@@ -20,3 +20,7 @@ Godot 4.7, GDScript (C# yok). 3D araba tamir/garaj oyunu.
   uzun `$Path/To/Node` yazma.
 - Sinyalleri kodda `.connect()` ile bağla.
 - Emin olmadığın API için godot-docs MCP'sinden doğrula, tahmin etme.
+
+## MCP
+- `godot` — editörü açma, projeyi çalıştırma, debug çıktısı okuma
+- `godot-docs` — Godot API dokümanı araması (Deno ile çalışıyor)
