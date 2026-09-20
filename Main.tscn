@@ -1,0 +1,740 @@
+[gd_scene format=3 uid="uid://0m64e8fs215g"]
+
+[ext_resource type="Script" uid="uid://dqu5jwwp73isy" path="res://build_grid.gd" id="1_glv2v"]
+[ext_resource type="Script" uid="uid://bohveeaofd2ef" path="res://garage_system.gd" id="1_uu6xs"]
+[ext_resource type="PackedScene" uid="uid://blsealac1pvvk" path="res://assets/cars/bmw_e_46.tscn" id="3_r0du0"]
+[ext_resource type="Script" uid="uid://m6rhfqj07sta" path="res://car_hitbox.gd" id="4_cm0pq"]
+[ext_resource type="PackedScene" uid="uid://c7hvyfhcuh7po" path="res://assets/cars/hyundai_getz.tscn" id="5_fos0i"]
+[ext_resource type="PackedScene" uid="uid://c18gb4cts0din" path="res://assets/cars/renault_fluence.tscn" id="6_3dxm6"]
+[ext_resource type="PackedScene" uid="uid://q7jjrpnwnuuq" path="res://assets/cars/volswagen_passat_b_5_5.tscn" id="7_lgr22"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_726x4"]
+size = Vector2(1.2, 6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ttnf8"]
+albedo_color = Color(0.26666668, 0.26666668, 0.26666668, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_yxqba"]
+size = Vector3(0.05, 0.002, 0.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_mbdbi"]
+size = Vector3(0.2, 0.01, 6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uu6xs"]
+albedo_color = Color(0.8862745, 0.81960785, 0.67058825, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cm0pq"]
+albedo_color = Color(0.8862745, 0.81960785, 0.67058825, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_03owx"]
+albedo_color = Color(0.8862745, 0.81960785, 0.67058825, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_trn2v"]
+albedo_color = Color(0.8862745, 0.81960785, 0.67058825, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_vpnhg"]
+size = Vector3(1.2, 0.005, 0.015)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_opuq7"]
+albedo_color = Color(0.26666668, 0.26666668, 0.26666668, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_v343h"]
+albedo_color = Color(0.32941177, 0.31764707, 0.31764707, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_yxqba"]
+material = SubResource("StandardMaterial3D_v343h")
+size = Vector2(7.2, 1.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_y5pdb"]
+size = Vector3(0.2, 0.002, 0.05)
+
+[sub_resource type="BoxMesh" id="BoxMesh_v343h"]
+size = Vector3(6, 0.01, 0.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fos0i"]
+albedo_color = Color(0.8862745, 0.81960785, 0.67058825, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3dxm6"]
+albedo_color = Color(0.8862745, 0.81960785, 0.67058825, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_gvpwv"]
+size = Vector3(0.015, 0.005, 1.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_n07hp"]
+size = Vector3(0.015, 0.005, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lgr22"]
+albedo_color = Color(0.8862745, 0.81960785, 0.67058825, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_r0du0"]
+albedo_color = Color(0.8862745, 0.81960785, 0.67058825, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_pu8qn"]
+size = Vector3(20, 0.002, 20)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_glv2v"]
+albedo_color = Color(0.5137255, 0.69803923, 0.30980393, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_glv2v"]
+size = Vector3(3, 0.01, 3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_j4qnp"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_uu6xs"]
+size = Vector3(3, 1, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fpfj3"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_r0du0"]
+size = Vector3(3.1, 0.2, 3.1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1sgfy"]
+size = Vector3(4, 0.01, 4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_kuahg"]
+size = Vector3(0.05, 1, 3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sc1dx"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5agnf"]
+albedo_color = Color(0, 0, 0, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_5fht5"]
+material = SubResource("StandardMaterial3D_5agnf")
+size = Vector3(0.5, 0.01, 0.7)
+
+[sub_resource type="BoxMesh" id="BoxMesh_5agnf"]
+size = Vector3(0.07, 0.8, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kjvhd"]
+transparency = 1
+albedo_color = Color(0.53313285, 0.8901186, 1, 0.3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_nyyj6"]
+size = Vector3(3.1, 0.19, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_o84ym"]
+albedo_color = Color(0.46666667, 0.46666667, 0.46666667, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c2ibq"]
+albedo_color = Color(0.53333336, 0.53333336, 0.53333336, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_yke70"]
+size = Vector3(2, 0.4, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c6i3y"]
+albedo_color = Color(0.6, 0.6, 0.6, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_726x4"]
+size = Vector3(0.05, 0.4, 1.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_20pc6"]
+albedo_color = Color(0.6, 0.6, 0.6, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_v343h"]
+size = Vector2(2, 1.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ttnf8"]
+size = Vector3(0.5, 0.005, 0.7)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_56tih"]
+size = Vector3(0.61035156, 0.5498047, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wkp8b"]
+albedo_color = Color(1, 1, 0, 1)
+
+[sub_resource type="TorusMesh" id="TorusMesh_uujhu"]
+material = SubResource("StandardMaterial3D_wkp8b")
+inner_radius = 0.3
+outer_radius = 0.24
+rings = 16
+ring_segments = 64
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_p4pcb"]
+size = Vector3(0.6008301, 0.51171875, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4mkqn"]
+albedo_color = Color(1, 1, 0, 1)
+
+[sub_resource type="TorusMesh" id="TorusMesh_wv5ha"]
+material = SubResource("StandardMaterial3D_4mkqn")
+inner_radius = 0.3
+outer_radius = 0.24
+rings = 16
+ring_segments = 64
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_uujhu"]
+size = Vector3(0.6016846, 0.62158203, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_p4pcb"]
+albedo_color = Color(1, 1, 0, 1)
+
+[sub_resource type="TorusMesh" id="TorusMesh_56tih"]
+material = SubResource("StandardMaterial3D_p4pcb")
+inner_radius = 0.3
+outer_radius = 0.24
+rings = 16
+ring_segments = 64
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wv5ha"]
+size = Vector3(0.60476685, 0.6123047, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uujhu"]
+albedo_color = Color(1, 1, 0, 1)
+
+[sub_resource type="TorusMesh" id="TorusMesh_p4pcb"]
+material = SubResource("StandardMaterial3D_uujhu")
+inner_radius = 0.3
+outer_radius = 0.24
+rings = 16
+ring_segments = 64
+
+[node name="World" type="Node3D" unique_id=1487894574]
+
+[node name="RoadRight" type="MeshInstance3D" parent="." unique_id=1049236408]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0, -3)
+mesh = SubResource("PlaneMesh_726x4")
+surface_material_override/0 = SubResource("StandardMaterial3D_ttnf8")
+
+[node name="LaneLineRight" type="CSGMesh3D" parent="RoadRight" unique_id=475884141]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 2.6103542)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight2" type="CSGMesh3D" parent="RoadRight" unique_id=615733428]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 2.210354)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight3" type="CSGMesh3D" parent="RoadRight" unique_id=1679101437]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 1.8103541)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight4" type="CSGMesh3D" parent="RoadRight" unique_id=1711943092]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 1.410354)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight5" type="CSGMesh3D" parent="RoadRight" unique_id=1684030217]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 1.010354)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight6" type="CSGMesh3D" parent="RoadRight" unique_id=1790194598]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 0.6103542)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight7" type="CSGMesh3D" parent="RoadRight" unique_id=2091341796]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 0.21035409)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight8" type="CSGMesh3D" parent="RoadRight" unique_id=1867629197]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -0.189646)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight9" type="CSGMesh3D" parent="RoadRight" unique_id=559865652]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -0.5896461)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight10" type="CSGMesh3D" parent="RoadRight" unique_id=217926809]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -0.9896457)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight11" type="CSGMesh3D" parent="RoadRight" unique_id=1183529519]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -1.3896456)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight12" type="CSGMesh3D" parent="RoadRight" unique_id=1006027959]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -1.7896461)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight13" type="CSGMesh3D" parent="RoadRight" unique_id=1832482334]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -2.1896458)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight14" type="CSGMesh3D" parent="RoadRight" unique_id=289881622]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -2.5896454)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight15" type="CSGMesh3D" parent="RoadRight" unique_id=1902078892]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -2.989646)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="SidewalkRight" type="CSGMesh3D" parent="RoadRight" unique_id=179519876]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0.005, 0)
+mesh = SubResource("BoxMesh_mbdbi")
+material = SubResource("StandardMaterial3D_uu6xs")
+
+[node name="SidewalkRight2" type="CSGMesh3D" parent="RoadRight" unique_id=10475367]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 0.005, 0)
+mesh = SubResource("BoxMesh_mbdbi")
+material = SubResource("StandardMaterial3D_cm0pq")
+
+[node name="RoadRight2" type="MeshInstance3D" parent="." unique_id=1521699380]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0, 4.2)
+mesh = SubResource("PlaneMesh_726x4")
+surface_material_override/0 = SubResource("StandardMaterial3D_ttnf8")
+
+[node name="LaneLineRight" type="CSGMesh3D" parent="RoadRight2" unique_id=1974907209]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 2.9835758)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight2" type="CSGMesh3D" parent="RoadRight2" unique_id=575994844]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 2.5835752)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight3" type="CSGMesh3D" parent="RoadRight2" unique_id=1860600989]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 2.1835756)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight4" type="CSGMesh3D" parent="RoadRight2" unique_id=1021745299]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 1.7835755)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight5" type="CSGMesh3D" parent="RoadRight2" unique_id=1884282943]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 1.3835754)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight6" type="CSGMesh3D" parent="RoadRight2" unique_id=743192747]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 0.9835758)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight7" type="CSGMesh3D" parent="RoadRight2" unique_id=228590067]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 0.58357525)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight8" type="CSGMesh3D" parent="RoadRight2" unique_id=87320875]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 0.18357563)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight9" type="CSGMesh3D" parent="RoadRight2" unique_id=773651567]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -0.2164247)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight10" type="CSGMesh3D" parent="RoadRight2" unique_id=1048135242]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -0.6164243)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight11" type="CSGMesh3D" parent="RoadRight2" unique_id=1740784254]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -1.0164242)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight12" type="CSGMesh3D" parent="RoadRight2" unique_id=1792930146]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -1.4164248)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight13" type="CSGMesh3D" parent="RoadRight2" unique_id=1148101138]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -1.8164244)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight14" type="CSGMesh3D" parent="RoadRight2" unique_id=103784862]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -2.216424)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="LaneLineRight15" type="CSGMesh3D" parent="RoadRight2" unique_id=2008845580]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, -2.6164246)
+mesh = SubResource("BoxMesh_yxqba")
+
+[node name="SidewalkRight" type="CSGMesh3D" parent="RoadRight2" unique_id=1235874477]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0.005, 0)
+mesh = SubResource("BoxMesh_mbdbi")
+material = SubResource("StandardMaterial3D_03owx")
+
+[node name="SidewalkRight2" type="CSGMesh3D" parent="RoadRight2" unique_id=89514649]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 0.005, 0)
+mesh = SubResource("BoxMesh_mbdbi")
+material = SubResource("StandardMaterial3D_trn2v")
+
+[node name="TurnLine3" type="CSGMesh3D" parent="RoadRight2" unique_id=201962554]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2.8483331)
+mesh = SubResource("BoxMesh_vpnhg")
+
+[node name="TurnLine4" type="CSGMesh3D" parent="RoadRight2" unique_id=102062078]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.37134)
+mesh = SubResource("BoxMesh_vpnhg")
+
+[node name="RoadLeft" type="MeshInstance3D" parent="." unique_id=864967831]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4, 0, 0.6)
+material_override = SubResource("StandardMaterial3D_opuq7")
+mesh = SubResource("PlaneMesh_yxqba")
+
+[node name="LaneLine" type="CSGMesh3D" parent="RoadLeft" unique_id=1305643072]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.41371655, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine8" type="CSGMesh3D" parent="RoadLeft" unique_id=1538262]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.81371665, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine9" type="CSGMesh3D" parent="RoadLeft" unique_id=925445986]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2137165, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine10" type="CSGMesh3D" parent="RoadLeft" unique_id=1262262235]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6137166, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine11" type="CSGMesh3D" parent="RoadLeft" unique_id=6129053]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0137162, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine12" type="CSGMesh3D" parent="RoadLeft" unique_id=999428157]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4137168, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine13" type="CSGMesh3D" parent="RoadLeft" unique_id=105241118]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8137164, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine14" type="CSGMesh3D" parent="RoadLeft" unique_id=1871890451]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.213716, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine15" type="CSGMesh3D" parent="RoadLeft" unique_id=188218328]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.6137166, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine2" type="CSGMesh3D" parent="RoadLeft" unique_id=653722678]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.013716459, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine3" type="CSGMesh3D" parent="RoadLeft" unique_id=57426453]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3862834, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine4" type="CSGMesh3D" parent="RoadLeft" unique_id=1112530480]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7862835, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine5" type="CSGMesh3D" parent="RoadLeft" unique_id=572713157]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1862835, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine16" type="CSGMesh3D" parent="RoadLeft" unique_id=1158074455]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1862835, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine6" type="CSGMesh3D" parent="RoadLeft" unique_id=182012398]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5862834, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine7" type="CSGMesh3D" parent="RoadLeft" unique_id=1033073651]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9862835, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="SidewalkLeft" type="CSGMesh3D" parent="RoadLeft" unique_id=1594565870]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5999999, 0.005, 0.6999999)
+mesh = SubResource("BoxMesh_v343h")
+material = SubResource("StandardMaterial3D_fos0i")
+
+[node name="SidewalkLeft2" type="CSGMesh3D" parent="RoadLeft" unique_id=293754150]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0.005, -0.7)
+mesh = SubResource("BoxMesh_v343h")
+material = SubResource("StandardMaterial3D_3dxm6")
+
+[node name="TurnLine" type="CSGMesh3D" parent="RoadLeft" unique_id=1164152255]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2650936, 0, 0)
+mesh = SubResource("BoxMesh_gvpwv")
+
+[node name="TurnLine2" type="CSGMesh3D" parent="RoadLeft" unique_id=38686729]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.7380893, 0, 0)
+mesh = SubResource("BoxMesh_gvpwv")
+
+[node name="Square" type="CSGMesh3D" parent="RoadLeft" unique_id=1021850797]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.63, 0, 0)
+mesh = SubResource("BoxMesh_n07hp")
+
+[node name="Square2" type="CSGMesh3D" parent="RoadLeft" unique_id=1517535284]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 3.025, 0, -0.392)
+mesh = SubResource("BoxMesh_n07hp")
+
+[node name="Square3" type="CSGMesh3D" parent="RoadLeft" unique_id=1072091549]
+transform = Transform3D(1.0000001, 0, 0, 0, 1, 0, 0, 0, 1.0000001, 3.416, 0, 0)
+mesh = SubResource("BoxMesh_n07hp")
+
+[node name="Square4" type="CSGMesh3D" parent="RoadLeft" unique_id=564671700]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 3.025, 0, 0.392)
+mesh = SubResource("BoxMesh_n07hp")
+
+[node name="RoadLeft2" type="MeshInstance3D" parent="." unique_id=336229220]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.8, 0, 0.6)
+material_override = SubResource("StandardMaterial3D_opuq7")
+mesh = SubResource("PlaneMesh_yxqba")
+
+[node name="LaneLine" type="CSGMesh3D" parent="RoadLeft2" unique_id=112552455]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.06528187, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine8" type="CSGMesh3D" parent="RoadLeft2" unique_id=598253105]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.46528244, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine9" type="CSGMesh3D" parent="RoadLeft2" unique_id=676863963]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.86528206, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine10" type="CSGMesh3D" parent="RoadLeft2" unique_id=480182585]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2652822, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine11" type="CSGMesh3D" parent="RoadLeft2" unique_id=1926347701]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6652818, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine12" type="CSGMesh3D" parent="RoadLeft2" unique_id=1075556937]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0652823, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine13" type="CSGMesh3D" parent="RoadLeft2" unique_id=608619771]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.465282, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine14" type="CSGMesh3D" parent="RoadLeft2" unique_id=132984650]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8652816, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine15" type="CSGMesh3D" parent="RoadLeft2" unique_id=1662789402]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.2652822, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine2" type="CSGMesh3D" parent="RoadLeft2" unique_id=1403139589]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.33471775, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine3" type="CSGMesh3D" parent="RoadLeft2" unique_id=1445917965]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.73471785, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine4" type="CSGMesh3D" parent="RoadLeft2" unique_id=575068147]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.134718, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine5" type="CSGMesh3D" parent="RoadLeft2" unique_id=105783312]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.534718, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine16" type="CSGMesh3D" parent="RoadLeft2" unique_id=1765009671]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.534718, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine6" type="CSGMesh3D" parent="RoadLeft2" unique_id=1050062667]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9347181, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="LaneLine7" type="CSGMesh3D" parent="RoadLeft2" unique_id=1285493951]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.3347178, 0.001, 0)
+mesh = SubResource("BoxMesh_y5pdb")
+
+[node name="SidewalkLeft" type="CSGMesh3D" parent="RoadLeft2" unique_id=1306498647]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0.005, 0.7)
+mesh = SubResource("BoxMesh_v343h")
+material = SubResource("StandardMaterial3D_lgr22")
+
+[node name="SidewalkLeft2" type="CSGMesh3D" parent="RoadLeft2" unique_id=2126945294]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0.005, -0.7)
+mesh = SubResource("BoxMesh_v343h")
+material = SubResource("StandardMaterial3D_r0du0")
+
+[node name="MainCamera" type="Camera3D" parent="." unique_id=222627041]
+transform = Transform3D(0.70710677, -0.29883623, 0.6408563, 0, 0.90630776, 0.42261827, -0.70710677, -0.29883623, 0.6408563, 3, 3, 3)
+projection = 1
+size = 4.0
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1110309721]
+transform = Transform3D(0.8189143, -0.423431, 0.38740844, -0.01356846, 0.66055393, 0.75065595, -0.5737552, -0.6199795, 0.5351919, 0, 0, 0)
+
+[node name="GrassArea" type="CSGMesh3D" parent="." unique_id=1684127467]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.954, -0.10631411, 0.648)
+mesh = SubResource("BoxMesh_pu8qn")
+material = SubResource("StandardMaterial3D_glv2v")
+
+[node name="Gallery" type="CSGMesh3D" parent="GrassArea" unique_id=37872572]
+
+[node name="Floor" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=76795332]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.574983, 0.009999998, -3.6870263)
+mesh = SubResource("BoxMesh_glv2v")
+material = SubResource("StandardMaterial3D_j4qnp")
+
+[node name="FrontWall" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=1986303246]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.587, 0.5, -2.202)
+mesh = SubResource("BoxMesh_uu6xs")
+material = SubResource("StandardMaterial3D_fpfj3")
+
+[node name="Roof" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=272397723]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.528, 1.1, -3.562)
+mesh = SubResource("BoxMesh_r0du0")
+
+[node name="GalleryFloor" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=729293316]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.4606614, 0.0050000027, -3.2316449)
+mesh = SubResource("BoxMesh_1sgfy")
+
+[node name="BackWall" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=242199387]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.1275094, 0.5, -3.6983676)
+mesh = SubResource("BoxMesh_kuahg")
+material = SubResource("StandardMaterial3D_sc1dx")
+
+[node name="GalleryParking" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=662427478]
+transform = Transform3D(0.7708453, 0, 0.63702226, 0, 1, 0, -0.63702226, 0, 0.7708453, 3.449858, 0.028528452, -1.6459893)
+mesh = SubResource("BoxMesh_5fht5")
+
+[node name="GalleryParking2" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=1598087358]
+transform = Transform3D(0.7708453, 0, 0.63702226, 0, 1, 0, -0.63702226, 0, 0.7708453, 4.25, 0.029, -1.646)
+mesh = SubResource("BoxMesh_5fht5")
+
+[node name="GalleryParking3" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=578725169]
+transform = Transform3D(0.7708453, 0, 0.63702226, 0, 1, 0, -0.63702226, 0, 0.7708453, 5.05, 0.029, -1.646)
+mesh = SubResource("BoxMesh_5fht5")
+
+[node name="GalleryParking4" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=1111976810]
+transform = Transform3D(0.7708453, 0, 0.63702226, 0, 1, 0, -0.63702226, 0, 0.7708453, 5.85, 0.029, -1.646)
+mesh = SubResource("BoxMesh_5fht5")
+
+[node name="GlassLeft" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=588305471]
+transform = Transform3D(-4.3711385e-08, 0, -0.99999994, 0, 1, 0, 0.99999994, 0, -4.3711385e-08, 3.6244323, 0.4853369, -2.2118733)
+mesh = SubResource("BoxMesh_5agnf")
+material = SubResource("StandardMaterial3D_kjvhd")
+
+[node name="GlassLeft6" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=188153313]
+transform = Transform3D(-0.9999999, 0, -8.742277e-08, 0, 1, 0, 8.742277e-08, 0, -0.9999999, 3.1339195, 0.4853369, -2.7297823)
+mesh = SubResource("BoxMesh_5agnf")
+material = SubResource("StandardMaterial3D_kjvhd")
+
+[node name="GlassLeft7" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=1357427954]
+transform = Transform3D(-0.9999999, 0, -8.742277e-08, 0, 1, 0, 8.742277e-08, 0, -0.9999999, 3.134, 0.485, -3.63)
+mesh = SubResource("BoxMesh_5agnf")
+material = SubResource("StandardMaterial3D_kjvhd")
+
+[node name="GlassLeft8" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=942022102]
+transform = Transform3D(-0.9999999, 0, -8.742277e-08, 0, 1, 0, 8.742277e-08, 0, -0.9999999, 3.134, 0.485, -4.53)
+mesh = SubResource("BoxMesh_5agnf")
+material = SubResource("StandardMaterial3D_kjvhd")
+
+[node name="GlassLeft2" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=96628968]
+transform = Transform3D(-4.3711385e-08, 0, -0.99999994, 0, 1, 0, 0.99999994, 0, -4.3711385e-08, 4.524, 0.485, -2.212)
+mesh = SubResource("BoxMesh_5agnf")
+material = SubResource("StandardMaterial3D_kjvhd")
+
+[node name="GlassLeft4" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=1756420594]
+transform = Transform3D(-4.3711385e-08, 0, -0.99999994, 0, 1, 0, 0.99999994, 0, -4.3711385e-08, 5.424, 0.485, -2.212)
+mesh = SubResource("BoxMesh_5agnf")
+material = SubResource("StandardMaterial3D_kjvhd")
+
+[node name="GlassLeft5" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=1193847671]
+transform = Transform3D(-4.3711385e-08, 0, -0.99999994, 0, 1, 0, 0.99999994, 0, -4.3711385e-08, 5.424, 0.485, -2.212)
+mesh = SubResource("BoxMesh_5agnf")
+material = SubResource("StandardMaterial3D_kjvhd")
+
+[node name="GlassLeft3" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=59420232]
+transform = Transform3D(-4.3711385e-08, 0, -0.99999994, 0, 1, 0, 0.99999994, 0, -4.3711385e-08, 4.524, 0.485, -2.212)
+mesh = SubResource("BoxMesh_5agnf")
+material = SubResource("StandardMaterial3D_kjvhd")
+
+[node name="GallerySign" type="CSGMesh3D" parent="GrassArea/Gallery" unique_id=1996973323]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.528, 1.1, -2.011939)
+mesh = SubResource("BoxMesh_nyyj6")
+
+[node name="GalleryText" type="Label3D" parent="GrassArea/Gallery/GallerySign" unique_id=1519873009]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.24958491, 0, 0.025865912)
+modulate = Color(1, 0.75, 0, 1)
+text = "CAR PARTS & SHOWROOM"
+font_size = 31
+outline_size = 8
+
+[node name="GarageSystem" type="Node3D" parent="." unique_id=344629921]
+script = ExtResource("1_uu6xs")
+level_names = PackedStringArray("10x10", "20x20", "30x30", "40x40")
+level_prices = PackedInt32Array(10000, 25000, 50000, 100000)
+
+[node name="Floor" type="Node3D" parent="GarageSystem" unique_id=62228734]
+
+[node name="GarageFloor" type="CSGBox3D" parent="GarageSystem/Floor" unique_id=937195520]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0.005, -0.95)
+material_override = SubResource("StandardMaterial3D_o84ym")
+size = Vector3(2, 0.01, 1.5)
+material = SubResource("StandardMaterial3D_c2ibq")
+
+[node name="Walls" type="Node3D" parent="GarageSystem" unique_id=203476443]
+
+[node name="GarageBackWall" type="CSGMesh3D" parent="GarageSystem/Walls" unique_id=497666357]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0.205, -1.675)
+mesh = SubResource("BoxMesh_yke70")
+material = SubResource("StandardMaterial3D_c6i3y")
+
+[node name="GarageLeftWall" type="CSGMesh3D" parent="GarageSystem/Walls" unique_id=2017559657]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 0.205, -0.95)
+mesh = SubResource("BoxMesh_726x4")
+material = SubResource("StandardMaterial3D_20pc6")
+
+[node name="BuildGrid" type="Node3D" parent="GarageSystem" unique_id=1066431588]
+
+[node name="BuildGrid" type="Node3D" parent="GarageSystem/BuildGrid" unique_id=276238766]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0.005, -0.95)
+script = ExtResource("1_glv2v")
+
+[node name="PlacedObjects" type="Node3D" parent="GarageSystem/BuildGrid/BuildGrid" unique_id=392656656]
+
+[node name="GridPreview" type="MeshInstance3D" parent="GarageSystem/BuildGrid/BuildGrid" unique_id=323842916]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.001, 0)
+mesh = SubResource("PlaneMesh_v343h")
+
+[node name="PlacedObjects" type="Node3D" parent="GarageSystem" unique_id=542339628]
+
+[node name="CarSpot" type="CSGMesh3D" parent="GarageSystem/PlacedObjects" unique_id=558813531]
+transform = Transform3D(0.9999458, 0, 0.01042252, 0, 1, 0, -0.01042252, 0, 0.9999458, -1.7628272, 0.01, -1.1048989)
+mesh = SubResource("BoxMesh_ttnf8")
+
+[node name="Car_BMW_E46" parent="GarageSystem/PlacedObjects" unique_id=1702285548 instance=ExtResource("3_r0du0")]
+transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, -1.756334, -1.1920929e-07, -1.0656013)
+
+[node name="CarHitbox" type="StaticBody3D" parent="GarageSystem/PlacedObjects/Car_BMW_E46" unique_id=32622745]
+script = ExtResource("4_cm0pq")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GarageSystem/PlacedObjects/Car_BMW_E46/CarHitbox" unique_id=1574949505]
+transform = Transform3D(0.99999976, 0, 0, 0, 0.99999976, 0, 0, 0, 0.99999976, 0.007324457, 0.12939447, 0)
+shape = SubResource("BoxShape3D_56tih")
+
+[node name="SelectionRing" type="MeshInstance3D" parent="GarageSystem/PlacedObjects/Car_BMW_E46" unique_id=257216253]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+visible = false
+mesh = SubResource("TorusMesh_uujhu")
+
+[node name="Car_HYUNDAI_GETZ" parent="GarageSystem/PlacedObjects" unique_id=407632810 instance=ExtResource("5_fos0i")]
+transform = Transform3D(0.54, 0, 0, 0, 0.54, 0, 0, 0, 0.54, -1.155317, -7.1054274e-15, -1.0656977)
+
+[node name="CarHitbox" type="StaticBody3D" parent="GarageSystem/PlacedObjects/Car_HYUNDAI_GETZ" unique_id=905977246]
+script = ExtResource("4_cm0pq")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GarageSystem/PlacedObjects/Car_HYUNDAI_GETZ/CarHitbox" unique_id=1614032618]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.004760742, 0.24414061, 0)
+shape = SubResource("BoxShape3D_p4pcb")
+
+[node name="SelectionRing" type="MeshInstance3D" parent="GarageSystem/PlacedObjects/Car_HYUNDAI_GETZ" unique_id=722945161]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+visible = false
+mesh = SubResource("TorusMesh_wv5ha")
+
+[node name="CAR_RENAULT_FLUENCE" parent="GarageSystem/PlacedObjects" unique_id=1075581627 instance=ExtResource("6_3dxm6")]
+transform = Transform3D(0.62, 0, 0, 0, 0.62, 0, 0, 0, 0.62, -0.56372094, 0, -0.93089557)
+
+[node name="CarHitbox" type="StaticBody3D" parent="GarageSystem/PlacedObjects/CAR_RENAULT_FLUENCE" unique_id=2134600757]
+script = ExtResource("4_cm0pq")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GarageSystem/PlacedObjects/CAR_RENAULT_FLUENCE/CarHitbox" unique_id=380952904]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0018920898, 0.16113281, 0)
+shape = SubResource("BoxShape3D_uujhu")
+
+[node name="SelectionRing" type="MeshInstance3D" parent="GarageSystem/PlacedObjects/CAR_RENAULT_FLUENCE" unique_id=1214591482]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+visible = false
+mesh = SubResource("TorusMesh_56tih")
+
+[node name="CAR_VW_PASSAT" parent="GarageSystem/PlacedObjects/CAR_RENAULT_FLUENCE" unique_id=1412565957 instance=ExtResource("7_lgr22")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2393194, 0, -0.04391527)
+
+[node name="CarHitbox" type="StaticBody3D" parent="GarageSystem/PlacedObjects/CAR_RENAULT_FLUENCE/CAR_VW_PASSAT" unique_id=1158781127]
+script = ExtResource("4_cm0pq")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GarageSystem/PlacedObjects/CAR_RENAULT_FLUENCE/CAR_VW_PASSAT/CarHitbox" unique_id=464436319]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0010528564, 0.13232422, 0)
+shape = SubResource("BoxShape3D_wv5ha")
+
+[node name="SelectionRing" type="MeshInstance3D" parent="GarageSystem/PlacedObjects/CAR_RENAULT_FLUENCE/CAR_VW_PASSAT" unique_id=225462905]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+visible = false
+mesh = SubResource("TorusMesh_p4pcb")

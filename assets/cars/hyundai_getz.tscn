@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c7hvyfhcuh7po"]
+
+[ext_resource type="PackedScene" uid="uid://cwsrovf1yarqv" path="res://assets/cars/hyundai_getz.glb" id="1_bbjns"]
+
+[node name="hyundai_getz" unique_id=407632810 instance=ExtResource("1_bbjns")]
+transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0, 0, 0)
