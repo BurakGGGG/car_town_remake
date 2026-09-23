@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// car-town-remake — oyuncu kayıtları.
+// Her oyuncu YALNIZCA kendi players/{uid} dokümanını okuyup yazabilir.
+// Anonim hesaplar da giriş yapmış sayılır ama oyun buluta yalnızca Google hesabıyla yazar.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /players/{userId} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isValidPlayer(request.resource.data);
+    }
+
+    // Başka her yol kapalı.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Yalnızca oyunun yazdığı alanlar; token / şifre gibi ek alanlar reddedilir.
+    function isValidPlayer(data) {
+      return data.keys().hasOnly(['profile', 'save_version', 'save_json', 'updated_at'])
+        && data.save_version is int
+        && data.save_json is string
+        && data.save_json.size() < 20000
+        && data.updated_at is int
+        && (!('profile' in data) || isValidProfile(data.profile));
+    }
+
+    function isValidProfile(p) {
+      return p is map
+        && p.keys().hasOnly(['display_name', 'email', 'photo_url'])
+        && (!('display_name' in p) || p.display_name is string)
+        && (!('email' in p) || p.email is string)
+        && (!('photo_url' in p) || p.photo_url is string);
+    }
+  }
+}
