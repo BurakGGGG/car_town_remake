@@ -1,5 +1,5 @@
 [gd_scene format=3 uid="uid://q7jjrpnwnuuq"]
 
-[ext_resource type="PackedScene" uid="uid://bwjvle6c3sf0i" path="res://assets/cars/volswagen_passat_b5_5.glb" id="1_hronr"]
+[ext_resource type="PackedScene" uid="uid://qd13sfjj8gg0" path="res://assets/cars/optimized/volswagen_passat_b5_5.glb" id="1_hronr"]
 
 [node name="volswagen_passat_b5_5" unique_id=1412565957 instance=ExtResource("1_hronr")]

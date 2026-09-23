@@ -1,5 +1,5 @@
 [gd_scene format=3 uid="uid://blsealac1pvvk"]
 
-[ext_resource type="PackedScene" uid="uid://to2kt8y62et1" path="res://assets/cars/bmw_e46.glb" id="1_gpm2l"]
+[ext_resource type="PackedScene" uid="uid://cimowgjiv4bw2" path="res://assets/cars/optimized/bmw_e46.glb" id="1_gpm2l"]
 
 [node name="bmw_e46" unique_id=1702285548 instance=ExtResource("1_gpm2l")]

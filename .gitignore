@@ -1,3 +1,6 @@
 .godot/
 /android/
 *.translation
+eksik_dosyalar/
+assets/cars/source/
+assets/cars/optimized_old/

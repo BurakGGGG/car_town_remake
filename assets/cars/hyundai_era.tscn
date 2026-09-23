@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://bee31aliuy7kw"]
+
+[ext_resource type="PackedScene" uid="uid://c4g3nlmchjimm" path="res://assets/cars/optimized/hyundai_era.glb" id="1_eg7lo"]
+
+[node name="hyundai_era" unique_id=1705771246 instance=ExtResource("1_eg7lo")]
