@@ -1,0 +1,354 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/hud/hud.gd" id="1_kwc50"]
+[ext_resource type="Theme" path="res://ui/theme/hud_theme.tres" id="2_o2lis"]
+[ext_resource type="PackedScene" path="res://ui/hud/garage_screen.tscn" id="3_aixkq"]
+[ext_resource type="Script" path="res://ui/hud/plate_button.gd" id="3_gfles"]
+[ext_resource type="Script" path="res://ui/hud/xp_lane.gd" id="4_aixkq"]
+[ext_resource type="Script" path="res://ui/hud/hud_icon.gd" id="5_cxhb7"]
+[ext_resource type="Script" path="res://ui/hud/plate_panel.gd" id="6_5uuaq"]
+[ext_resource type="Script" path="res://ui/hud/car_gallery.gd" id="7_o2lis"]
+
+[node name="HUD" type="CanvasLayer" unique_id=279782752]
+layer = 10
+script = ExtResource("1_kwc50")
+
+[node name="Root" type="Control" parent="." unique_id=1493168968]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("2_o2lis")
+
+[node name="GarageScreen" parent="Root" unique_id=1486615744 instance=ExtResource("3_aixkq")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TopLeft" type="MarginContainer" parent="Root" unique_id=1190628347]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="PlayerRow" type="HBoxContainer" parent="Root/TopLeft" unique_id=210251717]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="LevelSign" type="PanelContainer" parent="Root/TopLeft/PlayerRow" unique_id=1931757150]
+custom_minimum_size = Vector2(38, 38)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"HudLevelSign"
+
+[node name="LevelLabel" type="Label" parent="Root/TopLeft/PlayerRow/LevelSign" unique_id=1822910122]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudLevelLabel"
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Info" type="VBoxContainer" parent="Root/TopLeft/PlayerRow" unique_id=1052154487]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="NamePlate" type="Button" parent="Root/TopLeft/PlayerRow/Info" unique_id=230227508]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+focus_mode = 0
+theme_type_variation = &"HudPlateSmall"
+text = "PLAYER"
+script = ExtResource("3_gfles")
+lift_when_pressed = 0.0
+
+[node name="XpLane" type="Control" parent="Root/TopLeft/PlayerRow/Info" unique_id=243123229]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("4_aixkq")
+
+[node name="Currency" type="HBoxContainer" parent="Root/TopLeft/PlayerRow/Info" unique_id=322478468]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="CoinBox" type="HBoxContainer" parent="Root/TopLeft/PlayerRow/Info/Currency" unique_id=1775728157]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="CoinIcon" type="Control" parent="Root/TopLeft/PlayerRow/Info/Currency/CoinBox" unique_id=1668905725]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+script = ExtResource("5_cxhb7")
+icon_size = 15.0
+
+[node name="CoinLabel" type="Label" parent="Root/TopLeft/PlayerRow/Info/Currency/CoinBox" unique_id=120318819]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudOutlined"
+text = "12.500"
+vertical_alignment = 1
+
+[node name="GemBox" type="HBoxContainer" parent="Root/TopLeft/PlayerRow/Info/Currency" unique_id=1512403474]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="GemIcon" type="Control" parent="Root/TopLeft/PlayerRow/Info/Currency/GemBox" unique_id=56749334]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+script = ExtResource("5_cxhb7")
+kind = 13
+icon_size = 15.0
+
+[node name="GemLabel" type="Label" parent="Root/TopLeft/PlayerRow/Info/Currency/GemBox" unique_id=1779978126]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudOutlined"
+text = "40"
+vertical_alignment = 1
+
+[node name="TopRight" type="MarginContainer" parent="Root" unique_id=388510909]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="Column" type="VBoxContainer" parent="Root/TopRight" unique_id=1318907480]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="SignRow" type="HBoxContainer" parent="Root/TopRight/Column" unique_id=601129518]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="CameraButton" type="Button" parent="Root/TopRight/Column/SignRow" unique_id=1814591321]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudSign"
+toggle_mode = true
+script = ExtResource("3_gfles")
+shape = 1
+kind = 5
+icon_size = 18.0
+bolts = false
+lift_when_pressed = 0.0
+
+[node name="SoundButton" type="Button" parent="Root/TopRight/Column/SignRow" unique_id=1360298734]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudSignMute"
+toggle_mode = true
+script = ExtResource("3_gfles")
+shape = 1
+kind = 6
+icon_size = 18.0
+bolts = false
+lift_when_pressed = 0.0
+
+[node name="SettingsButton" type="Button" parent="Root/TopRight/Column/SignRow" unique_id=1129840164]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudSign"
+script = ExtResource("3_gfles")
+shape = 1
+kind = 8
+icon_size = 18.0
+bolts = false
+lift_when_pressed = 0.0
+
+[node name="CameraControls" type="VBoxContainer" parent="Root/TopRight/Column" unique_id=1357032098]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="ZoomInButton" type="Button" parent="Root/TopRight/Column/CameraControls" unique_id=1399936590]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(26, 26)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudSignSmall"
+script = ExtResource("3_gfles")
+shape = 1
+kind = 9
+icon_size = 15.0
+bolts = false
+lift_when_pressed = 0.0
+
+[node name="ZoomOutButton" type="Button" parent="Root/TopRight/Column/CameraControls" unique_id=13628475]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(26, 26)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudSignSmall"
+script = ExtResource("3_gfles")
+shape = 1
+kind = 10
+icon_size = 15.0
+bolts = false
+lift_when_pressed = 0.0
+
+[node name="RotateButton" type="Button" parent="Root/TopRight/Column/CameraControls" unique_id=1235008721]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(26, 26)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudSignSmall"
+script = ExtResource("3_gfles")
+shape = 1
+kind = 11
+icon_size = 15.0
+bolts = false
+lift_when_pressed = 0.0
+
+[node name="Bottom" type="MarginContainer" parent="Root" unique_id=559667473]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 10
+
+[node name="Column" type="VBoxContainer" parent="Root/Bottom" unique_id=388681278]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="CarInfoPanel" type="PanelContainer" parent="Root/Bottom/Column" unique_id=861269583]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"HudCarPlate"
+script = ExtResource("6_5uuaq")
+
+[node name="Row" type="HBoxContainer" parent="Root/Bottom/Column/CarInfoPanel" unique_id=1838102855]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="CarNameLabel" type="Label" parent="Root/Bottom/Column/CarInfoPanel/Row" unique_id=1677262071]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudPlateTitle"
+text = "—"
+vertical_alignment = 1
+uppercase = true
+
+[node name="Separator" type="VSeparator" parent="Root/Bottom/Column/CarInfoPanel/Row" unique_id=598795174]
+layout_mode = 2
+
+[node name="CarStatsContainer" type="HBoxContainer" parent="Root/Bottom/Column/CarInfoPanel/Row" unique_id=592187529]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="CarActionsContainer" type="HBoxContainer" parent="Root/Bottom/Column/CarInfoPanel/Row" unique_id=1004410950]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="CarGallery" type="HBoxContainer" parent="Root/Bottom/Column" unique_id=319469126]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("7_o2lis")
+
+[node name="NavRow" type="HBoxContainer" parent="Root/Bottom/Column" unique_id=1733946372]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="GarageButton" type="Button" parent="Root/Bottom/Column/NavRow" unique_id=1775272948]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(68, 0)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudPlate"
+toggle_mode = true
+text = "GARAJ"
+script = ExtResource("3_gfles")
+kind = 1
+
+[node name="CarsButton" type="Button" parent="Root/Bottom/Column/NavRow" unique_id=698287946]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(68, 0)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudPlate"
+toggle_mode = true
+text = "ARAÇLAR"
+script = ExtResource("3_gfles")
+kind = 2
+
+[node name="ShopButton" type="Button" parent="Root/Bottom/Column/NavRow" unique_id=1853282143]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(68, 0)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudPlate"
+toggle_mode = true
+text = "MAĞAZA"
+script = ExtResource("3_gfles")
+kind = 3
+
+[node name="ProfileButton" type="Button" parent="Root/Bottom/Column/NavRow" unique_id=1756896100]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(68, 0)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"HudPlate"
+toggle_mode = true
+text = "PROFİL"
+script = ExtResource("3_gfles")
+kind = 4

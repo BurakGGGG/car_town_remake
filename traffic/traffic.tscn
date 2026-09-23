@@ -1,0 +1,161 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://traffic/traffic_manager.gd" id="1_pvea0"]
+[ext_resource type="Script" path="res://traffic/traffic_waypoint.gd" id="2_b2med"]
+
+[node name="Traffic" type="Node3D" unique_id=1755902152]
+script = ExtResource("1_pvea0")
+
+[node name="TrafficPath" type="Node3D" parent="." unique_id=2114773150]
+
+[node name="W_out_1" type="Marker3D" parent="TrafficPath" unique_id=1529183627]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0.3)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../W_out_despawn")])
+
+[node name="W_out_despawn" type="Marker3D" parent="TrafficPath" unique_id=555968638]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.7000003, 0, 0.3)
+script = ExtResource("2_b2med")
+is_despawn = true
+
+[node name="E_out_1" type="Marker3D" parent="TrafficPath" unique_id=1864408932]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2, 0, 0.90000004)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../E_out_despawn")])
+
+[node name="E_out_despawn" type="Marker3D" parent="TrafficPath" unique_id=327312052]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.1, 0, 0.90000004)
+script = ExtResource("2_b2med")
+is_despawn = true
+
+[node name="N_out_1" type="Marker3D" parent="TrafficPath" unique_id=1271912291]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.90000004, 0, -1)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../N_out_despawn")])
+
+[node name="N_out_despawn" type="Marker3D" parent="TrafficPath" unique_id=1059456125]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.90000004, 0, -5.7000003)
+script = ExtResource("2_b2med")
+is_despawn = true
+
+[node name="S_out_1" type="Marker3D" parent="TrafficPath" unique_id=1668412940]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0, 2.2)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../S_out_despawn")])
+
+[node name="S_out_despawn" type="Marker3D" parent="TrafficPath" unique_id=1346223140]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0, 6.9)
+script = ExtResource("2_b2med")
+is_despawn = true
+
+[node name="W_in_spawn" type="Marker3D" parent="TrafficPath" unique_id=129653682]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.7000003, 0, 0.90000004)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../W_in_approach")])
+is_spawn = true
+
+[node name="W_in_approach" type="Marker3D" parent="TrafficPath" unique_id=1550477284]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.79999995, 0, 0.90000004)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../W_in_entry")])
+
+[node name="W_in_entry" type="Marker3D" parent="TrafficPath" unique_id=1536081397]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14999998, 0, 0.90000004)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../W_straight_1")])
+intersection_entry = true
+
+[node name="W_straight_1" type="Marker3D" parent="TrafficPath" unique_id=1769461167]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0, 0.90000004)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../W_straight_exit")])
+
+[node name="W_straight_exit" type="Marker3D" parent="TrafficPath" unique_id=827523687]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0.90000004)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../E_out_1")])
+intersection_exit = true
+
+[node name="E_in_spawn" type="Marker3D" parent="TrafficPath" unique_id=1068056654]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.1, 0, 0.3)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../E_in_approach")])
+is_spawn = true
+
+[node name="E_in_approach" type="Marker3D" parent="TrafficPath" unique_id=756865754]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0.3)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../E_in_entry")])
+
+[node name="E_in_entry" type="Marker3D" parent="TrafficPath" unique_id=415003956]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.35, 0, 0.3)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../E_straight_1")])
+intersection_entry = true
+
+[node name="E_straight_1" type="Marker3D" parent="TrafficPath" unique_id=1887323782]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0, 0.3)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../E_straight_exit")])
+
+[node name="E_straight_exit" type="Marker3D" parent="TrafficPath" unique_id=1177923112]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.29999995, 0, 0.3)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../W_out_1")])
+intersection_exit = true
+
+[node name="N_in_spawn" type="Marker3D" parent="TrafficPath" unique_id=1558524031]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0, -5.7000003)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../N_in_approach")])
+is_spawn = true
+
+[node name="N_in_approach" type="Marker3D" parent="TrafficPath" unique_id=1800531590]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0, -0.79999995)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../N_in_entry")])
+
+[node name="N_in_entry" type="Marker3D" parent="TrafficPath" unique_id=1327184857]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0, -0.14999998)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../N_straight_1")])
+intersection_entry = true
+
+[node name="N_straight_1" type="Marker3D" parent="TrafficPath" unique_id=1086943854]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0, 0.6)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../N_straight_exit")])
+
+[node name="N_straight_exit" type="Marker3D" parent="TrafficPath" unique_id=648022055]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0, 1.5)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../S_out_1")])
+intersection_exit = true
+
+[node name="S_in_spawn" type="Marker3D" parent="TrafficPath" unique_id=793928837]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.90000004, 0, 6.9)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../S_in_approach")])
+is_spawn = true
+
+[node name="S_in_approach" type="Marker3D" parent="TrafficPath" unique_id=735554611]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.90000004, 0, 2)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../S_in_entry")])
+
+[node name="S_in_entry" type="Marker3D" parent="TrafficPath" unique_id=799956008]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.90000004, 0, 1.35)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../S_straight_1")])
+intersection_entry = true
+
+[node name="S_straight_1" type="Marker3D" parent="TrafficPath" unique_id=677301496]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.90000004, 0, 0.6)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../S_straight_exit")])
+
+[node name="S_straight_exit" type="Marker3D" parent="TrafficPath" unique_id=1524662175]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.90000004, 0, -0.29999995)
+script = ExtResource("2_b2med")
+next_points = Array[NodePath]([NodePath("../N_out_1")])
+intersection_exit = true
