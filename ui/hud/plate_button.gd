@@ -37,9 +37,33 @@ enum Shape { PLATE, ROUND }
 		avatar = value
 		queue_redraw()
 
+## Dikkat çeken plaka (ör. alınabilir ödül): temadaki stilin kopyası amber (seçili plaka rengi) olur.
+## Her varyasyonda çalışır; tema dosyası değişmez.
+@export var highlight: bool = false:
+	set(value):
+		highlight = value
+		if is_inside_tree():
+			_apply_highlight()
+
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
+	if highlight:
+		_apply_highlight()
+
+
+func _apply_highlight() -> void:
+	for state: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed"]:
+		remove_theme_stylebox_override(state)
+		if not highlight:
+			continue
+		var base: StyleBox = get_theme_stylebox(state)
+		if base is StyleBoxFlat:
+			var amber: StyleBoxFlat = base.duplicate() as StyleBoxFlat
+			amber.bg_color = HudPalette.PLATE_SELECTED_HOVER if state == &"hover" else HudPalette.PLATE_SELECTED
+			amber.border_color = HudPalette.PLATE_SELECTED_EDGE
+			add_theme_stylebox_override(state, amber)
+	queue_redraw()
 
 
 func _draw() -> void:

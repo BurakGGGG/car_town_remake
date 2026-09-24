@@ -13,6 +13,7 @@
 [ext_resource type="Script" uid="uid://cp04j44jq2f5t" path="res://gameplay/garage_upgrade_manager.gd" id="15_sc1dx"]
 [ext_resource type="Script" uid="uid://dikjkc80l7a22" path="res://gameplay/save_manager.gd" id="18_kjvhd"]
 [ext_resource type="Script" uid="uid://cfkyi1mbbyrap" path="res://gameplay/cloud_save_manager.gd" id="19_cloud"]
+[ext_resource type="Script" uid="uid://b7qchshfyvfd6" path="res://gameplay/quest_manager.gd" id="20_quest"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_726x4"]
 size = Vector2(1.2, 6)
@@ -688,6 +689,9 @@ script = ExtResource("18_kjvhd")
 
 [node name="CloudSaveManager" type="Node" parent="Gameplay" unique_id=742913586]
 script = ExtResource("19_cloud")
+
+[node name="QuestManager" type="Node" parent="Gameplay" unique_id=518204771]
+script = ExtResource("20_quest")
 
 [node name="VehicleOwnership" type="Node" parent="Gameplay" unique_id=1567635173]
 script = ExtResource("11_20pc6")

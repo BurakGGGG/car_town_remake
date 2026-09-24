@@ -1,21 +1,22 @@
 class_name SaveManager
 extends Node
 ## Oyuncunun kalıcı ilerlemesi: para, XP / seviye / gem, garaj geliştirme seviyeleri,
-## sahip olunan araçlar ve boyaları.
+## sahip olunan araçlar ve boyaları, görevler.
 ## Sahnede World/Gameplay/SaveManager olarak durur; arayanlar "save_manager" grubundan bulur
 ## (autoload yok — proje kuralı).
 ##
 ## KENDİ VERİSİNİ TUTMAZ: her şeyi mevcut manager'ların public API'sinden okur ve onlara yazar
 ## (EconomyManager.money / set_money / reset, PlayerProgress.load_state / reset,
 ## GarageUpgradeManager.levels / apply_levels / reset, VehicleOwnership.owned_vehicle_ids /
-## load_state / paint_state / load_paint / reset). Paralel bir ekonomi / XP / upgrade / araç sistemi yoktur.
+## load_state / paint_state / load_paint / reset, QuestManager.state / load_state / reset).
+## Paralel bir ekonomi / XP / upgrade / araç / görev sistemi yoktur.
 ##
 ## Kaydedilmeyenler (oyun açılışında sıfırdan oluşur): trafikteki NPC'ler, bekleyen müşteriler,
 ## süren tamirler, araç konumları, kamera, UI durumu, seçili araç.
 ##
 ## Dosya: user://savegame.json (JSON, "version" alanıyla). Eski sürümler hâlâ geçerlidir ve yüklenince
 ## güncel sürümle yeniden yazılır: v1'de "vehicles" yoktur (başlangıç aracı sahiplenilir), v2'de
-## "vehicles.paint" yoktur (araçlar fabrika renginde kalır). Bozuk / okunamayan / daha yeni sürümlü
+## "vehicles.paint" yoktur (araçlar fabrika renginde kalır), v3'te "quests" yoktur (görevler baştan). Bozuk / okunamayan / daha yeni sürümlü
 ## kayıt oyunu çökertmez: hata loglanır ve sahnedeki başlangıç değerleriyle devam edilir.
 ## Otomatik kayıt: para / XP / seviye / gem / geliştirme değişince DEBOUNCE saniyelik gecikmeli tek
 ## yazma (aynı karedeki birden fazla değişiklik tek save'de birleşir). Kare başına iş yapılmaz.
@@ -30,8 +31,8 @@ signal game_saved
 signal game_loaded(success: bool)
 
 const SAVE_PATH: String = "user://savegame.json"
-const SAVE_VERSION: int = 3
-## Okunabilen en eski sürüm (daha eskisi reddedilir; 1/2 → 3 migration yapılır).
+const SAVE_VERSION: int = 4
+## Okunabilen en eski sürüm (daha eskisi reddedilir; 1/2/3 → 4 migration yapılır).
 const MIN_VERSION: int = 1
 ## Değişiklikten sonra diske yazmadan önce beklenen süre (sn).
 const DEBOUNCE: float = 0.5
@@ -48,6 +49,7 @@ var _economy: EconomyManager
 var _progress: PlayerProgress
 var _upgrades: GarageUpgradeManager
 var _ownership: VehicleOwnership
+var _quests: QuestManager
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -68,6 +70,7 @@ func _setup() -> void:
 	_progress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
 	_upgrades = get_tree().get_first_node_in_group("garage_upgrades") as GarageUpgradeManager
 	_ownership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+	_quests = get_tree().get_first_node_in_group("quests") as QuestManager
 	_fresh_json = snapshot_json()
 	if load_on_start:
 		if has_save():
@@ -106,7 +109,7 @@ func load_game() -> bool:
 	_apply(data)
 	_loading = false
 	if int(data.get("version", SAVE_VERSION)) < SAVE_VERSION:
-		save_game()   # v1/v2 → v3: dosya yeni formatta yeniden yazılır
+		save_game()   # v1/v2/v3 → v4: dosya yeni formatta yeniden yazılır
 	game_loaded.emit(true)
 	return true
 
@@ -133,6 +136,8 @@ func new_game() -> void:
 		_upgrades.reset()
 	if _ownership:
 		_ownership.reset()
+	if _quests:
+		_quests.reset()
 	_loading = false
 	save_game()
 
@@ -206,6 +211,7 @@ func _collect() -> Dictionary:
 			"owned": _owned_ids(),
 			"paint": _ownership.paint_state() if _ownership else {},
 		},
+		"quests": _quests.state() if _quests else {},
 	}
 
 
@@ -257,6 +263,9 @@ func _apply(data: Dictionary) -> void:
 		# v2 kayıtta "paint" yoktur: araçlar fabrika renginde kalır
 		var paint: Variant = vehicle_data.get("paint", {})
 		_ownership.load_paint(paint if paint is Dictionary else {})
+	if _quests:
+		# v3 kayıtta "quests" yoktur: görevler baştan başlar
+		_quests.load_state(data.get("quests", {}) if data.get("quests") is Dictionary else {})
 
 
 # --- Otomatik kayıt (debounce) -----------------------------------------------------

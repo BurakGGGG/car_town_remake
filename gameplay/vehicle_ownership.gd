@@ -28,6 +28,8 @@ signal purchase_failed(vehicle_id: StringName, price: int)
 signal ownership_changed
 ## Aracın boyası değişti (satın alma, fabrika rengine dönüş, kayıttan yükleme).
 signal paint_changed(vehicle_id: StringName, color: Color)
+## Ücretli bir boya satın alındı (görevler bunu sayar; kayıttan yükleme ve fabrika rengine dönüş yaymaz).
+signal paint_purchased(vehicle_id: StringName, paint_id: StringName)
 ## Boya alınamadı: araç sahipte değil, renk katalogda yok / zaten bu renk ya da bakiye yetersiz.
 signal paint_failed(vehicle_id: StringName, paint_id: StringName)
 
@@ -206,6 +208,8 @@ func purchase_paint(vehicle_id: StringName, paint_id: StringName) -> bool:
 		_paint[vehicle_id] = entry["color"]
 	_apply_paint(vehicle_id)
 	paint_changed.emit(vehicle_id, paint_color(vehicle_id))
+	if paint_id != PaintCatalog.FACTORY_ID:
+		paint_purchased.emit(vehicle_id, paint_id)
 	_request_save()
 	return true
 

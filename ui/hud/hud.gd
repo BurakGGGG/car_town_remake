@@ -12,6 +12,9 @@ extends CanvasLayer
 ## PROFİL plakası ve isim plakası PLAYER tabelasını (LoginScreen, kodla eklenir) açar: Google girişi,
 ## profil / çıkış ve bulut kayıt seçimi. Google hesabıyla girilince isim plakasında hesabın adı yazar
 ## (CloudSaveManager, "cloud_save" grubu); çıkışta player_name'e döner.
+## Sağ üstte tabelaların altında GÖREVLER plakası GÖREVLER tabelasını (QuestScreen, kodla eklenir) açar;
+## alınabilir ödül varken plaka amber olur ve sayıyı gösterir. Görev tamamlanınca / ödül alınınca kısa
+## bildirim plakası çıkar (QuestManager, "quests" grubu).
 ## Sadece görsel katman: değerler setter'larla gelir, butonlar sinyal olarak dışarı verilir.
 ## Oyun mantığı burada değil: tamir döngüsü için sahnedeki RepairManager ("repair_manager" grubu),
 ## para için EconomyManager ("economy" grubu) ve XP/seviye için PlayerProgress ("player_progress"
@@ -71,6 +74,10 @@ signal camera_rotate_requested
 var showroom: ShowroomScreen
 ## Kodla kurulan PLAYER tabelası (giriş / profil / kayıt seçimi).
 var login_screen: LoginScreen
+## Kodla kurulan GÖREVLER tabelası ve onu açan plaka.
+var quest_screen: QuestScreen
+var quest_button: PlateButton
+var _quests: QuestManager
 @onready var top_left: MarginContainer = %TopLeft
 @onready var top_right: MarginContainer = %TopRight
 @onready var bottom: MarginContainer = %Bottom
@@ -109,6 +116,7 @@ func _ready() -> void:
 	garage_screen.closed.connect(_on_garage_closed)
 	_build_showroom()
 	_build_login_screen()
+	_build_quests()
 
 	name_plate.pressed.connect(_on_name_plate_pressed)
 	profile_button.pressed.connect(_on_profile_button_pressed)
@@ -231,6 +239,11 @@ func _connect_gameplay() -> void:
 		_repair_manager.repair_cancelled.connect(_on_repair_cancelled)
 		_repair_manager.customer_marked.connect(_on_customer_changed)
 		_repair_manager.customer_stopped.connect(_on_customer_changed)
+	_quests = get_tree().get_first_node_in_group("quests") as QuestManager
+	if _quests:
+		_quests.quests_changed.connect(_refresh_quest_button)
+		_quests.quest_completed.connect(_on_quest_completed)
+	_refresh_quest_button()
 	var cloud: CloudSaveManager = get_tree().get_first_node_in_group("cloud_save") as CloudSaveManager
 	if cloud:
 		cloud.user_changed.connect(_on_cloud_user_changed)
@@ -406,6 +419,44 @@ func _build_login_screen() -> void:
 
 func _on_profile_button_pressed() -> void:
 	login_screen.open()
+
+
+## GÖREVLER plakası sağ üst tabela sırasının hemen altına (kamera kontrollerinin üstüne) eklenir.
+func _build_quests() -> void:
+	quest_button = PlateButton.new()
+	quest_button.name = "QuestButton"
+	quest_button.theme_type_variation = &"HudPlateSmall"
+	quest_button.text = "GÖREVLER"
+	quest_button.focus_mode = Control.FOCUS_NONE
+	quest_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	quest_button.pressed.connect(_on_quest_button_pressed)
+	var column: Node = camera_controls.get_parent()
+	column.add_child(quest_button)
+	column.move_child(quest_button, camera_controls.get_index())
+	quest_screen = QuestScreen.new()
+	garage_screen.get_parent().add_child(quest_screen)
+	quest_screen.reward_claimed.connect(func(text: String) -> void: _show_notice(text, HudPalette.COIN_DARK))
+	quest_screen.closed.connect(_refresh_quest_button)
+
+
+func _on_quest_button_pressed() -> void:
+	quest_screen.open()
+	_refresh_quest_button()
+
+
+## Alınabilir ödül varsa plaka amber olur ve sayıyı gösterir; hepsi bittiyse plaka gizlenir.
+func _refresh_quest_button() -> void:
+	if quest_button == null:
+		return
+	quest_button.visible = _quests != null and not _quests.all_done()
+	var count: int = _quests.claimable_count() if _quests else 0
+	quest_button.text = "GÖREVLER (%d)" % count if count > 0 else "GÖREVLER"
+	quest_button.highlight = count > 0
+
+
+func _on_quest_completed(quest_id: StringName) -> void:
+	var entry: Dictionary = QuestCatalog.get_entry(quest_id)
+	_show_notice("GÖREV TAMAMLANDI: %s" % String(entry.get("title", "")), HudPalette.COIN_DARK, 2.2)
 
 
 func _on_showroom_opened() -> void:
