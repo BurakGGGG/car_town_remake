@@ -175,11 +175,23 @@ func _init() -> void:
 func set_info(type: RepairType) -> void:
 	if type == null:
 		return
-	_reward = type.reward
-	_xp = type.xp
+	_reward = effective_reward(type)
+	_xp = effective_xp(type)
 	_cost = type.cost
-	_reward_label.text = "Ödül: %s ₺" % Hud.format_thousands(type.reward)
-	_done_value.text = "+%s ₺   +%d XP" % [Hud.format_thousands(type.reward), type.xp]
+	_reward_label.text = "Ödül: %s ₺" % Hud.format_thousands(_reward)
+	_done_value.text = "+%s ₺   +%d XP" % [Hud.format_thousands(_reward), _xp]
+
+
+## Plakada yazan ile kasaya giren aynı olsun: ödül garaj seviyesinin müşteri çarpanıyla
+## (RepairManager.reward_multiplier), XP iş ustalığı çarpanıyla (JobMastery) büyür.
+func effective_reward(type: RepairType) -> int:
+	var repairs: RepairManager = get_tree().get_first_node_in_group("repair_manager") as RepairManager
+	return int(round(float(type.reward) * (repairs.reward_multiplier() if repairs else 1.0)))
+
+
+func effective_xp(type: RepairType) -> int:
+	var mastery: JobMastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
+	return int(round(float(type.xp) * (mastery.xp_multiplier(type.id) if mastery else 1.0)))
 
 
 ## Müşterinin arızasını gösterir (plakada kısa ad + süre, satırda tam ad / süre / ödül / XP).
@@ -291,7 +303,9 @@ func _apply_selection_state() -> void:
 		_button.disabled = true
 		_job_caption.text = ""
 		return
-	var line: String = "%s · %d sn · +%s ₺ · +%d XP" % [t.title, int(t.duration), Hud.format_thousands(t.reward), t.xp]
+	var line: String = "%s · %d sn · +%s ₺ · +%d XP" % [
+		t.title, int(t.duration), Hud.format_thousands(effective_reward(t)), effective_xp(t)]
+	line += _mastery_text(t)
 	var busy: bool = _mode == Mode.BUSY
 	var unlocked: bool = t.min_level <= _player_level
 	var affordable: bool = t.cost <= _player_coins
@@ -320,6 +334,17 @@ func _pop(target: Control) -> void:
 	_pop_tween.tween_property(target, "scale", Vector2.ONE, 0.28) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
+
+
+## "  ·  USTALIK ★★ (62/150)" — iş ustalığı görünür olsun; yıldız yoksa yalnızca sayaç.
+func _mastery_text(type: RepairType) -> String:
+	var mastery: JobMastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
+	if mastery == null:
+		return ""
+	var stars: int = mastery.stars(type.id)
+	var next: int = mastery.next_threshold(type.id)
+	var text: String = "  ·  USTALIK %s" % ("★".repeat(stars) if stars > 0 else "")
+	return text + ("" if next == 0 else " (%d/%d)" % [mastery.count(type.id), next])
 
 
 func _make_label(text: String, variation: StringName) -> Label:

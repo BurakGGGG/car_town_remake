@@ -22,6 +22,13 @@ extends Resource
 @export_range(0, 100000) var cost: int = 100
 ## İşin açıldığı oyuncu seviyesi.
 @export_range(1, 99) var min_level: int = 1
+## İşin açıldığı GARAJ seviyesi (fiziksel genişleme). Orta süreli işler bir bay'i uzun süre işgal
+## ettiği için ikinci bay'in alınabilir olduğu garaj seviyesinden önce müşteri olarak gelmezler.
+@export_range(1, 4) var min_garage_level: int = 1
+## İşin açılması için AÇILMIŞ tamir alanı sayısı. Ölçüm (model simülasyonu): tek alanı olan oyuncu
+## 300 sn'lik bir işi alırsa 5 dakika boyunca yapacak hiçbir şeyi kalmıyor; almazsa bekleme noktası
+## kalıcı olarak tıkanıyor (müşterinin sabır sayacı yok). Uzun iş ancak başka alan varken gelir.
+@export_range(1, 3) var min_bays: int = 1
 ## Plaka ikonu (HudIcon.Kind adı: WRENCH, CAR, ROTATE, ...).
 @export var icon: StringName = &"WRENCH"
 ## Küçük seçim plakası başlığı; boşsa title'ın ilk kelimesi.
@@ -39,13 +46,24 @@ func short_title() -> String:
 	return short if short != "" else title.split(" ")[0]
 
 
-## ARIZA KATALOĞU — 4 tür. Süre (sn), ödül (₺) ve XP burada tanımlıdır.
+## ARIZA KATALOĞU — süre (sn), ödül (₺), XP, seviye ve garaj şartı burada tanımlıdır.
+##
+## İKİ KADEME (Car Town'ın süre/kâr eğrisi):
+##   KISA  (6–12 sn)  — bay zamanı başına EN İYİ kazanç (~1.000 ₺/dk); aktif oyuncunun ekmeği.
+##   ORTA  (90–300 sn) — bay zamanı başına daha düşük (~350–400 ₺/dk) ama tek işte çok daha yüksek
+##                        mutlak ödül ve XP. Bir bay'i uzun süre işgal eder → "alayım mı?" kararı.
+## Oyuncu orta işi almak zorunda değildir: almazsa müşteri bekler, bir bekleme noktası dolu kalır.
 static func defaults() -> Array[RepairType]:
 	return [
+		# --- KISA İŞLER (Seviye 1, garaj 1) ---
 		_make(&"engine", "MOTOR ARIZASI", 10.0, 0, 150, 10, 1, &"WRENCH", 1.0, "MOTOR"),
 		_make(&"brakes", "FREN ARIZASI", 8.0, 0, 140, 9, 1, &"WRENCH", 1.0, "FREN"),
 		_make(&"tires", "LASTİK ARIZASI", 6.0, 0, 100, 7, 1, &"ROTATE", 1.0, "LASTİK"),
 		_make(&"body", "KAPORTA HASARI", 12.0, 0, 200, 14, 1, &"CAR", 1.0, "KAPORTA"),
+		# --- ORTA İŞLER (seviye + garaj şartı) ---
+		_make(&"paint_job", "BOYA İŞİ", 90.0, 0, 600, 45, 5, &"CAR", 0.8, "BOYA", 2, 2),
+		_make(&"upholstery", "DÖŞEME", 180.0, 0, 1150, 85, 8, &"WRENCH", 0.6, "DÖŞEME", 2, 2),
+		_make(&"brake_overhaul", "FREN REVİZYONU", 300.0, 0, 1800, 140, 12, &"WRENCH", 0.5, "REVİZYON", 3, 3),
 	]
 
 
@@ -62,7 +80,7 @@ static func engine() -> RepairType:
 	return defaults()[0]
 
 
-static func _make(p_id: StringName, p_title: String, p_duration: float, p_cost: int, p_reward: int, p_xp: int, p_level: int, p_icon: StringName, p_weight: float, p_short: String = "") -> RepairType:
+static func _make(p_id: StringName, p_title: String, p_duration: float, p_cost: int, p_reward: int, p_xp: int, p_level: int, p_icon: StringName, p_weight: float, p_short: String = "", p_garage: int = 1, p_bays: int = 1) -> RepairType:
 	var t: RepairType = RepairType.new()
 	t.short = p_short
 	t.id = p_id
@@ -72,6 +90,8 @@ static func _make(p_id: StringName, p_title: String, p_duration: float, p_cost: 
 	t.reward = p_reward
 	t.xp = p_xp
 	t.min_level = p_level
+	t.min_garage_level = p_garage
+	t.min_bays = p_bays
 	t.icon = p_icon
 	t.weight = p_weight
 	return t

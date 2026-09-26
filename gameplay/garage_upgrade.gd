@@ -5,8 +5,12 @@ extends Resource
 ##
 ## Seviye 1'den başlar. `costs[i]` = (i+1) → (i+2) seviyesine yükseltme ücretidir; dolayısıyla
 ## max_level = costs.size() + 1. `effects[i]` = (i+1). seviyedeki oyun etkisidir:
-##   repair_speed    → süre çarpanı (1.0, 0.9, 0.8, 0.7, 0.6)
-##   repair_capacity → aynı anda tamir edilebilen araç sayısı (1, 2, 3)
+##   repair_speed → süre çarpanı (1.0, 0.9, 0.8, 0.7, 0.6)
+##   garage_level → garajın FİZİKSEL seviyesi (1..4). Zemin/duvar boyutunu GarageSystem büyütür ve
+##                  her seviye bir sonraki TAMİR ALANINI ortaya çıkarır — ama alanı açmaz:
+##                  alanın kendi ücreti RepairBayManager'da ödenir (iki ayrı satın alma).
+## NOT: eski "repair_capacity" geliştirmesi kaldırıldı; kapasite artık satın alınmış alan sayısıdır
+## (GarageUpgradeManager.repair_capacity() bunu RepairBayManager'dan okur).
 ## Katalog tek yerde: defaults(). Maliyet/etki değiştirmek için orası yeter.
 
 @export var id: StringName = &"repair_speed"
@@ -54,8 +58,8 @@ static func defaults() -> Array[GarageUpgrade]:
 	return [
 		_make(&"repair_speed", "TAMİR HIZI", &"WRENCH", "Tamir süresi",
 			PackedInt32Array([1000, 2000, 3500, 5000]), PackedFloat32Array([1.0, 0.9, 0.8, 0.7, 0.6])),
-		_make(&"repair_capacity", "TAMİR ALANI", &"GARAGE", "Aynı anda tamir",
-			PackedInt32Array([2500, 5000]), PackedFloat32Array([1.0, 2.0, 3.0])),
+		_make(&"garage_level", "GARAJ SEVİYESİ", &"GARAGE", "Garaj alanı",
+			PackedInt32Array([12000, 30000, 60000]), PackedFloat32Array([1.0, 2.0, 3.0, 4.0])),
 	]
 
 

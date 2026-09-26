@@ -25,6 +25,9 @@ signal vehicle_purchased(vehicle_id: StringName)
 ## Satın alma olmadı: zaten sahip, katalogda yok ya da bakiye yetersiz (UI uyarısı için).
 signal purchase_failed(vehicle_id: StringName, price: int)
 ## Sahip olunan araç listesi değişti (satın alma, ekleme, çıkarma, kayıttan yükleme).
+## Araç satıldı (eline geçen ₺ ile birlikte).
+signal vehicle_sold(vehicle_id: StringName, payout: int)
+
 signal ownership_changed
 ## Aracın boyası değişti (satın alma, fabrika rengine dönüş, kayıttan yükleme).
 signal paint_changed(vehicle_id: StringName, color: Color)
@@ -38,6 +41,8 @@ enum Status {
 	OWNED,          ## zaten oyuncunun
 	PURCHASABLE,    ## satın alınabilir (bakiye yeter)
 	TOO_EXPENSIVE,  ## bakiye yetersiz
+	LOCKED_LEVEL,   ## oyuncu seviyesi yetmiyor (cars.json min_level)
+	LOCKED_RANK,    ## garaj değeri rütbesi yetmiyor (cars.json min_garage_rank)
 	UNKNOWN,        ## katalogda yok
 }
 
@@ -81,12 +86,20 @@ func can_purchase(vehicle_id: StringName) -> bool:
 	return status(vehicle_id) == Status.PURCHASABLE
 
 
-## UI için tek karar noktası (SAHİPSİN / SATIN AL / PARA YETERSİZ).
+## UI için tek karar noktası (SAHİPSİN / SATIN AL / PARA YETERSİZ / SEVİYE / RÜTBE).
+## Car Town prensibi: pahalı araçlar yalnızca PARAYLA değil İLERLEMEYLE de açılır — oyuncu seviyesi
+## (ustalık) ve garaj değeri rütbesi (garajın büyüklüğü). Kilit sırası: seviye → rütbe → para.
 func status(vehicle_id: StringName) -> Status:
-	if CarCatalog.get_entry(vehicle_id).is_empty():
+	var entry: Dictionary = CarCatalog.get_entry(vehicle_id)
+	if entry.is_empty():
 		return Status.UNKNOWN
 	if is_owned(vehicle_id):
 		return Status.OWNED
+	var progress: PlayerProgress = _progress()
+	if progress and progress.level < int(entry.get("min_level", 1)):
+		return Status.LOCKED_LEVEL
+	if GarageValue.current_rank(get_tree()) < int(entry.get("min_garage_rank", 1)):
+		return Status.LOCKED_RANK
 	var economy: EconomyManager = _economy()
 	if economy and not economy.can_afford(price(vehicle_id)):
 		return Status.TOO_EXPENSIVE
@@ -103,7 +116,8 @@ func purchase_vehicle(vehicle_id: StringName) -> bool:
 		push_warning("VehicleOwnership: katalogda '%s' yok" % vehicle_id)
 		purchase_failed.emit(vehicle_id, 0)
 		return false
-	if is_owned(vehicle_id):
+	var gate: Status = status(vehicle_id)
+	if gate == Status.OWNED or gate == Status.LOCKED_LEVEL or gate == Status.LOCKED_RANK:
 		purchase_failed.emit(vehicle_id, int(entry["price"]))
 		return false
 	var cost: int = int(entry["price"])
@@ -128,6 +142,41 @@ func add_vehicle(vehicle_id: StringName) -> bool:
 	_owned.append(vehicle_id)
 	ownership_changed.emit()
 	_request_save()
+	return true
+
+
+## Satış oranı: aracın katalog fiyatının bu kadarı geri döner. Car Town'ın "Recycling" prensibi:
+## yanlış alımın bedeli var ama araç tamamen çöpe gitmiyor. %40 seçildi çünkü daha yükseği
+## "al-sat" ile ekonomi sömürüsüne, daha düşüğü satışı tamamen anlamsız hale getiriyordu.
+const SELL_RATIO: float = 0.4
+
+
+## Bu aracın açılması için gereken oyuncu seviyesi (UI yazısı için).
+func required_level(vehicle_id: StringName) -> int:
+	return int(CarCatalog.get_entry(vehicle_id).get("min_level", 1))
+
+
+## Bu aracın açılması için gereken garaj değeri rütbesi (UI yazısı için).
+func required_rank(vehicle_id: StringName) -> int:
+	return int(CarCatalog.get_entry(vehicle_id).get("min_garage_rank", 1))
+
+
+## Bu aracı satarsan eline geçecek ₺.
+func sell_price(vehicle_id: StringName) -> int:
+	return int(round(float(price(vehicle_id)) * SELL_RATIO))
+
+
+## Aracı satar: ücret eklenir, boyası silinir, sahiplikten çıkar. Son araç satılamaz (false).
+func sell_vehicle(vehicle_id: StringName) -> bool:
+	if not is_owned(vehicle_id) or _owned.size() <= 1:
+		return false
+	var payout: int = sell_price(vehicle_id)
+	if not remove_vehicle(vehicle_id):   # boyayı da temizler, fabrika rengini geri yazar
+		return false
+	var economy: EconomyManager = _economy()
+	if economy:
+		economy.add_money(payout)
+	vehicle_sold.emit(vehicle_id, payout)
 	return true
 
 

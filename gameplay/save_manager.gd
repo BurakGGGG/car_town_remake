@@ -14,6 +14,9 @@ extends Node
 ## Kaydedilmeyenler (oyun açılışında sıfırdan oluşur): trafikteki NPC'ler, bekleyen müşteriler,
 ## süren tamirler, araç konumları, kamera, UI durumu, seçili araç.
 ##
+## Kayıtta garajın FİZİKSEL seviyesi (garage_upgrades.garage_level) ile SATIN ALINMIŞ tamir alanı
+## sayısı (repair_bays.unlocked) ayrı alanlardır: garaj büyük olup alan satın alınmamış olabilir.
+##
 ## Dosya: user://savegame.json (JSON, "version" alanıyla). Eski sürümler hâlâ geçerlidir ve yüklenince
 ## güncel sürümle yeniden yazılır: v1'de "vehicles" yoktur (başlangıç aracı sahiplenilir), v2'de
 ## "vehicles.paint" yoktur (araçlar fabrika renginde kalır), v3'te "quests" yoktur (görevler baştan). Bozuk / okunamayan / daha yeni sürümlü
@@ -31,7 +34,7 @@ signal game_saved
 signal game_loaded(success: bool)
 
 const SAVE_PATH: String = "user://savegame.json"
-const SAVE_VERSION: int = 4
+const SAVE_VERSION: int = 7
 ## Okunabilen en eski sürüm (daha eskisi reddedilir; 1/2/3 → 4 migration yapılır).
 const MIN_VERSION: int = 1
 ## Değişiklikten sonra diske yazmadan önce beklenen süre (sn).
@@ -50,6 +53,8 @@ var _progress: PlayerProgress
 var _upgrades: GarageUpgradeManager
 var _ownership: VehicleOwnership
 var _quests: QuestManager
+var _bays: RepairBayManager
+var _mastery: JobMastery
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -71,6 +76,8 @@ func _setup() -> void:
 	_upgrades = get_tree().get_first_node_in_group("garage_upgrades") as GarageUpgradeManager
 	_ownership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 	_quests = get_tree().get_first_node_in_group("quests") as QuestManager
+	_bays = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
+	_mastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
 	_fresh_json = snapshot_json()
 	if load_on_start:
 		if has_save():
@@ -138,6 +145,10 @@ func new_game() -> void:
 		_ownership.reset()
 	if _quests:
 		_quests.reset()
+	if _bays:
+		_bays.reset()
+	if _mastery:
+		_mastery.reset()
 	_loading = false
 	save_game()
 
@@ -205,13 +216,18 @@ func _collect() -> Dictionary:
 		},
 		"garage_upgrades": {
 			String(GarageUpgradeManager.SPEED_ID): int(levels.get(GarageUpgradeManager.SPEED_ID, 1)),
-			String(GarageUpgradeManager.CAPACITY_ID): int(levels.get(GarageUpgradeManager.CAPACITY_ID, 1)),
+			# GARAJ SEVİYESİ: garajın fiziksel boyutu. Satın alınmış tamir alanı sayısı ayrı alandadır
+			# ("repair_bays.unlocked") — ikisi bilinçli olarak birbirinden bağımsızdır.
+			String(GarageUpgradeManager.GARAGE_ID): int(levels.get(GarageUpgradeManager.GARAGE_ID, 1)),
 		},
 		"vehicles": {
 			"owned": _owned_ids(),
 			"paint": _ownership.paint_state() if _ownership else {},
 		},
 		"quests": _quests.state() if _quests else {},
+		"repair_bays": {"unlocked": _bays.state() if _bays else 1},
+		# İŞ USTALIĞI: arıza id → tamamlanan iş sayısı (yıldızlar bundan türetilir)
+		"job_mastery": _mastery.state() if _mastery else {},
 	}
 
 
@@ -250,10 +266,17 @@ func _apply(data: Dictionary) -> void:
 			maxi(int(progress_data.get("xp", _progress.xp)), 0),
 			maxi(int(progress_data.get("gems", _progress.gems)), 0))
 	var upgrade_data: Dictionary = data.get("garage_upgrades", {}) if typeof(data.get("garage_upgrades")) == TYPE_DICTIONARY else {}
+	var bay_data: Dictionary = data.get("repair_bays", {}) if data.get("repair_bays") is Dictionary else {}
+	var unlocked_bays: int = maxi(int(bay_data.get("unlocked", 1)), 1)
 	if _upgrades and not upgrade_data.is_empty():
 		var levels: Dictionary = {}
 		for key: String in upgrade_data:
 			levels[StringName(key)] = int(upgrade_data[key])   # aralık dışı → apply_levels 1'e çeker
+		if not levels.has(GarageUpgradeManager.GARAGE_ID):
+			# v5 ve öncesi: "repair_capacity" hem garaj büyüklüğü hem kapasite demekti. Oyuncunun
+			# ödediği seviye fiziksel garaj seviyesi olur; satın alınmış alan sayısı ayrı kalır.
+			levels[GarageUpgradeManager.GARAGE_ID] = maxi(
+				int(upgrade_data.get(String(GarageUpgradeManager.CAPACITY_ID), 1)), unlocked_bays)
 		_upgrades.apply_levels(levels)
 	if _ownership:
 		# v1 kayıtta "vehicles" yoktur: liste boş gider, VehicleOwnership başlangıç aracını sahiplenir
@@ -266,6 +289,13 @@ func _apply(data: Dictionary) -> void:
 	if _quests:
 		# v3 kayıtta "quests" yoktur: görevler baştan başlar
 		_quests.load_state(data.get("quests", {}) if data.get("quests") is Dictionary else {})
+	if _bays:
+		# v4 ve öncesi kayıtta "repair_bays" yoktur: yalnızca ilk tamir alanı açık gelir
+		_bays.load_state(unlocked_bays)
+	if _mastery:
+		# v6 ve öncesi kayıtta "job_mastery" yoktur: ustalık sayaçları sıfırdan başlar
+		var mastery_data: Variant = data.get("job_mastery", {})
+		_mastery.load_state(mastery_data if mastery_data is Dictionary else {})
 
 
 # --- Otomatik kayıt (debounce) -----------------------------------------------------

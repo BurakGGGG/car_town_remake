@@ -6,7 +6,8 @@ extends Node
 ##    boş bir yol kenarı bekleme noktası (repair_wait_spots) varsa oraya yanaşıp durur ve balonunda
 ##    arıza adını gösterir (REPAIR_REQUESTED → REPAIR_WAITING). Arıza müşteri olurken seçilir, o
 ##    döngü boyunca değişmez; araç trafiğe dönünce sıfırlanır. Normal trafik aracında ne balon ne arıza
-##    vardır. Aynı anda en fazla MAX_REPAIR_WAITING araç bekler; sınır doluysa yeni müşteri oluşmaz.
+##    vardır. Aynı anda en fazla waiting_limit() araç bekler (garaj seviyesine bağlı, bkz. SUPPLY);
+##    sınır doluysa yeni müşteri oluşmaz.
 ##    Bekleyen müşteri tamire alınana kadar gitmez (süresiz).
 ## 2) TAMİRE AL: oyuncu bekleyen aracı seçip onaylayınca araç ANINDA boş bir CarSpot'a ışınlanır ve o
 ##    aracın ARIZASININ süresiyle sayaç başlar (REPAIR_BAY). Sürüş animasyonu yok. Kaç CarSpot'un aktif
@@ -38,10 +39,23 @@ signal repair_cancelled(car: Node3D)
 signal repair_slot_freed(car: Node3D)              # CarSpot boşaldı
 
 const CarHitbox: GDScript = preload("res://car_hitbox.gd")
-## Aynı anda yol kenarında tamir bekleyen araç üst sınırı (CarSpot'taki araç dahil değil).
-const MAX_REPAIR_WAITING: int = 2
+
+## GARAJ SEVİYESİ → MÜŞTERİ ARZI. Ölçüm (bkz. docs/GDD.md): garaj büyümeden müşteri akışı
+## dakikada ~2,4'te sabit kalıyor, bu yüzden 2. ve 3. tamir alanı ekonomik olarak işe yaramıyordu
+## (kuyruk hep boş, bay doluluğu %38). Garaj seviyesi artık arzı da büyütür:
+##   interval → customer_interval_min/max çarpanı (küçük = sık müşteri)
+##   waiting  → aynı anda yol kenarında bekleyebilen müşteri
+##   spots    → kullanılan bekleme noktası sayısı (garaj büyüdükçe bitişik kaldırım uzar)
+##   reward   → müşteri değeri çarpanı (daha iyi sınıf araçlar gelir)
+##   traffic  → TrafficManager.max_vehicles
+const SUPPLY: Array[Dictionary] = [
+	{"interval": 1.00, "waiting": 2, "spots": 2, "reward": 1.00, "traffic": 4},
+	{"interval": 0.80, "waiting": 3, "spots": 3, "reward": 1.15, "traffic": 6},
+	{"interval": 0.62, "waiting": 4, "spots": 4, "reward": 1.30, "traffic": 8},
+	{"interval": 0.48, "waiting": 5, "spots": 4, "reward": 1.45, "traffic": 8},
+]
 const SPOT_AHEAD_MIN: float = 0.5   # bekleme noktası aracın bu kadar önünde olmalı (yanaşma payı)
-const SPOT_AHEAD_MAX: float = 1.8
+const SPOT_AHEAD_MAX: float = 3.2   # aracın noktayı "görebildiği" pencere (1.8 iken adaylar çok seyrekti)
 const SPOT_SIDE_MAX: float = 0.6    # noktanın şeride yanal uzaklığı en çok (kaldırım kenarı ~0.36)
 const SPOT_CLEAR: float = 0.9       # nokta çevresinde bu yarıçapta bekleyen araç varsa dolu sayılır
 const PATH_SIDE: float = 0.55       # yanaşma yolunun bu kadar yanında duran araç varsa o nokta seçilmez
@@ -117,13 +131,51 @@ func is_repairable(car: Node3D) -> bool:
 	return is_instance_valid(car) and car is TrafficVehicle
 
 
-## Aynı anda kullanılabilen tamir alanı sayısı: geliştirme seviyesi ile sahnedeki CarSpot sayısının küçüğü.
+## Aynı anda kullanılabilen tamir alanı sayısı = SATIN ALINMIŞ tamir alanı sayısı
+## (üst sınır: sahnedeki CarSpot sayısı). Garaj seviyesi alanı yalnızca ORTAYA ÇIKARIR;
+## satın alınmadıkça kapasite artmaz ve kilitli CarSpot'a araç gönderilmez.
 func capacity() -> int:
-	var wanted: int = 1
-	var upgrades: GarageUpgradeManager = _upgrades()
-	if upgrades:
-		wanted = upgrades.repair_capacity()
+	var bays: RepairBayManager = _bays()
+	var wanted: int = bays.unlocked_count() if bays else repair_car_spots.size()
 	return clampi(wanted, 1, maxi(repair_car_spots.size(), 1))
+
+
+## Açılmış tamir alanları (sahnede yoksa null: eski davranış, hepsi açık sayılır).
+func _bays() -> RepairBayManager:
+	return get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
+
+
+## Bu garaj seviyesinin müşteri arzı ayarları.
+func _supply() -> Dictionary:
+	var upgrades: GarageUpgradeManager = _upgrades()
+	var level: int = upgrades.garage_level() if upgrades else 1
+	return SUPPLY[clampi(level - 1, 0, SUPPLY.size() - 1)]
+
+
+## Aynı anda yol kenarında bekleyebilen müşteri sayısı (garaj seviyesine bağlı).
+func waiting_limit() -> int:
+	return int(_supply()["waiting"])
+
+
+## Müşteri ödül çarpanı (garaj seviyesine bağlı).
+func reward_multiplier() -> float:
+	return float(_supply()["reward"])
+
+
+## Bu garaj seviyesinde kullanılan bekleme noktaları (garaj büyüdükçe kaldırımda daha çok yer açılır).
+func active_wait_spots() -> Array[Node3D]:
+	var limit: int = mini(int(_supply()["spots"]), repair_wait_spots.size())
+	var out: Array[Node3D] = []
+	for i: int in limit:
+		if is_instance_valid(repair_wait_spots[i]):
+			out.append(repair_wait_spots[i])
+	return out
+
+
+## Garaj seviyesi değişince trafik yoğunluğu da güncellenir (daha büyük garaj = daha canlı şehir).
+func _apply_supply() -> void:
+	if _traffic:
+		_traffic.max_vehicles = int(_supply()["traffic"])
 
 
 ## Şu an süren iş sayısı (tamir + ödül bekleyen).
@@ -197,11 +249,17 @@ func get_repair_types() -> Array[RepairType]:
 	return repair_types
 
 
-## Verilen seviyede açık işler.
+## Bu oyuncu/garaj/alan durumunda gelebilecek arızalar (müşteri seçimi bu listeden yapılır).
+## Uzun işler yalnızca garaj büyüdükten VE alan açıldıktan sonra gelir (RepairType.min_garage_level
+## / min_bays): tek alanı olan oyuncunun 5 dakikalık bir işle kilitlenmesi engellenir.
 func unlocked_types(level: int) -> Array[RepairType]:
+	var upgrades: GarageUpgradeManager = _upgrades()
+	var garage: int = upgrades.garage_level() if upgrades else 1
+	var bays: RepairBayManager = _bays()
+	var bay_count: int = bays.unlocked_count() if bays else 1
 	var out: Array[RepairType] = []
 	for t: RepairType in repair_types:
-		if t.min_level <= level:
+		if t.min_level <= level and t.min_garage_level <= garage and t.min_bays <= bay_count:
 			out.append(t)
 	return out
 
@@ -259,6 +317,7 @@ func start_repair(car: Node3D, type: RepairType = null) -> bool:
 	var upgrades: GarageUpgradeManager = _upgrades()
 	if upgrades:
 		state.duration_scale = upgrades.repair_speed_multiplier()  # hız geliştirmesi: süre × çarpan
+	state.reward_scale = reward_multiplier()                       # garaj seviyesi: müşteri değeri
 	state.start()
 	_active.append(state)
 	_progress_timer = progress_interval
@@ -293,10 +352,17 @@ func collect(car: Node3D) -> bool:
 	var economy: EconomyManager = _economy()
 	if economy:
 		economy.add_money(state.repair_reward)
+	# İŞ USTALIĞI: aynı arızayı çok yapmak XP'yi artırır, kademe atlayınca tek seferlik ödül düşer
+	var mastery: JobMastery = _mastery()
+	var xp_gain: int = state.repair_xp
+	if mastery:
+		xp_gain = int(round(float(xp_gain) * mastery.xp_multiplier(state.repair_type.id)))
 	var player: PlayerProgress = _player()
 	if player:
-		player.add_xp(state.repair_xp)
-	repair_collected.emit(vehicle, state.repair_reward, state.repair_xp)
+		player.add_xp(xp_gain)
+	if mastery:
+		mastery.record(state.repair_type.id)
+	repair_collected.emit(vehicle, state.repair_reward, xp_gain)
 	if is_instance_valid(vehicle):
 		var on_exit: Callable = _on_car_exiting.bind(vehicle)
 		if vehicle.tree_exiting.is_connected(on_exit):
@@ -340,6 +406,10 @@ func _connect_traffic() -> void:
 		push_warning("RepairManager: yol kenarı bekleme noktası (repair_wait_spots) atanmamış; müşteri oluşmaz")
 	if repair_car_spots.is_empty():
 		push_warning("RepairManager: CarSpot atanmamış; tamir başlatılamaz")
+	var upgrades: GarageUpgradeManager = _upgrades()
+	if upgrades and not upgrades.levels_changed.is_connected(_apply_supply):
+		upgrades.levels_changed.connect(_apply_supply)   # garaj büyüdü → trafik/arz güncellensin
+	_apply_supply()
 
 
 ## Sayaç dolunca ve yerde yer varsa: önünde boş bekleme noktası olan trafikteki bir NPC müşteri olur.
@@ -347,7 +417,7 @@ func _tick_customers(delta: float) -> void:
 	if _traffic == null or repair_wait_spots.is_empty():
 		return
 	_customer_timer -= delta
-	if _customer_timer > 0.0 or waiting_count() >= MAX_REPAIR_WAITING:
+	if _customer_timer > 0.0 or waiting_count() >= waiting_limit():
 		return
 	var options: Array[Dictionary] = _candidates()
 	if options.is_empty():
@@ -360,7 +430,8 @@ func _tick_customers(delta: float) -> void:
 	vehicle.request_repair(pick["spot"], job, _rng.randf_range(job.severity_min, job.severity_max))
 	if not vehicle.customer_stopped.is_connected(_on_customer_stopped):
 		vehicle.customer_stopped.connect(_on_customer_stopped)
-	_customer_timer = _rng.randf_range(customer_interval_min, customer_interval_max)
+	var interval: float = float(_supply()["interval"])
+	_customer_timer = _rng.randf_range(customer_interval_min * interval, customer_interval_max * interval)
 	customer_marked.emit(vehicle)
 
 
@@ -376,9 +447,7 @@ func _candidates() -> Array[Dictionary]:
 			continue
 		var forward: Vector3 = _flat(v.global_transform.basis.z).normalized()
 		var to_target: float = _flat(v.target.global_position - v.global_position).dot(forward)
-		for spot: Node3D in repair_wait_spots:
-			if not is_instance_valid(spot):
-				continue
+		for spot: Node3D in active_wait_spots():
 			var rel: Vector3 = _flat(spot.global_position - v.global_position)
 			var along: float = rel.dot(forward)
 			if along < SPOT_AHEAD_MIN or along > SPOT_AHEAD_MAX or along > to_target - 0.2:
@@ -464,6 +533,11 @@ func _player() -> PlayerProgress:
 ## Paranın tek kaynağı (sahnede yoksa null: maliyet/ödül uygulanmaz, akış bozulmaz).
 func _economy() -> EconomyManager:
 	return get_tree().get_first_node_in_group("economy") as EconomyManager
+
+
+## İş ustalığı (sahnede yoksa null: XP çarpanı 1.0).
+func _mastery() -> JobMastery:
+	return get_tree().get_first_node_in_group("job_mastery") as JobMastery
 
 
 ## Garaj geliştirmeleri (sahnede yoksa null: hız çarpanı 1.0, kapasite 1).

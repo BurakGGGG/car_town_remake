@@ -267,6 +267,12 @@ func _refresh_actions() -> void:
 			VehicleOwnership.Status.TOO_EXPENSIVE:
 				action.text = "%s ₺\nPARA YETERSİZ" % Hud.format_thousands(_ownership.price(id))
 				action.disabled = true
+			VehicleOwnership.Status.LOCKED_LEVEL:
+				action.text = "SEVİYE %d\nGEREKLİ" % _ownership.required_level(id)
+				action.disabled = true
+			VehicleOwnership.Status.LOCKED_RANK:
+				action.text = "RÜTBE %d\nGEREKLİ" % _ownership.required_rank(id)
+				action.disabled = true
 			_:
 				action.text = "%s ₺\nSATIN AL" % Hud.format_thousands(_ownership.price(id))
 				action.disabled = false

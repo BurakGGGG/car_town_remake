@@ -53,6 +53,12 @@ func _connect() -> void:
 		_upgrades.upgrade_purchased.connect(func(_id: StringName, _level: int) -> void: _check_completed())
 	if _player:
 		_player.level_up.connect(func(_level: int) -> void: _check_completed())
+	var bays: RepairBayManager = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
+	if bays:
+		bays.bays_changed.connect(_check_completed)
+	var mastery: JobMastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
+	if mastery:
+		mastery.mastery_up.connect(func(_id: StringName, _stars: int) -> void: _check_completed())
 	_mark_announced()
 
 
@@ -93,6 +99,14 @@ func progress(quest_id: StringName) -> int:
 			value = _upgrades.level(entry["upgrade"]) if _upgrades else 1
 		QuestCatalog.Type.PLAYER_LEVEL:
 			value = _player.level if _player else 1
+		QuestCatalog.Type.REPAIR_BAYS:
+			var bays: RepairBayManager = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
+			value = bays.unlocked_count() if bays else 1
+		QuestCatalog.Type.GARAGE_RANK:
+			value = GarageValue.current_rank(get_tree())
+		QuestCatalog.Type.JOB_STARS:
+			var mastery: JobMastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
+			value = mastery.total_stars() if mastery else 0
 		_:
 			value = int(_counters.get(quest_id, 0))
 	return clampi(value, 0, target)

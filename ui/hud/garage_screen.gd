@@ -23,6 +23,12 @@ extends Control
 ## asla aynı anda yüklenmez). Park etmiş araca tıklamak onu lifte alır — seçim bu şekilde yapılır
 ## (CarHitbox ile aynı yöntem: StaticBody3D + input_ray_pickable + input_event; ama dünyadaki statik
 ## CarHitbox.selected_car'a dokunulmaz, yoksa RepairManager'ın hedefi bozulurdu).
+## GARAJ DEĞERİ: sol sütunun sonundaki plaka garajın toplam değerini ve 10 basamaklı rütbesini
+## gösterir (GarageValue — türetilmiş, kayda yazılmaz); plakaya basınca rütbe merdiveni açılır.
+## Duvardaki tabela da rütbenin adını taşır: garaj büyüdükçe tabela değişir.
+## SATIŞ: sağdaki SAT plakası aksiyon plakalarının yerine onay plakasını açar (satış geri alınamaz);
+## para ve sahiplik VehicleOwnership.sell_vehicle'dedir, tek araç satılamaz.
+##
 ## Modeller yalnızca garaj AÇIKKEN yaşar: kapanışta hepsi serbest bırakılır, kapalıyken hiçbir araç
 ## modeli bellekte durmaz. Satın alınmayan araç hiç yüklenmez; oyuncu araçları trafiğe de çıkmaz.
 
@@ -81,6 +87,9 @@ const CAM_SHIFT_AT: float = 2.0
 
 ## Geliştirme plakaları: id → {plate, level, cost, button}
 var _upgrade_rows: Dictionary = {}
+## Tamir alanı plakaları: indeks → {title, state, button}
+var _bay_rows: Array[Dictionary] = []
+var _bays: RepairBayManager
 var _upgrades: GarageUpgradeManager
 var _economy: EconomyManager
 
@@ -101,6 +110,14 @@ var _info_tween: Tween
 var _group_targets: Dictionary = {}  # anchor'lı grup → hedef position (animasyon yarıda kesilirse geri koymak için)
 var _paint_button: PlateButton
 var _paint_panel: PaintPanel
+## Garaj değeri plakası (sol sütunun sonu) ve rütbe merdiveni ekranı.
+var _value_button: PlateButton
+var _value_screen: GarageValueScreen
+## Satış onay plakası (sağ sütun, aksiyon plakalarının yerine açılır).
+var _sell_panel: PlatePanel
+var _sell_name: Label
+var _sell_payout: Label
+var _sell_confirm: PlateButton
 
 
 func _ready() -> void:
@@ -122,7 +139,10 @@ func _ready() -> void:
 	car_list.mode = CarGallery.Mode.OWNED   # garaj listesi: yalnızca sahip olunan araçlar
 	car_list.vehicle_selected.connect(_on_vehicle_selected)
 	_build_upgrade_plates()
+	_build_bay_plates()
+	_build_value_plate()
 	_build_paint()
+	_build_sell()
 	_connect_upgrades.call_deferred()
 
 
@@ -154,6 +174,8 @@ func open() -> void:
 	_show_vehicle(target, false)
 	_refresh_collection()
 	_refresh_upgrades()
+	_refresh_bays()
+	_refresh_value()
 	_actions_clear()
 	set_process(true)
 	_enter_animation()
@@ -174,6 +196,10 @@ func close() -> void:
 
 
 func _finish_close() -> void:
+	_sell_panel.hide()
+	action_column.show()
+	if _value_screen:
+		_value_screen.hide()
 	_paint_panel.close()   # önizleme bırakılır; yeniden açılışta aksiyon plakaları görünür
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	car_list.close()
@@ -330,13 +356,20 @@ func _owner_node() -> VehicleOwnership:
 		_ownership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 		if _ownership and not _ownership.ownership_changed.is_connected(_on_ownership_changed):
 			_ownership.ownership_changed.connect(_on_ownership_changed)
+			_ownership.paint_changed.connect(func(_id: StringName, _c: Color) -> void: _refresh_value())
 	return _ownership
 
 
-## Yeni araç alındı / çıkarıldı: garaj açıksa koleksiyon anında güncellenir.
+## Yeni araç alındı / çıkarıldı: garaj açıksa koleksiyon ve garaj değeri anında güncellenir.
+## Lifteki araç satıldıysa yerine sahip olunan ilk araç alınır (lift asla boş kalmaz).
 func _on_ownership_changed() -> void:
-	if visible and not _closing:
-		_refresh_collection()
+	if not visible or _closing:
+		return
+	if _shown_vehicle != &"" and not _is_owned(_shown_vehicle):
+		_shown_vehicle = &""
+		_show_vehicle(_first_owned(), false)
+	_refresh_collection()
+	_refresh_value()
 
 
 # --- Koleksiyon: sahip olunan araçların garaj zeminindeki fiziksel kopyaları ----------
@@ -486,7 +519,7 @@ func _build_upgrade_plates() -> void:
 	caption.custom_minimum_size = Vector2(0.0, 20.0)   # plakanın altına girmesin
 	caption.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	info_column.add_child(caption)
-	for id: StringName in [GarageUpgradeManager.SPEED_ID, GarageUpgradeManager.CAPACITY_ID]:
+	for id: StringName in [GarageUpgradeManager.SPEED_ID, GarageUpgradeManager.GARAGE_ID]:
 		var plate: PlatePanel = PlatePanel.new()
 		plate.theme_type_variation = &"HudCarPlate"
 		plate.custom_minimum_size = Vector2(190.0, 0.0)
@@ -519,14 +552,99 @@ func _build_upgrade_plates() -> void:
 		_upgrade_rows[id] = {"title": title, "level": level, "button": button}
 
 
+## TAMİR ALANLARI: tek plaka içinde üç kompakt satır (ALAN 1/2/3 + durum düğmesi).
+## Sol sütun uzamasın diye satırlar tek satırlıktır; ayrıntılı "ALANI AÇ" akışı dünyadaki
+## kilitli alana tıklayınca açılan plakadadır.
+func _build_bay_plates() -> void:
+	var caption: Label = Label.new()
+	caption.text = "TAMİR ALANLARI"
+	caption.theme_type_variation = &"HudOutlined"
+	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caption.custom_minimum_size = Vector2(0.0, 20.0)
+	caption.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	info_column.add_child(caption)
+
+	var plate: PlatePanel = PlatePanel.new()
+	plate.theme_type_variation = &"HudCarPlate"
+	plate.custom_minimum_size = Vector2(190.0, 0.0)
+	var rows: VBoxContainer = VBoxContainer.new()
+	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rows.add_theme_constant_override(&"separation", 2)
+	for i: int in RepairBayManager.BAY_PRICES.size():
+		var row: HBoxContainer = HBoxContainer.new()
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_theme_constant_override(&"separation", 6)
+		var title: Label = Label.new()
+		title.theme_type_variation = &"HudInkCaption"
+		title.text = "ALAN %d" % (i + 1)
+		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var button: PlateButton = PlateButton.new()
+		button.theme_type_variation = &"HudPlateSmall"
+		button.kind = HudIcon.Kind.NONE
+		button.bolts = false
+		button.focus_mode = Control.FOCUS_NONE
+		button.custom_minimum_size = Vector2(88.0, 26.0)
+		button.pressed.connect(_on_bay_pressed.bind(i))
+		row.add_child(title)
+		row.add_child(button)
+		rows.add_child(row)
+		_bay_rows.append({"title": title, "state": title, "button": button})
+	plate.add_child(rows)
+	info_column.add_child(plate)
+
+
+func _on_bay_pressed(index: int) -> void:
+	if _bays:
+		_bays.purchase(index)   # seviye/bakiye uygun değilse hiçbir şey değişmez
+	_refresh_bays()
+
+
+## Satırları açık / satın alınabilir / kilitli durumuna göre yazar.
+func _refresh_bays() -> void:
+	for i: int in _bay_rows.size():
+		var row: Dictionary = _bay_rows[i]
+		var title: Label = row["title"]
+		var button: PlateButton = row["button"]
+		title.text = "ALAN %d" % (i + 1)
+		if _bays == null:
+			button.text = "—"
+			button.disabled = true
+			continue
+		match _bays.status(i):
+			RepairBayManager.Status.OPEN:
+				button.text = "AÇIK"
+				button.disabled = true
+			RepairBayManager.Status.NEEDS_LEVEL:
+				button.text = "Sv.%d" % _bays.required_level(i)
+				button.disabled = true
+			RepairBayManager.Status.TOO_EXPENSIVE:
+				button.text = "%s ₺" % Hud.format_thousands(_bays.price(i))
+				button.disabled = true
+			_:
+				button.text = "AÇ  %s ₺" % Hud.format_thousands(_bays.price(i))
+				button.disabled = false
+
+
 func _connect_upgrades() -> void:
 	_upgrades = get_tree().get_first_node_in_group("garage_upgrades") as GarageUpgradeManager
 	_economy = get_tree().get_first_node_in_group("economy") as EconomyManager
+	_bays = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
+	if _bays:
+		_bays.bays_changed.connect(_refresh_bays)
+		_bays.bays_changed.connect(_refresh_value)
 	if _upgrades:
-		_upgrades.upgrade_purchased.connect(func(_id: StringName, _level: int) -> void: _refresh_upgrades())
+		_upgrades.upgrade_purchased.connect(func(_id: StringName, _level: int) -> void:
+			_refresh_upgrades()
+			_refresh_bays()
+			_refresh_value())
 	if _economy:
-		_economy.money_changed.connect(func(_m: int) -> void: _refresh_upgrades())
+		_economy.money_changed.connect(func(_m: int) -> void:
+			_refresh_upgrades()
+			_refresh_bays())
 	_refresh_upgrades()
+	_refresh_bays()
 
 
 func _on_upgrade_pressed(id: StringName) -> void:
@@ -557,6 +675,132 @@ func _refresh_upgrades() -> void:
 		var cost: int = upgrade.next_cost()
 		button.text = "YÜKSELT\n%s ₺" % Hud.format_thousands(cost)
 		button.disabled = _economy != null and not _economy.can_afford(cost)
+
+
+# --- Garaj değeri ----------------------------------------------------------------
+
+## Sol sütunun sonuna tek satırlık GARAJ DEĞERİ plakası; basınca rütbe merdiveni açılır.
+func _build_value_plate() -> void:
+	_value_button = PlateButton.new()
+	_value_button.name = "GarageValueButton"
+	_value_button.theme_type_variation = &"HudCarPlate"
+	_value_button.kind = HudIcon.Kind.NONE
+	_value_button.bolts = false
+	_value_button.focus_mode = Control.FOCUS_NONE
+	_value_button.custom_minimum_size = Vector2(190.0, 0.0)
+	_value_button.pressed.connect(_open_value_screen)
+	info_column.add_child(_value_button)
+	_value_screen = GarageValueScreen.new()
+	add_child(_value_screen)   # garaj plakalarının ÜSTÜNE oturur (overlay'den sonra eklenir)
+
+
+## Plakayı ve duvardaki tabelayı güncel garaj değerine göre yazar.
+func _refresh_value() -> void:
+	if _value_button == null:
+		return
+	var value: int = GarageValue.compute(get_tree())
+	var rank: int = GarageValue.rank(value)
+	_value_button.text = "GARAJ DEĞERİ  %s ₺\n%d. %s" % [
+		Hud.format_thousands(value), rank, GarageValue.rank_name(rank)]
+	_write_wall_sign(rank)
+
+
+## Duvardaki tabela rütbenin adını taşır ("GARAJ" eki tabelada zaten fazladır). Yazı tabela
+## tahtasına (0,9 m) sığsın diye punto gerçek font ölçüsünden hesaplanır.
+const WALL_SIGN_PIXELS: float = 380.0   # 0,76 m / pixel_size 0,002 → tahtada kenar payı kalır
+
+func _write_wall_sign(rank: int) -> void:
+	var sign: Label3D = car_viewport.get_node_or_null("Environment/WallSignText") as Label3D
+	if sign == null:
+		return
+	var text: String = GarageValue.rank_name(rank).trim_suffix(" GARAJ")
+	sign.text = text
+	var font: Font = sign.font if sign.font else ThemeDB.fallback_font
+	var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 96).x
+	sign.font_size = clampi(int(96.0 * WALL_SIGN_PIXELS / maxf(width, 1.0)), 28, 96)
+
+
+func _open_value_screen() -> void:
+	if _value_screen:
+		_value_screen.open()
+
+
+# --- Araç satışı -------------------------------------------------------------------
+
+## Sağ sütuna satış onay plakası (SAT plakası basılınca aksiyon plakalarının yerine görünür).
+func _build_sell() -> void:
+	_sell_panel = PlatePanel.new()
+	_sell_panel.name = "SellPanel"
+	_sell_panel.theme_type_variation = &"HudCarPlate"
+	_sell_panel.custom_minimum_size = Vector2(190.0, 0.0)
+	_sell_panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER   # içeriği kadar yer kaplasın
+	_sell_panel.visible = false
+	var box: VBoxContainer = VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override(&"separation", 4)
+	var title: Label = Label.new()
+	title.theme_type_variation = &"HudPlateTitle"
+	title.text = "ARACI SAT"
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sell_name = Label.new()
+	_sell_name.theme_type_variation = &"HudInkCaption"
+	_sell_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sell_payout = Label.new()
+	_sell_payout.theme_type_variation = &"HudInkCaption"
+	_sell_payout.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sell_payout.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
+	_sell_confirm = PlateButton.new()
+	_sell_confirm.theme_type_variation = &"HudPlateSmall"
+	_sell_confirm.text = "ONAYLA"
+	_sell_confirm.bolts = false
+	_sell_confirm.focus_mode = Control.FOCUS_NONE
+	_sell_confirm.pressed.connect(_on_sell_confirmed)
+	var cancel: PlateButton = PlateButton.new()
+	cancel.theme_type_variation = &"HudPlateSmall"
+	cancel.text = "VAZGEÇ"
+	cancel.bolts = false
+	cancel.focus_mode = Control.FOCUS_NONE
+	cancel.pressed.connect(_close_sell)
+	box.add_child(title)
+	box.add_child(_sell_name)
+	box.add_child(_sell_payout)
+	box.add_child(_sell_confirm)
+	box.add_child(cancel)
+	_sell_panel.add_child(box)
+	right_group.add_child(_sell_panel)
+
+
+## Onay plakasını açar: hangi araç, eline ne geçecek. Tek araç satılamaz (garaj boş kalmaz).
+func _open_sell() -> void:
+	var ownership: VehicleOwnership = _owner_node()
+	if ownership == null or _shown_vehicle == &"":
+		_actions_clear()
+		return
+	var entry: Dictionary = CarCatalog.get_entry(_shown_vehicle)
+	_sell_name.text = String(entry.get("display_name", _shown_vehicle)).to_upper()
+	if ownership.owned_count() <= 1:
+		_sell_payout.text = "TEK ARACINI SATAMAZSIN"
+		_sell_confirm.disabled = true
+	else:
+		_sell_payout.text = "+%s ₺" % Hud.format_thousands(ownership.sell_price(_shown_vehicle))
+		_sell_confirm.disabled = false
+	_paint_panel.close()
+	action_column.hide()
+	_sell_panel.show()
+
+
+func _close_sell() -> void:
+	_sell_panel.hide()
+	action_column.show()
+	_actions_clear()
+
+
+func _on_sell_confirmed() -> void:
+	var ownership: VehicleOwnership = _owner_node()
+	if ownership == null:
+		return
+	ownership.sell_vehicle(_shown_vehicle)   # son araçsa hiçbir şey değişmez
+	_close_sell()
 
 
 # --- Boya atölyesi -------------------------------------------------------------
@@ -606,7 +850,16 @@ func _on_paint_preview_cleared() -> void:
 # --- Aksiyon plakaları -------------------------------------------------------
 
 func _on_action_toggled(pressed: bool, action: StringName) -> void:
+	if action == &"sell":
+		if pressed:
+			_open_sell()
+		else:
+			_sell_panel.hide()
+			action_column.show()
+		return
 	if pressed:
+		_sell_panel.hide()
+		action_column.show()
 		action_selected.emit(action, _shown_vehicle)
 
 

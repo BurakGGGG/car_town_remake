@@ -96,6 +96,18 @@ var _notice_plate: PlatePanel
 var _notice_label: Label
 var _notice_tween: Tween
 
+# Tamir alanı satın alma plakası (dünyadaki kilitli alana tıklanınca)
+var _bays: RepairBayManager
+var _bay_plate: PlatePanel
+var _bay_title: Label
+var _bay_price: Label
+var _bay_buy: PlateButton
+var _bay_index: int = -1
+var _plate_mode: StringName = &"bay"   # &"bay" ya da &"garage"
+var _upgrades: GarageUpgradeManager
+var _garage: Node
+var _ownership: VehicleOwnership
+
 
 func _ready() -> void:
 	camera_controls.visible = false
@@ -138,6 +150,7 @@ func _ready() -> void:
 	_repair_panel.collect_pressed.connect(_on_collect_pressed)
 	car_stats_container.add_child(_repair_panel)
 	_build_notice_plate()
+	_build_bay_plate()
 	_connect_gameplay.call_deferred()  # sahnedeki yöneticiler hazır olsun
 
 
@@ -215,6 +228,15 @@ static func format_thousands(value: int) -> String:
 
 # --- Tamir döngüsü bağlantısı ----------------------------------------------------
 
+## Aynı anda en fazla bu kadar bildirim beklet (fazlası oyuncuyu geride bırakır).
+const NOTICE_QUEUE_MAX: int = 4
+
+var _notice_queue: Array[Dictionary] = []
+var _notice_busy: bool = false
+## Son bilinen garaj rütbesi (rütbe atlayınca bildirim gösterilir; GarageValue'nun sinyali yoktur).
+var _garage_rank: int = 0
+
+
 func _connect_gameplay() -> void:
 	_economy = get_tree().get_first_node_in_group("economy") as EconomyManager
 	if _economy:
@@ -226,8 +248,20 @@ func _connect_gameplay() -> void:
 		_player_progress.level_up.connect(func(_l: int) -> void: _refresh_repair_panel(false))
 		_player_progress.gems_changed.connect(set_gems)
 		_player_progress.xp_changed.connect(_on_xp_changed)
+		_player_progress.level_reward.connect(_on_level_reward)
 		set_gems(_player_progress.gems)
 		_on_xp_changed(_player_progress.level, _player_progress.xp, _player_progress.xp_to_next())
+	_upgrades = get_tree().get_first_node_in_group("garage_upgrades") as GarageUpgradeManager
+	_garage = get_tree().get_first_node_in_group("garage_system")
+	if _garage and _garage.has_signal(&"expand_clicked"):
+		_garage.connect(&"expand_clicked", show_expansion_plate)
+	if _upgrades:
+		_upgrades.upgrade_purchased.connect(_on_upgrade_purchased)
+	_bays = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
+	if _bays:
+		_bays.bay_clicked.connect(show_bay_plate)
+		_bays.bay_unlocked.connect(_on_bay_unlocked)
+		_bays.purchase_failed.connect(_on_bay_purchase_failed)
 	_repair_manager = get_tree().get_first_node_in_group("repair_manager") as RepairManager
 	if _repair_manager:
 		_repair_manager.target_changed.connect(_on_repair_target_changed)
@@ -239,11 +273,24 @@ func _connect_gameplay() -> void:
 		_repair_manager.repair_cancelled.connect(_on_repair_cancelled)
 		_repair_manager.customer_marked.connect(_on_customer_changed)
 		_repair_manager.customer_stopped.connect(_on_customer_changed)
+	var mastery: JobMastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
+	if mastery:
+		mastery.mastery_up.connect(_on_mastery_up)
 	_quests = get_tree().get_first_node_in_group("quests") as QuestManager
 	if _quests:
 		_quests.quests_changed.connect(_refresh_quest_button)
 		_quests.quest_completed.connect(_on_quest_completed)
 	_refresh_quest_button()
+	# Garaj rütbesi türetilmiştir: değeri büyütebilen her olaydan sonra bakılır
+	_ownership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+	if _ownership:
+		_ownership.ownership_changed.connect(_check_garage_rank)
+		_ownership.paint_changed.connect(func(_id: StringName, _c: Color) -> void: _check_garage_rank())
+	if _upgrades:
+		_upgrades.levels_changed.connect(_check_garage_rank)
+	if _bays:
+		_bays.bays_changed.connect(_check_garage_rank)
+	_check_garage_rank()
 	var cloud: CloudSaveManager = get_tree().get_first_node_in_group("cloud_save") as CloudSaveManager
 	if cloud:
 		cloud.user_changed.connect(_on_cloud_user_changed)
@@ -264,6 +311,8 @@ func _on_xp_changed(new_level: int, current_xp: int, xp_to_next: int) -> void:
 ## Seçili tamir edilebilir araç değişti (null = plaka kapanır).
 func _on_repair_target_changed(car: Node3D) -> void:
 	_repair_target = car
+	if car != null:
+		hide_bay_plate()
 	if car == null:
 		hide_car_info()
 		return
@@ -338,13 +387,166 @@ func _build_notice_plate() -> void:
 	column.move_child(_notice_plate, car_info_panel.get_index())
 
 
+## Dünyadaki kilitli tamir alanına tıklanınca açılan fiziksel satın alma plakası:
+## "TAMİR ALANI 2 / 8.000 ₺ / [ALANI AÇ] [VAZGEÇ]". Yeni UI dili yok, mevcut plakalar.
+func _build_bay_plate() -> void:
+	_bay_plate = PlatePanel.new()
+	_bay_plate.name = "BayPlate"
+	_bay_plate.theme_type_variation = &"HudCarPlate"
+	_bay_plate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_bay_plate.visible = false
+	var margin: MarginContainer = MarginContainer.new()
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side: StringName in [&"margin_left", &"margin_right"]:
+		margin.add_theme_constant_override(side, 16)
+	for side: StringName in [&"margin_top", &"margin_bottom"]:
+		margin.add_theme_constant_override(side, 8)
+	var box: VBoxContainer = VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override(&"separation", 4)
+	_bay_title = Label.new()
+	_bay_title.theme_type_variation = &"HudPlateTitle"
+	_bay_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_bay_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bay_price = Label.new()
+	_bay_price.theme_type_variation = &"HudInkValue"
+	_bay_price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_bay_price.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var buttons: HBoxContainer = HBoxContainer.new()
+	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override(&"separation", 8)
+	_bay_buy = PlateButton.new()
+	_bay_buy.theme_type_variation = &"HudPlateSmall"
+	_bay_buy.text = "ALANI AÇ"
+	_bay_buy.bolts = false
+	_bay_buy.focus_mode = Control.FOCUS_NONE
+	_bay_buy.pressed.connect(_on_bay_buy_pressed)
+	var cancel: PlateButton = PlateButton.new()
+	cancel.theme_type_variation = &"HudPlateSmall"
+	cancel.text = "VAZGEÇ"
+	cancel.bolts = false
+	cancel.focus_mode = Control.FOCUS_NONE
+	cancel.pressed.connect(hide_bay_plate)
+	buttons.add_child(_bay_buy)
+	buttons.add_child(cancel)
+	box.add_child(_bay_title)
+	box.add_child(_bay_price)
+	box.add_child(buttons)
+	margin.add_child(box)
+	_bay_plate.add_child(margin)
+	var column: Node = car_info_panel.get_parent()
+	column.add_child(_bay_plate)
+	column.move_child(_bay_plate, car_info_panel.get_index())
+
+
+## Kilitli alana tıklandı: plaka alanın durumuna göre açılır.
+func show_bay_plate(index: int) -> void:
+	if _bays == null:
+		return
+	_bay_index = index
+	_plate_mode = &"bay"
+	_bay_buy.text = "ALANI AÇ"
+	hide_car_info()
+	_bay_title.text = "TAMİR ALANI %d" % (index + 1)
+	var price: String = format_thousands(_bays.price(index))
+	match _bays.status(index):
+		RepairBayManager.Status.NEEDS_LEVEL:
+			_bay_price.text = "TAMİR ALANI Sv.%d GEREKLİ" % _bays.required_level(index)
+			_bay_buy.disabled = true
+		RepairBayManager.Status.TOO_EXPENSIVE:
+			_bay_price.text = "%s ₺  ·  PARA YETERSİZ" % price
+			_bay_buy.disabled = true
+		RepairBayManager.Status.OPEN:
+			_bay_price.text = "AÇIK"
+			_bay_buy.disabled = true
+		_:
+			_bay_price.text = "%s ₺" % price
+			_bay_buy.disabled = false
+	_bay_plate.show()
+
+
+## Dünyadaki "GARAJI GENİŞLET" tabelasına tıklandı: garajın fiziksel seviyesini satın alma plakası.
+## Bu, tamir alanı satın almadan AYRI bir işlemdir (garaj büyür, alan yine ayrıca açılır).
+func show_expansion_plate() -> void:
+	if _upgrades == null:
+		return
+	_plate_mode = &"garage"
+	_bay_index = -1
+	hide_car_info()
+	var id: StringName = GarageUpgradeManager.GARAGE_ID
+	_bay_title.text = "GARAJI GENİŞLET"
+	if _upgrades.is_max(id):
+		_bay_price.text = "MAKSİMUM"
+		_bay_buy.disabled = true
+	else:
+		var cost: int = _upgrades.next_cost(id)
+		var affordable: bool = _economy == null or _economy.can_afford(cost)
+		_bay_price.text = "SEVİYE %d  ·  %s ₺%s" % [
+			_upgrades.level(id) + 1, format_thousands(cost), "" if affordable else "  ·  PARA YETERSİZ"]
+		_bay_buy.disabled = not affordable
+	_bay_buy.text = "GENİŞLET"
+	_bay_plate.show()
+
+
+func hide_bay_plate() -> void:
+	_bay_index = -1
+	_plate_mode = &"bay"
+	_bay_buy.text = "ALANI AÇ"
+	_bay_plate.hide()
+
+
+func _on_bay_buy_pressed() -> void:
+	if _plate_mode == &"garage":
+		if _upgrades:
+			_upgrades.buy(GarageUpgradeManager.GARAGE_ID)   # bakiye yetmezse hiçbir şey değişmez
+		return
+	if _bays and _bay_index >= 0:
+		_bays.purchase(_bay_index)   # para/seviye uygun değilse hiçbir şey değişmez
+
+
+## Garaj genişledi: plaka kapanır, kısa bildirim çıkar (yeni tamir alanı kilitli olarak belirir).
+func _on_upgrade_purchased(id: StringName, level: int) -> void:
+	if id != GarageUpgradeManager.GARAGE_ID:
+		return
+	hide_bay_plate()
+	_show_notice("GARAJ SEVİYE %d" % level, HudPalette.COIN_DARK)
+
+
+func _on_bay_unlocked(index: int) -> void:
+	hide_bay_plate()
+	_show_notice("TAMİR ALANI %d AÇILDI" % (index + 1), HudPalette.COIN_DARK)
+
+
+func _on_bay_purchase_failed(index: int, price: int) -> void:
+	_show_notice("%s ₺ GEREKLİ" % format_thousands(price), HudPalette.INK)
+	if _bay_plate.visible:
+		show_bay_plate(index)   # plaka güncel durumu göstersin
+
+
+## Bildirim plakası SIRAYLA gösterir: ödül toplamak seviye atlatabilir, seviye ustalık kademesi
+## açabilir — aynı karede gelen bildirimler birbirini silmesin diye kuyruğa girer.
 func _show_notice(text: String, color: Color, hold: float = 1.6) -> void:
 	if _notice_plate == null:
 		return
+	_notice_queue.append({"text": text, "color": color, "hold": hold})
+	if _notice_queue.size() > NOTICE_QUEUE_MAX:
+		_notice_queue.pop_front()   # taşarsa en eskisi düşer (oyuncu güncel olanı görsün)
+	if not _notice_busy:
+		_drain_notices()
+
+
+func _drain_notices() -> void:
+	_notice_busy = true
+	while not _notice_queue.is_empty():
+		var notice: Dictionary = _notice_queue.pop_front()
+		await _play_notice(String(notice["text"]), notice["color"], float(notice["hold"]))
+	_notice_busy = false
+
+
+func _play_notice(text: String, color: Color, hold: float) -> void:
 	_notice_label.text = text
 	_notice_label.add_theme_color_override(&"font_color", color)
-	if _notice_tween:
-		_notice_tween.kill()
 	_notice_plate.modulate.a = 0.0
 	_notice_plate.show()
 	await get_tree().process_frame  # container boyutu hesaplansın
@@ -358,6 +560,41 @@ func _show_notice(text: String, color: Color, hold: float = 1.6) -> void:
 	_notice_tween.tween_interval(hold)
 	_notice_tween.tween_property(_notice_plate, "modulate:a", 0.0, 0.25)
 	_notice_tween.tween_callback(_notice_plate.hide)
+	await _notice_tween.finished
+
+
+## Seviye atlandı: para ödülü ve (varsa) açılan içerik plakada duyurulur.
+func _on_level_reward(new_level: int, money: int, text: String) -> void:
+	var line: String = "SEVİYE %d   +%s ₺" % [new_level, format_thousands(money)]
+	if text != "":
+		line += "\n%s" % text
+	_show_notice(line, HudPalette.COIN_DARK, 2.2)
+
+
+## İş ustalığı kademesi atlandı: hangi iş, kaçıncı yıldız, tek seferlik ödül.
+func _on_mastery_up(job_id: StringName, stars: int) -> void:
+	var title: String = job_id
+	if _repair_manager:
+		for type: RepairType in _repair_manager.repair_types:
+			if type.id == job_id:
+				title = type.title
+				break
+	var reward: int = JobMastery.STAR_REWARDS[clampi(stars - 1, 0, JobMastery.STAR_REWARDS.size() - 1)]
+	_show_notice("%s USTALIK %d★\n+%s ₺" % [title, stars, format_thousands(reward)],
+			HudPalette.COIN_DARK, 2.2)
+
+
+## Garaj rütbesi değişti mi diye bakar (GarageValue türetilmiştir, sinyali yoktur).
+func _check_garage_rank() -> void:
+	var rank: int = GarageValue.current_rank(get_tree())
+	if _garage_rank == 0:
+		_garage_rank = rank
+		return
+	if rank <= _garage_rank:
+		return
+	_garage_rank = rank
+	_show_notice("GARAJ RÜTBESİ %d\n%s" % [rank, GarageValue.rank_name(rank)],
+			HudPalette.COIN_DARK, 2.2)
 
 
 ## Showroom'dan araç satın alındı: kısa bildirim plakası (para düşüşünü zaten coin plakası gösterir).

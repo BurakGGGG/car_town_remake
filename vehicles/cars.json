@@ -7,7 +7,7 @@
 			"model": "E46",
 			"display_name": "BMW E46",
 			"year": 2003,
-			"price": 125000,
+			"price": 85000,
 			"condition": 0.85,
 			"category": "sedan",
 			"scene_path": "res://assets/cars/bmw_e_46.tscn",
@@ -24,7 +24,10 @@
 			],
 			"world_node": "Car_BMW_E46",
 			"plate_color": "#7FD3F5",
-			"traffic": true
+			"traffic": true,
+			"class": "A",
+			"min_level": 1,
+			"min_garage_rank": 1
 		},
 		{
 			"id": "hyundai_getz",
@@ -32,7 +35,7 @@
 			"model": "Getz",
 			"display_name": "Hyundai Getz",
 			"year": 2008,
-			"price": 48000,
+			"price": 35000,
 			"condition": 0.72,
 			"category": "hatchback",
 			"scene_path": "res://assets/cars/hyundai_getz.tscn",
@@ -49,7 +52,10 @@
 			],
 			"world_node": "Car_HYUNDAI_GETZ",
 			"plate_color": "#F5BE4C",
-			"traffic": true
+			"traffic": true,
+			"class": "C",
+			"min_level": 8,
+			"min_garage_rank": 2
 		},
 		{
 			"id": "renault_fluence",
@@ -57,7 +63,7 @@
 			"model": "Fluence",
 			"display_name": "Renault Fluence",
 			"year": 2012,
-			"price": 96000,
+			"price": 60000,
 			"condition": 0.64,
 			"category": "sedan",
 			"scene_path": "res://assets/cars/renault_fluence.tscn",
@@ -74,7 +80,10 @@
 			],
 			"world_node": "CAR_RENAULT_FLUENCE",
 			"plate_color": "#F3E8CF",
-			"traffic": true
+			"traffic": true,
+			"class": "B",
+			"min_level": 15,
+			"min_garage_rank": 4
 		},
 		{
 			"id": "vw_passat_b55",
@@ -82,7 +91,7 @@
 			"model": "Passat B5.5",
 			"display_name": "Volkswagen Passat B5.5",
 			"year": 2004,
-			"price": 74000,
+			"price": 50000,
 			"condition": 0.58,
 			"category": "sedan",
 			"scene_path": "res://assets/cars/volswagen_passat_b_5_5.tscn",
@@ -99,7 +108,10 @@
 			],
 			"world_node": "CAR_VW_PASSAT",
 			"plate_color": "#83B24F",
-			"traffic": true
+			"traffic": true,
+			"class": "B",
+			"min_level": 12,
+			"min_garage_rank": 3
 		},
 		{
 			"id": "hyundai_era",
@@ -107,7 +119,7 @@
 			"model": "Era",
 			"display_name": "Hyundai Era",
 			"year": 2007,
-			"price": 42000,
+			"price": 30000,
 			"condition": 0.7,
 			"category": "sedan",
 			"scene_path": "res://assets/cars/hyundai_era.tscn",
@@ -124,7 +136,10 @@
 			],
 			"world_node": "Car_HYUNDAI_ERA",
 			"plate_color": "#9FD6C8",
-			"traffic": true
+			"traffic": true,
+			"class": "C",
+			"min_level": 6,
+			"min_garage_rank": 1
 		},
 		{
 			"id": "renault_toros",
@@ -132,7 +147,7 @@
 			"model": "Toros",
 			"display_name": "Renault Toros",
 			"year": 1994,
-			"price": 26000,
+			"price": 20000,
 			"condition": 0.55,
 			"category": "sedan",
 			"scene_path": "res://assets/cars/renault_toros.tscn",
@@ -149,7 +164,10 @@
 			],
 			"world_node": "Car_RENAULT_TOROS",
 			"plate_color": "#E8C58A",
-			"traffic": true
+			"traffic": true,
+			"class": "D",
+			"min_level": 3,
+			"min_garage_rank": 1
 		},
 		{
 			"id": "tofas_sahin",
@@ -158,7 +176,7 @@
 			"display_name": "Tofaş Şahin",
 			"label": "TOFAŞ\nŞAHİN",
 			"year": 1995,
-			"price": 22000,
+			"price": 15000,
 			"condition": 0.5,
 			"category": "sedan",
 			"scene_path": "res://assets/cars/tofas_sahin.tscn",
@@ -175,7 +193,10 @@
 			],
 			"world_node": "Car_TOFAS_SAHIN",
 			"plate_color": "#D9E7C8",
-			"traffic": true
+			"traffic": true,
+			"class": "D",
+			"min_level": 1,
+			"min_garage_rank": 1
 		}
 	]
 }

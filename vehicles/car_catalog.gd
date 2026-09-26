@@ -4,6 +4,9 @@ class_name CarCatalog
 ##
 ## Kayıt alanları (normalize edilmiş):
 ##   id (StringName), brand, model, display_name, year (int), price (int), condition (0–1),
+##   class (araç sınıfı: D/C/B/A — yalnızca gösterim),
+##   min_level (aracın showroom'da açıldığı oyuncu seviyesi),
+##   min_garage_rank (aracın açıldığı garaj değeri rütbesi — GarageValue),
 ##   category, scene_path (oyunun kullandığı sahne: wrapper .tscn veya doğrudan optimized .glb),
 ##   source_path (editör kaynağı, export dışı), optimized_path, default_color (fabrika boyası),
 ##   available_colors (Array[Color]), world_node (Main.tscn'deki node adı; yoksa boş),
@@ -146,6 +149,9 @@ static func _normalize(raw: Dictionary) -> Dictionary:
 		"optimized_path": String(raw.get("optimized_path", "")),
 		"default_color": _color(raw.get("default_color", "#FFFFFF"), Color.WHITE),
 		"available_colors": colors,
+		"class": String(raw.get("class", "")),
+		"min_level": maxi(int(raw.get("min_level", 1)), 1),
+		"min_garage_rank": maxi(int(raw.get("min_garage_rank", 1)), 1),
 		"world_node": StringName(String(raw.get("world_node", ""))),
 		"plate_color": _color(raw.get("plate_color", "#F3E8CF"), Color("F3E8CF")),
 		"traffic": bool(raw.get("traffic", true)),

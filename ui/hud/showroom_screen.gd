@@ -880,6 +880,12 @@ func _refresh_state() -> void:
 		VehicleOwnership.Status.TOO_EXPENSIVE:
 			_buy_button.text = "%s ₺\nPARA YETERSİZ" % Hud.format_thousands(price)
 			_buy_button.disabled = true
+		VehicleOwnership.Status.LOCKED_LEVEL:
+			_buy_button.text = "SEVİYE %d\nGEREKLİ" % _ownership.required_level(_shown_vehicle)
+			_buy_button.disabled = true
+		VehicleOwnership.Status.LOCKED_RANK:
+			_buy_button.text = "GARAJ RÜTBESİ %d\nGEREKLİ" % _ownership.required_rank(_shown_vehicle)
+			_buy_button.disabled = true
 		_:
 			_buy_button.text = "SATIN AL\n%s ₺" % Hud.format_thousands(price)
 			_buy_button.disabled = false

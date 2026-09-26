@@ -17,6 +17,9 @@ var bay_index: int = 0
 ## Süre çarpanı: garaj "tamir hızı" geliştirmesinden gelir (Lv1 1.0 … Lv5 0.6). İş BAŞLARKEN sabitlenir,
 ## sonra alınan geliştirme süren işi kısaltmaz. RepairType.duration hiç değişmez.
 var duration_scale: float = 1.0
+## Ödül çarpanı: garaj seviyesi yükseldikçe daha değerli müşteriler gelir (RepairManager.SUPPLY).
+## İş BAŞLARKEN sabitlenir; RepairType.reward hiç değişmez.
+var reward_scale: float = 1.0
 var phase: Phase = Phase.REPAIRING
 var elapsed: float = 0.0
 var is_repairing: bool = false
@@ -34,7 +37,7 @@ var repair_duration: float:
 	get: return repair_type.duration * duration_scale
 
 var repair_reward: int:
-	get: return repair_type.reward
+	get: return int(round(float(repair_type.reward) * reward_scale))
 
 var repair_xp: int:
 	get: return repair_type.xp

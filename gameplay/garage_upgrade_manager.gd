@@ -7,15 +7,23 @@ extends Node
 ## Para: yalnızca EconomyManager. Satın alma yetersiz bakiyede HİÇBİR ŞEYİ değiştirmez (para da seviye de).
 ## Oyun etkileri veri odaklıdır (GarageUpgrade.effects):
 ##   repair_speed_multiplier() → RepairManager tamir süresini bununla çarpar (RepairType.duration sabit kalır)
-##   repair_capacity()         → RepairManager aynı anda kaç CarSpot kullanacağını buradan öğrenir
+##   garage_level()            → GarageSystem zemini/duvarları bu seviyeye göre büyütür
+##   repair_capacity()         → ARTIK SATIN ALINAN BİR GELİŞTİRME DEĞİL: satın alınmış tamir alanı
+##                               sayısını (RepairBayManager) döndürür, eski API'yi okuyan kod bozulmasın diye
 ## Kayıt sistemi geldiğinde yazılacak/okunacak tek şey seviyelerdir (levels()/apply_levels()).
 
 ## Bir geliştirme satın alındı (yeni seviyesiyle).
 signal upgrade_purchased(id: StringName, level: int)
 ## Satın alma başarısız (yetersiz bakiye ya da maksimum seviye).
 signal purchase_failed(id: StringName, cost: int)
+## Seviyeler değişti — satın alma, kayıttan yükleme ya da yeni oyun. Kayıttan yükleme
+## upgrade_purchased yaymadığı için GarageSystem / RepairBayManager bu sinyali dinler.
+signal levels_changed
 
 const SPEED_ID: StringName = &"repair_speed"
+## Garajın fiziksel seviyesi (1..4): zemini büyütür ve bir sonraki tamir alanını ortaya çıkarır.
+const GARAGE_ID: StringName = &"garage_level"
+## Eski kayıtlarda geçen geliştirme; artık satın alınamaz (kapasite = satın alınmış alan sayısı).
 const CAPACITY_ID: StringName = &"repair_capacity"
 
 ## Geliştirme kataloğu; boşsa GarageUpgrade.defaults().
@@ -89,6 +97,7 @@ func buy(id: StringName) -> bool:
 		return false
 	u.current_level += 1
 	upgrade_purchased.emit(id, u.current_level)
+	levels_changed.emit()
 	return true
 
 
@@ -100,10 +109,17 @@ func repair_speed_multiplier() -> float:
 	return u.value() if u else 1.0
 
 
-## Aynı anda tamir edilebilen araç sayısı (kullanılabilir CarSpot sayısıyla sınırlanır).
-func repair_capacity() -> int:
-	var u: GarageUpgrade = get_upgrade(CAPACITY_ID)
+## Garajın fiziksel seviyesi (1..4).
+func garage_level() -> int:
+	var u: GarageUpgrade = get_upgrade(GARAGE_ID)
 	return maxi(int(round(u.value())), 1) if u else 1
+
+
+## Aynı anda tamir edilebilen araç sayısı = SATIN ALINMIŞ tamir alanı sayısı.
+## (Geriye dönük API: eskiden bu bir geliştirme seviyesiydi, artık RepairBayManager'dan okunur.)
+func repair_capacity() -> int:
+	var bays: Node = get_tree().get_first_node_in_group("repair_bays")
+	return maxi(int(bays.call(&"unlocked_count")), 1) if bays else 1
 
 
 # --- Kayıt (ileride) --------------------------------------------------------------
@@ -123,12 +139,14 @@ func apply_levels(data: Dictionary) -> void:
 			continue
 		var value: int = int(data[u.id])
 		u.current_level = clampi(value, 1, u.max_level) if value >= 1 and value <= u.max_level else 1
+	levels_changed.emit()
 
 
 ## Yeni oyun: tüm geliştirmeler 1. seviyeye döner.
 func reset() -> void:
 	for u: GarageUpgrade in upgrades:
 		u.current_level = 1
+	levels_changed.emit()
 
 
 func _economy() -> EconomyManager:
