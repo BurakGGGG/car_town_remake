@@ -47,6 +47,9 @@ const MAPS: Dictionary = {
 		"plate": [17],
 		"fog_lights": [47, 49],
 		"exhaust": [52],
+		# Silindir merkezi aks merkezinin BİRAZ ALTINDA: alt ucu zemine değsin (lastiğin taban
+		# dilimi gövdede kalmasın, dönmeyen bir hilal bırakırdı) ama ÜST ucu çamurluğun altında
+		# kalsın (kesilirse kemerde siyah kamalar oluşuyor — ölçüldü ve geri alındı).
 		"extract": [{"part": 1, "new_part": 67, "center": [-0.199, 0.103, -0.326], "radius": 0.108, "half_width": 0.045}],  # arka-sol teker alt kabuğa (1) kaynamış
 		"wheel_groups": {"fl": [4], "fr": [3], "rl": [67], "rr": [2]},
 	},
@@ -120,20 +123,160 @@ const MAPS: Dictionary = {
 		"black_trim": [19, 58],
 		"plate": [35],
 		"antenna": [60],
+		# Silindir merkezi aks merkezinin BİRAZ ALTINDA: alt ucu zemine değsin (lastiğin taban
+		# dilimi gövdede kalmasın, dönmeyen bir hilal bırakırdı) ama ÜST ucu çamurluğun altında
+		# kalsın (kesilirse kemerde siyah kamalar oluşuyor — ölçüldü ve geri alındı).
 		"extract": [{"part": 0, "new_part": 77, "center": [-0.196, 0.084, 0.313], "radius": 0.088, "half_width": 0.032}],  # ön-sol lastik kabuğa kaynamış (jant kapağı 2 ayrı)
 		"wheel_groups": {"fl": [77, 2], "fr": [27, 5], "rl": [6, 3], "rr": [8, 26]},
 	},
-	"res://assets/cars/renault_toros.tscn": {
-		"default_paint": Color(0.914, 0.929, 0.937),  # dokunun baskın kaporta rengi (#E9EDEF); paint mask ile aynı olmalı
-		"body": [0],                   # kaynak TEK mesh (tripo_part_0, --rename): cam/far/tampon ayrılamaz, dokudan gelir
-		"wheels": [1, 2, 3, 4],        # pipeline extract ile silindir bölgesinden ayrılan tekerler (lastik+jant tek mesh)
-		"extract": [
-			{"part": 0, "new_part": 1, "center": [-0.206, 0.110, 0.308], "radius": 0.100, "half_width": 0.04},
-			{"part": 0, "new_part": 2, "center": [0.206, 0.110, 0.308], "radius": 0.100, "half_width": 0.04},
-			{"part": 0, "new_part": 3, "center": [-0.208, 0.111, -0.272], "radius": 0.100, "half_width": 0.04},
-			{"part": 0, "new_part": 4, "center": [0.208, 0.111, -0.272], "radius": 0.100, "half_width": 0.04},
-		],
-		"wheel_groups": {"fl": [1], "fr": [2], "rl": [3], "rr": [4]},
+	# renault_toros 2026-09-27'de OYUNDAN ÇIKARILDI (kullanıcı kararı: kaynak model tek mesh
+	# olduğu için tekerler silindirle kesiliyor ve kemerde iz kalıyordu — bkz.
+	# docs/vehicle_visual_qa_report.md §8). Haritası ve kaynak GLB'si duruyor; geri almak için
+	# cars.json'a kaydı eklenir ve şu komut çalıştırılır:
+	#   godot-4 --headless --path . -s res://tools/optimize_car.gd -- \
+	#     --in res://assets/cars/source/renault_r12.glb \
+	#     --out res://assets/cars/optimized/renault_toros.glb \
+	#     --ratio 0.08 --min-tris 300 --rename --map res://assets/cars/renault_toros.tscn
+	# Harita kaydı (center/radius/half_width ölçülmüş değerlerdir):
+	# "res://assets/cars/renault_toros.tscn": {
+	# "default_paint": Color(0.914, 0.929, 0.937),  # dokunun baskın kaporta rengi (#E9EDEF); paint mask ile aynı olmalı
+	# "body": [0],                   # kaynak TEK mesh (tripo_part_0, --rename): cam/far/tampon ayrılamaz, dokudan gelir
+	# "wheels": [1, 2, 3, 4],        # pipeline extract ile silindir bölgesinden ayrılan tekerler (lastik+jant tek mesh)
+	# # Silindir merkezi aks merkezinin BİRAZ ALTINDA: alt ucu zemine değsin (lastiğin taban
+	# # dilimi gövdede kalmasın, dönmeyen bir hilal bırakırdı) ama ÜST ucu çamurluğun altında
+	# # kalsın (kesilirse kemerde siyah kamalar oluşuyor — ölçüldü ve geri alındı).
+	# "extract": [
+	# {"part": 0, "new_part": 1, "center": [-0.206, 0.103, 0.308], "radius": 0.107, "half_width": 0.034},
+	# {"part": 0, "new_part": 2, "center": [0.206, 0.103, 0.308], "radius": 0.107, "half_width": 0.034},
+	# {"part": 0, "new_part": 3, "center": [-0.208, 0.104, -0.272], "radius": 0.107, "half_width": 0.034},
+	# {"part": 0, "new_part": 4, "center": [0.208, 0.104, -0.272], "radius": 0.107, "half_width": 0.034},
+	# ],
+	# "wheel_groups": {"fl": [1], "fr": [2], "rl": [3], "rr": [4]},
+	# },
+	# --- 2026-09-27 ikinci parti (9 araç): roller OTOMATİK sınıflandırıcıyla çıkarıldı
+	# (geometri: köşe/yükseklik/yuvarlaklık + doku rengi: aracın kendi parlaklık dağılımına göre
+	# eşikler). Sınıflandırıcı mevcut 7 aracın elle doğrulanmış haritalarıyla ölçüldü: işlevsel
+	# grup isabeti %75, teker %100, stop %100, far %95, ayna %100. Kalan hata gövde↔trim
+	# ayrımındadır ve boya maskesi aracı bunu texel bazında zaten düzeltir.
+	"res://assets/cars/audi_a3.tscn": {
+		"default_paint": Color(0.871, 0.882, 0.898),  # boya maskesi aracının ölçtüğü fabrika rengi (#DEE1E5)
+		"body": [2, 6, 8, 9, 10, 13, 17, 23, 25, 29, 32, 37, 38, 43, 48, 49, 51, 54, 56, 58, 59, 60, 65, 68, 78],
+		"mirrors": [20, 22, 44, 61, 69],
+		"wheels": [1, 3, 4, 5],
+		"rims": [11, 12, 28, 34],
+		"glass": [14, 18, 21, 26, 31, 39, 41, 47, 50, 63, 66, 71, 73, 76],
+		"headlights": [16, 19, 42, 55, 64, 70, 75],
+		"taillights": [24, 53, 57, 67, 74, 79],
+		"grille": [15, 27, 35],
+		"black_trim": [0, 7, 30, 33, 36, 40, 45, 46, 52, 62, 72, 77],
+		"wheel_groups": {"fl": [5], "fr": [1, 12], "rl": [3, 11, 34], "rr": [4, 28]},
+	},
+	"res://assets/cars/bmw_e60.tscn": {
+		"default_paint": Color(0.129, 0.133, 0.145),  # boya maskesi aracının ölçtüğü fabrika rengi (#212225)
+		"body": [0, 1, 7, 8, 11, 15, 21, 22, 23, 24, 25, 29, 31, 33, 34, 35, 36, 38, 40, 41, 44, 47, 49, 51, 52],
+		"mirrors": [19, 28],
+		"wheels": [2, 3, 4, 5, 10, 12],
+		"tires": [9],
+		"rims": [13, 14, 16, 17, 20, 30],
+		"glass": [6],
+		"headlights": [32],
+		"taillights": [37, 39],
+		"grille": [18, 26, 27, 42, 46, 50],
+		"black_trim": [43, 45, 48],
+		"wheel_groups": {"fl": [4, 17, 20], "fr": [5, 9], "rl": [3, 12, 30], "rr": [2, 10, 14]},
+	},
+	"res://assets/cars/ford_focus.tscn": {
+		"default_paint": Color(0.886, 0.910, 0.933),  # boya maskesi aracının ölçtüğü fabrika rengi (#E2E8EE)
+		"body": [0, 4, 8, 9, 10, 11, 12, 15, 16, 17, 19, 20, 30, 32, 39, 43, 48, 51, 54, 55],
+		"mirrors": [34, 36, 38],
+		"wheels": [1, 2, 3, 6],
+		"rims": [13, 14],
+		"glass": [5, 18, 22, 24, 25, 26, 29, 33, 37, 40, 42, 46, 47, 50, 52, 53, 56],
+		"headlights": [23, 35, 44, 45],
+		"taillights": [31],
+		"grille": [7, 27, 28, 41, 49],
+		"black_trim": [21],
+		"wheel_groups": {"fl": [6, 13], "fr": [2], "rl": [1, 14], "rr": [3]},
+	},
+	"res://assets/cars/honda_civic.tscn": {
+		"default_paint": Color(0.820, 0.824, 0.831),  # boya maskesi aracının ölçtüğü fabrika rengi (#D1D2D4)
+		"body": [0, 3, 4, 9, 17, 18, 26, 40],
+		"mirrors": [21, 22],
+		"wheels": [1, 2, 6, 8],
+		"tires": [12, 14],
+		"rims": [15, 16, 20, 32, 34, 38],
+		"glass": [5, 10, 13, 19, 23, 24, 25, 36, 41],
+		"headlights": [27, 28, 29, 30, 31, 35, 39],
+		"grille": [7],
+		"black_trim": [11, 33, 37, 42, 43],
+		"wheel_groups": {"fl": [1, 20, 38], "fr": [2, 15], "rl": [8, 14, 16], "rr": [6, 12, 32]},
+	},
+	"res://assets/cars/hyundai_accent_blue.tscn": {
+		"default_paint": Color(0.922, 0.929, 0.925),  # boya maskesi aracının ölçtüğü fabrika rengi (#EBEDEC)
+		"body": [0, 10, 13, 14, 15, 16, 17, 20, 22, 23, 24, 25, 26, 27, 32, 37, 39, 46, 50, 52],
+		"mirrors": [28, 30, 33, 34],
+		"wheels": [3, 4, 6, 7, 8, 11],
+		"tires": [9],
+		"rims": [35, 42, 44, 45, 47],
+		"glass": [2, 18, 19, 21, 29, 38, 40, 48, 49, 51],
+		"headlights": [41, 43],
+		"taillights": [31, 36],
+		"grille": [5, 12],
+		"black_trim": [1],
+		"wheel_groups": {"fl": [6, 9, 35], "fr": [3], "rl": [4, 11, 42], "rr": [7, 8, 47]},
+	},
+	"res://assets/cars/seat_leon.tscn": {
+		"default_paint": Color(0.890, 0.902, 0.922),  # boya maskesi aracının ölçtüğü fabrika rengi (#E3E6EB)
+		"body": [0, 6, 9, 10, 13, 14, 15, 19, 21, 27, 30, 43, 45],
+		"mirrors": [23, 24, 31, 35],
+		"wheels": [2, 3, 4, 5],
+		"rims": [12, 16, 18],
+		"glass": [8, 11, 20, 22, 25, 26, 28, 29, 33, 34, 37, 39, 40, 44],
+		"headlights": [42],
+		"taillights": [32, 36, 38, 41],
+		"grille": [17],
+		"black_trim": [1, 7],
+		"wheel_groups": {"fl": [3, 12], "fr": [5, 18], "rl": [2], "rr": [4, 16]},
+	},
+	"res://assets/cars/skoda_kamiq.tscn": {
+		"default_paint": Color(0.918, 0.925, 0.925),  # boya maskesi aracının ölçtüğü fabrika rengi (#EAECEC)
+		"body": [0, 4, 9, 10, 12, 16, 17, 19, 22, 30, 31, 34, 38, 39, 41, 42, 44, 46, 47, 49, 51],
+		"mirrors": [23, 24, 26],
+		"wheels": [6, 7, 8, 13],
+		"tires": [2, 3, 14, 15],
+		"rims": [18],
+		"glass": [5, 11, 20, 21, 25, 28, 29, 33, 35, 36, 37, 40, 50],
+		"headlights": [45, 48, 53],
+		"taillights": [27, 32],
+		"grille": [43, 52],
+		"black_trim": [1],
+		"wheel_groups": {"fl": [8, 15], "fr": [7, 14, 18], "rl": [3, 13], "rr": [2, 6]},
+	},
+	"res://assets/cars/volvo_s60.tscn": {
+		"default_paint": Color(0.863, 0.878, 0.902),  # boya maskesi aracının ölçtüğü fabrika rengi (#DCE0E6)
+		"body": [0, 5, 7, 8, 9, 15, 18, 20, 23, 25, 26, 28, 30, 37, 40, 42],
+		"mirrors": [12, 17],
+		"wheels": [2, 4],
+		"tires": [1, 3],
+		"glass": [6, 21, 22, 32, 36, 39],
+		"headlights": [11, 16, 24, 27, 29, 38, 41, 43],
+		"taillights": [14, 31],
+		"grille": [10, 19, 35],
+		"black_trim": [13, 33, 34],
+		"wheel_groups": {"fl": [4], "fr": [2], "rl": [3], "rr": [1]},
+	},
+	"res://assets/cars/vw_golf_7.tscn": {
+		"default_paint": Color(0.784, 0.024, 0.102),  # boya maskesi aracının ölçtüğü fabrika rengi (#C8061A)
+		"body": [1, 6, 7, 8, 15, 17, 19, 25, 26, 32, 40],
+		"mirrors": [13, 16],
+		"wheels": [2, 4, 5, 10, 20, 21],
+		"rims": [14],
+		"glass": [9, 12, 23, 24, 29, 31, 33, 34, 35],
+		"headlights": [39, 43, 44, 45],
+		"taillights": [18, 22, 27, 36, 37, 41, 42],
+		"grille": [11, 28, 30],
+		"black_trim": [0, 3, 38],
+		"wheel_groups": {"fl": [4, 21], "fr": [2], "rl": [5, 14], "rr": [10, 20]},
 	},
 }
 

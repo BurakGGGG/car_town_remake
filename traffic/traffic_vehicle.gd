@@ -30,7 +30,10 @@ signal customer_stopped(vehicle: TrafficVehicle)
 ## Arıza durumu (koşul).
 enum RepairStatus { NORMAL, DAMAGED, REPAIRING, REPAIRED }
 ## Araç durumu (hareket / tamir döngüsü).
-enum Mode { TRAFFIC, REPAIR_REQUESTED, REPAIR_WAITING, REPAIR_BAY, REPAIR_COMPLETE, REWARD_WAITING }
+## RACE_CHALLENGE: yarış daveti veren rakip — tamir akışıyla AYNI yanaşma kodunu kullanır
+## (yol kenarına çekilir, döner, balon açar) ama arıza/tamir durumuna hiç dokunmaz.
+enum Mode { TRAFFIC, REPAIR_REQUESTED, REPAIR_WAITING, REPAIR_BAY, REPAIR_COMPLETE, REWARD_WAITING,
+	RACE_CHALLENGE }
 
 const WHEEL_RADIUS: float = 0.1  # model uzayında (ölçek öncesi)
 const CarHitboxScript: GDScript = preload("res://car_hitbox.gd")
@@ -40,6 +43,7 @@ const PULL_OVER_REACH: float = 0.06   # bekleme noktasına varış yarıçapı
 const PARK_TURN_SPEED: float = 2.5    # yerinde nokta yönüne dönüş (rad/sn)
 const BUBBLE_GAP: float = 0.12        # tavanın üstünde boşluk
 const BUBBLE_PICK_DEPTH: float = 0.26   # balon tıklama kutusunun derinliği (billboard döndüğü için geniş)
+const RACE_REJOIN_TIME: float = 6.0     # yarıştan sonra tekrar müşteri olmadan önce geçen süre (sn)
 
 @export var max_speed: float = 0.8        # birim/sn
 @export var acceleration: float = 0.6     # birim/sn²
@@ -60,6 +64,10 @@ var axis: int = 0
 ## Arıza durumu (RepairManager değiştirir). Araçlar SAĞLAM doğar; müşteri olan DAMAGED olur.
 var repair_status: RepairStatus = RepairStatus.NORMAL
 var mode: Mode = Mode.TRAFFIC
+## Yarış şeridinde mi doğdu? (Şehir trafiği sayacına girmez; RaceManager yönetir.)
+var race_lane: bool = false
+## Bu aracın KATALOG kimliği — yarışta aynı model çıksın diye (yoldaki araç = rakip araç).
+var vehicle_id: StringName = &""
 ## Müşterinin arızası (request_repair ile atanır; trafiğe dönünce null olur). Müşteri değilken null.
 var fault: RepairType
 ## Arıza şiddeti (RepairType.severity_min..max arası); ilk sürümde yalnızca veri, süreyi etkilemez.
@@ -69,12 +77,17 @@ var _bubble_shape: CollisionShape3D  # CarHitbox altında: balon görünürken b
 var _in_intersection: bool = false
 var _spot: Node3D                 # yol kenarı bekleme noktası (REPAIR_REQUESTED / REPAIR_WAITING)
 var _arrived: bool = false        # bekleme noktasına vardı, yerinde yerleşiyor
+## Yarıştan sonra araç bir süre müşteri olarak seçilmez: yol kenarından kalkıp akışa karışsın
+## (yoksa RaceManager onu bıraktığı anda RepairManager aynı kaldırımda müşteri yapıyor).
+var _race_cooldown: float = 0.0
 
 
 func setup(traffic_manager: TrafficManager, scene: PackedScene, appearance: CarAppearance, start: TrafficWaypoint, model_scale: float) -> void:
 	manager = traffic_manager
 	model = scene.instantiate() as Node3D
-	model.scale = Vector3.ONE * model_scale
+	# Bağlam çarpanı × aracın GERÇEK boyutundan türeyen ölçek: Getz gerçekten küçük, E60 gerçekten
+	# uzun görünür (CarCatalog.model_scale; cars.json "real_dimensions"dan türetilmiştir).
+	model.scale = Vector3.ONE * model_scale * CarCatalog.model_scale(vehicle_id)
 	add_child(model)
 	rig = CarRig.new(model)   # for_node değil: oyuncu araçlarının görünüm kaydına bağlanmaz
 	rig.apply(appearance)
@@ -88,13 +101,15 @@ func setup(traffic_manager: TrafficManager, scene: PackedScene, appearance: CarA
 
 func _physics_process(delta: float) -> void:
 	match mode:
-		Mode.REPAIR_REQUESTED:
+		Mode.REPAIR_REQUESTED, Mode.RACE_CHALLENGE:
 			_pull_over(delta)
 			return
 		Mode.TRAFFIC:
 			pass
 		_:
 			return  # yol kenarında bekliyor / CarSpot'ta: hareket yok
+	if _race_cooldown > 0.0:
+		_race_cooldown = maxf(_race_cooldown - delta, 0.0)
 	if target == null:
 		return
 	var to_target: Vector3 = _flat(target.global_position - global_position)
@@ -181,8 +196,9 @@ func in_bay() -> bool:
 
 
 ## Öndeki araç hesabına girer mi? Yol kenarında duran ve CarSpot'taki araçlar trafiği engellemez.
+## Yarış rakibi de yol kenarında durduğu için trafik akışında "duran araç" sayılır.
 func blocks_traffic() -> bool:
-	return mode == Mode.TRAFFIC or mode == Mode.REPAIR_REQUESTED
+	return mode == Mode.TRAFFIC or mode == Mode.REPAIR_REQUESTED or mode == Mode.RACE_CHALLENGE
 
 
 func bubble_visible() -> bool:
@@ -192,6 +208,49 @@ func bubble_visible() -> bool:
 ## Hedeflenen / durulan yol kenarı bekleme noktası (müşteri değilse null).
 func wait_spot() -> Node3D:
 	return _spot
+
+
+# --- Yarış daveti (RaceManager API) -----------------------------------------------------
+
+## Yoldan gelen rakip: verilen noktaya yanaşır, garaja dönük durur ve 🏁 balonunu açar.
+## Tamir durumu (fault / repair_status) DEĞİŞMEZ: araç tamir müşterisi değildir.
+func request_race_challenge(spot: Node3D) -> void:
+	_spot = spot
+	target = null
+	_arrived = false
+	# Davet kavşağın içinde açılırsa kilit BIRAKILMALI, yoksa diğer eksen sonsuza kadar bekler
+	# (enter_bay ile aynı koruma).
+	if _in_intersection:
+		_in_intersection = false
+		if manager:
+			manager.finish_crossing(self)
+	mode = Mode.RACE_CHALLENGE
+	_bubble.show_glyph(CarBubble.GLYPH_FLAG)   # yalnızca damalı bayrak, yazı yok
+	_sync_bubble_shape()
+
+
+## Yarış bitti / vazgeçildi: balon kapanır, araç normal trafiğe döner (aynı yerden devam eder).
+func end_race_challenge() -> void:
+	if mode != Mode.RACE_CHALLENGE:
+		return
+	_bubble.hide_bubble()
+	_sync_bubble_shape()
+	_spot = null
+	_arrived = false
+	mode = Mode.TRAFFIC
+	speed = 0.0
+	_race_cooldown = RACE_REJOIN_TIME
+	target = manager.nearest_waypoint_ahead(self) if manager else null
+
+
+## Yarış daveti veren rakip mi (RaceManager / HUD sorar)?
+func is_challenger() -> bool:
+	return mode == Mode.RACE_CHALLENGE
+
+
+## Yarıştan yeni çıktı mı? (RepairManager bu araca müşteri rolü vermez.)
+func busy_after_race() -> bool:
+	return _race_cooldown > 0.0
 
 
 # --- Tamir döngüsü (RepairManager API) --------------------------------------------------
@@ -263,8 +322,11 @@ func _pull_over(delta: float) -> void:
 	if _arrived:
 		if _settle(center, _spot.global_rotation.y, delta):
 			speed = 0.0
-			mode = Mode.REPAIR_WAITING
-			customer_stopped.emit(self)
+			# Yarış rakibi yerine oturunca KİPİ DEĞİŞMEZ: RACE_CHALLENGE olarak bekler.
+			# (Tamir müşterisi burada REPAIR_WAITING'e geçer ve customer_stopped yayar.)
+			if mode == Mode.REPAIR_REQUESTED:
+				mode = Mode.REPAIR_WAITING
+				customer_stopped.emit(self)
 		return
 	var to_goal: Vector3 = center - _flat(global_position)
 	var distance: float = to_goal.length()

@@ -1,6 +1,6 @@
 class_name ShowroomScreen
 extends Control
-## ARABA GALERİSİ — tam ekran showroom. Haritadaki "CAR PARTS & SHOWROOM" binasına tıklayınca açılır
+## MAĞAZA — tam ekran showroom (alt sekmedeki MAĞAZA ile aynı yer). Haritadaki "CAR PARTS & SHOWROOM" binasına tıklayınca açılır
 ## (shop_hitbox.gd), araç satın almanın TEK yeridir (alt menüdeki ARAÇLAR artık mağaza açmaz).
 ##
 ## Garaj ekranının çalışan düzenini örnek alır ama daha lüks bir mekân kurar: kendi 3D dünyası
@@ -21,7 +21,7 @@ signal opened
 signal closed
 signal vehicle_purchased(vehicle_id: StringName)
 
-const TITLE: String = "ARABA GALERİSİ"
+const TITLE: String = "MAĞAZA"
 const LIST_WIDTH: float = 188.0
 const INFO_WIDTH: float = 210.0
 const SLIDE: float = 18.0
@@ -63,10 +63,7 @@ var _list_group: VBoxContainer
 var _info_group: VBoxContainer
 var _exit_group: HBoxContainer
 var _list_box: VBoxContainer
-var _brand_label: Label
-var _model_label: Label
-var _spec_label: Label
-var _price_label: Label
+var _info_plate: PurchasePlate
 var _buy_button: PlateButton
 var _exit_button: PlateButton
 
@@ -155,12 +152,6 @@ func _finish_close() -> void:
 ## Gösterilen araç (CarCatalog id; kapalıyken en son bakılan araç).
 func shown_vehicle() -> StringName:
 	return _shown_vehicle
-
-
-func _unhandled_input(event: InputEvent) -> void:
-	if visible and not _closing and event.is_action_pressed(&"ui_cancel"):
-		close()
-		get_viewport().set_input_as_handled()
 
 
 # --- 3D showroom --------------------------------------------------------------
@@ -738,23 +729,10 @@ func _build_overlay() -> void:
 	_info_group.add_theme_constant_override(&"separation", 8)
 	middle.add_child(_info_group)
 
-	var info: PlatePanel = PlatePanel.new()
-	info.theme_type_variation = &"HudCarPlate"
-	info.custom_minimum_size = Vector2(INFO_WIDTH, 0.0)
-	var info_box: VBoxContainer = VBoxContainer.new()
-	info_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	info_box.add_theme_constant_override(&"separation", 0)
-	_brand_label = _label(&"HudInkCaption", "BMW")
-	_model_label = _label(&"HudPlateTitle", "E46")
-	_spec_label = _label(&"HudInkCaption", "2003 · %85")
-	_price_label = _label(&"HudInkValue", "125.000 ₺")
-	info_box.add_child(_brand_label)
-	info_box.add_child(_model_label)
-	info_box.add_child(_spec_label)
-	info_box.add_child(_label(&"HudInkCaption", "FİYAT"))
-	info_box.add_child(_price_label)
-	info.add_child(info_box)
-	_info_group.add_child(info)
+	# Araç bilgisi de diğer satın almalarla AYNI plakadır (PurchasePlate): başlık / alt başlık /
+	# fiyat / etki satırları. Böylece garaj genişletme, tamir alanı ve araç aynı dili konuşur.
+	_info_plate = PurchasePlate.new(INFO_WIDTH)
+	_info_group.add_child(_info_plate)
 
 	_buy_button = PlateButton.new()
 	_buy_button.name = "BuyButton"
@@ -856,10 +834,6 @@ func _show_vehicle(vehicle_id: StringName) -> void:
 	var plate: PlateButton = _plates.get(vehicle_id)
 	if plate:
 		plate.set_pressed_no_signal(true)
-	_brand_label.text = String(entry["brand"]).to_upper()
-	_model_label.text = String(entry["model"]).to_upper()
-	_spec_label.text = "%d · %%%d" % [int(entry["year"]), roundi(float(entry["condition"]) * 100.0)]
-	_price_label.text = "%s ₺" % Hud.format_thousands(int(entry["price"]))
 	_load_preview(entry["scene_path"])
 	_refresh_state()
 
@@ -868,7 +842,13 @@ func _show_vehicle(vehicle_id: StringName) -> void:
 func _refresh_state() -> void:
 	if _shown_vehicle == &"":
 		return
-	var price: int = int(CarCatalog.get_entry(_shown_vehicle).get("price", 0))
+	var entry: Dictionary = CarCatalog.get_entry(_shown_vehicle)
+	var price: int = int(entry.get("price", 0))
+	_info_plate.set_content(
+		"%s %s" % [String(entry.get("brand", "")).to_upper(), String(entry.get("model", "")).to_upper()],
+		ProgressionEffects.vehicle_subtitle(_shown_vehicle),
+		"%s ₺" % Hud.format_thousands(price),
+		ProgressionEffects.vehicle_lines(get_tree(), _shown_vehicle))
 	if _ownership == null:
 		_buy_button.text = "%s ₺" % Hud.format_thousands(price)
 		_buy_button.disabled = true
@@ -910,7 +890,9 @@ func _load_preview(scene_path: String) -> void:
 		push_warning("ShowroomScreen: '%s' yüklenemedi" % scene_path)
 		return
 	_preview = scene.instantiate() as Node3D
-	_preview.scale = Vector3.ONE   # wrapper .tscn köküne gömülü ölçekler yok sayılır (garajdaki gibi)
+	# Gerçek boyuttan türeyen ölçek (garajdaki, trafikteki ve dragdeki ile AYNI oran); platform ve
+	# kamera zaten modele göre uyarlanıyor (_fit_to_platform), o yüzden taşma olmuyor.
+	_preview.scale = Vector3.ONE * CarCatalog.model_scale_for_scene(scene_path)
 	_model_slot.add_child(_preview)
 	_preview_rig = CarRig.for_node(_preview)
 	_preview_rig.apply(CarAppearance.get_for(scene_path))

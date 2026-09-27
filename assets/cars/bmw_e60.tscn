@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://c78wm7v8nsiky"]
+
+[ext_resource type="PackedScene" uid="uid://yvp4uojumpne" path="res://assets/cars/optimized/bmw_e60.glb" id="1_bmw_e"]
+
+[node name="bmw_e60" instance=ExtResource("1_bmw_e")]

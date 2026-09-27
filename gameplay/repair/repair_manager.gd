@@ -44,15 +44,21 @@ const CarHitbox: GDScript = preload("res://car_hitbox.gd")
 ## dakikada ~2,4'te sabit kalıyor, bu yüzden 2. ve 3. tamir alanı ekonomik olarak işe yaramıyordu
 ## (kuyruk hep boş, bay doluluğu %38). Garaj seviyesi artık arzı da büyütür:
 ##   interval → customer_interval_min/max çarpanı (küçük = sık müşteri)
-##   waiting  → aynı anda yol kenarında bekleyebilen müşteri
-##   spots    → kullanılan bekleme noktası sayısı (garaj büyüdükçe bitişik kaldırım uzar)
+##   waiting  → aynı anda yol kenarında bekleyebilen müşteri. 2026-09-27: kullanıcı kararıyla
+##              HER SEVİYEDE 2 — garaj büyüdükçe 3-4 araç birikmesi kaldırımı tıkıyor ve dağınık
+##              görünüyordu. Garaj seviyesinin arz katkısı artık yalnızca sıklık ve değer üzerinden.
+##   spots    → kullanılan bekleme noktası sayısı; waiting ile aynı tutulur (fazlası kullanılmaz)
 ##   reward   → müşteri değeri çarpanı (daha iyi sınıf araçlar gelir)
-##   traffic  → TrafficManager.max_vehicles
+##   traffic  → TrafficManager.max_vehicles. 4. seviyede 8 yerine 10: ÖLÇÜLDÜ (20 dk, sv.15, 3 alan,
+##              tamir hızı 5) — trafik 8'de garaj 4 yalnızca 2.206 ₺/dk veriyordu (garaj 3: 2.021),
+##              yani 60.000 ₺'lik son genişleme 5,4 saatte kendini amorti ediyordu. Aday araç havuzu
+##              büyümediği için kısalan müşteri aralığı karşılığını bulamıyor (bay'deki araçlar yoldan
+##              çekiliyor). Trafik 10 ile aynı yapılandırma 2.798 ₺/dk (+%27, amorti 77 dk).
 const SUPPLY: Array[Dictionary] = [
 	{"interval": 1.00, "waiting": 2, "spots": 2, "reward": 1.00, "traffic": 4},
-	{"interval": 0.80, "waiting": 3, "spots": 3, "reward": 1.15, "traffic": 6},
-	{"interval": 0.62, "waiting": 4, "spots": 4, "reward": 1.30, "traffic": 8},
-	{"interval": 0.48, "waiting": 5, "spots": 4, "reward": 1.45, "traffic": 8},
+	{"interval": 0.80, "waiting": 2, "spots": 2, "reward": 1.15, "traffic": 6},
+	{"interval": 0.62, "waiting": 2, "spots": 2, "reward": 1.30, "traffic": 8},
+	{"interval": 0.48, "waiting": 2, "spots": 2, "reward": 1.45, "traffic": 10},
 ]
 const SPOT_AHEAD_MIN: float = 0.5   # bekleme noktası aracın bu kadar önünde olmalı (yanaşma payı)
 const SPOT_AHEAD_MAX: float = 3.2   # aracın noktayı "görebildiği" pencere (1.8 iken adaylar çok seyrekti)
@@ -317,7 +323,9 @@ func start_repair(car: Node3D, type: RepairType = null) -> bool:
 	var upgrades: GarageUpgradeManager = _upgrades()
 	if upgrades:
 		state.duration_scale = upgrades.repair_speed_multiplier()  # hız geliştirmesi: süre × çarpan
-	state.reward_scale = reward_multiplier()                       # garaj seviyesi: müşteri değeri
+	# Ödül çarpanı iş BAŞLARKEN sabitlenir: garaj seviyesi (müşteri değeri) × iş ustalığı
+	var mastery_start: JobMastery = _mastery()
+	state.reward_scale = reward_multiplier() * (mastery_start.reward_multiplier(type.id) if mastery_start else 1.0)
 	state.start()
 	_active.append(state)
 	_progress_timer = progress_interval
@@ -443,6 +451,8 @@ func _candidates() -> Array[Dictionary]:
 	for v: TrafficVehicle in _traffic.vehicles:
 		if v.mode != TrafficVehicle.Mode.TRAFFIC or v.repair_status != TrafficVehicle.RepairStatus.NORMAL:
 			continue
+		if v.busy_after_race():
+			continue   # yarıştan yeni çıktı: önce yola karışsın
 		if v.is_in_intersection() or v.target == null or v.target.intersection_entry:
 			continue
 		var forward: Vector3 = _flat(v.global_transform.basis.z).normalized()

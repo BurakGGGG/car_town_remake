@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://2sjvcgtjffe2"]
+
+[ext_resource type="PackedScene" uid="uid://b37kmu52sxn4a" path="res://assets/cars/optimized/vw_golf_7.glb" id="1_vw_go"]
+
+[node name="vw_golf_7" instance=ExtResource("1_vw_go")]

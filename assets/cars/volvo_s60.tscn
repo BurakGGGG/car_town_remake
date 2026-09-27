@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://bvpmitce1vrrw"]
+
+[ext_resource type="PackedScene" uid="uid://kdjx713jnh4j" path="res://assets/cars/optimized/volvo_s60.glb" id="1_volvo"]
+
+[node name="volvo_s60" instance=ExtResource("1_volvo")]

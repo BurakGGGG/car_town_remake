@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://bxs6qllvjg7v"]
+
+[ext_resource type="PackedScene" uid="uid://dao0usqj47s54" path="res://assets/cars/optimized/audi_a3.glb" id="1_audi_"]
+
+[node name="audi_a3" instance=ExtResource("1_audi_")]

@@ -5,7 +5,7 @@ extends CanvasLayer
 ## Sağ üst: yuvarlak tabela butonları (kamera / ses / ayarlar), kamera açılınca mini şerit.
 ## Alt: dört plaka (GARAJ / ARAÇLAR / MAĞAZA / PROFİL) ve seçilince açılan araç plakası.
 ## Araç satın alma artık alt menüde DEĞİL: haritadaki "CAR PARTS & SHOWROOM" binasına tıklanınca
-## açılan ARABA GALERİSİ'ndedir (ShowroomScreen, HUD'un altına kodla eklenir ve "showroom" grubundan
+## açılan MAĞAZA ekranındadır (ShowroomScreen, HUD'un altına kodla eklenir ve "showroom" grubundan
 ## bulunur). ARAÇLAR plakası bu yüzden pasiftir (sekme seçer, mağaza açmaz); garaj listesi
 ## (CarGallery, OWNED kipi) GarageScreen'in içinde kalır. Showroom açıkken oyun HUD'u gizlenir,
 ## kapanınca aynen geri gelir — GarageScreen ile aynı davranış.
@@ -25,11 +25,9 @@ extends CanvasLayer
 ## bağımsız çalışır.
 
 signal nav_selected(id: StringName)
-signal settings_pressed
 signal sound_toggled(enabled: bool)
 ## direction: +1 yakınlaş, -1 uzaklaş
 signal camera_zoom_requested(direction: int)
-signal camera_rotate_requested
 
 ## Araç bilgi plakası: seçili trafik aracı için tamir içeriğini (RepairPanel) gösterir.
 ## false yapılırsa show_car_info() plakayı açmaz (eski davranış).
@@ -53,11 +51,9 @@ signal camera_rotate_requested
 # Sağ üst
 @onready var camera_button: PlateButton = %CameraButton
 @onready var sound_button: PlateButton = %SoundButton
-@onready var settings_button: PlateButton = %SettingsButton
 @onready var camera_controls: VBoxContainer = %CameraControls
 @onready var zoom_in_button: PlateButton = %ZoomInButton
 @onready var zoom_out_button: PlateButton = %ZoomOutButton
-@onready var rotate_button: PlateButton = %RotateButton
 
 # Alt
 @onready var car_info_panel: PlatePanel = %CarInfoPanel
@@ -68,9 +64,8 @@ signal camera_rotate_requested
 @onready var cars_button: PlateButton = %CarsButton
 @onready var shop_button: PlateButton = %ShopButton
 @onready var profile_button: PlateButton = %ProfileButton
-@onready var car_gallery: CarGallery = %CarGallery
 @onready var garage_screen: GarageScreen = %GarageScreen
-## Kodla kurulan tam ekran ARABA GALERİSİ (bina tıklamasıyla açılır).
+## Kodla kurulan tam ekran MAĞAZA / showroom (bina tıklamasıyla ya da MAĞAZA sekmesiyle açılır).
 var showroom: ShowroomScreen
 ## Kodla kurulan PLAYER tabelası (giriş / profil / kayıt seçimi).
 var login_screen: LoginScreen
@@ -98,21 +93,32 @@ var _notice_tween: Tween
 
 # Tamir alanı satın alma plakası (dünyadaki kilitli alana tıklanınca)
 var _bays: RepairBayManager
-var _bay_plate: PlatePanel
-var _bay_title: Label
-var _bay_price: Label
+## Satın alma plakası (PurchasePlate) ve aksiyon satırı; ikisi birlikte _bay_group içinde.
+var _bay_group: VBoxContainer
+var _bay_plate: PurchasePlate
 var _bay_buy: PlateButton
 var _bay_index: int = -1
 var _plate_mode: StringName = &"bay"   # &"bay" ya da &"garage"
 var _upgrades: GarageUpgradeManager
 var _garage: Node
 var _ownership: VehicleOwnership
+## Tüm tam ekranların TEK yönlendiricisi (aynı anda bir yer + en fazla bir pano).
+var router: UiRouter
+var profile_screen: ProfileScreen
+## Drag yarışı ekranları (davet panosu → pist → sonuç panosu).
+var race_challenge_screen: RaceChallengeScreen
+var drag_race_screen: DragRaceScreen
+var race_result_screen: RaceResultScreen
+var _race: RaceManager
+var mastery_screen: MasteryScreen
+var garage_value_screen: GarageValueScreen
+## Alt sekme → açtığı ekran.
+var _nav_screens: Dictionary = {}
 
 
 func _ready() -> void:
 	camera_controls.visible = false
 	car_info_panel.visible = false
-	car_gallery.visible = false
 
 	_nav_ids = {
 		garage_button: &"garage",
@@ -120,24 +126,34 @@ func _ready() -> void:
 		shop_button: &"shop",
 		profile_button: &"profile",
 	}
+	# Her sekmenin AÇTIĞI ekran nettir: GARAJ ve ARAÇLAR aynı fiziksel garaja gider (araçlar orada
+	# park eder — aynı listeyi iki ayrı arayüzde göstermemek için), MAĞAZA showroom'a, PROFİL
+	# ilerleme panosuna. Daha önce ARAÇLAR ve MAĞAZA hiçbir şey açmıyordu.
+	_nav_screens = {
+		garage_button: &"garage",
+		cars_button: &"garage",
+		shop_button: &"showroom",
+		profile_button: &"profile",
+	}
 	for button: PlateButton in _nav_ids:
 		button.button_group = _nav_group
 		button.toggled.connect(_on_nav_toggled.bind(button))
+		button.pressed.connect(_on_nav_pressed.bind(button))
 	garage_button.button_pressed = true
-	garage_button.pressed.connect(_on_garage_button_pressed)
-	garage_screen.closed.connect(_on_garage_closed)
+	_build_router()
 	_build_showroom()
 	_build_login_screen()
 	_build_quests()
+	_build_progress_screens()
+	_build_race_screens()
+	_register_screens()
 
 	name_plate.pressed.connect(_on_name_plate_pressed)
 	profile_button.pressed.connect(_on_profile_button_pressed)
 	camera_button.toggled.connect(_on_camera_toggled)
 	sound_button.toggled.connect(_on_sound_toggled)
-	settings_button.pressed.connect(_on_settings_pressed)
 	zoom_in_button.pressed.connect(_on_zoom_in_pressed)
 	zoom_out_button.pressed.connect(_on_zoom_out_pressed)
-	rotate_button.pressed.connect(_on_rotate_pressed)
 
 	set_player_name(player_name)
 	set_level(level)
@@ -151,7 +167,31 @@ func _ready() -> void:
 	car_stats_container.add_child(_repair_panel)
 	_build_notice_plate()
 	_build_bay_plate()
+	_apply_safe_area()
+	get_viewport().size_changed.connect(_apply_safe_area)
 	_connect_gameplay.call_deferred()  # sahnedeki yöneticiler hazır olsun
+
+
+## MOBİL GÜVENLİ ALAN — çentikli / yuvarlak köşeli telefonlarda (20:9) kenar plakaları ekran
+## dışında kalmasın diye kenar boşlukları güvenli alana göre büyütülür. Masaüstünde hiçbir şey
+## değişmez: yalnızca mobil derlemede uygulanır ve pencere ölçeği (viewport/pencere) hesaba katılır.
+func _apply_safe_area() -> void:
+	if not OS.has_feature("mobile"):
+		return
+	var window: Vector2i = DisplayServer.window_get_size()
+	var safe: Rect2i = DisplayServer.get_display_safe_area()
+	if window.x <= 0 or window.y <= 0:
+		return
+	var scale: Vector2 = get_viewport().get_visible_rect().size / Vector2(window)
+	var inset_left: int = int(round(float(maxi(safe.position.x, 0)) * scale.x))
+	var inset_top: int = int(round(float(maxi(safe.position.y, 0)) * scale.y))
+	var inset_right: int = int(round(float(maxi(window.x - safe.end.x, 0)) * scale.x))
+	var inset_bottom: int = int(round(float(maxi(window.y - safe.end.y, 0)) * scale.y))
+	top_left.add_theme_constant_override(&"margin_left", 10 + inset_left)
+	top_left.add_theme_constant_override(&"margin_top", 10 + inset_top)
+	top_right.add_theme_constant_override(&"margin_right", 10 + inset_right)
+	top_right.add_theme_constant_override(&"margin_top", 10 + inset_top)
+	bottom.add_theme_constant_override(&"margin_bottom", 10 + inset_bottom)
 
 
 # --- Dış API -----------------------------------------------------------------
@@ -282,6 +322,10 @@ func _connect_gameplay() -> void:
 		_quests.quest_completed.connect(_on_quest_completed)
 	_refresh_quest_button()
 	# Garaj rütbesi türetilmiştir: değeri büyütebilen her olaydan sonra bakılır
+	_race = get_tree().get_first_node_in_group("race") as RaceManager
+	if _race:
+		_race.challenge_clicked.connect(_on_challenge_clicked)
+		_race.race_finished.connect(_on_race_reward)
 	_ownership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 	if _ownership:
 		_ownership.ownership_changed.connect(_check_garage_rank)
@@ -328,7 +372,7 @@ func _refresh_repair_panel(celebrate: bool) -> void:
 	var vehicle: TrafficVehicle = _repair_target as TrafficVehicle
 	var state: RepairState = _repair_manager.get_state(vehicle)
 	if state:
-		_repair_panel.set_info(state.repair_type)
+		_repair_panel.set_info(state.repair_type, state.repair_reward)   # ödül işin kendi çarpanıyla
 		if state.phase == RepairState.Phase.REPAIRING:
 			_repair_panel.show_repairing(state.repair_progress, state.remaining)
 		else:
@@ -387,31 +431,19 @@ func _build_notice_plate() -> void:
 	column.move_child(_notice_plate, car_info_panel.get_index())
 
 
-## Dünyadaki kilitli tamir alanına tıklanınca açılan fiziksel satın alma plakası:
-## "TAMİR ALANI 2 / 8.000 ₺ / [ALANI AÇ] [VAZGEÇ]". Yeni UI dili yok, mevcut plakalar.
+## Dünyadaki kilitli tamir alanına / genişletme tabelasına tıklanınca açılan SATIN ALMA plakası.
+## Üç satın almanın (garaj seviyesi, tamir alanı, araç) hepsi aynı hiyerarşiyi kullanır:
+## BAŞLIK / alt başlık / FİYAT / etki satırları / aksiyon plakası — bkz. PurchasePlate.
 func _build_bay_plate() -> void:
-	_bay_plate = PlatePanel.new()
-	_bay_plate.name = "BayPlate"
-	_bay_plate.theme_type_variation = &"HudCarPlate"
-	_bay_plate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_bay_plate.visible = false
-	var margin: MarginContainer = MarginContainer.new()
-	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for side: StringName in [&"margin_left", &"margin_right"]:
-		margin.add_theme_constant_override(side, 16)
-	for side: StringName in [&"margin_top", &"margin_bottom"]:
-		margin.add_theme_constant_override(side, 8)
-	var box: VBoxContainer = VBoxContainer.new()
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_theme_constant_override(&"separation", 4)
-	_bay_title = Label.new()
-	_bay_title.theme_type_variation = &"HudPlateTitle"
-	_bay_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_bay_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_bay_price = Label.new()
-	_bay_price.theme_type_variation = &"HudInkValue"
-	_bay_price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_bay_price.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bay_group = VBoxContainer.new()
+	_bay_group.name = "PurchaseGroup"
+	_bay_group.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bay_group.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_bay_group.add_theme_constant_override(&"separation", 6)
+	_bay_group.visible = false
+	_bay_plate = PurchasePlate.new(230.0)
+	_bay_plate.set_centered(true)
+	_bay_group.add_child(_bay_plate)
 	var buttons: HBoxContainer = HBoxContainer.new()
 	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -430,14 +462,10 @@ func _build_bay_plate() -> void:
 	cancel.pressed.connect(hide_bay_plate)
 	buttons.add_child(_bay_buy)
 	buttons.add_child(cancel)
-	box.add_child(_bay_title)
-	box.add_child(_bay_price)
-	box.add_child(buttons)
-	margin.add_child(box)
-	_bay_plate.add_child(margin)
+	_bay_group.add_child(buttons)
 	var column: Node = car_info_panel.get_parent()
-	column.add_child(_bay_plate)
-	column.move_child(_bay_plate, car_info_panel.get_index())
+	column.add_child(_bay_group)
+	column.move_child(_bay_group, car_info_panel.get_index())
 
 
 ## Kilitli alana tıklandı: plaka alanın durumuna göre açılır.
@@ -448,22 +476,26 @@ func show_bay_plate(index: int) -> void:
 	_plate_mode = &"bay"
 	_bay_buy.text = "ALANI AÇ"
 	hide_car_info()
-	_bay_title.text = "TAMİR ALANI %d" % (index + 1)
-	var price: String = format_thousands(_bays.price(index))
-	match _bays.status(index):
+	var price: String = "%s ₺" % format_thousands(_bays.price(index))
+	var status: RepairBayManager.Status = _bays.status(index)
+	var effects: PackedStringArray = ProgressionEffects.bay_lines(get_tree(), index)
+	match status:
 		RepairBayManager.Status.NEEDS_LEVEL:
-			_bay_price.text = "TAMİR ALANI Sv.%d GEREKLİ" % _bays.required_level(index)
+			# Alanı ortaya çıkaran şey GARAJ seviyesidir (eski metin "TAMİR ALANI Sv." diyordu:
+			# o geliştirme artık yok, oyuncuyu yanlış yere yönlendiriyordu)
+			price = "ÖNCE GARAJI SEVİYE %d'E GENİŞLET" % _bays.required_level(index)
 			_bay_buy.disabled = true
 		RepairBayManager.Status.TOO_EXPENSIVE:
-			_bay_price.text = "%s ₺  ·  PARA YETERSİZ" % price
+			price += "  ·  PARA YETERSİZ"
 			_bay_buy.disabled = true
 		RepairBayManager.Status.OPEN:
-			_bay_price.text = "AÇIK"
+			price = "AÇIK"
+			effects = PackedStringArray()
 			_bay_buy.disabled = true
 		_:
-			_bay_price.text = "%s ₺" % price
 			_bay_buy.disabled = false
-	_bay_plate.show()
+	_bay_plate.set_content("TAMİR ALANI %d" % (index + 1), "", price, effects)
+	_bay_group.show()
 
 
 ## Dünyadaki "GARAJI GENİŞLET" tabelasına tıklandı: garajın fiziksel seviyesini satın alma plakası.
@@ -475,25 +507,29 @@ func show_expansion_plate() -> void:
 	_bay_index = -1
 	hide_car_info()
 	var id: StringName = GarageUpgradeManager.GARAGE_ID
-	_bay_title.text = "GARAJI GENİŞLET"
+	var next_level: int = _upgrades.level(id) + 1
+	var subtitle: String = "SEVİYE %d" % next_level
+	var price: String = "MAKSİMUM"
+	var effects: PackedStringArray = PackedStringArray()
 	if _upgrades.is_max(id):
-		_bay_price.text = "MAKSİMUM"
+		subtitle = "SEVİYE %d" % _upgrades.level(id)
 		_bay_buy.disabled = true
 	else:
 		var cost: int = _upgrades.next_cost(id)
 		var affordable: bool = _economy == null or _economy.can_afford(cost)
-		_bay_price.text = "SEVİYE %d  ·  %s ₺%s" % [
-			_upgrades.level(id) + 1, format_thousands(cost), "" if affordable else "  ·  PARA YETERSİZ"]
+		price = "%s ₺%s" % [format_thousands(cost), "" if affordable else "  ·  PARA YETERSİZ"]
+		effects = ProgressionEffects.garage_level_lines(get_tree(), next_level)
 		_bay_buy.disabled = not affordable
+	_bay_plate.set_content("GARAJI GENİŞLET", subtitle, price, effects)
 	_bay_buy.text = "GENİŞLET"
-	_bay_plate.show()
+	_bay_group.show()
 
 
 func hide_bay_plate() -> void:
 	_bay_index = -1
 	_plate_mode = &"bay"
 	_bay_buy.text = "ALANI AÇ"
-	_bay_plate.hide()
+	_bay_group.hide()
 
 
 func _on_bay_buy_pressed() -> void:
@@ -564,6 +600,19 @@ func _play_notice(text: String, color: Color, hold: float) -> void:
 
 
 ## Seviye atlandı: para ödülü ve (varsa) açılan içerik plakada duyurulur.
+## Yarış ödülü kasaya girdi: kısa bildirim plakası (para plakası zaten değişimi gösterir).
+func _on_race_reward(won: bool, money: int, xp: int) -> void:
+	var line: String = "YARIŞ KAZANILDI" if won else "YARIŞ KAYBEDİLDİ"
+	var parts: PackedStringArray = PackedStringArray()
+	if money > 0:
+		parts.append("+%s ₺" % format_thousands(money))
+	if xp > 0:
+		parts.append("+%d XP" % xp)
+	if not parts.is_empty():
+		line += "\n%s" % "   ".join(parts)
+	_show_notice(line, HudPalette.COIN_DARK, 2.2)
+
+
 func _on_level_reward(new_level: int, money: int, text: String) -> void:
 	var line: String = "SEVİYE %d   +%s ₺" % [new_level, format_thousands(money)]
 	if text != "":
@@ -573,15 +622,15 @@ func _on_level_reward(new_level: int, money: int, text: String) -> void:
 
 ## İş ustalığı kademesi atlandı: hangi iş, kaçıncı yıldız, tek seferlik ödül.
 func _on_mastery_up(job_id: StringName, stars: int) -> void:
-	var title: String = job_id
-	if _repair_manager:
-		for type: RepairType in _repair_manager.repair_types:
-			if type.id == job_id:
-				title = type.title
-				break
-	var reward: int = JobMastery.STAR_REWARDS[clampi(stars - 1, 0, JobMastery.STAR_REWARDS.size() - 1)]
-	_show_notice("%s USTALIK %d★\n+%s ₺" % [title, stars, format_thousands(reward)],
-			HudPalette.COIN_DARK, 2.2)
+	var mastery: JobMastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
+	if mastery == null:
+		return
+	var type: RepairType = mastery.type_of(job_id)
+	_show_notice("%s USTALIK %d★\n+%s ₺   ÖDÜL +%%%d" % [
+		type.title if type else String(job_id), stars,
+		format_thousands(mastery.star_payout(job_id, stars)),
+		roundi(JobMastery.REWARD_BONUS_PER_STAR * float(stars) * 100.0)],
+		HudPalette.COIN_DARK, 2.2)
 
 
 ## Garaj rütbesi değişti mi diye bakar (GarageValue türetilmiştir, sinyali yoktur).
@@ -595,6 +644,38 @@ func _check_garage_rank() -> void:
 	_garage_rank = rank
 	_show_notice("GARAJ RÜTBESİ %d\n%s" % [rank, GarageValue.rank_name(rank)],
 			HudPalette.COIN_DARK, 2.2)
+
+
+## Rakibin balonuna dokunuldu: davet panosu açılır (aynı anda başka panel açık kalmaz).
+func _on_challenge_clicked(_vehicle: Node3D) -> void:
+	router.open(&"race_challenge")
+
+
+## YARIŞ plakası: pist açılır (PLACE — garaj/showroom kapanır, oyun HUD'u gizlenir).
+func _on_race_accepted() -> void:
+	if _race:
+		_race.set_racing(true)
+	router.open(&"drag_race")
+
+
+## Yarış bitti: ödül BİR KEZ RaceManager'da yazılır, sonuç panosu yalnızca gösterir.
+func _on_race_completed(won: bool, player_time: float, rival_time: float) -> void:
+	var reward: Dictionary = {"money": 0, "xp": 0}
+	var rival: StringName = _race.rival_id() if _race else &""
+	var player_id: StringName = _race.player_vehicle_id() if _race else &""
+	if _race:
+		reward = _race.finish_race(won)
+	race_result_screen.show_result(won, player_time, rival_time,
+		int(reward["money"]), int(reward["xp"]), player_id if won else rival)
+	router.open(&"race_result")
+
+
+## GARAJA DÖN: sonuç ve pist kapanır, oyuncu dünyaya döner.
+func _on_race_exit() -> void:
+	if _race:
+		_race.set_racing(false)
+	if router.is_open(&"drag_race") or router.is_open(&"race_result"):
+		router.close_all()
 
 
 ## Showroom'dan araç satın alındı: kısa bildirim plakası (para düşüşünü zaten coin plakası gösterir).
@@ -634,17 +715,99 @@ func _on_repair_cancelled(_car: Node3D) -> void:
 func _on_nav_toggled(pressed: bool, button: PlateButton) -> void:
 	if pressed:
 		nav_selected.emit(_nav_ids[button])
-	# Başka sekmeye geçilince araç galerisi kapanır
-	if button == cars_button and not pressed:
-		car_gallery.close()   # ARAÇLAR pasif: mağaza showroom'a taşındı, burada yalnızca sekme kalır
 
 
-## ARABA GALERİSİ: bina hitbox'ı açtığında oyun HUD'u gizlenir, GERİ ile aynen geri gelir.
+## Sekmeye basıldı: ilgili ekranı açar. Açık olan sekmeye tekrar basmak onu kapatır (geri döner).
+func _on_nav_pressed(button: PlateButton) -> void:
+	var id: StringName = _nav_screens.get(button, &"")
+	if id == &"":
+		return
+	if router.is_open(id) and router.top() == id:
+		router.back()
+		return
+	router.open(id)
+	if button == cars_button and id == &"garage":
+		garage_screen.focus_cars()   # ARAÇLAR sekmesi: garajdaki araç listesini öne çıkarır
+
+
+func _build_router() -> void:
+	router = UiRouter.new()
+	router.name = "UiRouter"
+	add_child(router)
+	router.stack_changed.connect(_on_ui_stack_changed)
+
+
+## İlerleme panoları HUD'a ait: hem garajdan hem PROFİL'den açılabilsinler (daha önce yalnızca
+## garaj ekranının çocuklarıydı, dışarıdan erişilemiyorlardı).
+func _build_progress_screens() -> void:
+	var host: Node = garage_screen.get_parent()
+	garage_value_screen = GarageValueScreen.new()
+	host.add_child(garage_value_screen)
+	mastery_screen = MasteryScreen.new()
+	host.add_child(mastery_screen)
+	profile_screen = ProfileScreen.new()
+	host.add_child(profile_screen)
+	profile_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
+	garage_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
+
+
+## YARIŞ: davet panosu (MODAL) → pist (PLACE) → sonuç panosu (MODAL). Ekranlar kendi navigasyonunu
+## taşımaz; akışı burası kurar, UiRouter uygular.
+func _build_race_screens() -> void:
+	var host: Node = garage_screen.get_parent()
+	race_challenge_screen = RaceChallengeScreen.new()
+	host.add_child(race_challenge_screen)
+	drag_race_screen = DragRaceScreen.new()
+	host.add_child(drag_race_screen)
+	race_result_screen = RaceResultScreen.new()
+	host.add_child(race_result_screen)
+	race_challenge_screen.race_accepted.connect(_on_race_accepted)
+	drag_race_screen.race_completed.connect(_on_race_completed)
+	race_result_screen.exit_requested.connect(_on_race_exit)
+	race_result_screen.closed.connect(_on_race_exit)
+
+
+func _register_screens() -> void:
+	router.register(&"garage", garage_screen, UiRouter.Kind.PLACE)
+	router.register(&"showroom", showroom, UiRouter.Kind.PLACE)
+	router.register(&"quests", quest_screen, UiRouter.Kind.MODAL)
+	router.register(&"mastery", mastery_screen, UiRouter.Kind.MODAL)
+	router.register(&"garage_value", garage_value_screen, UiRouter.Kind.MODAL)
+	router.register(&"profile", profile_screen, UiRouter.Kind.MODAL)
+	router.register(&"account", login_screen, UiRouter.Kind.MODAL)
+	router.register(&"race_challenge", race_challenge_screen, UiRouter.Kind.MODAL)
+	router.register(&"drag_race", drag_race_screen, UiRouter.Kind.PLACE)
+	router.register(&"race_result", race_result_screen, UiRouter.Kind.MODAL)
+
+
+## Yığın değişti: oyun HUD'u yalnızca bir YER (garaj/showroom) açıkken gizlenir; panolar
+## (görevler, ustalık, rütbe, profil, hesap) HUD'un üstünde durur.
+func _on_ui_stack_changed(top: StringName, place_open: bool) -> void:
+	_set_gameplay_hud_visible(not place_open)
+	if top != &"":
+		hide_bay_plate()   # dünya plakası bir ekranın altında asılı kalmasın
+		hide_car_info()
+	_sync_nav_tab(router.current_place())
+	_refresh_quest_button()
+
+
+## Alt sekme, açık olan yeri gösterir (hiçbir yer açık değilse GARAJ sekmesi işaretli kalır).
+func _sync_nav_tab(place: StringName) -> void:
+	var target: PlateButton = garage_button
+	match place:
+		&"showroom":
+			target = shop_button
+		&"garage":
+			target = cars_button if cars_button.button_pressed else garage_button
+	# ButtonGroup set_pressed_no_signal ile diğerlerini bırakmıyor: iki sekme birden amber kalıyordu.
+	for button: PlateButton in _nav_ids:
+		button.set_pressed_no_signal(button == target)
+
+
+## MAĞAZA ekranı: bina hitbox'ı ya da MAĞAZA sekmesi açar, oyun HUD'u gizlenir, GERİ ile döner.
 func _build_showroom() -> void:
 	showroom = ShowroomScreen.new()
 	garage_screen.get_parent().add_child(showroom)   # temalı Root'un altına, en üste
-	showroom.opened.connect(_on_showroom_opened)
-	showroom.closed.connect(_on_showroom_closed)
 	showroom.vehicle_purchased.connect(_on_vehicle_purchased)
 
 
@@ -655,7 +818,7 @@ func _build_login_screen() -> void:
 
 
 func _on_profile_button_pressed() -> void:
-	login_screen.open()
+	router.open(&"profile")
 
 
 ## GÖREVLER plakası sağ üst tabela sırasının hemen altına (kamera kontrollerinin üstüne) eklenir.
@@ -673,11 +836,10 @@ func _build_quests() -> void:
 	quest_screen = QuestScreen.new()
 	garage_screen.get_parent().add_child(quest_screen)
 	quest_screen.reward_claimed.connect(func(text: String) -> void: _show_notice(text, HudPalette.COIN_DARK))
-	quest_screen.closed.connect(_refresh_quest_button)
 
 
 func _on_quest_button_pressed() -> void:
-	quest_screen.open()
+	router.open(&"quests")
 	_refresh_quest_button()
 
 
@@ -696,32 +858,6 @@ func _on_quest_completed(quest_id: StringName) -> void:
 	_show_notice("GÖREV TAMAMLANDI: %s" % String(entry.get("title", "")), HudPalette.COIN_DARK, 2.2)
 
 
-func _on_showroom_opened() -> void:
-	car_gallery.close()
-	if garage_screen.visible:
-		garage_screen.close()
-	_set_gameplay_hud_visible(false)
-
-
-func _on_showroom_closed() -> void:
-	_set_gameplay_hud_visible(true)
-
-
-## GARAJ plakası: tam ekran Garaj görünümünü açar; açıkken oyun HUD'unun tamamı gizlenir,
-## GARAJDAN ÇIK ile aynen geri gelir.
-func _on_garage_button_pressed() -> void:
-	if garage_screen.visible:
-		garage_screen.close()
-		return
-	car_gallery.close()
-	_set_gameplay_hud_visible(false)
-	garage_screen.open()
-
-
-func _on_garage_closed() -> void:
-	_set_gameplay_hud_visible(true)
-
-
 func _set_gameplay_hud_visible(shown: bool) -> void:
 	top_left.visible = shown
 	top_right.visible = shown
@@ -730,7 +866,7 @@ func _set_gameplay_hud_visible(shown: bool) -> void:
 
 func _on_name_plate_pressed() -> void:
 	select_nav_tab(&"profile")
-	login_screen.open()
+	router.open(&"profile")
 
 
 func _on_camera_toggled(pressed: bool) -> void:
@@ -742,10 +878,6 @@ func _on_sound_toggled(muted: bool) -> void:
 	sound_toggled.emit(not muted)
 
 
-func _on_settings_pressed() -> void:
-	settings_pressed.emit()
-
-
 func _on_zoom_in_pressed() -> void:
 	camera_zoom_requested.emit(1)
 
@@ -754,5 +886,3 @@ func _on_zoom_out_pressed() -> void:
 	camera_zoom_requested.emit(-1)
 
 
-func _on_rotate_pressed() -> void:
-	camera_rotate_requested.emit()

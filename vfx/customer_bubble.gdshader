@@ -80,6 +80,23 @@ void fragment() {
 			float in_lira = 1.0 - smoothstep(0.0, fwidth(lira) * 1.2, lira);
 			col = mix(col, coin_color.rgb, in_disc);
 			col = mix(col, coin_edge.rgb, max(in_rim, in_lira));
+		} else if (glyph == 2) {
+			// Damalı bayrak: DİREK YOK — plakanın ortasında 4x3 dama deseni + ince koyu çerçeve.
+			// (Çerçeve şart: deseninin krem kareleri plakayla aynı renk, çerçevesiz "havada duran
+			// koyu kareler" gibi görünüyordu.)
+			vec2 c = gp - vec2(0.0, 0.03);
+			vec2 half_size = vec2(0.26, 0.18);
+			vec2 d = abs(c) - half_size;
+			float box = max(d.x, d.y);
+			float aa = fwidth(box) * 1.2;
+			float in_box = 1.0 - smoothstep(0.0, aa, box);
+			float frame = abs(box) - 0.014;
+			float in_frame = 1.0 - smoothstep(0.0, fwidth(frame) * 1.2, frame);
+			vec2 cell = floor((c + half_size) / (half_size * 2.0 / vec2(4.0, 3.0)));
+			float checker = mod(cell.x + cell.y, 2.0);
+			vec3 flag_col = mix(plate_color.rgb, ink_color.rgb, checker);
+			col = mix(col, flag_col, in_box);
+			col = mix(col, ink_color.rgb, in_frame);
 		} else {
 			float wrench = sd_wrench(gp);
 			float aa = fwidth(wrench) * 1.2;

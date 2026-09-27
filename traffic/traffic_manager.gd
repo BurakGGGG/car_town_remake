@@ -18,6 +18,10 @@ extends Node3D
 ## ve CarSpot'taki araçlar da bu sayıya dahildir (4 = 3 trafik + 1 bekleyen); yolda hiçbir zaman 4'ten
 ## fazla NPC olmaz, tamirdeki araç yola dönünce yeni spawn açılmaz.
 @export_range(1, 20) var max_vehicles: int = 4
+## YARIŞ ŞERİDİ — bu spawn noktası normal trafiğe KAPALIDIR. O şeride yalnızca RaceManager'ın
+## davet araçları girer (şehir trafiği oraya araç koymaz). Boş bırakılırsa bütün şeritler normal
+## trafiğe açılır.
+@export var race_lane_spawn: StringName = &"N_in_spawn"
 @export var spawn_interval: float = 2.0
 ## Bir eksen bu süreden uzun geçiyorsa ve karşı eksen bekliyorsa yeni araç almaz (adalet).
 @export var crossing_max_hold: float = 4.0
@@ -40,6 +44,10 @@ signal vehicle_spawned(vehicle: TrafficVehicle)
 
 var vehicles: Array[TrafficVehicle] = []
 var spawn_points: Array[TrafficWaypoint] = []
+## Yarış şeridinin başı — `spawn_points` içinde DEĞİLDİR, yalnızca RaceManager kullanır.
+var race_spawn_point: TrafficWaypoint
+## Bütün yol noktaları (yarış rakibi yol kenarından akışa geri dönerken en yakın noktayı arar).
+var waypoints: Array[TrafficWaypoint] = []
 var _spawn_timer: float = 0.0
 var _crossing: Array[TrafficVehicle] = []   # şu an kavşakta (veya geçiş izni almış) araçlar
 var _crossing_axis: int = -1                # kavşağı kullanan eksen (-1 = boş)
@@ -68,7 +76,7 @@ func _physics_process(delta: float) -> void:
 	_poll_pending()
 	_rotate_pool(delta)
 	_spawn_timer -= delta
-	if _spawn_timer <= 0.0 and vehicles.size() < max_vehicles:
+	if _spawn_timer <= 0.0 and city_vehicle_count() < max_vehicles:
 		if _try_spawn():
 			_spawn_timer = spawn_interval
 		else:
@@ -89,16 +97,64 @@ func _try_spawn() -> bool:
 	return false
 
 
-func _spawn_at(point: TrafficWaypoint) -> void:
+## Şehir trafiğindeki araç sayısı — yarış şeridindekiler SAYILMAZ (o şerit ayrı yönetiliyor,
+## bekleyen bir rakip yüzünden şehir boşalmasın).
+func city_vehicle_count() -> int:
+	var total: int = 0
+	for vehicle: TrafficVehicle in vehicles:
+		if not vehicle.race_lane:
+			total += 1
+	return total
+
+
+## Yarış daveti aracı: RaceManager çağırır, yarış şeridinin başında doğar. Aynı `vehicles`
+## listesinde yaşar (takip mesafesi, kavşak ve kuyruk mantığı ortaktır) ama şehir sayacına girmez.
+##
+## `wanted` verilirse rakip TAM O MODELLE gelir — yoldan gelen araç ile yarışta çıkan araç aynı
+## olsun diye (eskiden yoldan Getz geliyor, yarışta BMW başlıyordu). Model havuzda yoksa arka
+## planda yüklenmeye başlar ve null döner; RaceManager birkaç saniye sonra yeniden dener.
+func spawn_challenger(wanted: StringName = &"") -> TrafficVehicle:
+	if race_spawn_point == null or _pool.is_empty():
+		return null
+	if not _is_clear(race_spawn_point.global_position):
+		return null   # şeritte hâlâ bekleyen biri var: sonra denenir
+	var entry: Dictionary = {}
+	if wanted != &"":
+		entry = _pool_entry(wanted)
+		if entry.is_empty():
+			request_model(wanted)
+			return null
+	var vehicle: TrafficVehicle = _spawn_at(race_spawn_point, entry)
+	vehicle.race_lane = true
+	return vehicle
+
+
+## Havuzdaki model kaydı ({id, scene}) — yoksa boş sözlük.
+func _pool_entry(id: StringName) -> Dictionary:
+	for entry: Dictionary in _pool:
+		if entry["id"] == id:
+			return entry
+	return {}
+
+
+## Modeli arka planda yüklemeye başlar (RaceManager rakip modeli için kullanır).
+func request_model(id: StringName) -> void:
+	_request_model(id)
+
+
+func _spawn_at(point: TrafficWaypoint, entry: Dictionary = {}) -> TrafficVehicle:
 	var vehicle: TrafficVehicle = TrafficVehicle.new()
 	vehicle.name = "Npc_%d" % (_rng.randi() % 100000)
 	vehicle.max_speed = _rng.randf_range(min_speed, max_speed)
 	vehicle.acceleration = _rng.randf_range(0.5, 0.8)
 	add_child(vehicle)
-	vehicle.setup(self, _pool.pick_random()["scene"], _random_appearance(), point, model_scale)
+	var model: Dictionary = entry if not entry.is_empty() else _pool.pick_random()
+	vehicle.vehicle_id = model["id"]
+	vehicle.setup(self, model["scene"], _random_appearance(model["id"]), point, model_scale)
 	vehicle.reached_despawn.connect(_on_vehicle_despawn)
 	vehicles.append(vehicle)
 	vehicle_spawned.emit(vehicle)
+	return vehicle
 
 
 func _on_vehicle_despawn(vehicle: TrafficVehicle) -> void:
@@ -177,8 +233,12 @@ func loaded_model_ids() -> Array[StringName]:
 	return out
 
 
-func _random_appearance() -> CarAppearance:
+func _random_appearance(id: StringName = &"") -> CarAppearance:
 	var appearance: CarAppearance = CarAppearance.new()  # NPC'ye özel; oyuncu araçlarının kaydına girmez
+	if not GameFeatures.PAINT:
+		# Boya kapalıyken hiçbir araç rastgele renge boyanmaz: NPC de FABRİKA rengiyle çıkar.
+		appearance.body_color = CarCatalog.default_color_for(CarCatalog.scene_path(id))
+		return appearance
 	appearance.body_color = paint_palette.pick_random() if not paint_palette.is_empty() else Color.WHITE
 	if _rng.randf() < 0.2:
 		appearance.wheel_color = Color(0.2, 0.2, 0.22)  # ara sıra koyu jant
@@ -264,8 +324,33 @@ func _prune_crossing() -> void:
 
 # --- Kurulum -------------------------------------------------------------------
 
+## Aracın ÖNÜNDEKİ en yakın yol noktası (yol kenarında duran araç akışa böyle döner: ışınlanma yok).
+## Aracın ÖNÜNDEKİ en yakın yol noktası. (Model önü +Z'dir — burada -Z yazıyordu, yani araç
+## yarıştan/tamirden dönerken ARKASINDAKİ noktayı hedefleyip geri dönüyordu.)
+func nearest_waypoint_ahead(vehicle: TrafficVehicle) -> TrafficWaypoint:
+	var forward: Vector3 = vehicle.global_transform.basis.z
+	var best: TrafficWaypoint = null
+	var best_distance: float = 1e9
+	for point: TrafficWaypoint in waypoints:
+		var to_point: Vector3 = point.global_position - vehicle.global_position
+		to_point.y = 0.0
+		var distance: float = to_point.length()
+		if distance < 0.2 or distance > best_distance:
+			continue
+		if forward.dot(to_point.normalized()) < 0.3:
+			continue   # arkada kalan noktalar geri dönüş için uygun değil
+		best = point
+		best_distance = distance
+	return best
+
+
 func _collect_spawn_points(node: Node) -> void:
-	if node is TrafficWaypoint and (node as TrafficWaypoint).is_spawn:
-		spawn_points.append(node)
+	if node is TrafficWaypoint:
+		waypoints.append(node)
+		if (node as TrafficWaypoint).is_spawn:
+			if node.name == race_lane_spawn:
+				race_spawn_point = node   # yarış şeridi: şehir trafiğine kapalı
+			else:
+				spawn_points.append(node)
 	for child: Node in node.get_children():
 		_collect_spawn_points(child)

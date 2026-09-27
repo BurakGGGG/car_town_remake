@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://b1ae5xqqk8g5y"]
+
+[ext_resource type="PackedScene" uid="uid://bygop3jfoh28d" path="res://assets/cars/optimized/honda_civic.glb" id="1_honda"]
+
+[node name="honda_civic" instance=ExtResource("1_honda")]

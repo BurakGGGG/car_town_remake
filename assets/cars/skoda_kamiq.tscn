@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://b80reydm6cyf0"]
+
+[ext_resource type="PackedScene" uid="uid://d3bslmr2d2701" path="res://assets/cars/optimized/skoda_kamiq.glb" id="1_skoda"]
+
+[node name="skoda_kamiq" instance=ExtResource("1_skoda")]

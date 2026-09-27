@@ -47,7 +47,21 @@ func _ready():
 	if Engine.is_editor_hint():
 		return
 	add_to_group("garage_system")
+	_hide_build_grid()
 	_connect_upgrade.call_deferred()
+
+
+## Yerleştirme ızgarası (BuildGrid) açılış kadrajının tam ortasında camgöbeği tel kafes olarak
+## görünüyordu: bu, yerleştirme sistemi için bırakılmış bir prototip yardımcısı, oyuncuya
+## gösterilecek bir görsel değil. Sahnede DURUYOR (ileride yerleştirme modunda açılacak),
+## yalnızca oyunda gizleniyor.
+func _hide_build_grid() -> void:
+	var grid: Node = get_node_or_null("BuildGrid")
+	if grid == null:
+		return
+	for node: Node in [grid.get_node_or_null("BuildGrid"), grid.get_node_or_null("BuildGrid/GridPreview")]:
+		if node is Node3D:
+			(node as Node3D).visible = false
 
 
 ## Seviyeyi "garage_level" geliştirmesinden alır ve satın alındıkça büyür.

@@ -29,6 +29,13 @@ extends RefCounted
 
 const META_KEY: StringName = &"car_rig"
 const WHEEL_SHADER: Shader = preload("res://vehicles/wheel_split.gdshader")
+## Bir tekerlek grubundaki mesh, en küçük tekerin bu katından büyükse tekerlek sayılmaz
+## (çamurluk/kemer parça haritasına yanlışlıkla girmiş olur). Ölçüldü: temiz tekerler
+## birbirinden en çok %8 farklı, bulaşmış gruplar %40 büyük çıkıyor.
+const WHEEL_MEMBER_TOLERANCE: float = 1.25
+## Bir üyenin merkezi, lastiğin ekseninden (Y-Z düzleminde) lastik çapının bu katından uzaksa
+## tekerleğin parçası değildir. Jant/göbek eş merkezlidir; kaliper/kemer değildir.
+const WHEEL_AXIS_TOLERANCE: float = 0.22
 const PAINT_SHADER: Shader = preload("res://vehicles/car_paint.gdshader")
 const PAINT_MATCH: float = 0.03  # body_color fabrika boyasına bu kadar yakınsa doku aynen (yeniden boyama yok)
 ## Boya shader'ının uygulandığı roller: kaporta + dokuda kaporta rengi olabilen parçalar (renkli tampon,
@@ -68,10 +75,12 @@ var _surface_parts: Dictionary = {}  # rol → Array[[MeshInstance3D, yüzey ind
 var _wheel_groups: Array[Dictionary] = []  # {front, pivot, meshes, bases}
 var _materials: Dictionary = {}   # rol → StandardMaterial3D (bu instance'a özel)
 var _paint_materials: Dictionary = {}  # rol → ShaderMaterial (dokulu model: body / mirrors)
+var _wheel_dropped: PackedStringArray = PackedStringArray()  # gruptan elenen parçalar (denetim)
 var _wheel_materials: Array[ShaderMaterial] = []  # tek mesh tekerler için (bu instance'a özel)
 var _last_applied: CarAppearance
 var _albedo: Texture2D               # GLB'nin albedo dokusu (dokusuz modelde null)
 var _paint_mask: Texture2D           # UV paint mask (yoksa null → boyama kapalı)
+var _mask_probed: bool = false        # maske diskten bir kez arandı mı (tembel yükleme)
 var _default_paint: Color = Color.WHITE  # CarPartMap.default_paint (dokudaki fabrika boyası)
 
 
@@ -168,7 +177,7 @@ func apply(appearance: CarAppearance) -> void:
 func _apply_textured(appearance: CarAppearance) -> void:
 	# Fabrika rengindeyken boya shader'ı hiç takılmaz: GLB'nin kendi materyali kalır (ek doku örneklemesi
 	# ve materyal değişimi yok). Yalnızca yeniden boyanan araçlar shader'a geçer.
-	var repaint: bool = _paint_mask != null and not _color_close(appearance.body_color, _default_paint)
+	var repaint: bool = not _color_close(appearance.body_color, _default_paint) and _mask() != null
 	var paint: ShaderMaterial = _paint_material(&"paint") if repaint else null
 	if paint:
 		paint.set_shader_parameter(&"tint", appearance.body_color)
@@ -224,13 +233,22 @@ static func _color_close(a: Color, b: Color) -> bool:
 	return absf(a.r - b.r) < PAINT_MATCH and absf(a.g - b.g) < PAINT_MATCH and absf(a.b - b.b) < PAINT_MATCH
 
 
+## Boya maskesi (ilk istekte diskten yüklenir, sonuç — null da olsa — saklanır).
+func _mask() -> Texture2D:
+	if not _mask_probed:
+		_mask_probed = true
+		if _albedo:
+			_paint_mask = _load_paint_mask(scene_path)
+	return _paint_mask
+
+
 ## Dokulu gövde boyası materyali (rol başına bir kez; doku ve fabrika boyası sabit).
 func _paint_material(role: StringName) -> ShaderMaterial:
 	if not _paint_materials.has(role):
 		var mat: ShaderMaterial = ShaderMaterial.new()
 		mat.shader = PAINT_SHADER
 		mat.set_shader_parameter(&"albedo_tex", _albedo)
-		mat.set_shader_parameter(&"paint_mask", _paint_mask)
+		mat.set_shader_parameter(&"paint_mask", _mask())
 		mat.set_shader_parameter(&"paint", _default_paint)
 		_paint_materials[role] = mat
 	return _paint_materials[role]
@@ -291,6 +309,12 @@ func get_meshes(role: StringName) -> Array[MeshInstance3D]:
 
 # --- Detay kademesi (LOD) -------------------------------------------------------
 
+## Mesh'in tekerlek büyüklüğü: ebeveyn uzayında kutunun dikey/boyuna en büyük kenarı.
+static func _wheel_extent(mesh: MeshInstance3D) -> float:
+	var box: AABB = mesh.transform * mesh.get_aabb()
+	return maxf(box.size.y, box.size.z)
+
+
 ## Bu instance'ın tüm mesh'lerine LOD katsayısını uygular (bkz. LOD_BIAS_* sabitleri).
 func set_lod_bias(bias: float) -> void:
 	for mesh: MeshInstance3D in _all_meshes:
@@ -323,14 +347,19 @@ func _update_wheels() -> void:
 		var rot: Basis = spin
 		if group["front"]:
 			rot = Basis(Vector3.UP, deg_to_rad(steer_deg)) * spin
+		# Dönüş EBEVEYN uzayında, tekerin GERÇEK merkezi etrafında uygulanır. (Eskiden ilk
+		# mesh'in KENDİ yerel kutu merkezi pivot alınıp dönüş mesh'in yerel uzayında
+		# uygulanıyordu: parçaların yerel çerçeveleri farklı olduğunda teker kendi ekseninde
+		# değil aracın içinde yörüngeye giriyordu — Şahin'de ölçülen kayma 0,229 birim.)
 		var pivot: Vector3 = group["pivot"]
-		var local: Transform3D = Transform3D(Basis(), pivot) * Transform3D(rot, Vector3.ZERO) * Transform3D(Basis(), -pivot)
+		var about: Transform3D = Transform3D(Basis(), pivot) * Transform3D(rot, Vector3.ZERO) \
+			* Transform3D(Basis(), -pivot)
 		var meshes: Array = group["meshes"]
 		var bases: Array = group["bases"]
 		for i: int in meshes.size():
 			var mesh: MeshInstance3D = meshes[i]
 			if is_instance_valid(mesh):
-				mesh.transform = (bases[i] as Transform3D) * local
+				mesh.transform = about * (bases[i] as Transform3D)
 
 
 # --- Kurulum -----------------------------------------------------------------
@@ -345,8 +374,8 @@ func _resolve_parts() -> void:
 	_all_meshes.assign(by_name.values())
 	_default_paint = map.get("default_paint", Color.WHITE)
 	_albedo = _find_albedo(_all_meshes)
-	if _albedo:
-		_paint_mask = _load_paint_mask(scene_path)
+	# Maske KURULUMDA yüklenmez: fabrika renginde hiç örneklenmez, araç başına 1.33 MB VRAM
+	# (1024² kayıpsız) boşa giderdi. İlk yeniden boyamada _mask() ile yüklenir.
 
 	for role: StringName in CarPartMap.ROLES:
 		var list: Array[MeshInstance3D] = []
@@ -381,6 +410,8 @@ func _resolve_parts() -> void:
 		_add_surface_part(StringName(spec["back"]), mesh, 1)
 
 	var wheels: Dictionary = map.get("wheel_groups", {})
+	var raw: Array = []
+	var reference: float = INF
 	for key: String in ["fl", "fr", "rl", "rr"]:
 		var meshes: Array[MeshInstance3D] = []
 		for index: int in wheels.get(key, []):
@@ -389,13 +420,58 @@ func _resolve_parts() -> void:
 				meshes.append(mesh)
 		if meshes.is_empty():
 			continue
-		var bases: Array[Transform3D] = []
+		# Grubun "çekirdeği": en büyük üye = lastik. Dört grubun en KÜÇÜK çekirdeği referanstır
+		# (sokak araçlarında dört teker aynı boydadır).
+		var core: float = 0.0
 		for mesh: MeshInstance3D in meshes:
+			core = maxf(core, _wheel_extent(mesh))
+		reference = minf(reference, core)
+		raw.append({"key": key, "meshes": meshes})
+	for item: Dictionary in raw:
+		# 1) BOYUT elemesi: en küçük tekerin belirgin şekilde üstündeki parça tekerlek değildir
+		#    (çamurluk / kemer yanlışlıkla haritaya girmiş olur).
+		var sized: Array[MeshInstance3D] = []
+		var dropped: PackedStringArray = PackedStringArray()
+		for mesh: MeshInstance3D in (item["meshes"] as Array[MeshInstance3D]):
+			if _wheel_extent(mesh) <= reference * WHEEL_MEMBER_TOLERANCE:
+				sized.append(mesh)
+			else:
+				dropped.append(mesh.name)
+		if sized.is_empty():
+			sized.assign(item["meshes"])
+		# 2) Eksen, ELEMEDEN SONRA kalan en büyük üyeden (lastik) alınır. Eleneni eksen kabul
+		#    etmek tekeri çamurluğun merkezi etrafında döndürüyordu (Audi'de ölçülen 0,099).
+		var tyre: MeshInstance3D = sized[0]
+		var tyre_extent: float = _wheel_extent(tyre)
+		for mesh: MeshInstance3D in sized:
+			var extent: float = _wheel_extent(mesh)
+			if extent > tyre_extent:
+				tyre_extent = extent
+				tyre = mesh
+		var axis: Vector3 = (tyre.transform * tyre.get_aabb()).get_center()
+		# 3) EKSEN elemesi: jant/göbek lastikle eş merkezlidir; kaliper/kemer değildir.
+		var kept: Array[MeshInstance3D] = []
+		for mesh: MeshInstance3D in sized:
+			var box: AABB = mesh.transform * mesh.get_aabb()
+			var offset: Vector2 = Vector2(box.get_center().y - axis.y, box.get_center().z - axis.z)
+			if mesh == tyre or offset.length() <= tyre_extent * WHEEL_AXIS_TOLERANCE:
+				kept.append(mesh)
+			else:
+				dropped.append(mesh.name)
+		if not dropped.is_empty():
+			# Parça haritası tekerlek grubuna tekerlek OLMAYAN bir mesh koymuş (çamurluk / kemer).
+			# Dönmesi gövdeyi döndürüyormuş gibi görünürdü; gruptan çıkarılır (görünür kalır).
+			push_warning("CarRig: '%s' %s tekerlek grubundan çıkarılan parça(lar): %s"
+				% [scene_path.get_file(), item["key"], ", ".join(dropped)])
+		_wheel_dropped.append_array(dropped)
+		var bases: Array[Transform3D] = []
+		for mesh: MeshInstance3D in kept:
 			bases.append(mesh.transform)
 		_wheel_groups.append({
-			"front": key.begins_with("f"),
-			"pivot": meshes[0].get_aabb().get_center(),  # grubun lastiği ortak pivot
-			"meshes": meshes,
+			"front": String(item["key"]).begins_with("f"),
+			"tyre_index": maxi(kept.find(tyre), 0),
+			"pivot": axis,   # EBEVEYN uzayında LASTİĞİN ekseni
+			"meshes": kept,
 			"bases": bases,
 		})
 

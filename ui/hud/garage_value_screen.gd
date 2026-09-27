@@ -17,6 +17,8 @@ var _next_label: Label
 var _gauge: XpLane
 var _breakdown: VBoxContainer
 var _ladder: VBoxContainer
+var _column: VBoxContainer
+var _closing: bool = false
 
 
 func _ready() -> void:
@@ -29,20 +31,17 @@ func _ready() -> void:
 
 func open() -> void:
 	_refresh()
-	show()
+	PlateAnim.pop_in(self, _column)
 
 
 func close() -> void:
-	if not visible:
+	if not visible or _closing:
 		return
-	hide()
-	closed.emit()
-
-
-func _unhandled_input(event: InputEvent) -> void:
-	if visible and event.is_action_pressed(&"ui_cancel"):
-		close()
-		get_viewport().set_input_as_handled()
+	_closing = true
+	PlateAnim.pop_out(self, _column, func() -> void:
+		hide()
+		_closing = false
+		closed.emit())
 
 
 # --- Kurulum ---------------------------------------------------------------------
@@ -63,6 +62,7 @@ func _build() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_theme_constant_override(&"separation", 6)
 	center.add_child(column)
+	_column = column
 
 	var sign: PlatePanel = PlatePanel.new()
 	sign.theme_type_variation = &"HudCarPlate"

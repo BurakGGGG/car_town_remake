@@ -7,7 +7,6 @@
 [ext_resource type="Script" path="res://ui/hud/xp_lane.gd" id="4_aixkq"]
 [ext_resource type="Script" path="res://ui/hud/hud_icon.gd" id="5_cxhb7"]
 [ext_resource type="Script" path="res://ui/hud/plate_panel.gd" id="6_5uuaq"]
-[ext_resource type="Script" path="res://ui/hud/car_gallery.gd" id="7_o2lis"]
 
 [node name="HUD" type="CanvasLayer" unique_id=279782752]
 layer = 10
@@ -176,19 +175,6 @@ icon_size = 18.0
 bolts = false
 lift_when_pressed = 0.0
 
-[node name="SettingsButton" type="Button" parent="Root/TopRight/Column/SignRow" unique_id=1129840164]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(32, 32)
-layout_mode = 2
-focus_mode = 0
-theme_type_variation = &"HudSign"
-script = ExtResource("3_gfles")
-shape = 1
-kind = 8
-icon_size = 18.0
-bolts = false
-lift_when_pressed = 0.0
-
 [node name="CameraControls" type="VBoxContainer" parent="Root/TopRight/Column" unique_id=1357032098]
 unique_name_in_owner = true
 visible = false
@@ -219,19 +205,6 @@ theme_type_variation = &"HudSignSmall"
 script = ExtResource("3_gfles")
 shape = 1
 kind = 10
-icon_size = 15.0
-bolts = false
-lift_when_pressed = 0.0
-
-[node name="RotateButton" type="Button" parent="Root/TopRight/Column/CameraControls" unique_id=1235008721]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(26, 26)
-layout_mode = 2
-focus_mode = 0
-theme_type_variation = &"HudSignSmall"
-script = ExtResource("3_gfles")
-shape = 1
-kind = 11
 icon_size = 15.0
 bolts = false
 lift_when_pressed = 0.0
@@ -293,14 +266,6 @@ unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 6
-
-[node name="CarGallery" type="HBoxContainer" parent="Root/Bottom/Column" unique_id=319469126]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-size_flags_horizontal = 4
-mouse_filter = 2
-script = ExtResource("7_o2lis")
 
 [node name="NavRow" type="HBoxContainer" parent="Root/Bottom/Column" unique_id=1733946372]
 unique_name_in_owner = true

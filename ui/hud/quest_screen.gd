@@ -15,6 +15,8 @@ const PLATE_WIDTH: float = 440.0
 var _quests: QuestManager
 var _list: VBoxContainer
 var _empty: PlatePanel
+var _column: VBoxContainer
+var _closing: bool = false
 
 
 func _ready() -> void:
@@ -30,15 +32,18 @@ func open() -> void:
 	_refresh()
 	if visible:
 		return
-	show()
+	PlateAnim.pop_in(self, _column)
 	opened.emit()
 
 
 func close() -> void:
-	if not visible:
+	if not visible or _closing:
 		return
-	hide()
-	closed.emit()
+	_closing = true
+	PlateAnim.pop_out(self, _column, func() -> void:
+		hide()
+		_closing = false
+		closed.emit())
 
 
 # --- Kurulum -----------------------------------------------------------------
@@ -59,6 +64,7 @@ func _build() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_theme_constant_override(&"separation", 8)
 	center.add_child(column)
+	_column = column
 
 	var sign: PlatePanel = PlatePanel.new()
 	sign.theme_type_variation = &"HudCarPlate"

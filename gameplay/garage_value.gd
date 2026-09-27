@@ -11,8 +11,11 @@ class_name GarageValue
 ## Rütbe pahalı araçları kilitler (CarCatalog "min_garage_rank"), böylece "önce koleksiyonunu
 ## büyüt, sonra pahalı aracı al" hedefi doğar.
 
-## Rütbe eşikleri (₺). 8. rütbe "her şeye sahip olmak" seviyesidir; 9–10 ileride gelecek
-## dekor / ustalık plakaları için ayrılmıştır (bkz. docs/GDD.md).
+## Rütbe eşikleri (₺). 8. rütbe "bugünkü içeriğin tamamına sahip olmak" seviyesidir: ÖLÇÜLDÜ —
+## 7 aracın hepsi + tüm geliştirmeler + 3 alan + her araca boya = 439.500 ₺ (araç 295.000 +
+## geliştirme 113.500 + alan 17.000 + boya 14.000). Eşik 440.000 iken bu tavan 8. rütbeye 500 ₺
+## yetişemiyordu; 430.000'e çekildi. 9–10 bilinçli olarak ULAŞILAMAZDIR: gelecek dekor/koleksiyon
+## içeriği için ayrılmış uzun vadeli hedeflerdir (bkz. docs/GDD.md).
 const THRESHOLDS: Array[int] = [
 	0,        # 1
 	110000,   # 2
@@ -21,9 +24,10 @@ const THRESHOLDS: Array[int] = [
 	260000,   # 5
 	320000,   # 6
 	380000,   # 7
-	440000,   # 8
+	430000,   # 8 — 7 araçlık sette tavan buydu (ölçülen 439.500 ₺)
 	550000,   # 9
-	700000,   # 10
+	700000,   # 10 — 16 araçlık sette tavan: ölçülen 1.088.500 ₺ (600 dk simülasyonu),
+	          #      yani 10. rütbeye 5. saatte ulaşılıyor ve üstü boş kalıyor
 ]
 
 const RANK_NAMES: Array[String] = [

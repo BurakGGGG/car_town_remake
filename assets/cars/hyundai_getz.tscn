@@ -1,6 +1,5 @@
-[gd_scene format=3 uid="uid://c7hvyfhcuh7po"]
+[gd_scene format=3 uid="uid://2kj8ae8x4vlu"]
 
-[ext_resource type="PackedScene" uid="uid://cbvk4hg1lp5wx" path="res://assets/cars/optimized/hyundai_getz.glb" id="1_bbjns"]
+[ext_resource type="PackedScene" uid="uid://cbvk4hg1lp5wx" path="res://assets/cars/optimized/hyundai_getz.glb" id="1_hyund"]
 
-[node name="hyundai_getz" unique_id=407632810 instance=ExtResource("1_bbjns")]
-transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0, 0, 0)
+[node name="hyundai_getz" instance=ExtResource("1_hyund")]

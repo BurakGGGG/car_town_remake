@@ -13,6 +13,7 @@
 [ext_resource type="Script" uid="uid://cd5cihhahn0no" path="res://gameplay/repair_bay_manager.gd" id="15_j4qnp"]
 [ext_resource type="Script" uid="uid://cp04j44jq2f5t" path="res://gameplay/garage_upgrade_manager.gd" id="15_sc1dx"]
 [ext_resource type="Script" uid="uid://b3svwmly71a1g" path="res://gameplay/job_mastery.gd" id="16_fpfj3"]
+[ext_resource type="Script" path="res://gameplay/race/race_manager.gd" id="17_sc1dx"]
 [ext_resource type="Script" uid="uid://dikjkc80l7a22" path="res://gameplay/save_manager.gd" id="18_kjvhd"]
 [ext_resource type="Script" uid="uid://cfkyi1mbbyrap" path="res://gameplay/cloud_save_manager.gd" id="19_cloud"]
 [ext_resource type="Script" uid="uid://b7qchshfyvfd6" path="res://gameplay/quest_manager.gd" id="20_quest"]
@@ -694,6 +695,10 @@ gizmo_extents = 0.12
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -5.8, 0, -0.06)
 gizmo_extents = 0.12
 
+[node name="RaceSpot" type="Marker3D" parent="Gameplay/RepairSpots" unique_id=2121963795]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -1.7, 0, -0.06)
+gizmo_extents = 0.12
+
 [node name="SaveManager" type="Node" parent="Gameplay" unique_id=3834862]
 script = ExtResource("18_kjvhd")
 
@@ -711,3 +716,7 @@ script = ExtResource("15_j4qnp")
 
 [node name="JobMastery" type="Node" parent="Gameplay" unique_id=1287692745]
 script = ExtResource("16_fpfj3")
+
+[node name="RaceManager" type="Node" parent="Gameplay" unique_id=1879550802 node_paths=PackedStringArray("challenge_spot")]
+script = ExtResource("17_sc1dx")
+challenge_spot = NodePath("../RepairSpots/RaceSpot")

@@ -7,23 +7,32 @@ extends Node
 ## Sahnede World/Gameplay/JobMastery olarak durur; arayanlar "job_mastery" grubundan bulur
 ## (autoload yok — proje kuralı). Kare başına iş yapmaz.
 ##
-## AKIŞ: RepairManager.collect() → xp_multiplier(id) ile XP çarpılır → record(id) sayacı artırır.
-## Kademe atlanınca tek seferlik ₺ ödülü EconomyManager'dan verilir ve mastery_up yayılır.
-## Kalıcılık SaveManager'ındır (state / load_state / reset).
+## AKIŞ: iş BAŞLARKEN reward_multiplier(id) ödül çarpanına girer; iş TOPLANIRKEN xp_multiplier(id)
+## ile XP çarpılır ve record(id) sayacı artırır. Kademe atlanınca tek seferlik ₺ ödülü
+## EconomyManager'dan verilir ve mastery_up yayılır.
+##
+## KAYIT: yalnızca sayaçlar saklanır ({arıza id → sayı}), yıldızlar/bonuslar hep sayaçtan TÜRETİLİR.
+## Bu yüzden eşik tablosu değiştiğinde kayıt şeması değişmez ve v7 kayıtlar olduğu gibi çalışır
+## (yeni eşiklerle yıldızlar yeniden hesaplanır; geçmişe dönük kademe ödemesi YAPILMAZ).
 
 ## Bir arıza türü yıldız atladı.
 signal mastery_up(job_id: StringName, stars: int)
 ## Sayaç değişti (UI tazelemesi için).
 signal mastery_changed(job_id: StringName, count: int)
 
-## Yıldız eşikleri: 1★ 10 iş, 2★ 50, 3★ 150, 4★ 400, 5★ 1000.
-const STAR_THRESHOLDS: Array[int] = [10, 50, 150, 400, 1000]
-## Kademe başına TEK SEFERLİK ₺ ödülü.
-const STAR_REWARDS: Array[int] = [1000, 3000, 8000, 20000, 50000]
+## TEMEL yıldız eşikleri (kısa işler için): 1★ 10 iş, 2★ 40, 3★ 120, 4★ 300, 5★ 750.
+const BASE_THRESHOLDS: Array[int] = [10, 40, 120, 300, 750]
+## TEK SEFERLİK ödül = arızanın ödülü × bu çarpan × arızanın ağırlığı.
+## (İlk kademede ~10 işlik kazancın %80'i kadar; üst kademelerde pay düşer: 80 → 60 → 50 → 47 → 40.)
+const STAR_PAYOUT: Array[float] = [8.0, 18.0, 40.0, 85.0, 180.0]
 ## Yıldız başına XP bonusu (%10): 5 yıldızda +%50.
 const XP_BONUS_PER_STAR: float = 0.10
+## Yıldız başına KALICI ödül bonusu (%2): 5 yıldızda +%10. Küçük tutuldu — ekonomiyi bozmadan
+## "bu işi artık daha iyi yapıyorum" hissini versin diye (0-10 saatlik projeksiyonda +%3,4 gelir).
+const REWARD_BONUS_PER_STAR: float = 0.02
 
 var _counts: Dictionary = {}   # arıza id → tamamlanan iş sayısı
+var _types: Dictionary = {}    # arıza id → RepairType (eşik hesabı için, tembel önbellek)
 
 
 func _ready() -> void:
@@ -36,11 +45,23 @@ func count(job_id: StringName) -> int:
 	return int(_counts.get(job_id, 0))
 
 
+## BU ARIZANIN yıldız eşikleri. Eşikler arızanın SIKLIĞINA (RepairType.weight) göre ölçeklenir:
+## bütün arızalarda bir yıldız KABACA AYNI OYUN SÜRESİNİ alsın diye. Ölçülen akışta (garaj 3, 3 alan)
+## saatte ~35 kısa iş, ~28 boya, ~21 döşeme, ~17 revizyon geliyor; ağırlıkla ölçeklenen eşikler
+## hepsinde 1. yıldızı ~18 dakikaya getirir. Ayrı bir alan eklenmedi: ağırlık zaten sıklığın kendisi.
+func thresholds(job_id: StringName) -> Array[int]:
+	var scale: float = weight_of(job_id)
+	var out: Array[int] = []
+	for base: int in BASE_THRESHOLDS:
+		out.append(maxi(int(round(float(base) * scale)), 1))
+	return out
+
+
 ## 0–5 arası yıldız.
 func stars(job_id: StringName) -> int:
 	var done: int = count(job_id)
 	var result: int = 0
-	for threshold: int in STAR_THRESHOLDS:
+	for threshold: int in thresholds(job_id):
 		if done >= threshold:
 			result += 1
 	return result
@@ -49,7 +70,46 @@ func stars(job_id: StringName) -> int:
 ## Sıradaki yıldız için gereken iş sayısı (5 yıldızdaysa 0).
 func next_threshold(job_id: StringName) -> int:
 	var current: int = stars(job_id)
-	return 0 if current >= STAR_THRESHOLDS.size() else STAR_THRESHOLDS[current]
+	var list: Array[int] = thresholds(job_id)
+	return 0 if current >= list.size() else list[current]
+
+
+## Bu arızanın kademe ödülü (₺): arızanın ödülü × kademe çarpanı × sıklık ağırlığı.
+func star_payout(job_id: StringName, star: int) -> int:
+	var type: RepairType = type_of(job_id)
+	if type == null or star < 1:
+		return 0
+	var mult: float = STAR_PAYOUT[clampi(star - 1, 0, STAR_PAYOUT.size() - 1)]
+	return int(round(float(type.reward) * mult * weight_of(job_id)))
+
+
+## Kalıcı ödül çarpanı (1.0 … 1.10).
+func reward_multiplier(job_id: StringName) -> float:
+	return 1.0 + REWARD_BONUS_PER_STAR * float(stars(job_id))
+
+
+## 5 yıldıza ulaşmış arızalar (fiziksel "usta" işaretleri bunlara bakacak).
+func mastered_jobs() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for id: StringName in _counts:
+		if stars(id) >= BASE_THRESHOLDS.size():
+			out.append(id)
+	return out
+
+
+## Arızanın kataloğu (sahnedeki RepairManager, yoksa varsayılan katalog).
+func type_of(job_id: StringName) -> RepairType:
+	if _types.is_empty():
+		var repairs: RepairManager = get_tree().get_first_node_in_group("repair_manager") as RepairManager
+		var list: Array[RepairType] = repairs.repair_types if repairs and not repairs.repair_types.is_empty() else RepairType.defaults()
+		for type: RepairType in list:
+			_types[type.id] = type
+	return _types.get(job_id, null)
+
+
+func weight_of(job_id: StringName) -> float:
+	var type: RepairType = type_of(job_id)
+	return maxf(type.weight, 0.05) if type else 1.0
 
 
 ## Bu arızadan kazanılan XP çarpanı (1.0 … 1.5).
@@ -78,7 +138,7 @@ func record(job_id: StringName) -> void:
 	if after > before:
 		var economy: EconomyManager = get_tree().get_first_node_in_group("economy") as EconomyManager
 		if economy:
-			economy.add_money(STAR_REWARDS[mini(after - 1, STAR_REWARDS.size() - 1)])
+			economy.add_money(star_payout(job_id, after))
 		mastery_up.emit(job_id, after)
 	_request_save()
 

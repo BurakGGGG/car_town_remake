@@ -24,7 +24,8 @@ extends Control
 ## (CarHitbox ile aynı yöntem: StaticBody3D + input_ray_pickable + input_event; ama dünyadaki statik
 ## CarHitbox.selected_car'a dokunulmaz, yoksa RepairManager'ın hedefi bozulurdu).
 ## GARAJ DEĞERİ: sol sütunun sonundaki plaka garajın toplam değerini ve 10 basamaklı rütbesini
-## gösterir (GarageValue — türetilmiş, kayda yazılmaz); plakaya basınca rütbe merdiveni açılır.
+## gösterir (GarageValue — türetilmiş, kayda yazılmaz); plakaya basınca rütbe merdiveni AÇILMASI
+## İÇİN screen_requested yayılır (ekranları UiRouter yönetir, ESC'yi de o karşılar).
 ## Duvardaki tabela da rütbenin adını taşır: garaj büyüdükçe tabela değişir.
 ## SATIŞ: sağdaki SAT plakası aksiyon plakalarının yerine onay plakasını açar (satış geri alınamaz);
 ## para ve sahiplik VehicleOwnership.sell_vehicle'dedir, tek araç satılamaz.
@@ -33,9 +34,91 @@ extends Control
 ## modeli bellekte durmaz. Satın alınmayan araç hiç yüklenmez; oyuncu araçları trafiğe de çıkmaz.
 
 signal action_selected(action: StringName, car: StringName)
+## Bir pano isteniyor (&"garage_value" / &"mastery"): ekranı UiRouter açar, garaj altta açık kalır.
+signal screen_requested(id: StringName)
 signal closed
 
 const SLIDE: float = 16.0
+## Bu yüksekliğin altında sol sütun sadeleşir (telefon tuvali ~480).
+const COMPACT_HEIGHT: float = 560.0
+## Alt araç şeridinin kadraj kenarına bıraktığı pay (sahnedeki margin_bottom ile aynı).
+const BOTTOM_MARGIN: float = 14.0
+
+## Sol sütunun altında GARAJDAN ÇIK plakasına bırakılan pay (şerit ölçülemezse yedek).
+const EXIT_RESERVE: float = 96.0
+## Sol sütunun kadraj üstünden payı.
+const COLUMN_TOP: float = 16.0
+const INFO_WIDTH: float = 196.0
+
+## Alt araç şeridi: çok araçta satır kadrajı aştığı için kaydırma kabına alınır.
+## %BottomCenter sahnede bottom-center'a tutturulmuş ama büyüme yönü uygulanmadığından
+## (offsets 0,-14,1312,108) satır sağa ve aşağı taşıyordu: 9 araçta şerit 1312 px, kadraj 1152.
+## Burada anchor'lar bottom-wide'a alınır (satır kadraj genişliğinde, aşağıdan yukarı büyür) ve
+## CarList yatay kaydırmalı bir kaba taşınır: az araçta ortalı, çok araçta parmakla kaydırılır.
+func _fix_car_list_layout() -> void:
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.name = "CarListScroll"
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	var index: int = car_list.get_index()
+	bottom_group.remove_child(car_list)
+	scroll.add_child(car_list)
+	bottom_group.add_child(scroll)
+	bottom_group.move_child(scroll, index)
+	car_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL   # az araçta kabı doldurur
+	car_list.alignment = BoxContainer.ALIGNMENT_CENTER          # ... ve ortalanır
+	# Şerit yüksekliği plakalar kurulduktan SONRA belli olur: her minimum boy değişiminde
+	# (ve kadraj değişiminde) yeniden yerleştirilir, kare sonuna ertelenerek.
+	bottom_group.minimum_size_changed.connect(_place_car_list, CONNECT_DEFERRED)
+	car_list.minimum_size_changed.connect(_place_car_list, CONNECT_DEFERRED)
+	(bottom_group.get_parent() as Control).resized.connect(_place_car_list, CONNECT_DEFERRED)
+	exit_group.resized.connect(_place_car_list, CONNECT_DEFERRED)
+	# Sol sütunun genişliği kaydırma çubuğu göründükçe 8 px oynuyor: şerit onu takip etmeli.
+	left_group.resized.connect(_place_car_list, CONNECT_DEFERRED)
+	exit_group.minimum_size_changed.connect(_place_car_list, CONNECT_DEFERRED)
+	_place_car_list.call_deferred()
+
+
+## Şeridi kadrajın altına oturtur: tam genişlik, yüksekliği kendi minimumu kadar.
+## Anchor + büyüme yönüne bırakılamıyor — offset'ler bir kez aşağı doğru büyüyünce
+## (offset_bottom = +116) motor bir daha küçültmüyor ve şerit kadrajın altında kalıyordu.
+## Bu yüzden rect doğrudan yazılır; kadraj değişince (resized) yeniden hesaplanır.
+func _place_car_list() -> void:
+	var area: Vector2 = bottom_group.get_parent_area_size()
+	if area.y <= 0.0:
+		return
+	var height: float = maxf(bottom_group.get_combined_minimum_size().y,
+		car_list.get_combined_minimum_size().y + BOTTOM_MARGIN)
+	bottom_group.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
+	# Solda bilgi sütunu ve GARAJDAN ÇIK plakası duruyor: şerit ikisinin de sağından başlar.
+	# Böylece sütun kadrajın altına kadar inebilir (değer plakası kırpılmaz) ve şerit hiçbir
+	# şeyin üstüne binmez; sığmayan araçlar zaten yatay kaydırma ile geliyor.
+	var left_inset: float = 0.0
+	for group: Control in [exit_group, left_group]:
+		if group and group.is_visible_in_tree():
+			left_inset = maxf(left_inset, maxf(group.size.x, group.get_combined_minimum_size().x))
+	if left_inset > 0.0:
+		left_inset += 8.0
+	bottom_group.offset_left = left_inset
+	bottom_group.offset_top = area.y - height
+	bottom_group.offset_right = area.x
+	bottom_group.offset_bottom = area.y
+	# Kaydırma kabı kendi minimum genişliği yüzünden 8 px taşabiliyor: kırpılır, böylece
+	# hiçbir plaka kadrajın dışına çizilmez.
+	bottom_group.clip_contents = true
+	# Açılış animasyonu hedef konumu bir kez yakalıyor; şerit sonradan yer değiştirirse
+	# tween eski hedefe geri çekmesin diye hedef de tazelenir.
+	if _group_targets.has(bottom_group):
+		_group_targets[bottom_group] = bottom_group.position
+	_apply_responsive_layout()   # sol sütun şeridin üstünde bitsin
+
+
+## Garaj zemininde SADECE liftteki araç durur. Sahip olunan diğer araçların zemine park
+## edilmesi (kullanıcı kararı, 2026-09-27) kalabalık ve dağınık görünüyordu; araç değiştirme
+## zaten alt şeritteki plakalardan yapılıyor. Park kodu duruyor, yalnızca kapalı.
+const SHOW_PARKED_CARS: bool = false
 
 ## Park yerleri (garaj zemini, y=0). Park eden k. araç → PARK_SLOTS[k]; yerler içeriden dışarıya
 ## sıralıdır, böylece az araçta hepsi kadrajın ortasında toplanır. Konumlar izometrik kameranın
@@ -90,6 +173,13 @@ var _upgrade_rows: Dictionary = {}
 ## Tamir alanı plakaları: indeks → {title, state, button}
 var _bay_rows: Array[Dictionary] = []
 var _bays: RepairBayManager
+## Sıradaki alanın ne açtığını yazan satır (ProgressionEffects).
+var _bay_hint: Label
+## Kısa ekranda gizlenen yardımcı satırlar (başlıklar + "ne alıyorum" özetleri).
+var _compact_labels: Array[Label] = []
+## Kısa ekran kipi (telefon tuvali): yardımcı satırlar gizli.
+var _compact: bool = false
+var _info_scroll: ScrollContainer
 var _upgrades: GarageUpgradeManager
 var _economy: EconomyManager
 
@@ -110,9 +200,10 @@ var _info_tween: Tween
 var _group_targets: Dictionary = {}  # anchor'lı grup → hedef position (animasyon yarıda kesilirse geri koymak için)
 var _paint_button: PlateButton
 var _paint_panel: PaintPanel
-## Garaj değeri plakası (sol sütunun sonu) ve rütbe merdiveni ekranı.
+## Ustalık panosu plakası (ekranın kendisi UiRouter'dadır).
+var _mastery_button: PlateButton
+## Garaj değeri plakası (sol sütunun sonu); rütbe merdiveni ekranı UiRouter'dadır.
 var _value_button: PlateButton
-var _value_screen: GarageValueScreen
 ## Satış onay plakası (sağ sütun, aksiyon plakalarının yerine açılır).
 var _sell_panel: PlatePanel
 var _sell_name: Label
@@ -138,11 +229,19 @@ func _ready() -> void:
 	set_process(false)
 	car_list.mode = CarGallery.Mode.OWNED   # garaj listesi: yalnızca sahip olunan araçlar
 	car_list.vehicle_selected.connect(_on_vehicle_selected)
+	_fix_car_list_layout()
+	# Sol sütun artık "ne alıyorum" satırlarını da taşıyor: aralık biraz daraltıldı, böylece
+	# sütunun altı GARAJDAN ÇIK plakasına değmiyor (ölçüm: 611 → 597 px, buton üstü 607).
+	info_column.add_theme_constant_override(&"separation", 4)
 	_build_upgrade_plates()
 	_build_bay_plates()
 	_build_value_plate()
 	_build_paint()
+	_build_mastery()
 	_build_sell()
+	_wrap_info_column()
+	_apply_responsive_layout()
+	get_viewport().size_changed.connect(_apply_responsive_layout)
 	_connect_upgrades.call_deferred()
 
 
@@ -151,10 +250,57 @@ func _process(delta: float) -> void:
 		car_slot.rotate_y(deg_to_rad(turntable_speed) * delta)
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if visible and not _closing and event.is_action_pressed(&"ui_cancel"):
-		close()
-		get_viewport().set_input_as_handled()
+# --- Ekrana uyum (telefon tuvali ~1040×480) ----------------------------------
+
+## Sol sütun kaydırılabilir bir kapsayıcıya alınır: telefon tuvalinde (yükseklik 480) içerik
+## GARAJDAN ÇIK plakasının altına taşıyordu. Masaüstünde (648) hiçbir şey değişmez: içerik sığar,
+## kaydırma çubuğu görünmez.
+func _wrap_info_column() -> void:
+	var host: Control = left_group
+	_info_scroll = ScrollContainer.new()
+	_info_scroll.name = "InfoScroll"
+	_info_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_info_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	_info_scroll.follow_focus = false
+	_info_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	host.remove_child(info_column)
+	_info_scroll.add_child(info_column)
+	host.add_child(_info_scroll)
+
+
+## Kısa tuvalde (yükseklik < 560) sütun sadeleşir: başlıklar ve "ne alıyorum" özet satırları
+## gizlenir — o ayrıntılar zaten dünyadaki satın alma plakasında tam haliyle yazıyor.
+func _apply_responsive_layout() -> void:
+	if _info_scroll == null:
+		return
+	var view_height: float = get_viewport_rect().size.y
+	_compact = view_height < COMPACT_HEIGHT
+	for label: Label in _compact_labels:
+		if is_instance_valid(label):
+			label.visible = not _compact and label.text != ""
+	info_column.add_theme_constant_override(&"separation", 2 if _compact else 4)
+	# Şerit sütunun SAĞINDAN başladığı için sütun aşağı kadar inebilir; yalnızca GARAJDAN ÇIK
+	# plakasına pay bırakılır.
+	var available: float = maxf(view_height - COLUMN_TOP - EXIT_RESERVE, 120.0)
+	var wanted: float = info_column.get_combined_minimum_size().y
+	_info_scroll.custom_minimum_size = Vector2(INFO_WIDTH, minf(wanted, available))
+	_place_left_column()
+
+
+## Sol sütunu üstten hizalar. Sahnede dikey ORTALI (%LeftCenter, anchor 0.5) olduğu için sütun
+## uzadıkça altı araç şeridinin üstüne biniyordu; üstten hizalanınca aynı yerde başlar ama
+## şeridin üstünde biter.
+func _place_left_column() -> void:
+	var height: float = _info_scroll.custom_minimum_size.y
+	if height <= 0.0:
+		return
+	left_group.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
+	left_group.offset_left = 0.0
+	left_group.offset_top = COLUMN_TOP
+	left_group.offset_right = left_group.get_combined_minimum_size().x
+	left_group.offset_bottom = COLUMN_TOP + height
+	if _group_targets.has(left_group):
+		_group_targets[left_group] = left_group.position
 
 
 # --- Aç / kapa ---------------------------------------------------------------
@@ -198,8 +344,6 @@ func close() -> void:
 func _finish_close() -> void:
 	_sell_panel.hide()
 	action_column.show()
-	if _value_screen:
-		_value_screen.hide()
 	_paint_panel.close()   # önizleme bırakılır; yeniden açılışta aksiyon plakaları görünür
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	car_list.close()
@@ -229,6 +373,7 @@ func _enter_animation() -> void:
 	await get_tree().process_frame  # anchor'lı grupların konumları hesaplansın
 	if not visible or _closing:
 		return
+	_place_car_list()   # hedefler yakalanmadan ÖNCE şerit ve sol sütun doğru yere otursun
 	var groups: Array = [
 		[top_group, Vector2(0.0, -SLIDE)],
 		[left_group, Vector2(-SLIDE, 0.0)],
@@ -264,6 +409,17 @@ func _kill_tweens() -> void:
 
 
 # --- Araç bilgisi ------------------------------------------------------------
+
+## ARAÇLAR sekmesinden gelindi: alt listedeki araç plakaları kısa bir amber vuruşla öne çıkar
+## (ayrı bir "araçlarım" ekranı açmıyoruz — araçlar zaten fiziksel olarak burada park ediyor).
+func focus_cars() -> void:
+	if car_list == null:
+		return
+	var tween: Tween = create_tween()
+	tween.tween_property(car_list, "modulate", HudPalette.PLATE_SELECTED, 0.18)
+	tween.tween_property(car_list, "modulate", Color.WHITE, 0.35)
+	_tweens.append(tween)
+
 
 ## Listeden araç seçildi.
 func _on_vehicle_selected(vehicle_id: StringName) -> void:
@@ -324,9 +480,9 @@ func _load_preview(scene_path: String) -> void:
 	if scene == null:
 		return
 	_preview = scene.instantiate() as Node3D
-	# .tscn köküne gömülü ölçekleri yok say (Getz 0.6): dört modelin native boyu ~1 birim,
-	# lift üstünde hepsi aynı ölçekte görünsün
-	_preview.scale = Vector3.ONE
+	# .tscn köküne gömülü ölçek yok sayılır; yerine aracın GERÇEK boyutundan türeyen ölçek
+	# uygulanır (Getz modeli 0,6 birim olduğu için eskiden lift üstünde de küçücük duruyordu).
+	_preview.scale = Vector3.ONE * CarCatalog.model_scale_for_scene(scene_path)
 	car_slot.add_child(_preview)
 	# Aynı görünüm verisi: dünya aracı, bu önizleme ve thumbnail hepsi CarAppearance.get_for(yol) okur
 	_preview_rig = CarRig.for_node(_preview)
@@ -380,6 +536,10 @@ func _refresh_collection() -> void:
 	var ownership: VehicleOwnership = _owner_node()
 	var owned: Array[StringName] = ownership.owned_vehicle_ids() if ownership else ([_shown_vehicle] as Array[StringName])
 	_listed = owned
+	if not SHOW_PARKED_CARS:
+		_clear_collection()
+		_fit_camera(1)   # kadraj tek araca göre: lift ortada, kamera yakın
+		return
 	# Artık sahip olunmayan ya da lifte çıkan araçları kaldır
 	for id: StringName in _parked.keys():
 		if not owned.has(id) or id == _shown_vehicle:
@@ -415,7 +575,7 @@ func _spawn_parked(vehicle_id: StringName, slot: Vector3) -> Node3D:
 		return null
 	var car: Node3D = scene.instantiate() as Node3D
 	car.name = String(vehicle_id)
-	car.scale = Vector3.ONE        # wrapper .tscn ölçekleri yok sayılır (lifteki araçla aynı kural)
+	car.scale = Vector3.ONE * CarCatalog.model_scale(vehicle_id)   # lifteki araçla aynı kural
 	car.position = slot
 	_collection.add_child(car)
 	var rig: CarRig = CarRig.for_node(car)
@@ -516,9 +676,10 @@ func _build_upgrade_plates() -> void:
 	caption.text = "GELİŞTİRMELER"
 	caption.theme_type_variation = &"HudOutlined"   # dünya üstünde: konturlu yazı (plaka arkası yok)
 	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	caption.custom_minimum_size = Vector2(0.0, 20.0)   # plakanın altına girmesin
+	caption.custom_minimum_size = Vector2(0.0, 16.0)   # plakanın altına girmesin
 	caption.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	info_column.add_child(caption)
+	_compact_labels.append(caption)
 	for id: StringName in [GarageUpgradeManager.SPEED_ID, GarageUpgradeManager.GARAGE_ID]:
 		var plate: PlatePanel = PlatePanel.new()
 		plate.theme_type_variation = &"HudCarPlate"
@@ -536,8 +697,17 @@ func _build_upgrade_plates() -> void:
 		var level: Label = Label.new()
 		level.theme_type_variation = &"HudInkCaption"
 		level.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# NE ALIYORUM: ProgressionEffects'ten tek satır (dar sütun; ayrıntı dünyadaki plakada)
+		var effect: Label = Label.new()
+		effect.theme_type_variation = &"HudInkCaption"
+		effect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # dar plakada kırpılmasın
+		effect.custom_minimum_size = Vector2(120.0, 0.0)
+		effect.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
 		texts.add_child(title)
 		texts.add_child(level)
+		texts.add_child(effect)
+		_compact_labels.append(effect)
 		row.add_child(texts)
 		var button: PlateButton = PlateButton.new()
 		button.theme_type_variation = &"HudPlateSmall"
@@ -549,7 +719,7 @@ func _build_upgrade_plates() -> void:
 		row.add_child(button)
 		plate.add_child(row)
 		info_column.add_child(plate)
-		_upgrade_rows[id] = {"title": title, "level": level, "button": button}
+		_upgrade_rows[id] = {"title": title, "level": level, "button": button, "effect": effect}
 
 
 ## TAMİR ALANLARI: tek plaka içinde üç kompakt satır (ALAN 1/2/3 + durum düğmesi).
@@ -560,9 +730,10 @@ func _build_bay_plates() -> void:
 	caption.text = "TAMİR ALANLARI"
 	caption.theme_type_variation = &"HudOutlined"
 	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	caption.custom_minimum_size = Vector2(0.0, 20.0)
+	caption.custom_minimum_size = Vector2(0.0, 16.0)
 	caption.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	info_column.add_child(caption)
+	_compact_labels.append(caption)
 
 	var plate: PlatePanel = PlatePanel.new()
 	plate.theme_type_variation = &"HudCarPlate"
@@ -591,6 +762,13 @@ func _build_bay_plates() -> void:
 		row.add_child(button)
 		rows.add_child(row)
 		_bay_rows.append({"title": title, "state": title, "button": button})
+	_bay_hint = Label.new()
+	_bay_hint.theme_type_variation = &"HudInkCaption"
+	_bay_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bay_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_bay_hint.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
+	rows.add_child(_bay_hint)
+	_compact_labels.append(_bay_hint)
 	plate.add_child(rows)
 	info_column.add_child(plate)
 
@@ -603,6 +781,7 @@ func _on_bay_pressed(index: int) -> void:
 
 ## Satırları açık / satın alınabilir / kilitli durumuna göre yazar.
 func _refresh_bays() -> void:
+	_refresh_bay_hint()
 	for i: int in _bay_rows.size():
 		var row: Dictionary = _bay_rows[i]
 		var title: Label = row["title"]
@@ -617,7 +796,7 @@ func _refresh_bays() -> void:
 				button.text = "AÇIK"
 				button.disabled = true
 			RepairBayManager.Status.NEEDS_LEVEL:
-				button.text = "Sv.%d" % _bays.required_level(i)
+				button.text = "GARAJ %d" % _bays.required_level(i)   # alanı açan şey garaj seviyesi
 				button.disabled = true
 			RepairBayManager.Status.TOO_EXPENSIVE:
 				button.text = "%s ₺" % Hud.format_thousands(_bays.price(i))
@@ -625,6 +804,18 @@ func _refresh_bays() -> void:
 			_:
 				button.text = "AÇ  %s ₺" % Hud.format_thousands(_bays.price(i))
 				button.disabled = false
+
+
+## Henüz açılmamış ilk alanın somut getirisi ("BOYA İŞİ AÇILIR" gibi); yoksa satır gizlenir.
+func _refresh_bay_hint() -> void:
+	if _bay_hint == null:
+		return
+	var next: int = _bays.unlocked_count() if _bays else RepairBayManager.BAY_PRICES.size()
+	if next >= RepairBayManager.BAY_PRICES.size():
+		_bay_hint.visible = false
+		return
+	_bay_hint.text = ProgressionEffects.bay_summary(get_tree(), next)
+	_bay_hint.visible = not _compact
 
 
 func _connect_upgrades() -> void:
@@ -664,13 +855,18 @@ func _refresh_upgrades() -> void:
 			title.text = "—"
 			level.text = ""
 			button.disabled = true
+			(row["effect"] as Label).visible = false
 			continue
+		var effect: Label = row["effect"]
 		var upgrade: GarageUpgrade = _upgrades.get_upgrade(id)
 		title.text = upgrade.display_name
 		level.text = "Seviye %d/%d" % [upgrade.current_level, upgrade.max_level]
+		effect.text = ProgressionEffects.upgrade_summary(get_tree(), id, upgrade.current_level + 1)
+		effect.visible = effect.text != "" and not _compact
 		if upgrade.is_max():
 			button.text = "MAKSİMUM"
 			button.disabled = true
+			effect.visible = false
 			continue
 		var cost: int = upgrade.next_cost()
 		button.text = "YÜKSELT\n%s ₺" % Hud.format_thousands(cost)
@@ -688,10 +884,8 @@ func _build_value_plate() -> void:
 	_value_button.bolts = false
 	_value_button.focus_mode = Control.FOCUS_NONE
 	_value_button.custom_minimum_size = Vector2(190.0, 0.0)
-	_value_button.pressed.connect(_open_value_screen)
+	_value_button.pressed.connect(func() -> void: screen_requested.emit(&"garage_value"))
 	info_column.add_child(_value_button)
-	_value_screen = GarageValueScreen.new()
-	add_child(_value_screen)   # garaj plakalarının ÜSTÜNE oturur (overlay'den sonra eklenir)
 
 
 ## Plakayı ve duvardaki tabelayı güncel garaj değerine göre yazar.
@@ -700,8 +894,9 @@ func _refresh_value() -> void:
 		return
 	var value: int = GarageValue.compute(get_tree())
 	var rank: int = GarageValue.rank(value)
-	_value_button.text = "GARAJ DEĞERİ  %s ₺\n%d. %s" % [
-		Hud.format_thousands(value), rank, GarageValue.rank_name(rank)]
+	# Tek satır: sol sütun GARAJDAN ÇIK'ın üstüne taşmasın (ölçüldü: iki satırda 16 px çakışıyordu).
+	# Rütbenin ADI zaten duvardaki tabelada ve rütbe merdiveninde yazıyor.
+	_value_button.text = "GARAJ DEĞERİ  %s ₺  ·  %d. RÜTBE" % [Hud.format_thousands(value), rank]
 	_write_wall_sign(rank)
 
 
@@ -718,11 +913,6 @@ func _write_wall_sign(rank: int) -> void:
 	var font: Font = sign.font if sign.font else ThemeDB.fallback_font
 	var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 96).x
 	sign.font_size = clampi(int(96.0 * WALL_SIGN_PIXELS / maxf(width, 1.0)), 28, 96)
-
-
-func _open_value_screen() -> void:
-	if _value_screen:
-		_value_screen.open()
 
 
 # --- Araç satışı -------------------------------------------------------------------
@@ -815,6 +1005,8 @@ func _build_paint() -> void:
 	_paint_button.custom_minimum_size = Vector2(86.0, 0.0)
 	_paint_button.focus_mode = Control.FOCUS_NONE
 	_paint_button.pressed.connect(_open_paint)
+	# Boya özelliği kapalıyken plaka hiç görünmez (panonun kendisi kurulu kalır: altyapı bozulmaz)
+	_paint_button.visible = GameFeatures.PAINT
 	action_column.add_child(_paint_button)
 	_paint_panel = PaintPanel.new()
 	right_group.add_child(_paint_panel)
@@ -823,7 +1015,27 @@ func _build_paint() -> void:
 	_paint_panel.closed.connect(func() -> void: action_column.show())
 
 
+## Sağ sütuna USTALIK plakası: garajın ustalık panosunu açar (QA: ustalık görünmüyordu).
+func _build_mastery() -> void:
+	_mastery_button = PlateButton.new()
+	_mastery_button.name = "MasteryButton"
+	_mastery_button.theme_type_variation = &"HudPlate"
+	_mastery_button.kind = HudIcon.Kind.WRENCH
+	_mastery_button.text = "USTALIK"
+	_mastery_button.custom_minimum_size = Vector2(86.0, 0.0)
+	_mastery_button.focus_mode = Control.FOCUS_NONE
+	_mastery_button.pressed.connect(_open_mastery)
+	action_column.add_child(_mastery_button)
+
+
+func _open_mastery() -> void:
+	_actions_clear()
+	screen_requested.emit(&"mastery")
+
+
 func _open_paint() -> void:
+	if not GameFeatures.PAINT:
+		return   # özellik kapalı: pano hiçbir yoldan açılmaz (plaka zaten gizli)
 	if _shown_vehicle == &"":
 		return
 	_actions_clear()

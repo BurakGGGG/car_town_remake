@@ -6,9 +6,10 @@ extends MeshInstance3D
 ## değildir; aracın çocuğu olduğu için onunla birlikte durur/taşınır. Gizli başlar.
 ## Kullanım: show_wrench() (yalnızca 🔧 — yol kenarında bekleyen müşteri; arıza adı araç üstünde
 ## YAZMAZ, araca/balona tıklayınca HUD plakasında görünür), show_text("TAMİR", GLYPH_WRENCH) (CarSpot'ta),
-## show_text("+150 ₺", GLYPH_COIN) (para hazır), hide_bubble(). Plaka genişliği metne göre büyür.
+## show_text("+150 ₺", GLYPH_COIN) (para hazır), show_glyph(GLYPH_FLAG) (yalnızca damalı bayrak —
+## drag yarışı daveti), hide_bubble(). Plaka genişliği metne göre büyür.
 
-enum { GLYPH_WRENCH = 0, GLYPH_COIN = 1 }
+enum { GLYPH_WRENCH = 0, GLYPH_COIN = 1, GLYPH_FLAG = 2 }
 
 const SHADER: Shader = preload("res://vfx/customer_bubble.gdshader")
 const HEIGHT: float = 0.17                     # plaka yüksekliği (dünya birimi)
@@ -51,7 +52,12 @@ func _init() -> void:
 
 ## Yalnızca anahtar işareti (müşteri tamir istiyor).
 func show_wrench() -> void:
-	_apply(GLYPH_WRENCH, "")
+	show_glyph(GLYPH_WRENCH)
+
+
+## Yalnızca işaret, yazısız (dar plaka) — ör. yarış daveti: sadece damalı bayrak.
+func show_glyph(glyph: int) -> void:
+	_apply(glyph, "")
 
 
 ## İşaret + kısa yazı ("TAMİR", "+150 ₺").

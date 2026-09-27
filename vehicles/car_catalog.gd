@@ -2,16 +2,8 @@ class_name CarCatalog
 ## Araç kataloğu — araç bilgisinin TEK kaynağı. Veri: res://vehicles/cars.json (yalnızca metadata;
 ## model/sahne yüklenmez). Galeri, Garaj, Trafik ve görünüm varsayılanı buradan okur.
 ##
-## Kayıt alanları (normalize edilmiş):
-##   id (StringName), brand, model, display_name, year (int), price (int), condition (0–1),
-##   class (araç sınıfı: D/C/B/A — yalnızca gösterim),
-##   min_level (aracın showroom'da açıldığı oyuncu seviyesi),
-##   min_garage_rank (aracın açıldığı garaj değeri rütbesi — GarageValue),
-##   category, scene_path (oyunun kullandığı sahne: wrapper .tscn veya doğrudan optimized .glb),
-##   source_path (editör kaynağı, export dışı), optimized_path, default_color (fabrika boyası),
-##   available_colors (Array[Color]), world_node (Main.tscn'deki node adı; yoksa boş),
-##   plate_color (galeri plakası siluet rengi), traffic (bool: NPC trafiğinde kullanılsın mı),
-##   label (isteğe bağlı plaka metni; boşsa MARKA\nMODEL).
+## Kayıt alanlarının TEK tanımı aşağıdaki SCHEMA tablosudur; bu belge onu tekrarlamaz.
+## Yeni bir alan eklemek = SCHEMA'ya bir satır eklemek (başka hiçbir yeri değiştirmeye gerek yok).
 ## Zincir: Katalog → scene_path → CarPartMap (parça rolleri) → CarRig → CarAppearance.
 ## Yeni araç: source GLB → tools/optimize_car.gd → optimized GLB (+ isteğe bağlı wrapper .tscn)
 ## → cars.json'a kayıt → CarPartMap'e rol haritası. Başka kod değişikliği gerekmez.
@@ -54,6 +46,20 @@ static func find(node_name: StringName) -> Dictionary:
 static func find_by_scene(scene_path: String) -> Dictionary:
 	_ensure_loaded()
 	return _by_scene.get(scene_path, {})
+
+
+## ARACIN OYUN ÖLÇEĞİ — gerçek boyuttan türetilmiş çarpan (cars.json "model_scale").
+## Aracı sahneye koyan HER yer (trafik, garaj, showroom, drag) kendi bağlam çarpanını bununla
+## çarpar; böylece dört yerde de aynı fiziksel oran görünür. Koda araç adı gömülmez.
+static func model_scale(id: StringName) -> float:
+	var entry: Dictionary = get_entry(id)
+	return float(entry.get("model_scale", 1.0)) if not entry.is_empty() else 1.0
+
+
+## Sahne yolundan ölçek (garaj/showroom yalnızca yolu biliyor).
+static func model_scale_for_scene(scene_path_value: String) -> float:
+	var entry: Dictionary = find_by_scene(scene_path_value)
+	return float(entry.get("model_scale", 1.0)) if not entry.is_empty() else 1.0
 
 
 static func scene_path(id: StringName) -> String:
@@ -122,40 +128,133 @@ static func _ensure_loaded() -> void:
 		load_from(DATA_PATH)
 
 
-## Ham JSON kaydını tipli kayda çevirir; zorunlu alan eksikse boş döner.
+## Alan türleri (SCHEMA "kind" sütunu).
+enum Kind { TEXT, NAME, INT, FLOAT, BOOL, COLOR, COLOR_LIST, STATS, DIMENSIONS }
+
+## "race" bloğundaki alanlar ve alan yoksa kullanılan değerler. Yarış istatistikleri cars.json'da
+## TEK KAYNAKTADIR; burada yalnızca eksik alanın güvenli varsayılanı vardır (sınıfa göre kabaca D).
+const RACE_STATS: Dictionary = {"top_speed": 100, "acceleration": 55, "reaction": 50, "grip": 50}
+
+## GERÇEK ARAÇ ÖLÇÜLERİ (metre) — "real_dimensions" bloğu. Kaynak: üretici/teknik veri siteleri,
+## bkz. docs/VEHICLE_SCALE.md. Oyun ölçeği bu tablodan TÜRETİLİR (model_scale), koda gömülmez.
+const DIMENSIONS: Dictionary = {"length_m": 4.39, "width_m": 1.75, "height_m": 1.45, "wheelbase_m": 2.60}
+
+## ÖLÇEK REFERANSI: 16 aracın ortalama gerçek uzunluğu (m). Bir aracın oyundaki ölçeği
+## `gerçek uzunluk / REFERENCE_LENGTH_M`'dir; yani ortalama araç 1,0 ölçekte kalır ve MEVCUT dünya
+## ölçeği değişmez (trafik 0,6 · drag 1,2 · showroom 0,88 · garaj 1,0 bağlam çarpanları aynı).
+const REFERENCE_LENGTH_M: float = 4.39
+
+## KAYIT ŞEMASI — cars.json'daki alanların TEK tanımı. _normalize bu tabloyu gezer; elle alan
+## kopyalanmaz. Eskiden tablo yoktu ve _normalize sabit bir sözlük kurduğu için JSON'a eklenen
+## yeni alan SESSİZCE düşüyordu (min_level / min_garage_rank bu yüzden çalışmamıştı, 2026-09-26).
+## Tabloda olmayan bir alan JSON'da görülürse artık uyarı verilir — yazım hatası da sessiz kalmaz.
+##   key      : JSON ve kayıt anahtarı
+##   kind     : tür dönüşümü
+##   default  : alan yoksa kullanılan değer ("" / 0 / 1.0 / Color / [] ...)
+##   required : boşsa kayıt tamamen atlanır
+##   min/max  : sayısal sınır (isteğe bağlı)
+const SCHEMA: Array[Dictionary] = [
+	{"key": "id", "kind": Kind.NAME, "default": &"", "required": true},
+	{"key": "brand", "kind": Kind.TEXT, "default": ""},
+	{"key": "model", "kind": Kind.TEXT, "default": ""},
+	{"key": "display_name", "kind": Kind.TEXT, "default": ""},   # boşsa "MARKA MODEL" türetilir
+	{"key": "label", "kind": Kind.TEXT, "default": ""},          # galeri plakası metni; boşsa MARKA\nMODEL
+	{"key": "year", "kind": Kind.INT, "default": 0},
+	{"key": "price", "kind": Kind.INT, "default": 0, "min": 0},
+	{"key": "condition", "kind": Kind.FLOAT, "default": 1.0, "min": 0.0, "max": 1.0},
+	{"key": "category", "kind": Kind.TEXT, "default": ""},
+	{"key": "class", "kind": Kind.TEXT, "default": ""},          # D/C/B/A — yalnızca gösterim
+	{"key": "min_level", "kind": Kind.INT, "default": 1, "min": 1},          # showroom kilidi (oyuncu seviyesi)
+	{"key": "min_garage_rank", "kind": Kind.INT, "default": 1, "min": 1},    # showroom kilidi (GarageValue rütbesi)
+	{"key": "scene_path", "kind": Kind.TEXT, "default": "", "required": true},
+	{"key": "source_path", "kind": Kind.TEXT, "default": ""},
+	{"key": "optimized_path", "kind": Kind.TEXT, "default": ""},
+	{"key": "default_color", "kind": Kind.COLOR, "default": Color.WHITE},
+	{"key": "available_colors", "kind": Kind.COLOR_LIST, "default": []},
+	{"key": "world_node", "kind": Kind.NAME, "default": &""},
+	{"key": "plate_color", "kind": Kind.COLOR, "default": Color("F3E8CF")},
+	{"key": "traffic", "kind": Kind.BOOL, "default": true},
+	{"key": "race", "kind": Kind.STATS, "default": {}},   # drag yarışı statları (bkz. RACE_STATS)
+	{"key": "real_dimensions", "kind": Kind.DIMENSIONS, "default": {}},  # gerçek dış ölçüler (m)
+	{"key": "model_scale", "kind": Kind.FLOAT, "default": 1.0, "min": 0.01},  # gerçek boyuta göre ölçek
+]
+
+
+## Ham JSON kaydını SCHEMA'ya göre tipli kayda çevirir; zorunlu alan eksikse boş döner.
 static func _normalize(raw: Dictionary) -> Dictionary:
-	var id: String = String(raw.get("id", ""))
-	var scene: String = String(raw.get("scene_path", ""))
-	if id == "" or scene == "":
-		push_warning("CarCatalog: id/scene_path eksik kayıt atlandı: %s" % raw)
-		return {}
-	var brand: String = String(raw.get("brand", ""))
-	var model: String = String(raw.get("model", ""))
-	var colors: Array[Color] = []
-	for c: Variant in raw.get("available_colors", []):
-		colors.append(_color(c, Color.WHITE))
-	return {
-		"id": StringName(id),
-		"brand": brand,
-		"model": model,
-		"display_name": String(raw.get("display_name", ("%s %s" % [brand, model]).strip_edges())),
-		"label": String(raw.get("label", "")),
-		"year": int(raw.get("year", 0)),
-		"price": int(raw.get("price", 0)),
-		"condition": clampf(float(raw.get("condition", 1.0)), 0.0, 1.0),
-		"category": String(raw.get("category", "")),
-		"scene_path": scene,
-		"source_path": String(raw.get("source_path", "")),
-		"optimized_path": String(raw.get("optimized_path", "")),
-		"default_color": _color(raw.get("default_color", "#FFFFFF"), Color.WHITE),
-		"available_colors": colors,
-		"class": String(raw.get("class", "")),
-		"min_level": maxi(int(raw.get("min_level", 1)), 1),
-		"min_garage_rank": maxi(int(raw.get("min_garage_rank", 1)), 1),
-		"world_node": StringName(String(raw.get("world_node", ""))),
-		"plate_color": _color(raw.get("plate_color", "#F3E8CF"), Color("F3E8CF")),
-		"traffic": bool(raw.get("traffic", true)),
-	}
+	var entry: Dictionary = {}
+	for field: Dictionary in SCHEMA:
+		var key: String = field["key"]
+		var value: Variant = _convert(raw.get(key, null), field)
+		if bool(field.get("required", false)) and _is_blank(value):
+			push_warning("CarCatalog: zorunlu alan '%s' eksik, kayıt atlandı: %s" % [key, raw])
+			return {}
+		entry[key] = value
+	if String(entry["display_name"]) == "":
+		entry["display_name"] = ("%s %s" % [entry["brand"], entry["model"]]).strip_edges()
+	for key: Variant in raw:
+		if not _known_key(String(key)):
+			push_warning("CarCatalog: '%s' kaydında tanınmayan alan '%s' (SCHEMA'ya ekle)"
+					% [entry["id"], key])
+	return entry
+
+
+static func _known_key(key: String) -> bool:
+	for field: Dictionary in SCHEMA:
+		if field["key"] == key:
+			return true
+	return false
+
+
+static func _is_blank(value: Variant) -> bool:
+	return value == null or value == "" or value == &""
+
+
+## Tek bir alanı şemadaki türe çevirir (alan yoksa varsayılan).
+static func _convert(value: Variant, field: Dictionary) -> Variant:
+	var fallback: Variant = field["default"]
+	match int(field["kind"]):
+		Kind.TEXT:
+			return String(value) if value != null else String(fallback)
+		Kind.NAME:
+			return StringName(String(value)) if value != null else StringName(fallback)
+		Kind.INT:
+			var i: int = int(value) if value != null else int(fallback)
+			i = maxi(i, int(field["min"])) if field.has("min") else i
+			return mini(i, int(field["max"])) if field.has("max") else i
+		Kind.FLOAT:
+			var f: float = float(value) if value != null else float(fallback)
+			f = maxf(f, float(field["min"])) if field.has("min") else f
+			return minf(f, float(field["max"])) if field.has("max") else f
+		Kind.BOOL:
+			return bool(value) if value != null else bool(fallback)
+		Kind.COLOR:
+			return _color(value, fallback) if value != null else fallback
+		Kind.STATS:
+			var raw: Dictionary = value if value is Dictionary else {}
+			var stats: Dictionary = {}
+			for key: String in RACE_STATS:
+				stats[key] = maxi(int(raw.get(key, RACE_STATS[key])), 0)
+			for key: Variant in raw:
+				if not RACE_STATS.has(String(key)):
+					push_warning("CarCatalog: 'race' bloğunda tanınmayan alan '%s'" % key)
+			return stats
+		Kind.DIMENSIONS:
+			var dims_raw: Dictionary = value if value is Dictionary else {}
+			var dims: Dictionary = {}
+			for key: String in DIMENSIONS:
+				dims[key] = maxf(float(dims_raw.get(key, DIMENSIONS[key])), 0.0)
+			for key: Variant in dims_raw:
+				if not DIMENSIONS.has(String(key)):
+					push_warning("CarCatalog: 'real_dimensions' bloğunda tanınmayan alan '%s'" % key)
+			return dims
+		Kind.COLOR_LIST:
+			var colors: Array[Color] = []
+			for c: Variant in (value if value is Array else []):
+				colors.append(_color(c, Color.WHITE))
+			return colors
+	return fallback
+
 
 
 ## "#RRGGBB" / "RRGGBB" metni ya da [r, g, b(, a)] float dizisi.

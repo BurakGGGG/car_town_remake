@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://dfgxyvu287jf0"]
+
+[ext_resource type="PackedScene" uid="uid://dyqv4r6blvxv" path="res://assets/cars/optimized/hyundai_accent_blue.glb" id="1_hyund"]
+
+[node name="hyundai_accent_blue" instance=ExtResource("1_hyund")]

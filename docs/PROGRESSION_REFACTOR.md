@@ -39,9 +39,15 @@ alanlardır (v7).
 | Garaj | müşteri aralığı | bekleyen sınırı | bekleme noktası | ödül çarpanı | trafik |
 |---|---|---|---|---|---|
 | 1 | ×1,00 (6-14 sn) | 2 | 2 | ×1,00 | 4 |
-| 2 | ×0,80 | 3 | 3 | ×1,15 | 6 |
-| 3 | ×0,62 | 4 | 4 | ×1,30 | 8 |
-| 4 | ×0,48 | 5 | 4 | ×1,45 | 8 |
+| 2 | ×0,80 | 2 | 2 | ×1,15 | 6 |
+| 3 | ×0,62 | 2 | 2 | ×1,30 | 8 |
+| 4 | ×0,48 | 2 | 2 | ×1,45 | 10 (QA'de 8'den yükseltildi) |
+
+**2026-09-27 (kullanıcı kararı):** bekleyen sınırı ve bekleme noktası artık HER seviyede 2.
+Önceden garaj büyüdükçe 3-5'e çıkıyordu; kaldırımda 3-4 araç birikmesi dağınık görünüyordu.
+Garaj seviyesinin arz katkısı yalnızca müşteri sıklığı, müşteri değeri ve trafik yoğunluğu
+üzerinden kalıyor; genişletme plakası artık "+1 BEKLEME NOKTASI" vaat etmiyor
+(`progression_test` bunu doğruluyor).
 
 Ek olarak `SPOT_AHEAD_MAX` 1,8 → 3,2 m: aracın bir bekleme noktasını "görebildiği" pencere dardı,
 sayaç dolduğu halde aday bulunamıyordu (ölçülen yakalama oranı %42).
@@ -168,10 +174,13 @@ altında, VRAM 120 MB'ın altında.
 1. **Reddedilen uzun iş bekleme noktasını kalıcı tıkar.** Müşterinin sabır sayacı yok; oyuncu
    300 sn'lik işi almazsa o nokta boşalmaz. `min_bays` en kötü durumu (tek alan) engelliyor ama
    "müşteriyi gönder" aksiyonu ileride gerekebilir.
-2. **Geç oyunda müşterilerin %45-59'u geri çevriliyor** (kuyruk dolu). Bu bilinçli bir baskıdır
-   (kapasiteye yatırım yapma sebebi) ama oyuncuya "kaçırdığın müşteri" olarak gösterilmiyor.
-3. **9. ve 10. rütbe bugünkü içerikle ulaşılamaz** (tavan ≈ 440.000 ₺). Dekor/ustalık içeriği
-   geldiğinde açılır.
+2. ~~Geç oyunda müşterilerin %45-59'u geri çevriliyor.~~ **DÜZELTME (QA, bkz. [QA_REVIEW.md](QA_REVIEW.md)):
+   bu rakam modelin tamir hızı 1 varsayımından ve trafik havuzu geri beslemesini görmemesinden
+   geliyordu. Gerçek oyunda ölçülen "kuyruk dolu" süresi %0,0'dır (G2+2 ve G3+3, 10 dk); sistem
+   kuyruk değil MÜŞTERİ ARZI sınırlıdır.**
+3. **9. ve 10. rütbe bugünkü içerikle ulaşılamaz.** Ölçülen tavan 439.500 ₺'dir; 8. rütbe eşiği
+   440.000 iken tavan ona 500 ₺ yetişemiyordu — QA'de eşik 430.000'e çekildi, 9-10 bilinçli
+   olarak gelecek içeriğe ayrıldı.
 4. Erken oyunda 2. tamir alanı, oyuncu 5. seviyeye gelip BOYA İŞİ açılana kadar gelir artırmaz;
    ölçülen koşuda alan 28. dakikada, ilk uzun iş 23. dakikada geldiği için sıralama doğru çıktı,
    ama oyuncu farklı bir sırada ilerlerse alanı "boşa almış" hissedebilir.
