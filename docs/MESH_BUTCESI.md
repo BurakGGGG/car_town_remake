@@ -16,7 +16,7 @@ Oyuna GLB değil, **içe aktarılmış** kaynak girer. Android'e iki doku format
 | boya maskesi | 0,8 MB | 0,05 MB |
 | _(doku, masaüstü `s3tc` — APK'ya girmez)_ | _(42,7 MB)_ | _(2,67 MB)_ |
 
-Yani Android araç maliyetinin **%64'ü mesh**. APK 180,4 MB, Play sınırı 150 MB.
+Yani Android araç maliyetinin **%64'ü mesh**. (APK 180,4 MB'tı; "Play sınırı 150 MB" varsayımı yanlış çıktı, bkz. §7.)
 
 ## 2. Kaynakta ne var
 
@@ -147,3 +147,31 @@ atlıyor; bu sessizce her aracın rollerini bozabilecek bir hataydı.
 - **Vertex sıkıştırma:** içe aktarılmış mesh'lerde `COMPRESS_ATTRIBUTES` kapalı; açılırsa normal
   ve UV küçülür, ölçülmedi.
 - **LOD basamağı yerine tam hedefe sadeleştirme:** §5'e bakınız, araç başına 0,5–1 MB.
+
+## 7. APK boyutu Play için engel DEĞİL (2026-09-28)
+
+Mesh küçültmesinden sonra debug APK **175,6 MB** (arm64). Dökümü:
+
+| kalem | APK içinde | sıkıştırılmış (≈ indirme) |
+|---|---|---|
+| motor `.so` | 74,2 MB | **24,8 MB** |
+| araç mesh `.scn` | 66,1 MB | **65,2 MB** |
+| doku (etc2) | 44,4 MB | 27,0 MB |
+| diğer | 18,8 MB | 7,1 MB |
+| **toplam** | 203,4 MB (açık) | **~124 MB** |
+
+- **Sınır:** denetimdeki "Play 150 MB" varsayımı güncel değil. APK yüklemesi 100 MB ile sınırlı ve
+  yeni uygulamalar AAB zorunlu; AAB'de sınır taban modülün cihaz başına SIKIŞTIRILMIŞ indirme
+  boyutudur — eski kaynaklarda 200 MB, güncel resmî sayfada 500 MB. ~124 MB ikisinin de altında.
+  Kaynak: <https://support.google.com/googleplay/android-developer/answer/9859372>
+- **Motor:** `.so` APK'da mmap için sıkıştırılmadan durduğu için büyük görünüyor; indirmede %67
+  küçülüyor. Release şablonu yalnızca 4,85 MB kazandırıyor (72,88 → 68,03) — hata ayıklama sembolü
+  yok, boyut koddan geliyor. Şablon **mono** sürümü (.NET köprüsü içeride), proje C# kullanmıyor;
+  standart şablona geçmek biraz daha kazandırabilir, ölçülmedi.
+- **Mesh artık indirmenin en büyük kalemi (%53)** ve neredeyse hiç sıkışmıyor (66,1 → 65,2).
+  Yani mesh'teki her MB kazanç indirmeye birebir yansır; §5'teki "LOD basamağı yerine tam hedefe
+  sadeleştirme" (araç başına 0,5–1 MB) bu yüzden en verimli sonraki adım.
+
+Sürüm için yapılacak tek zorunlu şey derlemeyi **AAB** olarak almak (`export_presets.cfg`,
+`gradle_build/export_format`). Bu, Play hesabına bağlı bir **yükleme anahtarı** gerektirir —
+kalıcı bir kimlik olduğu için sahibi tarafından oluşturulmalı.
