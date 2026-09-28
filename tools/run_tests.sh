@@ -22,8 +22,11 @@ fails=0
 for t in $ALL; do
 	# Her paket TEMİZ kayıtla başlar: aksi halde bir önceki paketin bıraktığı ilerleme
 	# (ustalık sayaçları, garaj seviyesi) eşik testlerini yanlış FAIL'e düşürüyor.
-	rm -f "$HOME/snap/godot-4/33/.local/share/ct_suite/savegame.json" \
-	      "$HOME/snap/godot-4/33/.local/share/ct_suite/cloud_sync.json"
+	# Snap sürüm numarası yola giriyor ve snap kendini güncelliyor (33 → 40 görüldü);
+	# sabit yazılırsa temizlik sessizce hiçbir şey silmez ve testler kirli kayıtla koşar.
+	for d in "$HOME/snap/godot-4"/*/.local/share/ct_suite; do
+		rm -f "$d/savegame.json" "$d/cloud_sync.json"
+	done
 	mode="--headless"
 	case " $WINDOWED " in *" $t "*) mode="--resolution 1152x648";; esac
 	timeout 600 stdbuf -oL "$GODOT" --path . $mode --script "$SUITE/$t.gd" > "$OUT/$t.txt" 2>&1
