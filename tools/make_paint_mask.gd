@@ -127,6 +127,13 @@ func _build(id: StringName) -> void:
 		var target: PackedByteArray = part_mask if (is_paint or is_pending) else block
 		var key: String = "paint_tris" if is_paint else ("block_tris" if blocked.has(mesh.name) or is_pending else "other_tris")
 		for si: int in mesh.mesh.get_surface_count():
+			# Atlası KULLANMAYAN yüzey maskeye girmez: UV'si anlamsızdır ve engel olarak
+			# rasterize edilirse bütün gövdeyi kapatabilir. (Toros'un Blender'da üretilen
+			# tekerleri düz renk materyalle gelir; UV'leri 0-1'e yayıldığı için aday texel
+			# sayısını 624.555 → 23.864'e düşürüyordu.)
+			var surf_mat: BaseMaterial3D = mesh.mesh.surface_get_material(si) as BaseMaterial3D
+			if surf_mat and surf_mat.albedo_texture == null:
+				continue
 			stats[key] += _rasterize(mesh.mesh.surface_get_arrays(si), target)
 		if is_paint:
 			parts.append({"name": mesh.name, "mask": part_mask})

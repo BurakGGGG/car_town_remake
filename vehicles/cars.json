@@ -249,6 +249,48 @@
       "model_scale": 0.9831
     },
     {
+      "id": "renault_toros",
+      "brand": "Renault",
+      "model": "Toros",
+      "display_name": "Renault Toros",
+      "label": "RENAULT\nTOROS",
+      "year": 1994,
+      "price": 20000,
+      "condition": 0.55,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/renault_toros.tscn",
+      "source_path": "res://assets/cars/source/renault_toros_wheels.glb",
+      "optimized_path": "res://assets/cars/optimized/renault_toros.glb",
+      "default_color": "#E9EDEF",
+      "available_colors": [
+        "#E9EDEF",
+        "#A2A8AD",
+        "#EAEDEF",
+        "#CCBA8C",
+        "#F2F2EB",
+        "#1F1F21"
+      ],
+      "world_node": "Car_RENAULT_TOROS",
+      "plate_color": "#E8C58A",
+      "traffic": true,
+      "class": "D",
+      "min_level": 3,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 100,
+        "acceleration": 56,
+        "reaction": 50,
+        "grip": 47
+      },
+      "real_dimensions": {
+        "length_m": 4.318,
+        "width_m": 1.616,
+        "height_m": 1.47,
+        "wheelbase_m": 2.441
+      },
+      "model_scale": 0.9836
+    },
+    {
       "id": "hyundai_accent_blue",
       "brand": "Hyundai",
       "model": "Accent Blue",

@@ -129,30 +129,20 @@ const MAPS: Dictionary = {
 		"extract": [{"part": 0, "new_part": 77, "center": [-0.196, 0.084, 0.313], "radius": 0.088, "half_width": 0.032}],  # ön-sol lastik kabuğa kaynamış (jant kapağı 2 ayrı)
 		"wheel_groups": {"fl": [77, 2], "fr": [27, 5], "rl": [6, 3], "rr": [8, 26]},
 	},
-	# renault_toros 2026-09-27'de OYUNDAN ÇIKARILDI (kullanıcı kararı: kaynak model tek mesh
-	# olduğu için tekerler silindirle kesiliyor ve kemerde iz kalıyordu — bkz.
-	# docs/vehicle_visual_qa_report.md §8). Haritası ve kaynak GLB'si duruyor; geri almak için
-	# cars.json'a kaydı eklenir ve şu komut çalıştırılır:
-	#   godot-4 --headless --path . -s res://tools/optimize_car.gd -- \
-	#     --in res://assets/cars/source/renault_r12.glb \
-	#     --out res://assets/cars/optimized/renault_toros.glb \
-	#     --ratio 0.08 --min-tris 300 --rename --map res://assets/cars/renault_toros.tscn
-	# Harita kaydı (center/radius/half_width ölçülmüş değerlerdir):
-	# "res://assets/cars/renault_toros.tscn": {
-	# "default_paint": Color(0.914, 0.929, 0.937),  # dokunun baskın kaporta rengi (#E9EDEF); paint mask ile aynı olmalı
-	# "body": [0],                   # kaynak TEK mesh (tripo_part_0, --rename): cam/far/tampon ayrılamaz, dokudan gelir
-	# "wheels": [1, 2, 3, 4],        # pipeline extract ile silindir bölgesinden ayrılan tekerler (lastik+jant tek mesh)
-	# # Silindir merkezi aks merkezinin BİRAZ ALTINDA: alt ucu zemine değsin (lastiğin taban
-	# # dilimi gövdede kalmasın, dönmeyen bir hilal bırakırdı) ama ÜST ucu çamurluğun altında
-	# # kalsın (kesilirse kemerde siyah kamalar oluşuyor — ölçüldü ve geri alındı).
-	# "extract": [
-	# {"part": 0, "new_part": 1, "center": [-0.206, 0.103, 0.308], "radius": 0.107, "half_width": 0.034},
-	# {"part": 0, "new_part": 2, "center": [0.206, 0.103, 0.308], "radius": 0.107, "half_width": 0.034},
-	# {"part": 0, "new_part": 3, "center": [-0.208, 0.104, -0.272], "radius": 0.107, "half_width": 0.034},
-	# {"part": 0, "new_part": 4, "center": [0.208, 0.104, -0.272], "radius": 0.107, "half_width": 0.034},
-	# ],
-	# "wheel_groups": {"fl": [1], "fr": [2], "rl": [3], "rr": [4]},
-	# },
+	# renault_toros 2026-09-27'de çıkarılmıştı (tek mesh kaynakta tekerler silindirle kesiliyor,
+	# kemerde iz kalıyordu). 2026-09-28'de GERİ ALINDI: tekerler artık kesilmiyor, Blender'da
+	# kaynaktaki bozuk teker geometrisi silinip yerine temiz teker konuldu ve AYRI NESNE olarak
+	# dışa aktarıldı (tools/decor/toros_tekerlek.py) → extract adımına gerek yok.
+	# Eski extract'in neden tutmadığı ölçüldü: haritadaki aks üç eksende de yanlıştı —
+	# x ±0,206 (gerçek ±0,188), y 0,103 (gerçek 0,0735), yarıçap 0,107 (gerçek 0,0735).
+	# Silindir %45 iri ve 29 mm yüksek olduğu için lastiği ıskalayıp çamurluğu kesiyordu.
+	# Kaynak: assets/cars/source/renault_toros_wheels.glb (renault_r12.glb'ye DOKUNULMADI).
+	"res://assets/cars/renault_toros.tscn": {
+		"default_paint": Color(0.914, 0.929, 0.937),  # boya maskesi aracının ölçtüğü fabrika rengi (#E9EDEF)
+		"body": [0],                   # kaynak gövdesi TEK mesh: cam/far/tampon ayrılamaz, dokudan gelir
+		"wheels": [1, 2, 3, 4],        # Blender'da üretilen temiz tekerler (lastik+jant+göbek tek mesh)
+		"wheel_groups": {"fl": [1], "fr": [2], "rl": [3], "rr": [4]},
+	},
 	# --- 2026-09-27 ikinci parti (9 araç): roller OTOMATİK sınıflandırıcıyla çıkarıldı
 	# (geometri: köşe/yükseklik/yuvarlaklık + doku rengi: aracın kendi parlaklık dağılımına göre
 	# eşikler). Sınıflandırıcı mevcut 7 aracın elle doğrulanmış haritalarıyla ölçüldü: işlevsel

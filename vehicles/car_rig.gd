@@ -48,6 +48,17 @@ const RIM_RATIO: float = 0.78  # teker yarıçapının bu oranının içi jant s
 const RIM_METALLIC: float = 0.55
 const RIM_ROUGHNESS: float = 0.4
 
+## FAR LENSİ. Dokuda far beyaz, kaporta da beyaz olduğu için açık renkli araçlarda far
+## kayboluyordu (Volvo S60 ve Honda Civic'te belirgin; koyu araçlarda sorun yok). Lens artık
+## krom reflektörlü cam gibi kurulur: doku hafif soğuk bir tonla koyulaşır, metaliklik ve düşük
+## pürüz keskin bir vurgu verir — kaporta mat (pürüz ~0,5) kaldığı için far kendi parlamasıyla
+## ayrışır. Doku SİLİNMEZ, yalnızca çarpanla koyulaşır; lamba deseni ve kromu görünür kalır.
+const HEADLIGHT_TINT: Color = Color(0.78, 0.83, 0.90)
+const HEADLIGHT_METALLIC: float = 0.45
+const HEADLIGHT_ROUGHNESS: float = 0.10
+## Lamba rolündeki parça, aracın kutu hacminin bu oranını aşarsa lamba değildir — bkz. _filter_lamps().
+const LAMP_MAX_VOLUME: float = 0.0045
+
 ## Detay kademeleri (LOD). Geometri kademeleri Godot'un import sırasında ürettiği LOD zincirinden
 ## gelir (meshes/generate_lods); hangi kademenin çizileceğini mesh'in ekrandaki boyutu seçer.
 ## Bu katsayı seçimi instance başına kaydırır: 1.0 = varsayılan, >1 daha uzun süre detaylı kalır,
@@ -203,7 +214,9 @@ func _apply_textured(appearance: CarAppearance) -> void:
 
 	var head: StandardMaterial3D = _material(&"headlights")
 	head.albedo_texture = _albedo
-	head.roughness = 0.2
+	head.albedo_color = HEADLIGHT_TINT        # beyaz kaportada kaybolmasın (bkz. sabitin açıklaması)
+	head.metallic = HEADLIGHT_METALLIC
+	head.roughness = HEADLIGHT_ROUGHNESS
 	head.emission_enabled = appearance.headlights_enabled
 	head.emission = Color(1.0, 0.96, 0.82)
 	head.emission_energy_multiplier = 2.0
@@ -252,6 +265,67 @@ func _paint_material(role: StringName) -> ShaderMaterial:
 		mat.set_shader_parameter(&"paint", _default_paint)
 		_paint_materials[role] = mat
 	return _paint_materials[role]
+
+
+## Lamba rolünden, lamba OLAMAYACAK kadar büyük parçaları eler.
+##
+## Neden: roller 2026-09-27'de otomatik sınıflandırıcıyla çıkarıldı (bkz. docs/VEHICLE_ASSETS.md)
+## ve bazı araçlarda çamurluk / tampon köşesi far rolüne düşmüş. Ölçüm (qa/far_parcalari.gd):
+## gerçek lambalar aracın kutu hacminin en çok **%0,31**'i (bmw_e60 0,31 · volvo 0,28 · era 0,26),
+## yanlış girenler en az **%0,58**'i (ford_focus 0,58 · tofas_sahin 0,90 · volvo 1,20 · audi 2,34).
+## Eşik ikisinin ortasına konuldu. Lens materyali bu parçalara uygulanırsa kaportada koyu leke
+## oluşur — elenen parça GÖRÜNÜR kalır, yalnızca GLB'nin kendi dokulu materyalinde bırakılır.
+func _filter_lamps(role: StringName) -> void:
+	var list: Array[MeshInstance3D] = _parts.get(role, [])
+	if list.is_empty():
+		return
+	var car: float = _volume(_all_meshes)
+	if car <= 0.0:
+		return
+	var kept: Array[MeshInstance3D] = []
+	var dropped: PackedStringArray = PackedStringArray()
+	for mesh: MeshInstance3D in list:
+		if _volume([mesh]) <= car * LAMP_MAX_VOLUME:
+			kept.append(mesh)
+		else:
+			dropped.append(mesh.name)
+	if dropped.is_empty():
+		return
+	_parts[role] = kept
+	push_warning("CarRig: '%s' %s rolünden elenen (lamba olamayacak kadar büyük): %s" % [
+		scene_path.get_file(), role, dropped])
+
+
+## Mesh listesinin ARAÇ uzayındaki ortak kutusunun hacmi. `mesh.get_aabb()` yerel uzaydadır ve
+## kök dönüşümü düğüme yazılır; kutuyu değil 8 KÖŞEYİ dönüştürmek gerekir (`Transform3D * AABB`
+## döndürülmüş kutunun eksen hizalı sınırını verir ve şişirir).
+static func _volume(meshes: Array) -> float:
+	var out: AABB = AABB()
+	var first: bool = true
+	for mesh: MeshInstance3D in meshes:
+		if mesh.mesh == null:
+			continue
+		var b: AABB = mesh.mesh.get_aabb()
+		var xf: Transform3D = mesh.transform
+		for i: int in 8:
+			var p: Vector3 = xf * (b.position + Vector3(
+				b.size.x if (i & 1) else 0.0, b.size.y if (i & 2) else 0.0, b.size.z if (i & 4) else 0.0))
+			if first:
+				out = AABB(p, Vector3.ZERO)
+				first = false
+			else:
+				out = out.expand(p)
+	return out.size.x * out.size.y * out.size.z
+
+
+## Teker mesh'i lastik ile jantı AYIRMAYA ihtiyaç duyuyor mu? Tek yüzeyli ve gövde atlasını
+## kullanan tekerlerde evet (renk dokuda, yarıçapa göre bölmek gerekir); kaynakta ayrı yüzey
+## ve kendi materyaliyle gelen tekerlerde hayır.
+static func _needs_wheel_split(mesh: MeshInstance3D) -> bool:
+	if mesh.mesh == null or mesh.mesh.get_surface_count() != 1:
+		return false
+	var mat: BaseMaterial3D = mesh.mesh.surface_get_material(0) as BaseMaterial3D
+	return mat == null or mat.albedo_texture != null
 
 
 func _assign(role: StringName, material: Material) -> void:
@@ -385,8 +459,15 @@ func _resolve_parts() -> void:
 				list.append(mesh)
 		_parts[role] = list
 
-	# Lastik + jant tek mesh: her teker için kendi merkezini bilen shader materyali
+	_filter_lamps(&"headlights")
+
+	# Lastik + jant tek mesh: her teker için kendi merkezini bilen shader materyali.
+	# Teker kaynakta ZATEN ayrılmışsa (birden çok yüzey ya da dokusuz kendi materyali) bu
+	# shader takılmaz — rengi atlastan okuduğu için kendi materyalinin üstünü örter.
+	# (Toros'un tekerleri Blender'da yeniden üretildi: yüzey 0 lastik, yüzey 1 jant.)
 	for mesh: MeshInstance3D in _parts.get(&"wheels", []):
+		if not _needs_wheel_split(mesh):
+			continue
 		var box: AABB = mesh.get_aabb()
 		var wheel_mat: ShaderMaterial = ShaderMaterial.new()
 		wheel_mat.shader = WHEEL_SHADER

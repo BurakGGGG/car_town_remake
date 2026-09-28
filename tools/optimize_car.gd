@@ -91,6 +91,7 @@ func _init() -> void:
 	var total_after: Dictionary = {"verts": 0, "tris": 0, "meshes": 0}
 	var materials: Dictionary = {}
 	var shared_material: Material = null
+	var plain_materials: Dictionary = {}   # dokusuz kaynak materyaller (bkz. _surface_material)
 	var rows: PackedStringArray = PackedStringArray()
 
 	for node: Node in _find_mesh_nodes(source):
@@ -109,22 +110,31 @@ func _init() -> void:
 		# böylece sınır yoğun mesh'te doğru çizilir, Godot import her yüzey için LOD üretir ve
 		# CarRig çalışma zamanında bölme yapmak zorunda kalmaz.
 		var surfaces: Array = []
+		var surface_materials: Array[Material] = []
 		for si: int in importer.get_surface_count():
 			surfaces.append(importer.get_surface_arrays(si))
+			surface_materials.append(importer.get_surface_material(si))
 		var split_spec: Dictionary = splits.get(name, {})
 		if not split_spec.is_empty() and surfaces.size() == 1:
 			var whole: ArrayMesh = ArrayMesh.new()
 			whole.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surfaces[0])
 			var halves: ArrayMesh = CarRig._split_mesh_z(whole, map_path, split_spec["part"], split_spec["z"])
 			surfaces = [halves.surface_get_arrays(0), halves.surface_get_arrays(1)]
+			surface_materials = [surface_materials[0], surface_materials[0]]
 
 		var part_ratio: float = ratio * (2.0 if keep.has(name) else 1.0)
 		var mesh: ArrayMesh = ArrayMesh.new()
 		for si: int in surfaces.size():
 			var r: Dictionary = _simplify_surface(surfaces[si], part_ratio, min_tris)
+			# Tanjant BURADA atılamaz: kaynakta yok, glTF yükleyicisi UV gördüğü için üretiyor ve
+			# diziden silinse bile add_surface_from_arrays geri ekliyor (ölçüldü). Çıktı GLB'sinden
+			# tools/strip_tangents.py atar — tools/rebuild_cars.sh bu betikten hemen sonra çağırır.
 			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, r["arrays"])
-			if shared_material:
-				mesh.surface_set_material(si, shared_material)
+			var surf_mat: Material = _surface_material(surface_materials[si], out_material, plain_materials)
+			if surf_mat == null:
+				surf_mat = shared_material
+			if surf_mat:
+				mesh.surface_set_material(si, surf_mat)
 			total_before["verts"] += r["verts_before"]
 			total_before["tris"] += r["tris_before"]
 			total_after["verts"] += r["verts_after"]
@@ -176,6 +186,33 @@ static func _global_of(node: Node) -> Transform3D:
 		xf = (p as Node3D).transform * xf
 		p = p.get_parent()
 	return xf
+
+
+## Yüzeyin çıkış materyali. Kural: DOKULU her materyal gövdenin küçültülmüş tek materyalini
+## kullanır (bütün araçlar tek atlasla gelir, tek materyal = tek draw state). DOKUSUZ bir
+## materyal ise kaynakta bilerek ayrı verilmiştir — düz renk olarak KORUNUR.
+##
+## Neden: Toros'un tekerleri Blender'da yeniden üretildi (kaynak mesh'teki bozuk lastik silinip
+## yerine temiz geometri konuldu). Bu tekerlerin atlasta karşılığı yok; gövde materyaline
+## bağlanınca renkleri UV'den geliyordu ve doğru texel'e nişanlamanın hiçbir yolu tutmadı —
+## tek texel'i mipmap yutuyor, kaynağın kendi teker UV'leri ise atlasın her yanına dağılmış
+## (model 6.887 kopuk parçadan oluşuyor). Dokusuz materyali korumak bunu kökten çözer.
+## Tek atlaslı 15 aracın hepsinde her materyal DOKULU olduğu için çıktıları bit bit aynı kalır.
+static func _surface_material(src: Material, out_material: StandardMaterial3D, cache: Dictionary) -> Material:
+	if out_material == null:
+		return src
+	var base: BaseMaterial3D = src as BaseMaterial3D
+	if base == null or base.albedo_texture != null:
+		return out_material
+	var key: int = base.get_instance_id()
+	if not cache.has(key):
+		var flat: StandardMaterial3D = StandardMaterial3D.new()
+		flat.resource_name = base.resource_name
+		flat.albedo_color = base.albedo_color
+		flat.metallic = base.metallic
+		flat.roughness = base.roughness
+		cache[key] = flat
+	return cache[key]
 
 
 ## Kaynağın ilk materyalinden çıkış materyali: albedo dokusu tex_size'a küçültülür (Lanczos), metallic /

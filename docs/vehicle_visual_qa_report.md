@@ -247,3 +247,169 @@ godot-4 --headless --path . -s res://tools/optimize_car.gd -- \
 **Yan etki:** D sınıfında tek araç kaldı (Tofaş Şahin). Sınıf dağılımı artık
 **A 4 · B 6 · C 4 · D 1**. Rakip seçimi oyuncunun sınıfı + bir üstünden yaptığı için
 D sınıfı bir oyuncu hâlâ 5 farklı rakiple karşılaşıyor, ama giriş sınıfının çeşitliliği azaldı.
+
+---
+
+## 10. Renault Toros geri alındı — tekerler Blender'da yeniden üretildi (2026-09-28)
+
+§9'da araç oyundan çıkarılmıştı. Kaynak model (`renault_r12.glb`) tek mesh ve **6.887 kopuk
+geometri adasından** oluşuyor, yani "loose parts" ile tekerler ayrılamıyor; pipeline bu yüzden
+tekerleri **silindirle kesiyordu** ve kesim izleri kalıyordu. Bu sefer kesmek yerine kaynaktaki
+bozuk teker geometrisi **silinip yerine temiz teker kondu**.
+
+### 10.1 Asıl kök neden: harita aksı üç eksende de yanlıştı
+
+Silindirin nereye oturacağı `CarPartMap`'teki `extract.center`/`radius` değerlerinden geliyordu.
+Bunlar ölçülmemişti. Ortografik siluetten ve temas yamasından ölçülen gerçek değerler:
+
+| büyüklük | haritadaki | ölçülen | fark |
+|---|---|---|---|
+| teker merkezi x | ±0,206 | **±0,1880** | 18 mm dışarıda |
+| teker merkezi y (yükseklik) | 0,103 | **0,0735** | 29 mm yukarıda |
+| teker merkezi z (ön/arka) | ±0,308 / ∓0,272 | **±0,3125 / ∓0,2685** | 4 mm |
+| lastik yarıçapı | ~0,107 | **0,0735** | %45 iri |
+| lastik genişliği | 0,068 (2×half_width) | **0,0534** | %27 geniş |
+
+Silindir hem %45 iri hem 29 mm yüksek olduğu için lastiği ıskalayıp **çamurluğu kesiyordu**.
+§9'daki "yarıçapı 0,107'ye çıkar" düzeltmesi bu yüzden tutmadı: yanlış merkezin etrafında
+doğru yarıçap yoktur.
+
+Ölçüm yöntemi (`tools/decor/toros_tekerlek.py` içinde belgeli):
+1. Ortografik yan render (1 px = 0,001 birim), siluetin alt sınır profili çıkarıldı.
+2. Eşiğin altındaki (z < 0,0564) her yükseklikte lastiğin **kirişi** ölçüldü; `h² = 2Rz − z²`
+   üç yükseklikte R ≈ 0,0724 / 0,0713 / 0,0728 verdi → **R = 0,0735**.
+3. Temas yaması (z < 0,008) lastik genişliğini ve merkez x'ini doğrudan verdi: dört tekerde de
+   0,0531–0,0538 genişlik, merkez ±0,1876…±0,1881.
+
+Not: ilk denemede daire, alt yaya **cebirsel daire uydurma** ile arandı; yay yalnızca alt kapağı
+kapsadığı için kötü koşullu çıktı (artık 0,020 = yarıçapın %28'i) ve merkez z = −0,033 gibi
+imkânsız bir değer verdi. Kiriş yöntemi kapalı formda ve koşullu.
+
+### 10.2 Yapılan
+
+- `tools/decor/toros_tekerlek.py` (yeni): canlı Blender oturumunda kaynağı içe alır, dört teker
+  bölgesini siler (r ≤ 0,078, |x−aks| ≤ 0,032 — çamurluk dudağı |x| > 0,220'de korunur),
+  yerine **halka profilli** temiz teker üretir (lastik + jant tablası + göbek, 400 üçgen) ve
+  `renault_toros_wheels.glb` olarak yazar. **Kaynak `renault_r12.glb`'ye dokunulmaz.**
+- Tekerler `tripo_part_1..4` adıyla AYRI nesne çıktığı için pipeline'ın `extract` adımına
+  gerek kalmadı; harita kaydı sadeleşti.
+- `vehicles/cars.json`: kayıt geri eklendi (15 → **16 araç**), D sınıfı yine 2 araç.
+
+### 10.3 Yol boyunca çıkan üç ayrı renk hatası
+
+Teker geometrisi düzeldikten sonra lastik oyunda **açık gri** çıkmaya devam etti. Üç ayrı sebep
+vardı ve üçü de ayrı ayrı ölçülüp düzeltildi:
+
+1. **Tek texel'e nişan almak işe yaramıyor.** `optimize_car.gd` çıkışta bütün yüzeylere tek
+   gövde materyalini verdiği için teker rengi yalnızca UV'den geliyor. Lastiğin bütün UV'si
+   dokudaki siyah bir texel'e sabitlendi — **mipmap yuttu**: o texel'in 9×9 komşu ortalaması
+   zaten 93, 33×33 ortalaması 96. Kaynağın kendi teker UV'lerini taşımak da tutmadı, çünkü
+   model 6.887 parçaya bölünmüş ve teker UV'leri atlasın **her yanına** dağılmış (ölçüldü:
+   u 0,005–0,990, v 0,005–0,991).
+2. **Blender iki UV katmanı bırakıyordu.** Silindir primitifleri kendi katmanlarını getiriyor;
+   glTF dışa aktarımı **aktif** katmanı değil **ilk** katmanı TEXCOORD_0 yazıyor. Yazdığım
+   katman aktifti ama ikinciydi → oyunda lastiğin UV'si (0, 1) köşesinde kalmıştı.
+3. **CarRig teker shader'ını zorla takıyordu.** "Lastik + jant tek mesh" araçlar için yarıçapa
+   göre bölen `wheel_split.gdshader`, `wheels` rolündeki HER parçaya takılıyor ve rengi yine
+   atlastan okuyordu — kendi materyalinin üstünü örtüyordu.
+
+**Kalıcı çözüm — üç araçta üç küçük kural:**
+
+| dosya | kural |
+|---|---|
+| `tools/optimize_car.gd` | `_surface_material()`: **dokulu** materyaller tek gövde materyaline indirgenir (eskisi gibi), **dokusuz** materyal kaynakta bilerek ayrı verilmiştir ve düz renk olarak KORUNUR. |
+| `vehicles/car_rig.gd` | `_needs_wheel_split()`: teker tek yüzeyli ve atlası kullanıyorsa shader takılır; kaynakta zaten ayrılmışsa (çok yüzey / dokusuz materyal) takılmaz. |
+| `tools/make_paint_mask.gd` | Atlası kullanmayan yüzey maskeye rasterize edilmez. UV'si anlamsız olduğu için engel sayılıyor ve **aday texel'i 624.555 → 23.864'e** düşürüyordu. |
+
+Üçü de mevcut araçlar için **işlemsiz**: 15 aracın her materyali dokulu, 56 tekerinin hepsi tek
+yüzeyli ve atlaslı (`qa/wheel_surfaces.gd` ile ölçüldü — shader takılan 56, takılmayan yalnızca
+Toros'un 4 tekeri).
+
+Sonuç materyaller: lastik `#353538`, jant/göbek `#999A9D` — jant grisi aracın **kendi
+dokusundan** ölçülen jant kapağı rengi (152,153,155).
+
+### 10.4 Denge korundu
+
+Araç geri eklenirken yarış statları raporun eski tablosundan (§14, drag_racing_2_report.md)
+**türetilerek** bulundu, uydurulmadı: `launch_rpm = redline × lerp(0,52; 0,62; ivme) × 1,08`
+denklemi ivmeyi tek değere kilitliyor (6131 devir sınırı → ivme 56), son hız ise süpürülerek
+eşlendi. `top_speed = 100` ile `qa/drag_lab.gd` eski satırı **birebir** yeniden üretiyor:
+
+```
+renault_toros          D       5  6131   5608  3814  14.44  14.56  14.91   0.47
+```
+
+---
+
+## 11. Farlar beyaz araçlarda kayboluyordu (2026-09-28)
+
+Kullanıcı şikâyeti: "bazı araçların renk konusunu çözemedik, mesela farları güzel olmadı."
+Önden çekimde görüldü — Volvo S60, Honda Civic ve Audi A3 gibi **beyaz** araçlarda far, beyaz
+kaportadan ayrışmıyordu; koyu araçlarda (BMW E60) sorun yoktu.
+
+### 11.1 Ölçüm: iki AYRI sebep
+
+`qa/far_kontrast.gd` dokudan örnekleyip far ↔ kaporta parlaklık farkını ölçtü — **15 araçtan
+8'inde fark 0,10'un altında**:
+
+```
+honda_civic   0,001      audi_a3   0,002      hyundai_era     0,013
+vw_passat     0,031      volvo_s60 0,036      renault_fluence 0,074
+bmw_e60       0,086      accent_blue 0,089
+```
+
+Audi'nin 0,002'si şüphe uyandırdı: far ile kaporta BİREBİR aynı renk çıkıyorsa far rolünde
+kaporta parçası olabilir. `qa/far_parcalari.gd` parça kutularını ölçtü ve doğruladı:
+
+| araç | şüpheli parça | hacim (araç kutusunun oranı) | kutu |
+|---|---|---|---|
+| audi_a3 | tripo_part_16 / 19 | **%2,17 / %2,34** | 0,236×0,135×0,123 |
+| volvo_s60 | tripo_part_11 / 24 | **%1,20 / %0,96** | 0,130×0,114×0,131 |
+| tofas_sahin | tripo_part_18 / 36 | **%0,81 / %0,90** | 0,090×0,073×0,232 |
+
+Gerçek lambalar en çok **%0,31** (bmw_e60 0,31 · volvo 0,28 · era 0,26). Yani 2026-09-27'nin
+otomatik rol sınıflandırıcısı bu araçlarda çamurluk/tampon panelini far rolüne koymuş.
+
+> Ölçüm tuzağı: ilk denemede parça kutuları hepsi aracın ortasında çıktı. `mesh.get_aabb()`
+> YEREL uzaydadır; `optimize_car.gd` kök dönüşümü vertex'lere pişirmez, düğüme yazar. Kutuyu
+> `Transform3D * AABB` ile dönüştürmek de yanlış (döndürülmüş kutunun sınırını verip şişirir) —
+> 8 KÖŞE dönüştürülüyor.
+
+### 11.2 Düzeltme — iki adım, ikisi de ölçüye dayalı
+
+1. **Rol süzgeci** (`CarRig._filter_lamps`): far rolünden, aracın kutu hacminin `%0,45`'ini aşan
+   parça elenir. Eşik ölçülen iki kümenin (gerçek ≤ %0,31, yanlış ≥ %0,58) ortasında. Elenen
+   parça **görünür kalır**, yalnızca lens materyali uygulanmaz ve GLB dokusunda bırakılır;
+   eleme `push_warning` ile loglanır. Araç id'si hardcode EDİLMEZ.
+2. **Lens materyali**: far artık krom reflektörlü cam gibi kurulur — `HEADLIGHT_TINT`
+   (0,78 0,83 0,90), `HEADLIGHT_METALLIC` 0,45, `HEADLIGHT_ROUGHNESS` 0,10. Kaporta mat
+   (pürüz ~0,5) kaldığı için lamba kendi vurgusuyla ayrışır. Doku silinmez, çarpanla koyulaşır.
+
+Süzgecin elediği: `tofas_sahin` 18/36, `audi_a3` 16/19, `volvo_s60` 11/24 — ölçümün işaret
+ettiği altı parçanın tamamı, fazlası değil.
+
+### 11.3 Sonuç
+
+`ct_shots/far/<araç>.png` (araç başına yakın plan ön görünüm) ve
+`ct_shots/kiyas/far_oncesonra.png` (Audi + Volvo, önce/sonra). Farlar artık projektör
+çanaklarıyla birlikte okunuyor; kaportada leke yok; koyu (bmw_e60) ve doygun renkli
+(vw_golf_7) araçlarda değişiklik olumsuz etkilemiyor.
+
+`qa/far_olcum.gd` + `qa/far_olcum.py` objektif ölçüm: her aracı iki kez çeker (normal + far
+parçaları macenta maske), lamba piksellerinin ortalama parlaklığını çevresindeki kaporta
+halkasıyla karşılaştırır. Ölçüt İŞARETSİZ farktır — koyu araçta lamba parlak, açık araçta koyu
+olarak ayrışır; ikisi de okunurluktur. Sonuç: **15 araçtan 13'ü okunur** (fark 0,14–0,54).
+
+İki araç eşiğin altında kalıyor ve ikisi de **ölçünün kapsamından** kaynaklanıyor, görüntüden
+değil — ölçü yalnızca far ROLÜNDEKİ parçaları görür, yani rolün saflığını da ölçer:
+
+| araç | fark | lamba px | sebep |
+|---|---|---|---|
+| `tofas_sahin` | 0,035 | 21.704 | rolde ön yüzü boydan boya kaplayan ince krom şeritler var (43/45/59/62/73/75); piksellerin çoğu lamba değil trim |
+| `seat_leon` | 0,048 | 1.433 | rolde tek parça; lambanın çoğu dokuya pişmiş, role girmemiş |
+
+İkisinin de render'ı (`ct_shots/far/`) temiz: Şahin'in kare farları reflektör çanaklarıyla,
+Leon'un köşeli lensleri beyaz kaportada net okunuyor. Trim'e lens materyalinin uygulanması
+zararsız (metaliklik 0,45 kromda zaten doğru duruyor), bu yüzden süzgeç ince şeritleri elemek
+üzere sıkılaştırılmadı — sıkılaştırmak modern araçlardaki gerçek gündüz farı şeritlerini
+(Passat/Fluence/Civic) de elerdi.
