@@ -49,7 +49,15 @@ const PAINT_VALUE: int = 2000
 
 ## Garajın toplam değeri (₺).
 static func compute(tree: SceneTree) -> int:
-	return vehicles_value(tree) + upgrades_value(tree) + bays_value(tree) + paint_value(tree)
+	return vehicles_value(tree) + upgrades_value(tree) + bays_value(tree) + paint_value(tree) \
+		+ decor_value(tree)
+
+
+## Satın alınmış garaj dekorasyonunun katkısı (yuvaya konmuş olması gerekmez — Car Town'daki
+## "Item Storage" gibi, ödenen para prestije yazılır). Katalog: gameplay/garage_decor.gd
+static func decor_value(tree: SceneTree) -> int:
+	var decor: DecorManager = tree.get_first_node_in_group("decor") as DecorManager
+	return decor.value() if decor else 0
 
 
 ## Sahip olunan araçların katalog fiyatı toplamı.

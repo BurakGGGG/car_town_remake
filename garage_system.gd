@@ -47,8 +47,27 @@ func _ready():
 	if Engine.is_editor_hint():
 		return
 	add_to_group("garage_system")
+	_ensure_decor_manager()
+	_ensure_decor_view()
 	_hide_build_grid()
 	_connect_upgrade.call_deferred()
+
+
+## Dekorasyon yöneticisi KODLA kurulur (sahne dosyası elle düzenlenmiyor — bkz. CLAUDE.md).
+## Diğer yöneticiler gibi grupla bulunur ("decor"); garaj değeri ve kayıt ona bakar.
+func _ensure_decor_manager() -> void:
+	if get_tree().get_first_node_in_group("decor") != null:
+		return
+	var decor: DecorManager = DecorManager.new()
+	decor.name = "DecorManager"
+	add_child(decor)
+
+
+## Avludaki dekorasyon görünümü de kodla kurulur (sahne dosyası elle düzenlenmiyor).
+func _ensure_decor_view() -> void:
+	if get_tree().get_first_node_in_group("garage_decor_view") != null:
+		return
+	add_child(GarageDecorView.new())
 
 
 ## Yerleştirme ızgarası (BuildGrid) açılış kadrajının tam ortasında camgöbeği tel kafes olarak
@@ -117,6 +136,15 @@ func update_garage():
 	back_wall.position.z = FIXED_FRONT_Z - garage_depth + 0.025
 
 	_update_grid(garage_width, garage_depth)
+	var view: Node = get_node_or_null("GarageDecorView")
+	if view and view.has_method("refresh"):
+		view.call("refresh")   # avlu büyüdü: yeni yuvalar açılmış olabilir
+
+
+## Yerleştirme ızgarasının göz boyu: TAMİR ALANININ (CarSpot 0,5 x 0,7) uzun kenarının DÖRTTE
+## biri. Eski değer 0,5 idi (bir göz neredeyse koca bir tamir alanı); 0,7/8 denendi ama alan
+## olarak tamir alanı ~45 göze bölünüyordu ve fazla ince duruyordu — iki katına çıkarıldı.
+const GRID_CELL: float = 0.7 / 4.0
 
 
 ## Zemindeki ızgara da garajla birlikte büyür (yeni alan boş zemin gibi görünmesin).
@@ -124,6 +152,7 @@ func _update_grid(garage_width: float, garage_depth: float) -> void:
 	var grid: Node3D = get_node_or_null("BuildGrid/BuildGrid")
 	if grid == null:
 		return
+	grid.cell_size = GRID_CELL
 	grid.position.x = FIXED_RIGHT_X - garage_width / 2.0
 	grid.position.z = FIXED_FRONT_Z - garage_depth / 2.0
 	grid.width = int(round(garage_width / grid.cell_size))

@@ -18,7 +18,7 @@ extends Node
 ## sayısı (repair_bays.unlocked) ayrı alanlardır: garaj büyük olup alan satın alınmamış olabilir.
 ##
 ## Dosya: user://savegame.json (JSON, "version" alanıyla). Eski sürümler hâlâ geçerlidir ve yüklenince
-## güncel sürümle yeniden yazılır: v1'de "vehicles" yoktur (başlangıç aracı sahiplenilir), v2'de
+## güncel sürümle yeniden yazılır: v7'de "decor" yoktur (garaj dekorasyonsuz başlar), v1'de "vehicles" yoktur (başlangıç aracı sahiplenilir), v2'de
 ## "vehicles.paint" yoktur (araçlar fabrika renginde kalır), v3'te "quests" yoktur (görevler baştan). Bozuk / okunamayan / daha yeni sürümlü
 ## kayıt oyunu çökertmez: hata loglanır ve sahnedeki başlangıç değerleriyle devam edilir.
 ## Otomatik kayıt: para / XP / seviye / gem / geliştirme değişince DEBOUNCE saniyelik gecikmeli tek
@@ -34,7 +34,7 @@ signal game_saved
 signal game_loaded(success: bool)
 
 const SAVE_PATH: String = "user://savegame.json"
-const SAVE_VERSION: int = 7
+const SAVE_VERSION: int = 8
 ## Okunabilen en eski sürüm (daha eskisi reddedilir; 1/2/3 → 4 migration yapılır).
 const MIN_VERSION: int = 1
 ## Değişiklikten sonra diske yazmadan önce beklenen süre (sn).
@@ -55,6 +55,7 @@ var _ownership: VehicleOwnership
 var _quests: QuestManager
 var _bays: RepairBayManager
 var _mastery: JobMastery
+var _decor: DecorManager
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -78,6 +79,7 @@ func _setup() -> void:
 	_quests = get_tree().get_first_node_in_group("quests") as QuestManager
 	_bays = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
 	_mastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
+	_decor = get_tree().get_first_node_in_group("decor") as DecorManager
 	_fresh_json = snapshot_json()
 	if load_on_start:
 		if has_save():
@@ -147,6 +149,8 @@ func new_game() -> void:
 		_quests.reset()
 	if _bays:
 		_bays.reset()
+	if _decor:
+		_decor.reset()
 	if _mastery:
 		_mastery.reset()
 	_loading = false
@@ -228,6 +232,8 @@ func _collect() -> Dictionary:
 		"repair_bays": {"unlocked": _bays.state() if _bays else 1},
 		# İŞ USTALIĞI: arıza id → tamamlanan iş sayısı (yıldızlar bundan türetilir)
 		"job_mastery": _mastery.state() if _mastery else {},
+		# GARAJ DEKORASYONU: sahip olunan eşyalar + hangi yuvada durdukları
+		"decor": _decor.state() if _decor else {},
 	}
 
 
@@ -296,6 +302,10 @@ func _apply(data: Dictionary) -> void:
 		# v6 ve öncesi kayıtta "job_mastery" yoktur: ustalık sayaçları sıfırdan başlar
 		var mastery_data: Variant = data.get("job_mastery", {})
 		_mastery.load_state(mastery_data if mastery_data is Dictionary else {})
+	if _decor:
+		# v7 ve öncesi kayıtta "decor" yoktur: garaj boş dekorasyonla başlar
+		var decor_data: Variant = data.get("decor", {})
+		_decor.load_state(decor_data if decor_data is Dictionary else {})
 
 
 # --- Otomatik kayıt (debounce) -----------------------------------------------------

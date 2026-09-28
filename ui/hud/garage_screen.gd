@@ -243,6 +243,15 @@ func _ready() -> void:
 	_apply_responsive_layout()
 	get_viewport().size_changed.connect(_apply_responsive_layout)
 	_connect_upgrades.call_deferred()
+	_connect_decor.call_deferred()
+
+
+## Dekorasyon DIŞ AVLUDA duruyor (world/garage_decor_view.gd); garaj ekranı yalnızca garaj
+## DEĞERİNİ tazeler, çünkü satın alınan eşya değere yazılıyor.
+func _connect_decor() -> void:
+	var decor: DecorManager = get_tree().get_first_node_in_group("decor") as DecorManager
+	if decor and not decor.placement_changed.is_connected(_refresh_value):
+		decor.placement_changed.connect(_refresh_value)
 
 
 func _process(delta: float) -> void:
@@ -633,7 +642,8 @@ func _clear_collection() -> void:
 
 ## Araç sayısı arttıkça kamera açılır; hepsi kadraja sığar, izometrik açı değişmez.
 func _fit_camera(count: int) -> void:
-	preview_camera.size = lerpf(CAM_SIZE_MIN, CAM_SIZE_MAX, clampf(float(count - 1) / CAM_FULL_AT, 0.0, 1.0))
+	preview_camera.size = lerpf(CAM_SIZE_MIN, CAM_SIZE_MAX,
+		clampf(float(count - 1) / CAM_FULL_AT, 0.0, 1.0))
 	preview_camera.position = _camera_home + CAM_SHIFT * clampf(float(count - 1) / CAM_SHIFT_AT, 0.0, 1.0)
 
 

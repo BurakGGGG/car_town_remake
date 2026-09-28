@@ -17,7 +17,10 @@ func create_grid():
 	var material := StandardMaterial3D.new()
 
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = Color(0.2, 0.8, 1.0, 0.5)
+	# Göz boyu tamir alanının uzun kenarının 1/4'üne indi (garage_system.gd GRID_CELL); çizgi
+	# sayısı arttığı için eski %50 opak camgöbeği ızgara zemini düz bir örtüye çeviriyordu.
+	# Koyu ve silik çizgi zemindeki DERZ gibi okunuyor, aynı bilgiyi zemini boğmadan veriyor.
+	material.albedo_color = Color(0.16, 0.19, 0.23, 0.22)
 
 	mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
 

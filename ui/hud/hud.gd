@@ -111,6 +111,8 @@ var drag_race_screen: DragRaceScreen
 var race_result_screen: RaceResultScreen
 var _race: RaceManager
 var mastery_screen: MasteryScreen
+## Avlu dekorasyonu panosu (dünyada avluya dokununca açılır).
+var decor_panel: DecorPanel
 var garage_value_screen: GarageValueScreen
 ## Alt sekme → açtığı ekran.
 var _nav_screens: Dictionary = {}
@@ -295,6 +297,12 @@ func _connect_gameplay() -> void:
 	_garage = get_tree().get_first_node_in_group("garage_system")
 	if _garage and _garage.has_signal(&"expand_clicked"):
 		_garage.connect(&"expand_clicked", show_expansion_plate)
+	# AVLUYA DOKUNMA: dekorasyon panosunu açar, düzenleme boyunca yerleştirme ızgarası görünür.
+	var lot: Node = get_tree().get_first_node_in_group("garage_decor_view")
+	if lot and lot.has_signal(&"lot_clicked") and not lot.is_connected(&"lot_clicked", _open_decor):
+		lot.connect(&"lot_clicked", _open_decor)
+	if decor_panel and not decor_panel.closed.is_connected(_close_decor):
+		decor_panel.closed.connect(_close_decor)
 	if _upgrades:
 		_upgrades.upgrade_purchased.connect(_on_upgrade_purchased)
 	_bays = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
@@ -745,6 +753,8 @@ func _build_progress_screens() -> void:
 	host.add_child(garage_value_screen)
 	mastery_screen = MasteryScreen.new()
 	host.add_child(mastery_screen)
+	decor_panel = DecorPanel.new()
+	host.add_child(decor_panel)
 	profile_screen = ProfileScreen.new()
 	host.add_child(profile_screen)
 	profile_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
@@ -767,11 +777,30 @@ func _build_race_screens() -> void:
 	race_result_screen.closed.connect(_on_race_exit)
 
 
+## Avlu düzenleme: pano açılır ve yerleştirme ızgarası görünür olur.
+func _open_decor() -> void:
+	router.open(&"decor")
+	_set_lot_editing(true)
+
+
+func _close_decor() -> void:
+	_set_lot_editing(false)
+	if router.top() == &"decor":
+		router.back()
+
+
+func _set_lot_editing(value: bool) -> void:
+	var lot: Node = get_tree().get_first_node_in_group("garage_decor_view")
+	if lot and lot.has_method("set_editing"):
+		lot.call("set_editing", value)
+
+
 func _register_screens() -> void:
 	router.register(&"garage", garage_screen, UiRouter.Kind.PLACE)
 	router.register(&"showroom", showroom, UiRouter.Kind.PLACE)
 	router.register(&"quests", quest_screen, UiRouter.Kind.MODAL)
 	router.register(&"mastery", mastery_screen, UiRouter.Kind.MODAL)
+	router.register(&"decor", decor_panel, UiRouter.Kind.MODAL)
 	router.register(&"garage_value", garage_value_screen, UiRouter.Kind.MODAL)
 	router.register(&"profile", profile_screen, UiRouter.Kind.MODAL)
 	router.register(&"account", login_screen, UiRouter.Kind.MODAL)
