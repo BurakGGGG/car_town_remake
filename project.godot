@@ -8,13 +8,19 @@
 
 config_version=5
 
+[admob]
+
+general/android/app_id="ca-app-pub-7404501315536471~9308307471"
+general/ios/enabled=false
+
 [application]
 
-config/name="CarTownRemake"
-run/max_fps=60
+config/name="AUTO YARD"
 run/main_scene="uid://0m64e8fs215g"
+config/quit_on_go_back=false
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/icon="res://icon.svg"
+run/max_fps=60
+config/icon="res://assets/branding/icon_512.png"
 
 [display]
 
@@ -28,7 +34,7 @@ project/assembly_name="CarTownRemake"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/GodotFirebaseAndroid/plugin.cfg")
+enabled=PackedStringArray("res://addons/GodotFirebaseAndroid/plugin.cfg", "res://addons/admob/plugin.cfg")
 
 [physics]
 
