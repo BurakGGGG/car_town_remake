@@ -39,13 +39,14 @@ signal screen_requested(id: StringName)
 signal closed
 
 const SLIDE: float = 16.0
-## Bu yüksekliğin altında sol sütun sadeleşir (telefon tuvali ~480).
-const COMPACT_HEIGHT: float = 560.0
 ## Alt araç şeridinin kadraj kenarına bıraktığı pay (sahnedeki margin_bottom ile aynı).
 const BOTTOM_MARGIN: float = 14.0
 
-## Sol sütunun altında GARAJDAN ÇIK plakasına bırakılan pay (şerit ölçülemezse yedek).
+## Sol sütunun altında GARAJDAN ÇIK plakasına bırakılan pay — plaka ölçülemezse YEDEK
+## (normalde _exit_reserve() gerçek plakadan hesaplar).
 const EXIT_RESERVE: float = 96.0
+## Sol sütunun sonu ile GARAJDAN ÇIK plakası arasındaki boşluk.
+const EXIT_GAP: float = 8.0
 ## Sol sütunun kadraj üstünden payı.
 const COLUMN_TOP: float = 16.0
 const INFO_WIDTH: float = 196.0
@@ -176,7 +177,10 @@ var _bays: RepairBayManager
 ## Sıradaki alanın ne açtığını yazan satır (ProgressionEffects).
 var _bay_hint: Label
 ## Kısa ekranda gizlenen yardımcı satırlar (başlıklar + "ne alıyorum" özetleri).
+## Sütun sığmazsa gizlenen AYRINTI satırları ("ne alıyorum" özetleri, alan ipucu).
 var _compact_labels: Array[Label] = []
+## Sütun ayrıntılar gizlendiği hâlde sığmazsa gizlenen bölüm BAŞLIKLARI.
+var _caption_labels: Array[Label] = []
 ## Kısa ekran kipi (telefon tuvali): yardımcı satırlar gizli.
 var _compact: bool = false
 var _info_scroll: ScrollContainer
@@ -209,6 +213,14 @@ var _sell_panel: PlatePanel
 var _sell_name: Label
 var _sell_payout: Label
 var _sell_confirm: PlateButton
+var _detail_panel: PlatePanel
+var _detail_name: Label
+var _detail_overall: Label
+## Genel puanı oluşturan dört stat: [statü anahtarı, etiket].
+const DETAIL_ROWS: Array = [
+	["top_speed", "HIZ"], ["acceleration", "HIZLANMA"], ["reaction", "TEPKİ"], ["grip", "TUTUŞ"]]
+var _detail_lanes: Dictionary = {}
+var _detail_values: Dictionary = {}
 
 
 func _ready() -> void:
@@ -238,7 +250,10 @@ func _ready() -> void:
 	_build_value_plate()
 	_build_paint()
 	_build_mastery()
+	_build_race_pick()
+	_build_collection_button()
 	_build_sell()
+	_build_detail()
 	_wrap_info_column()
 	_apply_responsive_layout()
 	get_viewport().size_changed.connect(_apply_responsive_layout)
@@ -277,23 +292,52 @@ func _wrap_info_column() -> void:
 	host.add_child(_info_scroll)
 
 
-## Kısa tuvalde (yükseklik < 560) sütun sadeleşir: başlıklar ve "ne alıyorum" özet satırları
-## gizlenir — o ayrıntılar zaten dünyadaki satın alma plakasında tam haliyle yazıyor.
+## Sol sütunun yoğunluğu İÇERİĞE göre seçilir: GARAJDAN ÇIK'ın üstünde biten İLK kademe.
+##   0 — tam
+##   1 — "ne alıyorum" özetleri ve alan ipucu gizli, aralık sık (bölüm başlıkları durur)
+##   2 — bölüm başlıkları da gizli
+## Hiçbiri sığmazsa sütun kaydırılır (son çare). Gizlenen ayrıntılar dünyadaki satın alma
+## plakasında tam hâliyle yazıyor.
+##
+## Eskiden kademe ekran yüksekliğine göre seçiliyordu (< 560), ama canvas_items + expand dikey
+## tabanı her cihazda 648'de tuttuğu için hiç tetiklenmiyordu. Dokunma tabanıyla
+## (PlateButton.MIN_PLATE_HEIGHT) düğmeler 25 → 44 birime çıkınca sütun 648'lik tuvalde 47 birim
+## taştı ve GARAJ DEĞERİ kaydırmanın altına düştü (ölçüldü).
 func _apply_responsive_layout() -> void:
 	if _info_scroll == null:
 		return
 	var view_height: float = get_viewport_rect().size.y
-	_compact = view_height < COMPACT_HEIGHT
-	for label: Label in _compact_labels:
-		if is_instance_valid(label):
-			label.visible = not _compact and label.text != ""
-	info_column.add_theme_constant_override(&"separation", 2 if _compact else 4)
-	# Şerit sütunun SAĞINDAN başladığı için sütun aşağı kadar inebilir; yalnızca GARAJDAN ÇIK
-	# plakasına pay bırakılır.
-	var available: float = maxf(view_height - COLUMN_TOP - EXIT_RESERVE, 120.0)
-	var wanted: float = info_column.get_combined_minimum_size().y
+	var available: float = maxf(view_height - COLUMN_TOP - _exit_reserve(), 120.0)
+	var wanted: float = 0.0
+	for level: int in 3:
+		_set_density(level)
+		wanted = info_column.get_combined_minimum_size().y
+		if wanted <= available:
+			break
 	_info_scroll.custom_minimum_size = Vector2(INFO_WIDTH, minf(wanted, available))
 	_place_left_column()
+
+
+func _set_density(level: int) -> void:
+	_compact = level >= 1
+	for label: Label in _caption_labels:
+		if is_instance_valid(label):
+			label.visible = level < 2 and label.text != ""
+	info_column.add_theme_constant_override(&"separation", 2 if _compact else 4)
+	# Ayrıntı satırlarının görünürlüğünü KENDİ kuralları belirler (ör. alanların hepsi açıksa
+	# ipucu hiç görünmez). Eskiden burada doğrudan açılıyordu ve o kural eziliyordu: üç alan da
+	# AÇIK iken "2. ALAN → ..." ipucu görünüyordu.
+	_refresh_upgrades()
+	_refresh_bay_hint()
+
+
+## GARAJDAN ÇIK plakasının kadrajdaki yüksekliği (kenar payı dahil) + araya bırakılan boşluk.
+## Eskiden 96 birimlik sabitti, 25 birimlik düğmeye göre elle verilmişti.
+func _exit_reserve() -> float:
+	var host: Control = exit_button.get_parent() as Control if exit_button else null
+	if host == null:
+		return EXIT_RESERVE
+	return host.get_combined_minimum_size().y + EXIT_GAP
 
 
 ## Sol sütunu üstten hizalar. Sahnede dikey ORTALI (%LeftCenter, anchor 0.5) olduğu için sütun
@@ -352,6 +396,7 @@ func close() -> void:
 
 func _finish_close() -> void:
 	_sell_panel.hide()
+	_detail_panel.hide()
 	action_column.show()
 	_paint_panel.close()   # önizleme bırakılır; yeniden açılışta aksiyon plakaları görünür
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
@@ -466,7 +511,9 @@ func _apply(entry: Dictionary) -> void:
 	condition_label.text = "%d%%" % roundi(float(entry["condition"]) * 100.0)
 	value_label.text = Hud.format_thousands(entry["price"])
 	_load_preview(entry["scene_path"])
+	_refresh_detail()
 	_actions_clear()
+	_refresh_race_pick()
 	if _paint_panel.visible:
 		_paint_panel.set_vehicle(_shown_vehicle)   # yeni aracın rengi seçili, önizleme yok
 
@@ -689,7 +736,7 @@ func _build_upgrade_plates() -> void:
 	caption.custom_minimum_size = Vector2(0.0, 16.0)   # plakanın altına girmesin
 	caption.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	info_column.add_child(caption)
-	_compact_labels.append(caption)
+	_caption_labels.append(caption)
 	for id: StringName in [GarageUpgradeManager.SPEED_ID, GarageUpgradeManager.GARAGE_ID]:
 		var plate: PlatePanel = PlatePanel.new()
 		plate.theme_type_variation = &"HudCarPlate"
@@ -743,7 +790,7 @@ func _build_bay_plates() -> void:
 	caption.custom_minimum_size = Vector2(0.0, 16.0)
 	caption.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	info_column.add_child(caption)
-	_compact_labels.append(caption)
+	_caption_labels.append(caption)
 
 	var plate: PlatePanel = PlatePanel.new()
 	plate.theme_type_variation = &"HudCarPlate"
@@ -904,9 +951,11 @@ func _refresh_value() -> void:
 		return
 	var value: int = GarageValue.compute(get_tree())
 	var rank: int = GarageValue.rank(value)
-	# Tek satır: sol sütun GARAJDAN ÇIK'ın üstüne taşmasın (ölçüldü: iki satırda 16 px çakışıyordu).
-	# Rütbenin ADI zaten duvardaki tabelada ve rütbe merdiveninde yazıyor.
-	_value_button.text = "GARAJ DEĞERİ  %s ₺  ·  %d. RÜTBE" % [Hud.format_thousands(value), rank]
+	# İKİ satır, diğer plakalardaki gibi etiket üstte değer altta. Eskiden tek satırdı çünkü iki
+	# satır sütunu 16 birim uzatıp GARAJDAN ÇIK'a bindiriyordu; artık düğmenin dokunma tabanı
+	# (44 birim) iki satırı zaten kapsıyor, tek satır ise 14 puntoda sütunu ~330 birime
+	# genişletip araç şeridini itiyordu. Rütbenin ADI duvardaki tabelada ve merdivende yazıyor.
+	_value_button.text = "GARAJ DEĞERİ\n%s ₺ · %d. RÜTBE" % [Hud.format_thousands(value), rank]
 	_write_wall_sign(rank)
 
 
@@ -1003,6 +1052,94 @@ func _on_sell_confirmed() -> void:
 	_close_sell()
 
 
+# --- Araç detayı (genel puan) ------------------------------------------------------
+
+## Sağ sütunda DETAY plakasının açtığı panel: GENEL puan (0-1000) ve onu oluşturan dört stat.
+func _build_detail() -> void:
+	_detail_panel = PlatePanel.new()
+	_detail_panel.name = "DetailPanel"
+	_detail_panel.theme_type_variation = &"HudCarPlate"
+	_detail_panel.custom_minimum_size = Vector2(190.0, 0.0)
+	_detail_panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_detail_panel.visible = false
+	var box: VBoxContainer = VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override(&"separation", 4)
+	_detail_name = Label.new()
+	_detail_name.theme_type_variation = &"HudPlateTitle"
+	_detail_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var caption: Label = Label.new()
+	caption.theme_type_variation = &"HudInkCaption"
+	caption.text = "GENEL"
+	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_detail_overall = Label.new()
+	_detail_overall.theme_type_variation = &"HudInkValue"
+	_detail_overall.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(_detail_name)
+	box.add_child(caption)
+	box.add_child(_detail_overall)
+	for row: Array in DETAIL_ROWS:
+		var key: String = row[0]
+		var line: HBoxContainer = HBoxContainer.new()
+		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var title: Label = Label.new()
+		title.theme_type_variation = &"HudInkCaption"
+		title.text = row[1]
+		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var value: Label = Label.new()
+		value.theme_type_variation = &"HudInkCaption"
+		value.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		line.add_child(title)
+		line.add_child(value)
+		var lane: XpLane = XpLane.new()
+		lane.segments = 10
+		box.add_child(line)
+		box.add_child(lane)
+		_detail_values[key] = value
+		_detail_lanes[key] = lane
+	var close_button: PlateButton = PlateButton.new()
+	close_button.theme_type_variation = &"HudPlateSmall"
+	close_button.text = "KAPAT"
+	close_button.bolts = false
+	close_button.focus_mode = Control.FOCUS_NONE
+	close_button.pressed.connect(_close_detail)
+	box.add_child(close_button)
+	_detail_panel.add_child(box)
+	right_group.add_child(_detail_panel)
+
+
+func _refresh_detail() -> void:
+	if _detail_panel == null or _shown_vehicle == &"":
+		return
+	var entry: Dictionary = CarCatalog.get_entry(_shown_vehicle)
+	var stats: Dictionary = DragRaceSim.stats_of(_shown_vehicle)
+	_detail_name.text = String(entry.get("display_name", _shown_vehicle)).to_upper()
+	_detail_overall.text = "%d / %d" % [DragRaceSim.overall_of(_shown_vehicle), DragRaceSim.OVERALL_MAX]
+	for row: Array in DETAIL_ROWS:
+		var key: String = row[0]
+		var ratio: float = DragRaceSim.stat_ratio(key, float(stats.get(key, 0)))
+		(_detail_lanes[key] as XpLane).ratio = ratio
+		(_detail_values[key] as Label).text = str(roundi(ratio * 100.0))
+
+
+func _open_detail() -> void:
+	if _shown_vehicle == &"":
+		_actions_clear()
+		return
+	_refresh_detail()
+	_paint_panel.close()
+	_sell_panel.hide()
+	action_column.hide()
+	_detail_panel.show()
+
+
+func _close_detail() -> void:
+	_detail_panel.hide()
+	action_column.show()
+	_actions_clear()
+
+
 # --- Boya atölyesi -------------------------------------------------------------
 
 ## Sağ sütuna BOYA plakası (mevcut aksiyon plakalarıyla aynı tip) ve onun açtığı panel.
@@ -1023,6 +1160,50 @@ func _build_paint() -> void:
 	_paint_panel.preview_requested.connect(_on_paint_preview)
 	_paint_panel.preview_cleared.connect(_on_paint_preview_cleared)
 	_paint_panel.closed.connect(func() -> void: action_column.show())
+
+
+## Sağ sütuna YARIŞ ARACI plakası: lifteki aracı yarışa çıkan araç yapar (RaceManager
+## VehicleOwnership.race_vehicle_id'yi okur). Zaten yarış aracıysa plaka pasif ve işaretli.
+var _race_button: PlateButton
+
+
+func _build_race_pick() -> void:
+	_race_button = PlateButton.new()
+	_race_button.name = "RacePickButton"
+	_race_button.theme_type_variation = &"HudPlate"
+	_race_button.kind = HudIcon.Kind.CAR
+	_race_button.text = "YARIŞ ARACI YAP"
+	_race_button.custom_minimum_size = Vector2(86.0, 0.0)
+	_race_button.focus_mode = Control.FOCUS_NONE
+	_race_button.pressed.connect(func() -> void:
+		var ownership: VehicleOwnership = _owner_node()
+		if ownership and ownership.set_race_vehicle(_shown_vehicle):
+			_refresh_race_pick())
+	action_column.add_child(_race_button)
+
+
+func _refresh_race_pick() -> void:
+	if _race_button == null:
+		return
+	var ownership: VehicleOwnership = _owner_node()
+	var is_racer: bool = ownership != null and ownership.race_vehicle_id() == _shown_vehicle
+	_race_button.text = "YARIŞ ARACI ✔" if is_racer else "YARIŞ ARACI YAP"
+	_race_button.disabled = is_racer or ownership == null
+
+
+## Sağ sütuna KOLEKSİYON plakası (koleksiyon panosu UiRouter'dadır).
+func _build_collection_button() -> void:
+	var button: PlateButton = PlateButton.new()
+	button.name = "CollectionButton"
+	button.theme_type_variation = &"HudPlate"
+	button.kind = HudIcon.Kind.CAR
+	button.text = "KOLEKSİYON"
+	button.custom_minimum_size = Vector2(86.0, 0.0)
+	button.focus_mode = Control.FOCUS_NONE
+	button.pressed.connect(func() -> void:
+		_actions_clear()
+		screen_requested.emit(&"collection"))
+	action_column.add_child(button)
 
 
 ## Sağ sütuna USTALIK plakası: garajın ustalık panosunu açar (QA: ustalık görünmüyordu).
@@ -1072,6 +1253,12 @@ func _on_paint_preview_cleared() -> void:
 # --- Aksiyon plakaları -------------------------------------------------------
 
 func _on_action_toggled(pressed: bool, action: StringName) -> void:
+	if action == &"detail":
+		if pressed:
+			_open_detail()
+		else:
+			_close_detail()
+		return
 	if action == &"sell":
 		if pressed:
 			_open_sell()
@@ -1081,6 +1268,7 @@ func _on_action_toggled(pressed: bool, action: StringName) -> void:
 		return
 	if pressed:
 		_sell_panel.hide()
+		_detail_panel.hide()
 		action_column.show()
 		action_selected.emit(action, _shown_vehicle)
 

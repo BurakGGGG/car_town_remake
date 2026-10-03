@@ -561,6 +561,30 @@ static func power_of(vehicle_id: StringName) -> float:
 	return float(stats["top_speed"]) * 0.4 + float(stats["acceleration"]) * 0.45 + float(stats["grip"]) * 0.15
 
 
+## GENEL (OVERALL) PUAN, 0-1000: aracın dört yarış statının tek sayılık özeti. Oyuncu hız,
+## hızlanma ve tepkiyi ayrı ayrı görmez; araçları bu sayıyla karşılaştırır. Ağırlıklar yarışın
+## gerçekte neye bağlı olduğunu yansıtır: hızlanma 400 m'yi en çok belirler, tepki ve tutuş
+## ince ayardır. Hız statı 160 km/s'te tavana vurur (diğerleri zaten 0-100).
+const OVERALL_MAX: int = 1000
+const OVERALL_TOP_SPEED_CAP: float = 160.0
+const OVERALL_WEIGHTS: Dictionary = {
+	"top_speed": 0.35, "acceleration": 0.40, "reaction": 0.15, "grip": 0.10}
+
+## Bir statın 0-1 normalleşmiş hali (çubuklar ve genel puan aynı ölçeği kullanır).
+static func stat_ratio(stat: String, value: float) -> float:
+	if stat == "top_speed":
+		return clampf(value / OVERALL_TOP_SPEED_CAP, 0.0, 1.0)
+	return clampf(value / 100.0, 0.0, 1.0)
+
+
+static func overall_of(vehicle_id: StringName) -> int:
+	var stats: Dictionary = stats_of(vehicle_id)
+	var total: float = 0.0
+	for stat: String in OVERALL_WEIGHTS:
+		total += float(OVERALL_WEIGHTS[stat]) * stat_ratio(stat, float(stats.get(stat, 0)))
+	return roundi(total * OVERALL_MAX)
+
+
 ## İdeal süre (kusursuz kalkış + kusursuz vitesler, tepki yok).
 static func base_time(vehicle_id: StringName) -> float:
 	return drive(vehicle_id, 0.0, 1.0, 1.0, null).time

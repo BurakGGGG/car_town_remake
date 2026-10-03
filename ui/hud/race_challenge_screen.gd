@@ -120,10 +120,8 @@ func _car_plate(row: HBoxContainer, caption: String, labels: Dictionary) -> Plat
 	labels["caption"] = _label(&"HudInkCaption", caption)
 	labels["name"] = _label(&"HudPlateTitle", "")
 	labels["class"] = _label(&"HudInkCaption", "")
-	labels["speed"] = _label(&"HudInkCaption", "")
-	labels["accel"] = _label(&"HudInkCaption", "")
-	labels["reaction"] = _label(&"HudInkCaption", "")
-	for key: String in ["caption", "name", "class", "speed", "accel", "reaction"]:
+	labels["overall"] = _label(&"HudInkCaption", "")
+	for key: String in ["caption", "name", "class", "overall"]:
 		box.add_child(labels[key])
 	plate.add_child(box)
 	row.add_child(plate)
@@ -148,12 +146,9 @@ func _refresh() -> void:
 
 func _fill(labels: Dictionary, vehicle_id: StringName) -> void:
 	var entry: Dictionary = CarCatalog.get_entry(vehicle_id)
-	var stats: Dictionary = DragRaceSim.stats_of(vehicle_id)
 	(labels["name"] as Label).text = String(entry.get("display_name", vehicle_id)).to_upper()
 	(labels["class"] as Label).text = "%s SINIFI" % String(entry.get("class", "?"))
-	(labels["speed"] as Label).text = "HIZ            %d" % int(stats["top_speed"])
-	(labels["accel"] as Label).text = "HIZLANMA       %d" % int(stats["acceleration"])
-	(labels["reaction"] as Label).text = "TEPKİ          %d" % int(stats["reaction"])
+	(labels["overall"] as Label).text = "GENEL  %d" % DragRaceSim.overall_of(vehicle_id)
 
 
 func _label(variation: StringName, text: String) -> Label:
