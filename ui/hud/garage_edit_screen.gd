@@ -204,6 +204,7 @@ func _build() -> void:
 	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
 	_strip_panel.add_child(_scroll)
+	TouchScroll.attach(_scroll, true)   # kaydırınca akar, bırakınca en yakın eşya kartına oturur
 	_strip = HBoxContainer.new()
 	_strip.add_theme_constant_override(&"separation", 6)
 	_scroll.add_child(_strip)

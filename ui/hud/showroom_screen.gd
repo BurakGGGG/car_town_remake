@@ -740,6 +740,7 @@ func _build_overlay() -> void:
 	scroll.custom_minimum_size = Vector2(LIST_WIDTH, 316.0)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
+	TouchScroll.attach(scroll)
 	_list_box = VBoxContainer.new()
 	_list_box.name = "Plates"
 	_list_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL

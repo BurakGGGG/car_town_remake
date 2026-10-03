@@ -148,6 +148,8 @@ func capacity() -> int:
 
 ## Açılmış tamir alanları (sahnede yoksa null: eski davranış, hepsi açık sayılır).
 func _bays() -> RepairBayManager:
+	if not is_inside_tree():
+		return null   # sahne kapanırken (araç ağaçtan çıkarken) grup araması olmaz
 	return get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
 
 

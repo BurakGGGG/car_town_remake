@@ -113,7 +113,10 @@ var _race: RaceManager
 var mastery_screen: MasteryScreen
 ## Avlu dekorasyonu panosu (dünyada avluya dokununca açılır).
 var garage_edit_screen: GarageEditScreen
+## GARAJ panelindeki DÜZENLE düğmesi (GaragePanel.edit_button).
 var edit_button: PlateButton
+var garage_panel: GaragePanel
+var _garage_panel_open: bool = false
 var garage_value_screen: GarageValueScreen
 ## KOLEKSİYON tabelası (showroom ve garaj ekranından açılır).
 var collection_screen: CollectionScreen
@@ -136,11 +139,10 @@ func _ready() -> void:
 		shop_button: &"shop",
 		profile_button: &"profile",
 	}
-	# Her sekmenin AÇTIĞI ekran nettir: GARAJ ve ARAÇLAR aynı fiziksel garaja gider (araçlar orada
-	# park eder — aynı listeyi iki ayrı arayüzde göstermemek için), MAĞAZA showroom'a, PROFİL
-	# ilerleme panosuna. Daha önce ARAÇLAR ve MAĞAZA hiçbir şey açmıyordu.
+	# GARAJ sekmesi ekran AÇMAZ: ana görünüme (dünya garajı) döner ve alt paneli (GaragePanel:
+	# genişlet / tamir hızı / düzenle / detay / ustalık) gösterir. ARAÇLAR yalnızca araçları
+	# (GarageScreen), MAĞAZA showroom'u, PROFİL ilerleme panosunu açar.
 	_nav_screens = {
-		garage_button: &"garage",
 		cars_button: &"garage",
 		shop_button: &"showroom",
 		profile_button: &"profile",
@@ -150,6 +152,7 @@ func _ready() -> void:
 		button.toggled.connect(_on_nav_toggled.bind(button))
 		button.pressed.connect(_on_nav_pressed.bind(button))
 	garage_button.button_pressed = true
+	_build_garage_panel()
 	_build_router()
 	_build_showroom()
 	_build_login_screen()
@@ -846,6 +849,15 @@ func _on_nav_toggled(pressed: bool, button: PlateButton) -> void:
 
 ## Sekmeye basıldı: ilgili ekranı açar. Açık olan sekmeye tekrar basmak onu kapatır (geri döner).
 func _on_nav_pressed(button: PlateButton) -> void:
+	if button == garage_button:
+		# GARAJ: açık yer / pano kapanır ve GARAJ paneli açılır; panel açıkken tekrar basmak kapatır.
+		var in_world: bool = router.top() == &""
+		router.close_all()
+		_garage_panel_open = not (in_world and _garage_panel_open)
+		_sync_garage_panel()
+		return
+	_garage_panel_open = false   # başka sekme: panel kapanır
+	_sync_garage_panel()
 	var id: StringName = _nav_screens.get(button, &"")
 	if id == &"":
 		return
@@ -855,6 +867,28 @@ func _on_nav_pressed(button: PlateButton) -> void:
 	router.open(id)
 	if button == cars_button and id == &"garage":
 		garage_screen.focus_cars()   # ARAÇLAR sekmesi: garajdaki araç listesini öne çıkarır
+
+
+## GARAJ sekmesinin alt paneli: sekme satırının (NavRow) hemen üstüne kodla eklenir (sahne düzenlenmez).
+func _build_garage_panel() -> void:
+	garage_panel = GaragePanel.new()
+	var nav_row: Node = garage_button.get_parent()
+	var column: Node = nav_row.get_parent()
+	column.add_child(garage_panel)
+	column.move_child(garage_panel, nav_row.get_index())
+	edit_button = garage_panel.edit_button
+	garage_panel.expand_requested.connect(show_expansion_plate)
+	garage_panel.edit_requested.connect(func() -> void: router.open(&"garage_edit"))
+	garage_panel.value_requested.connect(func() -> void: router.open(&"garage_value"))
+	garage_panel.mastery_requested.connect(func() -> void: router.open(&"mastery"))
+	_sync_garage_panel()
+
+
+## Panel varsayılan KAPALI: yalnızca GARAJ sekmesine basınca açılır; bir yer (araçlar, mağaza,
+## düzenleme) açılınca ya da başka sekmeye basınca kapanır.
+func _sync_garage_panel() -> void:
+	if garage_panel:
+		garage_panel.visible = _garage_panel_open and (router == null or not router.place_open())
 
 
 func _build_router() -> void:
@@ -933,6 +967,8 @@ func _register_screens() -> void:
 ## (görevler, ustalık, rütbe, profil, hesap) HUD'un üstünde durur.
 func _on_ui_stack_changed(top: StringName, place_open: bool) -> void:
 	_set_gameplay_hud_visible(not place_open)
+	if place_open:
+		_garage_panel_open = false
 	if top != &"":
 		hide_bay_plate()   # dünya plakası bir ekranın altında asılı kalmasın
 		hide_car_info()
@@ -949,10 +985,11 @@ func _sync_nav_tab(place: StringName) -> void:
 		&"showroom":
 			target = shop_button
 		&"garage":
-			target = cars_button if cars_button.button_pressed else garage_button
+			target = cars_button
 	# ButtonGroup set_pressed_no_signal ile diğerlerini bırakmıyor: iki sekme birden amber kalıyordu.
 	for button: PlateButton in _nav_ids:
 		button.set_pressed_no_signal(button == target)
+	_sync_garage_panel()
 
 
 # --- Araç teslimat kasaları ---------------------------------------------------------------
@@ -1069,17 +1106,6 @@ func _build_quests() -> void:
 	var column: Node = camera_controls.get_parent()
 	column.add_child(quest_button)
 	column.move_child(quest_button, camera_controls.get_index())
-	# GARAJI DÜZENLE: GÖREVLER'in altında, aynı fiziksel plaka dilinde. Eskiden avluya dokunmak
-	# dekor panosunu açıyordu; oyun sırasında zemine her dokunuşta yanlışlıkla açılıyordu.
-	edit_button = PlateButton.new()
-	edit_button.name = "EditGarageButton"
-	edit_button.theme_type_variation = &"HudPlateSmall"
-	edit_button.text = "GARAJI DÜZENLE"
-	edit_button.focus_mode = Control.FOCUS_NONE
-	edit_button.size_flags_horizontal = Control.SIZE_SHRINK_END
-	edit_button.pressed.connect(func() -> void: router.open(&"garage_edit"))
-	column.add_child(edit_button)
-	column.move_child(edit_button, quest_button.get_index() + 1)
 	quest_screen = QuestScreen.new()
 	garage_screen.get_parent().add_child(quest_screen)
 	quest_screen.reward_claimed.connect(func(text: String) -> void: _show_notice(text, HudPalette.COIN_DARK))
