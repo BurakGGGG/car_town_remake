@@ -8,18 +8,21 @@ extends HBoxContainer
 ## düzenleme / detay / ustalık ekranlarını HUD / UiRouter açar). TAMİR HIZI doğrudan satın alınır.
 
 signal expand_requested
+signal bay_requested(index: int)
 signal edit_requested
 signal value_requested
 signal mastery_requested
 
 var level_button: PlateButton
 var speed_button: PlateButton
+var bay_button: PlateButton
 var edit_button: PlateButton
 var value_button: PlateButton
 var mastery_button: PlateButton
 
 var _upgrades: GarageUpgradeManager
 var _economy: EconomyManager
+var _bays: RepairBayManager
 
 
 func _ready() -> void:
@@ -29,6 +32,7 @@ func _ready() -> void:
 	add_theme_constant_override(&"separation", 6)
 	level_button = _make("LevelButton", HudIcon.Kind.GARAGE)
 	speed_button = _make("SpeedButton", HudIcon.Kind.WRENCH)
+	bay_button = _make("BayButton", HudIcon.Kind.NONE)
 	edit_button = _make("EditButton", HudIcon.Kind.NONE)
 	value_button = _make("ValueButton", HudIcon.Kind.NONE)
 	mastery_button = _make("MasteryButton", HudIcon.Kind.NONE)
@@ -36,6 +40,9 @@ func _ready() -> void:
 	mastery_button.text = "USTALIK"
 	level_button.pressed.connect(func() -> void: expand_requested.emit())
 	speed_button.pressed.connect(_on_speed_pressed)
+	bay_button.pressed.connect(func() -> void:
+		if _bays and _bays.unlocked_count() < _bays.bay_count():
+			bay_requested.emit(_bays.unlocked_count()))
 	edit_button.pressed.connect(func() -> void: edit_requested.emit())
 	value_button.pressed.connect(func() -> void: value_requested.emit())
 	mastery_button.pressed.connect(func() -> void: mastery_requested.emit())
@@ -69,9 +76,9 @@ func _connect() -> void:
 	var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 	if ownership:
 		ownership.ownership_changed.connect(refresh)
-	var bays: Node = get_tree().get_first_node_in_group("repair_bays")
-	if bays and bays.has_signal(&"bays_changed"):
-		bays.connect(&"bays_changed", refresh)
+	_bays = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
+	if _bays:
+		_bays.bays_changed.connect(refresh)
 	refresh()
 
 
@@ -85,6 +92,7 @@ func refresh() -> void:
 		return
 	_write_upgrade(level_button, GarageUpgradeManager.GARAGE_ID, "GARAJ SV.%d", "GENİŞLET")
 	_write_upgrade(speed_button, GarageUpgradeManager.SPEED_ID, "TAMİR HIZI %d/%d", "YÜKSELT")
+	_write_bay()
 	var value: int = GarageValue.compute(get_tree())
 	value_button.text = "DETAY\n%d. RÜTBE" % GarageValue.rank(value)
 
@@ -110,3 +118,18 @@ func _write_upgrade(button: PlateButton, id: StringName, title: String, action: 
 	# TAMİR HIZI doğrudan satın alınır: bakiye yetmezse kapalı. GENİŞLET plaka açar (yetersiz bakiye
 	# plakada yazar), o yüzden hep açık.
 	button.disabled = id == GarageUpgradeManager.SPEED_ID and _economy != null and not _economy.can_afford(cost)
+
+
+## TAMİR ALANI düğmesi: sıradaki alanın satın alma durumu. Basınca HUD satın alma plakasını açar.
+func _write_bay() -> void:
+	if _bays == null or _bays.unlocked_count() >= _bays.bay_count():
+		bay_button.text = "TAMİR ALANI\nTÜMÜ AÇIK"
+		bay_button.disabled = true
+		return
+	var next: int = _bays.unlocked_count()
+	bay_button.disabled = false
+	match _bays.status(next):
+		RepairBayManager.Status.NEEDS_LEVEL:
+			bay_button.text = "TAMİR ALANI %d\nGARAJ SV.%d" % [next + 1, _bays.required_level(next)]
+		_:
+			bay_button.text = "TAMİR ALANI %d\nAL %s ₺" % [next + 1, Hud.format_thousands(_bays.price(next))]

@@ -142,6 +142,31 @@ static func _local_bounds(root: Node3D) -> AABB:
 	return out
 
 
+## SERGİLENEN ARAÇ: aracın oyun sahnesi, dünyadaki (trafik) boyutunda ve güncel boyasıyla. Gövde
+## garaj-içi ölçüsünde üretilir (view WORLD_SCALE uygular): trafik ölçeği / WORLD_SCALE × aracın
+## gerçek-boyut çarpanı. Tekerlek / far gibi canlı davranışlar sergide kapalıdır (yalnızca boya).
+const VEHICLE_WORLD_SCALE: float = 0.6   # TrafficManager.model_scale ile aynı bağlam
+
+static func _vehicle(id: StringName) -> Node3D:
+	var vehicle: StringName = GarageDecor.vehicle_of(id)
+	var path: String = CarCatalog.scene_path(vehicle)
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	var scene: PackedScene = load(path)
+	if scene == null:
+		return null
+	var holder: Node3D = Node3D.new()
+	holder.name = String(id)
+	var car: Node3D = scene.instantiate() as Node3D
+	car.scale = Vector3.ONE * (VEHICLE_WORLD_SCALE / PLACER_SCALE) * CarCatalog.model_scale(vehicle)
+	holder.add_child(car)
+	var rig: CarRig = CarRig.new(car)
+	rig.apply(CarAppearance.get_for(path))
+	rig.set_steer(0.0)
+	rig.set_lod_bias(CarRig.LOD_BIAS_GARAGE)
+	return holder
+
+
 ## Hazır modeli yükler; metre ölçeğinden oyun ölçeğine çevrilmiş halde döner.
 static func _load_model(id: StringName) -> Node3D:
 	var scene: PackedScene = load(model_path(id))
@@ -160,6 +185,8 @@ static func _load_model(id: StringName) -> Node3D:
 
 ## Eşyanın gövdesi. Bilinmeyen id → null (arayüz onu atlar).
 static func build(id: StringName) -> Node3D:
+	if GarageDecor.is_vehicle(id):
+		return _vehicle(id)
 	if has_model(id):
 		return _load_model(id)
 	var root: Node3D = Node3D.new()

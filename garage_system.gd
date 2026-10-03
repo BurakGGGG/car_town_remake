@@ -3,13 +3,10 @@ extends Node3D
 ## Garajın FİZİKSEL boyutu: zemin + sol/arka duvar + ızgara. Sağ (x=-0.2) ve ön (z=-0.2) kenar sabittir,
 ## garaj -x ve -z yönüne büyür. Seviyeyi GarageUpgradeManager'daki "garage_level" geliştirmesi sürer
 ## (satın alma ve para orada); burada yalnızca geometri vardır.
-## Oyunda garajın önünde "GARAJI GENİŞLET" tabelası durur: tıklanınca expand_clicked yayılır,
-## satın alma plakasını HUD gösterir. Tabela yalnızca çalışırken kurulur (editörde değil).
+## Genişletme dünyada tabela olarak durmaz: GARAJ sekmesinin alt panelindeki GENİŞLET düğmesindedir.
 
 ## Fiziksel seviye değişti (0 tabanlı indeks).
 signal level_changed(level: int)
-## Dünyadaki genişletme tabelasına tıklandı.
-signal expand_clicked
 
 @export_category("Current Garage")
 @export_range(0, 3, 1) var current_level: int = 0
@@ -41,8 +38,6 @@ const LEFT_WALL_DEPTH := 1.5
 const BACK_WALL_WIDTH := 2.0
 
 
-var _sign: Node3D
-var _sign_hidden: bool = false
 
 
 func _ready():
@@ -137,15 +132,11 @@ func _connect_upgrade() -> void:
 	if upgrades == null:
 		return
 	upgrades.levels_changed.connect(func() -> void: _sync_from_upgrade(upgrades))   # kayıttan yükleme dahil
-	var economy: EconomyManager = get_tree().get_first_node_in_group("economy") as EconomyManager
-	if economy:
-		economy.money_changed.connect(func(_m: int) -> void: _update_sign(upgrades))
 	_sync_from_upgrade(upgrades)
 
 
 func _sync_from_upgrade(upgrades: GarageUpgradeManager) -> void:
 	set_level(upgrades.garage_level() - 1)   # geliştirme 1 tabanlı, buradaki indeks 0 tabanlı
-	_update_sign(upgrades)
 
 
 ## Fiziksel seviyeyi doğrudan ayarlar (kayıttan yükleme / geliştirme satın alma).
@@ -237,106 +228,3 @@ func upgrade_garage() -> bool:
 	current_level += 1
 	update_garage()
 	return true
-
-
-# --- Dünyadaki "GARAJI GENİŞLET" tabelası -------------------------------------------
-
-## Garajın ön-sağ köşesinde duran fiziksel tabela: seviye, ücret ve tıklama kutusu.
-func _update_sign(upgrades: GarageUpgradeManager) -> void:
-	if Engine.is_editor_hint():
-		return
-	var maxed: bool = upgrades.is_max(GarageUpgradeManager.GARAGE_ID)
-	if maxed:
-		if is_instance_valid(_sign):
-			_sign.queue_free()
-			_sign = null
-		return
-	if not is_instance_valid(_sign):
-		_sign = _build_sign()
-		add_child(_sign)
-		_sign.visible = not _sign_hidden
-	# Garajın ön-sağ köşesinde, zeminin ÜSTÜNDE durur (yolun üstünde durursa geçen araçlar
-	# tıklamayı kapatıyor; sağ/ön kenar sabit olduğu için garaj büyüse de tabela yerinde kalır)
-	_sign.position = Vector3(FIXED_RIGHT_X - 0.32, 0.0, FIXED_FRONT_Z - 0.4)
-	var label: Label3D = _sign.get_node("SignText")
-	label.text = "GARAJI GENİŞLET\nSEVİYE %d  ·  %s ₺" % [
-		upgrades.level(GarageUpgradeManager.GARAGE_ID) + 1,
-		Hud.format_thousands(upgrades.next_cost(GarageUpgradeManager.GARAGE_ID))]
-
-
-## Genişletme tabelasının zemindeki izi (dünya X/Z); tabela yoksa boş dikdörtgen. Tabela havada
-## (y ≈ 0,28–0,48) ve hep kameraya dönük asılı; altına uzun eşya konursa içinden geçerdi. İz,
-## çapraz duran 0,62'lik plakayı kapsayan kare (0,62 · cos45° ≈ 0,44).
-## Düzenleme modunda tabela GİZLENİR (eşyaların önüne biniyor, o modda tıklanamıyor da) ama izi
-## engel olmaya devam eder: yoksa çıkınca tabela yerleştirilen eşyanın içine girerdi.
-func sign_footprint() -> Rect2:
-	if not is_instance_valid(_sign):
-		return Rect2()
-	var c: Vector3 = _sign.global_position
-	return Rect2(Vector2(c.x - 0.23, c.z - 0.23), Vector2(0.46, 0.46))
-
-
-func set_sign_hidden(hidden: bool) -> void:
-	_sign_hidden = hidden
-	if is_instance_valid(_sign):
-		_sign.visible = not hidden
-
-
-func _build_sign() -> Node3D:
-	var root: Node3D = Node3D.new()
-	root.name = "ExpandSign"
-	# Direk yok: tabela kilitli alan plakalarıyla aynı dilde, havada duran krem plakadır
-	var board: MeshInstance3D = MeshInstance3D.new()
-	board.name = "Board"
-	var quad: QuadMesh = QuadMesh.new()
-	quad.size = Vector2(0.62, 0.2)
-	board.mesh = quad
-	board.position = Vector3(0.0, 0.38, 0.0)
-	board.material_override = _sign_material(Color("F3E8CF"), true)
-	board.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	root.add_child(board)
-
-	var label: Label3D = Label3D.new()
-	label.name = "SignText"
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.no_depth_test = true
-	label.render_priority = 2
-	label.pixel_size = 0.00105
-	label.font_size = 48
-	label.outline_size = 0
-	label.modulate = Color("2F3236")
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.position = Vector3(0.0, 0.38, 0.0)
-	root.add_child(label)
-
-	var body: StaticBody3D = StaticBody3D.new()
-	body.name = "ClickBody"
-	body.input_ray_pickable = true
-	var shape: CollisionShape3D = CollisionShape3D.new()
-	var box: BoxShape3D = BoxShape3D.new()
-	box.size = Vector3(0.72, 0.34, 0.3)   # plakanın etrafı (mobilde rahat dokunma payı)
-	shape.shape = box
-	shape.position = Vector3(0.0, 0.38, 0.0)
-	body.add_child(shape)
-	body.input_event.connect(_on_sign_input)
-	root.add_child(body)
-	return root
-
-
-func _sign_material(color: Color, billboard: bool) -> StandardMaterial3D:
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.albedo_color = color
-	mat.roughness = 0.8
-	if billboard:
-		mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	return mat
-
-
-func _on_sign_input(_camera: Node, event: InputEvent, _position: Vector3, _normal: Vector3, _shape: int) -> void:
-	if not (event is InputEventMouseButton):
-		return
-	var mb: InputEventMouseButton = event
-	if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-		expand_clicked.emit()
-		get_viewport().set_input_as_handled()

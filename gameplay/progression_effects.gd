@@ -34,7 +34,7 @@ static func garage_level_lines(tree: SceneTree, next_level: int) -> PackedString
 	if bays:
 		for index: int in RepairBayManager.BAY_PRICES.size():
 			if bays.required_level(index) == next_level:
-				lines.append("%d. TAMİR ALANI AÇILIR (%s ₺)" % [index + 1, Hud.format_thousands(bays.price(index))])
+				lines.append("%d. TAMİR ALANI ALINABİLİR (%s ₺)" % [index + 1, Hud.format_thousands(bays.price(index))])
 	# "YENİ İŞ" yalnızca garaj seviyesi SON kilitse yazılır: işin ayrıca alan şartı varsa (min_bays)
 	# onu o alanın plakası duyurur — yoksa oyuncuya tutulmayacak bir söz verilmiş olur.
 	var bay_count: int = bays.unlocked_count() if bays else 1

@@ -9,6 +9,7 @@ var editor: GarageEditor
 var save: SaveManager
 var upgrades: GarageUpgradeManager
 var decor: DecorManager
+var economy: EconomyManager
 
 
 func check(cond: bool, what: String) -> void:
@@ -37,6 +38,7 @@ func _run() -> void:
 	save = get_first_node_in_group("save_manager")
 	upgrades = get_first_node_in_group("garage_upgrades")
 	decor = get_first_node_in_group("decor")
+	economy = get_first_node_in_group("economy")
 	save.new_game()
 	await frames(4)
 	var router: UiRouter = (current_scene.find_child("HUD", true, false)).get("router")
@@ -97,15 +99,23 @@ func _run() -> void:
 	bays.load_layout([{"x": 999.0, "z": 0.0}])
 	check(bays.bay_position(0).is_equal_approx(RepairBayManager.DEFAULT_POSITIONS[0]), "aralık dışı konum yok sayılır")
 
-	print("== seviye: alanlar kendi şeridinde ==")
-	router.close_all() if router.has_method("close_all") else null
-	for i: int in 3:
-		var lot_ok: bool = true
-		upgrades.apply_levels({GarageUpgradeManager.GARAGE_ID: i + 1})
+	print("== satın alma: panelden al, ilk boş yere konur ==")
+	economy.add_money(1000000)
+	check(bays.status(1) == RepairBayManager.Status.NEEDS_LEVEL, "2. alan garaj Sv.2 olmadan alınamaz")
+	check(bays.revealed_spots().size() == 1, "alınmayan alan dünyada yok (kilit / bariyer yok)")
+	for i: int in 2:
+		upgrades.apply_levels({GarageUpgradeManager.GARAGE_ID: i + 2})
 		await frames(3)
-		check(bays.is_bay_revealed(i), "Sv.%d: %d. alan görünür" % [i + 1, i + 1])
-		check(view.is_bay_valid(i, RepairBayManager.DEFAULT_POSITIONS[i], RepairBayManager.DEFAULT_YAW),
-			"Sv.%d: %d. alanın varsayılan yeri zeminin içinde" % [i + 1, i + 1])
+		check(bays.status(i + 1) == RepairBayManager.Status.BUYABLE, "Sv.%d: %d. alan alınabilir" % [i + 2, i + 2])
+		check(bays.purchase(i + 1), "%d. alan satın alındı" % (i + 2))
+		await frames(3)
+		check(bays.is_bay_unlocked(i + 1) and bays.bay_node(i + 1).visible, "%d. alan dünyada" % (i + 2))
+		check(view.is_bay_valid(i + 1, bays.bay_position(i + 1), bays.bay_yaw(i + 1)), "%d. alan geçerli yerde" % (i + 2))
+	var seen: Dictionary = {}
+	for i: int in 3:
+		seen[bays.bay_position(i)] = true
+	check(seen.size() == 3, "üç alan farklı yerlerde")
+
 	print("== lift ==")
 	var lift: RepairLift = bays.lift(0)
 	check(lift != null, "1. alanın lifti kuruldu (CarSpot çocuğu)")

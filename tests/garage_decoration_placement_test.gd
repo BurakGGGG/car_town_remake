@@ -194,7 +194,6 @@ func _normal_input() -> void:
 	check(15, not editor.is_processing_unhandled_input(), "düzenleyici girdi dinlemiyor")
 	check(15, not view.is_editing() and view.get_node_or_null("BlockedZones") == null,
 		"düzenleme görselleri (yasak alan örtüsü) kapalı")
-	check(15, not bool(garage.get("_sign_hidden")), "genişletme tabelası görünür")
 	var grid: Node3D = garage.get_node_or_null("BuildGrid/BuildGrid")
 	_grid_visible_before = grid != null and grid.visible
 	# Kapalı düzenleyiciye doğrudan tıklama verilse bile hiçbir şey olmaz
@@ -227,7 +226,6 @@ func _open_editor() -> void:
 	check(16, screen != null and screen.mouse_filter == Control.MOUSE_FILTER_IGNORE,
 		"düzenleme ekranı dünyaya gelen dokunuşu yutmuyor (yalnızca plakalar)")
 	check(16, view.is_editing() and view.get_node_or_null("BlockedZones") != null, "ızgara ve yasak alanlar görünür")
-	check(16, bool(garage.get("_sign_hidden")), "genişletme tabelası eşyaların önünden kalktı")
 	var camera: WorldCamera = get_root().get_camera_3d() as WorldCamera
 	check(16, camera != null and camera.cull_mask & WorldCamera.LAYER_WORLD_UI == 0,
 		"araç balonları / alan plakaları katmanı kamerada kapalı")
@@ -236,7 +234,9 @@ func _open_editor() -> void:
 	var tabs: Dictionary = screen.get("_tab_buttons")
 	var tab_kinds: Array = tabs.keys()
 	tab_kinds.sort()
-	check(16, tab_kinds == Array(GarageDecor.categories()), "sekmeler katalog kategorilerinden (%d)" % tabs.size())
+	var expected_kinds: Array = Array(GarageDecor.categories())
+	expected_kinds.append(GarageDecor.Kind.VEHICLE)   # SERGİ sekmesi katalogda değil, sahip olunan araçlardan
+	check(16, tab_kinds == expected_kinds, "sekmeler katalog kategorileri + ARAÇLAR sergisi (%d)" % tabs.size())
 
 
 func _close_editor() -> void:
@@ -247,7 +247,6 @@ func _close_editor() -> void:
 	check(15, get_root().physics_object_picking, "dünya tıklaması geri açıldı")
 	check(15, not editor.is_processing_unhandled_input(), "düzenleyici girdiyi bıraktı")
 	check(15, not view.is_editing() and view.get_node_or_null("BlockedZones") == null, "düzenleme görselleri kalktı")
-	check(15, not bool(garage.get("_sign_hidden")), "tabela geri geldi")
 	var camera: WorldCamera = get_root().get_camera_3d() as WorldCamera
 	check(15, camera != null and camera.cull_mask & WorldCamera.LAYER_WORLD_UI != 0, "balon katmanı geri açıldı")
 	await frames(40)   # odak kapanış geçişi (0,35 sn)
@@ -651,9 +650,6 @@ func _invalid() -> void:
 	var spots: Array[Node3D] = (get_first_node_in_group("repair_bays") as Node).call("revealed_spots")
 	var spot_center: Vector3 = spots[0].global_position
 	check(23, not view.is_valid(CHAIR, Vector3(spot_center.x, a.floor_y, spot_center.z), 0.0), "tamir alanı geçersiz")
-	var sign: Rect2 = garage.call("sign_footprint")
-	check(23, not view.is_valid(CHAIR, Vector3(sign.get_center().x, a.floor_y, sign.get_center().y), 0.0),
-		"genişletme tabelasının yeri geçersiz")
 	# Hayalet geçersiz yerdeyken YERLEŞTİR çalışmaz
 	check(23, editor.begin_place(CHAIR), "hayalet açıldı")
 	editor.set("_ghost_pos", Vector3(spot_center.x, a.floor_y, spot_center.z))

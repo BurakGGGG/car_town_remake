@@ -123,13 +123,8 @@ func _build() -> void:
 
 	print("== 3) DÜZENLEMEDE dünya tıklaması YALITILMIŞ ==")
 	var garage: Node = get_first_node_in_group("garage_system")
-	var expand_hits: Array[int] = [0]
-	garage.connect(&"expand_clicked", func() -> void: expand_hits[0] += 1)
-	var sign_pos: Vector3 = Vector3(-0.52, 0.38, -0.6)
-	await _tap(_world_to_screen(sign_pos))
 	await _tap(_world_to_screen(Vector3(-1.72, 0.05, -1.05)))   # tamir alanı
 	await frames(8)
-	check(expand_hits[0] == 0, "düzenlerken tabela yerine tıklamak expand_clicked YAYMADI (%d)" % expand_hits[0])
 	check(not (_hud.get("_bay_plate") as Control).is_visible_in_tree(), "genişletme plakası açılmadı")
 	check(_router.top() == &"garage_edit", "düzenleme modunda kalındı")
 

@@ -347,13 +347,12 @@ func _connect_gameplay() -> void:
 		_on_xp_changed(_player_progress.level, _player_progress.xp, _player_progress.xp_to_next())
 	_upgrades = get_tree().get_first_node_in_group("garage_upgrades") as GarageUpgradeManager
 	_garage = get_tree().get_first_node_in_group("garage_system")
-	if _garage and _garage.has_signal(&"expand_clicked"):
-		_garage.connect(&"expand_clicked", show_expansion_plate)
 	if _upgrades:
 		_upgrades.upgrade_purchased.connect(_on_upgrade_purchased)
 	_bays = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
 	if _bays:
-		_bays.bay_clicked.connect(show_bay_plate)
+		_bays.no_room.connect(func(_i: int) -> void:
+			_show_notice("TAMİR ALANI İÇİN YER YOK\nBİR EŞYAYI TAŞI", HudPalette.INK, 2.4))
 		_bays.bay_unlocked.connect(_on_bay_unlocked)
 		_bays.purchase_failed.connect(_on_bay_purchase_failed)
 	_repair_manager = get_tree().get_first_node_in_group("repair_manager") as RepairManager
@@ -525,7 +524,7 @@ func _build_bay_plate() -> void:
 	buttons.add_theme_constant_override(&"separation", 8)
 	_bay_buy = PlateButton.new()
 	_bay_buy.theme_type_variation = &"HudPlateSmall"
-	_bay_buy.text = "ALANI AÇ"
+	_bay_buy.text = "SATIN AL"
 	_bay_buy.bolts = false
 	_bay_buy.focus_mode = Control.FOCUS_NONE
 	_bay_buy.pressed.connect(_on_bay_buy_pressed)
@@ -543,13 +542,13 @@ func _build_bay_plate() -> void:
 	column.move_child(_bay_group, car_info_panel.get_index())
 
 
-## Kilitli alana tıklandı: plaka alanın durumuna göre açılır.
+## GARAJ panelindeki TAMİR ALANI düğmesi: plaka alanın durumuna göre açılır.
 func show_bay_plate(index: int) -> void:
 	if _bays == null:
 		return
 	_bay_index = index
 	_plate_mode = &"bay"
-	_bay_buy.text = "ALANI AÇ"
+	_bay_buy.text = "SATIN AL"
 	hide_car_info()
 	var price: String = "%s ₺" % format_thousands(_bays.price(index))
 	var status: RepairBayManager.Status = _bays.status(index)
@@ -603,7 +602,7 @@ func show_expansion_plate() -> void:
 func hide_bay_plate() -> void:
 	_bay_index = -1
 	_plate_mode = &"bay"
-	_bay_buy.text = "ALANI AÇ"
+	_bay_buy.text = "SATIN AL"
 	_bay_group.hide()
 
 
@@ -626,7 +625,7 @@ func _on_upgrade_purchased(id: StringName, level: int) -> void:
 
 func _on_bay_unlocked(index: int) -> void:
 	hide_bay_plate()
-	_show_notice("TAMİR ALANI %d AÇILDI" % (index + 1), HudPalette.COIN_DARK)
+	_show_notice("TAMİR ALANI %d AÇILDI\nGARAJI DÜZENLE'DEN TAŞIYABİLİRSİN" % (index + 1), HudPalette.COIN_DARK, 2.4)
 
 
 func _on_bay_purchase_failed(index: int, price: int) -> void:
@@ -878,6 +877,7 @@ func _build_garage_panel() -> void:
 	column.move_child(garage_panel, nav_row.get_index())
 	edit_button = garage_panel.edit_button
 	garage_panel.expand_requested.connect(show_expansion_plate)
+	garage_panel.bay_requested.connect(show_bay_plate)
 	garage_panel.edit_requested.connect(func() -> void: router.open(&"garage_edit"))
 	garage_panel.value_requested.connect(func() -> void: router.open(&"garage_value"))
 	garage_panel.mastery_requested.connect(func() -> void: router.open(&"mastery"))

@@ -265,7 +265,6 @@ func open_crate(uid: int) -> bool:
 
 func _play_reveal(uid: int, v: CrateVisual, result: Dictionary) -> void:
 	v.set_clickable(false)
-	_set_expand_sign_hidden(true)   # havadaki "GARAJI GENİŞLET" tabelası çıkan aracın önüne biniyordu (QA)
 	_camera_state = _frame(v)
 	var vehicle: StringName = result["vehicle"]
 	var scene_path: String = CarCatalog.scene_path(vehicle)
@@ -306,7 +305,6 @@ func finish_reveal(uid: int) -> void:
 	_revealing.erase(uid)
 	_finishing.erase(uid)
 	_restore_camera()
-	_set_expand_sign_hidden(false)
 	# Önce dekor görünümünün engelleri tazelenir (açılan kasanın izi kalksın), SONRA claim: claim
 	# yol bekleyen kasaların teslimatını yeniden dener; sıra tersken boşalan yer hâlâ dolu görünüyor,
 	# "yolda" kasa hiç gelmiyordu (QA oyuncu testi, uid 5 PURCHASED'da kaldı).
@@ -381,17 +379,6 @@ func _burst(v: CrateVisual, color: Color, strong: bool) -> OmniLight3D:
 			if node:
 				light.add_child(node)
 	return light
-
-
-## Garajın havada asılı genişletme tabelası açılış sahnesi boyunca gizlenir (düzenleyici de aynısını
-## yapar). Düzenleme modu açıksa tabelaya dokunulmaz: onu düzenleyici yönetir.
-func _set_expand_sign_hidden(hidden: bool) -> void:
-	var garage: Node = get_tree().get_first_node_in_group("garage_system")
-	var editor: Node = get_tree().get_first_node_in_group("garage_editor")
-	if editor and bool(editor.get("active")):
-		return
-	if garage and garage.has_method("set_sign_hidden"):
-		garage.call("set_sign_hidden", hidden)
 
 
 # --- Kamera --------------------------------------------------------------------------------

@@ -53,6 +53,9 @@ func _connect() -> void:
 	var upgrades: GarageUpgradeManager = get_tree().get_first_node_in_group("garage_upgrades") as GarageUpgradeManager
 	if upgrades and not upgrades.levels_changed.is_connected(refresh):
 		upgrades.levels_changed.connect(refresh)
+	var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+	if ownership and not ownership.paint_changed.is_connected(_on_paint_changed):
+		ownership.paint_changed.connect(_on_paint_changed)
 	var bays: Node = get_tree().get_first_node_in_group("repair_bays")
 	if bays and bays.has_signal(&"bays_changed") and not bays.is_connected(&"bays_changed", refresh):
 		bays.connect(&"bays_changed", refresh)
@@ -115,11 +118,6 @@ func _rebuild_area() -> void:
 			if box.size != Vector3.ZERO:
 				obstacles.append(Rect2(Vector2(box.position.x, box.position.z),
 					Vector2(box.size.x, box.size.z)).grow(OBSTACLE_MARGIN))
-	if _garage and _garage.has_method("sign_footprint"):
-		var sign: Rect2 = _garage.call("sign_footprint")
-		if sign.has_area():
-			obstacles.append(sign)
-			fixed.append(sign)
 	# Teslimat kasaları dekorasyon DEĞİLDİR (DecorManager'da yoktur) ama yer kaplar: dekor onların
 	# üstüne konamaz. Kasa açılınca iz kalkar (CrateDelivery refresh çağırır).
 	var delivery: Node = get_tree().get_first_node_in_group("crate_delivery")
@@ -140,6 +138,18 @@ func _rebuild_area() -> void:
 
 
 # --- Eşitleme -------------------------------------------------------------------------
+
+## Sergilenen aracın boyası değişti: gövdesi yeniden kurulur (refresh yeni boyayla üretir).
+func _on_paint_changed(_vehicle: StringName, _color: Color) -> void:
+	for iid: String in _bodies.keys():
+		var inst: Dictionary = _decor.instance(iid) if _decor else {}
+		if not inst.is_empty() and GarageDecor.is_vehicle(inst["item"]):
+			var body: Node3D = _bodies[iid]
+			if is_instance_valid(body):
+				body.queue_free()
+			_bodies.erase(iid)
+	refresh()
+
 
 ## Gövdeleri DecorManager ile eşitler: yeni örnek kurulur, silinen kaldırılır, hepsinin dönüşümü
 ## güncellenir (duvar eşyası güncel duvara yeniden oturur). Baştan kurmaz.
@@ -276,6 +286,29 @@ func is_bay_valid(index: int, pos: Vector2, yaw: float) -> bool:
 	return true
 
 
+## Satın alınan tamir alanı için ilk geçerli yer: önce varsayılan yeri, sonra zemini ızgara adımıyla
+## (ön-sağ köşeden arka-sola) iki yönde tarar. Yer yoksa boş sözlük döner.
+func find_bay_spot(index: int) -> Dictionary:
+	_rebuild_area()
+	var defaults: Array[Vector2] = RepairBayManager.DEFAULT_POSITIONS
+	var default_pos: Vector2 = defaults[mini(index, defaults.size() - 1)]
+	if is_bay_valid(index, default_pos, RepairBayManager.DEFAULT_YAW):
+		return {"pos": default_pos, "yaw": RepairBayManager.DEFAULT_YAW}
+	var rect: Rect2 = _area.floor_rect
+	var step: float = 0.1
+	for yaw: float in [RepairBayManager.DEFAULT_YAW, 0.0]:
+		var z: float = rect.end.y
+		while z > rect.position.y:
+			var x: float = rect.end.x
+			while x > rect.position.x:
+				var p: Vector2 = _area.snap(Vector2(x, z), step)
+				if is_bay_valid(index, p, yaw):
+					return {"pos": p, "yaw": yaw}
+				x -= step
+			z -= step
+	return {}
+
+
 ## Seçim kimliği "bay:N" ise N, değilse -1 (tamir alanları dekor örnekleriyle aynı seçim yolundan geçer).
 static func bay_index_of(iid: String) -> int:
 	return int(iid.substr(4)) if iid.begins_with("bay:") else -1
@@ -389,8 +422,6 @@ func set_editing(value: bool) -> void:
 		var node: Node = _garage.get_node_or_null(path)
 		if node is Node3D:
 			(node as Node3D).visible = value
-	if _garage.has_method("set_sign_hidden"):
-		_garage.call("set_sign_hidden", value)
 	_draw_blocked()
 
 

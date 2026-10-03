@@ -19,6 +19,7 @@ enum Kind {
 	WALL_ITEM,       # duvara asılan
 	YARD,            # avlu düzeni: bariyer, konteyner, pompa...
 	PLANT,           # bitki / peyzaj
+	VEHICLE,         # SERGİ: sahip olunan araçlar (katalogda değil, VehicleOwnership'ten gelir)
 }
 
 ## Yerleşim türleri.
@@ -48,7 +49,47 @@ static func all() -> Array[Dictionary]:
 
 static func get_item(id: StringName) -> Dictionary:
 	_ensure_loaded()
+	if is_vehicle(id):
+		return _vehicle_item(id)
 	return _by_id.get(id, {})
+
+
+# --- Araç sergisi ----------------------------------------------------------------------
+## Garajda sergilenen araç, dekor örneği olarak yaşar (konum, yön, geri al, kayıt aynı yoldan): eşya id'si
+## "car:<araç id>". Sahiplik DEPO'dan değil VehicleOwnership'ten gelir (DecorManager.owned_of);
+## her sahip olunan araç bir kez sergilenir, satılınca sergi de kalkar. Fiyatı / garaj değeri yoktur.
+const VEHICLE_PREFIX: String = "car:"
+## Sergilenen aracın dönüş adımı (derece): araç 15°'de açıyla durabilsin.
+const VEHICLE_ROTATION_STEP: float = 15.0
+static var _vehicle_items: Dictionary = {}
+
+
+static func vehicle_item_id(vehicle_id: StringName) -> StringName:
+	return StringName(VEHICLE_PREFIX + String(vehicle_id))
+
+
+static func is_vehicle(id: StringName) -> bool:
+	return String(id).begins_with(VEHICLE_PREFIX)
+
+
+## "car:x" → x (araç değilse boş).
+static func vehicle_of(id: StringName) -> StringName:
+	return StringName(String(id).substr(VEHICLE_PREFIX.length())) if is_vehicle(id) else &""
+
+
+static func _vehicle_item(id: StringName) -> Dictionary:
+	if _vehicle_items.has(id):
+		return _vehicle_items[id]
+	var entry: Dictionary = CarCatalog.get_entry(vehicle_of(id))
+	if entry.is_empty():
+		return {}
+	var item: Dictionary = {
+		"id": id, "title": "%s %s" % [String(entry.get("brand", "")).to_upper(), String(entry.get("model", "")).to_upper()],
+		"kind": Kind.VEHICLE, "placement": String(PLACE_FLOOR), "price": 0, "value": 0, "min_rank": 1,
+		"rotation_step": VEHICLE_ROTATION_STEP, "vehicle": true,
+	}
+	_vehicle_items[id] = item
+	return item
 
 
 static func exists(id: StringName) -> bool:

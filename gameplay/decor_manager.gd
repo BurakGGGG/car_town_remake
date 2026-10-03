@@ -37,6 +37,29 @@ var _next_iid: int = 1
 
 func _ready() -> void:
 	add_to_group("decor")
+	_connect_ownership.call_deferred()
+
+
+func _ownership() -> VehicleOwnership:
+	return get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+
+
+## Araç satılınca sergisi de kalkar (sahiplik tek kaynak).
+func _connect_ownership() -> void:
+	var ownership: VehicleOwnership = _ownership()
+	if ownership and not ownership.ownership_changed.is_connected(_prune_vehicles):
+		ownership.ownership_changed.connect(_prune_vehicles)
+
+
+func _prune_vehicles() -> void:
+	var changed: bool = false
+	for i: int in range(_instances.size() - 1, -1, -1):
+		var item: StringName = _instances[i]["item"]
+		if GarageDecor.is_vehicle(item) and owned_of(item) <= 0:
+			_instances.remove_at(i)
+			changed = true
+	if changed:
+		placement_changed.emit()
 
 
 func _economy() -> EconomyManager:
@@ -50,6 +73,9 @@ func is_owned(id: StringName) -> bool:
 
 
 func owned_of(id: StringName) -> int:
+	if GarageDecor.is_vehicle(id):
+		var ownership: VehicleOwnership = _ownership()
+		return 1 if ownership != null and ownership.is_owned(GarageDecor.vehicle_of(id)) else 0
 	return int(_owned.get(id, 0))
 
 
@@ -100,8 +126,8 @@ func is_unlocked(id: StringName) -> bool:
 
 ## Satın alınabilir mi? Kaplama bir kez alınır; eşyadan birden çok kopya alınabilir.
 func can_purchase(id: StringName) -> bool:
-	if not GarageDecor.exists(id) or not is_unlocked(id):
-		return false
+	if not GarageDecor.exists(id) or not is_unlocked(id) or GarageDecor.is_vehicle(id):
+		return false   # sergilenen araç satın alınmaz: sahip olunan araçtır
 	if GarageDecor.is_surface(id) and is_owned(id):
 		return false
 	if owned_of(id) >= MAX_COPIES:

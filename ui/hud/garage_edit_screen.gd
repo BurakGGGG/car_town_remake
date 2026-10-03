@@ -215,6 +215,13 @@ func _build() -> void:
 		tab.pressed.connect(_on_tab_pressed.bind(kind))
 		_tabs.add_child(tab)
 		_tab_buttons[kind] = tab
+	# SERGİ sekmesi: sahip olunan araçlar (katalogda değil, VehicleOwnership'ten gelir)
+	var car_tab: PlateButton = _plate("ARAÇLAR", &"HudPlateSmall")
+	car_tab.toggle_mode = true
+	car_tab.button_group = _tab_group
+	car_tab.pressed.connect(_on_tab_pressed.bind(GarageDecor.Kind.VEHICLE))
+	_tabs.add_child(car_tab)
+	_tab_buttons[GarageDecor.Kind.VEHICLE] = car_tab
 
 	_rot_left = _sign_button(true)
 	_rot_left.pressed.connect(func() -> void:
@@ -314,8 +321,14 @@ func _select_tab(kind: int) -> void:
 	_cards.clear()
 	if kind == GarageDecor.Kind.FLOOR_SURFACE or kind == GarageDecor.Kind.WALL_SURFACE:
 		_add_card(&"")   # varsayılan kaplamaya dönüş
-	for item: Dictionary in GarageDecor.items_in(kind):
-		_add_card(item["id"])
+	if kind == GarageDecor.Kind.VEHICLE:
+		var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+		if ownership:
+			for vehicle: StringName in ownership.owned_vehicle_ids():
+				_add_card(GarageDecor.vehicle_item_id(vehicle))
+	else:
+		for item: Dictionary in GarageDecor.items_in(kind):
+			_add_card(item["id"])
 	_scroll.scroll_horizontal = 0
 	_refresh_cards()
 
@@ -377,6 +390,12 @@ func _on_card_pressed(id: StringName) -> void:
 			_editor.apply_surface(slot, id)
 		_refresh_cards()
 		return
+	if GarageDecor.is_vehicle(id):
+		if _decor.available_of(id) > 0:
+			_editor.begin_place(id)
+		else:
+			_show_notice("ZATEN SERGİLENİYOR — GARAJDAN SEÇİP TAŞI")
+		return
 	if _decor.available_of(id) > 0:
 		_confirm_buy = &""
 		_editor.begin_place(id)
@@ -421,6 +440,11 @@ func _refresh_cards() -> void:
 		var item: Dictionary = GarageDecor.get_item(id)
 		var title: String = String(item.get("title", id))
 		var status: String
+		if GarageDecor.is_vehicle(id):
+			card.text = "%s\n%s" % [title, "SERGİLE" if _decor.available_of(id) > 0 else "SERGİLENİYOR"]
+			card.disabled = false
+			card.queue_redraw()
+			continue
 		if GarageDecor.is_surface(id):
 			var slot2: StringName = DecorManager.surface_slot_of(id)
 			if _decor.is_owned(id):
