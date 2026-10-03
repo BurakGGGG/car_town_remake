@@ -47,6 +47,15 @@ const COMPACT_HEIGHT: float = 560.0
 ## İKİ ARAÇ DA HER ZAMAN KADRAJDA: gerçek fark yumuşatılarak ekrana taşınır.
 const MAX_VISUAL_GAP: float = 0.92
 const GAP_SOFT: float = 6.0
+## BİTİŞ SONRASI: araçlar çizgide durmaz, hızlarıyla geçip frenleyerek durur (gerçek drag'de
+## paraşüt/fren pisti). Kamera çizgide kalır; sonuç, araçlar kadrajdan geçerken gelir.
+const OVERRUN_BRAKE: float = 16.0          # m/s² (≈ 60 m/s'den ~110 m'de durur: pist payına sığar)
+## İki araç da geçtikten sonra sonuç panosuna kadar bekleme (kazanan görüntüsü).
+const FINISH_HOLD: float = 2.2
+## Biri geçtiği halde diğeri geçmediyse en çok bu kadar beklenir.
+const FINISH_HOLD_MAX: float = 6.0
+## Oyuncu hiç kalkmadıysa (rakip bitirdi) sonuç daha çabuk gelir.
+const FINISH_HOLD_IDLE: float = 2.0
 ## Çıkış lambası renkleri DragTrack'tedir.
 ## Yarış telemetrisini ekrana basar (devir, vites, hız, kalite). Yayında KAPALI olmalı;
 ## `DRAG_DEBUG=1` ortam değişkeni ya da `--drag-debug` ile açılır.
@@ -73,6 +82,13 @@ var _player_rig: CarRig
 var _rival_rig: CarRig
 var _player_distance: float = 0.0
 var _rival_distance: float = 0.0
+## Bitiş çizgisinden sonra kat edilen yol (metre) ve o andaki hız (m/s).
+var _player_over: float = 0.0
+var _rival_over: float = 0.0
+var _player_over_speed: float = -1.0
+var _rival_over_speed: float = -1.0
+## İlk aracın çizgiyi geçtiği yarış zamanı (-1: henüz kimse geçmedi).
+var _first_finish_time: float = -1.0
 ## Kalkış anı efektleri: kamera darbesi (ortografik size kısa süre daralır) ve lastik dumanı.
 var _punch: float = 0.0
 var _smoke: Array[CPUParticles3D] = []
@@ -130,7 +146,7 @@ func _ready() -> void:
 
 func open() -> void:
 	var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager
-	_player_id = race.player_vehicle_id() if race else &"bmw_e46"
+	_player_id = race.player_vehicle_id() if race else RaceManager.FALLBACK_VEHICLE
 	_rival_id = race.rival_id() if race else &""
 	if _rival_id == &"":
 		# Ekran bir davet olmadan açıldıysa (menüden / hata ayıklama) rakip boş kalıyordu:
@@ -160,6 +176,11 @@ func open() -> void:
 	_punch = 0.0
 	_player_distance = DragTrack.START_Z
 	_rival_distance = DragTrack.START_Z
+	_player_over = 0.0
+	_rival_over = 0.0
+	_player_over_speed = -1.0
+	_rival_over_speed = -1.0
+	_first_finish_time = -1.0
 	_place_camera(0.0)   # önceki yarıştan kalan kadraj (bitiş çizgisi) sıfırlanır
 	_status_label.text = "HAZIR OL"
 	_last_step = -1
@@ -260,7 +281,7 @@ func tap() -> void:
 				# GO'dan sonraki İLK dokunuş TEPKİdir (vites değil): araç orada kalkar, yani
 				# gecikme doğrudan mesafeye yansır.
 				_launch_player(_time)
-			else:
+			elif _player.finish_time < 0.0:
 				_register_shift()
 		_:
 			pass
@@ -556,9 +577,8 @@ func _process(delta: float) -> void:
 					_spawn_smoke(_rival_car)
 			if not _player.running and _hold_until > 0.0 and _time >= _hold_until:
 				_launch_player(_time)   # hatalı çıkış cezası doldu, araç kalkıyor
-			elif not _player.running and _hold_until <= 0.0 \
-					and _time >= DragRaceSim.REACTION_WORST:
-				_launch_player(_time)   # hiç dokunulmadı: en kötü tepkiyle otomatik kalkış
+			# Dokunulmazsa araç KALKMAZ: yeşili kaçırmak oyuncunun hatası, oyun onun yerine
+			# başlatmaz (rakip gider, oyuncu geç kalkarsa yarışı kaybeder).
 			_advance(delta)
 		Phase.DONE:
 			pass
@@ -624,10 +644,45 @@ func _advance(delta: float) -> void:
 	_place_cars(delta)
 	_punch = maxf(_punch - delta * 2.2, 0.0)
 	_place_camera(_time)
-	if _player.finish_time >= 0.0 and _rival.finish_time >= 0.0:
+	_advance_overrun(delta)
+	if _should_finish():
 		_finish()
 	elif _time > 40.0:
 		_finish()   # güvenlik: kilitlenmiş bir koşu ekranı sonsuza kadar açık tutmasın
+
+
+## Çizgiyi geçen araç hızıyla yoluna devam eder ve frenler; ilk geçiş anı kaydedilir.
+func _advance_overrun(delta: float) -> void:
+	if _first_finish_time < 0.0 and (_player.finish_time >= 0.0 or _rival.finish_time >= 0.0):
+		_first_finish_time = _time
+		_set_status("BİTİŞ!")
+		_tap_button.disabled = true
+		_set_hot(false)
+	if _player.finish_time >= 0.0:
+		if _player_over_speed < 0.0:
+			_player_over_speed = _player.speed
+			_status_label.text = "BİTİRDİN!"
+		_player_over += _player_over_speed * delta
+		_player_over_speed = maxf(_player_over_speed - OVERRUN_BRAKE * delta, 0.0)
+	if _rival.finish_time >= 0.0:
+		if _rival_over_speed < 0.0:
+			_rival_over_speed = _rival.speed
+		_rival_over += _rival_over_speed * delta
+		_rival_over_speed = maxf(_rival_over_speed - OVERRUN_BRAKE * delta, 0.0)
+
+
+## Sonuç ne zaman gelir: iki araç da geçip kısa bir "kazanan" görüntüsü bekledikten sonra.
+func _should_finish() -> bool:
+	if _first_finish_time < 0.0:
+		return false
+	var elapsed: float = _time - _first_finish_time
+	var both: bool = _player.finish_time >= 0.0 and _rival.finish_time >= 0.0
+	if both:
+		var last: float = maxf(_player.finish_time, _rival.finish_time)
+		return _time - last >= FINISH_HOLD
+	if not _player.running:
+		return elapsed >= FINISH_HOLD_IDLE   # oyuncu hiç kalkmadı
+	return elapsed >= FINISH_HOLD_MAX
 
 
 ## HATA AYIKLAMA KATMANI (DRAG_DEBUG=1): simülasyonun ham durumu. UI'nin fiziği gerçekten
@@ -728,7 +783,7 @@ func _register_shift() -> void:
 ## diye bildirdi.) Aradaki gerçek fark yine yumuşatılır (bkz. MAX_VISUAL_GAP), böylece kopan
 ## yarışta bile iki araç kadrajda kalır.
 func _place_cars(delta: float = 0.0) -> void:
-	var base: float = DragTrack.START_Z + (_player.progress() if _player else 0.0) * TRACK_LENGTH
+	var base: float = DragTrack.START_Z + _player_track_z()
 	_move_car(_player_car, _player_rig, base, delta, true)
 	_move_car(_rival_car, _rival_rig, base + _visual_gap(), delta, false)
 
@@ -751,6 +806,14 @@ func _move_car(car: Node3D, rig: CarRig, target_z: float, delta: float, is_playe
 	car.rotation.x = lerpf(car.rotation.x, deg_to_rad(-1.6) * squat, 0.18)
 
 
+## Oyuncunun pistteki yeri (dünya birimi, START_Z'den): bitişten sonra da ilerlemeye devam eder.
+func _player_track_z() -> float:
+	if _player == null:
+		return 0.0
+	return _player.progress() * TRACK_LENGTH \
+		+ _player_over * (TRACK_LENGTH / DragRaceSim.DISTANCE)
+
+
 ## İki aracın ortalama ilerlemesi (0-1) — doğrudan canlı koşuculardan.
 func _track_center() -> float:
 	if _player == null or _rival == null:
@@ -763,7 +826,9 @@ func _track_center() -> float:
 func _visual_gap() -> float:
 	if _player == null or _rival == null:
 		return 0.0
-	return MAX_VISUAL_GAP * tanh((_rival.distance - _player.distance) / GAP_SOFT)
+	var rival_total: float = _rival.distance + _rival_over
+	var player_total: float = _player.distance + _player_over
+	return MAX_VISUAL_GAP * tanh((rival_total - player_total) / GAP_SOFT)
 
 
 ## Kamera izometrik açıyı koruyarak İKİ ARACIN ORTASINI takip eder; açı ne olursa olsun konum
@@ -771,8 +836,9 @@ func _visual_gap() -> float:
 func _place_camera(_t: float) -> void:
 	# Kamera araçların ÇİZİLDİĞİ iki noktanın ortasını izler: oyuncu geride kalırsa ekranda da
 	# geride kalır ama iki araç da kadrajda durur.
-	var player_z: float = (_player.progress() if _player else 0.0) * TRACK_LENGTH
-	var center_z: float = player_z + _visual_gap() * 0.5
+	var player_z: float = _player_track_z()
+	# Kamera bitiş çizgisinde KALIR: araçlar çizgiyi geçip kadrajdan ilerler.
+	var center_z: float = minf(player_z + _visual_gap() * 0.5, TRACK_LENGTH)
 	# Yarış ilerledikçe kamera biraz daha ileriyi gösterir: son bölümde FINISH kapısı kadraja girer.
 	var progress: float = clampf(center_z / TRACK_LENGTH, 0.0, 1.0)
 	var look: float = CAM_LOOK_AHEAD + CAM_LOOK_AHEAD_END * progress * progress
