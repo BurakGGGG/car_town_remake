@@ -335,8 +335,33 @@ func start_repair(car: Node3D, type: RepairType = null) -> bool:
 	var spot: Node3D = repair_car_spots[bay]
 	var p: Vector3 = spot.global_position
 	vehicle.enter_bay(Vector3(p.x, 0.0, p.z), spot.global_rotation.y)
+	var bays_node: RepairBayManager = _bays()
+	if bays_node:
+		bays_node.raise_lift(bay, vehicle)   # lift kalkar, araç üstünde
 	repair_started.emit(vehicle)
 	repair_progress.emit(vehicle, 0.0)
+	return true
+
+
+## Ödüllü reklamla kısaltma yalnızca bu kadar saniyeden uzun kalan işlerde sunulur (kısa işlerde değmez).
+const BOOST_MIN_REMAINING: float = 40.0
+## Kısaltma: kalan sürenin bu oranı silinir.
+const BOOST_FRACTION: float = 0.5
+
+
+## Bu araçtaki iş ödüllü reklamla kısaltılabilir mi?
+func can_boost(car: Node3D) -> bool:
+	var state: RepairState = get_state(car)
+	return state != null and state.is_repairing and not state.boosted \
+			and state.remaining >= BOOST_MIN_REMAINING
+
+
+## Reklam ödülü hak edildi: işin kalan süresi yarıya iner. Süre bittiyse iş normal akışla tamamlanır.
+func boost_repair(car: Node3D) -> bool:
+	var state: RepairState = get_state(car)
+	if state == null or not can_boost(car) or not state.boost(BOOST_FRACTION):
+		return false
+	repair_progress.emit(state.car, state.repair_progress)
 	return true
 
 
@@ -346,6 +371,9 @@ func _finish_state(state: RepairState) -> void:
 	if is_instance_valid(car):
 		car.finish_repair(state.repair_reward)
 		car.await_reward()
+	var bays_node: RepairBayManager = _bays()
+	if bays_node:
+		bays_node.lower_lift(state.bay_index)   # tamir bitti: lift iner
 	repair_ready.emit(car)
 
 
@@ -371,6 +399,9 @@ func collect(car: Node3D) -> bool:
 	if mastery:
 		mastery.record(state.repair_type.id)
 	repair_collected.emit(vehicle, state.repair_reward, xp_gain)
+	var lift_bays: RepairBayManager = _bays()
+	if lift_bays:
+		lift_bays.release_lift(state.bay_index)   # araç eski kotuna iner, lift alçak kalır
 	if is_instance_valid(vehicle):
 		var on_exit: Callable = _on_car_exiting.bind(vehicle)
 		if vehicle.tree_exiting.is_connected(on_exit):
@@ -395,6 +426,9 @@ func _pick_return_point() -> TrafficWaypoint:
 func _cancel_state(state: RepairState) -> void:
 	var car: Node3D = state.car
 	_active.erase(state)
+	var bays_node: RepairBayManager = _bays()
+	if bays_node:
+		bays_node.release_lift(state.bay_index)
 	repair_cancelled.emit(car)
 
 

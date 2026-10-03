@@ -15,6 +15,9 @@ const PLATE_WIDTH: float = 440.0
 var _quests: QuestManager
 var _list: VBoxContainer
 var _empty: PlatePanel
+var _daily: PlatePanel
+var _daily_box: VBoxContainer
+var _gem_rewards: GemRewards
 var _column: VBoxContainer
 var _closing: bool = false
 
@@ -84,6 +87,17 @@ func _build() -> void:
 	_empty.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
 	_empty.add_child(_label(&"HudInkCaption", "Tüm görevler tamamlandı. Yenileri yolda!"))
 	column.add_child(_empty)
+
+	# Günlük görevler (GemRewards): ödül tamamlanınca kendiliğinden verilir, burada yalnızca durum
+	_daily = PlatePanel.new()
+	_daily.name = "DailyPlate"
+	_daily.theme_type_variation = &"HudCarPlate"
+	_daily.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
+	_daily_box = VBoxContainer.new()
+	_daily_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_daily_box.add_theme_constant_override(&"separation", 1)
+	_daily.add_child(_daily_box)
+	column.add_child(_daily)
 
 	var close_button: PlateButton = PlateButton.new()
 	close_button.theme_type_variation = &"HudPlateSmall"
@@ -158,6 +172,9 @@ func _connect_quests() -> void:
 	_quests = get_tree().get_first_node_in_group("quests") as QuestManager
 	if _quests:
 		_quests.quests_changed.connect(_refresh)
+	_gem_rewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
+	if _gem_rewards:
+		_gem_rewards.daily_changed.connect(_refresh_daily)
 
 
 func _refresh() -> void:
@@ -169,6 +186,33 @@ func _refresh() -> void:
 	for entry: Dictionary in active:
 		_list.add_child(_quest_plate(entry))
 	_empty.visible = active.is_empty()
+	_refresh_daily()
+
+
+## GÜNLÜK GÖREVLER plakası: giriş serisi, bugünün üç görevi ve haftalık hedef.
+func _refresh_daily() -> void:
+	if _daily_box == null:
+		return
+	for child: Node in _daily_box.get_children():
+		child.queue_free()
+	_daily.visible = _gem_rewards != null
+	if _gem_rewards == null:
+		return
+	_daily_box.add_child(_label(&"HudPlateTitle", "GÜNLÜK GÖREVLER   ·   GİRİŞ SERİSİ %d. GÜN" % _gem_rewards.streak()))
+	var tasks: Array[Dictionary] = _gem_rewards.daily_tasks()
+	if tasks.is_empty():
+		_daily_box.add_child(_label(&"HudInkCaption", "SEVİYE %d'TE AÇILIR" % GemRewards.TASK_MIN_LEVEL))
+		return
+	for task: Dictionary in tasks:
+		var done: bool = bool(task["done"])
+		var line: Label = _label(&"HudInkCaption", "%s %s   %d / %d   +%d GEM" % [
+			"✔" if done else "•", task["text"], int(task["progress"]), int(task["target"]), GemRewards.TASK_GEMS])
+		if done:
+			line.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
+		_daily_box.add_child(line)
+	var week: Vector2i = _gem_rewards.week_progress()
+	_daily_box.add_child(_label(&"HudInkCaption", "ÜÇÜ BİRDEN +%d GEM   ·   HAFTALIK %d / %d GÖREV → +%d GEM" % [
+		GemRewards.ALL_TASKS_BONUS, mini(week.x, week.y), week.y, GemRewards.WEEKLY_GEMS]))
 
 
 func _on_claim_pressed(quest_id: StringName) -> void:
@@ -199,4 +243,6 @@ static func _reward_text(entry: Dictionary) -> String:
 		parts.append("+%d GEM" % int(entry["gems"]))
 	if int(entry.get("money", 0)) > 0:
 		parts.append("+%s ₺" % Hud.format_thousands(int(entry["money"])))
+	if StringName(entry.get("crate", &"")) != &"":
+		parts.append("+1 %s" % String(CrateCatalog.get_entry(entry["crate"]).get("display_name", "KASA")))
 	return "   ".join(parts)

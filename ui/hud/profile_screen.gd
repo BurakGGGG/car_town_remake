@@ -160,7 +160,7 @@ func _refresh() -> void:
 	var cloud: Node = tree.get_first_node_in_group("cloud_save")
 	var who: String = ""
 	if cloud and cloud.has_method(&"get_profile"):
-		who = String((cloud.call(&"get_profile") as Dictionary).get("name", ""))
+		who = String((cloud.call(&"get_profile") as Dictionary).get("display_name", ""))
 	_account_button.text = "HESAP               %s" % (who.to_upper() if who != "" else "OTURUM AÇ")
 
 

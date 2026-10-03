@@ -42,6 +42,18 @@ extends Node3D
 ## Yeni NPC sahneye eklendi ve kuruldu (tamir sistemi müşteri kararını bununla verir).
 signal vehicle_spawned(vehicle: TrafficVehicle)
 
+## Yol ucu dünyanın kenarına taşınmış (WorldDressing) doğma / kaybolma noktasının ESKİ konumu.
+## Böyle bir noktada araç, eski konumdan başlayıp dışarı doğru kameranın görmediği İLK yerde doğar;
+## kaybolma noktasına giderken eski konumu geçip görünmez olunca silinir. Varsayılan görünümde eski
+## konumlar zaten ekran dışında: yolculuk süresi ve müşteri sıklığı değişmez. Oyuncu uzaklaşıp
+## kenara baktığında araç yolun ortasında birden belirip kaybolmaz.
+const CORE_META: StringName = &"core_position"
+## Görünmezlik sınaması: aracın merkezi + gövdesinin uçları (en, boy, tavan) ekran dışında olmalı.
+const HIDE_PROBES: Array[Vector3] = [Vector3.ZERO, Vector3(0.4, 0.0, 0.0), Vector3(-0.4, 0.0, 0.0),
+	Vector3(0.0, 0.0, 0.4), Vector3(0.0, 0.0, -0.4), Vector3(0.0, 0.35, 0.0)]
+## Doğma yeri aranırken eski konumdan dışarı doğru adım.
+const HIDE_STEP: float = 0.3
+
 var vehicles: Array[TrafficVehicle] = []
 var spawn_points: Array[TrafficWaypoint] = []
 ## Yarış şeridinin başı — `spawn_points` içinde DEĞİLDİR, yalnızca RaceManager kullanır.
@@ -91,10 +103,47 @@ func _try_spawn() -> bool:
 	var candidates: Array[TrafficWaypoint] = spawn_points.duplicate()
 	candidates.shuffle()
 	for point: TrafficWaypoint in candidates:
-		if _is_clear(point.global_position):
-			_spawn_at(point)
+		var start: Vector3 = hidden_start(point)
+		if _is_clear(start):
+			_spawn_at(point, {}, start)
 			return true
 	return false
+
+
+## Bu noktada doğacak aracın başlangıç yeri (CORE_META'ya bakın). Nokta taşınmamışsa kendisi.
+func hidden_start(point: TrafficWaypoint) -> Vector3:
+	if not point.has_meta(CORE_META):
+		return point.global_position
+	var core: Vector3 = point.get_meta(CORE_META)
+	var far: Vector3 = point.global_position
+	var steps: int = maxi(int(core.distance_to(far) / HIDE_STEP), 1)
+	for i: int in steps + 1:
+		var at: Vector3 = core.lerp(far, float(i) / float(steps))
+		if is_hidden(at):
+			return at
+	return far
+
+
+## Bu konumdaki bir araç kameradan görünmüyor mu? (Kamera yoksa — başsız testler — görünmez sayılır.)
+func is_hidden(position: Vector3) -> bool:
+	var camera: Camera3D = get_viewport().get_camera_3d() if is_inside_tree() else null
+	if camera == null:
+		return true
+	for probe: Vector3 in HIDE_PROBES:
+		if camera.is_position_in_frustum(position + probe):
+			return false
+	return true
+
+
+## Kaybolma noktasına giden araç erken silinebilir mi: noktanın eski konumunu geçti ve görünmüyor.
+func can_leave_early(vehicle: TrafficVehicle, point: TrafficWaypoint) -> bool:
+	if point == null or not point.is_despawn or not point.has_meta(CORE_META):
+		return false
+	var core: Vector3 = point.get_meta(CORE_META)
+	var outward: Vector3 = point.global_position - core
+	if outward.length_squared() < 0.0001 or (vehicle.global_position - core).dot(outward) < 0.0:
+		return false
+	return is_hidden(vehicle.global_position)
 
 
 ## Şehir trafiğindeki araç sayısı — yarış şeridindekiler SAYILMAZ (o şerit ayrı yönetiliyor,
@@ -116,7 +165,8 @@ func city_vehicle_count() -> int:
 func spawn_challenger(wanted: StringName = &"") -> TrafficVehicle:
 	if race_spawn_point == null or _pool.is_empty():
 		return null
-	if not _is_clear(race_spawn_point.global_position):
+	var start: Vector3 = hidden_start(race_spawn_point)
+	if not _is_clear(start):
 		return null   # şeritte hâlâ bekleyen biri var: sonra denenir
 	var entry: Dictionary = {}
 	if wanted != &"":
@@ -124,7 +174,7 @@ func spawn_challenger(wanted: StringName = &"") -> TrafficVehicle:
 		if entry.is_empty():
 			request_model(wanted)
 			return null
-	var vehicle: TrafficVehicle = _spawn_at(race_spawn_point, entry)
+	var vehicle: TrafficVehicle = _spawn_at(race_spawn_point, entry, start)
 	vehicle.race_lane = true
 	return vehicle
 
@@ -142,7 +192,9 @@ func request_model(id: StringName) -> void:
 	_request_model(id)
 
 
-func _spawn_at(point: TrafficWaypoint, entry: Dictionary = {}) -> TrafficVehicle:
+## `start`: doğma yeri (hidden_start); verilmezse noktanın kendisi. Araç noktadan bir sonrakine giden
+## doğru üzerinde kalır, yönü ve hedefi değişmez.
+func _spawn_at(point: TrafficWaypoint, entry: Dictionary = {}, start: Vector3 = Vector3.INF) -> TrafficVehicle:
 	var vehicle: TrafficVehicle = TrafficVehicle.new()
 	vehicle.name = "Npc_%d" % (_rng.randi() % 100000)
 	vehicle.max_speed = _rng.randf_range(min_speed, max_speed)
@@ -151,6 +203,8 @@ func _spawn_at(point: TrafficWaypoint, entry: Dictionary = {}) -> TrafficVehicle
 	var model: Dictionary = entry if not entry.is_empty() else _pool.pick_random()
 	vehicle.vehicle_id = model["id"]
 	vehicle.setup(self, model["scene"], _random_appearance(model["id"]), point, model_scale)
+	if start != Vector3.INF:
+		vehicle.global_position = Vector3(start.x, vehicle.global_position.y, start.z)
 	vehicle.reached_despawn.connect(_on_vehicle_despawn)
 	vehicles.append(vehicle)
 	vehicle_spawned.emit(vehicle)

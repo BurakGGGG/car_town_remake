@@ -112,8 +112,16 @@ var race_result_screen: RaceResultScreen
 var _race: RaceManager
 var mastery_screen: MasteryScreen
 ## Avlu dekorasyonu panosu (dünyada avluya dokununca açılır).
-var decor_panel: DecorPanel
+var garage_edit_screen: GarageEditScreen
+var edit_button: PlateButton
 var garage_value_screen: GarageValueScreen
+## KOLEKSİYON tabelası (showroom ve garaj ekranından açılır).
+var collection_screen: CollectionScreen
+## Dünyadaki teslimat kasasının AÇ / sonuç plakası.
+var crate_panel: CratePanel
+var _crates: CrateManager
+var _delivery: CrateDelivery
+var _blocked_notified: Dictionary = {}   # yer bulamayan kasa uid → uyarıldı mı
 ## Alt sekme → açtığı ekran.
 var _nav_screens: Dictionary = {}
 
@@ -154,6 +162,9 @@ func _ready() -> void:
 	profile_button.pressed.connect(_on_profile_button_pressed)
 	camera_button.toggled.connect(_on_camera_toggled)
 	sound_button.toggled.connect(_on_sound_toggled)
+	# Oyunda henüz ses/müzik varlığı yok: hiçbir şeyi susturmayan düğme yanıltıcı olur. Ses eklenince
+	# AUDIO_AVAILABLE true yapılır ve sound_toggled bir bus'a bağlanır.
+	sound_button.visible = AUDIO_AVAILABLE
 	zoom_in_button.pressed.connect(_on_zoom_in_pressed)
 	zoom_out_button.pressed.connect(_on_zoom_out_pressed)
 
@@ -166,9 +177,11 @@ func _ready() -> void:
 	_repair_panel = RepairPanel.new()
 	_repair_panel.repair_pressed.connect(_on_repair_pressed)
 	_repair_panel.collect_pressed.connect(_on_collect_pressed)
+	_repair_panel.boost_pressed.connect(_on_repair_boost_pressed)
 	car_stats_container.add_child(_repair_panel)
 	_build_notice_plate()
 	_build_bay_plate()
+	_build_crate_panel()
 	_apply_safe_area()
 	get_viewport().size_changed.connect(_apply_safe_area)
 	_connect_gameplay.call_deferred()  # sahnedeki yöneticiler hazır olsun
@@ -273,10 +286,45 @@ static func format_thousands(value: int) -> String:
 ## Aynı anda en fazla bu kadar bildirim beklet (fazlası oyuncuyu geride bırakır).
 const NOTICE_QUEUE_MAX: int = 4
 
+## Ses sistemi (müzik/SFX varlıkları + bus) bağlı mı? Şimdilik yok: SES düğmesi gizli kalır.
+const AUDIO_AVAILABLE: bool = false
+
 var _notice_queue: Array[Dictionary] = []
 var _notice_busy: bool = false
 ## Son bilinen garaj rütbesi (rütbe atlayınca bildirim gösterilir; GarageValue'nun sinyali yoktur).
 var _garage_rank: int = 0
+## Yarış sonucunda teklif edilen ödüllü reklam bonusu (₺). 0 = teklif yok / verildi.
+var _race_bonus_amount: int = 0
+var _ads_bound: AdService = null
+## Süre kısaltma reklamı izlenirken kısaltılacak araç.
+var _boost_car: Node3D = null
+
+
+## TEST DERLEMESİ KISAYOLU (yalnızca debug derlemede): sol üstteki paraya TEST_MONEY_HOLD saniye
+## basılı tutmak kasaya TEST_MONEY ekler. Testçi telefonda dekor / garaj denemek için para biriktirmek
+## zorunda kalmasın. Sürüm derlemesinde (export-release) OS.is_debug_build() false: hiç kurulmaz.
+const TEST_MONEY: int = 10_000_000
+const TEST_MONEY_HOLD: float = 1.5
+
+
+func _setup_test_money() -> void:
+	if not OS.is_debug_build():
+		return
+	var box: Control = coin_label.get_parent() as Control
+	box.mouse_filter = Control.MOUSE_FILTER_STOP
+	var presses: Array[int] = [0]   # her basış/bırakış sayacı artırır: bırakılan basış zamanlayıcıyı iptal eder
+	box.gui_input.connect(func(event: InputEvent) -> void:
+		var mb: InputEventMouseButton = event as InputEventMouseButton   # dokunuş fareye çevrilir
+		if mb == null or mb.button_index != MOUSE_BUTTON_LEFT:
+			return
+		presses[0] += 1
+		if not mb.pressed:
+			return
+		var token: int = presses[0]
+		get_tree().create_timer(TEST_MONEY_HOLD).timeout.connect(func() -> void:
+			if presses[0] == token and _economy:
+				_economy.add_money(TEST_MONEY)
+				_show_notice("TEST: +%s ₺" % format_thousands(TEST_MONEY), HudPalette.COIN_DARK, 2.0)))
 
 
 func _connect_gameplay() -> void:
@@ -285,6 +333,7 @@ func _connect_gameplay() -> void:
 		_economy.money_changed.connect(set_coins)
 		_economy.money_changed.connect(func(_m: int) -> void: _refresh_repair_panel(false))  # bakiye → buton durumu
 		set_coins(_economy.money)
+		_setup_test_money()
 	_player_progress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
 	if _player_progress:
 		_player_progress.level_up.connect(func(_l: int) -> void: _refresh_repair_panel(false))
@@ -297,12 +346,6 @@ func _connect_gameplay() -> void:
 	_garage = get_tree().get_first_node_in_group("garage_system")
 	if _garage and _garage.has_signal(&"expand_clicked"):
 		_garage.connect(&"expand_clicked", show_expansion_plate)
-	# AVLUYA DOKUNMA: dekorasyon panosunu açar, düzenleme boyunca yerleştirme ızgarası görünür.
-	var lot: Node = get_tree().get_first_node_in_group("garage_decor_view")
-	if lot and lot.has_signal(&"lot_clicked") and not lot.is_connected(&"lot_clicked", _open_decor):
-		lot.connect(&"lot_clicked", _open_decor)
-	if decor_panel and not decor_panel.closed.is_connected(_close_decor):
-		decor_panel.closed.connect(_close_decor)
 	if _upgrades:
 		_upgrades.upgrade_purchased.connect(_on_upgrade_purchased)
 	_bays = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
@@ -343,6 +386,7 @@ func _connect_gameplay() -> void:
 	if _bays:
 		_bays.bays_changed.connect(_check_garage_rank)
 	_check_garage_rank()
+	_connect_crates()
 	var cloud: CloudSaveManager = get_tree().get_first_node_in_group("cloud_save") as CloudSaveManager
 	if cloud:
 		cloud.user_changed.connect(_on_cloud_user_changed)
@@ -382,7 +426,7 @@ func _refresh_repair_panel(celebrate: bool) -> void:
 	if state:
 		_repair_panel.set_info(state.repair_type, state.repair_reward)   # ödül işin kendi çarpanıyla
 		if state.phase == RepairState.Phase.REPAIRING:
-			_repair_panel.show_repairing(state.repair_progress, state.remaining)
+			_repair_panel.show_repairing(state.repair_progress, state.remaining, _boost_offer(vehicle))
 		else:
 			_repair_panel.show_ready()
 	elif vehicle.repair_status == TrafficVehicle.RepairStatus.REPAIRED:
@@ -400,6 +444,26 @@ func _on_repair_pressed(_type: RepairType) -> void:
 	if _repair_manager and _repair_target:
 		_repair_manager.start_repair(_repair_target)  # iş aracın kendi arızasıdır
 		_refresh_repair_panel(false)  # başladıysa "TAMİR EDİLİYOR", başlamadıysa güncel kilit/bakiye durumu
+
+
+## Süren işte "REKLAM İZLE (süre yarıya iner)" sunulabilir mi: uzun iş, daha önce kısaltılmamış,
+## reklam politikası uygun ve hazır reklam var.
+func _boost_offer(car: Node3D) -> bool:
+	var ads: AdService = _ads_service()
+	return ads != null and _repair_manager != null and _repair_manager.can_boost(car) \
+			and ads.can_offer(AdPolicy.REPAIR_BOOST)
+
+
+func _on_repair_boost_pressed() -> void:
+	var ads: AdService = _ads_service()
+	if ads == null or _repair_target == null or not _repair_manager.can_boost(_repair_target):
+		_refresh_repair_panel(false)
+		return
+	if ads.is_busy():
+		return   # bir reklam zaten gösteriliyor (çift dokunuş): bekleyen kısaltmayı bozma
+	if ads.show_rewarded(AdPolicy.REPAIR_BOOST):
+		_boost_car = _repair_target
+	_refresh_repair_panel(false)
 
 
 func _on_collect_pressed() -> void:
@@ -622,7 +686,8 @@ func _on_race_reward(won: bool, money: int, xp: int) -> void:
 
 
 func _on_level_reward(new_level: int, money: int, text: String) -> void:
-	var line: String = "SEVİYE %d   +%s ₺" % [new_level, format_thousands(money)]
+	var line: String = "SEVİYE %d   +%s ₺   +%d GEM" % [new_level, format_thousands(money),
+		int(PlayerProgress.reward_for(new_level)["gems"])]
 	if text != "":
 		line += "\n%s" % text
 	_show_notice(line, HudPalette.COIN_DARK, 2.2)
@@ -675,11 +740,65 @@ func _on_race_completed(won: bool, player_time: float, rival_time: float) -> voi
 		reward = _race.finish_race(won)
 	race_result_screen.show_result(won, player_time, rival_time,
 		int(reward["money"]), int(reward["xp"]), player_id if won else rival)
+	# ÖDÜLLÜ REKLAM: yalnızca para kazanıldıysa ve politika + hazır reklam uygunsa teklif edilir (açık onay).
+	_race_bonus_amount = 0
+	var ads: AdService = _ads_service()
+	if ads and int(reward["money"]) > 0 and ads.can_offer(AdPolicy.RACE_DOUBLE):
+		_race_bonus_amount = int(reward["money"])
+		race_result_screen.offer_bonus(_race_bonus_amount)
 	router.open(&"race_result")
+
+
+## Reklam servisini bulur ve sinyallerini BİR kez bağlar. Servis sahneye HUD'dan sonra kurulabildiği için
+## bağlantı kurulumda değil ilk kullanımda yapılır (ödül sinyalinin kaçırılması = reklam izlenip ödül verilmemesi olurdu).
+func _ads_service() -> AdService:
+	var ads: AdService = get_tree().get_first_node_in_group("ads") as AdService
+	if ads != null and ads != _ads_bound:
+		ads.reward_earned.connect(_on_ad_reward_earned)
+		ads.ad_finished.connect(_on_ad_finished)
+		_ads_bound = ads
+	return ads
+
+
+## Yarış bonusu: oyuncu REKLAM İZLE'ye bastı.
+func _on_race_bonus_requested() -> void:
+	var ads: AdService = _ads_service()
+	if ads == null or _race_bonus_amount <= 0 or not ads.show_rewarded(AdPolicy.RACE_DOUBLE):
+		race_result_screen.rearm_bonus()   # gösterilemedi: oyuncu tekrar deneyebilir ya da çıkabilir
+
+
+## Reklam ödülü hak edildi (AdService bunu bir gösterimde en çok BİR kez yayar). Bonus = yarış parası kadar.
+func _on_ad_reward_earned(kind: StringName) -> void:
+	if kind == AdPolicy.REPAIR_BOOST:
+		if is_instance_valid(_boost_car) and _repair_manager != null:
+			_repair_manager.boost_repair(_boost_car)   # tek sefer: RepairState.boosted
+		_boost_car = null
+		_refresh_repair_panel(false)
+		return
+	if kind != AdPolicy.RACE_DOUBLE or _race_bonus_amount <= 0 or _economy == null:
+		return
+	var amount: int = _race_bonus_amount
+	_race_bonus_amount = 0   # aynı yarış için ikinci bonus yok
+	_economy.add_money(amount)
+	race_result_screen.bonus_granted(amount)
+
+
+func _on_ad_finished(kind: StringName, rewarded: bool) -> void:
+	if kind == AdPolicy.REPAIR_BOOST:
+		_boost_car = null
+		_refresh_repair_panel(false)
+		return
+	if kind == AdPolicy.RACE_DOUBLE and not rewarded:
+		var ads: AdService = _ads_service()
+		if ads and _race_bonus_amount > 0 and ads.block_reason(AdPolicy.RACE_DOUBLE) == AdPolicy.OK:
+			race_result_screen.rearm_bonus()
+		else:
+			race_result_screen.hide_bonus()
 
 
 ## GARAJA DÖN: sonuç ve pist kapanır, oyuncu dünyaya döner.
 func _on_race_exit() -> void:
+	_race_bonus_amount = 0
 	if _race:
 		_race.set_racing(false)
 	if router.is_open(&"drag_race") or router.is_open(&"race_result"):
@@ -706,7 +825,7 @@ func _on_repair_started(car: Node3D) -> void:
 func _on_repair_progress(car: Node3D, progress: float) -> void:
 	if car == _repair_target:
 		var state: RepairState = _repair_manager.get_state(car)
-		_repair_panel.show_repairing(progress, state.remaining if state else 0.0)
+		_repair_panel.show_repairing(progress, state.remaining if state else 0.0, _boost_offer(car))
 
 
 ## Araç alandan çıktı: seçili başka bir arızalı aracın plakası TAMİR'i açar.
@@ -743,6 +862,19 @@ func _build_router() -> void:
 	router.name = "UiRouter"
 	add_child(router)
 	router.stack_changed.connect(_on_ui_stack_changed)
+	router.exit_hint_requested.connect(func() -> void:
+		_show_notice("Çıkmak için tekrar GERİ'ye bas", Color(1.0, 0.9, 0.5), 1.8))
+	router.back_override = _android_back_for_crate_panel
+
+
+## Android GERİ, kasa panosu açıkken: "hazır" panosu kapanır (kasa beklemeye döner); sonuç panosu
+## ödülü gösterir, GERİ ile geçilemez (yanlışlıkla kapatıp ödülü görmemeyi önler).
+func _android_back_for_crate_panel() -> bool:
+	if crate_panel == null or not crate_panel.visible:
+		return false
+	if crate_panel.mode() == &"prompt":
+		crate_panel.dismiss()
+	return true
 
 
 ## İlerleme panoları HUD'a ait: hem garajdan hem PROFİL'den açılabilsinler (daha önce yalnızca
@@ -753,10 +885,13 @@ func _build_progress_screens() -> void:
 	host.add_child(garage_value_screen)
 	mastery_screen = MasteryScreen.new()
 	host.add_child(mastery_screen)
-	decor_panel = DecorPanel.new()
-	host.add_child(decor_panel)
+	# GARAJI DÜZENLE: dünya garajının üstünde, kendisi tıklama almayan tam çerçeve arayüz
+	garage_edit_screen = GarageEditScreen.new()
+	host.add_child(garage_edit_screen)
 	profile_screen = ProfileScreen.new()
 	host.add_child(profile_screen)
+	collection_screen = CollectionScreen.new()
+	host.add_child(collection_screen)
 	profile_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
 	garage_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
 
@@ -775,24 +910,7 @@ func _build_race_screens() -> void:
 	drag_race_screen.race_completed.connect(_on_race_completed)
 	race_result_screen.exit_requested.connect(_on_race_exit)
 	race_result_screen.closed.connect(_on_race_exit)
-
-
-## Avlu düzenleme: pano açılır ve yerleştirme ızgarası görünür olur.
-func _open_decor() -> void:
-	router.open(&"decor")
-	_set_lot_editing(true)
-
-
-func _close_decor() -> void:
-	_set_lot_editing(false)
-	if router.top() == &"decor":
-		router.back()
-
-
-func _set_lot_editing(value: bool) -> void:
-	var lot: Node = get_tree().get_first_node_in_group("garage_decor_view")
-	if lot and lot.has_method("set_editing"):
-		lot.call("set_editing", value)
+	race_result_screen.bonus_requested.connect(_on_race_bonus_requested)
 
 
 func _register_screens() -> void:
@@ -800,13 +918,15 @@ func _register_screens() -> void:
 	router.register(&"showroom", showroom, UiRouter.Kind.PLACE)
 	router.register(&"quests", quest_screen, UiRouter.Kind.MODAL)
 	router.register(&"mastery", mastery_screen, UiRouter.Kind.MODAL)
-	router.register(&"decor", decor_panel, UiRouter.Kind.MODAL)
+	# YER (PLACE): oyun HUD'u gizlenir — düzenlerken alt sekmeler / görevler yanlışlıkla açılmasın
+	router.register(&"garage_edit", garage_edit_screen, UiRouter.Kind.PLACE)
 	router.register(&"garage_value", garage_value_screen, UiRouter.Kind.MODAL)
 	router.register(&"profile", profile_screen, UiRouter.Kind.MODAL)
 	router.register(&"account", login_screen, UiRouter.Kind.MODAL)
 	router.register(&"race_challenge", race_challenge_screen, UiRouter.Kind.MODAL)
 	router.register(&"drag_race", drag_race_screen, UiRouter.Kind.PLACE)
 	router.register(&"race_result", race_result_screen, UiRouter.Kind.MODAL)
+	router.register(&"collection", collection_screen, UiRouter.Kind.MODAL)
 
 
 ## Yığın değişti: oyun HUD'u yalnızca bir YER (garaj/showroom) açıkken gizlenir; panolar
@@ -816,6 +936,8 @@ func _on_ui_stack_changed(top: StringName, place_open: bool) -> void:
 	if top != &"":
 		hide_bay_plate()   # dünya plakası bir ekranın altında asılı kalmasın
 		hide_car_info()
+		if crate_panel and crate_panel.mode() == &"prompt":
+			crate_panel.hide_panel()
 	_sync_nav_tab(router.current_place())
 	_refresh_quest_button()
 
@@ -833,11 +955,96 @@ func _sync_nav_tab(place: StringName) -> void:
 		button.set_pressed_no_signal(button == target)
 
 
+# --- Araç teslimat kasaları ---------------------------------------------------------------
+
+## Kasa plakası tamir alanı plakasıyla aynı sütunda (alt-orta) durur.
+func _build_crate_panel() -> void:
+	crate_panel = CratePanel.new()
+	var column: Node = car_info_panel.get_parent()
+	column.add_child(crate_panel)
+	column.move_child(crate_panel, car_info_panel.get_index())
+	crate_panel.open_pressed.connect(_on_crate_open_pressed)
+	crate_panel.done_pressed.connect(_on_crate_done_pressed)
+
+
+func _connect_crates() -> void:
+	_crates = get_tree().get_first_node_in_group("crates") as CrateManager
+	_delivery = get_tree().get_first_node_in_group("crate_delivery") as CrateDelivery
+	if _crates:
+		_crates.crate_added.connect(_on_crate_added)
+	if _delivery:
+		_delivery.crate_clicked.connect(_on_crate_clicked)
+		_delivery.reveal_ready.connect(_on_crate_revealed)
+		_delivery.delivery_blocked.connect(_on_crate_blocked)
+	var gem_rewards: GemRewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
+	if gem_rewards:
+		gem_rewards.reward_granted.connect(func(_amount: int, text: String) -> void:
+			if text != "":
+				_show_notice(text, HudPalette.INK, 1.8))
+
+
+## Showroom'dan kasa alındı: showroom kapanır, kamera garajın teslimat alanına, kasanın gelişine gider.
+func _on_crate_purchased(uid: int) -> void:
+	router.close_all()
+	if _delivery:
+		_delivery.focus_on_arrival(uid)
+	var crate: Dictionary = _crates.get_crate(uid) if _crates else {}
+	_show_notice("%s GARAJINA GELİYOR" % String(CrateCatalog.get_entry(crate.get("crate", &"")).get("display_name", "KASA")),
+		HudPalette.COIN_DARK, 1.8)
+
+
+## Görev ödülü kasa (İLK KASA): görev panosu açıkken ödül alınır ve kasa panonun ARKASINDA garaja
+## iniyordu — oyuncu fark etmiyordu. Pano kapanır, kamera kasaya gider, ne yapacağı söylenir.
+func _on_crate_added(uid: int) -> void:
+	var crate: Dictionary = _crates.get_crate(uid) if _crates else {}
+	if not String(crate.get("source", "")).begins_with("quest"):
+		return   # showroom satın alması _on_crate_purchased'da
+	router.close_all()
+	if _delivery:
+		_delivery.focus_on_arrival(uid)
+	_show_notice("İLK ARAÇ KASAN GARAJINA GELDİ\nKASAYA DOKUN VE AÇ", HudPalette.COIN_DARK, 3.0)
+
+
+## Dünyadaki kasaya dokunuldu: içerik GİZLİ soru plakası.
+func _on_crate_clicked(uid: int) -> void:
+	if router.top() != &"" or _crates == null or not _crates.can_open(uid):
+		return
+	hide_bay_plate()
+	hide_car_info()
+	crate_panel.show_prompt(uid, _crates.get_crate(uid).get("crate", &""))
+
+
+func _on_crate_open_pressed(uid: int) -> void:
+	if _delivery == null or not _delivery.open_crate(uid):
+		_show_notice("KASA ŞU AN AÇILAMIYOR", HudPalette.INK, 1.4)
+
+
+func _on_crate_revealed(uid: int, result: Dictionary) -> void:
+	crate_panel.show_result(uid, result)
+
+
+func _on_crate_done_pressed(uid: int) -> void:
+	if _delivery:
+		_delivery.finish_reveal(uid)
+
+
+func _on_crate_blocked(uid: int) -> void:
+	if _blocked_notified.has(uid):
+		return
+	_blocked_notified[uid] = true
+	# Yeri dolduran dekor mu kasalar mı: yanlış yönlendirme olmasın (QA: dekorsuz garajda "dekoru kaldır" diyordu)
+	var decor: DecorManager = get_tree().get_first_node_in_group("decor") as DecorManager
+	var hint: String = "BİRAZ DEKORASYONU KALDIR" if decor and decor.instance_count() > 0 else "ÖNCE GARAJDAKİ BİR KASAYI AÇ"
+	_show_notice("KASA YOLDA: GARAJDA YER YOK\n%s" % hint, HudPalette.INK, 2.4)
+
+
 ## MAĞAZA ekranı: bina hitbox'ı ya da MAĞAZA sekmesi açar, oyun HUD'u gizlenir, GERİ ile döner.
 func _build_showroom() -> void:
 	showroom = ShowroomScreen.new()
 	garage_screen.get_parent().add_child(showroom)   # temalı Root'un altına, en üste
 	showroom.vehicle_purchased.connect(_on_vehicle_purchased)
+	showroom.crate_purchased.connect(_on_crate_purchased)
+	showroom.screen_requested.connect(func(id: StringName) -> void: router.open(id))
 
 
 ## PLAYER tabelası temalı Root'un en üstünde durur (showroom'un da üstünde: kayıt seçimi her yerde görünür).
@@ -862,6 +1069,17 @@ func _build_quests() -> void:
 	var column: Node = camera_controls.get_parent()
 	column.add_child(quest_button)
 	column.move_child(quest_button, camera_controls.get_index())
+	# GARAJI DÜZENLE: GÖREVLER'in altında, aynı fiziksel plaka dilinde. Eskiden avluya dokunmak
+	# dekor panosunu açıyordu; oyun sırasında zemine her dokunuşta yanlışlıkla açılıyordu.
+	edit_button = PlateButton.new()
+	edit_button.name = "EditGarageButton"
+	edit_button.theme_type_variation = &"HudPlateSmall"
+	edit_button.text = "GARAJI DÜZENLE"
+	edit_button.focus_mode = Control.FOCUS_NONE
+	edit_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	edit_button.pressed.connect(func() -> void: router.open(&"garage_edit"))
+	column.add_child(edit_button)
+	column.move_child(edit_button, quest_button.get_index() + 1)
 	quest_screen = QuestScreen.new()
 	garage_screen.get_parent().add_child(quest_screen)
 	quest_screen.reward_claimed.connect(func(text: String) -> void: _show_notice(text, HudPalette.COIN_DARK))

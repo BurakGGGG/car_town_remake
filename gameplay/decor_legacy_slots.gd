@@ -1,0 +1,242 @@
+class_name DecorLegacySlots
+## ESKİ SABİT YUVALAR — yalnızca v8 kaydını taşımak için (SaveManager v8 → v9).
+##
+## 2026-09-28'e kadar dekorasyon avluda SABİT yuvalara konuyordu: 64 zemin + 3 duvar yuvası, her
+## biri bir garaj seviyesine bağlı, yönü sabit. Garaj düzenleyicisiyle yerleştirme serbest oldu
+## (konum + dönüş + örnek kimliği); v8 kayıttaki "yuva → eşya" eşlemesi yüklenirken bu
+## tablolardan gerçek konuma çevrilir. Yeni kod bu dosyayı KULLANMAZ.
+##
+## Değerler eski gameplay/garage_decor.gd'den birebir taşındı (dünya koordinatı, y = 0).
+
+const SLOT_FLOOR_SURFACE: StringName = &"zemin"
+const SLOT_WALL_SURFACE: StringName = &"duvar"
+const SLOT_FLOOR: StringName = &"taban"
+const SLOT_WALL: StringName = &"pano"
+## Eski yerleştiricinin ızgarası: eşya merkezi bu gözün ortasına oturtuluyordu (0,7 / 4).
+const LEGACY_CELL: float = 0.175
+
+const FLOOR_SLOTS: Dictionary = {
+	&"taban_01": Vector3(-1.10, 0.0, -1.38),
+	&"taban_02": Vector3(-1.10, 0.0, -0.60),
+	&"taban_03": Vector3(-3.88, 0.0, -2.88),
+	&"taban_04": Vector3(-3.88, 0.0, -2.10),
+	&"taban_05": Vector3(-3.88, 0.0, -1.32),
+	&"taban_06": Vector3(-3.88, 0.0, -0.54),
+	&"taban_07": Vector3(-3.10, 0.0, -2.88),
+	&"taban_08": Vector3(-3.10, 0.0, -2.10),
+	&"taban_09": Vector3(-2.32, 0.0, -2.88),
+	&"taban_10": Vector3(-2.32, 0.0, -2.10),
+	&"taban_11": Vector3(-2.32, 0.0, -0.54),
+	&"taban_12": Vector3(-1.54, 0.0, -2.88),
+	&"taban_13": Vector3(-1.54, 0.0, -2.10),
+	&"taban_14": Vector3(-0.76, 0.0, -2.88),
+	&"taban_15": Vector3(-0.76, 0.0, -2.10),
+	&"taban_16": Vector3(-5.88, 0.0, -4.38),
+	&"taban_17": Vector3(-5.88, 0.0, -3.60),
+	&"taban_18": Vector3(-5.88, 0.0, -2.82),
+	&"taban_19": Vector3(-5.88, 0.0, -2.04),
+	&"taban_20": Vector3(-5.88, 0.0, -1.26),
+	&"taban_21": Vector3(-5.10, 0.0, -4.38),
+	&"taban_22": Vector3(-5.10, 0.0, -3.60),
+	&"taban_23": Vector3(-5.10, 0.0, -2.82),
+	&"taban_24": Vector3(-5.10, 0.0, -2.04),
+	&"taban_25": Vector3(-4.32, 0.0, -4.38),
+	&"taban_26": Vector3(-4.32, 0.0, -3.60),
+	&"taban_27": Vector3(-3.54, 0.0, -4.38),
+	&"taban_28": Vector3(-3.54, 0.0, -3.60),
+	&"taban_29": Vector3(-2.76, 0.0, -4.38),
+	&"taban_30": Vector3(-2.76, 0.0, -3.60),
+	&"taban_31": Vector3(-1.98, 0.0, -4.38),
+	&"taban_32": Vector3(-1.98, 0.0, -3.60),
+	&"taban_33": Vector3(-1.20, 0.0, -4.38),
+	&"taban_34": Vector3(-1.20, 0.0, -3.60),
+	&"taban_35": Vector3(-7.88, 0.0, -5.88),
+	&"taban_36": Vector3(-7.88, 0.0, -5.10),
+	&"taban_37": Vector3(-7.88, 0.0, -4.32),
+	&"taban_38": Vector3(-7.88, 0.0, -3.54),
+	&"taban_39": Vector3(-7.88, 0.0, -2.76),
+	&"taban_40": Vector3(-7.88, 0.0, -1.98),
+	&"taban_41": Vector3(-7.88, 0.0, -1.20),
+	&"taban_42": Vector3(-7.10, 0.0, -5.88),
+	&"taban_43": Vector3(-7.10, 0.0, -5.10),
+	&"taban_44": Vector3(-7.10, 0.0, -4.32),
+	&"taban_45": Vector3(-7.10, 0.0, -3.54),
+	&"taban_46": Vector3(-7.10, 0.0, -2.76),
+	&"taban_47": Vector3(-7.10, 0.0, -1.98),
+	&"taban_48": Vector3(-7.10, 0.0, -1.20),
+	&"taban_49": Vector3(-6.32, 0.0, -5.88),
+	&"taban_50": Vector3(-6.32, 0.0, -5.10),
+	&"taban_51": Vector3(-5.54, 0.0, -5.88),
+	&"taban_52": Vector3(-5.54, 0.0, -5.10),
+	&"taban_53": Vector3(-4.76, 0.0, -5.88),
+	&"taban_54": Vector3(-4.76, 0.0, -5.10),
+	&"taban_55": Vector3(-3.98, 0.0, -5.88),
+	&"taban_56": Vector3(-3.98, 0.0, -5.10),
+	&"taban_57": Vector3(-3.20, 0.0, -5.88),
+	&"taban_58": Vector3(-3.20, 0.0, -5.10),
+	&"taban_59": Vector3(-2.42, 0.0, -5.88),
+	&"taban_60": Vector3(-2.42, 0.0, -5.10),
+	&"taban_61": Vector3(-1.64, 0.0, -5.88),
+	&"taban_62": Vector3(-1.64, 0.0, -5.10),
+	&"taban_63": Vector3(-0.86, 0.0, -5.88),
+	&"taban_64": Vector3(-0.86, 0.0, -5.10),
+}
+## Yuvanın açılması için gereken garaj seviyesi (1 tabanlı).
+const FLOOR_SLOT_LEVEL: Dictionary = {
+	&"taban_01": 1,
+	&"taban_02": 1,
+	&"taban_03": 2,
+	&"taban_04": 2,
+	&"taban_05": 2,
+	&"taban_06": 2,
+	&"taban_07": 2,
+	&"taban_08": 2,
+	&"taban_09": 2,
+	&"taban_10": 2,
+	&"taban_11": 2,
+	&"taban_12": 2,
+	&"taban_13": 2,
+	&"taban_14": 2,
+	&"taban_15": 2,
+	&"taban_16": 3,
+	&"taban_17": 3,
+	&"taban_18": 3,
+	&"taban_19": 3,
+	&"taban_20": 3,
+	&"taban_21": 3,
+	&"taban_22": 3,
+	&"taban_23": 3,
+	&"taban_24": 3,
+	&"taban_25": 3,
+	&"taban_26": 3,
+	&"taban_27": 3,
+	&"taban_28": 3,
+	&"taban_29": 3,
+	&"taban_30": 3,
+	&"taban_31": 3,
+	&"taban_32": 3,
+	&"taban_33": 3,
+	&"taban_34": 3,
+	&"taban_35": 4,
+	&"taban_36": 4,
+	&"taban_37": 4,
+	&"taban_38": 4,
+	&"taban_39": 4,
+	&"taban_40": 4,
+	&"taban_41": 4,
+	&"taban_42": 4,
+	&"taban_43": 4,
+	&"taban_44": 4,
+	&"taban_45": 4,
+	&"taban_46": 4,
+	&"taban_47": 4,
+	&"taban_48": 4,
+	&"taban_49": 4,
+	&"taban_50": 4,
+	&"taban_51": 4,
+	&"taban_52": 4,
+	&"taban_53": 4,
+	&"taban_54": 4,
+	&"taban_55": 4,
+	&"taban_56": 4,
+	&"taban_57": 4,
+	&"taban_58": 4,
+	&"taban_59": 4,
+	&"taban_60": 4,
+	&"taban_61": 4,
+	&"taban_62": 4,
+	&"taban_63": 4,
+	&"taban_64": 4,
+}
+## Zemin eşyalarının baktığı yön (dereceyle): avluya / yola dönük dururlar.
+const FLOOR_SLOT_YAW: Dictionary = {
+	&"taban_01": 0.0,
+	&"taban_02": 180.0,
+	&"taban_03": 0.0,
+	&"taban_04": 0.0,
+	&"taban_05": 180.0,
+	&"taban_06": 180.0,
+	&"taban_07": 0.0,
+	&"taban_08": 0.0,
+	&"taban_09": 0.0,
+	&"taban_10": 0.0,
+	&"taban_11": 180.0,
+	&"taban_12": 0.0,
+	&"taban_13": 0.0,
+	&"taban_14": 0.0,
+	&"taban_15": 0.0,
+	&"taban_16": 0.0,
+	&"taban_17": 0.0,
+	&"taban_18": 0.0,
+	&"taban_19": 180.0,
+	&"taban_20": 180.0,
+	&"taban_21": 0.0,
+	&"taban_22": 0.0,
+	&"taban_23": 0.0,
+	&"taban_24": 180.0,
+	&"taban_25": 0.0,
+	&"taban_26": 0.0,
+	&"taban_27": 0.0,
+	&"taban_28": 0.0,
+	&"taban_29": 0.0,
+	&"taban_30": 0.0,
+	&"taban_31": 0.0,
+	&"taban_32": 0.0,
+	&"taban_33": 0.0,
+	&"taban_34": 0.0,
+	&"taban_35": 0.0,
+	&"taban_36": 0.0,
+	&"taban_37": 0.0,
+	&"taban_38": 0.0,
+	&"taban_39": 180.0,
+	&"taban_40": 180.0,
+	&"taban_41": 180.0,
+	&"taban_42": 0.0,
+	&"taban_43": 0.0,
+	&"taban_44": 0.0,
+	&"taban_45": 0.0,
+	&"taban_46": 180.0,
+	&"taban_47": 180.0,
+	&"taban_48": 180.0,
+	&"taban_49": 0.0,
+	&"taban_50": 0.0,
+	&"taban_51": 0.0,
+	&"taban_52": 0.0,
+	&"taban_53": 0.0,
+	&"taban_54": 0.0,
+	&"taban_55": 0.0,
+	&"taban_56": 0.0,
+	&"taban_57": 0.0,
+	&"taban_58": 0.0,
+	&"taban_59": 0.0,
+	&"taban_60": 0.0,
+	&"taban_61": 0.0,
+	&"taban_62": 0.0,
+	&"taban_63": 0.0,
+	&"taban_64": 0.0,
+}
+## Duvar yuvası: garajın ARKA duvarının avluya bakan yüzü. Duvar seviyeyle birlikte kaydığı
+## için konum çalışma anında hesaplanır (bkz. GarageDecorView); buradaki değer seviye 1 içindir.
+const WALL_SLOTS: Dictionary = {
+	&"pano_a": Vector3(-1.20, 0.42, -1.62),
+	&"pano_b": Vector3(-1.95, 0.42, -1.62),
+	&"pano_c": Vector3(-0.45, 0.42, -1.62),
+}
+const WALL_SLOT_LEVEL: Dictionary = {&"pano_a": 1, &"pano_b": 2, &"pano_c": 2}
+const WALL_SLOT_YAW: Dictionary = {&"pano_a": 0.0, &"pano_b": 0.0, &"pano_c": 0.0}
+
+
+## Yuva adından yuva TÜRÜ ("taban_03" → "taban").
+static func kind_of(slot: StringName) -> StringName:
+	var text: String = String(slot)
+	var cut: int = text.find("_")
+	return StringName(text.substr(0, cut)) if cut > 0 else slot
+
+
+## Yuvanın açıldığı garaj seviyesi (1 tabanlı).
+static func level_of(slot: StringName) -> int:
+	if FLOOR_SLOT_LEVEL.has(slot):
+		return int(FLOOR_SLOT_LEVEL[slot])
+	if WALL_SLOT_LEVEL.has(slot):
+		return int(WALL_SLOT_LEVEL[slot])
+	return 1

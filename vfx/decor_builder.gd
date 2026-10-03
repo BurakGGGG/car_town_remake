@@ -60,14 +60,91 @@ const METER: float = 0.1367
 const PLACER_SCALE: float = 0.48
 
 
+## Eşyanın model yolu: katalogda scene_path varsa o, yoksa assets/decor/<id>.glb geleneği.
+static func model_path(id: StringName) -> String:
+	var custom: String = GarageDecor.scene_path(id)
+	return custom if custom != "" else MODEL_DIR + String(id) + ".glb"
+
+
 ## Bu eşyanın hazır modeli var mı?
 static func has_model(id: StringName) -> bool:
-	return ResourceLoader.exists(MODEL_DIR + String(id) + ".glb")
+	return ResourceLoader.exists(model_path(id))
+
+
+# --- Yerleşime hazır gövde -----------------------------------------------------------
+
+## id → {"offset": Vector3, "size": Vector3} (gövdenin KENDİ biriminde, WORLD_SCALE öncesi).
+static var _norm: Dictionary = {}
+
+
+## YERLEŞİME HAZIR gövde. Modellerin çoğunun orijini tabanında ya da ortasında DEĞİL (ölçüldü:
+## tree_slim, water_tower, garage_sign 0,157 birim zemine gömülüyordu; foosball, vending,
+## workbench 0,11–0,12). Burada her gövde bir kez ölçülür ve kaydırılır:
+##   zemin eşyası → taban y = 0, iz merkezi (0, 0): zemine oturur, KENDİ ortası etrafında döner
+##   duvar eşyası → dikey merkez y = 0, genişlik merkezi x = 0, ARKA yüz z = 0: duvara yaslanır
+## Eşya başına elle değer yok; yeni bir model de aynı kuralla doğru oturur.
+static func build_placeable(id: StringName) -> Node3D:
+	var inner: Node3D = build(id)
+	if inner == null:
+		return null
+	if not _norm.has(id):
+		_norm[id] = _measure(inner, GarageDecor.placement(id) == GarageDecor.PLACE_WALL)
+	var root: Node3D = Node3D.new()
+	root.name = String(id)
+	inner.position = (_norm[id] as Dictionary)["offset"]
+	root.add_child(inner)
+	return root
+
+
+## Gövdenin kendi birimindeki boyutu (x genişlik, y yükseklik, z derinlik), WORLD_SCALE öncesi.
+static func local_size(id: StringName) -> Vector3:
+	if not _norm.has(id):
+		var body: Node3D = build_placeable(id)
+		if body == null:
+			return Vector3.ZERO
+		body.free()
+	return (_norm[id] as Dictionary)["size"]
+
+
+static func _measure(root: Node3D, wall: bool) -> Dictionary:
+	var box: AABB = _local_bounds(root)
+	var c: Vector3 = box.get_center()
+	var offset: Vector3 = Vector3(-c.x, -c.y, -box.position.z) if wall \
+			else Vector3(-c.x, -box.position.y, -c.z)
+	return {"offset": offset, "size": box.size}
+
+
+## Ağaç henüz sahnede değilken (global_transform yok) görünür geometrinin kök uzayındaki kutusu.
+## Kutuyu değil 8 KÖŞEYİ dönüştürür: Transform3D * AABB döndürülmüş kutunun sınırını verip şişirir.
+static func _local_bounds(root: Node3D) -> AABB:
+	var out: AABB = AABB()
+	var first: bool = true
+	var stack: Array = [[root, Transform3D.IDENTITY]]
+	while not stack.is_empty():
+		var pair: Array = stack.pop_back()
+		var node: Node = pair[0]
+		var xf: Transform3D = pair[1]
+		for child: Node in node.get_children():
+			if child is Node3D:
+				stack.append([child, xf * (child as Node3D).transform])
+		if not (node is VisualInstance3D) or node == root:
+			continue
+		var local: AABB = (node as VisualInstance3D).get_aabb()
+		for i: int in 8:
+			var p: Vector3 = xf * (local.position + Vector3(
+				local.size.x if (i & 1) else 0.0, local.size.y if (i & 2) else 0.0,
+				local.size.z if (i & 4) else 0.0))
+			if first:
+				out = AABB(p, Vector3.ZERO)
+				first = false
+			else:
+				out = out.expand(p)
+	return out
 
 
 ## Hazır modeli yükler; metre ölçeğinden oyun ölçeğine çevrilmiş halde döner.
 static func _load_model(id: StringName) -> Node3D:
-	var scene: PackedScene = load(MODEL_DIR + String(id) + ".glb")
+	var scene: PackedScene = load(model_path(id))
 	if scene == null:
 		return null
 	var holder: Node3D = Node3D.new()

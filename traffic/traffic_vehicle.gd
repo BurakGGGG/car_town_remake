@@ -112,6 +112,9 @@ func _physics_process(delta: float) -> void:
 		_race_cooldown = maxf(_race_cooldown - delta, 0.0)
 	if target == null:
 		return
+	if manager and manager.can_leave_early(self, target):
+		_arrive(target)   # yol ucu kenara taşındı ama araç görünmüyor: eski yerinde silinir
+		return
 	var to_target: Vector3 = _flat(target.global_position - global_position)
 	var distance: float = to_target.length()
 
@@ -313,6 +316,10 @@ func return_to_traffic(point: TrafficWaypoint) -> void:
 		reached_despawn.emit(self)
 		return
 	_place_at(point)
+	if manager:
+		var start: Vector3 = manager.hidden_start(point)
+		if manager.is_clear(start):
+			global_position = Vector3(start.x, global_position.y, start.z)
 	speed = max_speed * 0.5
 
 

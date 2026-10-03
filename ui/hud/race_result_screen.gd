@@ -7,6 +7,8 @@ extends Control
 signal closed
 ## GARAJA DÖN: yarış modundan tamamen çıkılacak.
 signal exit_requested
+## Oyuncu "REKLAM İZLE" plakasına bastı (açık onay). Reklamı ve ödülü HUD yönetir; bu ekran yalnızca gösterir.
+signal bonus_requested
 
 const PLATE_WIDTH: float = 380.0
 
@@ -14,6 +16,8 @@ var _title: Label
 var _reward: Label
 var _times: Label
 var _winner: Label
+var _bonus_button: PlateButton
+var _bonus_amount: int = 0
 var _column: VBoxContainer
 var _closing: bool = false
 
@@ -37,7 +41,35 @@ func show_result(won: bool, player_time: float, rival_time: float, money: int, x
 		parts.append("+%d XP" % xp)
 	_reward.text = "   ".join(parts) if not parts.is_empty() else "ÖDÜL YOK"
 	_times.text = "SEN  %.2f sn        RAKİP  %.2f sn" % [player_time, rival_time]
+	hide_bonus()
 	_winner.text = "KAZANAN: %s" % String(CarCatalog.get_entry(winner_id).get("display_name", winner_id)).to_upper()
+
+
+## Ödüllü reklam teklifi: "REKLAM İZLE +X ₺". Yalnızca oyuncu basarsa reklam gösterilir.
+func offer_bonus(amount: int) -> void:
+	_bonus_amount = amount
+	_bonus_button.text = "REKLAM İZLE   +%s ₺" % Hud.format_thousands(amount)
+	_bonus_button.disabled = false
+	_bonus_button.visible = true
+
+
+## Reklam bitti ama ödül hak edilmedi (erken kapatıldı): teklif tekrar basılabilir olsun.
+func rearm_bonus() -> void:
+	if _bonus_amount > 0:
+		_bonus_button.disabled = false
+		_bonus_button.visible = true
+
+
+## Ödül verildi: teklif kapanır, ödül satırı bonusu gösterir.
+func bonus_granted(amount: int) -> void:
+	_bonus_button.visible = false
+	_bonus_amount = 0
+	_reward.text = "%s   +%s ₺ BONUS" % [_reward.text, Hud.format_thousands(amount)]
+
+
+func hide_bonus() -> void:
+	_bonus_amount = 0
+	_bonus_button.visible = false
 
 
 func open() -> void:
@@ -98,6 +130,17 @@ func _build() -> void:
 		box.add_child(label)
 	plate.add_child(box)
 	_column.add_child(plate)
+
+	_bonus_button = PlateButton.new()
+	_bonus_button.name = "BonusButton"
+	_bonus_button.theme_type_variation = &"HudPlate"
+	_bonus_button.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
+	_bonus_button.focus_mode = Control.FOCUS_NONE
+	_bonus_button.visible = false
+	_bonus_button.pressed.connect(func() -> void:
+		_bonus_button.disabled = true   # çift dokunuş: reklam bitene kadar pasif
+		bonus_requested.emit())
+	_column.add_child(_bonus_button)
 
 	var exit_button: PlateButton = PlateButton.new()
 	exit_button.name = "ExitButton"

@@ -59,6 +59,11 @@ func _connect() -> void:
 	var mastery: JobMastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
 	if mastery:
 		mastery.mastery_up.connect(func(_id: StringName, _stars: int) -> void: _check_completed())
+	var crates: CrateManager = get_tree().get_first_node_in_group("crates") as CrateManager
+	if crates:
+		crates.crate_added.connect(func(uid: int) -> void:
+			if String(crates.get_crate(uid).get("source", "")) == "gems":
+				_count(QuestCatalog.Type.CRATES_BOUGHT, 1))
 	_mark_announced()
 
 
@@ -147,6 +152,10 @@ func claim(quest_id: StringName) -> bool:
 		_economy.add_money(int(entry["money"]))
 	if _player and int(entry.get("gems", 0)) > 0:
 		_player.add_gems(int(entry["gems"]))
+	if StringName(entry.get("crate", &"")) != &"":
+		var crates: CrateManager = get_tree().get_first_node_in_group("crates") as CrateManager
+		if crates:
+			crates.grant_free(StringName(entry["crate"]), "quest:%s" % quest_id)
 	if _player and int(entry.get("xp", 0)) > 0:
 		_player.add_xp(int(entry["xp"]))   # seviye atlarsa level_up → yeni aktif görevler kontrol edilir
 	quest_claimed.emit(quest_id)
@@ -224,17 +233,17 @@ func load_state(data: Dictionary) -> void:
 	var claimed: Variant = data.get("claimed", [])
 	if claimed is Array:
 		for raw: Variant in claimed:
-			var quest_id: StringName = StringName(str(raw))
+			var quest_id: StringName = StringName(SaveSafe.s(raw))
 			if not QuestCatalog.get_entry(quest_id).is_empty() and not _claimed.has(quest_id):
 				_claimed.append(quest_id)
 	var counters: Variant = data.get("progress", {})
 	if counters is Dictionary:
 		for raw: Variant in counters:
-			var quest_id: StringName = StringName(str(raw))
+			var quest_id: StringName = StringName(SaveSafe.s(raw))
 			var entry: Dictionary = QuestCatalog.get_entry(quest_id)
-			if entry.is_empty() or _claimed.has(quest_id) or not QuestCatalog.is_counter(int(entry["type"])):
+			if entry.is_empty() or _claimed.has(quest_id) or not QuestCatalog.is_counter(SaveSafe.i(entry["type"])):
 				continue
-			_counters[quest_id] = clampi(int((counters as Dictionary)[raw]), 0, int(entry["target"]))
+			_counters[quest_id] = clampi(SaveSafe.i((counters as Dictionary)[raw]), 0, SaveSafe.i(entry["target"]))
 	_mark_announced()
 
 

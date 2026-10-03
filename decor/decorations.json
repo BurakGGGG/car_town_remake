@@ -1,0 +1,760 @@
+{
+  "version": 1,
+  "_readme": [
+    "GARAJ DEKORASYONU KATALOĞU — tek kaynak (gameplay/garage_decor.gd okur).",
+    "Yeni eşya = buraya bir kayıt + assets/decor/<id>.glb (ya da scene_path). Başka kod gerekmez.",
+    "kind: floor_surface | wall_surface | workshop | lounge | wall_item | yard | plant (palet kategorileri)",
+    "placement: floor (zemine) | wall (duvara) | surface (zemin/duvar kaplaması, yerleştirilmez uygulanır)",
+    "value: garaj değerine katkı (adet başına, fiyatın ~%40'ı). min_rank: garaj rütbesi kilidi.",
+    "İsteğe bağlı: scene_path (varsayılan assets/decor/<id>.glb), rotation_step (derece),",
+    "functional + gameplay_scene (işlevli eşya: gövdeyle aynı dönüşümü paylaşan oyun düğümü).",
+    "Boyut YAZILMAZ: yerleşim izi modelin gerçek sınırlarından ölçülür (elle yazılan boyut kayar)."
+  ],
+  "defaults": {
+    "rotation_step": 45,
+    "functional": false
+  },
+  "items": [
+    {
+      "id": "floor_tile",
+      "title": "KARO AVLU",
+      "kind": "floor_surface",
+      "placement": "surface",
+      "price": 6000,
+      "value": 2400,
+      "min_rank": 1,
+      "desc": "Açık gri karo. Avluyu aydınlatır."
+    },
+    {
+      "id": "floor_epoxy",
+      "title": "ASFALT AVLU",
+      "kind": "floor_surface",
+      "placement": "surface",
+      "price": 22000,
+      "value": 8800,
+      "min_rank": 3,
+      "desc": "Koyu asfalt kaplama. Profesyonel görünüm."
+    },
+    {
+      "id": "wall_brick",
+      "title": "TUĞLA DUVAR",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 9000,
+      "value": 3600,
+      "min_rank": 2,
+      "desc": "Kırmızı tuğla. Klasik tamirhane havası."
+    },
+    {
+      "id": "wall_panel",
+      "title": "PANEL DUVAR",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 30000,
+      "value": 12000,
+      "min_rank": 4,
+      "desc": "Beyaz panel kaplama. Temiz ve modern."
+    },
+    {
+      "id": "tool_cabinet",
+      "title": "TAKIM DOLABI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 3000,
+      "value": 1200,
+      "min_rank": 1,
+      "desc": "Kırmızı çekmeceli dolap."
+    },
+    {
+      "id": "tyre_rack",
+      "title": "LASTİK RAFI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 5000,
+      "value": 2000,
+      "min_rank": 1,
+      "desc": "İstiflenmiş yedek lastikler."
+    },
+    {
+      "id": "compressor",
+      "title": "KOMPRESÖR",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 12000,
+      "value": 4800,
+      "min_rank": 2,
+      "desc": "Hava kompresörü ve hortum makarası."
+    },
+    {
+      "id": "tool_trolley",
+      "title": "ALET ARABASI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 16000,
+      "value": 6400,
+      "min_rank": 3,
+      "desc": "Tekerlekli alet arabası."
+    },
+    {
+      "id": "sofa",
+      "title": "KANEPE",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 8000,
+      "value": 3200,
+      "min_rank": 2,
+      "desc": "Müşteri bekleme kanepesi."
+    },
+    {
+      "id": "coffee_table",
+      "title": "SEHPA",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 4000,
+      "value": 1600,
+      "min_rank": 1,
+      "desc": "Ahşap sehpa, üstünde dergiler."
+    },
+    {
+      "id": "vending",
+      "title": "OTOMAT",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 26000,
+      "value": 10400,
+      "min_rank": 4,
+      "desc": "Işıklı atıştırmalık otomatı."
+    },
+    {
+      "id": "neon_sign",
+      "title": "NEON TABELA",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 60000,
+      "value": 24000,
+      "min_rank": 6,
+      "desc": "Duvara asılan neon garaj tabelası."
+    },
+    {
+      "id": "oil_drums",
+      "title": "YAĞ VARİLLERİ",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 3500,
+      "value": 1400,
+      "min_rank": 1,
+      "desc": "Üç renkli yağ varili."
+    },
+    {
+      "id": "pallet_stack",
+      "title": "PALET YIĞINI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 2500,
+      "value": 1000,
+      "min_rank": 1,
+      "desc": "İstiflenmiş ahşap paletler."
+    },
+    {
+      "id": "tyre_pile",
+      "title": "LASTİK YIĞINI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 12000,
+      "value": 4800,
+      "min_rank": 2,
+      "desc": "Üst üste atılmış hurda lastikler."
+    },
+    {
+      "id": "jack_stand",
+      "title": "KRİKO",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 9500,
+      "value": 3800,
+      "min_rank": 2,
+      "desc": "Kırmızı zemin krikosu."
+    },
+    {
+      "id": "parts_shelf",
+      "title": "PARÇA RAFI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 34000,
+      "value": 13600,
+      "min_rank": 4,
+      "desc": "Üç katlı metal raf, kasalarla dolu."
+    },
+    {
+      "id": "traffic_cones",
+      "title": "TRAFİK KONİLERİ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 1500,
+      "value": 600,
+      "min_rank": 1,
+      "desc": "Üçlü turuncu koni takımı."
+    },
+    {
+      "id": "barrier",
+      "title": "BARİYER",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 7000,
+      "value": 2800,
+      "min_rank": 2,
+      "desc": "Kırmızı-beyaz yol bariyeri."
+    },
+    {
+      "id": "dumpster",
+      "title": "ÇÖP KONTEYNERİ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 11000,
+      "value": 4400,
+      "min_rank": 2,
+      "desc": "Tekerlekli yeşil konteyner."
+    },
+    {
+      "id": "container",
+      "title": "DEPO KONTEYNERİ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 48000,
+      "value": 19200,
+      "min_rank": 5,
+      "desc": "Nervürlü saç depo konteyneri."
+    },
+    {
+      "id": "fuel_pump",
+      "title": "YAKIT POMPASI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 85000,
+      "value": 34000,
+      "min_rank": 7,
+      "desc": "Kırmızı yakıt pompası, ekranlı."
+    },
+    {
+      "id": "bench",
+      "title": "BANK",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 5500,
+      "value": 2200,
+      "min_rank": 1,
+      "desc": "Ahşap latalı bahçe bankı."
+    },
+    {
+      "id": "picnic_table",
+      "title": "PİKNİK MASASI",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 14000,
+      "value": 5600,
+      "min_rank": 3,
+      "desc": "Oturaklı ahşap piknik masası."
+    },
+    {
+      "id": "potted_plant",
+      "title": "SAKSI BİTKİ",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 6500,
+      "value": 2600,
+      "min_rank": 2,
+      "desc": "Terracotta saksıda yeşillik."
+    },
+    {
+      "id": "lamp_post",
+      "title": "AYDINLATMA DİREĞİ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 40000,
+      "value": 16000,
+      "min_rank": 5,
+      "desc": "Işıklı avlu direği."
+    },
+    {
+      "id": "flagpole",
+      "title": "BAYRAK DİREĞİ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 120000,
+      "value": 48000,
+      "min_rank": 8,
+      "desc": "Garaj bayrağı taşıyan direk."
+    },
+    {
+      "id": "hedge",
+      "title": "ÇİT BİTKİ",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 3000,
+      "value": 1200,
+      "min_rank": 1,
+      "desc": "Budanmış yeşil çit bloğu."
+    },
+    {
+      "id": "tyre_planter",
+      "title": "LASTİK SAKSI",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 3500,
+      "value": 1400,
+      "min_rank": 1,
+      "desc": "Boyalı lastiğin içinde çiçek."
+    },
+    {
+      "id": "planter_box",
+      "title": "AHŞAP SAKSI",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 5000,
+      "value": 2000,
+      "min_rank": 1,
+      "desc": "Ahşap kasada üç yeşillik."
+    },
+    {
+      "id": "flower_bed",
+      "title": "ÇİÇEK TARHI",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 7500,
+      "value": 3000,
+      "min_rank": 2,
+      "desc": "Taş bordürlü çiçek tarhı."
+    },
+    {
+      "id": "vase_large",
+      "title": "BÜYÜK VAZO",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 9000,
+      "value": 3600,
+      "min_rank": 2,
+      "desc": "Terracotta vazoda yeşillik."
+    },
+    {
+      "id": "tree_round",
+      "title": "YUVARLAK AĞAÇ",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 18000,
+      "value": 7200,
+      "min_rank": 3,
+      "desc": "Geniş taçlı gölge ağacı."
+    },
+    {
+      "id": "tree_slim",
+      "title": "İNCE AĞAÇ",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 20000,
+      "value": 8000,
+      "min_rank": 3,
+      "desc": "Uzun ve dar, sıraya dizilir."
+    },
+    {
+      "id": "tree_pine",
+      "title": "ÇAM",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 24000,
+      "value": 9600,
+      "min_rank": 4,
+      "desc": "Üç katlı iğne yapraklı çam."
+    },
+    {
+      "id": "tree_palm",
+      "title": "PALMİYE",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 38000,
+      "value": 15200,
+      "min_rank": 5,
+      "desc": "Yedi yapraklı palmiye."
+    },
+    {
+      "id": "speed_bump",
+      "title": "KASİS",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 2000,
+      "value": 800,
+      "min_rank": 1,
+      "desc": "Sarı-siyah hız kesici."
+    },
+    {
+      "id": "warning_sign",
+      "title": "UYARI TABELASI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 2800,
+      "value": 1120,
+      "min_rank": 1,
+      "desc": "Katlanır sarı uyarı levhası."
+    },
+    {
+      "id": "jerry_cans",
+      "title": "BENZİN BİDONLARI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 3200,
+      "value": 1280,
+      "min_rank": 1,
+      "desc": "Üç yedek yakıt bidonu."
+    },
+    {
+      "id": "sandbags",
+      "title": "KUM TORBALARI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 3800,
+      "value": 1520,
+      "min_rank": 1,
+      "desc": "Üç sıra istiflenmiş torba."
+    },
+    {
+      "id": "wooden_crates",
+      "title": "AHŞAP KASALAR",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 4000,
+      "value": 1600,
+      "min_rank": 1,
+      "desc": "Dört ahşap nakliye kasası."
+    },
+    {
+      "id": "bollards",
+      "title": "DUBA SIRASI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 4500,
+      "value": 1800,
+      "min_rank": 1,
+      "desc": "Üç sarı baba."
+    },
+    {
+      "id": "arrow_sign",
+      "title": "YÖN OKU",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 5500,
+      "value": 2200,
+      "min_rank": 1,
+      "desc": "Direkli sarı yön oku."
+    },
+    {
+      "id": "cable_reel",
+      "title": "KABLO MAKARASI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 6000,
+      "value": 2400,
+      "min_rank": 2,
+      "desc": "Ahşap makarada kalın kablo."
+    },
+    {
+      "id": "extinguisher_stand",
+      "title": "YANGIN TÜPÜ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 7500,
+      "value": 3000,
+      "min_rank": 2,
+      "desc": "İki tüplü stand."
+    },
+    {
+      "id": "hose_reel",
+      "title": "HORTUM MAKARASI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 8500,
+      "value": 3400,
+      "min_rank": 2,
+      "desc": "Duvara sabit hortum makarası."
+    },
+    {
+      "id": "car_ramps",
+      "title": "ÇIKIŞ RAMPALARI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 9000,
+      "value": 3600,
+      "min_rank": 2,
+      "desc": "Sarı çift servis rampası."
+    },
+    {
+      "id": "parking_sign",
+      "title": "PARK TABELASI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 13000,
+      "value": 5200,
+      "min_rank": 3,
+      "desc": "Mavi park levhası."
+    },
+    {
+      "id": "air_station",
+      "title": "HAVA İSTASYONU",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 28000,
+      "value": 11200,
+      "min_rank": 4,
+      "desc": "Lastik hava ve basınç ünitesi."
+    },
+    {
+      "id": "spare_doors",
+      "title": "YEDEK KAPILAR",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 11000,
+      "value": 4400,
+      "min_rank": 2,
+      "desc": "Duvara yaslı üç kaporta kapısı."
+    },
+    {
+      "id": "welding_set",
+      "title": "KAYNAK TAKIMI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 17000,
+      "value": 6800,
+      "min_rank": 3,
+      "desc": "İki tüplü kaynak arabası."
+    },
+    {
+      "id": "engine_block",
+      "title": "MOTOR BLOĞU",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 22000,
+      "value": 8800,
+      "min_rank": 3,
+      "desc": "Sehpaya alınmış motor."
+    },
+    {
+      "id": "barrel_rack",
+      "title": "VARİL RAFI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 26000,
+      "value": 10400,
+      "min_rank": 4,
+      "desc": "İki katlı, altı varilli raf."
+    },
+    {
+      "id": "workbench",
+      "title": "ÇALIŞMA TEZGÂHI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 32000,
+      "value": 12800,
+      "min_rank": 4,
+      "desc": "Alet panolu ahşap tezgâh."
+    },
+    {
+      "id": "cooler",
+      "title": "BUZLUK",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 4500,
+      "value": 1800,
+      "min_rank": 1,
+      "desc": "Mavi taşınabilir buzluk."
+    },
+    {
+      "id": "deck_chair",
+      "title": "ŞEZLONG",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 6000,
+      "value": 2400,
+      "min_rank": 1,
+      "desc": "Bez şezlong."
+    },
+    {
+      "id": "dog_house",
+      "title": "KÖPEK KULÜBESİ",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 8000,
+      "value": 3200,
+      "min_rank": 2,
+      "desc": "Kırmızı çatılı kulübe."
+    },
+    {
+      "id": "bbq",
+      "title": "MANGAL",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 15000,
+      "value": 6000,
+      "min_rank": 3,
+      "desc": "Kapaklı yuvarlak mangal."
+    },
+    {
+      "id": "parasol_table",
+      "title": "ŞEMSİYELİ MASA",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 21000,
+      "value": 8400,
+      "min_rank": 3,
+      "desc": "Kırmızı şemsiyeli masa, üç tabure."
+    },
+    {
+      "id": "string_lights",
+      "title": "IŞIK DİZİSİ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 26000,
+      "value": 10400,
+      "min_rank": 4,
+      "desc": "İki direk arası asma ampuller."
+    },
+    {
+      "id": "floodlight",
+      "title": "PROJEKTÖR DİREĞİ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 45000,
+      "value": 18000,
+      "min_rank": 5,
+      "desc": "Çift başlı avlu projektörü."
+    },
+    {
+      "id": "garage_sign",
+      "title": "GARAJ TABELASI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 110000,
+      "value": 44000,
+      "min_rank": 7,
+      "desc": "Çift direkli büyük tabela."
+    },
+    {
+      "id": "wall_clock",
+      "title": "DUVAR SAATİ",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 6500,
+      "value": 2600,
+      "min_rank": 2,
+      "desc": "Klasik yuvarlak atölye saati."
+    },
+    {
+      "id": "wall_poster",
+      "title": "POSTER",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 8000,
+      "value": 3200,
+      "min_rank": 2,
+      "desc": "Çerçeveli yarış posteri."
+    },
+    {
+      "id": "neon_garage",
+      "title": "NEON 'GARAJ'",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 75000,
+      "value": 30000,
+      "min_rank": 6,
+      "desc": "Harf harf neon garaj tabelası."
+    },
+    {
+      "id": "mechanic",
+      "title": "TAMİRCİ FİGÜRÜ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 25000,
+      "value": 10000,
+      "min_rank": 3,
+      "desc": "Tulumlu, şapkalı tamirci."
+    },
+    {
+      "id": "foosball",
+      "title": "LANGIRT MASASI",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 30000,
+      "value": 12000,
+      "min_rank": 3,
+      "desc": "Sekiz çubuklu langırt."
+    },
+    {
+      "id": "jukebox",
+      "title": "JUKEBOX",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 35000,
+      "value": 14000,
+      "min_rank": 4,
+      "desc": "Kavisli, ışıklı müzik dolabı."
+    },
+    {
+      "id": "motorcycle",
+      "title": "MOTOSİKLET",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 45000,
+      "value": 18000,
+      "min_rank": 5,
+      "desc": "Telli jantlı klasik motor."
+    },
+    {
+      "id": "wreck",
+      "title": "HURDA ARAÇ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 55000,
+      "value": 22000,
+      "min_rank": 5,
+      "desc": "Paslı, camı kırık, tek tekeri eksik."
+    },
+    {
+      "id": "water_tower",
+      "title": "SU DEPOSU",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 65000,
+      "value": 26000,
+      "min_rank": 6,
+      "desc": "Dört ayaklı, merdivenli su kulesi."
+    },
+    {
+      "id": "trophy_case",
+      "title": "KUPA VİTRİNİ",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 70000,
+      "value": 28000,
+      "min_rank": 6,
+      "desc": "Işıklı camlı dokuz kupalı vitrin."
+    },
+    {
+      "id": "trailer",
+      "title": "SERVİS RÖMORKU",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 80000,
+      "value": 32000,
+      "min_rank": 7,
+      "desc": "Pencereli, kapılı servis karavanı."
+    },
+    {
+      "id": "car_lift",
+      "title": "ARAÇ LİFTİ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 95000,
+      "value": 38000,
+      "min_rank": 7,
+      "desc": "İki sütunlu hidrolik lift.",
+      "retired": true
+    }
+  ]
+}

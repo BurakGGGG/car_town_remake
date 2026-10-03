@@ -1,13 +1,24 @@
 extends SceneTree
 ## Mobil UI denetimi: her ekranı açar, ekran görüntüsü alır, kadraj dışına taşan Control'leri ve
-## küçük dokunma hedeflerini listeler. Ölçüler CANVAS birimindedir (taban 1152x648).
+## GÖRÜNÜR boyu küçük düğmeleri listeler. Ölçüler TUVAL birimindedir (taban 1152x648).
+##
+## DİKKAT — tuval birimi dp değildir: dikey 648 birim her cihazda ekran yüksekliği olduğu için
+## oyuncunun telefonunda (A24) 1 birim ≈ 0,67 dp. Bu eşik (44) GÖRÜNÜR boyu denetler; DOKUNMA alanı
+## ondan büyüktür (PlateButton.MIN_TOUCH = 72 ≈ 48 dp, görünmez kenar payıyla) ve ayrıca
+## qa/dokunma_testi.gd ile gerçek dokunuşla doğrulanır.
+## Kaydırma alanlarının (ScrollContainer) İÇİ taşma sayılmaz — garajın sol sütunu gibi kaydırılan
+## içerikte "görünür mü" sorusu için qa/garaj_sutun.gd var.
 const OUT: String = "/home/burak/Projects/ct_shots/ui/"
-const MIN_TOUCH: float = 44.0
+const MIN_TOUCH: float = PlateButton.MIN_PLATE_HEIGHT
 var _hud: Node
 var _router: Node
 var _frame: int = 0
 var _step: int = 0
-var _screens: Array = [&"garage", &"showroom", &"quest", &"garage_value"]
+# "quests" (çoğul) kayıtlı kimliktir; eskiden "quest" yazıyordu ve router onu sessizce
+# reddettiği için o rapor aslında dünya görünümünü tekrar ölçüyordu.
+var _screens: Array = [&"garage", &"showroom", &"quests", &"garage_value", &"mastery",
+	&"profile", &"account", &"garage_edit"]
+var _all_small: Dictionary = {}   # "ad (sınıf) GxY" → ilk görüldüğü ekran
 var _tag: String = ""
 
 func _initialize() -> void:
@@ -52,8 +63,10 @@ func _report(label: String) -> void:
 	_walk(_hud, over, small)
 	print("--- %s @ %s | kadraj %s" % [label, _tag, _canvas_rect().size])
 	print("    taşan: %d %s" % [over.size(), over if over.size() <= 6 else over.slice(0, 6)])
-	print("    küçük dokunma hedefi (<%dpx): %d %s" % [int(MIN_TOUCH), small.size(),
-		small if small.size() <= 8 else small.slice(0, 8)])
+	print("    küçük dokunma hedefi (<%dpx): %d" % [int(MIN_TOUCH), small.size()])
+	for s: String in small:
+		if not _all_small.has(s):
+			_all_small[s] = label
 	RenderingServer.force_draw()
 	get_root().get_texture().get_image().save_png("%s%s_%s.png" % [OUT, _tag, label])
 
@@ -80,6 +93,9 @@ func _process(_delta: float) -> bool:
 			_report(String(_screens[_step - 1]))
 			_router.call("close_all") if _router.has_method("close_all") else _router.call("open", &"")
 		if _step >= _screens.size():
+			print("=== TÜM EKRANLARDA KÜÇÜK DOKUNMA HEDEFİ: %d (tekilleştirilmiş) ===" % _all_small.size())
+			for s: String in _all_small:
+				print("  [%s] %s" % [_all_small[s], s])
 			print("TAMAM")
 			quit(0)
 			return true

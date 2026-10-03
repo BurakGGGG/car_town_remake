@@ -17,6 +17,8 @@ extends HBoxContainer
 signal repair_pressed(type: RepairType)
 ## PARA TOPLA basıldı (ödül hazır).
 signal collect_pressed
+## "REKLAM İZLE" (süre kısaltma) basıldı — açık onay; reklamı HUD yönetir.
+signal boost_pressed
 
 enum Mode { DAMAGED, BUSY, REPAIRING, READY, REPAIRED, NORMAL }
 
@@ -266,9 +268,16 @@ func show_ready() -> void:
 	_pop(_action_box)
 
 
-func show_repairing(progress: float, remaining: float) -> void:
+## boost_available: ödüllü reklamla kalan süre yarıya indirilebilir → buton "REKLAM İZLE" olur.
+func show_repairing(progress: float, remaining: float, boost_available: bool = false) -> void:
 	if _mode != Mode.REPAIRING:
 		_set_mode(Mode.REPAIRING)
+	if boost_available:
+		_button.disabled = false
+		_button.text = "REKLAM İZLE"
+		_button.kind = HudIcon.Kind.NONE
+		_reward_label.text = "Süre yarıya iner"
+	else:
 		_button.disabled = true
 		_button.text = "TAMİRE AL"
 		_button.kind = HudIcon.Kind.WRENCH
@@ -310,6 +319,9 @@ func _set_mode(mode: Mode) -> void:
 func _on_button_pressed() -> void:
 	if _mode == Mode.READY:
 		collect_pressed.emit()
+	elif _mode == Mode.REPAIRING:
+		_button.disabled = true   # çift dokunuş: reklam bitene kadar pasif
+		boost_pressed.emit()
 	else:
 		repair_pressed.emit(_issue_type)
 

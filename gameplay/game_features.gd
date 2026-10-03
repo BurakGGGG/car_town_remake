@@ -9,3 +9,8 @@ class_name GameFeatures
 ## Kapalıyken: garajda BOYA plakası görünmez, boya panosu açılmaz ve HER araç (oyuncununki de,
 ## trafikteki NPC'ler de) kendi FABRİKA rengiyle çıkar. true yapıldığında sistem geri gelir.
 const PAINT: bool = false
+
+## REKLAMLAR (AdMob, ödüllü) — altyapı ads/ klasöründe. Kapalıyken AdService hiçbir sağlayıcı kurmaz ve hiçbir
+## teklif çıkmaz. Release derlemede ek olarak AdConfig'te GERÇEK reklam birimi kimliği dolu olmalıdır (boşsa kapalı).
+## Ödül yalnızca ₺ ve süre kısaltmadır; gem verilmez.
+const ADS: bool = true

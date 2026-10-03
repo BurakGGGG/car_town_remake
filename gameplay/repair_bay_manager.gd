@@ -27,9 +27,20 @@ signal purchase_failed(index: int, price: int)
 signal bays_changed
 ## Dünyadaki kilitli alana tıklandı (HUD satın alma plakasını açar).
 signal bay_clicked(index: int)
+## Bir alanın yeri / yönü değişti (garaj düzenleyicisi, kayıttan yükleme, yeni oyun).
+signal layout_changed
 
 ## Alan ücretleri (1., 2., 3. alan). İlk alan ücretsizdir. Fiyatın tek tanımlandığı yer burasıdır.
 const BAY_PRICES: Array[int] = [0, 5000, 12000]
+
+## Tamir alanının zemin izi (x, z; yön 0°'de) — CarSpot ve kilitli alan görseli bu ölçüdedir.
+const BAY_SIZE: Vector2 = Vector2(0.5, 0.7)
+## Varsayılan yerler (dünya x, z) ve yön. Her alan, KENDİ seviyesinde ilk kez ortaya çıkan zemin
+## şeridine düşer (Sv.1 → x -0,2..-2,2; Sv.2 → -3,6'ya kadar; Sv.3 → -4,6'ya kadar): garaj
+## büyümeden o bölgeye eşya konamayacağı için ortaya çıkan alan hiçbir şeyin üstüne binmez.
+## Oyuncu bunları garaj düzenleyicisinde taşır; kayıtta yalnızca değişenler değil hepsi durur.
+const DEFAULT_POSITIONS: Array[Vector2] = [Vector2(-1.72, -1.05), Vector2(-3.1, -1.05), Vector2(-4.05, -1.05)]
+const DEFAULT_YAW: float = 90.0
 
 enum Status {
 	OPEN,           ## açık, kullanımda
@@ -43,6 +54,8 @@ enum Status {
 
 var _unlocked: int = 1
 var _locks: Dictionary = {}   # indeks → kilitli alan görselinin kökü (Node3D)
+var _positions: Array[Vector2] = DEFAULT_POSITIONS.duplicate()
+var _yaws: Array[float] = [DEFAULT_YAW, DEFAULT_YAW, DEFAULT_YAW]
 
 
 func _ready() -> void:
@@ -109,6 +122,17 @@ func is_bay_revealed(index: int) -> bool:
 	return index < level
 
 
+## Dünyada İNŞA EDİLMİŞ alanların CarSpot node'ları (açık ya da kilitli). Kilitli alan da ileride
+## araç alacağı için garaj düzenleyicisi hepsini engel sayar (üstüne eşya konamaz).
+func revealed_spots() -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	var spots: Array[Node3D] = _spots()
+	for i: int in spots.size():
+		if is_bay_revealed(i) and is_instance_valid(spots[i]):
+			out.append(spots[i])
+	return out
+
+
 ## UI'ın tek karar noktası.
 func status(index: int) -> Status:
 	if is_bay_unlocked(index):
@@ -151,6 +175,37 @@ func purchase(index: int) -> bool:
 
 # --- Kayıt ------------------------------------------------------------------------
 
+## Alanın lifti (CarSpot'un çocuğu); yoksa null.
+func lift(index: int) -> RepairLift:
+	var spots: Array[Node3D] = _spots()
+	if index < 0 or index >= spots.size() or not is_instance_valid(spots[index]):
+		return null
+	return spots[index].get_node_or_null("Lift") as RepairLift
+
+
+## Araç tamire alınırken: araç lifte oturur ve lift kalkar. Araç Y kotu liftin işidir.
+func raise_lift(index: int, car: Node3D) -> void:
+	var l: RepairLift = lift(index)
+	if l == null:
+		return
+	l.raise(car)                        # önce eski kotu hatırlar
+	car.global_position.y = l.car_y()   # alçak liftin yürüme yoluna otur
+
+
+## Tamir bitince (ya da araç iş sırasında çekilirse): lift iner.
+func lower_lift(index: int) -> void:
+	var l: RepairLift = lift(index)
+	if l:
+		l.lower()
+
+
+## Araç alandan ayrılırken (para toplandı / iş iptal): lift alçak konuma, araç eski kotuna.
+func release_lift(index: int) -> void:
+	var l: RepairLift = lift(index)
+	if l:
+		l.release()
+
+
 ## Kayda yazılacak değer: açık alan sayısı.
 func state() -> int:
 	return unlocked_count()
@@ -163,11 +218,90 @@ func load_state(count: int) -> void:
 	bays_changed.emit()
 
 
-## Yeni oyun: yalnızca ilk alan.
+## Yeni oyun: yalnızca ilk alan, alanlar varsayılan yerinde.
 func reset() -> void:
 	_unlocked = starting_bays
+	_positions = DEFAULT_POSITIONS.duplicate()
+	_yaws = [DEFAULT_YAW, DEFAULT_YAW, DEFAULT_YAW]
 	_refresh_world()
 	bays_changed.emit()
+
+
+# --- Yerleşim (taşınabilir alanlar) -------------------------------------------------
+
+## Alanın merkezi (dünya x, z).
+func bay_position(index: int) -> Vector2:
+	return _positions[index] if index >= 0 and index < _positions.size() else Vector2.ZERO
+
+
+## Alanın yönü (derece, Y ekseni).
+func bay_yaw(index: int) -> float:
+	return _yaws[index] if index >= 0 and index < _yaws.size() else DEFAULT_YAW
+
+
+## Dünyada şu an görünen düğüm: açık alanda CarSpot, kilitli alanda kilit görseli.
+func bay_node(index: int) -> Node3D:
+	if _locks.has(index) and is_instance_valid(_locks[index]):
+		return _locks[index]
+	var spots: Array[Node3D] = _spots()
+	return spots[index] if index >= 0 and index < spots.size() and is_instance_valid(spots[index]) else null
+
+
+## Yeri kalıcı olarak değiştirir (geçerlilik denetimi çağıranındır: GarageDecorView.is_bay_valid).
+func set_layout(index: int, pos: Vector2, yaw: float) -> void:
+	if index < 0 or index >= _positions.size():
+		return
+	_positions[index] = pos
+	_yaws[index] = fposmod(yaw, 360.0)
+	apply_layout(index)
+	layout_changed.emit()
+	_request_save()
+
+
+## Alanın görselini kayıtlı yerine koyar (sürükleme iptalinde de bununla geri döner).
+func apply_layout(index: int) -> void:
+	preview_layout(index, bay_position(index), bay_yaw(index))
+
+
+## Kaydetmeden yalnızca görseli taşır (sürüklerken canlı önizleme).
+func preview_layout(index: int, pos: Vector2, yaw: float) -> void:
+	var spots: Array[Node3D] = _spots()
+	var targets: Array[Node3D] = []
+	if index >= 0 and index < spots.size() and is_instance_valid(spots[index]):
+		targets.append(spots[index])
+	if _locks.has(index) and is_instance_valid(_locks[index]):
+		targets.append(_locks[index])
+	for node: Node3D in targets:
+		var y: float = node.global_position.y
+		node.global_transform = Transform3D(Basis(Vector3.UP, deg_to_rad(yaw)), Vector3(pos.x, y, pos.y))
+
+
+## Kayıt: her alan için {x, z, yaw}.
+func layout_state() -> Array:
+	var out: Array = []
+	for i: int in _positions.size():
+		out.append({"x": _positions[i].x, "z": _positions[i].y, "yaw": _yaws[i]})
+	return out
+
+
+## Kayıttan yerler; eksik / bozuk giriş varsayılanda kalır (eski kayıtta hiç yoktur).
+func load_layout(data: Variant) -> void:
+	_positions = DEFAULT_POSITIONS.duplicate()
+	_yaws = [DEFAULT_YAW, DEFAULT_YAW, DEFAULT_YAW]
+	if data is Array:
+		for i: int in mini((data as Array).size(), _positions.size()):
+			var entry: Variant = (data as Array)[i]
+			if not (entry is Dictionary):
+				continue
+			var d: Dictionary = entry
+			var x: float = SaveSafe.f(d.get("x", _positions[i].x))
+			var z: float = SaveSafe.f(d.get("z", _positions[i].y))
+			if absf(x) > 50.0 or absf(z) > 50.0:
+				continue
+			_positions[i] = Vector2(x, z)
+			_yaws[i] = fposmod(SaveSafe.f(d.get("yaw", DEFAULT_YAW)), 360.0)
+	_refresh_world()
+	layout_changed.emit()
 
 
 # --- Dünya görselleri -------------------------------------------------------------
@@ -182,6 +316,8 @@ func _refresh_world() -> void:
 		var open: bool = is_bay_unlocked(i)
 		var revealed: bool = is_bay_revealed(i)
 		spot.visible = open
+		if spot.get_node_or_null("Lift") == null:
+			spot.add_child(RepairLift.new())   # alan = lift (CarSpot'un çocuğu: alanla birlikte taşınır)
 		# Kilit görseli yalnızca "inşa edilmiş ama satın alınmamış" alanlarda durur
 		if (open or not revealed) and _locks.has(i):
 			(_locks[i] as Node3D).queue_free()
@@ -190,6 +326,8 @@ func _refresh_world() -> void:
 			_locks[i] = _build_lock(i, spot)
 		if _locks.has(i):
 			_update_lock_text(i)
+		if i < _positions.size():
+			apply_layout(i)
 
 
 ## Kilitli alan: koyu zemin + sarı bariyer + asma kilit + krem fiyat plakası + tıklama kutusu.
@@ -226,7 +364,11 @@ func _build_lock(index: int, spot: Node3D) -> Node3D:
 	plate_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var quad: QuadMesh = QuadMesh.new()
 	quad.size = Vector2(0.56, 0.19)
-	root.add_child(_mesh("Plate", quad, plate_mat, Vector3(0.0, 0.30, 0.0)))
+	# Fiyat plakası ve yazısı dünya plakası katmanında: garaj düzenlenirken görünmez (garajın
+	# içinde, eşyaların önünde yüzüyordu). Asma kilit ve bariyer zeminde kalır.
+	var plate: MeshInstance3D = _mesh("Plate", quad, plate_mat, Vector3(0.0, 0.30, 0.0))
+	plate.layers = WorldCamera.LAYER_WORLD_UI
+	root.add_child(plate)
 
 	var label: Label3D = Label3D.new()
 	label.name = "PlateText"
@@ -239,6 +381,7 @@ func _build_lock(index: int, spot: Node3D) -> Node3D:
 	label.modulate = Color("2F3236")
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.position = Vector3(0.0, 0.30, 0.0)
+	label.layers = WorldCamera.LAYER_WORLD_UI
 	root.add_child(label)
 
 	# Tıklama kutusu (car_hitbox / shop_hitbox ile aynı yöntem)

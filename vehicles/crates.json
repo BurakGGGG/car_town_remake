@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "_readme": [
+    "ARAÇ TESLİMAT KASALARI — tek veri kaynağı (CrateCatalog okur). Tasarım: docs/vehicle_crate_design_v2.md",
+    "Olasılık = aracın nadirlik ağırlığı / kasa havuzundaki ağırlıkların toplamı. Sahiplik ve keşif olasılığı DEĞİŞTİRMEZ.",
+    "Aracın nadirliği vehicles/cars.json 'rarity' alanındadır (sınıftan bağımsız).",
+    "GÖRSEL: scene_path boşsa kod içindeki yer tutucu kasa kurulur. Gerçek model için .glb ya da .tscn yolunu yazın.",
+    "  Model sözleşmesi: kök Node3D; orijin zeminde, kasanın ortasında; uzun kenar +X boyunca.",
+    "  Hedef dış ölçü (dünya birimi): world_size [x, y, z]. Farklı ölçüde üretilirse 'scale' ile düzeltilir.",
+    "  İsteğe bağlı: AnimationPlayer içinde 'open' animasyonu (kilitler + kapaklar). Varsa açılışta o oynar,",
+    "  yoksa yer tutucunun kod animasyonu oynar. İsteğe bağlı Marker3D 'VehicleAnchor': aracın çıkacağı nokta.",
+    "icon: showroom listesinde kullanılacak Texture2D yolu (boşsa renkli plaka).",
+    "open_effect: açılışta kasanın üstünde oluşturulacak sahne yolu (boşsa ışık patlaması)."
+  ],
+  "rarities": [
+    {"id": "common", "label": "COMMON", "weight": 100, "color": "#8C9A86"},
+    {"id": "rare", "label": "RARE", "weight": 40, "color": "#3E8ED0"},
+    {"id": "epic", "label": "EPIC", "weight": 15, "color": "#9A5BD3"},
+    {"id": "legendary", "label": "LEGENDARY", "weight": 4, "color": "#E8A317"}
+  ],
+  "world_size": [0.72, 0.38, 0.46],
+  "sets": [
+    {"id": "yerli_klasikler", "name": "YERLİ KLASİKLER", "cars": ["tofas_sahin", "renault_toros"]},
+    {"id": "kore_hatti", "name": "KORE HATTI", "cars": ["hyundai_era", "hyundai_getz", "hyundai_accent_blue"]},
+    {"id": "vw_grubu", "name": "VW GRUBU", "cars": ["vw_passat_b55", "vw_golf_7", "skoda_kamiq", "seat_leon", "audi_a3"]},
+    {"id": "sicak_kompakt", "name": "SICAK KOMPAKT", "cars": ["ford_focus", "vw_golf_7", "seat_leon", "honda_civic"]},
+    {"id": "aile_sedani", "name": "AİLE SEDANI", "cars": ["hyundai_era", "vw_passat_b55", "renault_fluence", "volvo_s60"]},
+    {"id": "bavyera", "name": "BAVYERA", "cars": ["bmw_e46", "bmw_e60"]},
+    {"id": "premium", "name": "PREMIUM", "cars": ["bmw_e46", "audi_a3", "volvo_s60", "bmw_e60"]}
+  ],
+  "crates": [
+    {
+      "id": "city_crate",
+      "display_name": "ŞEHİR KASASI",
+      "short_name": "ŞEHİR",
+      "price_gems": 30,
+      "min_level": 1,
+      "pool": ["hyundai_getz", "hyundai_accent_blue", "hyundai_era", "ford_focus", "renault_toros"],
+      "color": "#C9A46A",
+      "scene_path": "",
+      "icon": "",
+      "open_effect": "",
+      "scale": 1.0
+    },
+    {
+      "id": "family_crate",
+      "display_name": "AİLE KASASI",
+      "short_name": "AİLE",
+      "price_gems": 50,
+      "min_level": 10,
+      "pool": ["vw_passat_b55", "renault_fluence", "skoda_kamiq", "vw_golf_7"],
+      "color": "#5F8FB0",
+      "scene_path": "",
+      "icon": "",
+      "open_effect": "",
+      "scale": 1.0
+    },
+    {
+      "id": "sport_crate",
+      "display_name": "SPOR KASASI",
+      "short_name": "SPOR",
+      "price_gems": 80,
+      "min_level": 14,
+      "pool": ["seat_leon", "honda_civic", "bmw_e46"],
+      "color": "#C4473A",
+      "scene_path": "",
+      "icon": "",
+      "open_effect": "",
+      "scale": 1.0
+    },
+    {
+      "id": "prestige_crate",
+      "display_name": "PRESTİJ KASASI",
+      "short_name": "PRESTİJ",
+      "price_gems": 120,
+      "min_level": 20,
+      "pool": ["audi_a3", "volvo_s60", "bmw_e60"],
+      "color": "#2E3440",
+      "scene_path": "",
+      "icon": "",
+      "open_effect": "",
+      "scale": 1.0
+    }
+  ]
+}

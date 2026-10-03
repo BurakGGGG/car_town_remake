@@ -156,7 +156,7 @@ func state() -> Dictionary:
 func load_state(data: Dictionary) -> void:
 	_counts.clear()
 	for key: String in data:
-		_counts[StringName(key)] = maxi(int(data[key]), 0)
+		_counts[StringName(key)] = maxi(SaveSafe.i(data[key]), 0)
 
 
 func reset() -> void:

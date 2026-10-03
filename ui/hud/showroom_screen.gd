@@ -1,7 +1,14 @@
 class_name ShowroomScreen
 extends Control
 ## MAĞAZA — tam ekran showroom (alt sekmedeki MAĞAZA ile aynı yer). Haritadaki "CAR PARTS & SHOWROOM" binasına tıklayınca açılır
-## (shop_hitbox.gd), araç satın almanın TEK yeridir (alt menüdeki ARAÇLAR artık mağaza açmaz).
+## (shop_hitbox.gd).
+##
+## KASA SİSTEMİ (docs/vehicle_crate_design_v2.md): burada artık ARAÇ SATILMAZ. Sol listede dört
+## ARAÇ TESLİMAT KASASI (ŞEHİR / AİLE / SPOR / PRESTİJ, gem ile) durur; seçilen kasanın modeli
+## platformda döner, sağ plakada fiyatı, seviye şartı ve havuzundaki HER aracın gerçek olasılığı
+## yazar. Satın alınan kasa garajın teslimat alanına FİZİKSEL olarak gelir (CrateManager +
+## CrateDelivery); showroom kapanır, kamera kasaya gider. Listenin altındaki GERİ AL bölümü yalnızca
+## daha önce keşfedilmiş ama satılmış araçları ₺ ile geri satar.
 ##
 ## Garaj ekranının çalışan düzenini örnek alır ama daha lüks bir mekân kurar: kendi 3D dünyası
 ## (SubViewport), koyu showroom zemini, ışıklı sergi platformu, spot ışıklar, cam/ahşap/metal duvar
@@ -20,10 +27,14 @@ extends Control
 signal opened
 signal closed
 signal vehicle_purchased(vehicle_id: StringName)
+## Kasa satın alındı (HUD showroom'u kapatıp kamerayı teslimat alanına götürür).
+signal crate_purchased(uid: int)
+## Başka bir pano istendi (KOLEKSİYON).
+signal screen_requested(id: StringName)
 
 const TITLE: String = "MAĞAZA"
 const LIST_WIDTH: float = 188.0
-const INFO_WIDTH: float = 210.0
+const INFO_WIDTH: float = 250.0   # kasa oran satırları (nadirlik · model · yüzde) tek satıra sığsın
 const SLIDE: float = 18.0
 
 # --- 3D sahne ölçüleri (araç ~1 birim uzunlukta) ---
@@ -67,7 +78,11 @@ var _info_plate: PurchasePlate
 var _buy_button: PlateButton
 var _exit_button: PlateButton
 
-var _plates: Dictionary = {}               # araç id → PlateButton
+var _plates: Dictionary = {}               # "crate:<id>" / "car:<id>" → PlateButton
+var _shown_crate: StringName = &""         # platformdaki kasa (araç gösteriliyorsa &"")
+var _closing_after_buy: bool = false       # satın alındı, showroom kapanıyor: buton kilitli kalır
+var _crates: CrateManager
+var _progress: PlayerProgress
 var _group: ButtonGroup = ButtonGroup.new()
 var _shown_vehicle: StringName = &""
 var _preview: Node3D
@@ -110,17 +125,19 @@ func open() -> void:
 	if visible:
 		return
 	_closing = false
+	_closing_after_buy = false
 	show()
 	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	_rebuild_list()
-	var target: StringName = _shown_vehicle if _shown_vehicle != &"" else _first_vehicle()
-	_shown_vehicle = &""
 	_zoom = 1.0
 	_zoom_target = 1.0
 	_spin_velocity = 0.0
 	_idle_time = AUTO_RESUME
 	_display_root.rotation = Vector3(0.0, deg_to_rad(-38.0), 0.0)   # showroom açılış kadrajı: 3/4
-	_show_vehicle(target)
+	var target: StringName = _shown_crate if _shown_crate != &"" else _first_crate()
+	_shown_crate = &""
+	_shown_vehicle = &""
+	_show_crate(target)
 	set_process(true)
 	opened.emit()
 	_enter_animation()
@@ -149,9 +166,14 @@ func _finish_close() -> void:
 	closed.emit()
 
 
-## Gösterilen araç (CarCatalog id; kapalıyken en son bakılan araç).
+## Gösterilen araç (GERİ AL listesinden; kasa gösteriliyorsa &"").
 func shown_vehicle() -> StringName:
 	return _shown_vehicle
+
+
+## Gösterilen kasa (araç gösteriliyorsa &"").
+func shown_crate() -> StringName:
+	return _shown_crate
 
 
 # --- 3D showroom --------------------------------------------------------------
@@ -691,6 +713,15 @@ func _build_overlay() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sign.add_child(title)
 	_title_group.add_child(sign)
+	var collection: PlateButton = PlateButton.new()
+	collection.name = "CollectionButton"
+	collection.theme_type_variation = &"HudPlateSmall"
+	collection.kind = HudIcon.Kind.CAR
+	collection.text = "KOLEKSİYON"
+	collection.focus_mode = Control.FOCUS_NONE
+	collection.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	collection.pressed.connect(func() -> void: screen_requested.emit(&"collection"))
+	_title_group.add_child(collection)
 
 	# Orta: solda araç plakaları, sağda bilgi + satın alma
 	var middle: HBoxContainer = HBoxContainer.new()
@@ -777,52 +808,95 @@ func _label(variation: StringName, text: String) -> Label:
 	return label
 
 
-# --- Araç listesi ve bilgisi -----------------------------------------------------
+# --- Kasa listesi, geri alma ve bilgi -------------------------------------------------
 
 func _connect_managers() -> void:
 	_ownership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 	_economy = get_tree().get_first_node_in_group("economy") as EconomyManager
+	_crates = get_tree().get_first_node_in_group("crates") as CrateManager
+	_progress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
 	if _ownership:
 		_ownership.ownership_changed.connect(_refresh_state)
 	if _economy:
 		_economy.money_changed.connect(func(_m: int) -> void: _refresh_state())
+	if _progress:
+		_progress.gems_changed.connect(func(_g: int) -> void: _refresh_state())
+		_progress.level_up.connect(func(_l: int) -> void: _refresh_state())
+	if _crates:
+		_crates.crates_changed.connect(_refresh_state)
 
 
-func _first_vehicle() -> StringName:
-	var entries: Array[Dictionary] = CarCatalog.all()
+func _first_crate() -> StringName:
+	var entries: Array[Dictionary] = CrateCatalog.all()
 	return entries[0]["id"] if not entries.is_empty() else &""
 
 
-## Katalogdaki her araç için bir plaka (bir kez kurulur).
+## Kasalar + (varsa) GERİ AL bölümü. Keşfedilmiş araç listesi değiştiği için her açılışta kurulur.
 func _rebuild_list() -> void:
-	if not _plates.is_empty():
-		_refresh_state()
-		return
-	for entry: Dictionary in CarCatalog.all():
-		var id: StringName = entry["id"]
-		var plate: PlateButton = PlateButton.new()
-		plate.name = String(id)
-		plate.text = CarCatalog.label(entry)
-		plate.theme_type_variation = &"HudPlate"
-		plate.kind = HudIcon.Kind.CAR
-		plate.toggle_mode = true
-		plate.button_group = _group
-		plate.focus_mode = Control.FOCUS_NONE
-		plate.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		plate.custom_minimum_size = Vector2(LIST_WIDTH - 16.0, 46.0)
-		plate.toggled.connect(_on_plate_toggled.bind(id))
-		_list_box.add_child(plate)
-		_plates[id] = plate
+	for child: Node in _list_box.get_children():
+		child.queue_free()
+	_plates.clear()
+	_list_box.add_child(_section_label("ARAÇ KASALARI"))
+	for crate: Dictionary in CrateCatalog.all():
+		var id: StringName = crate["id"]
+		var plate: PlateButton = _list_plate("crate:%s" % id, "%s\n%d GEM" % [crate["display_name"], crate["price_gems"]], HudIcon.Kind.GEM)
+		plate.toggled.connect(func(pressed: bool) -> void:
+			if pressed:
+				_show_crate(id))
+	var buyback: Array[StringName] = []
+	if _ownership:
+		for id: StringName in _ownership.discovered_ids():
+			if not _ownership.is_owned(id):
+				buyback.append(id)
+	if not buyback.is_empty():
+		_list_box.add_child(_section_label("GERİ AL"))
+		for id: StringName in buyback:
+			var plate: PlateButton = _list_plate("car:%s" % id, CarCatalog.label(CarCatalog.get_entry(id)), HudIcon.Kind.CAR)
+			plate.toggled.connect(func(pressed: bool) -> void:
+				if pressed:
+					_show_vehicle(id))
 	_group.allow_unpress = false
+
+
+func _list_plate(key: String, text: String, icon: HudIcon.Kind) -> PlateButton:
+	var plate: PlateButton = PlateButton.new()
+	plate.name = key.replace(":", "_")
+	plate.text = text
+	plate.theme_type_variation = &"HudPlate"
+	plate.kind = icon
+	plate.toggle_mode = true
+	plate.button_group = _group
+	plate.focus_mode = Control.FOCUS_NONE
+	plate.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	plate.custom_minimum_size = Vector2(LIST_WIDTH - 16.0, 46.0)
+	_list_box.add_child(plate)
+	_plates[key] = plate
+	return plate
+
+
+func _section_label(text: String) -> Label:
+	var label: Label = _label(&"HudPlateTitle", text)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	return label
+
+
+## Seçili kasayı platforma ve bilgi plakasına koyar.
+func _show_crate(crate_id: StringName) -> void:
+	if crate_id == &"" or (crate_id == _shown_crate and _shown_vehicle == &""):
+		return
+	if not CrateCatalog.exists(crate_id):
+		push_warning("ShowroomScreen: '%s' kasası yok" % crate_id)
+		return
+	_shown_crate = crate_id
+	_shown_vehicle = &""
+	var plate: PlateButton = _plates.get("crate:%s" % crate_id)
+	if plate:
+		plate.set_pressed_no_signal(true)
+	_load_crate_preview(crate_id)
 	_refresh_state()
 
 
-func _on_plate_toggled(pressed: bool, vehicle_id: StringName) -> void:
-	if pressed:
-		_show_vehicle(vehicle_id)
-
-
-## Seçili aracı bilgi plakalarına ve sergi platformuna koyar (aynı anda tek model yüklenir).
+## GERİ AL listesindeki (keşfedilmiş, satılmış) aracı platforma koyar. Aynı anda tek model yüklenir.
 func _show_vehicle(vehicle_id: StringName) -> void:
 	if vehicle_id == &"" or vehicle_id == _shown_vehicle:
 		return
@@ -831,17 +905,59 @@ func _show_vehicle(vehicle_id: StringName) -> void:
 		push_warning("ShowroomScreen: katalogda '%s' yok" % vehicle_id)
 		return
 	_shown_vehicle = vehicle_id
-	var plate: PlateButton = _plates.get(vehicle_id)
+	_shown_crate = &""
+	var plate: PlateButton = _plates.get("car:%s" % vehicle_id)
 	if plate:
 		plate.set_pressed_no_signal(true)
 	_load_preview(entry["scene_path"])
 	_refresh_state()
 
 
-## Satın alma plakası: sahiplik ve bakiyeye göre (mevcut VehicleOwnership.status kararı).
 func _refresh_state() -> void:
-	if _shown_vehicle == &"":
-		return
+	if _shown_crate != &"":
+		_refresh_crate()
+	elif _shown_vehicle != &"":
+		_refresh_vehicle()
+
+
+## Kasa plakası: fiyat, seviye şartı ve havuzdaki her aracın GERÇEK olasılığı (açık oranlar).
+func _refresh_crate() -> void:
+	var entry: Dictionary = CrateCatalog.get_entry(_shown_crate)
+	var lines: PackedStringArray = PackedStringArray()
+	for row: Dictionary in CrateCatalog.odds(_shown_crate):
+		var car: Dictionary = CarCatalog.get_entry(row["id"])
+		var mark: String = "✔ " if _ownership and _ownership.is_owned(row["id"]) else ""
+		lines.append("%s%%%s  %s  ·  %s" % [mark, ("%.1f" % (float(row["chance"]) * 100.0)).replace(".", ","),
+			String(car.get("display_name", row["id"])).to_upper(), CrateCatalog.rarity_label(row["rarity"])])
+	var price: int = int(entry["price_gems"])
+	if _progress and _progress.gems < price:
+		lines.append("GEM: GÜNLÜK GİRİŞ · GÖREVLER · SEVİYE · USTALIK")   # gem nereden gelir (QA: anlatılmıyordu)
+	_info_plate.set_content(String(entry["display_name"]),
+		"ARAÇ TESLİMAT KASASI  ·  SV %d+" % int(entry["min_level"]), "%d GEM" % price, lines)
+	_buy_button.kind = HudIcon.Kind.GEM
+	var reason: String = _crates.buy_block_reason(_shown_crate) if _crates else "unknown"
+	if _closing_after_buy:
+		reason = "busy"
+	match reason:
+		"":
+			_buy_button.text = "SATIN AL\n%d GEM" % price
+			_buy_button.disabled = false
+		"level":
+			_buy_button.text = "SEVİYE %d\nGEREKLİ" % int(entry["min_level"])
+			_buy_button.disabled = true
+		"gems":
+			_buy_button.text = "%d GEM\nGEM YETERSİZ" % price
+			_buy_button.disabled = true
+		"full":
+			_buy_button.text = "ÖNCE GARAJDAKİ\nKASALARI AÇ"
+			_buy_button.disabled = true
+		_:
+			_buy_button.text = "%d GEM" % price
+			_buy_button.disabled = true
+
+
+## GERİ AL plakası: keşfedilmiş aracın ₺ fiyatı (VehicleOwnership.status kararı).
+func _refresh_vehicle() -> void:
 	var entry: Dictionary = CarCatalog.get_entry(_shown_vehicle)
 	var price: int = int(entry.get("price", 0))
 	_info_plate.set_content(
@@ -849,6 +965,7 @@ func _refresh_state() -> void:
 		ProgressionEffects.vehicle_subtitle(_shown_vehicle),
 		"%s ₺" % Hud.format_thousands(price),
 		ProgressionEffects.vehicle_lines(get_tree(), _shown_vehicle))
+	_buy_button.kind = HudIcon.Kind.COIN
 	if _ownership == null:
 		_buy_button.text = "%s ₺" % Hud.format_thousands(price)
 		_buy_button.disabled = true
@@ -860,27 +977,52 @@ func _refresh_state() -> void:
 		VehicleOwnership.Status.TOO_EXPENSIVE:
 			_buy_button.text = "%s ₺\nPARA YETERSİZ" % Hud.format_thousands(price)
 			_buy_button.disabled = true
-		VehicleOwnership.Status.LOCKED_LEVEL:
-			_buy_button.text = "SEVİYE %d\nGEREKLİ" % _ownership.required_level(_shown_vehicle)
-			_buy_button.disabled = true
-		VehicleOwnership.Status.LOCKED_RANK:
-			_buy_button.text = "GARAJ RÜTBESİ %d\nGEREKLİ" % _ownership.required_rank(_shown_vehicle)
+		VehicleOwnership.Status.UNDISCOVERED:
+			_buy_button.text = "KASADAN ÇIKAR"
 			_buy_button.disabled = true
 		_:
-			_buy_button.text = "SATIN AL\n%s ₺" % Hud.format_thousands(price)
+			_buy_button.text = "GERİ AL\n%s ₺" % Hud.format_thousands(price)
 			_buy_button.disabled = false
 
 
 func _on_buy_pressed() -> void:
+	# Çift dokunuş: satın alma showroom'u kapatır; kapanış animasyonu sırasında (ya da aynı karede
+	# ikinci basışta) ikinci bir kasa alınmasın.
+	if _closing or not visible:
+		return
+	if _shown_crate != &"":
+		if _crates == null:
+			return
+		var uid: int = _crates.buy(_shown_crate)   # gem + sonuç + kayıt CrateManager'da
+		if uid > 0:
+			_buy_button.disabled = true
+			_closing_after_buy = true
+			crate_purchased.emit(uid)
+			return
+		_refresh_state()
+		return
 	if _ownership == null or _shown_vehicle == &"":
 		return
 	# Para, sahiplik ve kayıt zinciri VehicleOwnership'in içinde: burada yeni mantık yok
 	if _ownership.purchase_vehicle(_shown_vehicle):
 		vehicle_purchased.emit(_shown_vehicle)
+		_rebuild_list()
 	_refresh_state()
 
 
 # --- Önizleme modeli --------------------------------------------------------------
+
+## Kasanın dünyadaki modelinin (ya da yer tutucusunun) aynısını platforma koyar. Model tembel
+## yüklenir; showroom kapanınca serbest kalır.
+func _load_crate_preview(crate_id: StringName) -> void:
+	_free_model()
+	var crate: CrateVisual = CrateVisual.new()
+	crate.setup(crate_id, 0)
+	crate.set_tag_visible(false)
+	crate.set_clickable(false)
+	_preview = crate
+	_model_slot.add_child(crate)
+	_fit_to_platform()
 
 ## Seçili aracın mevcut .tscn modelini sergi platformuna koyar; öncekini serbest bırakır.
 func _load_preview(scene_path: String) -> void:

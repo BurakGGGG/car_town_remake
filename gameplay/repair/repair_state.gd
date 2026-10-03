@@ -25,6 +25,8 @@ var elapsed: float = 0.0
 var is_repairing: bool = false
 var is_completed: bool = false   # sayaç bitti
 var is_collected: bool = false   # ödül alındı
+## Ödüllü reklamla süre kısaltıldı mı? Bir iş EN ÇOK BİR kez kısaltılır.
+var boosted: bool = false
 
 
 func _init(target: Node3D, type: RepairType, issue_severity: float = 1.0) -> void:
@@ -56,6 +58,16 @@ func start() -> void:
 	is_repairing = true
 	is_completed = false
 	phase = Phase.REPAIRING
+
+
+## Kalan sürenin `fraction` kadarını siler (0.5 = yarıya indirir). Yalnızca süren ve daha önce kısaltılmamış iş.
+## Ödül / XP değişmez; yalnızca bekleme kısalır. Dönen: kısaltma uygulandı mı.
+func boost(fraction: float) -> bool:
+	if not is_repairing or boosted:
+		return false
+	boosted = true
+	elapsed += remaining * clampf(fraction, 0.0, 1.0)
+	return true
 
 
 ## Süreyi ilerletir; bu çağrıda tamamlandıysa true döner (aşama REWARD_WAITING: ödül toplanmayı bekler).

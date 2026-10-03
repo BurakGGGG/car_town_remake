@@ -164,6 +164,7 @@ const SCHEMA: Array[Dictionary] = [
 	{"key": "condition", "kind": Kind.FLOAT, "default": 1.0, "min": 0.0, "max": 1.0},
 	{"key": "category", "kind": Kind.TEXT, "default": ""},
 	{"key": "class", "kind": Kind.TEXT, "default": ""},          # D/C/B/A — yalnızca gösterim
+	{"key": "rarity", "kind": Kind.NAME, "default": &"common"},  # kasa nadirliği (bkz. CrateCatalog) — sınıftan BAĞIMSIZ
 	{"key": "min_level", "kind": Kind.INT, "default": 1, "min": 1},          # showroom kilidi (oyuncu seviyesi)
 	{"key": "min_garage_rank", "kind": Kind.INT, "default": 1, "min": 1},    # showroom kilidi (GarageValue rütbesi)
 	{"key": "scene_path", "kind": Kind.TEXT, "default": "", "required": true},

@@ -23,15 +23,17 @@ signal expand_clicked
 ]
 
 @export var level_prices: PackedInt32Array = [
-	10000,
-	25000,
-	50000,
-	100000
+	30000,
+	75000,
+	150000,
+	300000
 ]
 
 # Fiziksel ölçüler
-var level_widths = [2.0, 4.0, 6.0, 8.0]
-var level_depths = [1.5, 3.0, 4.5, 6.0]
+# Tamir alanları taşınabilir (RepairBayManager.DEFAULT_POSITIONS): her alanın varsayılan yeri kendi
+# seviyesinde açılan zemin şeridine düşer (Sv.3'te x ≥ -4,4 → genişlik ≥ 4,6).
+var level_widths = [2.0, 3.6, 4.6, 5.6]
+var level_depths = [1.5, 2.2, 2.9, 3.6]
 
 const FIXED_RIGHT_X := -0.2
 const FIXED_FRONT_Z := -0.2
@@ -40,6 +42,7 @@ const BACK_WALL_WIDTH := 2.0
 
 
 var _sign: Node3D
+var _sign_hidden: bool = false
 
 
 func _ready():
@@ -49,6 +52,9 @@ func _ready():
 	add_to_group("garage_system")
 	_ensure_decor_manager()
 	_ensure_decor_view()
+	_ensure_crate_system()
+	_ensure_editor.call_deferred()
+	_ensure_world_dressing.call_deferred()
 	_hide_build_grid()
 	_connect_upgrade.call_deferred()
 
@@ -63,11 +69,53 @@ func _ensure_decor_manager() -> void:
 	add_child(decor)
 
 
+## ARAÇ TESLİMAT KASALARI da kodla kurulur (sahne dosyası elle düzenlenmiyor): kasa durumu ve
+## kayıt (CrateManager, "crates"), tekrarlayan gem kaynakları (GemRewards, "gem_rewards") ve
+## dünyadaki teslimat alanı (CrateDelivery, "crate_delivery"). Burada SENKRON kurulurlar: HUD'un
+## ertelenmiş bağlantısı ve SaveManager'ın ertelenmiş yüklemesi onları hazır bulur.
+func _ensure_crate_system() -> void:
+	if get_tree().get_first_node_in_group("crates") == null:
+		var crates: CrateManager = CrateManager.new()
+		crates.name = "CrateManager"
+		add_child(crates)
+	if get_tree().get_first_node_in_group("gem_rewards") == null:
+		var gems: GemRewards = GemRewards.new()
+		gems.name = "GemRewards"
+		add_child(gems)
+	if get_tree().get_first_node_in_group("crate_delivery") == null:
+		add_child(CrateDelivery.new())
+	# REKLAM servisi (ödüllü): kodla kurulur, SaveManager'dan ÖNCE hazır olmalı (sayaçları o yükler).
+	if get_tree().get_first_node_in_group("ads") == null:
+		var ads: AdService = AdService.new()
+		ads.name = "AdService"
+		add_child(ads)
+
+
 ## Avludaki dekorasyon görünümü de kodla kurulur (sahne dosyası elle düzenlenmiyor).
 func _ensure_decor_view() -> void:
 	if get_tree().get_first_node_in_group("garage_decor_view") != null:
 		return
 	add_child(GarageDecorView.new())
+
+
+## Garaj düzenleyicisi (world/garage_editor.gd) de kodla kurulur. Sahnenin SON çocuğu olur:
+## Godot _unhandled_input'u ağaçtaki son düğümden başlatır, böylece düzenleyici eşya sürüklerken
+## olayları kameradan ve araç kutularından önce alıp tüketebilir. (Ertelenmiş: sahne kurulurken
+## current_scene'e çocuk eklenemez.)
+func _ensure_editor() -> void:
+	if get_tree().get_first_node_in_group("garage_editor") != null:
+		return
+	var host: Node = get_tree().current_scene if get_tree().current_scene else get_parent()
+	host.add_child(GarageEditor.new())
+
+
+## Dünyanın tamamlanması (world/world_dressing.gd) de kodla kurulur: yollar kameranın gidebileceği
+## kenara kadar uzar, yarım kalan showroom binası yenisiyle değişir, trafiğin uç noktaları taşınır.
+func _ensure_world_dressing() -> void:
+	var host: Node = get_tree().current_scene if get_tree().current_scene else get_parent()
+	if host.get_node_or_null("WorldDressing") != null:
+		return
+	host.add_child(WorldDressing.new())
 
 
 ## Yerleştirme ızgarası (BuildGrid) açılış kadrajının tam ortasında camgöbeği tel kafes olarak
@@ -206,6 +254,7 @@ func _update_sign(upgrades: GarageUpgradeManager) -> void:
 	if not is_instance_valid(_sign):
 		_sign = _build_sign()
 		add_child(_sign)
+		_sign.visible = not _sign_hidden
 	# Garajın ön-sağ köşesinde, zeminin ÜSTÜNDE durur (yolun üstünde durursa geçen araçlar
 	# tıklamayı kapatıyor; sağ/ön kenar sabit olduğu için garaj büyüse de tabela yerinde kalır)
 	_sign.position = Vector3(FIXED_RIGHT_X - 0.32, 0.0, FIXED_FRONT_Z - 0.4)
@@ -213,6 +262,24 @@ func _update_sign(upgrades: GarageUpgradeManager) -> void:
 	label.text = "GARAJI GENİŞLET\nSEVİYE %d  ·  %s ₺" % [
 		upgrades.level(GarageUpgradeManager.GARAGE_ID) + 1,
 		Hud.format_thousands(upgrades.next_cost(GarageUpgradeManager.GARAGE_ID))]
+
+
+## Genişletme tabelasının zemindeki izi (dünya X/Z); tabela yoksa boş dikdörtgen. Tabela havada
+## (y ≈ 0,28–0,48) ve hep kameraya dönük asılı; altına uzun eşya konursa içinden geçerdi. İz,
+## çapraz duran 0,62'lik plakayı kapsayan kare (0,62 · cos45° ≈ 0,44).
+## Düzenleme modunda tabela GİZLENİR (eşyaların önüne biniyor, o modda tıklanamıyor da) ama izi
+## engel olmaya devam eder: yoksa çıkınca tabela yerleştirilen eşyanın içine girerdi.
+func sign_footprint() -> Rect2:
+	if not is_instance_valid(_sign):
+		return Rect2()
+	var c: Vector3 = _sign.global_position
+	return Rect2(Vector2(c.x - 0.23, c.z - 0.23), Vector2(0.46, 0.46))
+
+
+func set_sign_hidden(hidden: bool) -> void:
+	_sign_hidden = hidden
+	if is_instance_valid(_sign):
+		_sign.visible = not hidden
 
 
 func _build_sign() -> Node3D:

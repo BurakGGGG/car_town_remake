@@ -50,6 +50,9 @@ const WIN_REWARD: Dictionary = {
 	"B": {"money": 1000, "xp": 50},
 	"A": {"money": 1400, "xp": 70},
 }
+## Sahiplik düğümü yoksa (test sahnesi) yarışa çıkan araç.
+const FALLBACK_VEHICLE: StringName = &"tofas_sahin"
+
 ## Kaybedince verilen XP oranı (para yok).
 const LOSS_XP_RATIO: float = 0.3
 
@@ -134,13 +137,15 @@ func rival_id_for(player_id: StringName) -> StringName:
 	return pool[_rng.randi_range(0, pool.size() - 1)]
 
 
-## Oyuncunun yarışa çıkaracağı araç: garajda seçili olan, yoksa sahip olunan ilk araç.
+## Oyuncunun yarışa çıkaracağı araç: garajda YARIŞ ARACI olarak seçilen (VehicleOwnership.race_vehicle_id);
+## seçilmemişse başlangıç aracı Tofaş Şahin. (Eskiden sahip olunan ilk araç dönüyordu: o da E46'ydı,
+## oyuncu ilk dakikadan A sınıfıyla yarışıyordu.)
 func player_vehicle_id() -> StringName:
 	var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 	if ownership == null:
-		return &"bmw_e46"
-	var owned: Array[StringName] = ownership.owned_vehicle_ids()
-	return owned[0] if not owned.is_empty() else &"bmw_e46"
+		return FALLBACK_VEHICLE
+	var id: StringName = ownership.race_vehicle_id()
+	return id if id != &"" else FALLBACK_VEHICLE
 
 
 func challenger() -> TrafficVehicle:

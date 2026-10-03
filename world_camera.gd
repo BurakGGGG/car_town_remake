@@ -10,6 +10,12 @@ extends Camera3D
 ## car_hitbox seçimi aynen çalışır; yalnızca eşik üstü sürükleme pan olur.
 ## Mobil: tek parmak sürükleme (fare emülasyonu) → pan, iki parmak pinch → zoom.
 
+## Dünyadaki kameraya dönük plakaların görüntü katmanı: araç balonları (🔧 / ₺ / 🏁) ve kilitli
+## tamir alanının fiyat plakası. Garaj düzenlenirken kamera bu katmanı göstermez — telefonda
+## denendi: yarış rakibinin balonu ve tamirdeki aracın plakası eşyaların önünü kapatıyordu.
+## Balonların görünürlüğünü (visible) araç mantığı kullandığı için onlara dokunulmaz, katman gizlenir.
+const LAYER_WORLD_UI: int = 1 << 1
+
 @export_group("Dünya Sınırları (zemin X/Z — ekranın hiçbir köşesi dışarı taşmaz)")
 ## GrassArea (20×20, merkez -0.954 / 0.648) biraz içeriden.
 @export var world_min: Vector2 = Vector2(-10.8, -9.2)
@@ -99,6 +105,68 @@ func _unhandled_input(event: InputEvent) -> void:
 			# Parmaklar açılınca yaklaş (size küçülür), kapanınca uzaklaş
 			_target_size = clampf(_pinch_start_size * (_pinch_start_dist / maxf(_touch_distance(), 1.0)), min_zoom, _max_zoom_fit())
 			get_viewport().set_input_as_handled()
+
+
+## Verilen kutuyu (ör. garajın zemini + duvar yüksekliği) ekranın dikey [top, bottom] oranları
+## arasına ve yatayda kenar payları içine SIĞDIRACAK şekilde yumuşakça odaklanır. Önceki görünümü
+## döndürür (restore_view ile geri alınır). Garaj düzenleyicisi kullanır: alt paletin üstünde
+## kalan alana garajın tamamı sığsın.
+func frame_box(box: AABB, top: float = 0.14, bottom: float = 0.64, side: float = 0.05) -> Dictionary:
+	var before: Dictionary = {"focus": _focus, "size": _target_size}
+	var right: Vector3 = global_transform.basis.x
+	var up: Vector3 = global_transform.basis.y
+	var lo: Vector2 = Vector2(INF, INF)
+	var hi: Vector2 = Vector2(-INF, -INF)
+	for i: int in 8:
+		var p: Vector3 = box.position + Vector3(box.size.x if (i & 1) else 0.0,
+			box.size.y if (i & 2) else 0.0, box.size.z if (i & 4) else 0.0)
+		var s: Vector2 = Vector2(p.dot(right), p.dot(up))
+		lo = lo.min(s)
+		hi = hi.max(s)
+	var screen: Vector2 = get_viewport().get_visible_rect().size
+	var aspect: float = screen.x / maxf(screen.y, 1.0)
+	var needed: float = maxf((hi.y - lo.y) / maxf(bottom - top, 0.1),
+		(hi.x - lo.x) / maxf((1.0 - side * 2.0) * aspect, 0.1))
+	var final_size: float = clampf(needed, min_zoom, _max_zoom_fit())
+	# Kutunun merkezi ekranda [top, bottom] aralığının ortasına düşsün: odağı zemin üzerinde
+	# kaydırıp kutunun ekrandaki yerini ölç, farkı pan_by_pixels ile kapat (aynı dönüşümle).
+	var keep_size: float = size
+	var keep_focus: Vector3 = _focus
+	size = final_size
+	_focus = Vector3(box.get_center().x, 0.0, box.get_center().z)
+	_apply_focus()
+	var target: Vector2 = Vector2(screen.x * 0.5, screen.y * (top + bottom) * 0.5)
+	pan_by_pixels(target - unproject_position(box.get_center()))
+	var final_focus: Vector3 = _focus
+	size = keep_size
+	_focus = keep_focus
+	_apply_focus()
+	_glide_to(final_focus, final_size)
+	return before
+
+
+## Dünya plakaları (LAYER_WORLD_UI) görünsün mü?
+func set_world_ui_visible(on: bool) -> void:
+	cull_mask = (cull_mask | LAYER_WORLD_UI) if on else (cull_mask & ~LAYER_WORLD_UI)
+
+
+## frame_box'tan önceki görünüme döner.
+func restore_view(state: Dictionary) -> void:
+	if state.has("focus") and state.has("size"):
+		_glide_to(state["focus"], float(state["size"]))
+
+
+var _glide: Tween
+
+
+func _glide_to(focus: Vector3, zoom: float) -> void:
+	if _glide:
+		_glide.kill()
+	_target_size = clampf(zoom, min_zoom, max_zoom)
+	_glide = create_tween()
+	_glide.tween_method(func(f: Vector3) -> void:
+		_focus = f
+		_apply_focus(), _focus, focus, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 ## Ekran pikseli cinsinden sürükleme → odak noktası zeminde kayar (sınırlar içinde).

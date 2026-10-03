@@ -23,6 +23,8 @@ extends HBoxContainer
 signal vehicle_selected(vehicle_id: StringName)
 ## Bir araç satın alındı (plakadan).
 signal vehicle_purchased(vehicle_id: StringName)
+## Bir render grubu önbelleğe girdi (başka ekranlar — koleksiyon — kendi görsellerini tazeler).
+signal thumbnails_rendered
 
 enum Mode {
 	SHOP,   ## katalogdaki tüm araçlar + satın alma plakası
@@ -281,6 +283,16 @@ func _refresh_actions() -> void:
 # --- Küçük render'lar ------------------------------------------------------------
 
 ## Açılışta ilk birkaç aracı önden üretir; gerisi plaka ilk çizildiğinde kuyruğa girer.
+## Başka ekranlar için (koleksiyon): önbellekteki küçük render, yoksa null.
+static func cached_thumbnail(id: StringName) -> Texture2D:
+	return _thumbnails.get(id)
+
+
+## Başka ekranlar için render isteği; bu galeri örneği render ev sahibi olur (ağaçta olmalı).
+func request_thumbnail(id: StringName) -> void:
+	_request_thumbnail(id)
+
+
 func _prewarm_thumbnails() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
@@ -388,6 +400,7 @@ func _render_thumbnails(ids: Array[StringName]) -> void:
 	if is_inside_tree():
 		for plate: PlateButton in _plates:
 			plate.queue_redraw()
+	thumbnails_rendered.emit()
 
 
 func _on_appearance_changed(id: StringName) -> void:

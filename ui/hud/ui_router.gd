@@ -22,6 +22,9 @@ signal stack_changed(top: StringName, place_open: bool)
 
 enum Kind { PLACE, MODAL }
 
+## Kök garajda GERİ'ye ikinci basışın geçerli olduğu süre (ms).
+const EXIT_CONFIRM_MS: int = 2000
+
 var _screens: Dictionary = {}   # id → {"node": Control, "kind": Kind}
 var _stack: Array[StringName] = []
 
@@ -97,6 +100,34 @@ func current_place() -> StringName:
 
 func screen(id: StringName) -> Control:
 	return _screens[id]["node"] if _screens.has(id) else null
+
+
+## Android GERİ tuşu: proje `quit_on_go_back=false` olduğundan sistem uygulamayı kendiliğinden
+## kapatmaz; karar burada. Sıra: dış işleyici (ör. kasa panosu) → açık ekran → kökte çift basış çıkışı.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		handle_android_back()
+
+
+## true dönen işleyici geri tuşunu karşılamış demektir (kasa panosu gibi router dışı katmanlar).
+var back_override: Callable = Callable()
+var _last_root_back_ms: int = -10000
+
+signal exit_hint_requested
+
+
+func handle_android_back() -> void:
+	if back_override.is_valid() and bool(back_override.call()):
+		return
+	if not _stack.is_empty():
+		back()
+		return
+	var now: int = Time.get_ticks_msec()
+	if now - _last_root_back_ms <= EXIT_CONFIRM_MS:
+		get_tree().quit()
+		return
+	_last_root_back_ms = now
+	exit_hint_requested.emit()
 
 
 func _unhandled_input(event: InputEvent) -> void:

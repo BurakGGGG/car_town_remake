@@ -59,7 +59,7 @@ static func defaults() -> Array[GarageUpgrade]:
 		_make(&"repair_speed", "TAMİR HIZI", &"WRENCH", "Tamir süresi",
 			PackedInt32Array([1000, 2000, 3500, 5000]), PackedFloat32Array([1.0, 0.9, 0.8, 0.7, 0.6])),
 		_make(&"garage_level", "GARAJ SEVİYESİ", &"GARAGE", "Garaj alanı",
-			PackedInt32Array([12000, 30000, 60000]), PackedFloat32Array([1.0, 2.0, 3.0, 4.0])),
+			PackedInt32Array([36000, 90000, 180000]), PackedFloat32Array([1.0, 2.0, 3.0, 4.0])),
 	]
 
 

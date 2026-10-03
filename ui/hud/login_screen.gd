@@ -9,6 +9,9 @@ extends Control
 ## Oyuncuyu engellemez: açılışta yalnızca bir kez (Android, misafir) kendiliğinden açılır;
 ## MİSAFİR OLARAK DEVAM ET / KAPAT ile oyun sürer. Kayıt seçimi (CONFLICT) çıkınca kendiliğinden
 ## açılır; SONRA KARAR VER ile kapatılabilir, seçim yapılana kadar buluta yazılmaz.
+##
+## HESABIMI SİL iki adımlıdır: ilk basış yalnızca neyin silineceğini anlatan onay görünümünü açar,
+## silme EVET, KALICI OLARAK SİL ile başlar (Google hesabı yeniden seçtirilir).
 
 signal opened
 signal closed
@@ -28,7 +31,9 @@ var _local_info: Label
 var _cloud_info: Label
 var _primary: PlateButton
 var _secondary: PlateButton
+var _delete: PlateButton
 var _notice_text: String = ""
+var _confirm_delete: bool = false
 
 
 func _ready() -> void:
@@ -45,6 +50,7 @@ func _ready() -> void:
 
 func open() -> void:
 	_notice_text = ""
+	_confirm_delete = false
 	_refresh()
 	if visible:
 		return
@@ -144,6 +150,17 @@ func _build() -> void:
 	_secondary.pressed.connect(_on_secondary_pressed)
 	column.add_child(_secondary)
 
+	_delete = PlateButton.new()
+	_delete.name = "DeleteAccountButton"
+	_delete.theme_type_variation = &"HudPlateSmall"
+	_delete.text = "HESABIMI SİL"
+	_delete.custom_minimum_size = Vector2(PANEL_WIDTH, 0.0)
+	_delete.focus_mode = Control.FOCUS_NONE
+	for color_name: StringName in [&"font_color", &"font_hover_color", &"font_pressed_color", &"font_hover_pressed_color"]:
+		_delete.add_theme_color_override(color_name, HudPalette.DANGER)
+	_delete.pressed.connect(_on_delete_pressed)
+	column.add_child(_delete)
+
 
 ## Seçim sütunu: özet plakası + seçme butonu. Özet etiketini döndürür.
 func _choice(parent: HBoxContainer, caption: String, use_cloud: bool) -> Label:
@@ -194,10 +211,16 @@ func _connect_cloud() -> void:
 	_cloud.user_changed.connect(func(_p: Dictionary) -> void: _refresh())
 	_cloud.conflict_found.connect(_on_conflict_found)
 	_cloud.notice.connect(_on_notice)
+	_cloud.account_deleted.connect(_on_account_deleted)
 	_refresh()
 	# İlk açılış: Android'de misafire bir kez giriş seçeneği sunulur (engellemez)
 	await get_tree().process_frame
-	if _cloud.should_prompt_login():
+	# Dünya yenilendiyse (giriş / çıkış / hesap silme) sonucu bir kez söyle
+	var pending: String = _cloud.take_pending_notice()
+	if not pending.is_empty():
+		open()
+		_on_notice(pending)
+	elif _cloud.should_prompt_login():
 		_cloud.mark_login_prompt_seen()
 		open()
 
@@ -210,6 +233,13 @@ func _on_conflict_found(local_summary: Dictionary, cloud_summary: Dictionary) ->
 
 func _on_notice(text: String) -> void:
 	_notice_text = text
+	_refresh()
+
+
+func _on_account_deleted(success: bool) -> void:
+	_confirm_delete = false
+	if success:
+		_notice_text = "Hesabın ve tüm verilerin silindi. Yeni bir oyunla misafir olarak devam ediyorsun."
 	_refresh()
 
 
@@ -239,6 +269,19 @@ func _refresh() -> void:
 	_notice.visible = not _notice_text.is_empty()
 	_primary.visible = true
 	_primary.disabled = false
+	_primary.remove_theme_color_override(&"font_color")
+	_delete.visible = false
+	if _confirm_delete and not (_cloud and _cloud.can_delete_account()):
+		_confirm_delete = false   # bu arada oturum / durum değişti
+
+	if _confirm_delete:
+		_title.text = "HESABI SİL"
+		_account_box.visible = true
+		_body.text = "Google hesabın oyundan silinir. Bulut kaydın ve bu cihazdaki tüm ilerlemen (para, elmas, araçlar, garaj, görevler) kalıcı olarak silinir ve oyun baştan başlar.\n\nBu işlem GERİ ALINAMAZ. Devam edersen Google hesabını bir kez daha seçmen istenecek."
+		_primary.text = "EVET, KALICI OLARAK SİL"
+		_primary.add_theme_color_override(&"font_color", HudPalette.DANGER_DARK)
+		_secondary.text = "VAZGEÇ"
+		return
 
 	match state:
 		CloudSaveManager.State.UNAVAILABLE:
@@ -259,17 +302,23 @@ func _refresh() -> void:
 			_primary.visible = false
 			_secondary.text = "SONRA KARAR VER"
 		CloudSaveManager.State.SYNCED:
-			_body.text = "Bulut kaydı güncel."
+			_body.text = "Bulut kaydı güncel.\nÇıkış yaparsan bu cihazda yeni bir misafir oyunu başlar; ilerlemen hesabında güvende kalır, tekrar girince geri gelir."
 			_primary.text = "ÇIKIŞ YAP"
 			_secondary.text = "KAPAT"
 		CloudSaveManager.State.OFFLINE:
-			_body.text = "Buluta ulaşılamıyor. Bu cihazdaki kayıt kullanılıyor; bağlantı gelince eşitlenecek."
+			_body.text = "Buluta ulaşılamıyor. Bu cihazdaki kayıt kullanılıyor; bağlantı gelince eşitlenecek.\nEşitlenmemiş değişiklik varken çıkış yapılamaz."
 			_primary.text = "ÇIKIŞ YAP"
 			_secondary.text = "KAPAT"
 		CloudSaveManager.State.ERROR:
 			_body.text = "Bulut kaydı bu sürümle açılamıyor. Bulut kaydına dokunulmadı; bu cihazdaki kayıt kullanılıyor."
 			_primary.text = "ÇIKIŞ YAP"
 			_secondary.text = "KAPAT"
+		CloudSaveManager.State.DELETING:
+			_body.text = "Hesap siliniyor… Google hesabını seçtiysen bu birkaç saniye sürer."
+			_primary.text = "SİLİNİYOR"
+			_primary.disabled = true
+			_secondary.text = "KAPAT"
+	_delete.visible = _cloud != null and _cloud.can_delete_account()
 
 
 # --- Butonlar ----------------------------------------------------------------------
@@ -278,7 +327,10 @@ func _on_primary_pressed() -> void:
 	if _cloud == null:
 		return
 	_notice_text = ""
-	if _cloud.is_authenticated():
+	if _confirm_delete:
+		_confirm_delete = false
+		_cloud.delete_account()
+	elif _cloud.is_authenticated():
 		_cloud.sign_out()   # local kayıt silinmez
 	else:
 		_cloud.sign_in()
@@ -286,7 +338,17 @@ func _on_primary_pressed() -> void:
 
 
 func _on_secondary_pressed() -> void:
+	if _confirm_delete:
+		_confirm_delete = false   # VAZGEÇ: hesap görünümüne dön
+		_refresh()
+		return
 	close()
+
+
+func _on_delete_pressed() -> void:
+	_notice_text = ""
+	_confirm_delete = true
+	_refresh()
 
 
 func _on_choice_pressed(use_cloud: bool) -> void:

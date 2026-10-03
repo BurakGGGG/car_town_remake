@@ -7,12 +7,65 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:1027985902163:android:f051feea22a5c7688894a6",
+        "android_client_info": {
+          "package_name": "com.autoyard.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1027985902163-cjis3o15bgnv5obs9tlu59moph1hgt1g.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.autoyard.app",
+            "certificate_hash": "b2f172b193fd42762f4567aedb5323f30ab02ff0"
+          }
+        },
+        {
+          "client_id": "1027985902163-k88cumdplvosmg6895ctoitf2ug4qshm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.autoyard.app",
+            "certificate_hash": "b8f17354e774cd42c2d6bc96b25932aacb5a51a6"
+          }
+        },
+        {
+          "client_id": "1027985902163-tf716j1qe3lmg9ahev4vrk046mrunn0u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBPProzickPMFT4BRZJf4vdWEqHDsqz8k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1027985902163-tf716j1qe3lmg9ahev4vrk046mrunn0u.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:1027985902163:android:e4b12c876944dac68894a6",
         "android_client_info": {
           "package_name": "com.cartownBurak.app"
         }
       },
       "oauth_client": [
+        {
+          "client_id": "1027985902163-8s25ttptg9bgel9r8pojtalpj494lsi7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.cartownBurak.app",
+            "certificate_hash": "b2f172b193fd42762f4567aedb5323f30ab02ff0"
+          }
+        },
         {
           "client_id": "1027985902163-ar673rbk3bham1b2l1jqocnoa3rt3dos.apps.googleusercontent.com",
           "client_type": 1,

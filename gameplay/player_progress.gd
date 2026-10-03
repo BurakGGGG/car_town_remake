@@ -22,22 +22,27 @@ signal level_up(level: int)
 
 ## SEVİYE ÖDÜLLERİ — Car Town prensibi: her seviye somut bir şey versin, belirli seviyeler
 ## yeni içerik AÇSIN. "text" yalnızca bildirim yazısıdır; gerçek kilit ilgili sistemdedir
-## (arızalar RepairType.min_level, araçlar cars.json min_level).
+## (arızalar RepairType.min_level, kasalar vehicles/crates.json min_level).
 const LEVEL_REWARDS: Dictionary = {
 	2: {"money": 500},
-	3: {"money": 750, "text": "RENAULT TOROS SHOWROOM'DA"},
+	3: {"money": 750},
 	4: {"money": 1000},
 	5: {"money": 1500, "text": "YENİ İŞ: BOYA İŞİ"},
-	6: {"money": 2000, "text": "HYUNDAI ERA SHOWROOM'DA"},
+	6: {"money": 2000},
 	7: {"money": 2500},
-	8: {"money": 3000, "text": "YENİ İŞ: DÖŞEME   ·   HYUNDAI GETZ SHOWROOM'DA"},
-	10: {"money": 4000},
-	12: {"money": 5000, "text": "YENİ İŞ: FREN REVİZYONU   ·   VW PASSAT SHOWROOM'DA"},
-	15: {"money": 7500, "text": "RENAULT FLUENCE SHOWROOM'DA"},
-	20: {"money": 12000},
+	8: {"money": 3000, "text": "YENİ İŞ: DÖŞEME"},
+	10: {"money": 4000, "text": "AİLE KASASI SHOWROOM'DA"},
+	12: {"money": 5000, "text": "YENİ İŞ: FREN REVİZYONU"},
+	14: {"money": 3500, "text": "SPOR KASASI SHOWROOM'DA"},
+	15: {"money": 7500},
+	20: {"money": 12000, "text": "PRESTİJ KASASI SHOWROOM'DA"},
 }
 ## Tabloda olmayan seviyelerde verilen para.
 const LEVEL_REWARD_STEP: int = 250
+## Seviye gemi (kasa ekonomisi, docs/vehicle_crate_design_v2.md §3.2): her seviyede bu kadar,
+## her 5. seviyede ek LEVEL_GEM_MILESTONE.
+const LEVEL_GEMS: int = 5
+const LEVEL_GEM_MILESTONE: int = 25
 
 var _default_level: int = 1
 var _default_xp: int = 0
@@ -99,11 +104,12 @@ func add_xp(amount: int) -> void:
 	xp_changed.emit(level, xp, xp_to_next())
 
 
-## Bu seviyenin ödülü: {"money": int, "text": String}.
+## Bu seviyenin ödülü: {"money": int, "gems": int, "text": String}.
 static func reward_for(p_level: int) -> Dictionary:
 	var entry: Dictionary = LEVEL_REWARDS.get(p_level, {})
 	return {
 		"money": int(entry.get("money", LEVEL_REWARD_STEP * p_level)),
+		"gems": LEVEL_GEMS + (LEVEL_GEM_MILESTONE if p_level % 5 == 0 else 0),
 		"text": String(entry.get("text", "")),
 	}
 
@@ -114,6 +120,7 @@ func _pay_level_reward(p_level: int) -> void:
 	var economy: EconomyManager = get_tree().get_first_node_in_group("economy") as EconomyManager
 	if economy:
 		economy.add_money(int(reward["money"]))
+	add_gems(int(reward["gems"]))
 	level_reward.emit(p_level, int(reward["money"]), String(reward["text"]))
 
 

@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "_readme": [
+    "DOĞRUDAN ARAÇ SATIN ALMA POLİTİKASI — ÖNERİ (oyun henüz okumuyor). Tasarım: docs/direct_vehicle_purchase_design.md §16",
+    "Uygulamada bu dosya OLDUĞU GİBİ vehicles/direct_purchase.json olur. vehicles/crates.json ve cars.json'a dokunulmaz.",
+    "Hiçbir satırda araç kimliği YOKTUR. Değerler araç metadata'sından türetilir (cars.json: price, rarity, class, min_level, category; crates.json: pool):",
+    "  fiyat   = yuvarla(price × rarity.price_multiplier × class_modifier[class] × category_modifier[category] × tuning_multiplier, round_to)",
+    "  seviye  = clamp(max(min_level, aracın kasalarının en düşük kapısı) + rarity.level_offset, min_unlock_level, max_unlock_level)",
+    "  sadakat = max(rarity.loyalty_crates, ceil(ln(1 − rarity.loyalty_tail) / ln(1 − p))); p = aracın kendi kasasındaki oranı; sayılan = aracın kasalarından açılanlar",
+    "Kurallar: crates.json'daki her nadirliğin burada satırı olmalı (yoksa o nadirlik satışa çıkmaz). Daha nadir olanın çarpan / fark / sadakati düşük olamaz.",
+    "Sadakatli nadirlikteki araç bir kasa havuzunda olmalı (loyalty_for_direct_only_vehicles = error)."
+  ],
+  "rarity": {
+    "common": {
+      "price_multiplier": 1.0,
+      "level_offset": 0,
+      "loyalty_crates": 0
+    },
+    "rare": {
+      "price_multiplier": 1.5,
+      "level_offset": 3,
+      "loyalty_crates": 0
+    },
+    "epic": {
+      "price_multiplier": 3.0,
+      "level_offset": 6,
+      "loyalty_crates": 5
+    },
+    "legendary": {
+      "price_multiplier": 12.0,
+      "level_offset": 12,
+      "loyalty_crates": 60,
+      "loyalty_tail": 0.87
+    }
+  },
+  "direct_purchase": {
+    "class_modifier": {
+      "default": 1.0
+    },
+    "category_modifier": {
+      "default": 1.0
+    },
+    "tuning_multiplier": 1.0,
+    "round_to": 1000,
+    "rounding": "half_up",
+    "min_unlock_level": 1,
+    "max_unlock_level": 99,
+    "unknown_rarity": "not_for_sale",
+    "loyalty_for_direct_only_vehicles": "error"
+  }
+}

@@ -137,7 +137,7 @@ func apply_levels(data: Dictionary) -> void:
 	for u: GarageUpgrade in upgrades:
 		if not data.has(u.id):
 			continue
-		var value: int = int(data[u.id])
+		var value: int = SaveSafe.i(data[u.id])
 		u.current_level = clampi(value, 1, u.max_level) if value >= 1 and value <= u.max_level else 1
 	levels_changed.emit()
 

@@ -26,6 +26,7 @@
       "plate_color": "#7FD3F5",
       "traffic": true,
       "class": "A",
+      "rarity": "legendary",
       "min_level": 12,
       "min_garage_rank": 3,
       "race": {
@@ -67,6 +68,7 @@
       "plate_color": "#F5BE4C",
       "traffic": true,
       "class": "C",
+      "rarity": "common",
       "min_level": 8,
       "min_garage_rank": 2,
       "race": {
@@ -108,6 +110,7 @@
       "plate_color": "#F3E8CF",
       "traffic": true,
       "class": "B",
+      "rarity": "common",
       "min_level": 15,
       "min_garage_rank": 4,
       "race": {
@@ -149,6 +152,7 @@
       "plate_color": "#83B24F",
       "traffic": true,
       "class": "B",
+      "rarity": "common",
       "min_level": 12,
       "min_garage_rank": 3,
       "race": {
@@ -190,6 +194,7 @@
       "plate_color": "#9FD6C8",
       "traffic": true,
       "class": "C",
+      "rarity": "rare",
       "min_level": 6,
       "min_garage_rank": 1,
       "race": {
@@ -232,6 +237,7 @@
       "plate_color": "#D9E7C8",
       "traffic": true,
       "class": "D",
+      "rarity": "common",
       "min_level": 1,
       "min_garage_rank": 1,
       "race": {
@@ -274,6 +280,7 @@
       "plate_color": "#E8C58A",
       "traffic": true,
       "class": "D",
+      "rarity": "epic",
       "min_level": 3,
       "min_garage_rank": 1,
       "race": {
@@ -315,6 +322,7 @@
       "plate_color": "#9FD6C8",
       "traffic": true,
       "class": "C",
+      "rarity": "common",
       "min_level": 8,
       "min_garage_rank": 2,
       "race": {
@@ -356,6 +364,7 @@
       "plate_color": "#D9E7C8",
       "traffic": true,
       "class": "C",
+      "rarity": "rare",
       "min_level": 10,
       "min_garage_rank": 2,
       "race": {
@@ -397,6 +406,7 @@
       "plate_color": "#E8C58A",
       "traffic": true,
       "class": "B",
+      "rarity": "rare",
       "min_level": 12,
       "min_garage_rank": 3,
       "race": {
@@ -438,6 +448,7 @@
       "plate_color": "#F5BE4C",
       "traffic": true,
       "class": "B",
+      "rarity": "epic",
       "min_level": 15,
       "min_garage_rank": 4,
       "race": {
@@ -479,6 +490,7 @@
       "plate_color": "#83B24F",
       "traffic": true,
       "class": "B",
+      "rarity": "common",
       "min_level": 16,
       "min_garage_rank": 4,
       "race": {
@@ -520,6 +532,7 @@
       "plate_color": "#7FD3F5",
       "traffic": true,
       "class": "B",
+      "rarity": "epic",
       "min_level": 18,
       "min_garage_rank": 4,
       "race": {
@@ -561,6 +574,7 @@
       "plate_color": "#F3E8CF",
       "traffic": true,
       "class": "A",
+      "rarity": "common",
       "min_level": 20,
       "min_garage_rank": 5,
       "race": {
@@ -602,6 +616,7 @@
       "plate_color": "#D9E7C8",
       "traffic": true,
       "class": "A",
+      "rarity": "rare",
       "min_level": 22,
       "min_garage_rank": 5,
       "race": {
@@ -643,6 +658,7 @@
       "plate_color": "#7FD3F5",
       "traffic": true,
       "class": "A",
+      "rarity": "legendary",
       "min_level": 25,
       "min_garage_rank": 6,
       "race": {

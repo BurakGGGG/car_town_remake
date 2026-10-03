@@ -48,6 +48,9 @@ func _init() -> void:
 	_label.visible = false
 	add_child(_label)
 	visible = false
+	# Dünya plakası katmanı: garaj düzenlenirken kamera bu katmanı göstermez (WorldCamera).
+	layers = WorldCamera.LAYER_WORLD_UI
+	_label.layers = WorldCamera.LAYER_WORLD_UI
 
 
 ## Yalnızca anahtar işareti (müşteri tamir istiyor).

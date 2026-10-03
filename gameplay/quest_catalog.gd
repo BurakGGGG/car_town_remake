@@ -13,15 +13,22 @@ class_name QuestCatalog
 ##   REPAIR_BAYS    satın alınmış tamir alanı sayısı            (durum)
 ##   GARAGE_RANK    garaj değeri rütbesi (1-10)                 (durum)
 ##   JOB_STARS      tüm arızalardan toplanan ustalık yıldızı    (durum)
-## Ödül: "xp", "gems", "money" (hepsi isteğe bağlı).
+##   CRATES_BOUGHT  showroom'dan GEMLE alınan kasa sayısı         (sayaç; görev ödülü kasa sayılmaz)
+## Ödül: "xp", "gems", "money", "crate" (kasa id — ücretsiz teslimat kasası; hepsi isteğe bağlı).
 
-enum Type { REPAIRS, REPAIR_MONEY, PAINTS, OWN_VEHICLES, UPGRADE_LEVEL, PLAYER_LEVEL, REPAIR_BAYS, GARAGE_RANK, JOB_STARS }
+enum Type { REPAIRS, REPAIR_MONEY, PAINTS, OWN_VEHICLES, UPGRADE_LEVEL, PLAYER_LEVEL, REPAIR_BAYS, GARAGE_RANK, JOB_STARS, CRATES_BOUGHT }
 
 const ENTRIES: Array[Dictionary] = [
 	# --- İLK 10 DAKİKA: döngüyü öğret ---
+	# İlk kasa: Şahin'den sonraki ilk araç kasadan gelir (docs/vehicle_crate_design_v2.md §2). Ödül bir
+	# kez verilir (görev claimed listesine girer); sonuç kasa kurulurken çekilip kaydedilir.
+	{"id": &"first_crate", "title": "İLK KASA", "text": "Seviye 2'ye ulaş, ilk araç kasan garajına gelsin", "type": Type.PLAYER_LEVEL, "target": 2, "xp": 10, "crate": &"city_crate"},
 	{"id": &"first_customer", "title": "İLK MÜŞTERİ", "text": "Bir aracı tamir et ve parasını topla", "type": Type.REPAIRS, "target": 1, "xp": 20, "money": 300},
 	{"id": &"apprentice", "title": "ÇIRAK", "text": "5 tamir tamamla", "type": Type.REPAIRS, "target": 5, "xp": 30, "money": 500},
 	{"id": &"fast_hands", "title": "HIZLI ELLER", "text": "TAMİR HIZI'nı 2. seviyeye çıkar", "type": Type.UPGRADE_LEVEL, "upgrade": &"repair_speed", "target": 2, "xp": 40, "money": 750},
+	# Gem → kasa → garaj ilişkisini öğretir (ayrı tutorial sistemi yok; görev zinciri öğretir).
+	# Ödül yalnızca XP: gem ekonomisi simülasyonu değişmesin.
+	{"id": &"crate_order", "title": "KASA SİPARİŞİ", "text": "MAĞAZA'dan gemle bir araç kasası sipariş et", "type": Type.CRATES_BOUGHT, "target": 1, "xp": 30},
 	# --- 10-40 DAKİKA: garajı büyüt, ikinci alanı aç ---
 	{"id": &"first_earnings", "title": "İLK KAZANÇ", "text": "Tamirlerden 3.000 ₺ kazan", "type": Type.REPAIR_MONEY, "target": 3000, "xp": 40, "money": 1000},
 	{"id": &"bigger_garage", "title": "BÜYÜK GARAJ", "text": "Garajı 2. seviyeye genişlet", "type": Type.UPGRADE_LEVEL, "upgrade": &"garage_level", "target": 2, "xp": 60, "gems": 10, "money": 2000},
@@ -54,4 +61,4 @@ static func get_entry(quest_id: StringName) -> Dictionary:
 
 ## Sayaç türü mü (ilerleme olaylardan birikir ve kaydedilir)? Değilse ilerleme oyunun durumundan okunur.
 static func is_counter(type: int) -> bool:
-	return type == Type.REPAIRS or type == Type.REPAIR_MONEY or type == Type.PAINTS
+	return type == Type.REPAIRS or type == Type.REPAIR_MONEY or type == Type.PAINTS or type == Type.CRATES_BOUGHT

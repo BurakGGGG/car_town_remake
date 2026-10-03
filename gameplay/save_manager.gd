@@ -18,7 +18,9 @@ extends Node
 ## sayısı (repair_bays.unlocked) ayrı alanlardır: garaj büyük olup alan satın alınmamış olabilir.
 ##
 ## Dosya: user://savegame.json (JSON, "version" alanıyla). Eski sürümler hâlâ geçerlidir ve yüklenince
-## güncel sürümle yeniden yazılır: v7'de "decor" yoktur (garaj dekorasyonsuz başlar), v1'de "vehicles" yoktur (başlangıç aracı sahiplenilir), v2'de
+## güncel sürümle yeniden yazılır: v9 ve öncesinde "crates" / "gem_rewards" / "vehicles.discovered"
+## yoktur (sahip olunan araçlar keşfedilmiş sayılır, bekleyen kasa yoktur, günlük seri sıfırdan), v8'de "decor" yuva biçimindedir (DecorManager yüklerken gerçek konumlu
+## örneklere taşır), v7'de "decor" yoktur (garaj dekorasyonsuz başlar), v1'de "vehicles" yoktur (başlangıç aracı sahiplenilir), v2'de
 ## "vehicles.paint" yoktur (araçlar fabrika renginde kalır), v3'te "quests" yoktur (görevler baştan). Bozuk / okunamayan / daha yeni sürümlü
 ## kayıt oyunu çökertmez: hata loglanır ve sahnedeki başlangıç değerleriyle devam edilir.
 ## Otomatik kayıt: para / XP / seviye / gem / geliştirme değişince DEBOUNCE saniyelik gecikmeli tek
@@ -34,7 +36,7 @@ signal game_saved
 signal game_loaded(success: bool)
 
 const SAVE_PATH: String = "user://savegame.json"
-const SAVE_VERSION: int = 8
+const SAVE_VERSION: int = 10
 ## Okunabilen en eski sürüm (daha eskisi reddedilir; 1/2/3 → 4 migration yapılır).
 const MIN_VERSION: int = 1
 ## Değişiklikten sonra diske yazmadan önce beklenen süre (sn).
@@ -56,6 +58,9 @@ var _quests: QuestManager
 var _bays: RepairBayManager
 var _mastery: JobMastery
 var _decor: DecorManager
+var _crates: CrateManager
+var _gem_rewards: GemRewards
+var _ads: AdService
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -80,7 +85,14 @@ func _setup() -> void:
 	_bays = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
 	_mastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
 	_decor = get_tree().get_first_node_in_group("decor") as DecorManager
-	_fresh_json = snapshot_json()
+	_crates = get_tree().get_first_node_in_group("crates") as CrateManager
+	_gem_rewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
+	_ads = get_tree().get_first_node_in_group("ads") as AdService
+	if _gem_rewards and not has_save():
+		# Yeni kurulum: ilk günün giriş ödülü başlangıç değerine dahil olsun, yoksa bu cihaz
+		# "ilerleme var" sayılır ve Google girişinde bulut kaydı otomatik gelmez (çakışma sorulur).
+		_gem_rewards.check_day()
+	_fresh_json = _progress_json()
 	if load_on_start:
 		if has_save():
 			load_game()
@@ -96,13 +108,22 @@ func has_save() -> bool:
 
 
 ## Güncel durumu diske yazar. Başarılıysa true (hata oyunu bozmaz, yalnızca loglanır).
+## ATOMİK: önce geçici dosyaya yazılır, sonra asıl dosyanın üzerine taşınır. Yazım yarıda kesilirse
+## (uygulama öldürüldü, pil bitti) eski kayıt bozulmadan kalır — kasa satın alma / açma gibi tek
+## yazımlık işlemler ya tamamen diskte olur ya hiç olmaz.
 func save_game() -> bool:
-	var file: FileAccess = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	var tmp_path: String = SAVE_PATH + ".tmp"
+	var file: FileAccess = FileAccess.open(tmp_path, FileAccess.WRITE)
 	if file == null:
-		push_error("SaveManager: kayıt yazılamadı (%s): %d" % [SAVE_PATH, FileAccess.get_open_error()])
+		push_error("SaveManager: kayıt yazılamadı (%s): %d" % [tmp_path, FileAccess.get_open_error()])
 		return false
 	file.store_string(JSON.stringify(_collect(), "\t"))
 	file.close()
+	var err: Error = DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp_path),
+		ProjectSettings.globalize_path(SAVE_PATH))
+	if err != OK:
+		push_error("SaveManager: kayıt yerine taşınamadı (%d)" % err)
+		return false
 	game_saved.emit()
 	return true
 
@@ -117,7 +138,7 @@ func load_game() -> bool:
 	_loading = true
 	_apply(data)
 	_loading = false
-	if int(data.get("version", SAVE_VERSION)) < SAVE_VERSION:
+	if SaveSafe.i(data.get("version", SAVE_VERSION)) < SAVE_VERSION:
 		save_game()   # v1/v2/v3 → v4: dosya yeni formatta yeniden yazılır
 	game_loaded.emit(true)
 	return true
@@ -153,6 +174,12 @@ func new_game() -> void:
 		_decor.reset()
 	if _mastery:
 		_mastery.reset()
+	if _crates:
+		_crates.reset()
+	if _gem_rewards:
+		_gem_rewards.reset()
+	if _ads:
+		_ads.reset()
 	_loading = false
 	save_game()
 
@@ -175,7 +202,16 @@ func snapshot_json() -> String:
 ## Oyuncu yeni oyundan ilerlemiş mi (para / XP / seviye / gem / geliştirme / araç farklı mı)?
 ## Açılışta kendiliğinden oluşan başlangıç kaydı "kayıt yok" sayılır.
 func has_progress() -> bool:
-	return snapshot_json() != _fresh_json
+	return _progress_json() != _fresh_json
+
+
+## İlerleme karşılaştırması için snapshot: gem ödülü durumu (saat damgası, günlük seri) oyuncu
+## oynamasa da zamanla değişir, bu yüzden karşılaştırmaya girmez.
+func _progress_json() -> String:
+	var data: Dictionary = _collect()
+	data.erase("gem_rewards")
+	data.erase("ads")   # reklam sayaçları da zamanla / izlemeyle değişir; ilerleme sayılmaz
+	return JSON.stringify(data, "", true)
 
 
 ## Dışarıdan gelen (bulut) kaydı load_game ile aynı doğrulamadan geçirir, uygular ve diske yazar.
@@ -198,7 +234,7 @@ func validate(raw: Variant) -> Dictionary:
 		push_error("SaveManager: kayıt bozuk (JSON okunamadı), varsayılan değerlerle devam ediliyor")
 		return {}
 	var data: Dictionary = raw
-	var version: int = int(data.get("version", 0))
+	var version: int = SaveSafe.i(data.get("version", 0))
 	if version < MIN_VERSION or version > SAVE_VERSION:
 		push_error("SaveManager: desteklenmeyen kayıt sürümü %d (beklenen %d..%d), varsayılan değerlerle devam ediliyor" % [version, MIN_VERSION, SAVE_VERSION])
 		return {}
@@ -224,17 +260,32 @@ func _collect() -> Dictionary:
 			# ("repair_bays.unlocked") — ikisi bilinçli olarak birbirinden bağımsızdır.
 			String(GarageUpgradeManager.GARAGE_ID): int(levels.get(GarageUpgradeManager.GARAGE_ID, 1)),
 		},
-		"vehicles": {
-			"owned": _owned_ids(),
-			"paint": _ownership.paint_state() if _ownership else {},
-		},
+		"vehicles": _vehicles_state(),
 		"quests": _quests.state() if _quests else {},
-		"repair_bays": {"unlocked": _bays.state() if _bays else 1},
+		"repair_bays": {"unlocked": _bays.state() if _bays else 1, "layout": _bays.layout_state() if _bays else []},
 		# İŞ USTALIĞI: arıza id → tamamlanan iş sayısı (yıldızlar bundan türetilir)
 		"job_mastery": _mastery.state() if _mastery else {},
-		# GARAJ DEKORASYONU: sahip olunan eşyalar + hangi yuvada durdukları
+		# GARAJ DEKORASYONU: depo (eşya → adet), garajdaki örnekler (kimlik, konum, dönüş, ölçek),
+		# uygulanan zemin / duvar kaplaması
 		"decor": _decor.state() if _decor else {},
+		# ARAÇ TESLİMAT KASALARI: bekleyen kasalar, sonuçları (satın almada çekilmiş) ve durumları
+		"crates": _crates.state() if _crates else {},
+		# TEKRARLAYAN GEM KAYNAKLARI: giriş serisi, günlük / haftalık görevler, bahşiş
+		"gem_rewards": _gem_rewards.state() if _gem_rewards else {},
+		# REKLAM SAYAÇLARI: günlük izleme hakları (saat geri alınarak sıfırlanamaz). Eski kayıtta yoktur: sorun değil.
+		"ads": _ads.state() if _ads else {},
 	}
+
+
+## Araçlar: sahiplik + boya + koleksiyon (keşif, kopya, yarış aracı).
+func _vehicles_state() -> Dictionary:
+	var out: Dictionary = {
+		"owned": _owned_ids(),
+		"paint": _ownership.paint_state() if _ownership else {},
+	}
+	if _ownership:
+		out.merge(_ownership.collection_state())
+	return out
 
 
 ## Sahip olunan araç id'leri, JSON'a yazılabilir String dizisi olarak.
@@ -264,25 +315,25 @@ func _read() -> Dictionary:
 func _apply(data: Dictionary) -> void:
 	var economy_data: Dictionary = data.get("economy", {}) if typeof(data.get("economy")) == TYPE_DICTIONARY else {}
 	if _economy and economy_data.has("money"):
-		_economy.set_money(maxi(int(economy_data["money"]), 0))   # negatif para kabul edilmez
+		_economy.set_money(maxi(SaveSafe.i(economy_data["money"]), 0))   # negatif para kabul edilmez
 	var progress_data: Dictionary = data.get("progress", {}) if typeof(data.get("progress")) == TYPE_DICTIONARY else {}
 	if _progress:
 		_progress.load_state(
-			clampi(int(progress_data.get("level", _progress.level)), 1, MAX_LEVEL),
-			maxi(int(progress_data.get("xp", _progress.xp)), 0),
-			maxi(int(progress_data.get("gems", _progress.gems)), 0))
+			clampi(SaveSafe.i(progress_data.get("level", _progress.level)), 1, MAX_LEVEL),
+			maxi(SaveSafe.i(progress_data.get("xp", _progress.xp)), 0),
+			maxi(SaveSafe.i(progress_data.get("gems", _progress.gems)), 0))
 	var upgrade_data: Dictionary = data.get("garage_upgrades", {}) if typeof(data.get("garage_upgrades")) == TYPE_DICTIONARY else {}
 	var bay_data: Dictionary = data.get("repair_bays", {}) if data.get("repair_bays") is Dictionary else {}
-	var unlocked_bays: int = maxi(int(bay_data.get("unlocked", 1)), 1)
+	var unlocked_bays: int = maxi(SaveSafe.i(bay_data.get("unlocked", 1)), 1)
 	if _upgrades and not upgrade_data.is_empty():
 		var levels: Dictionary = {}
 		for key: String in upgrade_data:
-			levels[StringName(key)] = int(upgrade_data[key])   # aralık dışı → apply_levels 1'e çeker
+			levels[StringName(key)] = SaveSafe.i(upgrade_data[key])   # aralık dışı → apply_levels 1'e çeker
 		if not levels.has(GarageUpgradeManager.GARAGE_ID):
 			# v5 ve öncesi: "repair_capacity" hem garaj büyüklüğü hem kapasite demekti. Oyuncunun
 			# ödediği seviye fiziksel garaj seviyesi olur; satın alınmış alan sayısı ayrı kalır.
 			levels[GarageUpgradeManager.GARAGE_ID] = maxi(
-				int(upgrade_data.get(String(GarageUpgradeManager.CAPACITY_ID), 1)), unlocked_bays)
+				SaveSafe.i(upgrade_data.get(SaveSafe.s(GarageUpgradeManager.CAPACITY_ID), 1)), unlocked_bays)
 		_upgrades.apply_levels(levels)
 	if _ownership:
 		# v1 kayıtta "vehicles" yoktur: liste boş gider, VehicleOwnership başlangıç aracını sahiplenir
@@ -292,20 +343,50 @@ func _apply(data: Dictionary) -> void:
 		# v2 kayıtta "paint" yoktur: araçlar fabrika renginde kalır
 		var paint: Variant = vehicle_data.get("paint", {})
 		_ownership.load_paint(paint if paint is Dictionary else {})
+		# v9 ve öncesi: "discovered" yoktur, sahip olunanlar keşfedilmiş sayılır; yarış aracı başlangıç
+		_ownership.load_collection(vehicle_data)
+	# v9 ve öncesi (kasa sisteminden önceki oyuncu): eski ilerleme için geriye dönük ödül verilmez —
+	# İLK KASA görevi alınmış sayılır (bedava kasa yok), geçilmiş tamir / koleksiyon kilometre taşları
+	# ödenmiş sayılır (bkz. aşağıda). Yalnızca o günün giriş ödülü normal şekilde gelir.
+	var legacy: bool = SaveSafe.i(data.get("version", SAVE_VERSION)) < 10
 	if _quests:
 		# v3 kayıtta "quests" yoktur: görevler baştan başlar
-		_quests.load_state(data.get("quests", {}) if data.get("quests") is Dictionary else {})
+		var quest_data: Dictionary = (data.get("quests", {}) as Dictionary).duplicate(true) if data.get("quests") is Dictionary else {}
+		if legacy:
+			var claimed: Array = quest_data.get("claimed", []) if quest_data.get("claimed") is Array else []
+			if not claimed.has("first_crate"):
+				claimed.append("first_crate")
+			quest_data["claimed"] = claimed
+		_quests.load_state(quest_data)
 	if _bays:
 		# v4 ve öncesi kayıtta "repair_bays" yoktur: yalnızca ilk tamir alanı açık gelir
+		# Yerler (taşınabilir alanlar): eski kayıtta yoktur, varsayılan yerde gelir
+		_bays.load_layout(bay_data.get("layout", []))
 		_bays.load_state(unlocked_bays)
 	if _mastery:
 		# v6 ve öncesi kayıtta "job_mastery" yoktur: ustalık sayaçları sıfırdan başlar
 		var mastery_data: Variant = data.get("job_mastery", {})
 		_mastery.load_state(mastery_data if mastery_data is Dictionary else {})
 	if _decor:
-		# v7 ve öncesi kayıtta "decor" yoktur: garaj boş dekorasyonla başlar
+		# v7 ve öncesi kayıtta "decor" yoktur: garaj boş dekorasyonla başlar. v8'in yuva biçimini
+		# DecorManager kendisi tanır ve taşır (garaj seviyesi yukarıda yüklendi, taşıma ona bakar).
 		var decor_data: Variant = data.get("decor", {})
 		_decor.load_state(decor_data if decor_data is Dictionary else {})
+	if _crates:
+		# v9 ve öncesi: bekleyen kasa yok
+		var crate_data: Variant = data.get("crates", {})
+		_crates.load_state(crate_data if crate_data is Dictionary else {})
+	if _gem_rewards:
+		var gem_data: Variant = data.get("gem_rewards", {})
+		_gem_rewards.load_state(gem_data if gem_data is Dictionary else {})
+	if _ads:
+		var ads_data: Variant = data.get("ads", {})
+		_ads.load_state(ads_data if ads_data is Dictionary else {})
+	if legacy:
+		if _gem_rewards:
+			_gem_rewards.mark_passed_repair_milestones()
+		if _crates and _ownership:
+			_crates.mark_passed_milestones(_ownership.discovered_count())
 
 
 # --- Otomatik kayıt (debounce) -----------------------------------------------------
@@ -315,12 +396,19 @@ func _connect_auto_save() -> void:
 		return
 	if _economy:
 		_economy.money_changed.connect(func(_m: int) -> void: request_save())
+	if _crates:
+		_crates.crates_changed.connect(request_save)
+	if _ownership:
+		_ownership.ownership_changed.connect(request_save)
 	if _progress:
 		_progress.xp_changed.connect(func(_l: int, _x: int, _n: int) -> void: request_save())
 		_progress.level_up.connect(func(_l: int) -> void: request_save())
 		_progress.gems_changed.connect(func(_g: int) -> void: request_save())
 	if _upgrades:
 		_upgrades.upgrade_purchased.connect(func(_id: StringName, _level: int) -> void: request_save())
+	if _decor:
+		# Eşya yalnızca taşınınca / döndürülünce para değişmez: yerleşim ayrıca kaydı tetikler.
+		_decor.placement_changed.connect(request_save)
 
 
 ## Kaydı DEBOUNCE saniye sonraya planlar; bu süre içinde gelen yeni istekler tek yazmada birleşir.

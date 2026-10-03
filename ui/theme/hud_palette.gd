@@ -44,4 +44,8 @@ const GEM: Color = Color("7FD3F5")
 const GEM_LIGHT: Color = Color("D2F3FF")
 const GEM_DARK: Color = Color("3D9FC7")
 
+# Geri alınamaz işlemler (hesap silme)
+const DANGER: Color = Color("B3412E")
+const DANGER_DARK: Color = Color("8A2E20")
+
 const SHADOW: Color = Color(0.0, 0.0, 0.0, 0.25)

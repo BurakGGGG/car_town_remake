@@ -16,6 +16,7 @@ Bunlar test değil **ölçüm** araçlarıdır: sayı üretirler, PASS/FAIL verm
 | `measure_models.gd` | Optimize modelin gerçek kutusu + dünya geometrisi (ölçek referansı). | `--script qa/measure_models.gd` |
 | `shot_world.gd` | Açılış kadrajı (hiçbir ekran açılmadan). | `--script qa/shot_world.gd` |
 | `shot_drag.gd` | Drag yarışı uçtan uca kareler + araçların ekran konumu. | `--script qa/shot_drag.gd` |
+| `magaza_goruntuleri.gd` | Play mağaza ekran görüntüleri (1920x1080): ilerlemiş oyuncu kurar, 7 ekranı çeker. İzole kayıt + `--position 0,0 --resolution 1920x1080` gerekir. | `--script qa/magaza_goruntuleri.gd` |
 
 **Yalıtım:** kayda dokunan ölçümler için geçici `override.cfg` yazıp
 (`config/use_custom_user_dir=true`, `custom_user_dir_name="ct_fresh"`) bitince silin;

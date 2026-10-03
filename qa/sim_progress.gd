@@ -1,11 +1,17 @@
 extends SceneTree
-## YENİ OYUNCU SİMÜLASYONU: temiz kayıtla başlar, "iyi oyuncu" gibi oynar
-## (müşteriyi alır, tamir eder, ödülü toplar, parası yettikçe en mantıklı yatırımı yapar)
-## ve belirlenen dakikalarda ilerleme fotoğrafı basar. Hız: Engine.time_scale.
+## YENİ OYUNCU SİMÜLASYONU (kasa ekonomisi): temiz kayıtla başlar, "iyi oyuncu" gibi oynar
+## (müşteriyi alır, tamir eder, ödülü toplar), ₺'yi ve gemi en mantıklı yere harcar ve belirlenen
+## dakikalarda ilerleme fotoğrafı basar. Hız: Engine.time_scale.
 ##
-## Kullanım: godot-4 --path . --headless --script qa/sim_progress.gd -- <dakika> [hiz]
+## Kullanım: godot-4 --path . --headless --script qa/sim_progress.gd -- <dakika>
+##
+## KASA SİSTEMİNDEN SONRA (docs/vehicle_crate_implementation_report.md): araçlar artık ₺ ile
+## ALINMAZ; kasadan çıkar (gem). Bu yüzden ₺ harcama sırası: tamir alanı > garaj seviyesi > tamir
+## hızı > dekorasyon (en ucuz sahip olunmayan eşya). Gem: açık kasalardan P(yeni araç)/fiyat oranı en
+## iyi olan alınır, gelir gelmez açılır. Günlük giriş / günlük görev gemi burada GELMEZ (oyun saati
+## 12 kat hızlı akar ama takvim günü değişmez) — onların etkisi tools/economy/crate_sim.py'dedir.
 
-const SNAPSHOTS: Array[float] = [5.0, 10.0, 20.0, 30.0, 60.0, 120.0, 300.0, 600.0]
+const SNAPSHOTS: Array[float] = [5.0, 10.0, 20.0, 30.0, 60.0, 120.0, 180.0, 300.0, 450.0, 600.0]
 
 var _frame: int = 0
 var _time: float = 0.0
@@ -14,7 +20,9 @@ var _limit: float = 120.0
 var _repairs: int = 0
 var _races: int = 0
 var _earned: int = 0
-var _spent: int = 0
+var _spent: Dictionary = {"alan": 0, "garaj": 0, "hiz": 0, "dekor": 0}
+var _crates_opened: int = 0
+var _dups: int = 0
 var _eco: EconomyManager
 var _prog: PlayerProgress
 var _own: VehicleOwnership
@@ -23,6 +31,8 @@ var _upgrades: GarageUpgradeManager
 var _bays: RepairBayManager
 var _race: RaceManager
 var _traffic: TrafficManager
+var _decor: DecorManager
+var _crates: CrateManager
 
 
 func _initialize() -> void:
@@ -45,24 +55,18 @@ func _process(delta: float) -> bool:
 		_upgrades = get_first_node_in_group("garage_upgrades")
 		_bays = get_first_node_in_group("repair_bays")
 		_race = get_first_node_in_group("race")
+		_decor = get_first_node_in_group("decor")
+		_crates = get_first_node_in_group("crates")
 		_traffic = _find(current_scene)
 		var save: SaveManager = get_first_node_in_group("save_manager")
 		if save:
 			save.new_game()
 		Engine.time_scale = 12.0
 		Engine.max_physics_steps_per_frame = 64
-		print("dk | para | XP | sv | garaj | alan | araç | garaj değeri | rütbe | tamir | yarış | ustalık★")
+		print("dk | bakiye | kazanç | alan | garaj | hız | dekor | sv | g.sv | alan | eşya | araç | garaj değeri | rütbe | tamir | gem | kasa | kopya")
 		return false
 	_time += delta
 	_play()
-	if _frame % 600 == 0:
-		var modes: Dictionary = {}
-		for v: TrafficVehicle in _traffic.vehicles:
-			modes[v.mode] = int(modes.get(v.mode, 0)) + 1
-		print("  [%4.0f sn] araç=%d kipler=%s | müşteri hazır=%s | alan=%d kapasite=%d" % [
-			_time, _traffic.vehicles.size(), modes,
-			_repairs_mgr.get("_waiting").size() if _repairs_mgr.get("_waiting") != null else "?",
-			_bays.unlocked_count(), _repairs_mgr.capacity()])
 	while _next < SNAPSHOTS.size() and _time >= SNAPSHOTS[_next] * 60.0:
 		_snapshot(SNAPSHOTS[_next])
 		_next += 1
@@ -73,7 +77,7 @@ func _process(delta: float) -> bool:
 	return false
 
 
-## "İyi oyuncu": bekleyen müşteriyi tamire alır, biten işi toplar, parası yettikçe yatırım yapar.
+## "İyi oyuncu": bekleyen müşteriyi tamire alır, biten işi toplar, ₺ ve gem harcar.
 func _play() -> void:
 	for vehicle: TrafficVehicle in _traffic.vehicles:
 		if vehicle.is_waiting() and _repairs_mgr.start_repair(vehicle):
@@ -83,54 +87,100 @@ func _play() -> void:
 			_repairs_mgr.collect(vehicle)
 			_earned += maxi(_eco.money - before, 0)
 			_repairs += 1
-	# Yatırım sırası: tamir alanı > garaj seviyesi > tamir hızı > yeni araç
+	_spend_gems()
+	# ₺ yatırım sırası: tamir alanı > garaj seviyesi > tamir hızı > dekorasyon
 	if _bays:
 		for index: int in _bays.bay_count():
 			if _bays.can_purchase(index) and _eco.money >= _bays.price(index):
-				_spent += _bays.price(index)
+				_spent["alan"] += _bays.price(index)
 				_bays.purchase(index)
 				return
-	for id: StringName in [GarageUpgradeManager.GARAGE_ID, GarageUpgradeManager.CAPACITY_ID, GarageUpgradeManager.SPEED_ID]:
+	for pair: Array in [[GarageUpgradeManager.GARAGE_ID, "garaj"], [GarageUpgradeManager.CAPACITY_ID, "alan"],
+			[GarageUpgradeManager.SPEED_ID, "hiz"]]:
+		var id: StringName = pair[0]
 		if _upgrades.can_buy(id) and _eco.money >= _upgrades.next_cost(id):
-			_spent += _upgrades.next_cost(id)
+			_spent[pair[1]] += _upgrades.next_cost(id)
 			_upgrades.buy(id)
 			return
-	# En pahalı alınabilir aracı al (ilerleme hissi: yeni araç)
+	# Dekor ancak sıradaki yatırımın parası ayrıldıktan sonra: yoksa ucuz eşyalar her kuruşu yiyip
+	# garaj seviyesini sonsuza erteliyordu (ilk koşuda 30. dakikada garaj hâlâ 1, dekora 14.800 ₺).
+	var reserve: int = 0
+	if _bays:
+		for index: int in _bays.bay_count():
+			var st: RepairBayManager.Status = _bays.status(index)
+			if st == RepairBayManager.Status.BUYABLE or st == RepairBayManager.Status.TOO_EXPENSIVE:
+				reserve = maxi(reserve, _bays.price(index))
+				break
+	# can_buy() "parası yetiyor mu"yu da sorar: yedek için yalnızca "maksimumda değil mi" bakılır
+	# (ilk düzeltmede can_buy kullanılmıştı; para yetmeyince yedek sıfırlanıyor, garaj 300. dakikaya kalıyordu)
+	for id: StringName in [GarageUpgradeManager.GARAGE_ID, GarageUpgradeManager.SPEED_ID]:
+		var u: GarageUpgrade = _upgrades.get_upgrade(id)
+		if u and not u.is_max():
+			reserve = maxi(reserve, u.next_cost())
+	if _decor:
+		var cheapest: StringName = &""
+		var cheapest_price: int = 1 << 30
+		for item: Dictionary in GarageDecor.all():
+			var id: StringName = item["id"]
+			if _decor.owned_of(id) == 0 and _decor.can_purchase(id) and _decor.price_of(id) < cheapest_price:
+				cheapest = id
+				cheapest_price = _decor.price_of(id)
+		if cheapest != &"" and _eco.money >= cheapest_price + reserve and _decor.purchase(cheapest):
+			_spent["dekor"] += cheapest_price
+
+
+## Gem: P(yeni araç)/fiyat oranı en iyi açık kasa; alınır alınmaz açılır (teslimat animasyonu beklenmez).
+func _spend_gems() -> void:
+	if _crates == null:
+		return
 	var best: StringName = &""
-	var best_price: int = 0
-	for entry: Dictionary in CarCatalog.all():
-		var id: StringName = entry["id"]
-		if _own.can_purchase(id) and int(entry["price"]) > best_price:
+	var best_ratio: float = 0.0
+	for crate: Dictionary in CrateCatalog.all():
+		var id: StringName = crate["id"]
+		if not _crates.can_buy(id):
+			continue
+		var p_new: float = 0.0
+		for row: Dictionary in CrateCatalog.odds(id):
+			if not _own.is_owned(row["id"]):
+				p_new += float(row["chance"])
+		var ratio: float = p_new / float(maxi(CrateCatalog.price(id), 1))
+		if ratio > best_ratio:
+			best_ratio = ratio
 			best = id
-			best_price = int(entry["price"])
-	if best != &"":
-		_spent += best_price
-		_own.purchase_vehicle(best)
+	if best == &"":
+		return
+	var uid: int = _crates.buy(best)
+	if uid <= 0:
+		return
+	var result: Dictionary = _crates.open(uid)
+	if result.is_empty():
+		return   # teslimat noktası bulunamadı: kasa bekler
+	_crates_opened += 1
+	if bool(result["duplicate"]):
+		_dups += 1
+	_crates.claim(uid)
 
 
 func _snapshot(minutes: float) -> void:
 	var value: int = GarageValue.compute(self)
-	var stars: int = 0
-	var mastery: JobMastery = get_first_node_in_group("job_mastery") as JobMastery
-	if mastery:
-		for job: RepairType in RepairType.defaults():
-			stars += mastery.stars(job.id)
-	print("%4.0f | %8d | %6d | %2d | %d/%d | %d/%d | %2d | %9d | %2d | %4d | %3d | %2d" % [
-		minutes, _eco.money, _prog.xp, _prog.level,
-		_upgrades.garage_level(), 4,
-		_bays.unlocked_count() if _bays else 1, 3,
-		_own.owned_count(), value, GarageValue.rank(value), _repairs, _races, stars])
+	print("%4.0f | %8d | %8d | %6d | %6d | %5d | %8d | %2d | %d/4 | %d/3 | %2d | %2d | %9d | %2d | %4d | %4d | %3d | %3d" % [
+		minutes, _eco.money, _earned, _spent["alan"], _spent["garaj"], _spent["hiz"], _spent["dekor"],
+		_prog.level, _upgrades.garage_level(), _bays.unlocked_count() if _bays else 1,
+		_decor.owned_count() if _decor else 0, _own.owned_count(), value, GarageValue.rank(value),
+		_repairs, _prog.gems, _crates_opened, _dups])
 
 
 func _final() -> void:
-	print("--- toplam: %d tamir, kazanç %d ₺, harcama %d ₺, kalan %d ₺ ---" % [
-		_repairs, _earned, _spent, _eco.money])
-	var locked: Array[String] = []
+	var total_spent: int = 0
+	for key: String in _spent:
+		total_spent += int(_spent[key])
+	print("--- toplam: %d tamir, tamir kazancı %d ₺, harcama %d ₺ %s, kalan %d ₺ ---" % [
+		_repairs, _earned, total_spent, _spent, _eco.money])
+	var missing: Array[String] = []
 	for entry: Dictionary in CarCatalog.all():
 		if not _own.is_owned(entry["id"]):
-			locked.append("%s(%s,%d₺,durum%d)" % [entry["id"], entry["class"], entry["price"],
-				_own.status(entry["id"])])
-	print("alınmayan araçlar: %s" % [locked])
+			missing.append(String(entry["id"]))
+	print("koleksiyonda olmayan: %s" % [missing])
 
 
 func _find(node: Node) -> TrafficManager:
