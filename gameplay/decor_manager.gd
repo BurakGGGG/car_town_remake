@@ -19,6 +19,8 @@ signal purchased(id: StringName)
 signal purchase_failed(id: StringName, price: int)
 ## Herhangi bir yerleşim / kaplama değişikliği (görünüm ve otomatik kayıt dinler).
 signal placement_changed()
+## Depodaki bir kopya garaja KONDU (araç sergisi dahil; görev sayaçları dinler). Taşıma / döndürme değil.
+signal instance_added(item: StringName)
 
 ## Bir eşyadan en çok kaç kopya sahiplenilebilir (kayıt dosyası akıl dışı büyümesin).
 const MAX_COPIES: int = 99
@@ -195,6 +197,7 @@ func add_instance(item: StringName, pos: Vector3, yaw: float, iid: String = "") 
 	_instances.append({"iid": iid, "item": item, "pos": pos, "rot": Vector3(0.0, _wrap(yaw), 0.0),
 		"scale": Vector3.ONE})
 	placement_changed.emit()
+	instance_added.emit(item)
 	return iid
 
 

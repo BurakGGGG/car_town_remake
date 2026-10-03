@@ -243,7 +243,8 @@ func _run() -> void:
 	print("== 14) GEM ÖDÜLLERİ: İKİ KEZ YOK, SAAT İSTİSMARI YOK ==")
 	var gr: GemRewards = g(&"gem_rewards")
 	pp = g(&"player_progress")
-	check(gr._repair_step == 2, "eski kayıttaki 320 tamir: 50/250 taşları ödenmiş sayıldı (adım %d)" % gr._repair_step)
+	var missions_v9: MissionManager = g(&"missions")
+	check(missions_v9.stars_claimed(MissionCatalog.achievement(&"a_repairs")) == 2, "eski kayıttaki 320 tamir: TAMİRCİ 1-2. yıldız ödenmiş sayıldı (%d)" % missions_v9.stars_claimed(MissionCatalog.achievement(&"a_repairs")))
 	pp.load_state(5, 0, 0)
 	gr.load_state({})
 	var t0: int = 1_800_000_000
@@ -265,27 +266,8 @@ func _run() -> void:
 	gr.check_day()
 	check(pp.gems == 30, "gerçek güne dönünce kilit: kaçırılan günler telafi edilmez")
 	gr.test_now = t0 + 86400 * 6
-	var tasks: Array[Dictionary] = gr.daily_tasks()
-	check(tasks.size() == 3, "3 günlük görev (Sv 3+)")
-	check(String(tasks[0]["text"]).begins_with(str(tasks[0]["target"])), "görev metni doğru: %s" % tasks[0]["text"])
-	var repairs_target: int = int(tasks[0]["target"])
-	var before_tasks: int = pp.gems
-	for i: int in repairs_target:
-		gr._on_repair_collected(null, 0, 0)
-	check(pp.gems >= before_tasks + GemRewards.TASK_GEMS, "tamir görevi tamam +10")
-	var after_one: int = pp.gems
-	for i: int in repairs_target:
-		gr._count(&"repairs", 1)
-	check(pp.gems == after_one, "aynı görev iki kez ödemez")
-	gr._count(&"repair_money", 99999)
-	gr._count(&"races", 9)
-	check(gr.daily_tasks().all(func(t: Dictionary) -> bool: return bool(t["done"])), "üç görev tamam")
-	var bonus_gems: int = pp.gems
-	gr._count(&"races", 9)
-	check(pp.gems == bonus_gems, "bütün görevler bonusu bir kez")
-	gr.test_now = t0 - 86400
-	gr.check_day()
-	check(gr.daily_tasks().all(func(t: Dictionary) -> bool: return bool(t["done"])), "saat geri alınınca görevler sıfırlanmaz (yeniden yapılamaz)")
+	# Günlük / haftalık görevler ve tamir kilometre taşları artık GÖREVLER sisteminde (tests/mission_test.gd)
+	check(not gr.has_method("daily_tasks") and not gr.has_method("check_repair_milestones"), "günlük görev / kilometre taşı GemRewards'tan kalktı")
 	var round_trip: Dictionary = gr.state()
 	gr.load_state(JSON.parse_string(JSON.stringify(round_trip)))
 	check(JSON.stringify(gr.state(), "", true) == JSON.stringify(round_trip, "", true), "gem ödül durumu kayıt turunda aynı")
@@ -294,17 +276,6 @@ func _run() -> void:
 	for i: int in GemRewards.TIP_EVERY * (GemRewards.TIP_DAILY_CAP + 10):
 		gr._on_repair_collected(null, 0, 0)
 	check(gr._tip_count == GemRewards.TIP_DAILY_CAP, "bahşiş günlük tavanda durur (%d / %d)" % [gr._tip_count, GemRewards.TIP_DAILY_CAP])
-	# Haftalık hedef: 12. görevde bir kez +100
-	gr.test_now = t0 + 86400 * 27
-	gr.check_day()
-	gr._week_count = GemRewards.WEEKLY_NEED - 1
-	gr._week_paid = false
-	var week_before: int = pp.gems
-	gr._count(&"races", 9)
-	check(pp.gems == week_before + GemRewards.TASK_GEMS + GemRewards.WEEKLY_GEMS, "haftalık hedef +%d bir kez (görev +%d ile)" % [GemRewards.WEEKLY_GEMS, GemRewards.TASK_GEMS])
-	var week_after: int = pp.gems
-	gr._count(&"repairs", 99)
-	check(pp.gems == week_after + GemRewards.TASK_GEMS, "haftalık hedef ikinci kez ödenmez (yalnızca görev gemi)")
 	# Ustalık yıldızı: JobMastery.mastery_up → +10 gem
 	var mastery: JobMastery = g(&"job_mastery")
 	var star_before: int = pp.gems
@@ -312,13 +283,13 @@ func _run() -> void:
 	while mastery.stars(&"brakes") == stars_before:
 		mastery.record(&"brakes")
 	check(pp.gems == star_before + GemRewards.MASTERY_STAR_GEMS, "ustalık yıldızı +%d gem" % GemRewards.MASTERY_STAR_GEMS)
-	# Tamir kilometre taşları: 320 tamirlik sayaç → 50 ve 250 taşları (10 + 20) bir kez
-	gr._repair_step = 0
-	var ms_before: int = pp.gems
-	gr.check_repair_milestones()
-	check(pp.gems == ms_before + 30 and gr._repair_step == 2, "tamir taşları 50/250 → +30 gem (%d)" % (pp.gems - ms_before))
-	gr.check_repair_milestones()
-	check(pp.gems == ms_before + 30, "tamir taşları ikinci kez ödenmez")
+	# Eski tamir kilometre taşları (320 tamir → 50/250 ödenmişti) TAMİRCİ başarımına ödenmiş yıldız olarak göçer
+	var missions: MissionManager = g(&"missions")
+	missions.load_state({})
+	missions._life_seeded = false
+	gr._repair_step = 2
+	missions._seed_legacy()
+	check(missions.stars_claimed(MissionCatalog.achievement(&"a_repairs")) == 2, "eski tamir taşları ödenmiş başarım yıldızı sayıldı (çifte ödeme yok)")
 	gr.test_now = -1
 
 	print("== 15) ORANLAR: GÖZLENEN = İLAN EDİLEN (200.000 çekiliş / kasa) ==")

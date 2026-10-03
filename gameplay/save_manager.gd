@@ -60,6 +60,7 @@ var _mastery: JobMastery
 var _decor: DecorManager
 var _crates: CrateManager
 var _gem_rewards: GemRewards
+var _missions: MissionManager
 var _ads: AdService
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
@@ -87,6 +88,7 @@ func _setup() -> void:
 	_decor = get_tree().get_first_node_in_group("decor") as DecorManager
 	_crates = get_tree().get_first_node_in_group("crates") as CrateManager
 	_gem_rewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
+	_missions = get_tree().get_first_node_in_group("missions") as MissionManager
 	_ads = get_tree().get_first_node_in_group("ads") as AdService
 	if _gem_rewards and not has_save():
 		# Yeni kurulum: ilk günün giriş ödülü başlangıç değerine dahil olsun, yoksa bu cihaz
@@ -178,6 +180,8 @@ func new_game() -> void:
 		_crates.reset()
 	if _gem_rewards:
 		_gem_rewards.reset()
+	if _missions:
+		_missions.reset()
 	if _ads:
 		_ads.reset()
 	_loading = false
@@ -210,6 +214,7 @@ func has_progress() -> bool:
 func _progress_json() -> String:
 	var data: Dictionary = _collect()
 	data.erase("gem_rewards")
+	data.erase("missions")   # gün / hafta değişimiyle kendiliğinden değişir; ilerleme sayılmaz
 	data.erase("ads")   # reklam sayaçları da zamanla / izlemeyle değişir; ilerleme sayılmaz
 	return JSON.stringify(data, "", true)
 
@@ -272,6 +277,7 @@ func _collect() -> Dictionary:
 		"crates": _crates.state() if _crates else {},
 		# TEKRARLAYAN GEM KAYNAKLARI: giriş serisi, günlük / haftalık görevler, bahşiş
 		"gem_rewards": _gem_rewards.state() if _gem_rewards else {},
+		"missions": _missions.state() if _missions else {},
 		# REKLAM SAYAÇLARI: günlük izleme hakları (saat geri alınarak sıfırlanamaz). Eski kayıtta yoktur: sorun değil.
 		"ads": _ads.state() if _ads else {},
 	}
@@ -379,12 +385,16 @@ func _apply(data: Dictionary) -> void:
 	if _gem_rewards:
 		var gem_data: Variant = data.get("gem_rewards", {})
 		_gem_rewards.load_state(gem_data if gem_data is Dictionary else {})
+	if _missions:
+		# v10 ve öncesi kayıtta "missions" yoktur: görevler boş başlar (bugünün görevleri ilk açılışta üretilir)
+		var mission_data: Variant = data.get("missions", {})
+		_missions.load_state(mission_data if mission_data is Dictionary else {})
 	if _ads:
 		var ads_data: Variant = data.get("ads", {})
 		_ads.load_state(ads_data if ads_data is Dictionary else {})
 	if legacy:
-		if _gem_rewards:
-			_gem_rewards.mark_passed_repair_milestones()
+		if _missions:
+			_missions.mark_legacy_repairs_passed()   # geçilmiş tamir yıldızları ödenmiş sayılır
 		if _crates and _ownership:
 			_crates.mark_passed_milestones(_ownership.discovered_count())
 

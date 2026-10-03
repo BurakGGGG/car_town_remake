@@ -12,7 +12,7 @@ extends CanvasLayer
 ## PROFİL plakası ve isim plakası PLAYER tabelasını (LoginScreen, kodla eklenir) açar: Google girişi,
 ## profil / çıkış ve bulut kayıt seçimi. Google hesabıyla girilince isim plakasında hesabın adı yazar
 ## (CloudSaveManager, "cloud_save" grubu); çıkışta player_name'e döner.
-## Sağ üstte tabelaların altında GÖREVLER plakası GÖREVLER tabelasını (QuestScreen, kodla eklenir) açar;
+## Sağ üstte tabelaların altında GÖREVLER plakası GÖREVLER tabelasını (MissionScreen: günlük / haftalık / başarım, kodla eklenir) açar;
 ## alınabilir ödül varken plaka amber olur ve sayıyı gösterir. Görev tamamlanınca / ödül alınınca kısa
 ## bildirim plakası çıkar (QuestManager, "quests" grubu).
 ## Sadece görsel katman: değerler setter'larla gelir, butonlar sinyal olarak dışarı verilir.
@@ -70,9 +70,10 @@ var showroom: ShowroomScreen
 ## Kodla kurulan PLAYER tabelası (giriş / profil / kayıt seçimi).
 var login_screen: LoginScreen
 ## Kodla kurulan GÖREVLER tabelası ve onu açan plaka.
-var quest_screen: QuestScreen
+var quest_screen: MissionScreen
 var quest_button: PlateButton
 var _quests: QuestManager
+var _missions: MissionManager
 @onready var top_left: MarginContainer = %TopLeft
 @onready var top_right: MarginContainer = %TopRight
 @onready var bottom: MarginContainer = %Bottom
@@ -373,6 +374,13 @@ func _connect_gameplay() -> void:
 	if _quests:
 		_quests.quests_changed.connect(_refresh_quest_button)
 		_quests.quest_completed.connect(_on_quest_completed)
+	_missions = get_tree().get_first_node_in_group("missions") as MissionManager
+	if _missions:
+		_missions.missions_changed.connect(_refresh_quest_button)
+		_missions.task_completed.connect(func(_kind: StringName, text: String) -> void:
+			_show_notice(text, HudPalette.COIN_DARK, 2.0))
+		_missions.reward_granted.connect(func(text: String) -> void:
+			_show_notice(text, HudPalette.COIN_DARK, 2.2))
 	_refresh_quest_button()
 	# Garaj rütbesi türetilmiştir: değeri büyütebilen her olaydan sonra bakılır
 	_race = get_tree().get_first_node_in_group("race") as RaceManager
@@ -1106,7 +1114,7 @@ func _build_quests() -> void:
 	var column: Node = camera_controls.get_parent()
 	column.add_child(quest_button)
 	column.move_child(quest_button, camera_controls.get_index())
-	quest_screen = QuestScreen.new()
+	quest_screen = MissionScreen.new()
 	garage_screen.get_parent().add_child(quest_screen)
 	quest_screen.reward_claimed.connect(func(text: String) -> void: _show_notice(text, HudPalette.COIN_DARK))
 
@@ -1116,12 +1124,12 @@ func _on_quest_button_pressed() -> void:
 	_refresh_quest_button()
 
 
-## Alınabilir ödül varsa plaka amber olur ve sayıyı gösterir; hepsi bittiyse plaka gizlenir.
+## Alınabilir ödül (günlük + haftalık + başarım + rehber) varsa plaka amber olur ve sayıyı gösterir.
 func _refresh_quest_button() -> void:
 	if quest_button == null:
 		return
-	quest_button.visible = _quests != null and not _quests.all_done()
-	var count: int = _quests.claimable_count() if _quests else 0
+	quest_button.visible = true
+	var count: int = (_quests.claimable_count() if _quests else 0) + (_missions.claimable_count() if _missions else 0)
 	quest_button.text = "GÖREVLER (%d)" % count if count > 0 else "GÖREVLER"
 	quest_button.highlight = count > 0
 

@@ -36,6 +36,7 @@ signal repair_progress(car: Node3D, progress: float)
 signal repair_ready(car: Node3D)                   # sayaç bitti; ödül PARA TOPLA'yı bekliyor (CarSpot dolu)
 signal repair_collected(car: Node3D, reward: int, xp: int)  # para + XP verildi, araç yola ışınlandı
 signal repair_cancelled(car: Node3D)
+signal job_collected(job_id: StringName, reward: int)   # iş türü + ödül (görev sayaçları; repair_collected ile aynı anda)
 signal repair_slot_freed(car: Node3D)              # CarSpot boşaldı
 
 const CarHitbox: GDScript = preload("res://car_hitbox.gd")
@@ -401,6 +402,7 @@ func collect(car: Node3D) -> bool:
 	if mastery:
 		mastery.record(state.repair_type.id)
 	repair_collected.emit(vehicle, state.repair_reward, xp_gain)
+	job_collected.emit(state.repair_type.id, state.repair_reward)
 	var lift_bays: RepairBayManager = _bays()
 	if lift_bays:
 		lift_bays.release_lift(state.bay_index)   # araç eski kotuna iner, lift alçak kalır

@@ -75,11 +75,8 @@ func _build() -> void:
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(dim)
 
-	var center: CenterContainer = CenterContainer.new()
+	var center: CenterContainer = FitScroll.center_in(self)
 	center.name = "Center"
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
 
 	var column: VBoxContainer = VBoxContainer.new()
 	column.name = "Column"

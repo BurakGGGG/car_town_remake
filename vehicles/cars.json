@@ -41,7 +41,7 @@
         "height_m": 1.415,
         "wheelbase_m": 2.725
       },
-      "model_scale": 1.0185
+      "model_scale": 0.93
     },
     {
       "id": "hyundai_getz",
@@ -83,7 +83,7 @@
         "height_m": 1.495,
         "wheelbase_m": 2.455
       },
-      "model_scale": 0.8713
+      "model_scale": 0.88
     },
     {
       "id": "renault_fluence",
@@ -125,7 +125,7 @@
         "height_m": 1.501,
         "wheelbase_m": 2.703
       },
-      "model_scale": 1.0519
+      "model_scale": 0.95
     },
     {
       "id": "vw_passat_b55",
@@ -167,7 +167,7 @@
         "height_m": 1.463,
         "wheelbase_m": 2.703
       },
-      "model_scale": 1.0715
+      "model_scale": 0.95
     },
     {
       "id": "hyundai_era",
@@ -209,7 +209,7 @@
         "height_m": 1.47,
         "wheelbase_m": 2.5
       },
-      "model_scale": 0.9749
+      "model_scale": 1.0
     },
     {
       "id": "tofas_sahin",
@@ -252,7 +252,7 @@
         "height_m": 1.437,
         "wheelbase_m": 2.49
       },
-      "model_scale": 0.9831
+      "model_scale": 1.0
     },
     {
       "id": "renault_toros",
@@ -295,7 +295,7 @@
         "height_m": 1.47,
         "wheelbase_m": 2.441
       },
-      "model_scale": 0.9836
+      "model_scale": 0.94
     },
     {
       "id": "hyundai_accent_blue",
@@ -379,7 +379,7 @@
         "height_m": 1.484,
         "wheelbase_m": 2.648
       },
-      "model_scale": 0.9927
+      "model_scale": 1.04
     },
     {
       "id": "skoda_kamiq",
@@ -421,7 +421,7 @@
         "height_m": 1.531,
         "wheelbase_m": 2.651
       },
-      "model_scale": 0.9661
+      "model_scale": 1.0
     },
     {
       "id": "vw_golf_7",
@@ -463,7 +463,7 @@
         "height_m": 1.452,
         "wheelbase_m": 2.637
       },
-      "model_scale": 0.9692
+      "model_scale": 1.0
     },
     {
       "id": "seat_leon",
@@ -505,7 +505,7 @@
         "height_m": 1.459,
         "wheelbase_m": 2.636
       },
-      "model_scale": 0.9729
+      "model_scale": 1.0
     },
     {
       "id": "honda_civic",
@@ -547,7 +547,7 @@
         "height_m": 1.44,
         "wheelbase_m": 2.62
       },
-      "model_scale": 1.0103
+      "model_scale": 1.05
     },
     {
       "id": "audi_a3",
@@ -589,7 +589,7 @@
         "height_m": 1.427,
         "wheelbase_m": 2.637
       },
-      "model_scale": 0.9822
+      "model_scale": 1.0
     },
     {
       "id": "volvo_s60",
@@ -631,7 +631,7 @@
         "height_m": 1.484,
         "wheelbase_m": 2.776
       },
-      "model_scale": 1.0542
+      "model_scale": 1.1
     },
     {
       "id": "bmw_e60",
@@ -673,7 +673,7 @@
         "height_m": 1.468,
         "wheelbase_m": 2.888
       },
-      "model_scale": 1.1027
+      "model_scale": 1.15
     }
   ]
 }

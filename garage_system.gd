@@ -77,6 +77,11 @@ func _ensure_crate_system() -> void:
 		var gems: GemRewards = GemRewards.new()
 		gems.name = "GemRewards"
 		add_child(gems)
+	# GÖREVLER (günlük / haftalık / başarım): gün saati GemRewards'tan, sayaçlar oyun sinyallerinden
+	if get_tree().get_first_node_in_group("missions") == null:
+		var missions: MissionManager = MissionManager.new()
+		missions.name = "MissionManager"
+		add_child(missions)
 	if get_tree().get_first_node_in_group("crate_delivery") == null:
 		add_child(CrateDelivery.new())
 	# REKLAM servisi (ödüllü): kodla kurulur, SaveManager'dan ÖNCE hazır olmalı (sayaçları o yükler).

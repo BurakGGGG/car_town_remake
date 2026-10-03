@@ -18,6 +18,8 @@ extends Node
 signal money_changed(money: int)
 ## Harcama denendi ama bakiye yetmedi (UI uyarısı için; şimdilik yalnızca bilgi).
 signal purchase_failed(amount: int)
+## Harcama yapıldı (başarılı spend_money; görev sayaçları dinler).
+signal money_spent(amount: int)
 
 ## Oyuna başlarken verilen para.
 @export var starting_money: int = 5000
@@ -59,6 +61,7 @@ func spend_money(amount: int) -> bool:
 		return false
 	_money -= amount
 	money_changed.emit(_money)
+	money_spent.emit(amount)
 	return true
 
 
