@@ -508,7 +508,11 @@ func _resolve_parts() -> void:
 			core = maxf(core, _wheel_extent(mesh))
 		reference = minf(reference, core)
 		raw.append({"key": key, "meshes": meshes})
+	var axes: Dictionary = map.get("wheel_axes", {})
 	for item: Dictionary in raw:
+		if axes.has(item["key"]):
+			_add_measured_group(item, axes[item["key"]])
+			continue
 		# 1) BOYUT elemesi: en küçük tekerin belirgin şekilde üstündeki parça tekerlek değildir
 		#    (çamurluk / kemer yanlışlıkla haritaya girmiş olur).
 		var sized: Array[MeshInstance3D] = []
@@ -555,6 +559,26 @@ func _resolve_parts() -> void:
 			"meshes": kept,
 			"bases": bases,
 		})
+
+
+## Ölçülmüş teker grubu (CarPartMap "wheel_axes", tools/wheel_fit.gd): eksen lastiğin geometrisinden
+## (yüzdelik uçlar, çöp üçgenlere dayanıklı) ölçülmüş, üyeler teker silindirinin içinde doğrulanmıştır.
+## Eleme YAPILMAZ: tek kol dilimi / jant halkası merkezden kaçık durduğu için eski eksen elemesi onları
+## atıyordu ve teker dönerken o parça yerinde kalıyordu (Accent, E60).
+func _add_measured_group(item: Dictionary, axis: Array) -> void:
+	var meshes: Array[MeshInstance3D] = item["meshes"]
+	var tyre: MeshInstance3D = meshes[0]   # haritada lastik önde
+	var x: float = (tyre.transform * tyre.get_aabb()).get_center().x
+	var bases: Array[Transform3D] = []
+	for mesh: MeshInstance3D in meshes:
+		bases.append(mesh.transform)
+	_wheel_groups.append({
+		"front": String(item["key"]).begins_with("f"),
+		"tyre_index": 0,
+		"pivot": Vector3(x, float(axis[0]), float(axis[1])),
+		"meshes": meshes,
+		"bases": bases,
+	})
 
 
 func _add_surface_part(role: StringName, mesh: MeshInstance3D, surface: int) -> void:

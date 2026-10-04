@@ -26,7 +26,9 @@
     {"id": "sicak_kompakt", "name": "SICAK KOMPAKT", "cars": ["ford_focus", "vw_golf_7", "seat_leon", "honda_civic"]},
     {"id": "aile_sedani", "name": "AİLE SEDANI", "cars": ["hyundai_era", "vw_passat_b55", "renault_fluence", "volvo_s60"]},
     {"id": "bavyera", "name": "BAVYERA", "cars": ["bmw_e46", "bmw_e60"]},
-    {"id": "premium", "name": "PREMIUM", "cars": ["bmw_e46", "audi_a3", "volvo_s60", "bmw_e60"]}
+    {"id": "premium", "name": "PREMIUM", "cars": ["bmw_e46", "audi_a3", "volvo_s60", "bmw_e60", "mercedes_cls"]},
+    {"id": "italyan", "name": "İTALYAN", "cars": ["alfa_romeo_159", "lambo_huracan", "ferrari_488_pista"]},
+    {"id": "super_spor", "name": "SÜPER SPOR", "cars": ["audi_rs6", "porsche_gt3", "lambo_huracan", "ferrari_488_pista"]}
   ],
   "crates": [
     {
@@ -61,7 +63,7 @@
       "short_name": "SPOR",
       "price_gems": 80,
       "min_level": 14,
-      "pool": ["seat_leon", "honda_civic", "bmw_e46"],
+      "pool": ["seat_leon", "honda_civic", "alfa_romeo_159", "bmw_e46"],
       "color": "#C4473A",
       "scene_path": "",
       "icon": "",
@@ -74,8 +76,21 @@
       "short_name": "PRESTİJ",
       "price_gems": 120,
       "min_level": 20,
-      "pool": ["audi_a3", "volvo_s60", "bmw_e60"],
+      "pool": ["audi_a3", "volvo_s60", "mercedes_cls", "bmw_e60"],
       "color": "#2E3440",
+      "scene_path": "",
+      "icon": "",
+      "open_effect": "",
+      "scale": 1.0
+    },
+    {
+      "id": "super_crate",
+      "display_name": "SÜPER KASA",
+      "short_name": "SÜPER",
+      "price_gems": 200,
+      "min_level": 28,
+      "pool": ["audi_rs6", "porsche_gt3", "lambo_huracan", "ferrari_488_pista"],
+      "color": "#B8902F",
       "scene_path": "",
       "icon": "",
       "open_effect": "",

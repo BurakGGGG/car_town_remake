@@ -78,7 +78,7 @@
  "+750 ₺   +35 XP": "+750 ₺   +35 XP",
  "-%%%d TAMİR SÜRESİ": "-%d%% REPAIR TIME",
  "100 tamir tamamla": "Complete 100 repairs",
- "16 araç, garaj Sv.4, 3 alan, 10. rütbe ve 35 ustalık yıldızı": "16 cars, garage Lv.4, 3 bays, rank 10 and 35 mastery stars",
+ "Tüm araçlar, garaj Sv.4, 3 alan, 10. rütbe ve 35 ustalık yıldızı": "All cars, garage Lv.4, 3 bays, rank 10 and 35 mastery stars",
  "2 ARACI BOYA": "PAINT 2 CARS",
  "2 GARAJ GELİŞTİRMESİ AL": "BUY 2 GARAGE UPGRADES",
  "2 araca sahip ol": "Own 2 cars",
@@ -683,5 +683,9 @@
  "ŞEZLONG": "DECK CHAIR",
  "ŞU ANDA": "CURRENT",
  "ŞİMDİ DOKUN": "TAP NOW",
- "ŞİMDİ!": "NOW!"
+ "ŞİMDİ!": "NOW!",
+ "SÜPER": "SUPER",
+ "SÜPER KASA": "SUPER CRATE",
+ "SÜPER SPOR": "SUPERCARS",
+ "İTALYAN": "ITALIAN"
 }

@@ -25,12 +25,13 @@ func _initialize() -> void:
 	var floor_mesh: MeshInstance3D = MeshInstance3D.new()
 	floor_mesh.name = "Floor"
 	var plane: PlaneMesh = PlaneMesh.new()
-	plane.size = Vector2(COLUMNS * SPACING_X + 2.0, 4.0 * SPACING_Z + 2.0)
+	var rows: int = ceili(float(CarCatalog.all().size()) / float(COLUMNS))   # zemin araç sayısıyla büyür
+	plane.size = Vector2(COLUMNS * SPACING_X + 2.0, float(rows) * SPACING_Z + 2.0)
 	floor_mesh.mesh = plane
 	var floor_mat: StandardMaterial3D = StandardMaterial3D.new()
 	floor_mat.albedo_color = Color(0.55, 0.57, 0.6)
 	floor_mesh.material_override = floor_mat
-	floor_mesh.position = Vector3((COLUMNS - 1) * SPACING_X * 0.5, -0.001, 1.5 * SPACING_Z)
+	floor_mesh.position = Vector3((COLUMNS - 1) * SPACING_X * 0.5, -0.001, float(rows - 1) * 0.5 * SPACING_Z)
 	root.add_child(floor_mesh)
 	floor_mesh.owner = root
 
@@ -77,9 +78,13 @@ func _initialize() -> void:
 		label.owner = root
 		i += 1
 
+	# Yeniden üretimde sahnenin UID'si korunur (pack + save yeni dosyaya UID yazmıyor).
+	var old_uid: int = ResourceLoader.get_resource_uid(OUT) if ResourceLoader.exists(OUT) else ResourceUID.INVALID_ID
 	var packed: PackedScene = PackedScene.new()
 	var err: int = packed.pack(root)
 	if err == OK:
 		err = ResourceSaver.save(packed, OUT)
+	if err == OK and old_uid != ResourceUID.INVALID_ID:
+		err = ResourceSaver.set_uid(OUT, old_uid)
 	print("size_lab: %d araç, kayıt %s (hata kodu %d)" % [i, OUT, err])
 	quit(0 if err == OK else 1)

@@ -159,3 +159,74 @@ cloud 50 · vehicle_asset 328 = 623 kontrol, 0 FAIL.**
 `edge_test`'in "içerik tavanı 8. rütbe" iddiası güncellendi: 16 araçla tavan 10. rütbeye çıktı
 (araç değeri 330K → 958K). Kural artık "en az 8. rütbeye ulaşmalı"; kesin değer araç ilerlemesi
 fazında yeniden konacak.
+
+---
+
+# Üçüncü parti (6 araç, 2026-10-04) — katalog 16 → 22
+
+alfa_romeo_159, audi_rs6, ferrari_488_pista, lambo_huracan, mercedes_cls, porsche_gt3. Hepsi aynı Tripo
+yapısında (tek materyal, 4096² JPEG, 46–82 parça, ~470K üçgen, uzunluk 1,0).
+
+**Sınıflandırıcı artık depoda:** ikinci partideki betikler geçici klasörde kalmış ve kaybolmuştu; oturum
+kaydından geri kuruldu → `tools/part_features.gd` (özellik CSV'si) + `tools/classify_roles.py`
+(doğrulama / `--emit` ile CarPartMap kaydı). Geri kurulan sürüm eski 7 araçta aynı sonucu verdi
+(işlevsel grup %75,5).
+
+```
+godot-4 --headless --path . -s res://tools/part_features.gd -- assets/cars/source/<glb>.glb > x.csv
+python3 tools/classify_roles.py x.csv --emit <glb_adı>=<tscn_adı>
+```
+
+**Elle düzeltilenler** (parça vurgu render'ıyla teşhis): Ferrari'de arka-sağ teker difüzörle tek mesh'e
+kaynamıştı → `extract` (yeni parça 59); 9 jant (gövde sanılmış), 18 çamurluk içi ve 41/45 ön hava girişi
+teker grubundan çıktı. Lambo'da 39/58 ön tampon, 46/51/61 hava girişi "jant" sanılmıştı. Mercedes'te
+8 kapı paneli "ayna", 52 ön çamurluk "jant" sanılmıştı. RS6 19 ve Lambo 33 "far" sanılan tampon parçası.
+
+| Araç | MB (tanjantsız) | Üçgen | Boya maskesi % | Fabrika rengi |
+|---|---|---|---|---|
+| alfa_romeo_159 | 5,5 | 124.272 | 19,0 | #D8D5D7 |
+| audi_rs6 | 5,8 | 125.934 | 16,6 | #8F9599 |
+| ferrari_488_pista | 5,6 | 116.946 | 11,9 | #C40003 |
+| lambo_huracan | 5,5 | 111.524 | 11,7 | #DBD8DB |
+| mercedes_cls | 5,0 | 110.850 | 18,9 | #B7B5B7 |
+| porsche_gt3 | 4,6 | 89.316 | 17,2 | #2F4C29 |
+
+Bilinen kusur: Ferrari maviye boyanınca panel kenarlarında ince kırmızı çizgiler kalıyor (dokudaki koyu
+kırmızı gölgeler boya sayılmıyor). Maske eşikleri tüm araçları etkilediği için değiştirilmedi.
+
+**Kasa ve sınıf (kullanıcı kararı, 2026-10-04):** yeni **SÜPER KASA** (200 gem, seviye 28): RS6 common ·
+GT3 rare · Huracán epic · 488 Pista legendary. Alfa 159 → SPOR kasası (rare), CLS → PRESTİJ kasası (epic;
+E60'ın oranı %2,78 → %2,52). Yeni yarış sınıfı **S** (RS6, GT3, Huracán, 488; galibiyet 2.000 ₺ / 100 XP,
+AI beceri payı 0,95); Alfa ve CLS A sınıfında. Trafikte yalnızca Alfa ve CLS dolaşır. Yeni setler İTALYAN ve
+SÜPER SPOR; CLS PREMIUM setine girdi. KOLEKSİYONCU başarımı 22 araçta biter. Fiyat / seviye kilidi / yarış
+statları hâlâ GEÇİCİ. `tools/economy/crate_sim.py` görevler sisteminden beri eski sabitleri arıyor
+(TASK_GEMS) ve çalışmıyor — ayrı iş. `model_scale` = gerçek uzunluk / 4,39, boyut
+laboratuvarında (tools/size_lab.tscn) ayarlanacak. `make_size_lab.gd` artık sahnenin UID'sini koruyor ve
+zemini araç sayısına göre büyütüyor.
+
+---
+
+# Tekerlek dönüşü düzeltmesi (2026-10-04, 22 araç)
+
+Kullanıcı E60 ve Accent'te dönerken teker hatası gördü; 22 aracın hepsi tek tek ölçüldü.
+
+**Teşhis aracı:** `tools/wheel_blur.gd` her tekeri 12 dönüş açısında render edip ORTALAR (uzun pozlama).
+Kusursuz teker: lastik çizgisi keskin, jant düzgün disk. Duran parça keskin kalır, gövdeden dönen parça
+bulanık leke / hale yapar. Parça teşhisi: `tools/part_highlight.gd`.
+
+**Bulunan üç kusur ve çözüm:**
+1. *Dönmeyen jant parçaları* (E60 arka jantın iki kolu, Accent kol dilimleri, Getz/Era/Şahin/RS6/GT3 göbek
+   ve halka parçaları): Tripo jantı birkaç parçaya bölüyor, gruba girmeyen parça yerinde kalıyordu; CarRig'in
+   eski "eş merkez" elemesi tek kol dilimini de atıyordu. → `tools/wheel_fit.gd` teker silindirinin içindeki
+   her parçayı gruba alır; dönme ekseni lastiğin geometrisinden ölçülüp `wheel_axes` olarak haritaya yazılır,
+   CarRig bu gruplarda eleme yapmaz.
+2. *Dönen fren kaliperleri* (Golf, Volvo, Alfa, RS6, GT3, Huracán, 488): ayrı parça olan fren grupları
+   (disk + kaliper) teker grubundan çıkarıldı — disk dönel simetrik, sabit dursa da aynı görünür. Lastiğe
+   KAYNAMIŞ kaliperler (Golf sağ-ön, Volvo, Huracán, 488) `extract`'in yeni renk koşuluyla ("hue", "hue_tol",
+   "min_sat") optimize adımında ayrı, sabit parçaya alındı.
+3. *Lastiğe kaynamış gövde / çöp üçgen* (Volvo sağ-arka, E60 sol-ön, Alfa sağ-ön, GT3 sağ-ön, Huracán
+   sağ-arka, 488 sağ-ön / sol-arka): silindir `extract`'i ile lastik ayrıldı, dışarıda kalan sabit kaldı.
+
+GT3 sağ-ön ve 488 sağ-arka ekseni lastikten yanlış ölçülüyordu (lastiğin çamurluk içindeki üst kısmı
+modelde yok → merkez aşağı kayıyor); karşı tekerin ekseni aynalandı. Sol-sağ eksen farkı artık her araçta
+< 3 mm. Kalan küçük kusur: GT3 ön lastiklerin üstü eksik modellendiği için dönerken altta hafif iz kalıyor.

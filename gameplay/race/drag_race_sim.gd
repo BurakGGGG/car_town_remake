@@ -617,7 +617,7 @@ static func skill_of(vehicle_id: StringName) -> float:
 ## Sınıfa göre AI beceri payı: D daha çok hata yapar, A neredeyse kusursuz.
 static func class_skill(vehicle_id: StringName) -> float:
 	var klass: String = String(CarCatalog.get_entry(vehicle_id).get("class", "C"))
-	var base: float = {"D": 0.35, "C": 0.55, "B": 0.75, "A": 0.90}.get(klass, 0.55)
+	var base: float = {"D": 0.35, "C": 0.55, "B": 0.75, "A": 0.90, "S": 0.95}.get(klass, 0.55)
 	return clampf(base * 0.7 + skill_of(vehicle_id) * 0.3, 0.0, 1.0)
 
 

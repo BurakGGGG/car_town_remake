@@ -94,7 +94,7 @@ const ACHIEVEMENTS: Array[Dictionary] = [
 	{"id": &"a_race_wins", "title": "YARIŞÇI", "text": "%s yarış kazan", "metric": &"race_wins", "kind": &"counter", "tiers": [3, 15, 50, 150], "mult": 1.0},
 	{"id": &"a_races", "title": "ARENA", "text": "%s yarışa katıl", "metric": &"races", "kind": &"counter", "tiers": [10, 50, 200], "mult": 0.6},
 	{"id": &"a_crates", "title": "KASA AVCISI", "text": "%s kasa aç", "metric": &"crates_opened", "kind": &"counter", "tiers": [3, 15, 50, 150], "mult": 0.9},
-	{"id": &"a_cars", "title": "KOLEKSİYONCU", "text": "%s farklı araç keşfet", "metric": &"cars_discovered", "kind": &"state", "tiers": [3, 6, 10, 14, 16], "mult": 1.5},
+	{"id": &"a_cars", "title": "KOLEKSİYONCU", "text": "%s farklı araç keşfet", "metric": &"cars_discovered", "kind": &"state", "tiers": [3, 6, 10, 16, 22], "mult": 1.5},
 	{"id": &"a_paints", "title": "BOYACI", "text": "%s boya satın al", "metric": &"paints", "kind": &"counter", "tiers": [1, 5, 20], "mult": 0.7, "feature": &"paint"},
 	{"id": &"a_decor", "title": "DEKORATÖR", "text": "Garaja toplam %s eşya yerleştir", "metric": &"decor_placed", "kind": &"counter", "tiers": [5, 20, 50, 100], "mult": 0.7},
 	{"id": &"a_display", "title": "SERGİCİ", "text": "Garajda aynı anda %s araç sergile", "metric": &"cars_on_display", "kind": &"state", "tiers": [1, 3, 6, 10], "mult": 0.8},
@@ -109,7 +109,7 @@ const ACHIEVEMENTS: Array[Dictionary] = [
 	{"id": &"a_perfect", "title": "MÜKEMMEL GÜN", "text": "%s günün tüm görevlerini bitir", "metric": &"daily_all", "kind": &"counter", "tiers": [3, 15, 50, 150], "mult": 1.0},
 	{"id": &"a_weekly", "title": "HAFTA YILDIZI", "text": "%s haftanın tüm görevlerini bitir", "metric": &"weekly_all", "kind": &"counter", "tiers": [1, 4, 12, 26], "mult": 1.2},
 	{"id": &"a_meta", "title": "YILDIZ TOPLAYICI", "text": "Toplam %s başarım yıldızı topla", "metric": &"ach_stars", "kind": &"state", "tiers": [10, 25, 50, 80], "mult": 1.0},
-	{"id": &"a_legend", "title": "EFSANE GARAJ SAHİBİ", "text": "16 araç, garaj Sv.4, 3 alan, 10. rütbe ve 35 ustalık yıldızı", "metric": &"legend", "kind": &"state", "tiers": [1], "gems": [500]},
+	{"id": &"a_legend", "title": "EFSANE GARAJ SAHİBİ", "text": "Tüm araçlar, garaj Sv.4, 3 alan, 10. rütbe ve 35 ustalık yıldızı", "metric": &"legend", "kind": &"state", "tiers": [1], "gems": [500]},
 ]
 ## Dönem anahtarları (kayıt).
 const LIFE: StringName = &"life"

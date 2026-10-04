@@ -674,6 +674,258 @@
         "wheelbase_m": 2.888
       },
       "model_scale": 1.15
+    },
+    {
+      "id": "alfa_romeo_159",
+      "brand": "ALFA ROMEO",
+      "model": "159",
+      "display_name": "ALFA ROMEO 159",
+      "year": 2008,
+      "price": 90000,
+      "condition": 0.85,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/alfa_romeo_159.tscn",
+      "source_path": "res://assets/cars/source/alfa_romeo_159.glb",
+      "optimized_path": "res://assets/cars/optimized/alfa_romeo_159.glb",
+      "default_color": "#D8D5D7",
+      "available_colors": [
+        "#D8D5D7",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": true,
+      "class": "A",
+      "rarity": "rare",
+      "min_level": 20,
+      "min_garage_rank": 5,
+      "race": {
+        "top_speed": 146,
+        "acceleration": 84,
+        "reaction": 80,
+        "grip": 82
+      },
+      "real_dimensions": {
+        "length_m": 4.661,
+        "width_m": 1.828,
+        "height_m": 1.417,
+        "wheelbase_m": 2.7
+      },
+      "model_scale": 1.1
+    },
+    {
+      "id": "mercedes_cls",
+      "brand": "MERCEDES",
+      "model": "CLS",
+      "display_name": "MERCEDES CLS",
+      "year": 2018,
+      "price": 150000,
+      "condition": 0.85,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/mercedes_cls.tscn",
+      "source_path": "res://assets/cars/source/mercedes_cls.glb",
+      "optimized_path": "res://assets/cars/optimized/mercedes_cls.glb",
+      "default_color": "#B7B5B7",
+      "available_colors": [
+        "#B7B5B7",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": true,
+      "class": "A",
+      "rarity": "epic",
+      "min_level": 26,
+      "min_garage_rank": 6,
+      "race": {
+        "top_speed": 158,
+        "acceleration": 88,
+        "reaction": 82,
+        "grip": 84
+      },
+      "real_dimensions": {
+        "length_m": 4.988,
+        "width_m": 1.89,
+        "height_m": 1.435,
+        "wheelbase_m": 2.939
+      },
+      "model_scale": 1.17
+    },
+    {
+      "id": "audi_rs6",
+      "brand": "AUDI",
+      "model": "RS6",
+      "display_name": "AUDI RS6",
+      "year": 2020,
+      "price": 220000,
+      "condition": 0.85,
+      "category": "wagon",
+      "scene_path": "res://assets/cars/audi_rs6.tscn",
+      "source_path": "res://assets/cars/source/audi_rs6.glb",
+      "optimized_path": "res://assets/cars/optimized/audi_rs6.glb",
+      "default_color": "#8F9599",
+      "available_colors": [
+        "#8F9599",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": false,
+      "class": "S",
+      "rarity": "common",
+      "min_level": 28,
+      "min_garage_rank": 7,
+      "race": {
+        "top_speed": 165,
+        "acceleration": 94,
+        "reaction": 84,
+        "grip": 86
+      },
+      "real_dimensions": {
+        "length_m": 4.995,
+        "width_m": 1.951,
+        "height_m": 1.46,
+        "wheelbase_m": 2.929
+      },
+      "model_scale": 1.23
+    },
+    {
+      "id": "porsche_gt3",
+      "brand": "PORSCHE",
+      "model": "911 GT3",
+      "display_name": "PORSCHE 911 GT3",
+      "year": 2018,
+      "price": 300000,
+      "condition": 0.85,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/porsche_gt3.tscn",
+      "source_path": "res://assets/cars/source/porsche_gt3.glb",
+      "optimized_path": "res://assets/cars/optimized/porsche_gt3.glb",
+      "default_color": "#2F4C29",
+      "available_colors": [
+        "#2F4C29",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": false,
+      "class": "S",
+      "rarity": "rare",
+      "min_level": 30,
+      "min_garage_rank": 8,
+      "race": {
+        "top_speed": 170,
+        "acceleration": 95,
+        "reaction": 90,
+        "grip": 94
+      },
+      "real_dimensions": {
+        "length_m": 4.562,
+        "width_m": 1.852,
+        "height_m": 1.271,
+        "wheelbase_m": 2.457
+      },
+      "model_scale": 1.12
+    },
+    {
+      "id": "lambo_huracan",
+      "brand": "LAMBORGHINI",
+      "model": "HURACÁN",
+      "display_name": "LAMBORGHINI HURACÁN",
+      "year": 2015,
+      "price": 400000,
+      "condition": 0.85,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/lambo_huracan.tscn",
+      "source_path": "res://assets/cars/source/lambo_huracan.glb",
+      "optimized_path": "res://assets/cars/optimized/lambo_huracan.glb",
+      "default_color": "#DBD8DB",
+      "available_colors": [
+        "#DBD8DB",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": false,
+      "class": "S",
+      "rarity": "epic",
+      "min_level": 32,
+      "min_garage_rank": 9,
+      "race": {
+        "top_speed": 175,
+        "acceleration": 97,
+        "reaction": 88,
+        "grip": 90
+      },
+      "real_dimensions": {
+        "length_m": 4.459,
+        "width_m": 1.924,
+        "height_m": 1.165,
+        "wheelbase_m": 2.62
+      },
+      "model_scale": 1.12
+    },
+    {
+      "id": "ferrari_488_pista",
+      "brand": "FERRARI",
+      "model": "488 PISTA",
+      "display_name": "FERRARI 488 PISTA",
+      "year": 2019,
+      "price": 450000,
+      "condition": 0.85,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/ferrari_488_pista.tscn",
+      "source_path": "res://assets/cars/source/ferrari_488_pista.glb",
+      "optimized_path": "res://assets/cars/optimized/ferrari_488_pista.glb",
+      "default_color": "#C40003",
+      "available_colors": [
+        "#C40003",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": false,
+      "class": "S",
+      "rarity": "legendary",
+      "min_level": 34,
+      "min_garage_rank": 10,
+      "race": {
+        "top_speed": 178,
+        "acceleration": 98,
+        "reaction": 90,
+        "grip": 92
+      },
+      "real_dimensions": {
+        "length_m": 4.605,
+        "width_m": 1.975,
+        "height_m": 1.206,
+        "wheelbase_m": 2.65
+      },
+      "model_scale": 1.12
     }
   ]
 }

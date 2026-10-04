@@ -80,8 +80,11 @@ func _init() -> void:
 	var source: Node = doc.generate_scene(state)
 	if rename:
 		_rename_parts(source)
+	var albedo_img: Image = null   # renk koşullu extract için (kaliper)
 	for spec: Dictionary in extracts:
-		_extract_part(source, spec)
+		if spec.has("hue") and albedo_img == null:
+			albedo_img = _source_albedo(state)
+		_extract_part(source, spec, albedo_img)
 	# Dokulu kaynak: tek albedo dokusu küçültülür, çıkışın tüm yüzeyleri tek materyali paylaşır
 	var out_material: StandardMaterial3D = _output_material(state, tex_size)
 
@@ -254,7 +257,9 @@ func _rename_parts(source: Node) -> void:
 ## CarPartMap "extract": {"part", "new_part", "center": [x,y,z], "radius", "half_width"} — X eksenli
 ## silindir (teker) bölgesinde, üç köşesi de içeride kalan üçgenler kaynak parçadan alınır ve
 ## tripo_part_<new_part> adlı yeni bir MeshInstance3D olarak kök altına eklenir.
-func _extract_part(source: Node, spec: Dictionary) -> void:
+## İsteğe bağlı RENK koşulu (janta kaynamış fren kaliperi): "hue" (0-1), "hue_tol", "min_sat" verilirse
+## üçgen ayrıca en az iki köşesinin doku rengi bu tona / doygunluğa uyuyorsa alınır.
+func _extract_part(source: Node, spec: Dictionary, albedo: Image = null) -> void:
 	var src_node: MeshInstance3D = source.find_child(String(CarPartMap.part_name(spec["part"])), true, false) as MeshInstance3D
 	if src_node == null or src_node.mesh == null:
 		push_error("extract: kaynak parca %s bulunamadi" % spec["part"])
@@ -271,6 +276,8 @@ func _extract_part(source: Node, spec: Dictionary) -> void:
 	var half_width: float = float(spec["half_width"]) * unit
 	var inside: PackedInt32Array = PackedInt32Array()
 	var outside: PackedInt32Array = PackedInt32Array()
+	var by_color: bool = spec.has("hue") and albedo != null
+	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV] if by_color else PackedVector2Array()
 	for t: int in indices.size() / 3:
 		var all_in: bool = true
 		for k: int in 3:
@@ -278,6 +285,12 @@ func _extract_part(source: Node, spec: Dictionary) -> void:
 			if absf(d.x) > half_width or Vector2(d.y, d.z).length() > radius:
 				all_in = false
 				break
+		if all_in and by_color:
+			var hits: int = 0
+			for k: int in 3:
+				if _color_match(albedo, uvs[indices[t * 3 + k]], spec):
+					hits += 1
+			all_in = hits >= 2
 		var target: PackedInt32Array = inside if all_in else outside
 		for k: int in 3:
 			target.append(indices[t * 3 + k])
@@ -295,6 +308,28 @@ func _extract_part(source: Node, spec: Dictionary) -> void:
 	mi.transform = src_node.transform
 	src_node.get_parent().add_child(mi)
 	print("extract: %s -> %s  ucgen %d / kalan %d" % [src_node.name, mi.name, inside.size() / 3, outside.size() / 3])
+
+
+static func _color_match(img: Image, uv: Vector2, spec: Dictionary) -> bool:
+	var c: Color = img.get_pixel(clampi(int(uv.x * img.get_width()), 0, img.get_width() - 1),
+		clampi(int(uv.y * img.get_height()), 0, img.get_height() - 1))
+	if c.s < float(spec.get("min_sat", 0.4)) or c.v < 0.2:
+		return false
+	var dh: float = absf(c.h - float(spec["hue"]))
+	return minf(dh, 1.0 - dh) <= float(spec.get("hue_tol", 0.06))
+
+
+## Kaynağın albedo görüntüsü (sıkıştırılmamış), renk koşullu extract için.
+static func _source_albedo(state: GLTFState) -> Image:
+	if state.materials.is_empty():
+		return null
+	var mat: BaseMaterial3D = state.materials[0] as BaseMaterial3D
+	if mat == null or mat.albedo_texture == null:
+		return null
+	var img: Image = mat.albedo_texture.get_image()
+	if img.is_compressed():
+		img.decompress()
+	return img
 
 
 ## Tek yüzeyi hedef orana sadeleştirir: meshoptimizer LOD zincirinden hedefe en yakın (>=) seviye

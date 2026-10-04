@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://b85u8s6pj3d1w"]
+
+[ext_resource type="PackedScene" uid="uid://cklbo0bmjx2s6" path="res://assets/cars/optimized/ferrari_488_pista.glb" id="1_ferra"]
+
+[node name="ferrari_488_pista" instance=ExtResource("1_ferra")]

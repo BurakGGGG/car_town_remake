@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://6ww7s1126mle"]
+
+[ext_resource type="PackedScene" uid="uid://civieuwgbi7ic" path="res://assets/cars/optimized/lambo_huracan.glb" id="1_lambo"]
+
+[node name="lambo_huracan" instance=ExtResource("1_lambo")]

@@ -316,7 +316,7 @@ func _run() -> void:
 	for row: Dictionary in CrateCatalog.odds(&"prestige_crate"):
 		if row["id"] == &"bmw_e60":
 			e60 = float(row["chance"])
-	check(absf(e60 - 4.0 / 144.0) < 1e-6, "E60 = 4/144 = yüzde 2,78 (tasarım belgesiyle aynı)")
+	check(absf(e60 - 4.0 / 159.0) < 1e-6, "E60 = 4/159 = yüzde 2,52 (A3 100 + S60 40 + CLS 15 + E60 4)")
 
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)

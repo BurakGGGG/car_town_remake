@@ -17,7 +17,10 @@ class_name CarPartMap
 ##   taillights  → sabit kırmızı lens + taillights_enabled emissive
 ##   grille, black_trim, plate, fog_lights, exhaust, antenna → sabit gerçekçi materyaller
 ##   hidden      → bozuk/çöp üçgenler, gizlenir
-## wheel_groups: fl/fr/rl/rr — dönüş/direksiyon grupları (ilk eleman pivot kaynağı).
+## wheel_groups: fl/fr/rl/rr — dönüş/direksiyon grupları (ilk eleman lastik).
+## wheel_axes: fl/fr/rl/rr → [y, z, yarıçap] — lastiğin geometrisinden ÖLÇÜLMÜŞ dönme ekseni
+##   (tools/wheel_fit.gd üretir, tools/wheel_blur.gd ile görsel doğrulanır). Varsa CarRig grubu elemeden
+##   kullanır; yoksa eski davranış (kutu merkezi + boyut / eksen elemesi).
 ## split_z: tek mesh'te iki rol (Fluence ön cam + tavan): z > z eşiği → front rolü, gerisi → back.
 ## extract: kaynakta başka parçaya kaynamış teker; tools/optimize_car.gd silindir bölgesini yeni parçaya ayırır
 ##   ({part, new_part, center, radius, half_width}); çalışma zamanında ek bir şey gerekmez.
@@ -52,6 +55,7 @@ const MAPS: Dictionary = {
 		# kalsın (kesilirse kemerde siyah kamalar oluşuyor — ölçüldü ve geri alındı).
 		"extract": [{"part": 1, "new_part": 67, "center": [-0.199, 0.103, -0.326], "radius": 0.108, "half_width": 0.045}],  # arka-sol teker alt kabuğa (1) kaynamış
 		"wheel_groups": {"fl": [4], "fr": [3], "rl": [67], "rr": [2]},
+		"wheel_axes": {"fl": [0.1025, 0.2988, 0.1018], "fr": [0.1032, 0.2987, 0.1019], "rl": [0.1046, -0.3252, 0.1050], "rr": [0.1036, -0.3252, 0.1007]},
 	},
 	"res://assets/cars/hyundai_era.tscn": {
 		"default_paint": Color(0.918, 0.910, 0.918),  # dokunun baskın kaporta rengi (#EAE8EA); paint mask ile aynı olmalı
@@ -59,15 +63,16 @@ const MAPS: Dictionary = {
 		"mirrors": [34, 35],
 		"wheels": [9],
 		"tires": [8, 12, 13],
-		"rims": [3, 4, 5, 11, 41],
+		"rims": [3, 4, 5, 11, 39, 41, 51, 55, 56],
 		"glass": [6, 23, 24, 32, 52, 54],
 		"headlights": [43, 47, 48, 68, 69, 71],
 		"taillights": [38, 57, 59, 63],
 		"grille": [25, 29, 33, 37, 42, 67],
-		"black_trim": [10, 18, 19, 30, 36, 39, 44, 45, 46, 49, 50, 51, 55, 56, 58],
+		"black_trim": [10, 18, 19, 30, 36, 44, 45, 46, 49, 50, 58],
 		"plate": [28],
 		"antenna": [61],
-		"wheel_groups": {"fl": [13, 4], "fr": [9, 3], "rl": [8, 5, 41], "rr": [12, 11]},
+		"wheel_groups": {"fl": [13, 4, 55], "fr": [9, 3, 39, 51, 56], "rl": [8, 5, 41], "rr": [12, 11]},
+		"wheel_axes": {"fl": [0.0849, 0.3079, 0.0839], "fr": [0.0845, 0.3116, 0.0871], "rl": [0.0853, -0.3059, 0.0843], "rr": [0.0849, -0.3054, 0.0909]},
 	},
 	"res://assets/cars/hyundai_getz.tscn": {
 		"default_paint": Color(0.847, 0.004, 0.039),  # dokunun baskın kaporta rengi (#D8010A); paint mask ile aynı olmalı
@@ -75,13 +80,14 @@ const MAPS: Dictionary = {
 		"mirrors": [15, 25],
 		"wheels": [1, 2, 19],
 		"tires": [6],
-		"rims": [4],
+		"rims": [4, 14, 29, 31, 62, 66],
 		"glass": [7, 33, 34, 37, 43, 60, 68],
 		"headlights": [40, 51, 52, 58, 65],
 		"taillights": [36, 44, 46, 48, 61],
 		"grille": [39],
-		"black_trim": [11, 12, 14, 20, 27, 29, 30, 31, 35, 42, 45, 49, 62, 66],
-		"wheel_groups": {"fl": [19], "fr": [1], "rl": [2], "rr": [6, 4]},
+		"black_trim": [12, 20, 27, 30, 35, 42, 45, 49],
+		"wheel_groups": {"fl": [19, 29, 66], "fr": [1, 62], "rl": [2, 14], "rr": [6, 4, 31]},
+		"wheel_axes": {"fl": [0.1057, 0.2982, 0.1047], "fr": [0.1048, 0.2981, 0.1046], "rl": [0.1061, -0.3296, 0.1034], "rr": [0.1061, -0.3287, 0.1049]},
 	},
 	"res://assets/cars/renault_fluence.tscn": {
 		"default_paint": Color(0.659, 0.678, 0.682),  # dokunun baskın kaporta rengi (#A8ADAE); paint mask ile aynı olmalı
@@ -94,7 +100,8 @@ const MAPS: Dictionary = {
 		"headlights": [41, 51, 59, 60],
 		"taillights": [43, 44, 55],
 		"grille": [33, 46, 47, 48],
-		"wheel_groups": {"fl": [2], "fr": [1], "rl": [10, 25, 20, 32, 50], "rr": [4, 8, 17]},
+		"wheel_groups": {"fl": [2], "fr": [1], "rl": [10, 20, 25, 32, 50], "rr": [4, 8, 17]},
+		"wheel_axes": {"fl": [0.1004, 0.2979, 0.0970], "fr": [0.1007, 0.2979, 0.0979], "rl": [0.1002, -0.3246, 0.0994], "rr": [0.1007, -0.3244, 0.0992]},
 	},
 	"res://assets/cars/volswagen_passat_b_5_5.tscn": {
 		"default_paint": Color(0.678, 0.690, 0.698),  # dokunun baskın kaporta rengi (#ADB0B2); paint mask ile aynı olmalı
@@ -109,13 +116,14 @@ const MAPS: Dictionary = {
 		"black_trim": [10, 39, 40, 41, 53, 56, 59, 60, 65],
 		"plate": [28],
 		"wheel_groups": {"fl": [1, 24], "fr": [4, 26], "rl": [2, 13], "rr": [3, 14]},
+		"wheel_axes": {"fl": [0.1006, 0.2760, 0.0985], "fr": [0.1002, 0.2754, 0.0993], "rl": [0.1001, -0.3230, 0.1011], "rr": [0.1009, -0.3238, 0.1008]},
 	},
 	"res://assets/cars/tofas_sahin.tscn": {
 		"default_paint": Color(0.918, 0.910, 0.918),  # dokunun baskın kaporta rengi (#EAE8EA); paint mask ile aynı olmalı
-		"body": [0, 1, 4, 9, 11, 13, 15, 16, 17, 22, 28, 29, 30, 31, 33, 38, 41, 44, 47, 49, 50, 51, 54, 55, 56, 64, 65, 70, 71, 72, 76],
+		"body": [0, 1, 4, 9, 11, 13, 15, 16, 17, 22, 28, 29, 30, 31, 33, 38, 41, 44, 47, 51, 56, 70, 72],
 		"wheels": [2, 8],
 		"tires": [6, 27, 77],
-		"rims": [3, 5, 26],
+		"rims": [3, 5, 26, 49, 50, 54, 55, 64, 65, 71, 76],
 		"glass": [7, 10, 12, 14, 20, 21, 23, 24, 25, 32, 34, 37, 39, 40, 42, 46, 52, 53, 61, 67],
 		"headlights": [18, 36, 43, 45, 59, 62, 63, 66, 68, 69, 73, 74, 75],
 		"taillights": [57],
@@ -127,7 +135,8 @@ const MAPS: Dictionary = {
 		# dilimi gövdede kalmasın, dönmeyen bir hilal bırakırdı) ama ÜST ucu çamurluğun altında
 		# kalsın (kesilirse kemerde siyah kamalar oluşuyor — ölçüldü ve geri alındı).
 		"extract": [{"part": 0, "new_part": 77, "center": [-0.196, 0.084, 0.313], "radius": 0.088, "half_width": 0.032}],  # ön-sol lastik kabuğa kaynamış (jant kapağı 2 ayrı)
-		"wheel_groups": {"fl": [77, 2], "fr": [27, 5], "rl": [6, 3], "rr": [8, 26]},
+		"wheel_groups": {"fl": [77, 2, 50, 76], "fr": [27, 5, 49, 71], "rl": [6, 3, 55, 64], "rr": [8, 26, 54, 65]},
+		"wheel_axes": {"fl": [0.0842, 0.3126, 0.0869], "fr": [0.0837, 0.3126, 0.0828], "rl": [0.0828, -0.2763, 0.0827], "rr": [0.0835, -0.2762, 0.0814]},
 	},
 	# renault_toros 2026-09-27'de çıkarılmıştı (tek mesh kaynakta tekerler silindirle kesiliyor,
 	# kemerde iz kalıyordu). 2026-09-28'de GERİ ALINDI: tekerler artık kesilmiyor, Blender'da
@@ -142,6 +151,7 @@ const MAPS: Dictionary = {
 		"body": [0],                   # kaynak gövdesi TEK mesh: cam/far/tampon ayrılamaz, dokudan gelir
 		"wheels": [1, 2, 3, 4],        # Blender'da üretilen temiz tekerler (lastik+jant+göbek tek mesh)
 		"wheel_groups": {"fl": [1], "fr": [2], "rl": [3], "rr": [4]},
+		"wheel_axes": {"fl": [0.0735, 0.3125, 0.0735], "fr": [0.0735, 0.3125, 0.0735], "rl": [0.0735, -0.2685, 0.0735], "rr": [0.0735, -0.2685, 0.0735]},
 	},
 	# --- 2026-09-27 ikinci parti (9 araç): roller OTOMATİK sınıflandırıcıyla çıkarıldı
 	# (geometri: köşe/yükseklik/yuvarlaklık + doku rengi: aracın kendi parlaklık dağılımına göre
@@ -159,21 +169,24 @@ const MAPS: Dictionary = {
 		"taillights": [24, 53, 57, 67, 74, 79],
 		"grille": [15, 27, 35],
 		"black_trim": [0, 7, 30, 33, 36, 40, 45, 46, 52, 62, 72, 77],
-		"wheel_groups": {"fl": [5], "fr": [1, 12], "rl": [3, 11, 34], "rr": [4, 28]},
+		"wheel_groups": {"fl": [5], "fr": [1], "rl": [3, 11], "rr": [4, 28]},
+		"wheel_axes": {"fl": [0.0860, 0.2991, 0.0877], "fr": [0.0855, 0.2992, 0.0878], "rl": [0.0855, -0.3183, 0.0875], "rr": [0.0848, -0.3183, 0.0875]},
 	},
 	"res://assets/cars/bmw_e60.tscn": {
 		"default_paint": Color(0.129, 0.133, 0.145),  # boya maskesi aracının ölçtüğü fabrika rengi (#212225)
 		"body": [0, 1, 7, 8, 11, 15, 21, 22, 23, 24, 25, 29, 31, 33, 34, 35, 36, 38, 40, 41, 44, 47, 49, 51, 52],
 		"mirrors": [19, 28],
-		"wheels": [2, 3, 4, 5, 10, 12],
+		"wheels": [2, 3, 5, 10, 12, 53],
 		"tires": [9],
 		"rims": [13, 14, 16, 17, 20, 30],
 		"glass": [6],
 		"headlights": [32],
 		"taillights": [37, 39],
 		"grille": [18, 26, 27, 42, 46, 50],
-		"black_trim": [43, 45, 48],
-		"wheel_groups": {"fl": [4, 17, 20], "fr": [5, 9], "rl": [3, 12, 30], "rr": [2, 10, 14]},
+		"black_trim": [4, 43, 45, 48],
+		"extract": [{"part": 4, "new_part": 53, "center": [0.1815, 0.0741, 0.3149], "radius": 0.0792, "half_width": 0.0394}],
+		"wheel_groups": {"fl": [53, 13, 17, 20], "fr": [5, 9], "rl": [3, 12, 30], "rr": [2, 10, 14, 16]},
+		"wheel_axes": {"fl": [0.0741, 0.3149, 0.0754], "fr": [0.0755, 0.3149, 0.0754], "rl": [0.0765, -0.2843, 0.0763], "rr": [0.0751, -0.2844, 0.0763]},
 	},
 	"res://assets/cars/ford_focus.tscn": {
 		"default_paint": Color(0.886, 0.910, 0.933),  # boya maskesi aracının ölçtüğü fabrika rengi (#E2E8EE)
@@ -187,6 +200,7 @@ const MAPS: Dictionary = {
 		"grille": [7, 27, 28, 41, 49],
 		"black_trim": [21],
 		"wheel_groups": {"fl": [6, 13], "fr": [2], "rl": [1, 14], "rr": [3]},
+		"wheel_axes": {"fl": [0.0853, 0.3000, 0.0806], "fr": [0.0852, 0.2999, 0.0815], "rl": [0.0853, -0.2971, 0.0802], "rr": [0.0859, -0.2979, 0.0806]},
 	},
 	"res://assets/cars/honda_civic.tscn": {
 		"default_paint": Color(0.820, 0.824, 0.831),  # boya maskesi aracının ölçtüğü fabrika rengi (#D1D2D4)
@@ -198,22 +212,24 @@ const MAPS: Dictionary = {
 		"glass": [5, 10, 13, 19, 23, 24, 25, 36, 41],
 		"headlights": [27, 28, 29, 30, 31, 35, 39],
 		"grille": [7],
-		"black_trim": [11, 33, 37, 42, 43],
-		"wheel_groups": {"fl": [1, 20, 38], "fr": [2, 15], "rl": [8, 14, 16], "rr": [6, 12, 32]},
+		"black_trim": [33, 37, 42, 43],
+		"wheel_groups": {"fl": [1, 20], "fr": [2, 15], "rl": [14, 8, 16, 34], "rr": [12, 6, 32]},
+		"wheel_axes": {"fl": [0.0804, 0.3164, 0.0805], "fr": [0.0803, 0.3161, 0.0807], "rl": [0.0784, -0.2808, 0.0817], "rr": [0.0779, -0.2809, 0.0813]},
 	},
 	"res://assets/cars/hyundai_accent_blue.tscn": {
 		"default_paint": Color(0.922, 0.929, 0.925),  # boya maskesi aracının ölçtüğü fabrika rengi (#EBEDEC)
-		"body": [0, 10, 13, 14, 15, 16, 17, 20, 22, 23, 24, 25, 26, 27, 32, 37, 39, 46, 50, 52],
+		"body": [0, 10, 13, 14, 15, 17, 20, 22, 23, 24, 25, 26, 27, 32, 37, 39, 46, 52],
 		"mirrors": [28, 30, 33, 34],
 		"wheels": [3, 4, 6, 7, 8, 11],
 		"tires": [9],
-		"rims": [35, 42, 44, 45, 47],
+		"rims": [16, 35, 42, 44, 45, 47, 50],
 		"glass": [2, 18, 19, 21, 29, 38, 40, 48, 49, 51],
 		"headlights": [41, 43],
 		"taillights": [31, 36],
 		"grille": [5, 12],
 		"black_trim": [1],
-		"wheel_groups": {"fl": [6, 9, 35], "fr": [3], "rl": [4, 11, 42], "rr": [7, 8, 47]},
+		"wheel_groups": {"fl": [9, 6, 35], "fr": [3], "rl": [4, 11, 42, 44, 45], "rr": [8, 7, 16, 47, 50]},
+		"wheel_axes": {"fl": [0.0873, 0.2948, 0.0909], "fr": [0.0884, 0.2952, 0.0905], "rl": [0.0894, -0.3026, 0.0909], "rr": [0.0895, -0.3023, 0.0905]},
 	},
 	"res://assets/cars/seat_leon.tscn": {
 		"default_paint": Color(0.890, 0.902, 0.922),  # boya maskesi aracının ölçtüğü fabrika rengi (#E3E6EB)
@@ -227,46 +243,159 @@ const MAPS: Dictionary = {
 		"grille": [17],
 		"black_trim": [1, 7],
 		"wheel_groups": {"fl": [3, 12], "fr": [5, 18], "rl": [2], "rr": [4, 16]},
+		"wheel_axes": {"fl": [0.0899, 0.2922, 0.0859], "fr": [0.0893, 0.2915, 0.0863], "rl": [0.0892, -0.3141, 0.0846], "rr": [0.0877, -0.3137, 0.0845]},
 	},
 	"res://assets/cars/skoda_kamiq.tscn": {
 		"default_paint": Color(0.918, 0.925, 0.925),  # boya maskesi aracının ölçtüğü fabrika rengi (#EAECEC)
-		"body": [0, 4, 9, 10, 12, 16, 17, 19, 22, 30, 31, 34, 38, 39, 41, 42, 44, 46, 47, 49, 51],
+		"body": [0, 4, 9, 10, 12, 16, 17, 19, 22, 30, 31, 34, 38, 41, 42, 44, 46, 47, 49, 51],
 		"mirrors": [23, 24, 26],
 		"wheels": [6, 7, 8, 13],
 		"tires": [2, 3, 14, 15],
-		"rims": [18],
+		"rims": [18, 39],
 		"glass": [5, 11, 20, 21, 25, 28, 29, 33, 35, 36, 37, 40, 50],
 		"headlights": [45, 48, 53],
 		"taillights": [27, 32],
 		"grille": [43, 52],
 		"black_trim": [1],
-		"wheel_groups": {"fl": [8, 15], "fr": [7, 14, 18], "rl": [3, 13], "rr": [2, 6]},
+		"wheel_groups": {"fl": [15, 8], "fr": [14, 7, 18, 39], "rl": [3, 13], "rr": [2, 6]},
+		"wheel_axes": {"fl": [0.0911, 0.3010, 0.0890], "fr": [0.0912, 0.3011, 0.0888], "rl": [0.0911, -0.2992, 0.0879], "rr": [0.0911, -0.2994, 0.0888]},
 	},
 	"res://assets/cars/volvo_s60.tscn": {
 		"default_paint": Color(0.863, 0.878, 0.902),  # boya maskesi aracının ölçtüğü fabrika rengi (#DCE0E6)
 		"body": [0, 5, 7, 8, 9, 15, 18, 20, 23, 25, 26, 28, 30, 37, 40, 42],
 		"mirrors": [12, 17],
 		"wheels": [2, 4],
-		"tires": [1, 3],
+		"tires": [3, 44],
 		"glass": [6, 21, 22, 32, 36, 39],
 		"headlights": [11, 16, 24, 27, 29, 38, 41, 43],
 		"taillights": [14, 31],
 		"grille": [10, 19, 35],
-		"black_trim": [13, 33, 34],
-		"wheel_groups": {"fl": [4], "fr": [2], "rl": [3], "rr": [1]},
+		"black_trim": [1, 13, 33, 34],
+		"rims": [45, 46, 47, 48],
+		"extract": [{"part": 1, "new_part": 44, "center": [-0.1828, 0.0873, -0.3048], "radius": 0.0849, "half_width": 0.0413},
+			{"part": 4, "new_part": 45, "center": [0.183, 0.0835, 0.2987], "radius": 0.0703, "half_width": 0.0464, "hue": 0.979, "hue_tol": 0.05, "min_sat": 0.45},
+			{"part": 2, "new_part": 46, "center": [-0.1823, 0.0853, 0.2985], "radius": 0.07, "half_width": 0.0458, "hue": 0.979, "hue_tol": 0.05, "min_sat": 0.45},
+			{"part": 3, "new_part": 47, "center": [0.1831, 0.0872, -0.3044], "radius": 0.0695, "half_width": 0.0463, "hue": 0.979, "hue_tol": 0.05, "min_sat": 0.45},
+			{"part": 44, "new_part": 48, "center": [-0.1828, 0.0873, -0.3048], "radius": 0.0688, "half_width": 0.0447, "hue": 0.979, "hue_tol": 0.05, "min_sat": 0.45}],
+		"wheel_groups": {"fl": [4], "fr": [2], "rl": [3], "rr": [44]},
+		"wheel_axes": {"fl": [0.0835, 0.2987, 0.0827], "fr": [0.0853, 0.2985, 0.0824], "rl": [0.0872, -0.3044, 0.0818], "rr": [0.0873, -0.3048, 0.0809]},
 	},
 	"res://assets/cars/vw_golf_7.tscn": {
 		"default_paint": Color(0.784, 0.024, 0.102),  # boya maskesi aracının ölçtüğü fabrika rengi (#C8061A)
 		"body": [1, 6, 7, 8, 15, 17, 19, 25, 26, 32, 40],
 		"mirrors": [13, 16],
 		"wheels": [2, 4, 5, 10, 20, 21],
-		"rims": [14],
+		"rims": [14, 38, 46],
 		"glass": [9, 12, 23, 24, 29, 31, 33, 34, 35],
 		"headlights": [39, 43, 44, 45],
 		"taillights": [18, 22, 27, 36, 37, 41, 42],
 		"grille": [11, 28, 30],
-		"black_trim": [0, 3, 38],
-		"wheel_groups": {"fl": [4, 21], "fr": [2], "rl": [5, 14], "rr": [10, 20]},
+		"black_trim": [0, 3],
+		"extract": [{"part": 2, "new_part": 46, "center": [-0.1899, 0.0937, 0.296], "radius": 0.0785, "half_width": 0.0426, "hue": 0.104, "hue_tol": 0.06, "min_sat": 0.45}],
+		"wheel_groups": {"fl": [4], "fr": [2], "rl": [5], "rr": [10, 38]},
+		"wheel_axes": {"fl": [0.0939, 0.2957, 0.0928], "fr": [0.0937, 0.2960, 0.0924], "rl": [0.0941, -0.3192, 0.0941], "rr": [0.0948, -0.3199, 0.0947]},
+	},
+	# --- 2026-10-04 üçüncü parti (6 araç): roller tools/classify_roles.py ile (ikinci partiyle aynı
+	# sınıflandırıcı; özellikler tools/part_features.gd). Boya rengi make_paint_mask.gd ölçümüyle eşitlenir.
+	"res://assets/cars/alfa_romeo_159.tscn": {
+		"default_paint": Color(0.847, 0.835, 0.843),  # boya maskesi aracının ölçtüğü fabrika rengi (#D8D5D7)
+		"body": [0, 1, 8, 9, 10, 14, 24, 28, 29, 30, 32, 34, 35, 38, 41, 42],
+		"mirrors": [11, 12],
+		"wheels": [2, 4],
+		"tires": [5, 46],
+		"rims": [13, 16, 17, 20, 21, 39],
+		"glass": [23, 25, 26, 44],
+		"headlights": [27],
+		"grille": [7, 15, 18, 19, 22, 37, 43, 45],
+		"black_trim": [3, 6, 31, 33, 36, 40],
+		"extract": [{"part": 3, "new_part": 46, "center": [-0.1963, 0.085, 0.2916], "radius": 0.0823, "half_width": 0.0415}],
+		"wheel_groups": {"fl": [2, 20], "fr": [46, 16], "rl": [4, 13], "rr": [5, 21]},
+		"wheel_axes": {"fl": [0.0832, 0.2934, 0.0793], "fr": [0.0850, 0.2916, 0.0784], "rl": [0.0804, -0.2944, 0.0807], "rr": [0.0807, -0.2947, 0.0805]},
+	},
+	"res://assets/cars/audi_rs6.tscn": {
+		"default_paint": Color(0.561, 0.584, 0.600),  # boya maskesi aracının ölçtüğü fabrika rengi (#8F9599)
+		"body": [2, 4, 10, 12, 15, 18, 19, 20, 22, 23, 24, 25, 26, 33, 34, 35, 37, 38, 39, 41, 44, 45, 48, 50, 51, 52, 61, 63, 67, 68, 69, 73, 74, 79, 80, 81],
+		"mirrors": [5, 31, 56, 64],
+		"wheels": [14, 32],
+		"tires": [1, 7, 8, 9, 11, 13, 16, 17],
+		"rims": [29, 30, 36, 40, 47, 58, 77, 78],
+		"glass": [6, 28, 43, 49, 53, 57],
+		"taillights": [42, 60],
+		"grille": [3, 27, 62, 65, 70, 71, 72, 76],
+		"black_trim": [0, 21, 46, 54, 55, 59, 66, 75],
+		"wheel_groups": {"fl": [11, 16, 40, 58], "fr": [13, 9], "rl": [1, 8], "rr": [7, 17]},
+		"wheel_axes": {"fl": [0.0814, 0.3129, 0.0816], "fr": [0.0824, 0.3127, 0.0814], "rl": [0.0803, -0.2828, 0.0806], "rr": [0.0817, -0.2829, 0.0804]},
+	},
+	"res://assets/cars/ferrari_488_pista.tscn": {
+		"default_paint": Color(0.769, 0.000, 0.012),  # boya maskesi aracının ölçtüğü fabrika rengi (#C40003)
+		"body": [1, 4, 5, 6, 8, 11, 12, 15, 17, 19, 20, 21, 22, 26, 28, 29, 31, 37, 38, 39, 40, 42, 46, 47, 55, 56, 57],
+		"mirrors": [16, 27],
+		"wheels": [0, 59, 60, 61],
+		"rims": [9, 24, 62, 63, 64, 65, 66, 67],
+		"taillights": [23, 25, 30, 50, 51, 52, 54, 58],
+		"grille": [14, 32, 44, 48, 53],
+		"black_trim": [2, 3, 7, 10, 13, 18, 33, 34, 35, 36, 41, 43, 45, 49],
+		# Elle düzeltildi (vurgu render'ı): 18 ön çamurluk içi, 41/45 ön hava girişi (teker değil);
+		# 9 arka-sol jant (gövde sanılmıştı); arka-sağ teker difüzörle (1) kaynamış → extract.
+		"extract": [{"part": 1, "new_part": 59, "center": [-0.1904, 0.0866, -0.3275], "radius": 0.0895, "half_width": 0.046},
+			{"part": 3, "new_part": 60, "center": [-0.1873, 0.0856, 0.244], "radius": 0.0874, "half_width": 0.0463},
+			{"part": 7, "new_part": 61, "center": [0.1873, 0.0866, -0.3275], "radius": 0.089, "half_width": 0.0499},
+			{"part": 0, "new_part": 62, "center": [0.1889, 0.0867, 0.2436], "radius": 0.0708, "half_width": 0.0504, "hue": 0.104, "hue_tol": 0.06, "min_sat": 0.45},
+			{"part": 60, "new_part": 63, "center": [-0.1873, 0.0856, 0.244], "radius": 0.0707, "half_width": 0.0502, "hue": 0.104, "hue_tol": 0.06, "min_sat": 0.45},
+			{"part": 61, "new_part": 64, "center": [0.1873, 0.0866, -0.3275], "radius": 0.0721, "half_width": 0.0541, "hue": 0.104, "hue_tol": 0.06, "min_sat": 0.45},
+			{"part": 9, "new_part": 65, "center": [0.1873, 0.0866, -0.3275], "radius": 0.0721, "half_width": 0.0541, "hue": 0.104, "hue_tol": 0.06, "min_sat": 0.45},
+			{"part": 59, "new_part": 66, "center": [-0.1904, 0.0866, -0.3275], "radius": 0.0721, "half_width": 0.0473, "hue": 0.104, "hue_tol": 0.06, "min_sat": 0.45},
+			{"part": 24, "new_part": 67, "center": [-0.1904, 0.0866, -0.3275], "radius": 0.0721, "half_width": 0.0473, "hue": 0.104, "hue_tol": 0.06, "min_sat": 0.45}],
+		"wheel_groups": {"fl": [0], "fr": [60], "rl": [61, 9], "rr": [59, 24]},
+		"wheel_axes": {"fl": [0.0867, 0.2436, 0.0833], "fr": [0.0856, 0.2440, 0.0832], "rl": [0.0866, -0.3275, 0.0848], "rr": [0.0866, -0.3275, 0.0848]},
+	},
+	"res://assets/cars/lambo_huracan.tscn": {
+		"default_paint": Color(0.859, 0.847, 0.859),  # boya maskesi aracının ölçtüğü fabrika rengi (#DBD8DB)
+		"body": [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 19, 21, 23, 24, 25, 26, 27, 28, 29, 30, 32, 33, 34, 35, 36, 38, 39, 42, 43, 45, 47, 50, 52, 53, 54, 58, 59, 62, 63, 66, 67],
+		"wheels": [1, 4, 5, 68],
+		"glass": [41],
+		"headlights": [40, 44, 56],
+		"taillights": [64],
+		"grille": [22, 60],
+		"black_trim": [0, 2, 3, 17, 18, 20, 31, 37, 46, 48, 49, 51, 55, 57, 61, 65],
+		# Elle düzeltildi (vurgu render'ı): 39/58 ön tampon (gövde), 46/51/61 ön hava girişi — jant değil.
+		"rims": [69, 70, 71, 72],
+		"extract": [{"part": 2, "new_part": 68, "center": [-0.1863, 0.0828, -0.3174], "radius": 0.0812, "half_width": 0.051},
+			{"part": 5, "new_part": 69, "center": [0.186, 0.0822, 0.2642], "radius": 0.0667, "half_width": 0.0549, "hue": 0.62, "hue_tol": 0.07, "min_sat": 0.45},
+			{"part": 4, "new_part": 70, "center": [-0.185, 0.0827, 0.2649], "radius": 0.0661, "half_width": 0.0545, "hue": 0.62, "hue_tol": 0.07, "min_sat": 0.45},
+			{"part": 1, "new_part": 71, "center": [0.1866, 0.0821, -0.318], "radius": 0.0671, "half_width": 0.0562, "hue": 0.62, "hue_tol": 0.07, "min_sat": 0.45},
+			{"part": 68, "new_part": 72, "center": [-0.1863, 0.0828, -0.3174], "radius": 0.0657, "half_width": 0.0553, "hue": 0.62, "hue_tol": 0.07, "min_sat": 0.45}],
+		"wheel_groups": {"fl": [5], "fr": [4], "rl": [1], "rr": [68]},
+		"wheel_axes": {"fl": [0.0822, 0.2642, 0.0785], "fr": [0.0827, 0.2649, 0.0778], "rl": [0.0821, -0.3180, 0.0789], "rr": [0.0828, -0.3174, 0.0773]},
+	},
+	"res://assets/cars/mercedes_cls.tscn": {
+		"default_paint": Color(0.718, 0.710, 0.718),  # boya maskesi aracının ölçtüğü fabrika rengi (#B7B5B7)
+		# Elle düzeltildi (vurgu render'ı): 8 kapı paneli (ayna sanılmıştı), 52 ön çamurluk (jant sanılmıştı).
+		"body": [1, 5, 7, 8, 10, 11, 16, 19, 20, 21, 22, 24, 25, 28, 31, 32, 33, 35, 40, 42, 46, 47, 48, 50, 52, 53, 54, 55, 56, 58, 59, 65],
+		"tires": [2, 3, 4, 9],
+		"rims": [12, 13, 14, 26],
+		"glass": [6, 23, 37, 39],
+		"headlights": [30],
+		"taillights": [18, 29],
+		"grille": [15, 17, 27, 34, 36, 38, 44, 45, 51, 57, 60, 61, 62],
+		"black_trim": [0, 41, 43, 49, 63, 64],
+		"wheel_groups": {"fl": [2, 12], "fr": [9, 26], "rl": [3, 14], "rr": [4, 13]},
+		"wheel_axes": {"fl": [0.0761, 0.3107, 0.0746], "fr": [0.0774, 0.3106, 0.0747], "rl": [0.0776, -0.2756, 0.0751], "rr": [0.0764, -0.2760, 0.0755]},
+	},
+	"res://assets/cars/porsche_gt3.tscn": {
+		"default_paint": Color(0.184, 0.298, 0.161),  # boya maskesi aracının ölçtüğü fabrika rengi (#2F4C29)
+		"body": [1, 5, 9, 10, 12, 13, 16, 18, 20, 22, 23, 24, 25, 27, 28, 32, 34, 35, 36, 40, 47, 50, 51, 52, 53, 55, 56, 57, 58, 61],
+		"mirrors": [38, 42, 44, 45, 46],
+		"wheels": [2, 3, 4, 6, 62],
+		"tires": [7, 8, 15],
+		"rims": [17, 26, 30, 33, 41, 49, 59],
+		"glass": [29, 31, 39, 43, 48],
+		"taillights": [37],
+		"grille": [14, 21],
+		"black_trim": [0, 19, 54, 60],
+		"extract": [{"part": 11, "new_part": 62, "center": [-0.1803, 0.0826, 0.2873], "radius": 0.0915, "half_width": 0.0498}],
+		"wheel_groups": {"fl": [15, 6], "fr": [62, 4, 33, 49], "rl": [7, 3], "rr": [8, 2, 41]},
+		"wheel_axes": {"fl": [0.0826, 0.2873, 0.0861], "fr": [0.0826, 0.2873, 0.0861], "rl": [0.0844, -0.2712, 0.0863], "rr": [0.0844, -0.2714, 0.0863]},
 	},
 }
 

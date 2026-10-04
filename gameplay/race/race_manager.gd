@@ -49,6 +49,7 @@ const WIN_REWARD: Dictionary = {
 	"C": {"money": 700, "xp": 35},
 	"B": {"money": 1000, "xp": 50},
 	"A": {"money": 1400, "xp": 70},
+	"S": {"money": 2000, "xp": 100},   # süper sporlar (GT3, Huracán, 488 Pista, RS6)
 }
 ## Sahiplik düğümü yoksa (test sahnesi) yarışa çıkan araç.
 const FALLBACK_VEHICLE: StringName = &"tofas_sahin"
@@ -123,7 +124,7 @@ func set_racing(value: bool) -> void:
 ## oyuncunun sahip OLMADIĞI araçlar da rakip olabilir (Car Town'da da rakipler dışarıdan gelir).
 func rival_id_for(player_id: StringName) -> StringName:
 	var player_class: String = String(CarCatalog.get_entry(player_id).get("class", "D"))
-	var order: Array[String] = ["D", "C", "B", "A"]
+	var order: Array[String] = ["D", "C", "B", "A", "S"]
 	var index: int = maxi(order.find(player_class), 0)
 	var wanted: Array[String] = [order[index]]
 	if index + 1 < order.size():

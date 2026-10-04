@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://nsrvuxy8nikt"]
+
+[ext_resource type="PackedScene" uid="uid://b6eqkwgpfflya" path="res://assets/cars/optimized/porsche_gt3.glb" id="1_porsc"]
+
+[node name="porsche_gt3" instance=ExtResource("1_porsc")]

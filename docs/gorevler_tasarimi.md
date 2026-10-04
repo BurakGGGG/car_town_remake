@@ -257,7 +257,7 @@ koleksiyon sonrası birikimi emsin diye.
 | MÜKEMMEL GÜN | `daily_all` | 3 · 15 · 50 · 150 | 1,0 |
 | HAFTA YILDIZI | `weekly_all` | 1 · 4 · 12 · 26 | 1,2 |
 | YILDIZ TOPLAYICI | `ach_stars` (meta) | 10 · 25 · 50 · 80 | 1,0 |
-| **EFSANE GARAJ SAHİBİ** | bileşik (16 araç + garaj Sv.4 + 3 alan + rütbe 10 + 35 ustalık yıldızı) | 1 yıldız | 500 gem |
+| **EFSANE GARAJ SAHİBİ** | bileşik (tüm araçlar + garaj Sv.4 + 3 alan + rütbe 10 + 35 ustalık yıldızı) | 1 yıldız | 500 gem |
 
 Başarımlar geriye dönük başlar: durum metrikleri mevcut oyundan okunur; `repairs` JobMastery
 toplamından, eski kilometre taşları ödenmiş yıldız olarak taşınır. Sayaç metrikleri (kazanç, harcama,
