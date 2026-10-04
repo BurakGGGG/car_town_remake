@@ -273,7 +273,7 @@ func _build_stop() -> void:
 			_stop.global_transform = challenge_spot.global_transform
 		else:
 			push_warning("RaceManager: challenge_spot yarış şeridinde değil, yok sayıldı " +
-				"(şerit noktası %s, verilen %s)" % [_stop.global_position, challenge_spot.global_position])
+				Loc.t("(şerit noktası %s, verilen %s)") % [_stop.global_position, challenge_spot.global_position])
 
 
 func _waypoint(point_name: StringName) -> TrafficWaypoint:

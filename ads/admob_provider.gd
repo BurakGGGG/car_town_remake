@@ -38,6 +38,15 @@ func _load_and_show_form(on_ready: Callable) -> void:
 			_init_sdk(on_ready))
 
 
+func privacy_options_required() -> bool:
+	return UserMessagingPlatform.consent_information.get_privacy_options_requirement_status() \
+			== ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
+
+
+func show_privacy_options(on_done: Callable) -> void:
+	UserMessagingPlatform.show_privacy_options_form(func(_error: FormError) -> void: on_done.call())
+
+
 func _init_sdk(on_ready: Callable) -> void:
 	# 13+ oyun: reklam içeriği en çok "T" (genç). Çocuk işaretlemesi YOK (hedef kitle çocuk değil).
 	var config: RequestConfiguration = RequestConfiguration.new()

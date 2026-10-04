@@ -399,7 +399,7 @@ func _build_back_wall(env_root: Node3D) -> void:
 
 	var title: Label3D = Label3D.new()
 	title.name = "SignTitle"
-	title.text = "CAR PARTS"
+	title.text = Loc.t("CAR PARTS")
 	title.font_size = 128
 	title.pixel_size = 0.0042
 	title.modulate = Color("2F3236")
@@ -407,7 +407,7 @@ func _build_back_wall(env_root: Node3D) -> void:
 	env_root.add_child(title)
 	var subtitle: Label3D = Label3D.new()
 	subtitle.name = "SignSubtitle"
-	subtitle.text = "AUTOMOTIVE  ·  SHOWROOM"
+	subtitle.text = Loc.t("AUTOMOTIVE  ·  SHOWROOM")
 	subtitle.font_size = 96
 	subtitle.pixel_size = 0.0021
 	subtitle.modulate = Color("8A5A2B")
@@ -709,7 +709,7 @@ func _build_overlay() -> void:
 	var sign: PlatePanel = PlatePanel.new()
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	var title: Label = _label(&"HudSignTitle", TITLE)
+	var title: Label = _label(&"HudSignTitle", Loc.t(TITLE))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sign.add_child(title)
 	_title_group.add_child(sign)
@@ -717,7 +717,7 @@ func _build_overlay() -> void:
 	collection.name = "CollectionButton"
 	collection.theme_type_variation = &"HudPlateSmall"
 	collection.kind = HudIcon.Kind.CAR
-	collection.text = "KOLEKSİYON"
+	collection.text = Loc.t("KOLEKSİYON")
 	collection.focus_mode = Control.FOCUS_NONE
 	collection.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	collection.pressed.connect(func() -> void: screen_requested.emit(&"collection"))
@@ -780,7 +780,7 @@ func _build_overlay() -> void:
 	_exit_button = PlateButton.new()
 	_exit_button.name = "ExitButton"
 	_exit_button.theme_type_variation = &"HudPlateSmall"
-	_exit_button.text = "GERİ"
+	_exit_button.text = Loc.t("GERİ")
 	_exit_button.focus_mode = Control.FOCUS_NONE
 	_exit_button.pressed.connect(close)
 	_exit_group.add_child(_exit_button)
@@ -837,10 +837,10 @@ func _rebuild_list() -> void:
 	for child: Node in _list_box.get_children():
 		child.queue_free()
 	_plates.clear()
-	_list_box.add_child(_section_label("ARAÇ KASALARI"))
+	_list_box.add_child(_section_label(Loc.t("ARAÇ KASALARI")))
 	for crate: Dictionary in CrateCatalog.all():
 		var id: StringName = crate["id"]
-		var plate: PlateButton = _list_plate("crate:%s" % id, "%s\n%d GEM" % [crate["display_name"], crate["price_gems"]], HudIcon.Kind.GEM)
+		var plate: PlateButton = _list_plate("crate:%s" % id, Loc.t("%s\n%d GEM") % [Loc.t(String(crate["display_name"])), crate["price_gems"]], HudIcon.Kind.GEM)
 		plate.toggled.connect(func(pressed: bool) -> void:
 			if pressed:
 				_show_crate(id))
@@ -850,7 +850,7 @@ func _rebuild_list() -> void:
 			if not _ownership.is_owned(id):
 				buyback.append(id)
 	if not buyback.is_empty():
-		_list_box.add_child(_section_label("GERİ AL"))
+		_list_box.add_child(_section_label(Loc.t("GERİ AL")))
 		for id: StringName in buyback:
 			var plate: PlateButton = _list_plate("car:%s" % id, CarCatalog.label(CarCatalog.get_entry(id)), HudIcon.Kind.CAR)
 			plate.toggled.connect(func(pressed: bool) -> void:
@@ -928,32 +928,32 @@ func _refresh_crate() -> void:
 	for row: Dictionary in CrateCatalog.odds(_shown_crate):
 		var car: Dictionary = CarCatalog.get_entry(row["id"])
 		var mark: String = "✔ " if _ownership and _ownership.is_owned(row["id"]) else ""
-		lines.append("%s%%%s  %s  ·  %s" % [mark, ("%.1f" % (float(row["chance"]) * 100.0)).replace(".", ","),
+		lines.append("%s%s  %s  ·  %s" % [mark, Loc.percent(Loc.decimal(float(row["chance"]) * 100.0)),
 			String(car.get("display_name", row["id"])).to_upper(), CrateCatalog.rarity_label(row["rarity"])])
 	var price: int = int(entry["price_gems"])
 	if _progress and _progress.gems < price:
-		lines.append("GEM: GÜNLÜK GİRİŞ · GÖREVLER · SEVİYE · USTALIK")   # gem nereden gelir (QA: anlatılmıyordu)
-	_info_plate.set_content(String(entry["display_name"]),
-		"ARAÇ TESLİMAT KASASI  ·  SV %d+" % int(entry["min_level"]), "%d GEM" % price, lines)
+		lines.append(Loc.t("GEM: GÜNLÜK GİRİŞ · GÖREVLER · SEVİYE · USTALIK"))   # gem nereden gelir (QA: anlatılmıyordu)
+	_info_plate.set_content(Loc.t(String(entry["display_name"])),
+		Loc.t("ARAÇ TESLİMAT KASASI  ·  SV %d+") % int(entry["min_level"]), Loc.t("%d GEM") % price, lines)
 	_buy_button.kind = HudIcon.Kind.GEM
 	var reason: String = _crates.buy_block_reason(_shown_crate) if _crates else "unknown"
 	if _closing_after_buy:
 		reason = "busy"
 	match reason:
 		"":
-			_buy_button.text = "SATIN AL\n%d GEM" % price
+			_buy_button.text = Loc.t("SATIN AL\n%d GEM") % price
 			_buy_button.disabled = false
 		"level":
-			_buy_button.text = "SEVİYE %d\nGEREKLİ" % int(entry["min_level"])
+			_buy_button.text = Loc.t("SEVİYE %d\nGEREKLİ") % int(entry["min_level"])
 			_buy_button.disabled = true
 		"gems":
-			_buy_button.text = "%d GEM\nGEM YETERSİZ" % price
+			_buy_button.text = Loc.t("%d GEM\nGEM YETERSİZ") % price
 			_buy_button.disabled = true
 		"full":
-			_buy_button.text = "ÖNCE GARAJDAKİ\nKASALARI AÇ"
+			_buy_button.text = Loc.t("ÖNCE GARAJDAKİ\nKASALARI AÇ")
 			_buy_button.disabled = true
 		_:
-			_buy_button.text = "%d GEM" % price
+			_buy_button.text = Loc.t("%d GEM") % price
 			_buy_button.disabled = true
 
 
@@ -973,16 +973,16 @@ func _refresh_vehicle() -> void:
 		return
 	match _ownership.status(_shown_vehicle):
 		VehicleOwnership.Status.OWNED:
-			_buy_button.text = "SAHİPSİN"
+			_buy_button.text = Loc.t("SAHİPSİN")
 			_buy_button.disabled = true
 		VehicleOwnership.Status.TOO_EXPENSIVE:
-			_buy_button.text = "%s ₺\nPARA YETERSİZ" % Hud.format_thousands(price)
+			_buy_button.text = Loc.t("%s ₺\nPARA YETERSİZ") % Hud.format_thousands(price)
 			_buy_button.disabled = true
 		VehicleOwnership.Status.UNDISCOVERED:
-			_buy_button.text = "KASADAN ÇIKAR"
+			_buy_button.text = Loc.t("KASADAN ÇIKAR")
 			_buy_button.disabled = true
 		_:
-			_buy_button.text = "GERİ AL\n%s ₺" % Hud.format_thousands(price)
+			_buy_button.text = Loc.t("GERİ AL\n%s ₺") % Hud.format_thousands(price)
 			_buy_button.disabled = false
 
 

@@ -110,7 +110,7 @@ static func rank(value: int) -> int:
 
 
 static func rank_name(rank_index: int) -> String:
-	return RANK_NAMES[clampi(rank_index - 1, 0, RANK_NAMES.size() - 1)]
+	return Loc.t(RANK_NAMES[clampi(rank_index - 1, 0, RANK_NAMES.size() - 1)])
 
 
 ## Bir sonraki rütbe için gereken değer (en üst rütbedeyse 0).

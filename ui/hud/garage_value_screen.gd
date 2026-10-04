@@ -64,7 +64,7 @@ func _build() -> void:
 	var sign: PlatePanel = PlatePanel.new()
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var title: Label = _label(&"HudSignTitle", "GARAJ DEĞERİ")
+	var title: Label = _label(&"HudSignTitle", Loc.t("GARAJ DEĞERİ"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sign.add_child(title)
 	column.add_child(sign)
@@ -112,7 +112,7 @@ func _build() -> void:
 
 	var close_button: PlateButton = PlateButton.new()
 	close_button.theme_type_variation = &"HudPlateSmall"
-	close_button.text = "KAPAT"
+	close_button.text = Loc.t("KAPAT")
 	close_button.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
 	close_button.focus_mode = Control.FOCUS_NONE
 	close_button.pressed.connect(close)
@@ -126,20 +126,20 @@ func _refresh() -> void:
 	var value: int = GarageValue.compute(tree)
 	var rank: int = GarageValue.rank(value)
 	_value_label.text = "%s ₺" % Hud.format_thousands(value)
-	_rank_label.text = "%d. RÜTBE — %s" % [rank, GarageValue.rank_name(rank)]
+	_rank_label.text = Loc.t("%d. RÜTBE — %s") % [rank, GarageValue.rank_name(rank)]
 	_gauge.ratio = GarageValue.rank_ratio(value)
 	var next: int = GarageValue.next_threshold(value)
-	_next_label.text = ("EN ÜST RÜTBE" if next == 0
-			else "SIRADAKİ RÜTBE: %s ₺ (%s ₺ kaldı)"
+	_next_label.text = (Loc.t("EN ÜST RÜTBE") if next == 0
+			else Loc.t("SIRADAKİ RÜTBE: %s ₺ (%s ₺ kaldı)")
 				% [Hud.format_thousands(next), Hud.format_thousands(next - value)])
 
 	for child: Node in _breakdown.get_children():
 		_breakdown.remove_child(child)
 		child.queue_free()
-	_breakdown.add_child(_row("ARAÇLAR", GarageValue.vehicles_value(tree), false))
-	_breakdown.add_child(_row("GELİŞTİRMELER", GarageValue.upgrades_value(tree), false))
-	_breakdown.add_child(_row("TAMİR ALANLARI", GarageValue.bays_value(tree), false))
-	_breakdown.add_child(_row("BOYA", GarageValue.paint_value(tree), false))
+	_breakdown.add_child(_row(Loc.t("ARAÇLAR"), GarageValue.vehicles_value(tree), false))
+	_breakdown.add_child(_row(Loc.t("GELİŞTİRMELER"), GarageValue.upgrades_value(tree), false))
+	_breakdown.add_child(_row(Loc.t("TAMİR ALANLARI"), GarageValue.bays_value(tree), false))
+	_breakdown.add_child(_row(Loc.t("BOYA"), GarageValue.paint_value(tree), false))
 
 	for child: Node in _ladder.get_children():
 		_ladder.remove_child(child)
@@ -175,11 +175,11 @@ func _ladder_row(rank_index: int, value: int, current: int) -> HBoxContainer:
 	var name_label: Label = _label(&"HudInkCaption", GarageValue.rank_name(rank_index))
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var need: Label = _label(&"HudInkCaption",
-			"AÇILDI" if value >= threshold else "%s ₺" % Hud.format_thousands(threshold))
+			Loc.t("AÇILDI") if value >= threshold else "%s ₺" % Hud.format_thousands(threshold))
 	if rank_index == current:
 		for label: Label in [no, name_label, need]:
 			label.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
-		need.text = "ŞU ANDA"
+		need.text = Loc.t("ŞU ANDA")
 	elif value < threshold:
 		for label: Label in [no, name_label, need]:
 			label.modulate.a = 0.45

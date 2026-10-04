@@ -36,8 +36,8 @@ func _ready() -> void:
 	edit_button = _make("EditButton", HudIcon.Kind.NONE)
 	value_button = _make("ValueButton", HudIcon.Kind.NONE)
 	mastery_button = _make("MasteryButton", HudIcon.Kind.NONE)
-	edit_button.text = "DÜZENLE"
-	mastery_button.text = "USTALIK"
+	edit_button.text = Loc.t("DÜZENLE")
+	mastery_button.text = Loc.t("USTALIK")
 	level_button.pressed.connect(func() -> void: expand_requested.emit())
 	speed_button.pressed.connect(_on_speed_pressed)
 	bay_button.pressed.connect(func() -> void:
@@ -90,11 +90,11 @@ func _on_speed_pressed() -> void:
 func refresh() -> void:
 	if level_button == null:
 		return
-	_write_upgrade(level_button, GarageUpgradeManager.GARAGE_ID, "GARAJ SV.%d", "GENİŞLET")
-	_write_upgrade(speed_button, GarageUpgradeManager.SPEED_ID, "TAMİR HIZI %d/%d", "YÜKSELT")
+	_write_upgrade(level_button, GarageUpgradeManager.GARAGE_ID, Loc.t("GARAJ SV.%d"), Loc.t("GENİŞLET"))
+	_write_upgrade(speed_button, GarageUpgradeManager.SPEED_ID, Loc.t("TAMİR HIZI %d/%d"), Loc.t("YÜKSELT"))
 	_write_bay()
 	var value: int = GarageValue.compute(get_tree())
-	value_button.text = "DETAY\n%d. RÜTBE" % GarageValue.rank(value)
+	value_button.text = Loc.t("DETAY\n%d. RÜTBE") % GarageValue.rank(value)
 
 
 ## "BAŞLIK\nEYLEM ücret ₺"; maksimumda "MAKSİMUM", bakiye yetmezse düğme kapalı.
@@ -110,7 +110,7 @@ func _write_upgrade(button: PlateButton, id: StringName, title: String, action: 
 	var head: String = title % [upgrade.current_level] if id == GarageUpgradeManager.GARAGE_ID \
 			else title % [upgrade.current_level, upgrade.max_level]
 	if upgrade.is_max():
-		button.text = "%s\nMAKSİMUM" % head
+		button.text = Loc.t("%s\nMAKSİMUM") % head
 		button.disabled = id == GarageUpgradeManager.SPEED_ID   # garaj düğmesi maksimumda da plakayı gösterir
 		return
 	var cost: int = upgrade.next_cost()
@@ -123,13 +123,13 @@ func _write_upgrade(button: PlateButton, id: StringName, title: String, action: 
 ## TAMİR ALANI düğmesi: sıradaki alanın satın alma durumu. Basınca HUD satın alma plakasını açar.
 func _write_bay() -> void:
 	if _bays == null or _bays.unlocked_count() >= _bays.bay_count():
-		bay_button.text = "TAMİR ALANI\nTÜMÜ AÇIK"
+		bay_button.text = Loc.t("TAMİR ALANI\nTÜMÜ AÇIK")
 		bay_button.disabled = true
 		return
 	var next: int = _bays.unlocked_count()
 	bay_button.disabled = false
 	match _bays.status(next):
 		RepairBayManager.Status.NEEDS_LEVEL:
-			bay_button.text = "TAMİR ALANI %d\nGARAJ SV.%d" % [next + 1, _bays.required_level(next)]
+			bay_button.text = Loc.t("TAMİR ALANI %d\nGARAJ SV.%d") % [next + 1, _bays.required_level(next)]
 		_:
-			bay_button.text = "TAMİR ALANI %d\nAL %s ₺" % [next + 1, Hud.format_thousands(_bays.price(next))]
+			bay_button.text = Loc.t("TAMİR ALANI %d\nAL %s ₺") % [next + 1, Hud.format_thousands(_bays.price(next))]

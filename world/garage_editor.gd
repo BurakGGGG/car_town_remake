@@ -310,7 +310,7 @@ func begin_place(item: StringName) -> bool:
 	_ghost_yaw = spot["yaw"]
 	_refresh_ghost()
 	if not bool(spot["ok"]):
-		notice.emit("YER YOK — SÜRÜKLEYİP BOŞ BİR YERE TAŞI")
+		notice.emit(Loc.t("YER YOK — SÜRÜKLEYİP BOŞ BİR YERE TAŞI"))
 	placing_changed.emit(item)
 	state_changed.emit()
 	return true
@@ -321,7 +321,7 @@ func confirm_ghost() -> bool:
 	if _ghost == null:
 		return false
 	if not _view.is_valid(_ghost_item, _ghost_pos, _ghost_yaw):
-		notice.emit("BURAYA SIĞMIYOR")
+		notice.emit(Loc.t("BURAYA SIĞMIYOR"))
 		return false
 	var iid: String = _decor.add_instance(_ghost_item, _ghost_pos, _ghost_yaw)
 	if iid == "":
@@ -331,7 +331,7 @@ func confirm_ghost() -> bool:
 	cancel_ghost()
 	select(iid)
 	placing_changed.emit(&"")
-	notice.emit("%s YERLEŞTİ" % String(GarageDecor.get_item(item).get("title", "")))
+	notice.emit(Loc.t("%s YERLEŞTİ") % Loc.t(String(GarageDecor.get_item(item).get("title", ""))))
 	return true
 
 
@@ -365,13 +365,13 @@ func rotate_selected(direction: int) -> bool:
 			return false
 		var turned: float = fposmod(_bays.bay_yaw(bay) - direction * BAY_ROTATION_STEP, 360.0)
 		if not move_bay(bay, _bays.bay_position(bay), turned):
-			notice.emit("DÖNÜNCE SIĞMIYOR")
+			notice.emit(Loc.t("DÖNÜNCE SIĞMIYOR"))
 			return false
 		return true
 	var inst: Dictionary = _decor.instance(_selected)
 	var item: StringName = inst["item"]
 	if GarageDecor.placement(item) == GarageDecor.PLACE_WALL:
-		notice.emit("DUVAR EŞYASI DUVARA GÖRE DURUR")
+		notice.emit(Loc.t("DUVAR EŞYASI DUVARA GÖRE DURUR"))
 		return false
 	var from: float = float((inst["rot"] as Vector3).y)
 	var to: float = fposmod(from - direction * GarageDecor.rotation_step(item), 360.0)
@@ -385,7 +385,7 @@ func rotate_selected(direction: int) -> bool:
 	# dönüşü reddediliyordu; oyuncu önce elle çekip sonra döndürmek zorunda kalıyordu.
 	var spot: Vector3 = _nudge(item, inst["pos"], to, _selected)
 	if spot == Vector3.INF:
-		notice.emit("DÖNÜNCE SIĞMIYOR")
+		notice.emit(Loc.t("DÖNÜNCE SIĞMIYOR"))
 		return false
 	return move_to(_selected, spot, to)
 
@@ -432,14 +432,14 @@ func delete_selected() -> bool:
 	if _selected == "":
 		return false
 	if selected_is_bay():
-		notice.emit("TAMİR ALANI KALDIRILAMAZ — TAŞIYABİLİRSİN")
+		notice.emit(Loc.t("TAMİR ALANI KALDIRILAMAZ — TAŞIYABİLİRSİN"))
 		return false
 	var record: Dictionary = _decor.remove_instance(_selected)
 	if record.is_empty():
 		return false
 	_push({"type": "delete", "record": record})
 	select("")
-	notice.emit("DEPOYA KALDIRILDI")
+	notice.emit(Loc.t("DEPOYA KALDIRILDI"))
 	return true
 
 
@@ -696,7 +696,7 @@ func _end_drag(commit: bool) -> void:
 	if bay >= 0:
 		if not (commit and _bay_ok and move_bay(bay, _bay_pos, _bay_yaw)):
 			if commit and not _bay_ok:
-				notice.emit("BURAYA SIĞMIYOR — ESKİ YERİNE DÖNDÜ")
+				notice.emit(Loc.t("BURAYA SIĞMIYOR — ESKİ YERİNE DÖNDÜ"))
 			_bays.apply_layout(bay)   # görseli kayıtlı yerine geri koy
 		_update_marker()
 		return
@@ -707,7 +707,7 @@ func _end_drag(commit: bool) -> void:
 		_set_tint(body, false)
 	if not (commit and _drag_ok and move_to(iid, _drag_pos, _drag_yaw_live)):
 		if commit and not _drag_ok:
-			notice.emit("BURAYA SIĞMIYOR — ESKİ YERİNE DÖNDÜ")
+			notice.emit(Loc.t("BURAYA SIĞMIYOR — ESKİ YERİNE DÖNDÜ"))
 		_view.refresh()   # gövdeyi kayıtlı yerine geri koy
 	_update_marker()
 

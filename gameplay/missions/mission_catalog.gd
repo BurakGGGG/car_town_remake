@@ -159,13 +159,13 @@ static func text_of(template_id: StringName, target: int) -> String:
 	if id_text.begins_with("job:"):
 		var job: RepairType = RepairType.by_id(StringName(id_text.substr(4)))
 		var name: String = job.short_title() if job else id_text.substr(4).to_upper()
-		return String(daily_template(&"job")["text"]) % [shown, name]
+		return Loc.tn(String(daily_template(&"job")["text"]), target) % [shown, name]
 	var tpl: Dictionary = daily_template(template_id)
 	if tpl.is_empty():
 		tpl = weekly_template(template_id)
 	if tpl.is_empty():
 		return id_text
-	var text: String = String(tpl["text"])
+	var text: String = Loc.tn(String(tpl["text"]), target)
 	return text % shown if text.contains("%s") else text
 
 

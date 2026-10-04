@@ -211,13 +211,18 @@ func _ready() -> void:
 	exit_button.pressed.connect(close)
 	# Bu ekran ARAÇLAR sekmesidir; garajın kendisi (seviye, düzenleme, detay) ana görünümün alt
 	# panelindedir (GaragePanel). Sahne dosyasındaki "GARAJ" yazıları burada değiştirilir.
-	exit_button.text = "GERİ"
+	exit_button.text = Loc.t("GERİ")
 	var title: Label = find_child("TitleLabel", true, false) as Label
 	if title:
-		title.text = "ARAÇLAR"
+		title.text = Loc.t("ARAÇLAR")
 	var wall_sign: Label3D = car_viewport.get_node_or_null("Environment/WallSignText") as Label3D
 	if wall_sign:
-		wall_sign.text = "ARAÇLAR"
+		wall_sign.text = Loc.t("ARAÇLAR")
+		# Yazı tabela tahtasına (0,76 m) sığsın: punto gerçek font ölçüsünden (dil değişince uzunluk değişir)
+		var font: Font = wall_sign.font if wall_sign.font else ThemeDB.fallback_font
+		var width: float = font.get_string_size(wall_sign.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 96).x
+		# Hedef 300 px (tahtanın ~%80'i): tahtanın sağ ucu telefonda aksiyon plakalarının arkasında kalıyor
+		wall_sign.font_size = clampi(int(96.0 * 300.0 / maxf(width, 1.0)), 28, wall_sign.font_size)
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	car_viewport.physics_object_picking = true      # park etmiş araçlara tıklanabilsin
 	view.mouse_filter = Control.MOUSE_FILTER_STOP   # tıklama SubViewport'a iletilsin (plakalar üstte)
@@ -701,7 +706,7 @@ func _build_sell() -> void:
 	box.add_theme_constant_override(&"separation", 4)
 	var title: Label = Label.new()
 	title.theme_type_variation = &"HudPlateTitle"
-	title.text = "ARACI SAT"
+	title.text = Loc.t("ARACI SAT")
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sell_name = Label.new()
 	_sell_name.theme_type_variation = &"HudInkCaption"
@@ -712,13 +717,13 @@ func _build_sell() -> void:
 	_sell_payout.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
 	_sell_confirm = PlateButton.new()
 	_sell_confirm.theme_type_variation = &"HudPlateSmall"
-	_sell_confirm.text = "ONAYLA"
+	_sell_confirm.text = Loc.t("ONAYLA")
 	_sell_confirm.bolts = false
 	_sell_confirm.focus_mode = Control.FOCUS_NONE
 	_sell_confirm.pressed.connect(_on_sell_confirmed)
 	var cancel: PlateButton = PlateButton.new()
 	cancel.theme_type_variation = &"HudPlateSmall"
-	cancel.text = "VAZGEÇ"
+	cancel.text = Loc.t("VAZGEÇ")
 	cancel.bolts = false
 	cancel.focus_mode = Control.FOCUS_NONE
 	cancel.pressed.connect(_close_sell)
@@ -740,7 +745,7 @@ func _open_sell() -> void:
 	var entry: Dictionary = CarCatalog.get_entry(_shown_vehicle)
 	_sell_name.text = String(entry.get("display_name", _shown_vehicle)).to_upper()
 	if ownership.owned_count() <= 1:
-		_sell_payout.text = "TEK ARACINI SATAMAZSIN"
+		_sell_payout.text = Loc.t("TEK ARACINI SATAMAZSIN")
 		_sell_confirm.disabled = true
 	else:
 		_sell_payout.text = "+%s ₺" % Hud.format_thousands(ownership.sell_price(_shown_vehicle))
@@ -782,7 +787,7 @@ func _build_detail() -> void:
 	_detail_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var caption: Label = Label.new()
 	caption.theme_type_variation = &"HudInkCaption"
-	caption.text = "GENEL"
+	caption.text = Loc.t("GENEL")
 	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_detail_overall = Label.new()
 	_detail_overall.theme_type_variation = &"HudInkValue"
@@ -796,7 +801,7 @@ func _build_detail() -> void:
 		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var title: Label = Label.new()
 		title.theme_type_variation = &"HudInkCaption"
-		title.text = row[1]
+		title.text = Loc.t(String(row[1]))
 		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var value: Label = Label.new()
@@ -812,7 +817,7 @@ func _build_detail() -> void:
 		_detail_lanes[key] = lane
 	var close_button: PlateButton = PlateButton.new()
 	close_button.theme_type_variation = &"HudPlateSmall"
-	close_button.text = "KAPAT"
+	close_button.text = Loc.t("KAPAT")
 	close_button.bolts = false
 	close_button.focus_mode = Control.FOCUS_NONE
 	close_button.pressed.connect(_close_detail)
@@ -860,7 +865,7 @@ func _build_paint() -> void:
 	_paint_button.name = "PaintButton"
 	_paint_button.theme_type_variation = &"HudPlate"
 	_paint_button.kind = HudIcon.Kind.PAINT
-	_paint_button.text = "BOYA"
+	_paint_button.text = Loc.t("BOYA")
 	_paint_button.custom_minimum_size = Vector2(86.0, 0.0)
 	_paint_button.focus_mode = Control.FOCUS_NONE
 	_paint_button.pressed.connect(_open_paint)
@@ -884,7 +889,7 @@ func _build_race_pick() -> void:
 	_race_button.name = "RacePickButton"
 	_race_button.theme_type_variation = &"HudPlate"
 	_race_button.kind = HudIcon.Kind.CAR
-	_race_button.text = "YARIŞ ARACI YAP"
+	_race_button.text = Loc.t("YARIŞ ARACI YAP")
 	_race_button.custom_minimum_size = Vector2(86.0, 0.0)
 	_race_button.focus_mode = Control.FOCUS_NONE
 	_race_button.pressed.connect(func() -> void:
@@ -899,7 +904,7 @@ func _refresh_race_pick() -> void:
 		return
 	var ownership: VehicleOwnership = _owner_node()
 	var is_racer: bool = ownership != null and ownership.race_vehicle_id() == _shown_vehicle
-	_race_button.text = "YARIŞ ARACI ✔" if is_racer else "YARIŞ ARACI YAP"
+	_race_button.text = Loc.t("YARIŞ ARACI ✔") if is_racer else Loc.t("YARIŞ ARACI YAP")
 	_race_button.disabled = is_racer or ownership == null
 
 
@@ -909,7 +914,7 @@ func _build_collection_button() -> void:
 	button.name = "CollectionButton"
 	button.theme_type_variation = &"HudPlate"
 	button.kind = HudIcon.Kind.CAR
-	button.text = "KOLEKSİYON"
+	button.text = Loc.t("KOLEKSİYON")
 	button.custom_minimum_size = Vector2(86.0, 0.0)
 	button.focus_mode = Control.FOCUS_NONE
 	button.pressed.connect(func() -> void:

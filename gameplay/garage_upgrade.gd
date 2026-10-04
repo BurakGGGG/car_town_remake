@@ -56,9 +56,9 @@ func value_at(level: int) -> float:
 ## GELİŞTİRME KATALOĞU — ilk sürümde iki geliştirme.
 static func defaults() -> Array[GarageUpgrade]:
 	return [
-		_make(&"repair_speed", "TAMİR HIZI", &"WRENCH", "Tamir süresi",
+		_make(&"repair_speed", Loc.t("TAMİR HIZI"), &"WRENCH", Loc.t("Tamir süresi"),
 			PackedInt32Array([1000, 2000, 3500, 5000]), PackedFloat32Array([1.0, 0.9, 0.8, 0.7, 0.6])),
-		_make(&"garage_level", "GARAJ SEVİYESİ", &"GARAGE", "Garaj alanı",
+		_make(&"garage_level", Loc.t("GARAJ SEVİYESİ"), &"GARAGE", Loc.t("Garaj alanı"),
 			PackedInt32Array([36000, 90000, 180000]), PackedFloat32Array([1.0, 2.0, 3.0, 4.0])),
 	]
 

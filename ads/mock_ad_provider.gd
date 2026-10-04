@@ -11,6 +11,9 @@ var earns: bool = true
 var shows: int = 0
 var loads: int = 0
 var last_shown_slot: StringName = &""
+## Gizlilik seçenekleri giriş noktası gerekli mi (testler / masaüstü önizleme için)?
+var privacy_required: bool = false
+var privacy_shows: int = 0
 
 var _loaded: Dictionary = {}   # yuva → bool
 
@@ -39,3 +42,12 @@ func show_rewarded(slot: StringName, on_earned: Callable, on_finished: Callable)
 
 func has_rewarded(slot: StringName) -> bool:
 	return bool(_loaded.get(slot, false))
+
+
+func privacy_options_required() -> bool:
+	return privacy_required
+
+
+func show_privacy_options(on_done: Callable) -> void:
+	privacy_shows += 1
+	on_done.call_deferred()

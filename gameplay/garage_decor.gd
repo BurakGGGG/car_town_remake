@@ -146,13 +146,13 @@ static func items_in(kind: int) -> Array[Dictionary]:
 ## Kategori başlığı (arayüz).
 static func kind_title(kind: int) -> String:
 	match kind:
-		Kind.FLOOR_SURFACE: return "AVLU ZEMİNİ"
-		Kind.WALL_SURFACE: return "GARAJ DUVARI"
-		Kind.WORKSHOP: return "ATÖLYE"
-		Kind.LOUNGE: return "YAŞAM ALANI"
-		Kind.YARD: return "AVLU DÜZENİ"
-		Kind.PLANT: return "BİTKİ"
-		_: return "PANO"
+		Kind.FLOOR_SURFACE: return Loc.t("AVLU ZEMİNİ")
+		Kind.WALL_SURFACE: return Loc.t("GARAJ DUVARI")
+		Kind.WORKSHOP: return Loc.t("ATÖLYE")
+		Kind.LOUNGE: return Loc.t("YAŞAM ALANI")
+		Kind.YARD: return Loc.t("AVLU DÜZENİ")
+		Kind.PLANT: return Loc.t("BİTKİ")
+		_: return Loc.t("PANO")
 
 
 ## Kataloğu JSON'dan (yeniden) yükler. Test ve araçlar başka dosya verebilir.

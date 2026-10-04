@@ -58,7 +58,7 @@ func _build() -> void:
 	var sign: PlatePanel = PlatePanel.new()
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var title: Label = _label(&"HudSignTitle", "USTALIK PANOSU")
+	var title: Label = _label(&"HudSignTitle", Loc.t("USTALIK PANOSU"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sign.add_child(title)
 	column.add_child(sign)
@@ -81,7 +81,7 @@ func _build() -> void:
 
 	var close_button: PlateButton = PlateButton.new()
 	close_button.theme_type_variation = &"HudPlateSmall"
-	close_button.text = "KAPAT"
+	close_button.text = Loc.t("KAPAT")
 	close_button.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
 	close_button.focus_mode = Control.FOCUS_NONE
 	close_button.pressed.connect(close)
@@ -94,12 +94,12 @@ func _refresh() -> void:
 		_list.remove_child(child)
 		child.queue_free()
 	if mastery == null:
-		_summary.text = "USTALIK SİSTEMİ SAHNEDE YOK"
+		_summary.text = Loc.t("USTALIK SİSTEMİ SAHNEDE YOK")
 		return
 	var repairs: RepairManager = get_tree().get_first_node_in_group("repair_manager") as RepairManager
 	var types: Array[RepairType] = repairs.repair_types if repairs and not repairs.repair_types.is_empty() else RepairType.defaults()
 	var mastered: int = mastery.mastered_jobs().size()
-	_summary.text = "TOPLAM %d ★   ·   HER YILDIZ: +%%%d XP, +%%%d ÖDÜL   ·   5★ İŞ: %d" % [
+	_summary.text = Loc.t("TOPLAM %d ★   ·   HER YILDIZ: +%%%d XP, +%%%d ÖDÜL   ·   5★ İŞ: %d") % [
 		mastery.total_stars(), roundi(JobMastery.XP_BONUS_PER_STAR * 100.0),
 		roundi(JobMastery.REWARD_BONUS_PER_STAR * 100.0), mastered]
 	for type: RepairType in types:
@@ -121,10 +121,10 @@ func _row(mastery: JobMastery, type: RepairType) -> HBoxContainer:
 			"★".repeat(stars) + "☆".repeat(maxi(JobMastery.BASE_THRESHOLDS.size() - stars, 0)))
 	star_label.custom_minimum_size = Vector2(72.0, 0.0)
 	var count_label: Label = _label(&"HudInkCaption",
-			"%d / %d" % [count, next] if next > 0 else "%d   USTA" % count)
+			"%d / %d" % [count, next] if next > 0 else Loc.t("%d   USTA") % count)
 	count_label.custom_minimum_size = Vector2(86.0, 0.0)
 	count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	var bonus_label: Label = _label(&"HudInkCaption", "+%%%d XP · +%%%d ₺" % [
+	var bonus_label: Label = _label(&"HudInkCaption", Loc.t("+%%%d XP · +%%%d ₺") % [
 		roundi(JobMastery.XP_BONUS_PER_STAR * float(stars) * 100.0),
 		roundi(JobMastery.REWARD_BONUS_PER_STAR * float(stars) * 100.0)])
 	bonus_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL

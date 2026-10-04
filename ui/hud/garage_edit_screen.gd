@@ -126,7 +126,7 @@ func _build() -> void:
 	title_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_plate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	top.add_child(title_plate)
-	_title = _label(&"HudPlateTitle", "GARAJI DÜZENLE")
+	_title = _label(&"HudPlateTitle", Loc.t("GARAJI DÜZENLE"))
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_plate.add_child(_title)
 	_info = _label(&"HudOutlined", "")
@@ -146,19 +146,19 @@ func _build() -> void:
 	corner.offset_right = -MARGIN
 	corner.add_theme_constant_override(&"separation", 8)
 	add_child(corner)
-	_snap_button = _plate("IZGARA", &"HudPlateSmall")
+	_snap_button = _plate(Loc.t("IZGARA"), &"HudPlateSmall")
 	_snap_button.toggle_mode = true
 	_snap_button.button_pressed = true
 	_snap_button.toggled.connect(func(on: bool) -> void:
 		if _editor:
 			_editor.set_snap(on))
 	corner.add_child(_snap_button)
-	_undo_button = _plate("GERİ AL", &"HudPlateSmall")
+	_undo_button = _plate(Loc.t("GERİ AL"), &"HudPlateSmall")
 	_undo_button.pressed.connect(func() -> void:
 		if _editor:
 			_editor.undo())
 	corner.add_child(_undo_button)
-	_done_button = _plate("BİTİR", &"HudPlate")
+	_done_button = _plate(Loc.t("BİTİR"), &"HudPlate")
 	_done_button.highlight = true
 	_done_button.pressed.connect(close)
 	corner.add_child(_done_button)
@@ -216,7 +216,7 @@ func _build() -> void:
 		_tabs.add_child(tab)
 		_tab_buttons[kind] = tab
 	# SERGİ sekmesi: sahip olunan araçlar (katalogda değil, VehicleOwnership'ten gelir)
-	var car_tab: PlateButton = _plate("ARAÇLAR", &"HudPlateSmall")
+	var car_tab: PlateButton = _plate(Loc.t("ARAÇLAR"), &"HudPlateSmall")
 	car_tab.toggle_mode = true
 	car_tab.button_group = _tab_group
 	car_tab.pressed.connect(_on_tab_pressed.bind(GarageDecor.Kind.VEHICLE))
@@ -233,18 +233,18 @@ func _build() -> void:
 		if _editor:
 			_editor.rotate_selected(1))
 	_bar.add_child(_rot_right)
-	_place_button = _plate("YERLEŞTİR", &"HudPlateSmall")
+	_place_button = _plate(Loc.t("YERLEŞTİR"), &"HudPlateSmall")
 	_place_button.highlight = true
 	_place_button.pressed.connect(func() -> void:
 		if _editor:
 			_editor.confirm_ghost())
 	_bar.add_child(_place_button)
-	_cancel_button = _plate("VAZGEÇ", &"HudPlateSmall")
+	_cancel_button = _plate(Loc.t("VAZGEÇ"), &"HudPlateSmall")
 	_cancel_button.pressed.connect(func() -> void:
 		if _editor:
 			_editor.cancel_ghost())
 	_bar.add_child(_cancel_button)
-	_delete_button = _plate("DEPOYA KALDIR", &"HudPlateSmall")
+	_delete_button = _plate(Loc.t("DEPOYA KALDIR"), &"HudPlateSmall")
 	_delete_button.pressed.connect(func() -> void:
 		if _editor:
 			_editor.delete_selected())
@@ -276,7 +276,7 @@ func _sign_button(left: bool) -> PlateButton:
 	button.kind = HudIcon.Kind.NONE
 	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size = Vector2(48.0, 48.0)
-	button.tooltip_text = "SOLA DÖNDÜR (Shift+R)" if left else "SAĞA DÖNDÜR (R)"
+	button.tooltip_text = Loc.t("SOLA DÖNDÜR (Shift+R)") if left else Loc.t("SAĞA DÖNDÜR (R)")
 	button.draw.connect(func() -> void:
 		var ink: Color = button.get_theme_color(&"font_color")
 		var center: Vector2 = button.size * 0.5
@@ -394,7 +394,7 @@ func _on_card_pressed(id: StringName) -> void:
 		if _decor.available_of(id) > 0:
 			_editor.begin_place(id)
 		else:
-			_show_notice("ZATEN SERGİLENİYOR — GARAJDAN SEÇİP TAŞI")
+			_show_notice(Loc.t("ZATEN SERGİLENİYOR — GARAJDAN SEÇİP TAŞI"))
 		return
 	if _decor.available_of(id) > 0:
 		_confirm_buy = &""
@@ -409,15 +409,15 @@ func _on_card_pressed(id: StringName) -> void:
 func _buy(id: StringName) -> bool:
 	if not _decor.can_purchase(id):
 		if not _decor.is_unlocked(id):
-			_show_notice("%d. RÜTBEDE AÇILIR" % int(GarageDecor.get_item(id).get("min_rank", 1)))
+			_show_notice(Loc.t("%d. RÜTBEDE AÇILIR") % int(GarageDecor.get_item(id).get("min_rank", 1)))
 		elif GarageDecor.is_surface(id) and _decor.is_owned(id):
 			pass
 		else:
-			_show_notice("PARA YETERSİZ")
+			_show_notice(Loc.t("PARA YETERSİZ"))
 		return false
 	if _confirm_buy != id:
 		_confirm_buy = id
-		_show_notice("SATIN ALMAK İÇİN TEKRAR DOKUN")
+		_show_notice(Loc.t("SATIN ALMAK İÇİN TEKRAR DOKUN"))
 		return false
 	_confirm_buy = &""
 	return _decor.purchase(id)
@@ -433,40 +433,54 @@ func _refresh_cards() -> void:
 		if id == &"":
 			var slot: StringName = DecorManager.SURFACE_FLOOR if _kind == GarageDecor.Kind.FLOOR_SURFACE \
 					else DecorManager.SURFACE_WALL
-			card.text = "VARSAYILAN"
+			card.text = Loc.t("VARSAYILAN")
 			card.button_pressed = _decor.surface(slot) == &""
 			card.disabled = false
 			continue
 		var item: Dictionary = GarageDecor.get_item(id)
-		var title: String = String(item.get("title", id))
+		var title: String = Loc.t(String(item.get("title", id)))
 		var status: String
 		if GarageDecor.is_vehicle(id):
-			card.text = "%s\n%s" % [title, "SERGİLE" if _decor.available_of(id) > 0 else "SERGİLENİYOR"]
+			card.text = "%s\n%s" % [title, Loc.t("SERGİLE") if _decor.available_of(id) > 0 else Loc.t("SERGİLENİYOR")]
+			_fit_card(card)
 			card.disabled = false
 			card.queue_redraw()
 			continue
 		if GarageDecor.is_surface(id):
 			var slot2: StringName = DecorManager.surface_slot_of(id)
 			if _decor.is_owned(id):
-				status = "KULLANILIYOR" if _decor.surface(slot2) == id else "UYGULA"
+				status = Loc.t("KULLANILIYOR") if _decor.surface(slot2) == id else Loc.t("UYGULA")
 			else:
 				status = _price_status(id)
 		elif _decor.available_of(id) > 0:
-			status = "DEPODA %d" % _decor.available_of(id)
+			status = Loc.t("DEPODA %d") % _decor.available_of(id)
 		else:
 			status = _price_status(id)
 		if _confirm_buy == id:
-			status = "SATIN AL? %s ₺" % Hud.format_thousands(_decor.price_of(id))
+			status = Loc.t("SATIN AL? %s ₺") % Hud.format_thousands(_decor.price_of(id))
 		card.text = "%s\n%s" % [title, status]
+		_fit_card(card)
 		card.disabled = not _decor.is_unlocked(id)
 		card.button_pressed = _confirm_buy == id or (GarageDecor.is_surface(id) \
 				and _decor.surface(DecorManager.surface_slot_of(id)) == id)
 		card.queue_redraw()
 
 
+## Kart, en uzun SÖZCÜĞÜ bölmeden sığacak kadar genişler (İspanyolca "HERRAMIENTAS" gibi uzun sözcükler
+## dar kartta harf harf bölünüyordu). Türkçe adlar zaten sığar: kart genişliği değişmez.
+func _fit_card(card: PlateButton) -> void:
+	var font: Font = card.get_theme_font(&"font")
+	var size: int = card.get_theme_font_size(&"font_size")
+	var widest: float = 0.0
+	for word: String in card.text.replace("\n", " ").split(" ", false):
+		widest = maxf(widest, font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x)
+	var margin: float = 24.0
+	card.custom_minimum_size.x = maxf(CARD_WIDTH, ceilf(widest + margin))
+
+
 func _price_status(id: StringName) -> String:
 	if not _decor.is_unlocked(id):
-		return "%d. RÜTBE" % int(GarageDecor.get_item(id).get("min_rank", 1))
+		return Loc.t("%d. RÜTBE") % int(GarageDecor.get_item(id).get("min_rank", 1))
 	return "%s ₺" % Hud.format_thousands(_decor.price_of(id))
 
 
@@ -483,17 +497,17 @@ func _refresh() -> void:
 	if placing:
 		var item: StringName = _editor.placing_item()
 		wall = GarageDecor.placement(item) == GarageDecor.PLACE_WALL
-		_info.text = "%s · SÜRÜKLE, BIRAKINCA YERLEŞİR" % String(GarageDecor.get_item(item).get("title", ""))
+		_info.text = Loc.t("%s · SÜRÜKLE, BIRAKINCA YERLEŞİR") % Loc.t(String(GarageDecor.get_item(item).get("title", "")))
 		_place_button.disabled = not _editor.ghost_valid()
 	elif _editor.selected_is_bay():
-		_info.text = "TAMİR ALANI %d · SÜRÜKLE: TAŞI, ↻: DÖNDÜR" % (GarageDecorView.bay_index_of(selected) + 1)
+		_info.text = Loc.t("TAMİR ALANI %d · SÜRÜKLE: TAŞI, ↻: DÖNDÜR") % (GarageDecorView.bay_index_of(selected) + 1)
 	elif selected != "":
 		var inst: Dictionary = _decor.instance(selected)
 		var item2: StringName = inst.get("item", &"")
 		wall = GarageDecor.placement(item2) == GarageDecor.PLACE_WALL
-		_info.text = "%s · SÜRÜKLE: TAŞI" % String(GarageDecor.get_item(item2).get("title", ""))
+		_info.text = Loc.t("%s · SÜRÜKLE: TAŞI") % Loc.t(String(GarageDecor.get_item(item2).get("title", "")))
 	else:
-		_info.text = "EŞYAYA DOKUN: SEÇ  ·  AŞAĞIDAN EŞYA SEÇ: EKLE"
+		_info.text = Loc.t("EŞYAYA DOKUN: SEÇ  ·  AŞAĞIDAN EŞYA SEÇ: EKLE")
 	_rot_left.visible = not wall
 	_rot_right.visible = not wall
 	_place_button.visible = placing

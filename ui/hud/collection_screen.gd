@@ -81,7 +81,7 @@ func _build() -> void:
 	var sign: PlatePanel = PlatePanel.new()
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_title = _label(&"HudSignTitle", "KOLEKSİYON")
+	_title = _label(&"HudSignTitle", Loc.t("KOLEKSİYON"))
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sign.add_child(_title)
 	_column.add_child(sign)
@@ -109,7 +109,7 @@ func _build() -> void:
 
 	var close_button: PlateButton = PlateButton.new()
 	close_button.theme_type_variation = &"HudPlateSmall"
-	close_button.text = "KAPAT"
+	close_button.text = Loc.t("KAPAT")
 	close_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	close_button.custom_minimum_size = Vector2(220.0, 0.0)
 	close_button.focus_mode = Control.FOCUS_NONE
@@ -129,7 +129,7 @@ func _rebuild() -> void:
 	var own: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 	var total: int = CarCatalog.size()
 	var found: int = own.discovered_count() if own else 0
-	_title.text = "KOLEKSİYON   %d / %d" % [found, total]
+	_title.text = Loc.t("KOLEKSİYON   %d / %d") % [found, total]
 
 	# Başlangıç aracı ve kasalar, kasa sırasıyla
 	var groups: Array[Dictionary] = []
@@ -138,9 +138,9 @@ func _rebuild() -> void:
 		if CrateCatalog.crate_of(entry["id"]) == &"":
 			starters.append(entry["id"])
 	if not starters.is_empty():
-		groups.append({"title": "BAŞLANGIÇ", "crate": &"", "cars": starters})
+		groups.append({"title": Loc.t("BAŞLANGIÇ"), "crate": &"", "cars": starters})
 	for crate: Dictionary in CrateCatalog.all():
-		groups.append({"title": String(crate["display_name"]), "crate": crate["id"], "cars": crate["pool"]})
+		groups.append({"title": Loc.t(String(crate["display_name"])), "crate": crate["id"], "cars": crate["pool"]})
 
 	var last_missing: StringName = _last_missing(own)
 	for group: Dictionary in groups:
@@ -159,7 +159,7 @@ func _rebuild() -> void:
 			grid.add_child(_card(id, own, id == last_missing))
 		_grid_box.add_child(grid)
 
-	_sets_box.add_child(_label(&"HudPlateTitle", "KOLEKSİYON SETLERİ"))
+	_sets_box.add_child(_label(&"HudPlateTitle", Loc.t("KOLEKSİYON SETLERİ")))
 	for set_entry: Dictionary in CrateCatalog.sets():
 		var cars: Array = set_entry["cars"]
 		var have: int = 0
@@ -171,7 +171,7 @@ func _rebuild() -> void:
 			names.append(String(CarCatalog.get_entry(id).get("display_name", id)).to_upper() if known else "???")
 		var done: bool = have == cars.size()
 		var line: Label = _label(&"HudInkCaption", "%s %s   %d / %d   ·   %s" % [
-			"✔" if done else "•", set_entry["name"], have, cars.size(), "  ".join(names)])
+			"✔" if done else "•", Loc.t(String(set_entry["name"])), have, cars.size(), "  ".join(names)])
 		if done:
 			line.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
 		_sets_box.add_child(line)
@@ -222,7 +222,7 @@ func _card(id: StringName, own: VehicleOwnership, last_piece: bool) -> Control:
 	box.add_theme_constant_override(&"separation", 0)
 	frame.add_child(box)
 
-	var rarity_label: Label = _label(&"HudInkCaption", "%s  ·  %s SINIFI" % [
+	var rarity_label: Label = _label(&"HudInkCaption", Loc.t("%s  ·  %s SINIFI") % [
 		CrateCatalog.rarity_label(rarity), String(entry.get("class", "?"))])
 	rarity_label.add_theme_color_override(&"font_color", color.darkened(0.15))
 	box.add_child(rarity_label)
@@ -245,14 +245,14 @@ func _card(id: StringName, own: VehicleOwnership, last_piece: bool) -> Control:
 	var info: String
 	if owned:
 		var stars: int = own.stars(id)
-		info = "GARAJINDA" if stars == 0 else "%s  ×%d" % ["★".repeat(stars) + "☆".repeat(5 - stars), own.duplicate_count(id) + 1]
+		info = Loc.t("GARAJINDA") if stars == 0 else "%s  ×%d" % ["★".repeat(stars) + "☆".repeat(5 - stars), own.duplicate_count(id) + 1]
 	elif known:
-		info = "SATILDI · SHOWROOM'DA GERİ AL"
+		info = Loc.t("SATILDI · SHOWROOM'DA GERİ AL")
 	else:
 		var crate: StringName = CrateCatalog.crate_of(id)
-		info = "%s  ·  %%%s" % [String(CrateCatalog.get_entry(crate).get("short_name", "")), _percent(_chance(crate, id))] if crate != &"" else "BAŞLANGIÇ ARACI"
+		info = "%s  ·  %s" % [Loc.t(String(CrateCatalog.get_entry(crate).get("short_name", ""))), Loc.percent(_percent(_chance(crate, id)))] if crate != &"" else Loc.t("BAŞLANGIÇ ARACI")
 	if last_piece:
-		info = "SON PARÇA  ·  " + info
+		info = Loc.t("SON PARÇA  ·  ") + info
 	box.add_child(_label(&"HudInkCaption", info))
 
 	if rarity == &"legendary" or last_piece:
@@ -279,7 +279,7 @@ static func _chance(crate: StringName, vehicle: StringName) -> float:
 
 ## 0.0508 → "5,1"
 static func _percent(chance: float) -> String:
-	return ("%.1f" % (chance * 100.0)).replace(".", ",")
+	return Loc.decimal(chance * 100.0)
 
 
 func _stop_pulses() -> void:

@@ -110,7 +110,7 @@ static func reward_for(p_level: int) -> Dictionary:
 	return {
 		"money": int(entry.get("money", LEVEL_REWARD_STEP * p_level)),
 		"gems": LEVEL_GEMS + (LEVEL_GEM_MILESTONE if p_level % 5 == 0 else 0),
-		"text": String(entry.get("text", "")),
+		"text": Loc.t(String(entry.get("text", ""))) if entry.has("text") else "",
 	}
 
 

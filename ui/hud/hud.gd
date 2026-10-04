@@ -2,7 +2,7 @@ class_name Hud
 extends CanvasLayer
 ## Ana HUD — "yol mobilyası / plaka" dili.
 ## Sol üst: level tabelası + isim plakası + şerit XP + coin/gem.
-## Sağ üst: yuvarlak tabela butonları (kamera / ses / ayarlar), kamera açılınca mini şerit.
+## Sağ üst: yuvarlak tabela butonları (kamera / ses / AYARLAR dişlisi), kamera açılınca mini şerit.
 ## Alt: dört plaka (GARAJ / ARAÇLAR / MAĞAZA / PROFİL) ve seçilince açılan araç plakası.
 ## Araç satın alma artık alt menüde DEĞİL: haritadaki "CAR PARTS & SHOWROOM" binasına tıklanınca
 ## açılan MAĞAZA ekranındadır (ShowroomScreen, HUD'un altına kodla eklenir ve "showroom" grubundan
@@ -69,6 +69,9 @@ signal camera_zoom_requested(direction: int)
 var showroom: ShowroomScreen
 ## Kodla kurulan PLAYER tabelası (giriş / profil / kayıt seçimi).
 var login_screen: LoginScreen
+## Kodla kurulan AYARLAR tabelası ve onu açan dişli tabela (sağ üst).
+var settings_screen: SettingsScreen
+var settings_button: PlateButton
 ## Kodla kurulan GÖREVLER tabelası ve onu açan plaka.
 var quest_screen: MissionScreen
 var quest_button: PlateButton
@@ -157,6 +160,7 @@ func _ready() -> void:
 	_build_router()
 	_build_showroom()
 	_build_login_screen()
+	_build_settings()
 	_build_quests()
 	_build_progress_screens()
 	_build_race_screens()
@@ -275,13 +279,14 @@ func hide_car_info() -> void:
 ## 12500 -> "12.500"
 static func format_thousands(value: int) -> String:
 	var digits: String = str(absi(value))
+	var separator: String = "," if Loc.current() == "en" else "."   # TR / ES: 1.000 · EN: 1,000
 	var out: String = ""
 	var count: int = 0
 	for i: int in range(digits.length() - 1, -1, -1):
 		out = digits[i] + out
 		count += 1
 		if count % 3 == 0 and i > 0:
-			out = "." + out
+			out = separator + out
 	return ("-" + out) if value < 0 else out
 
 
@@ -328,7 +333,7 @@ func _setup_test_money() -> void:
 		get_tree().create_timer(TEST_MONEY_HOLD).timeout.connect(func() -> void:
 			if presses[0] == token and _economy:
 				_economy.add_money(TEST_MONEY)
-				_show_notice("TEST: +%s ₺" % format_thousands(TEST_MONEY), HudPalette.COIN_DARK, 2.0)))
+				_show_notice(Loc.t("TEST: +%s ₺") % format_thousands(TEST_MONEY), HudPalette.COIN_DARK, 2.0)))
 
 
 func _connect_gameplay() -> void:
@@ -353,7 +358,7 @@ func _connect_gameplay() -> void:
 	_bays = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
 	if _bays:
 		_bays.no_room.connect(func(_i: int) -> void:
-			_show_notice("TAMİR ALANI İÇİN YER YOK\nBİR EŞYAYI TAŞI", HudPalette.INK, 2.4))
+			_show_notice(Loc.t("TAMİR ALANI İÇİN YER YOK\nBİR EŞYAYI TAŞI"), HudPalette.INK, 2.4))
 		_bays.bay_unlocked.connect(_on_bay_unlocked)
 		_bays.purchase_failed.connect(_on_bay_purchase_failed)
 	_repair_manager = get_tree().get_first_node_in_group("repair_manager") as RepairManager
@@ -483,7 +488,7 @@ func _on_collect_pressed() -> void:
 
 ## PARA TOPLA: para + XP verildi → kısa ödül plakası; hedef bu araçsa plaka "TAMAMLANDI"ya geçer.
 func _on_repair_collected(car: Node3D, reward: int, xp: int) -> void:
-	_show_notice("+%s ₺   +%d XP" % [format_thousands(reward), xp], HudPalette.COIN_DARK)
+	_show_notice(Loc.t("+%s ₺   +%d XP") % [format_thousands(reward), xp], HudPalette.COIN_DARK)
 	if car == _repair_target:
 		_refresh_repair_panel(true)
 
@@ -532,13 +537,13 @@ func _build_bay_plate() -> void:
 	buttons.add_theme_constant_override(&"separation", 8)
 	_bay_buy = PlateButton.new()
 	_bay_buy.theme_type_variation = &"HudPlateSmall"
-	_bay_buy.text = "SATIN AL"
+	_bay_buy.text = Loc.t("SATIN AL")
 	_bay_buy.bolts = false
 	_bay_buy.focus_mode = Control.FOCUS_NONE
 	_bay_buy.pressed.connect(_on_bay_buy_pressed)
 	var cancel: PlateButton = PlateButton.new()
 	cancel.theme_type_variation = &"HudPlateSmall"
-	cancel.text = "VAZGEÇ"
+	cancel.text = Loc.t("VAZGEÇ")
 	cancel.bolts = false
 	cancel.focus_mode = Control.FOCUS_NONE
 	cancel.pressed.connect(hide_bay_plate)
@@ -556,7 +561,7 @@ func show_bay_plate(index: int) -> void:
 		return
 	_bay_index = index
 	_plate_mode = &"bay"
-	_bay_buy.text = "SATIN AL"
+	_bay_buy.text = Loc.t("SATIN AL")
 	hide_car_info()
 	var price: String = "%s ₺" % format_thousands(_bays.price(index))
 	var status: RepairBayManager.Status = _bays.status(index)
@@ -565,18 +570,18 @@ func show_bay_plate(index: int) -> void:
 		RepairBayManager.Status.NEEDS_LEVEL:
 			# Alanı ortaya çıkaran şey GARAJ seviyesidir (eski metin "TAMİR ALANI Sv." diyordu:
 			# o geliştirme artık yok, oyuncuyu yanlış yere yönlendiriyordu)
-			price = "ÖNCE GARAJI SEVİYE %d'E GENİŞLET" % _bays.required_level(index)
+			price = Loc.t("ÖNCE GARAJI SEVİYE %d'E GENİŞLET") % _bays.required_level(index)
 			_bay_buy.disabled = true
 		RepairBayManager.Status.TOO_EXPENSIVE:
-			price += "  ·  PARA YETERSİZ"
+			price += Loc.t("  ·  PARA YETERSİZ")
 			_bay_buy.disabled = true
 		RepairBayManager.Status.OPEN:
-			price = "AÇIK"
+			price = Loc.t("AÇIK")
 			effects = PackedStringArray()
 			_bay_buy.disabled = true
 		_:
 			_bay_buy.disabled = false
-	_bay_plate.set_content("TAMİR ALANI %d" % (index + 1), "", price, effects)
+	_bay_plate.set_content(Loc.t("TAMİR ALANI %d") % (index + 1), "", price, effects)
 	_bay_group.show()
 
 
@@ -590,27 +595,27 @@ func show_expansion_plate() -> void:
 	hide_car_info()
 	var id: StringName = GarageUpgradeManager.GARAGE_ID
 	var next_level: int = _upgrades.level(id) + 1
-	var subtitle: String = "SEVİYE %d" % next_level
-	var price: String = "MAKSİMUM"
+	var subtitle: String = Loc.t("SEVİYE %d") % next_level
+	var price: String = Loc.t("MAKSİMUM")
 	var effects: PackedStringArray = PackedStringArray()
 	if _upgrades.is_max(id):
-		subtitle = "SEVİYE %d" % _upgrades.level(id)
+		subtitle = Loc.t("SEVİYE %d") % _upgrades.level(id)
 		_bay_buy.disabled = true
 	else:
 		var cost: int = _upgrades.next_cost(id)
 		var affordable: bool = _economy == null or _economy.can_afford(cost)
-		price = "%s ₺%s" % [format_thousands(cost), "" if affordable else "  ·  PARA YETERSİZ"]
+		price = "%s ₺%s" % [format_thousands(cost), "" if affordable else Loc.t("  ·  PARA YETERSİZ")]
 		effects = ProgressionEffects.garage_level_lines(get_tree(), next_level)
 		_bay_buy.disabled = not affordable
-	_bay_plate.set_content("GARAJI GENİŞLET", subtitle, price, effects)
-	_bay_buy.text = "GENİŞLET"
+	_bay_plate.set_content(Loc.t("GARAJI GENİŞLET"), subtitle, price, effects)
+	_bay_buy.text = Loc.t("GENİŞLET")
 	_bay_group.show()
 
 
 func hide_bay_plate() -> void:
 	_bay_index = -1
 	_plate_mode = &"bay"
-	_bay_buy.text = "SATIN AL"
+	_bay_buy.text = Loc.t("SATIN AL")
 	_bay_group.hide()
 
 
@@ -628,16 +633,16 @@ func _on_upgrade_purchased(id: StringName, level: int) -> void:
 	if id != GarageUpgradeManager.GARAGE_ID:
 		return
 	hide_bay_plate()
-	_show_notice("GARAJ SEVİYE %d" % level, HudPalette.COIN_DARK)
+	_show_notice(Loc.t("GARAJ SEVİYE %d") % level, HudPalette.COIN_DARK)
 
 
 func _on_bay_unlocked(index: int) -> void:
 	hide_bay_plate()
-	_show_notice("TAMİR ALANI %d AÇILDI\nGARAJI DÜZENLE'DEN TAŞIYABİLİRSİN" % (index + 1), HudPalette.COIN_DARK, 2.4)
+	_show_notice(Loc.t("TAMİR ALANI %d AÇILDI\nGARAJI DÜZENLE'DEN TAŞIYABİLİRSİN") % (index + 1), HudPalette.COIN_DARK, 2.4)
 
 
 func _on_bay_purchase_failed(index: int, price: int) -> void:
-	_show_notice("%s ₺ GEREKLİ" % format_thousands(price), HudPalette.INK)
+	_show_notice(Loc.t("%s ₺ GEREKLİ") % format_thousands(price), HudPalette.INK)
 	if _bay_plate.visible:
 		show_bay_plate(index)   # plaka güncel durumu göstersin
 
@@ -684,19 +689,19 @@ func _play_notice(text: String, color: Color, hold: float) -> void:
 ## Seviye atlandı: para ödülü ve (varsa) açılan içerik plakada duyurulur.
 ## Yarış ödülü kasaya girdi: kısa bildirim plakası (para plakası zaten değişimi gösterir).
 func _on_race_reward(won: bool, money: int, xp: int) -> void:
-	var line: String = "YARIŞ KAZANILDI" if won else "YARIŞ KAYBEDİLDİ"
+	var line: String = Loc.t("YARIŞ KAZANILDI") if won else Loc.t("YARIŞ KAYBEDİLDİ")
 	var parts: PackedStringArray = PackedStringArray()
 	if money > 0:
 		parts.append("+%s ₺" % format_thousands(money))
 	if xp > 0:
-		parts.append("+%d XP" % xp)
+		parts.append(Loc.t("+%d XP") % xp)
 	if not parts.is_empty():
 		line += "\n%s" % "   ".join(parts)
 	_show_notice(line, HudPalette.COIN_DARK, 2.2)
 
 
 func _on_level_reward(new_level: int, money: int, text: String) -> void:
-	var line: String = "SEVİYE %d   +%s ₺   +%d GEM" % [new_level, format_thousands(money),
+	var line: String = Loc.t("SEVİYE %d   +%s ₺   +%d GEM") % [new_level, format_thousands(money),
 		int(PlayerProgress.reward_for(new_level)["gems"])]
 	if text != "":
 		line += "\n%s" % text
@@ -709,7 +714,7 @@ func _on_mastery_up(job_id: StringName, stars: int) -> void:
 	if mastery == null:
 		return
 	var type: RepairType = mastery.type_of(job_id)
-	_show_notice("%s USTALIK %d★\n+%s ₺   ÖDÜL +%%%d" % [
+	_show_notice(Loc.t("%s USTALIK %d★\n+%s ₺   ÖDÜL +%%%d") % [
 		type.title if type else String(job_id), stars,
 		format_thousands(mastery.star_payout(job_id, stars)),
 		roundi(JobMastery.REWARD_BONUS_PER_STAR * float(stars) * 100.0)],
@@ -725,7 +730,7 @@ func _check_garage_rank() -> void:
 	if rank <= _garage_rank:
 		return
 	_garage_rank = rank
-	_show_notice("GARAJ RÜTBESİ %d\n%s" % [rank, GarageValue.rank_name(rank)],
+	_show_notice(Loc.t("GARAJ RÜTBESİ %d\n%s") % [rank, GarageValue.rank_name(rank)],
 			HudPalette.COIN_DARK, 2.2)
 
 
@@ -818,7 +823,7 @@ func _on_race_exit() -> void:
 ## Showroom'dan araç satın alındı: kısa bildirim plakası (para düşüşünü zaten coin plakası gösterir).
 func _on_vehicle_purchased(vehicle_id: StringName) -> void:
 	var entry: Dictionary = CarCatalog.get_entry(vehicle_id)
-	_show_notice("%s GARAJINDA" % String(entry.get("display_name", vehicle_id)).to_upper(), HudPalette.COIN_DARK)
+	_show_notice(Loc.t("%s GARAJINDA") % String(entry.get("display_name", vehicle_id)).to_upper(), HudPalette.COIN_DARK)
 
 
 ## Seçili aracın müşteri durumu değişti (tamir istedi / durdu): plaka güncellenir.
@@ -905,7 +910,7 @@ func _build_router() -> void:
 	add_child(router)
 	router.stack_changed.connect(_on_ui_stack_changed)
 	router.exit_hint_requested.connect(func() -> void:
-		_show_notice("Çıkmak için tekrar GERİ'ye bas", Color(1.0, 0.9, 0.5), 1.8))
+		_show_notice(Loc.t("Çıkmak için tekrar GERİ'ye bas"), Color(1.0, 0.9, 0.5), 1.8))
 	router.back_override = _android_back_for_crate_panel
 
 
@@ -965,6 +970,7 @@ func _register_screens() -> void:
 	router.register(&"garage_value", garage_value_screen, UiRouter.Kind.MODAL)
 	router.register(&"profile", profile_screen, UiRouter.Kind.MODAL)
 	router.register(&"account", login_screen, UiRouter.Kind.MODAL)
+	router.register(&"settings", settings_screen, UiRouter.Kind.PLACE)   # tam ekran: oyun arkada görünmez
 	router.register(&"race_challenge", race_challenge_screen, UiRouter.Kind.MODAL)
 	router.register(&"drag_race", drag_race_screen, UiRouter.Kind.PLACE)
 	router.register(&"race_result", race_result_screen, UiRouter.Kind.MODAL)
@@ -1034,7 +1040,7 @@ func _on_crate_purchased(uid: int) -> void:
 	if _delivery:
 		_delivery.focus_on_arrival(uid)
 	var crate: Dictionary = _crates.get_crate(uid) if _crates else {}
-	_show_notice("%s GARAJINA GELİYOR" % String(CrateCatalog.get_entry(crate.get("crate", &"")).get("display_name", "KASA")),
+	_show_notice(Loc.t("%s GARAJINA GELİYOR") % Loc.t(String(CrateCatalog.get_entry(crate.get("crate", &"")).get("display_name", Loc.t("KASA")))),
 		HudPalette.COIN_DARK, 1.8)
 
 
@@ -1047,7 +1053,7 @@ func _on_crate_added(uid: int) -> void:
 	router.close_all()
 	if _delivery:
 		_delivery.focus_on_arrival(uid)
-	_show_notice("İLK ARAÇ KASAN GARAJINA GELDİ\nKASAYA DOKUN VE AÇ", HudPalette.COIN_DARK, 3.0)
+	_show_notice(Loc.t("İLK ARAÇ KASAN GARAJINA GELDİ\nKASAYA DOKUN VE AÇ"), HudPalette.COIN_DARK, 3.0)
 
 
 ## Dünyadaki kasaya dokunuldu: içerik GİZLİ soru plakası.
@@ -1061,7 +1067,7 @@ func _on_crate_clicked(uid: int) -> void:
 
 func _on_crate_open_pressed(uid: int) -> void:
 	if _delivery == null or not _delivery.open_crate(uid):
-		_show_notice("KASA ŞU AN AÇILAMIYOR", HudPalette.INK, 1.4)
+		_show_notice(Loc.t("KASA ŞU AN AÇILAMIYOR"), HudPalette.INK, 1.4)
 
 
 func _on_crate_revealed(uid: int, result: Dictionary) -> void:
@@ -1079,8 +1085,8 @@ func _on_crate_blocked(uid: int) -> void:
 	_blocked_notified[uid] = true
 	# Yeri dolduran dekor mu kasalar mı: yanlış yönlendirme olmasın (QA: dekorsuz garajda "dekoru kaldır" diyordu)
 	var decor: DecorManager = get_tree().get_first_node_in_group("decor") as DecorManager
-	var hint: String = "BİRAZ DEKORASYONU KALDIR" if decor and decor.instance_count() > 0 else "ÖNCE GARAJDAKİ BİR KASAYI AÇ"
-	_show_notice("KASA YOLDA: GARAJDA YER YOK\n%s" % hint, HudPalette.INK, 2.4)
+	var hint: String = Loc.t("BİRAZ DEKORASYONU KALDIR") if decor and decor.instance_count() > 0 else Loc.t("ÖNCE GARAJDAKİ BİR KASAYI AÇ")
+	_show_notice(Loc.t("KASA YOLDA: GARAJDA YER YOK\n%s") % hint, HudPalette.INK, 2.4)
 
 
 ## MAĞAZA ekranı: bina hitbox'ı ya da MAĞAZA sekmesi açar, oyun HUD'u gizlenir, GERİ ile döner.
@@ -1093,6 +1099,25 @@ func _build_showroom() -> void:
 
 
 ## PLAYER tabelası temalı Root'un en üstünde durur (showroom'un da üstünde: kayıt seçimi her yerde görünür).
+## AYARLAR: dişli tabela sağ üst tabela sırasının sonuna (kameranın yanına) kodla eklenir.
+func _build_settings() -> void:
+	settings_screen = SettingsScreen.new()
+	garage_screen.get_parent().add_child(settings_screen)
+	settings_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
+	settings_button = PlateButton.new()
+	settings_button.name = "SettingsButton"
+	settings_button.theme_type_variation = camera_button.theme_type_variation
+	settings_button.shape = PlateButton.Shape.ROUND
+	settings_button.kind = HudIcon.Kind.GEAR
+	settings_button.icon_size = camera_button.icon_size
+	settings_button.custom_minimum_size = camera_button.custom_minimum_size
+	settings_button.bolts = false
+	settings_button.lift_when_pressed = 0.0
+	settings_button.focus_mode = Control.FOCUS_NONE
+	settings_button.pressed.connect(func() -> void: router.open(&"settings"))
+	camera_button.get_parent().add_child(settings_button)
+
+
 func _build_login_screen() -> void:
 	login_screen = LoginScreen.new()
 	garage_screen.get_parent().add_child(login_screen)
@@ -1107,7 +1132,7 @@ func _build_quests() -> void:
 	quest_button = PlateButton.new()
 	quest_button.name = "QuestButton"
 	quest_button.theme_type_variation = &"HudPlateSmall"
-	quest_button.text = "GÖREVLER"
+	quest_button.text = Loc.t("GÖREVLER")
 	quest_button.focus_mode = Control.FOCUS_NONE
 	quest_button.size_flags_horizontal = Control.SIZE_SHRINK_END
 	quest_button.pressed.connect(_on_quest_button_pressed)
@@ -1130,13 +1155,13 @@ func _refresh_quest_button() -> void:
 		return
 	quest_button.visible = true
 	var count: int = (_quests.claimable_count() if _quests else 0) + (_missions.claimable_count() if _missions else 0)
-	quest_button.text = "GÖREVLER (%d)" % count if count > 0 else "GÖREVLER"
+	quest_button.text = Loc.t("GÖREVLER (%d)") % count if count > 0 else Loc.t("GÖREVLER")
 	quest_button.highlight = count > 0
 
 
 func _on_quest_completed(quest_id: StringName) -> void:
 	var entry: Dictionary = QuestCatalog.get_entry(quest_id)
-	_show_notice("GÖREV TAMAMLANDI: %s" % String(entry.get("title", "")), HudPalette.COIN_DARK, 2.2)
+	_show_notice(Loc.t("GÖREV TAMAMLANDI: %s") % Loc.t(String(entry.get("title", ""))), HudPalette.COIN_DARK, 2.2)
 
 
 func _set_gameplay_hud_visible(shown: bool) -> void:

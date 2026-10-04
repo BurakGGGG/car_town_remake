@@ -56,14 +56,14 @@ func short_title() -> String:
 static func defaults() -> Array[RepairType]:
 	return [
 		# --- KISA İŞLER (Seviye 1, garaj 1) ---
-		_make(&"engine", "MOTOR ARIZASI", 10.0, 0, 150, 10, 1, &"WRENCH", 1.0, "MOTOR"),
-		_make(&"brakes", "FREN ARIZASI", 8.0, 0, 140, 9, 1, &"WRENCH", 1.0, "FREN"),
-		_make(&"tires", "LASTİK ARIZASI", 6.0, 0, 100, 7, 1, &"ROTATE", 1.0, "LASTİK"),
-		_make(&"body", "KAPORTA HASARI", 12.0, 0, 200, 14, 1, &"CAR", 1.0, "KAPORTA"),
+		_make(&"engine", Loc.t("MOTOR ARIZASI"), 10.0, 0, 150, 10, 1, &"WRENCH", 1.0, Loc.t("MOTOR")),
+		_make(&"brakes", Loc.t("FREN ARIZASI"), 8.0, 0, 140, 9, 1, &"WRENCH", 1.0, Loc.t("FREN")),
+		_make(&"tires", Loc.t("LASTİK ARIZASI"), 6.0, 0, 100, 7, 1, &"ROTATE", 1.0, Loc.t("LASTİK")),
+		_make(&"body", Loc.t("KAPORTA HASARI"), 12.0, 0, 200, 14, 1, &"CAR", 1.0, Loc.t("KAPORTA")),
 		# --- ORTA İŞLER (seviye + garaj şartı) ---
-		_make(&"paint_job", "BOYA İŞİ", 90.0, 0, 600, 45, 5, &"CAR", 0.8, "BOYA", 2, 2),
-		_make(&"upholstery", "DÖŞEME", 180.0, 0, 1150, 85, 8, &"WRENCH", 0.6, "DÖŞEME", 2, 2),
-		_make(&"brake_overhaul", "FREN REVİZYONU", 300.0, 0, 1800, 140, 12, &"WRENCH", 0.5, "REVİZYON", 3, 3),
+		_make(&"paint_job", Loc.t("BOYA İŞİ"), 90.0, 0, 600, 45, 5, &"CAR", 0.8, Loc.t("BOYA"), 2, 2),
+		_make(&"upholstery", Loc.t("DÖŞEME"), 180.0, 0, 1150, 85, 8, &"WRENCH", 0.6, Loc.t("DÖŞEME"), 2, 2),
+		_make(&"brake_overhaul", Loc.t("FREN REVİZYONU"), 300.0, 0, 1800, 140, 12, &"WRENCH", 0.5, Loc.t("REVİZYON"), 3, 3),
 	]
 
 

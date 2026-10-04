@@ -179,7 +179,7 @@ func _build_column(entry: Dictionary) -> void:
 		caption.theme_type_variation = &"HudOutlined"   # dünya üstünde okunsun diye konturlu
 		caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		caption.text = "%d · %%%d" % [int(entry["year"]), roundi(float(entry["condition"]) * 100.0)]
+		caption.text = "%d · %s" % [int(entry["year"]), Loc.percent(str(roundi(float(entry["condition"]) * 100.0)))]
 		column.add_child(caption)
 
 		var action: PlateButton = PlateButton.new()
@@ -264,19 +264,19 @@ func _refresh_actions() -> void:
 			continue
 		match _ownership.status(id):
 			VehicleOwnership.Status.OWNED:
-				action.text = "SAHİPSİN"
+				action.text = Loc.t("SAHİPSİN")
 				action.disabled = true
 			VehicleOwnership.Status.TOO_EXPENSIVE:
-				action.text = "%s ₺\nPARA YETERSİZ" % Hud.format_thousands(_ownership.price(id))
+				action.text = Loc.t("%s ₺\nPARA YETERSİZ") % Hud.format_thousands(_ownership.price(id))
 				action.disabled = true
 			VehicleOwnership.Status.LOCKED_LEVEL:
-				action.text = "SEVİYE %d\nGEREKLİ" % _ownership.required_level(id)
+				action.text = Loc.t("SEVİYE %d\nGEREKLİ") % _ownership.required_level(id)
 				action.disabled = true
 			VehicleOwnership.Status.LOCKED_RANK:
-				action.text = "RÜTBE %d\nGEREKLİ" % _ownership.required_rank(id)
+				action.text = Loc.t("RÜTBE %d\nGEREKLİ") % _ownership.required_rank(id)
 				action.disabled = true
 			_:
-				action.text = "%s ₺\nSATIN AL" % Hud.format_thousands(_ownership.price(id))
+				action.text = Loc.t("%s ₺\nSATIN AL") % Hud.format_thousands(_ownership.price(id))
 				action.disabled = false
 
 

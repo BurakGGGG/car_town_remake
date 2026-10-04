@@ -84,7 +84,7 @@ func _init() -> void:
 	_issue_row = HBoxContainer.new()
 	_issue_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_issue_row.add_theme_constant_override(&"separation", 6)
-	_issue_row.add_child(_make_label("ARIZA", &"HudInkCaption"))
+	_issue_row.add_child(_make_label(Loc.t("ARIZA"), &"HudInkCaption"))
 	_issue_plate = PlateButton.new()
 	_issue_plate.theme_type_variation = &"HudPlateSmall"
 	_issue_plate.kind = HudIcon.Kind.WRENCH
@@ -97,7 +97,7 @@ func _init() -> void:
 	_damaged_box.add_child(_issue_row)
 	_job_caption = _make_label("", &"HudInkCaption")
 	_damaged_box.add_child(_job_caption)
-	_normal_label = _make_label("Arıza yok", &"HudInkValue")
+	_normal_label = _make_label(Loc.t("Arıza yok"), &"HudInkValue")
 	_normal_label.visible = false
 	_damaged_box.add_child(_normal_label)
 	add_child(_damaged_box)
@@ -107,7 +107,7 @@ func _init() -> void:
 	_ready_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ready_box.add_theme_constant_override(&"separation", 4)
 	_ready_box.add_child(InkIcon.new(HudIcon.Kind.NONE, true))
-	_ready_box.add_child(_make_label("TAMİR HAZIR", &"HudInkValue"))
+	_ready_box.add_child(_make_label(Loc.t("TAMİR HAZIR"), &"HudInkValue"))
 	_ready_box.visible = false
 	add_child(_ready_box)
 
@@ -119,7 +119,7 @@ func _init() -> void:
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head.add_theme_constant_override(&"separation", 4)
 	head.add_child(InkIcon.new(HudIcon.Kind.WRENCH))
-	head.add_child(_make_label("TAMİR EDİLİYOR", &"HudInkValue"))
+	head.add_child(_make_label(Loc.t("TAMİR EDİLİYOR"), &"HudInkValue"))
 	_repairing_box.add_child(head)
 	var lane_row: HBoxContainer = HBoxContainer.new()
 	lane_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -144,9 +144,9 @@ func _init() -> void:
 	done_head.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	done_head.add_theme_constant_override(&"separation", 4)
 	done_head.add_child(InkIcon.new(HudIcon.Kind.NONE, true))
-	done_head.add_child(_make_label("TAMİR TAMAMLANDI", &"HudInkValue"))
+	done_head.add_child(_make_label(Loc.t("TAMİR TAMAMLANDI"), &"HudInkValue"))
 	_done_box.add_child(done_head)
-	_done_value = _make_label("+750 ₺   +35 XP", &"HudInkValue")
+	_done_value = _make_label(Loc.t("+750 ₺   +35 XP"), &"HudInkValue")
 	_done_value.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
 	_done_box.add_child(_done_value)
 	_done_box.visible = false
@@ -158,14 +158,14 @@ func _init() -> void:
 	_action_box.add_theme_constant_override(&"separation", 3)
 	_action_box.size_flags_horizontal = Control.SIZE_SHRINK_END | Control.SIZE_EXPAND
 	_button = PlateButton.new()
-	_button.text = "TAMİRE AL"
+	_button.text = Loc.t("TAMİRE AL")
 	_button.kind = HudIcon.Kind.WRENCH
 	_button.theme_type_variation = &"HudPlate"
 	_button.custom_minimum_size = Vector2(BUTTON_WIDTH, 0.0)
 	_button.focus_mode = Control.FOCUS_NONE
 	_button.pressed.connect(_on_button_pressed)
 	_action_box.add_child(_button)
-	_reward_label = _make_label("Ödül: 750 ₺", &"HudInkCaption")
+	_reward_label = _make_label(Loc.t("Ödül: 750 ₺"), &"HudInkCaption")
 	_reward_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_action_box.add_child(_reward_label)
 	add_child(_action_box)
@@ -183,8 +183,8 @@ func set_info(type: RepairType, fixed_reward: int = -1) -> void:
 	_reward = fixed_reward if fixed_reward >= 0 else effective_reward(type)
 	_xp = effective_xp(type)
 	_cost = type.cost
-	_reward_label.text = "Ödül: %s ₺" % Hud.format_thousands(_reward)
-	_done_value.text = "+%s ₺   +%d XP" % [Hud.format_thousands(_reward), _xp]
+	_reward_label.text = Loc.t("Ödül: %s ₺") % Hud.format_thousands(_reward)
+	_done_value.text = Loc.t("+%s ₺   +%d XP") % [Hud.format_thousands(_reward), _xp]
 
 
 ## Plakada yazan ile kasaya giren aynı olsun: ödül garaj seviyesinin müşteri çarpanıyla
@@ -221,7 +221,7 @@ func set_issue(type: RepairType) -> void:
 		_issue_plate.text = "—"
 		_job_caption.text = ""
 		return
-	_issue_plate.text = "%s\n%d sn" % [type.short_title(), int(type.duration)]
+	_issue_plate.text = Loc.t("%s\n%d sn") % [type.short_title(), int(type.duration)]
 	_issue_plate.kind = _icon_of(type)
 	set_info(type)
 
@@ -251,7 +251,7 @@ func show_damaged(busy: bool) -> void:
 	_issue_row.visible = true
 	_job_caption.visible = true
 	_normal_label.visible = false
-	_button.text = "TAMİRE AL"
+	_button.text = Loc.t("TAMİRE AL")
 	_button.kind = HudIcon.Kind.WRENCH
 	_apply_selection_state()
 
@@ -262,9 +262,9 @@ func show_ready() -> void:
 		return
 	_set_mode(Mode.READY)
 	_button.disabled = false
-	_button.text = "PARA TOPLA"
+	_button.text = Loc.t("PARA TOPLA")
 	_button.kind = HudIcon.Kind.COIN
-	_reward_label.text = "+%s ₺  +%d XP" % [Hud.format_thousands(_reward), _xp]
+	_reward_label.text = Loc.t("+%s ₺  +%d XP") % [Hud.format_thousands(_reward), _xp]
 	_pop(_action_box)
 
 
@@ -274,14 +274,14 @@ func show_repairing(progress: float, remaining: float, boost_available: bool = f
 		_set_mode(Mode.REPAIRING)
 	if boost_available:
 		_button.disabled = false
-		_button.text = "REKLAM İZLE"
+		_button.text = Loc.t("REKLAM İZLE")
 		_button.kind = HudIcon.Kind.NONE
-		_reward_label.text = "Süre yarıya iner"
+		_reward_label.text = Loc.t("Süre yarıya iner")
 	else:
 		_button.disabled = true
-		_button.text = "TAMİRE AL"
+		_button.text = Loc.t("TAMİRE AL")
 		_button.kind = HudIcon.Kind.WRENCH
-		_reward_label.text = "Ödül: %s ₺" % Hud.format_thousands(_reward)
+		_reward_label.text = Loc.t("Ödül: %s ₺") % Hud.format_thousands(_reward)
 	_lane.ratio = progress
 	_time_label.text = "%.1f sn" % remaining
 
@@ -300,9 +300,9 @@ func show_normal() -> void:
 	_job_caption.visible = false
 	_normal_label.visible = true
 	_button.disabled = true
-	_button.text = "TAMİRE AL"
+	_button.text = Loc.t("TAMİRE AL")
 	_button.kind = HudIcon.Kind.WRENCH
-	_reward_label.text = "Müşteri değil"
+	_reward_label.text = Loc.t("Müşteri değil")
 
 
 # --- İç -----------------------------------------------------------------------
@@ -339,9 +339,9 @@ func _apply_selection_state() -> void:
 	parts.append("%d sn" % int(round(effective_duration(t))))
 	if t.cost > 0:
 		parts.append("-%s ₺" % Hud.format_thousands(t.cost))
-	parts.append("+%s ₺ (%s ₺/dk)" % [
+	parts.append(Loc.t("+%s ₺ (%s ₺/dk)") % [
 		Hud.format_thousands(effective_reward(t)), Hud.format_thousands(rate_per_minute(t))])
-	parts.append("+%d XP" % effective_xp(t))
+	parts.append(Loc.t("+%d XP") % effective_xp(t))
 	var line: String = "%s   ·   %s" % [t.title, "  ·  ".join(parts)]
 	line += _mastery_text(t)
 	var busy: bool = _mode == Mode.BUSY
@@ -350,11 +350,11 @@ func _apply_selection_state() -> void:
 	_job_caption.text = line
 	_button.disabled = busy or not unlocked or not affordable
 	if busy:
-		_reward_label.text = "TAMİR ALANI DOLU"
+		_reward_label.text = Loc.t("TAMİR ALANI DOLU")
 	elif not unlocked:
-		_reward_label.text = "SEVİYE %d'DE AÇILIR" % t.min_level
+		_reward_label.text = Loc.t("SEVİYE %d'DE AÇILIR") % t.min_level
 	elif not affordable:
-		_reward_label.text = "YETERSİZ BAKİYE"
+		_reward_label.text = Loc.t("YETERSİZ BAKİYE")
 	else:
 		_reward_label.text = ""
 
@@ -377,8 +377,8 @@ func _mastery_text(type: RepairType) -> String:
 		return ""
 	var stars: int = mastery.stars(type.id)
 	var next: int = mastery.next_threshold(type.id)
-	var text: String = "  ·  USTALIK %s" % ("★".repeat(stars) if stars > 0 else "")
-	return text + ("USTA" if next == 0 else " %d/%d" % [mastery.count(type.id), next])
+	var text: String = Loc.t("  ·  USTALIK %s") % ("★".repeat(stars) if stars > 0 else "")
+	return text + (Loc.t("USTA") if next == 0 else " %d/%d" % [mastery.count(type.id), next])
 
 
 func _make_label(text: String, variation: StringName) -> Label:

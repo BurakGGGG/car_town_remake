@@ -33,22 +33,22 @@ func _ready() -> void:
 ## Sonuç verileri dışarıdan gelir (yarış ekranı + RaceManager ödülü).
 func show_result(won: bool, player_time: float, rival_time: float, money: int, xp: int,
 		winner_id: StringName) -> void:
-	_title.text = "KAZANDIN!" if won else "KAYBETTİN"
+	_title.text = Loc.t("KAZANDIN!") if won else Loc.t("KAYBETTİN")
 	var parts: PackedStringArray = PackedStringArray()
 	if money > 0:
 		parts.append("+%s ₺" % Hud.format_thousands(money))
 	if xp > 0:
-		parts.append("+%d XP" % xp)
-	_reward.text = "   ".join(parts) if not parts.is_empty() else "ÖDÜL YOK"
-	_times.text = "SEN  %.2f sn        RAKİP  %.2f sn" % [player_time, rival_time]
+		parts.append(Loc.t("+%d XP") % xp)
+	_reward.text = "   ".join(parts) if not parts.is_empty() else Loc.t("ÖDÜL YOK")
+	_times.text = Loc.t("SEN  %.2f sn        RAKİP  %.2f sn") % [player_time, rival_time]
 	hide_bonus()
-	_winner.text = "KAZANAN: %s" % String(CarCatalog.get_entry(winner_id).get("display_name", winner_id)).to_upper()
+	_winner.text = Loc.t("KAZANAN: %s") % String(CarCatalog.get_entry(winner_id).get("display_name", winner_id)).to_upper()
 
 
 ## Ödüllü reklam teklifi: "REKLAM İZLE +X ₺". Yalnızca oyuncu basarsa reklam gösterilir.
 func offer_bonus(amount: int) -> void:
 	_bonus_amount = amount
-	_bonus_button.text = "REKLAM İZLE   +%s ₺" % Hud.format_thousands(amount)
+	_bonus_button.text = Loc.t("REKLAM İZLE   +%s ₺") % Hud.format_thousands(amount)
 	_bonus_button.disabled = false
 	_bonus_button.visible = true
 
@@ -64,7 +64,7 @@ func rearm_bonus() -> void:
 func bonus_granted(amount: int) -> void:
 	_bonus_button.visible = false
 	_bonus_amount = 0
-	_reward.text = "%s   +%s ₺ BONUS" % [_reward.text, Hud.format_thousands(amount)]
+	_reward.text = Loc.t("%s   +%s ₺ BONUS") % [_reward.text, Hud.format_thousands(amount)]
 
 
 func hide_bonus() -> void:
@@ -103,7 +103,7 @@ func _build() -> void:
 	var sign: PlatePanel = PlatePanel.new()
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var head: Label = _label(&"HudSignTitle", "YARIŞ BİTTİ")
+	var head: Label = _label(&"HudSignTitle", Loc.t("YARIŞ BİTTİ"))
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sign.add_child(head)
 	_column.add_child(sign)
@@ -142,7 +142,7 @@ func _build() -> void:
 	var exit_button: PlateButton = PlateButton.new()
 	exit_button.name = "ExitButton"
 	exit_button.theme_type_variation = &"HudPlate"
-	exit_button.text = "GARAJA DÖN"
+	exit_button.text = Loc.t("GARAJA DÖN")
 	exit_button.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
 	exit_button.focus_mode = Control.FOCUS_NONE
 	exit_button.pressed.connect(func() -> void: exit_requested.emit())

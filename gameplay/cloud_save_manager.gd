@@ -197,7 +197,7 @@ func has_cloud_save() -> bool:
 ## GOOGLE İLE GİRİŞ: tek hesap seçici. Oturum açılınca bulut kaydı okunur (_decide).
 func sign_in() -> void:
 	if _fb == null:
-		notice.emit("Google girişi yalnızca Android sürümünde")
+		notice.emit(Loc.t("Google girişi yalnızca Android sürümünde"))
 		return
 	if is_authenticated() or _op != Op.NONE:
 		return
@@ -212,7 +212,7 @@ func sign_out() -> void:
 	if _fb == null or not is_authenticated() or _signing_out:
 		return
 	if _state == State.CONFLICT:
-		notice.emit("Önce hangi kaydı kullanacağını seçmelisin.")
+		notice.emit(Loc.t("Önce hangi kaydı kullanacağını seçmelisin."))
 		return
 	if _op not in [Op.NONE, Op.SET]:
 		return
@@ -296,7 +296,7 @@ func _on_auth_success(user: Dictionary) -> void:
 			_op = Op.NONE
 			if _str(user.get("uid")) != _delete_uid:
 				# Başka hesap seçildi: silme iptal, oturum artık o hesabın (normal hesap değişimi akışı)
-				_abort_delete("Hesap silinmedi: silmek için oyunda kullandığın Google hesabını seçmelisin.", false)
+				_abort_delete(Loc.t("Hesap silinmedi: silmek için oyunda kullandığın Google hesabını seçmelisin."), false)
 				_on_google_user(user)
 				return
 			_user = user
@@ -306,7 +306,7 @@ func _on_auth_success(user: Dictionary) -> void:
 func _on_auth_failure(message: String) -> void:
 	# Plugin silme hatasında user_deleted(false)'tan SONRA bunu da yollar; sonuç zaten işlendi ve
 	# o sırada başlamış olan çıkış (Op.SIGN_OUT) bu mesajla başarısız sayılmamalı.
-	if message.begins_with("Delete failed"):
+	if message.begins_with(Loc.t("Delete failed")):
 		return
 	match _op:
 		Op.GOOGLE:
@@ -314,7 +314,7 @@ func _on_auth_failure(message: String) -> void:
 			push_warning("CloudSaveManager: Google girişi başarısız: %s" % message)
 			_set_state(State.SIGNED_OUT)
 			if not _is_cancel(message):
-				notice.emit("Google girişi yapılamadı")
+				notice.emit(Loc.t("Google girişi yapılamadı"))
 		Op.SIGN_OUT:
 			_op = Op.NONE
 			_signing_out = false
@@ -322,7 +322,7 @@ func _on_auth_failure(message: String) -> void:
 		Op.REAUTH:
 			_op = Op.NONE
 			push_warning("CloudSaveManager: silme öncesi Google doğrulaması başarısız: %s" % message)
-			_abort_delete("" if _is_cancel(message) else "Hesap silinmedi: Google hesabı doğrulanamadı.")
+			_abort_delete("" if _is_cancel(message) else Loc.t("Hesap silinmedi: Google hesabı doğrulanamadı."))
 
 
 func _on_google_user(user: Dictionary) -> void:
@@ -346,7 +346,7 @@ func _on_sign_out_result(success: bool) -> void:
 	_op = Op.NONE
 	_signing_out = false
 	if not success:
-		notice.emit("Çıkış yapılamadı")
+		notice.emit(Loc.t("Çıkış yapılamadı"))
 		if _state == State.DELETING:
 			_begin_sync()   # yarım kalan silmeden sonra DELETING'de takılı kalınmaz
 		return
@@ -370,7 +370,7 @@ func _on_sign_out_result(success: bool) -> void:
 	_write_json(META_PATH, _meta)
 	user_changed.emit({})
 	_set_state(State.SIGNED_OUT)
-	_reload_world("Çıkış yapıldı. Bu cihazda yeni bir misafir oyunu başladı; hesabına tekrar girince ilerlemen geri gelir.")
+	_reload_world(Loc.t("Çıkış yapıldı. Bu cihazda yeni bir misafir oyunu başladı; hesabına tekrar girince ilerlemen geri gelir."))
 
 
 # --- Hesap silme -------------------------------------------------------------------
@@ -388,7 +388,7 @@ func _on_delete_completed(result: Dictionary) -> void:
 	_op_timer.stop()
 	if not bool(result.get("status", false)):
 		push_warning("CloudSaveManager: bulut kaydı silinemedi: %s" % _str(result.get("error")))
-		_abort_delete("Hesap silinmedi: bulut kaydına ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene.")
+		_abort_delete(Loc.t("Hesap silinmedi: bulut kaydına ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene."))
 		return
 	_op = Op.DELETE_USER
 	_op_timer.start(REQUEST_TIMEOUT)
@@ -421,7 +421,7 @@ func _finish_delete(auth_deleted: bool) -> void:
 	_retry_timer.stop()
 	if not auth_deleted:
 		push_warning("CloudSaveManager: Firebase hesabı silinemedi, veriler silindi, oturum kapatılıyor")
-		notice.emit("İlerlemen ve bulut kaydın silindi, ancak Google hesap bağlantısı kaldırılamadı. Tamamlamak için: %s" % DELETE_ACCOUNT_URL)
+		notice.emit(Loc.t("İlerlemen ve bulut kaydın silindi, ancak Google hesap bağlantısı kaldırılamadı. Tamamlamak için: %s") % DELETE_ACCOUNT_URL)
 		account_deleted.emit(false)
 		_signout_resets_local = false   # veriler zaten silindi
 		_finish_sign_out()   # _on_sign_out_result dünyayı yeniler
@@ -430,7 +430,7 @@ func _finish_delete(auth_deleted: bool) -> void:
 	user_changed.emit({})
 	_set_state(State.SIGNED_OUT)
 	account_deleted.emit(true)
-	_reload_world("Hesabın ve tüm verilerin silindi. Yeni bir oyunla misafir olarak devam ediyorsun.")
+	_reload_world(Loc.t("Hesabın ve tüm verilerin silindi. Yeni bir oyunla misafir olarak devam ediyorsun."))
 
 
 ## Silme iptal / başarısız: hiçbir şey silinmedi. resync → bulut yeniden okunup normal akışa dönülür.
@@ -495,7 +495,7 @@ func _decide(cloud_json: String) -> void:
 	if _parse_cloud(cloud_json).is_empty():
 		push_error("CloudSaveManager: bulut kaydı okunamadı (bozuk ya da daha yeni sürüm), bulut korunuyor")
 		_set_state(State.ERROR)
-		notice.emit("Bulut kaydı bu sürümle açılamıyor")
+		notice.emit(Loc.t("Bulut kaydı bu sürümle açılamıyor"))
 		return
 	if cloud_json == local_json:
 		_mark_synced(cloud_json)
@@ -533,7 +533,7 @@ func _apply_cloud(cloud_json: String) -> void:
 	_mark_synced(cloud_json)
 	# Katalogda olmayan araç vb. ayıklandıysa local artık farklıdır: temiz hali (yenilenmiş dünyada,
 	# yeni örneğin açılış senkronunda) buluta yazılır
-	_reload_world("Hesabın yüklendi.")
+	_reload_world(Loc.t("Hesabın yüklendi."))
 
 
 func _mark_synced(json: String) -> void:
@@ -622,7 +622,7 @@ func _go_offline(reason: String) -> void:
 	if _signing_out:
 		# Buluta yazılamayan ilerleme varken çıkış yapılırsa bu cihazdaki kayıt sıfırlanır ve kaybolur
 		_signing_out = false
-		notice.emit("Son değişiklikler buluta yazılamadığı için çıkış yapılmadı. İnternet bağlantını kontrol edip tekrar dene.")
+		notice.emit(Loc.t("Son değişiklikler buluta yazılamadığı için çıkış yapılmadı. İnternet bağlantını kontrol edip tekrar dene."))
 	_set_state(State.OFFLINE)
 	_retry_timer.start(RETRY_INTERVAL)
 
@@ -630,10 +630,10 @@ func _go_offline(reason: String) -> void:
 func _on_op_timeout() -> void:
 	match _op:
 		Op.GET, Op.SET:
-			_go_offline("zaman aşımı")
+			_go_offline(Loc.t("zaman aşımı"))
 		Op.DELETE_DOC:
 			_op = Op.NONE
-			_abort_delete("Hesap silinmedi: bulut yanıt vermedi. İnternet bağlantını kontrol edip tekrar dene.")
+			_abort_delete(Loc.t("Hesap silinmedi: bulut yanıt vermedi. İnternet bağlantını kontrol edip tekrar dene."))
 		Op.DELETE_USER:
 			_op = Op.NONE
 			_finish_delete(false)

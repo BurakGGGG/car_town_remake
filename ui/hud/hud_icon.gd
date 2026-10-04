@@ -21,6 +21,7 @@ enum Kind {
 	COIN,
 	GEM,
 	PAINT,  ## sprey boya kutusu (boya atölyesi) — sona eklendi: sahnelerdeki kayıtlı numaralar değişmez
+	GEAR,   ## dişli (AYARLAR) — sona eklendi
 }
 
 @export var kind: Kind = Kind.COIN:
@@ -93,8 +94,23 @@ static func draw_icon(ci: CanvasItem, kind: Kind, c: Vector2, s: float, ink: Col
 			_gem(ci, c, s)
 		Kind.PAINT:
 			_paint(ci, c, s, ink, cutout)
+		Kind.GEAR:
+			_gear(ci, c, s, ink, cutout)
 		_:
 			pass
+
+
+## Dişli: 8 diş + gövde + ortada delik.
+static func _gear(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+	for i: int in 8:
+		var angle: float = TAU * float(i) / 8.0
+		var dir: Vector2 = Vector2(cos(angle), sin(angle))
+		var side: Vector2 = Vector2(-dir.y, dir.x) * 0.075 * s
+		var inner: Vector2 = c + dir * 0.26 * s
+		var outer: Vector2 = c + dir * 0.46 * s
+		ci.draw_colored_polygon(PackedVector2Array([inner - side, outer - side * 0.8, outer + side * 0.8, inner + side]), ink)
+	ci.draw_circle(c, 0.33 * s, ink, true, -1.0, true)
+	ci.draw_circle(c, 0.13 * s, cutout, true, -1.0, true)
 
 
 static func _pts(c: Vector2, s: float, raw: PackedVector2Array) -> PackedVector2Array:

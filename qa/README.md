@@ -11,6 +11,7 @@ Bunlar test değil **ölçüm** araçlarıdır: sayı üretirler, PASS/FAIL verm
 | `sim_progress.gd` | Yeni oyuncu simülasyonu: para, XP, seviye, garaj, alan, araç, ustalık. `Engine.time_scale = 12`. | `--headless --script qa/sim_progress.gd -- 120` (dakika) |
 | `ui_audit.gd` | Her ekranda kadraj dışına taşan Control'ler, 44 px altı dokunma hedefleri + ekran görüntüsü. | `--resolution 1040x480 --script qa/ui_audit.gd` |
 | `mission_sim.gd` | GÖREVLER simülasyonu: 5 oyuncu profili × 30 gün; tamamlanma oranı, ₺ / gem akışı, görev çeşitliliği, DDA (docs/gorevler_tasarimi.md §12). | `--headless --script qa/mission_sim.gd` |
+| `i18n_tarama.gd` | Dil taraması: ekranlarda çevrilmeden kalan metinler + ekran görüntüleri (docs/DIL_DESTEGI.md). | `--resolution 1152x648 --script qa/i18n_tarama.gd -- en` |
 | `mesh_cost.gd` | Araç başına mesh/yüzey/vertex/üçgen ve örnek başına VRAM artışı. | `--script qa/mesh_cost.gd` |
 | `tex_quality.gd` | İçe aktarılmış (VRAM sıkıştırılmış) doku ile kaynak JPEG arasındaki PSNR. | `--headless --script qa/tex_quality.gd` |
 | `proportion_check.gd` | Model kutusunun en/boy ve yükseklik/boy oranlarının gerçek ölçülerle farkı. | `--script qa/proportion_check.gd` |

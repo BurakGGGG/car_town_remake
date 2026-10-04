@@ -42,7 +42,7 @@ func _ready() -> void:
 	_cancel = PlateButton.new()
 	_cancel.name = "CrateCancel"
 	_cancel.theme_type_variation = &"HudPlateSmall"
-	_cancel.text = "VAZGEÇ"
+	_cancel.text = Loc.t("VAZGEÇ")
 	_cancel.bolts = false
 	_cancel.focus_mode = Control.FOCUS_NONE
 	_cancel.pressed.connect(func() -> void:
@@ -71,9 +71,9 @@ func show_prompt(uid_value: int, crate_id: StringName) -> void:
 	var lines: PackedStringArray = PackedStringArray()
 	for rarity: StringName in CrateCatalog.RARITY_ORDER:
 		if odds.has(rarity):
-			lines.append("%s  %%%s" % [CrateCatalog.rarity_label(rarity), ("%.1f" % (float(odds[rarity]) * 100.0)).replace(".", ",")])
-	_plate.set_content(String(entry.get("display_name", "KASA")), "İÇİNDE BİR ARAÇ VAR", "???", lines)
-	_action.text = "AÇ"
+			lines.append("%s  %s" % [CrateCatalog.rarity_label(rarity), Loc.percent(Loc.decimal(float(odds[rarity]) * 100.0))])
+	_plate.set_content(Loc.t(String(entry.get("display_name", Loc.t("KASA")))), Loc.t("İÇİNDE BİR ARAÇ VAR"), "???", lines)
+	_action.text = Loc.t("AÇ")
 	_action.disabled = false
 	_cancel.visible = true
 	show()
@@ -90,18 +90,18 @@ func show_result(uid_value: int, result: Dictionary) -> void:
 	var headline: String
 	if bool(result["duplicate"]):
 		var stars: int = int(result["stars"])
-		headline = "KOPYA  %s" % ("★".repeat(stars) + "☆".repeat(5 - stars))
-		lines.append("ARAÇ YILDIZI İLERLEDİ")
+		headline = Loc.t("KOPYA  %s") % ("★".repeat(stars) + "☆".repeat(5 - stars))
+		lines.append(Loc.t("ARAÇ YILDIZI İLERLEDİ"))
 	elif bool(result["reacquired"]):
-		headline = "GARAJINA GERİ DÖNDÜ"
+		headline = Loc.t("GARAJINA GERİ DÖNDÜ")
 	else:
-		headline = "YENİ!  KOLEKSİYONA EKLENDİ"
+		headline = Loc.t("YENİ!  KOLEKSİYONA EKLENDİ")
 	if int(result["gems"]) > 0:
-		lines.append("+%d GEM" % int(result["gems"]))
+		lines.append(Loc.t("+%d GEM") % int(result["gems"]))
 	_plate.set_content(String(entry.get("display_name", vehicle)).to_upper(),
-		"%s  ·  %s SINIFI" % [CrateCatalog.rarity_label(rarity), String(entry.get("class", "?"))],
+		Loc.t("%s  ·  %s SINIFI") % [CrateCatalog.rarity_label(rarity), String(entry.get("class", "?"))],
 		headline, lines)
-	_action.text = "TAMAM"
+	_action.text = Loc.t("TAMAM")
 	_action.disabled = false
 	_cancel.visible = false
 	show()

@@ -57,6 +57,18 @@ func provider() -> AdProvider:
 	return _provider
 
 
+## Reklam gizlilik seçenekleri (UMP) giriş noktası gerekli mi? AYARLAR ekranı buna göre düğme gösterir.
+func privacy_options_required() -> bool:
+	return _provider != null and _provider.privacy_options_required()
+
+
+func show_privacy_options(on_done: Callable = func() -> void: pass) -> void:
+	if _provider:
+		_provider.show_privacy_options(on_done)
+	else:
+		on_done.call()
+
+
 static func _pick_provider() -> AdProvider:
 	if not GameFeatures.ADS or not AdConfig.any_slot_usable():
 		return AdProvider.new()   # kapalı: hiçbir şey yüklenmez, hiçbir teklif çıkmaz

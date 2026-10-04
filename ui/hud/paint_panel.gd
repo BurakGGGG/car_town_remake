@@ -74,7 +74,7 @@ func _build() -> void:
 	plate.add_child(box)
 	add_child(plate)
 
-	box.add_child(_label(&"HudPlateTitle", "BOYA ATÖLYESİ"))
+	box.add_child(_label(&"HudPlateTitle", Loc.t("BOYA ATÖLYESİ")))
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = COLUMNS
 	grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -101,7 +101,7 @@ func _build() -> void:
 
 	var back: PlateButton = PlateButton.new()
 	back.theme_type_variation = &"HudPlateSmall"
-	back.text = "GERİ"
+	back.text = Loc.t("GERİ")
 	back.custom_minimum_size = Vector2(WIDTH, 0.0)
 	back.focus_mode = Control.FOCUS_NONE
 	back.pressed.connect(close)
@@ -148,17 +148,17 @@ func _refresh() -> void:
 	for paint_id: StringName in _swatches:
 		_style_swatch(_swatches[paint_id], _color_of(paint_id), paint_id == _selected, paint_id == current)
 	var entry: Dictionary = PaintCatalog.get_entry(_selected)
-	_name_label.text = "FABRİKA RENGİ" if _selected == PaintCatalog.FACTORY_ID else String(entry.get("name", ""))
-	_price_label.text = "ÜCRETSİZ" if _selected == PaintCatalog.FACTORY_ID else _price_text(entry)
+	_name_label.text = Loc.t("FABRİKA RENGİ") if _selected == PaintCatalog.FACTORY_ID else Loc.t(String(entry.get("name", "")))
+	_price_label.text = Loc.t("ÜCRETSİZ") if _selected == PaintCatalog.FACTORY_ID else _price_text(entry)
 	_buy_button.kind = HudIcon.Kind.GEM if _is_gem(entry) else HudIcon.Kind.PAINT
 	if _selected == current:
-		_buy_button.text = "MEVCUT RENK"
+		_buy_button.text = Loc.t("MEVCUT RENK")
 		_buy_button.disabled = true
 	elif _ownership and _ownership.can_purchase_paint(_vehicle, _selected):
-		_buy_button.text = "BOYA"
+		_buy_button.text = Loc.t("BOYA")
 		_buy_button.disabled = false
 	else:
-		_buy_button.text = "GEM YETERSİZ" if _is_gem(entry) else "PARA YETERSİZ"
+		_buy_button.text = Loc.t("GEM YETERSİZ") if _is_gem(entry) else Loc.t("PARA YETERSİZ")
 		_buy_button.disabled = true
 
 
@@ -189,7 +189,7 @@ func _draw_swatch_mark(swatch: Button, paint_id: StringName) -> void:
 
 func _price_text(entry: Dictionary) -> String:
 	if _is_gem(entry):
-		return "%d GEM" % int(entry["price"])
+		return Loc.t("%d GEM") % int(entry["price"])
 	return "%s ₺" % Hud.format_thousands(int(entry.get("price", 0)))
 
 

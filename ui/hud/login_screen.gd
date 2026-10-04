@@ -88,7 +88,7 @@ func _build() -> void:
 	var sign: PlatePanel = PlatePanel.new()
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_title = _label(&"HudSignTitle", "PLAYER")
+	_title = _label(&"HudSignTitle", Loc.t("PLAYER"))
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sign.add_child(_title)
 	column.add_child(sign)
@@ -106,7 +106,7 @@ func _build() -> void:
 	_account_box = VBoxContainer.new()
 	_account_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_account_box.add_theme_constant_override(&"separation", 0)
-	_account_box.add_child(_label(&"HudInkCaption", "GOOGLE HESABI"))
+	_account_box.add_child(_label(&"HudInkCaption", Loc.t("GOOGLE HESABI")))
 	_name_label = _label(&"HudPlateTitle", "")
 	_email_label = _label(&"HudInkCaption", "")
 	_account_box.add_child(_name_label)
@@ -121,8 +121,8 @@ func _build() -> void:
 	_choice_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_choice_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_choice_row.add_theme_constant_override(&"separation", 8)
-	_local_info = _choice(_choice_row, "BU CİHAZDAKİ KAYIT", false)
-	_cloud_info = _choice(_choice_row, "BULUT KAYDI", true)
+	_local_info = _choice(_choice_row, Loc.t("BU CİHAZDAKİ KAYIT"), false)
+	_cloud_info = _choice(_choice_row, Loc.t("BULUT KAYDI"), true)
 	info_box.add_child(_choice_row)
 
 	_notice = _wrapped(&"HudInkCaption")
@@ -150,7 +150,7 @@ func _build() -> void:
 	_delete = PlateButton.new()
 	_delete.name = "DeleteAccountButton"
 	_delete.theme_type_variation = &"HudPlateSmall"
-	_delete.text = "HESABIMI SİL"
+	_delete.text = Loc.t("HESABIMI SİL")
 	_delete.custom_minimum_size = Vector2(PANEL_WIDTH, 0.0)
 	_delete.focus_mode = Control.FOCUS_NONE
 	for color_name: StringName in [&"font_color", &"font_hover_color", &"font_pressed_color", &"font_hover_pressed_color"]:
@@ -236,13 +236,13 @@ func _on_notice(text: String) -> void:
 func _on_account_deleted(success: bool) -> void:
 	_confirm_delete = false
 	if success:
-		_notice_text = "Hesabın ve tüm verilerin silindi. Yeni bir oyunla misafir olarak devam ediyorsun."
+		_notice_text = Loc.t("Hesabın ve tüm verilerin silindi. Yeni bir oyunla misafir olarak devam ediyorsun.")
 	_refresh()
 
 
 func _summary_text(summary: Dictionary) -> String:
 	var vehicles: PackedStringArray = summary.get("vehicles", PackedStringArray())
-	return "%s ₺\nSEVİYE %d\n%d ARAÇ\n%s" % [
+	return Loc.t("%s ₺\nSEVİYE %d\n%d ARAÇ\n%s") % [
 		Hud.format_thousands(int(summary.get("money", 0))),
 		int(summary.get("level", 1)),
 		vehicles.size(),
@@ -257,7 +257,7 @@ func _refresh() -> void:
 	var profile: Dictionary = _cloud.get_profile() if _cloud else {}
 	var signed_in: bool = not profile.is_empty()
 
-	_title.text = "KAYIT SEÇ" if state == CloudSaveManager.State.CONFLICT else "PLAYER"
+	_title.text = Loc.t("KAYIT SEÇ") if state == CloudSaveManager.State.CONFLICT else Loc.t("PLAYER")
 	_account_box.visible = signed_in and state != CloudSaveManager.State.CONFLICT
 	_choice_row.visible = state == CloudSaveManager.State.CONFLICT
 	_name_label.text = String(profile.get("display_name", "")).to_upper()
@@ -272,49 +272,49 @@ func _refresh() -> void:
 		_confirm_delete = false   # bu arada oturum / durum değişti
 
 	if _confirm_delete:
-		_title.text = "HESABI SİL"
+		_title.text = Loc.t("HESABI SİL")
 		_account_box.visible = true
-		_body.text = "Google hesabın oyundan silinir. Bulut kaydın ve bu cihazdaki tüm ilerlemen (para, elmas, araçlar, garaj, görevler) kalıcı olarak silinir ve oyun baştan başlar.\n\nBu işlem GERİ ALINAMAZ. Devam edersen Google hesabını bir kez daha seçmen istenecek."
-		_primary.text = "EVET, KALICI OLARAK SİL"
+		_body.text = Loc.t("Google hesabın oyundan silinir. Bulut kaydın ve bu cihazdaki tüm ilerlemen (para, elmas, araçlar, garaj, görevler) kalıcı olarak silinir ve oyun baştan başlar.\n\nBu işlem GERİ ALINAMAZ. Devam edersen Google hesabını bir kez daha seçmen istenecek.")
+		_primary.text = Loc.t("EVET, KALICI OLARAK SİL")
 		_primary.add_theme_color_override(&"font_color", HudPalette.DANGER_DARK)
-		_secondary.text = "VAZGEÇ"
+		_secondary.text = Loc.t("VAZGEÇ")
 		return
 
 	match state:
 		CloudSaveManager.State.UNAVAILABLE:
-			_body.text = "Misafir olarak oynuyorsun. İlerlemen bu cihazda kayıtlı.\nGoogle girişi yalnızca Android sürümünde."
+			_body.text = Loc.t("Misafir olarak oynuyorsun. İlerlemen bu cihazda kayıtlı.\nGoogle girişi yalnızca Android sürümünde.")
 			_primary.visible = false
-			_secondary.text = "DEVAM ET"
+			_secondary.text = Loc.t("DEVAM ET")
 		CloudSaveManager.State.SIGNED_OUT:
-			_body.text = "Misafir olarak oynuyorsun. İlerlemen bu cihazda kayıtlı.\nGoogle ile giriş yaparsan ilerlemen buluta yedeklenir."
-			_primary.text = "GOOGLE İLE GİRİŞ"
-			_secondary.text = "MİSAFİR OLARAK DEVAM ET"
+			_body.text = Loc.t("Misafir olarak oynuyorsun. İlerlemen bu cihazda kayıtlı.\nGoogle ile giriş yaparsan ilerlemen buluta yedeklenir.")
+			_primary.text = Loc.t("GOOGLE İLE GİRİŞ")
+			_secondary.text = Loc.t("MİSAFİR OLARAK DEVAM ET")
 		CloudSaveManager.State.SIGNING_IN, CloudSaveManager.State.SYNCING:
-			_body.text = "Bağlanıyor…"
-			_primary.text = "GOOGLE İLE GİRİŞ" if not signed_in else "ÇIKIŞ YAP"
+			_body.text = Loc.t("Bağlanıyor…")
+			_primary.text = Loc.t("GOOGLE İLE GİRİŞ") if not signed_in else Loc.t("ÇIKIŞ YAP")
 			_primary.disabled = true
-			_secondary.text = "KAPAT"
+			_secondary.text = Loc.t("KAPAT")
 		CloudSaveManager.State.CONFLICT:
-			_body.text = "Bu cihazda kayıt bulundu.\nBulut kaydı bulundu.\nHangisini kullanmak istiyorsun?"
+			_body.text = Loc.t("Bu cihazda kayıt bulundu.\nBulut kaydı bulundu.\nHangisini kullanmak istiyorsun?")
 			_primary.visible = false
-			_secondary.text = "SONRA KARAR VER"
+			_secondary.text = Loc.t("SONRA KARAR VER")
 		CloudSaveManager.State.SYNCED:
-			_body.text = "Bulut kaydı güncel.\nÇıkış yaparsan bu cihazda yeni bir misafir oyunu başlar; ilerlemen hesabında güvende kalır, tekrar girince geri gelir."
-			_primary.text = "ÇIKIŞ YAP"
-			_secondary.text = "KAPAT"
+			_body.text = Loc.t("Bulut kaydı güncel.\nÇıkış yaparsan bu cihazda yeni bir misafir oyunu başlar; ilerlemen hesabında güvende kalır, tekrar girince geri gelir.")
+			_primary.text = Loc.t("ÇIKIŞ YAP")
+			_secondary.text = Loc.t("KAPAT")
 		CloudSaveManager.State.OFFLINE:
-			_body.text = "Buluta ulaşılamıyor. Bu cihazdaki kayıt kullanılıyor; bağlantı gelince eşitlenecek.\nEşitlenmemiş değişiklik varken çıkış yapılamaz."
-			_primary.text = "ÇIKIŞ YAP"
-			_secondary.text = "KAPAT"
+			_body.text = Loc.t("Buluta ulaşılamıyor. Bu cihazdaki kayıt kullanılıyor; bağlantı gelince eşitlenecek.\nEşitlenmemiş değişiklik varken çıkış yapılamaz.")
+			_primary.text = Loc.t("ÇIKIŞ YAP")
+			_secondary.text = Loc.t("KAPAT")
 		CloudSaveManager.State.ERROR:
-			_body.text = "Bulut kaydı bu sürümle açılamıyor. Bulut kaydına dokunulmadı; bu cihazdaki kayıt kullanılıyor."
-			_primary.text = "ÇIKIŞ YAP"
-			_secondary.text = "KAPAT"
+			_body.text = Loc.t("Bulut kaydı bu sürümle açılamıyor. Bulut kaydına dokunulmadı; bu cihazdaki kayıt kullanılıyor.")
+			_primary.text = Loc.t("ÇIKIŞ YAP")
+			_secondary.text = Loc.t("KAPAT")
 		CloudSaveManager.State.DELETING:
-			_body.text = "Hesap siliniyor… Google hesabını seçtiysen bu birkaç saniye sürer."
-			_primary.text = "SİLİNİYOR"
+			_body.text = Loc.t("Hesap siliniyor… Google hesabını seçtiysen bu birkaç saniye sürer.")
+			_primary.text = Loc.t("SİLİNİYOR")
 			_primary.disabled = true
-			_secondary.text = "KAPAT"
+			_secondary.text = Loc.t("KAPAT")
 	_delete.visible = _cloud != null and _cloud.can_delete_account()
 
 

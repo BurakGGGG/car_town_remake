@@ -83,7 +83,7 @@ func _build() -> void:
 	_sign = PlatePanel.new()
 	_sign.theme_type_variation = &"HudCarPlate"
 	_sign.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var title: Label = _label(&"HudSignTitle", "GÖREVLER")
+	var title: Label = _label(&"HudSignTitle", Loc.t("GÖREVLER"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_sign.add_child(title)
 	_column.add_child(_sign)
@@ -93,7 +93,7 @@ func _build() -> void:
 	_tab_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_tab_row.add_theme_constant_override(&"separation", 6)
 	_column.add_child(_tab_row)
-	for entry: Array in [[Tab.DAILY, "GÜNLÜK"], [Tab.WEEKLY, "HAFTALIK"], [Tab.ACHIEVEMENTS, "BAŞARIMLAR"], [Tab.GUIDE, "REHBER"]]:
+	for entry: Array in [[Tab.DAILY, Loc.t("GÜNLÜK")], [Tab.WEEKLY, Loc.t("HAFTALIK")], [Tab.ACHIEVEMENTS, Loc.t("BAŞARIMLAR")], [Tab.GUIDE, Loc.t("REHBER")]]:
 		var tab: PlateButton = PlateButton.new()
 		tab.theme_type_variation = &"HudPlateSmall"
 		tab.text = entry[1]
@@ -123,14 +123,14 @@ func _build() -> void:
 	_column.add_child(_footer)
 	_claim_all = PlateButton.new()
 	_claim_all.theme_type_variation = &"HudPlateSmall"
-	_claim_all.text = "HEPSİNİ AL"
+	_claim_all.text = Loc.t("HEPSİNİ AL")
 	_claim_all.focus_mode = Control.FOCUS_NONE
 	_claim_all.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_claim_all.pressed.connect(_on_claim_all)
 	_footer.add_child(_claim_all)
 	_close_button = PlateButton.new()
 	_close_button.theme_type_variation = &"HudPlateSmall"
-	_close_button.text = "KAPAT"
+	_close_button.text = Loc.t("KAPAT")
 	_close_button.focus_mode = Control.FOCUS_NONE
 	_close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_close_button.pressed.connect(close)
@@ -227,7 +227,7 @@ func _refresh() -> void:
 
 func _badge(tab: int, count: int) -> void:
 	var button: PlateButton = _tabs[tab]
-	var base: String = ["GÜNLÜK", "HAFTALIK", "BAŞARIMLAR", "REHBER"][tab]
+	var base: String = [Loc.t("GÜNLÜK"), Loc.t("HAFTALIK"), Loc.t("BAŞARIMLAR"), Loc.t("REHBER")][tab]
 	button.text = "%s (%d)" % [base, count] if count > 0 else base
 	button.highlight = count > 0
 
@@ -270,14 +270,14 @@ func _render_daily() -> void:
 	if _missions == null:
 		return
 	if not _missions.is_unlocked():
-		_body.add_child(_note("GÜNLÜK GÖREVLER SEVİYE %d'TE AÇILIR" % MissionCatalog.MIN_LEVEL,
-			"Önce REHBER görevlerini tamamla: tamir yap, garajını büyüt."))
+		_body.add_child(_note(Loc.t("GÜNLÜK GÖREVLER SEVİYE %d'TE AÇILIR") % MissionCatalog.MIN_LEVEL,
+			Loc.t("Önce REHBER görevlerini tamamla: tamir yap, garajını büyüt.")))
 		return
 	var tasks: Array[Dictionary] = _missions.daily_tasks()
 	for i: int in tasks.size():
 		_body.add_child(_task_plate(tasks[i], false, i))
 	_body.add_child(_bonus_plate(
-		"BÜTÜN GÖREVLER", "+%d GEM" % MissionCatalog.DAILY_BONUS_GEMS,
+		Loc.t("BÜTÜN GÖREVLER"), Loc.t("+%d GEM") % MissionCatalog.DAILY_BONUS_GEMS,
 		_missions.daily_all_done(), _missions.daily_bonus_claimed(), _missions.claim_daily_bonus,
 		"%d / %d" % [_done_count(tasks), tasks.size()]))
 	_countdown = _label(&"HudInkCaption", "")
@@ -292,14 +292,14 @@ func _render_weekly() -> void:
 	if _missions == null:
 		return
 	if not _missions.is_unlocked():
-		_body.add_child(_note("HAFTALIK GÖREVLER SEVİYE %d'TE AÇILIR" % MissionCatalog.MIN_LEVEL,
-			"Günlük görevlerin tamamlayıcısı: hafta boyunca uğraşacağın 5 zor görev."))
+		_body.add_child(_note(Loc.t("HAFTALIK GÖREVLER SEVİYE %d'TE AÇILIR") % MissionCatalog.MIN_LEVEL,
+			Loc.t("Günlük görevlerin tamamlayıcısı: hafta boyunca uğraşacağın 5 zor görev.")))
 		return
 	var tasks: Array[Dictionary] = _missions.weekly_tasks()
 	for i: int in tasks.size():
 		_body.add_child(_task_plate(tasks[i], true, i))
 	_body.add_child(_bonus_plate(
-		"BÜYÜK ÖDÜL", "+%d GEM  +1 KASA" % MissionCatalog.WEEKLY_BONUS_GEMS,
+		Loc.t("BÜYÜK ÖDÜL"), Loc.t("+%d GEM  +1 KASA") % MissionCatalog.WEEKLY_BONUS_GEMS,
 		_missions.weekly_all_done(), _missions.weekly_final_claimed(), _missions.claim_weekly_bonus,
 		"%d / %d" % [_done_count(tasks), tasks.size()]))
 	_countdown = _label(&"HudInkCaption", "")
@@ -364,17 +364,17 @@ func _reward_text(task: Dictionary, weekly: bool) -> String:
 	if int(task.get("money", 0)) > 0:
 		parts.append("+%s ₺" % Hud.format_thousands(int(task["money"])))
 	if int(task.get("gems", 0)) > 0:
-		parts.append("+%d GEM" % int(task["gems"]))
+		parts.append(Loc.t("+%d GEM") % int(task["gems"]))
 	if int(task.get("xp", 0)) > 0:
-		parts.append("+%d XP" % int(task["xp"]))
-	var prefix: String = "" if weekly else "%s  ·  " % TIER_NAMES[clampi(int(task.get("tier", 0)), 0, 2)]
+		parts.append(Loc.t("+%d XP") % int(task["xp"]))
+	var prefix: String = "" if weekly else "%s  ·  " % Loc.t(TIER_NAMES[clampi(int(task.get("tier", 0)), 0, 2)])
 	return prefix + "   ".join(parts)
 
 
 func _claim_button(done: bool, claimed: bool) -> PlateButton:
 	var button: PlateButton = PlateButton.new()
 	button.theme_type_variation = &"HudPlateSmall"
-	button.text = "ALINDI" if claimed else ("ÖDÜLÜ AL" if done else "DEVAM")
+	button.text = Loc.t("ALINDI") if claimed else (Loc.t("ÖDÜLÜ AL") if done else Loc.t("DEVAM"))
 	button.disabled = claimed or not done
 	button.highlight = done and not claimed
 	button.custom_minimum_size = Vector2(100.0, 0.0)
@@ -435,9 +435,9 @@ func _update_countdown() -> void:
 	var hours: int = seconds / 3600
 	var minutes: int = (seconds % 3600) / 60
 	if _tab == Tab.WEEKLY:
-		_countdown.text = "HAFTALIK GÖREVLER %d GÜN %02d SAAT SONRA YENİLENİR" % [hours / 24, hours % 24]
+		_countdown.text = Loc.t("HAFTALIK GÖREVLER %d GÜN %02d SAAT SONRA YENİLENİR") % [hours / 24, hours % 24]
 	else:
-		_countdown.text = "GÜNLÜK GÖREVLER %02d:%02d SONRA YENİLENİR" % [hours, minutes]
+		_countdown.text = Loc.t("GÜNLÜK GÖREVLER %02d:%02d SONRA YENİLENİR") % [hours, minutes]
 
 
 # --- BAŞARIMLAR -----------------------------------------------------------------------
@@ -446,7 +446,7 @@ func _render_achievements() -> void:
 	if _missions == null:
 		return
 	var total: int = _missions.value_of(&"ach_stars")
-	_body.add_child(_label(&"HudInkCaption", "TOPLAM %d BAŞARIM YILDIZI" % total))
+	_body.add_child(_label(&"HudInkCaption", Loc.t("TOPLAM %d BAŞARIM YILDIZI") % total))
 	for line: Dictionary in _missions.achievements():
 		_body.add_child(_achievement_plate(line))
 
@@ -471,8 +471,9 @@ func _achievement_plate(line: Dictionary) -> PlatePanel:
 	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	texts.add_theme_constant_override(&"separation", 2)
 	var stars: String = "★".repeat(reached) + "☆".repeat(tiers.size() - reached)
-	texts.add_child(_label(&"HudPlateTitle", "%s   %s" % [line["title"], stars]))
-	var text: Label = _label(&"HudInkCaption", String(line["text"]) % Hud.format_thousands(threshold) if String(line["text"]).contains("%s") else String(line["text"]))
+	texts.add_child(_label(&"HudPlateTitle", "%s   %s" % [Loc.t(String(line["title"])), stars]))
+	var line_text: String = Loc.tn(String(line["text"]), threshold)
+	var text: Label = _label(&"HudInkCaption", line_text % Hud.format_thousands(threshold) if line_text.contains("%s") else line_text)
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.custom_minimum_size = Vector2(250.0, 0.0)
 	texts.add_child(text)
@@ -488,9 +489,9 @@ func _achievement_plate(line: Dictionary) -> PlatePanel:
 	gauge_row.add_child(_label(&"HudInkCaption", "%s / %s" % [Hud.format_thousands(mini(value, threshold)), Hud.format_thousands(threshold)]))
 	texts.add_child(gauge_row)
 	var star_index: int = mini(claimed, tiers.size() - 1)
-	var reward: Label = _label(&"HudInkCaption", "%d. YILDIZ  ·  +%d GEM   +%s ₺   +%d XP" % [
+	var reward: Label = _label(&"HudInkCaption", Loc.t("%d. YILDIZ  ·  +%d GEM   +%s ₺   +%d XP") % [
 		star_index + 1, MissionCatalog.ach_gems(line, star_index), Hud.format_thousands(MissionCatalog.ach_money(line, star_index)),
-		MissionCatalog.ach_xp(line, star_index)] if claimed < tiers.size() else "TÜM YILDIZLAR ALINDI")
+		MissionCatalog.ach_xp(line, star_index)] if claimed < tiers.size() else Loc.t("TÜM YILDIZLAR ALINDI"))
 	reward.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
 	texts.add_child(reward)
 	row.add_child(texts)
@@ -526,8 +527,8 @@ func _guide_plate(entry: Dictionary) -> PlatePanel:
 	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	texts.add_theme_constant_override(&"separation", 2)
-	texts.add_child(_label(&"HudPlateTitle", String(entry["title"])))
-	texts.add_child(_label(&"HudInkCaption", String(entry["text"])))
+	texts.add_child(_label(&"HudPlateTitle", Loc.t(String(entry["title"]))))
+	texts.add_child(_label(&"HudInkCaption", Loc.t(String(entry["text"]))))
 	var gauge_row: HBoxContainer = HBoxContainer.new()
 	gauge_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	gauge_row.add_theme_constant_override(&"separation", 8)
@@ -562,11 +563,11 @@ static func _count_text(entry: Dictionary, value: int) -> String:
 static func _guide_reward_text(entry: Dictionary) -> String:
 	var parts: PackedStringArray = PackedStringArray()
 	if int(entry.get("xp", 0)) > 0:
-		parts.append("+%d XP" % int(entry["xp"]))
+		parts.append(Loc.t("+%d XP") % int(entry["xp"]))
 	if int(entry.get("gems", 0)) > 0:
-		parts.append("+%d GEM" % int(entry["gems"]))
+		parts.append(Loc.t("+%d GEM") % int(entry["gems"]))
 	if int(entry.get("money", 0)) > 0:
 		parts.append("+%s ₺" % Hud.format_thousands(int(entry["money"])))
 	if StringName(entry.get("crate", &"")) != &"":
-		parts.append("+1 %s" % String(CrateCatalog.get_entry(entry["crate"]).get("display_name", "KASA")))
+		parts.append("+1 %s" % Loc.t(String(CrateCatalog.get_entry(entry["crate"]).get("display_name", Loc.t("KASA")))))
 	return "   ".join(parts)

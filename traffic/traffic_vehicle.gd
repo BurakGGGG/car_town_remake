@@ -284,7 +284,7 @@ func enter_bay(bay_position: Vector3, bay_yaw: float) -> void:
 		manager.finish_crossing(self)
 	repair_status = RepairStatus.REPAIRING
 	mode = Mode.REPAIR_BAY
-	_bubble.show_text("TAMİR", CarBubble.GLYPH_WRENCH)
+	_bubble.show_text(Loc.t("TAMİR"), CarBubble.GLYPH_WRENCH)
 	_sync_bubble_shape()
 
 

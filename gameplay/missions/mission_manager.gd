@@ -229,7 +229,7 @@ func _finish_daily() -> void:
 		_pay(0, 0, MissionCatalog.DAILY_BONUS_GEMS, false)
 		granted = true
 	if granted:
-		reward_granted.emit("DÜNÜN GÖREV ÖDÜLLERİ")
+		reward_granted.emit(Loc.t("DÜNÜN GÖREV ÖDÜLLERİ"))
 	var active: bool = int(_day_c.get(&"repairs", 0)) > 0 or int(_day_c.get(&"races", 0)) > 0
 	if not _daily.is_empty() and active:
 		_dda = dda_after(_dda, done, _daily.size())
@@ -261,7 +261,7 @@ func _rollover_week(week: int) -> void:
 			_pay_weekly_bonus(false)
 			granted = true
 		if granted:
-			reward_granted.emit("GEÇEN HAFTANIN GÖREV ÖDÜLLERİ")
+			reward_granted.emit(Loc.t("GEÇEN HAFTANIN GÖREV ÖDÜLLERİ"))
 		_last_week_ids = []
 		for task: Dictionary in _weekly:
 			_last_week_ids.append(String(task["id"]))
@@ -384,7 +384,7 @@ func _check_completions() -> void:
 		if not bool(task.get("done", false)) and progress_of(task, false) >= int(task["target"]):
 			task["done"] = true
 			guard = true
-			task_completed.emit(&"daily", "GÖREV TAMAM\n%s" % MissionCatalog.text_of(task["id"], int(task["target"])))
+			task_completed.emit(&"daily", Loc.t("GÖREV TAMAM\n%s") % MissionCatalog.text_of(task["id"], int(task["target"])))
 			_bump(&"daily_done")
 	if not _daily.is_empty() and not _daily_all_counted and _daily.all(func(t: Dictionary) -> bool: return bool(t.get("done", false))):
 		_daily_all_counted = true
@@ -394,7 +394,7 @@ func _check_completions() -> void:
 		if not bool(task.get("done", false)) and progress_of(task, true) >= int(task["target"]):
 			task["done"] = true
 			guard = true
-			task_completed.emit(&"weekly", "HAFTALIK GÖREV TAMAM\n%s" % MissionCatalog.text_of(task["id"], int(task["target"])))
+			task_completed.emit(&"weekly", Loc.t("HAFTALIK GÖREV TAMAM\n%s") % MissionCatalog.text_of(task["id"], int(task["target"])))
 			_bump(&"weekly_done")
 	if not _weekly.is_empty() and not _weekly_all_counted and _weekly.all(func(t: Dictionary) -> bool: return bool(t.get("done", false))):
 		_weekly_all_counted = true
@@ -415,7 +415,7 @@ func _bump(metric: StringName) -> void:
 	for task: Dictionary in _weekly:
 		if task["metric"] == metric and not bool(task.get("done", false)) and progress_of(task, true) >= int(task["target"]):
 			task["done"] = true
-			task_completed.emit(&"weekly", "HAFTALIK GÖREV TAMAM\n%s" % MissionCatalog.text_of(task["id"], int(task["target"])))
+			task_completed.emit(&"weekly", Loc.t("HAFTALIK GÖREV TAMAM\n%s") % MissionCatalog.text_of(task["id"], int(task["target"])))
 			_bump(&"weekly_done")
 
 
@@ -578,7 +578,7 @@ func claim_achievement(line_id: StringName) -> bool:
 		return false
 	_ach_claimed[String(line_id)] = claimed + 1
 	_pay(MissionCatalog.ach_money(line, claimed), MissionCatalog.ach_xp(line, claimed), MissionCatalog.ach_gems(line, claimed), true,
-		"%s ★%d" % [line["title"], claimed + 1])
+		"%s ★%d" % [Loc.t(String(line["title"])), claimed + 1])
 	_request_save()
 	missions_changed.emit()
 	scan_achievements()
@@ -622,10 +622,10 @@ func _pay(money: int, xp: int, gems: int, announce: bool, label: String = "") ->
 		parts.append("+%s ₺" % Hud.format_thousands(money))
 	if gems > 0 and player:
 		player.add_gems(gems)
-		parts.append("+%d GEM" % gems)
+		parts.append(Loc.t("+%d GEM") % gems)
 	if xp > 0 and player:
 		player.add_xp(xp)   # seviye atlarsa level_up → ensure_current (görevler açılabilir)
-		parts.append("+%d XP" % xp)
+		parts.append(Loc.t("+%d XP") % xp)
 	if announce and not parts.is_empty():
 		reward_granted.emit(("%s\n" % label if label != "" else "") + "  ".join(parts))
 
@@ -642,9 +642,9 @@ func _pay_weekly_bonus(announce: bool) -> void:
 	if crates:
 		var crate_id: StringName = best_crate_for(player.level if player else 1)
 		if crate_id != &"" and crates.grant_free(crate_id, "weekly") > 0:
-			crate_name = String(CrateCatalog.get_entry(crate_id).get("display_name", "KASA"))
+			crate_name = Loc.t(String(CrateCatalog.get_entry(crate_id).get("display_name", Loc.t("KASA"))))
 	if announce:
-		reward_granted.emit("HAFTALIK BÜYÜK ÖDÜL\n+%d GEM%s  +%d XP" % [MissionCatalog.WEEKLY_BONUS_GEMS,
+		reward_granted.emit(Loc.t("HAFTALIK BÜYÜK ÖDÜL\n+%d GEM%s  +%d XP") % [MissionCatalog.WEEKLY_BONUS_GEMS,
 			("  +1 %s" % crate_name) if crate_name != "" else "", xp])
 
 
@@ -676,7 +676,7 @@ func scan_achievements() -> void:
 		if reached > known:
 			_ach_announced[String(line["id"])] = reached
 			any = true
-			task_completed.emit(&"ach", "BAŞARIM\n%s ★%d" % [line["title"], reached])
+			task_completed.emit(&"ach", Loc.t("BAŞARIM\n%s ★%d") % [Loc.t(String(line["title"])), reached])
 	if any:
 		missions_changed.emit()
 

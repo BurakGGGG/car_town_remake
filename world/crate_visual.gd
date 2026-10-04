@@ -214,7 +214,7 @@ func _build_tag(entry: Dictionary) -> void:
 	tag_root.add_child(board)
 	var label: Label3D = Label3D.new()
 	label.name = "Text"
-	label.text = "%s\nDOKUN · AÇ" % String(entry.get("display_name", "KASA"))
+	label.text = Loc.t("%s\nDOKUN · AÇ") % Loc.t(String(entry.get("display_name", Loc.t("KASA"))))
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	label.render_priority = 2

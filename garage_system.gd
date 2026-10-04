@@ -77,6 +77,11 @@ func _ensure_crate_system() -> void:
 		var gems: GemRewards = GemRewards.new()
 		gems.name = "GemRewards"
 		add_child(gems)
+	# AYARLAR (grafik / performans / ses; cihaza özel, kayda girmez)
+	if get_tree().get_first_node_in_group("settings") == null:
+		var settings: GameSettings = GameSettings.new()
+		settings.name = "GameSettings"
+		add_child(settings)
 	# GÖREVLER (günlük / haftalık / başarım): gün saati GemRewards'tan, sayaçlar oyun sinyallerinden
 	if get_tree().get_first_node_in_group("missions") == null:
 		var missions: MissionManager = MissionManager.new()

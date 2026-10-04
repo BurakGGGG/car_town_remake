@@ -206,10 +206,10 @@ func _build_showroom() -> void:
 ## Tabela yazıları (levhalar modelde; yazı oyunun kalın yazısıyla, ışıktan etkilenmez).
 func _add_signs() -> void:
 	# Salonun güney ve doğu tabela bandı (çatı kenarında, koyu bant üstünde kehribar)
-	_sign("SHOWROOM", _lot(28.0, 9.52, 7.37), 0.0, AMBER, 0.00142, 64)
-	_sign("SHOWROOM", _lot(44.0, 23.0, 7.37), 90.0, AMBER, 0.00142, 64)
+	_sign(Loc.t("SHOWROOM"), _lot(28.0, 9.52, 7.37), 0.0, AMBER, 0.00142, 64)
+	_sign(Loc.t("SHOWROOM"), _lot(44.0, 23.0, 7.37), 90.0, AMBER, 0.00142, 64)
 	# CAR PARTS bloğunun kehribar bandı (servis kapılarının üstü)
-	_sign("CAR PARTS", _lot(9.0, 12.72, 4.95), 0.0, INK, 0.00118, 64)
+	_sign(Loc.t("CAR PARTS"), _lot(9.0, 12.72, 4.95), 0.0, INK, 0.00118, 64)
 	# Köşe totemi: iki yüzde dikey, sıkı dizili harfler
 	_sign("S\nH\nO\nW\nR\nO\nO\nM", _lot(3.1, 1.6, 4.1), 0.0, INK, 0.0013, 64, -0.18)
 	_sign("C\nA\nR\n \nP\nA\nR\nT\nS", _lot(4.0, 2.3, 4.1), 90.0, INK, 0.00108, 64, -0.18)

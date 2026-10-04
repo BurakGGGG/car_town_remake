@@ -64,7 +64,7 @@ func _connect() -> void:
 	var mastery: JobMastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
 	if mastery:
 		mastery.mastery_up.connect(func(_id: StringName, _stars: int) -> void:
-			_grant(MASTERY_STAR_GEMS, "USTALIK YILDIZI  +%d GEM" % MASTERY_STAR_GEMS))
+			_grant(MASTERY_STAR_GEMS, Loc.t("USTALIK YILDIZI  +%d GEM") % MASTERY_STAR_GEMS))
 	# Kayıt yüklemesi SaveManager'ın ertelenmiş kurulumunda olur; ilk gün kontrolü ondan sonra.
 	get_tree().create_timer(1.0).timeout.connect(check_day)
 
@@ -103,7 +103,7 @@ func check_day() -> void:
 		_streak = _streak + 1 if today == _login_day + 1 else 1
 		_login_day = today
 		var gems: int = login_gems(_streak)
-		_grant(gems, "GÜNLÜK GİRİŞ  %d. GÜN\n+%d GEM" % [_streak, gems])
+		_grant(gems, Loc.t("GÜNLÜK GİRİŞ  %d. GÜN\n+%d GEM") % [_streak, gems])
 		daily_changed.emit()
 	_request_save()
 

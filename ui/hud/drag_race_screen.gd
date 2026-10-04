@@ -182,7 +182,7 @@ func open() -> void:
 	_rival_over_speed = -1.0
 	_first_finish_time = -1.0
 	_place_camera(0.0)   # önceki yarıştan kalan kadraj (bitiş çizgisi) sıfırlanır
-	_status_label.text = "HAZIR OL"
+	_status_label.text = Loc.t("HAZIR OL")
 	_last_step = -1
 	_track.set_lights(4)   # hepsi sönük
 	_shift_dial.ratio = 0.0
@@ -194,8 +194,8 @@ func open() -> void:
 	_shift_dial.over = false
 	_shift_hot = false
 	_shift_dial.hot = false
-	_set_status("YEŞİLDE DOKUN")
-	_tap_button.text = "DOKUN"
+	_set_status(Loc.t("YEŞİLDE DOKUN"))
+	_tap_button.text = Loc.t("DOKUN")
 	_tap_button.disabled = false
 	_tap_button.highlight = false
 	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
@@ -309,7 +309,7 @@ func _build() -> void:
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_sign = sign
-	_status_label = _label(&"HudSignTitle", "HAZIR OL")
+	_status_label = _label(&"HudSignTitle", Loc.t("HAZIR OL"))
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sign.add_child(_status_label)
 	top.add_child(sign)
@@ -335,7 +335,7 @@ func _build() -> void:
 	var caption_plate: PlatePanel = _caption_plate
 	caption_plate.theme_type_variation = &"HudCarPlate"
 	caption_plate.size_flags_horizontal = Control.SIZE_SHRINK_END
-	_shift_caption = _label(&"HudInkValue", "YEŞİLDE DOKUN")
+	_shift_caption = _label(&"HudInkValue", Loc.t("YEŞİLDE DOKUN"))
 	_shift_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_shift_caption.custom_minimum_size = Vector2(CAPTION_WIDTH, 0.0)
 	caption_plate.add_child(_shift_caption)
@@ -354,7 +354,7 @@ func _build() -> void:
 	_tap_button.theme_type_variation = &"HudSign"
 	_tap_button.shape = PlateButton.Shape.ROUND
 	_tap_button.kind = HudIcon.Kind.NONE
-	_tap_button.text = "DOKUN"
+	_tap_button.text = Loc.t("DOKUN")
 	_tap_button.custom_minimum_size = Vector2(TAP_SIZE, TAP_SIZE)
 	_tap_button.size_flags_vertical = Control.SIZE_SHRINK_END
 	_tap_button.focus_mode = Control.FOCUS_NONE
@@ -536,7 +536,7 @@ func _process(delta: float) -> void:
 		_shift_dial.ratio = DragRaceSim.launch_gauge(_player.rpm, _player.spec)
 		var ready: bool = _phase == Phase.COUNTDOWN and _countdown <= COUNTDOWN_STEP
 		_set_hot(ready)
-		_shift_caption.text = "YEŞİLDE DOKUN" if ready else "HAZIR OL"
+		_shift_caption.text = Loc.t("YEŞİLDE DOKUN") if ready else Loc.t("HAZIR OL")
 		_shift_dial.over = false
 	match _phase:
 		Phase.READY:
@@ -553,17 +553,17 @@ func _process(delta: float) -> void:
 			_status_label.text = str(maxi(step, 1))
 			_track.set_lights(maxi(step, 1))
 			if _countdown <= 0.0:
-				_status_label.text = "GO!"
+				_status_label.text = Loc.t("GO!")
 				_track.set_lights(0)
 				_pop_sign()
-				_set_status("ŞİMDİ DOKUN")
+				_set_status(Loc.t("ŞİMDİ DOKUN"))
 				_time = 0.0
 				_phase = Phase.RUNNING
 				# RAKİP YEŞİLDE KENDİ KALKAR: oyuncu dokunmasa da yarış başlar.
 				_rival.reaction = clampf(lerpf(DragRaceSim.REACTION_WORST,
 					DragRaceSim.REACTION_PERFECT, _rival_skill) + _rng.randf_range(-0.06, 0.06),
 					0.05, DragRaceSim.REACTION_WORST)
-				_tap_button.text = "VİTES"
+				_tap_button.text = Loc.t("VİTES")
 		Phase.RUNNING:
 			if _shift_hot:
 				# Yuvarlak tabela da nabız atsın: efekt tek bir yerde kalmasın
@@ -595,17 +595,17 @@ func _launch_player(at_time: float) -> void:
 	_player.launch()
 	_punch = 1.0
 	_spawn_smoke(_player_car)
-	_status_label.text = "GİT!"
-	_set_status("VİTES  1 / %d" % (_player.gear_count() - 1))
-	_tap_button.text = "VİTES"
+	_status_label.text = Loc.t("GİT!")
+	_set_status(Loc.t("VİTES  1 / %d") % (_player.gear_count() - 1))
+	_tap_button.text = Loc.t("VİTES")
 
 
 ## Hatalı çıkış: yeşilden önce dokunuldu. Araç yeşilden sonra da ceza kadar çizgide bekler.
 func _false_start() -> void:
 	_player.false_start = true
 	_hold_until = DragRaceSim.FALSE_START_PENALTY
-	_status_label.text = "HATALI ÇIKIŞ"
-	_set_status("HATALI ÇIKIŞ")
+	_status_label.text = Loc.t("HATALI ÇIKIŞ")
+	_set_status(Loc.t("HATALI ÇIKIŞ"))
 
 
 ## Canlı adım: iki koşucu da ilerler, rakip kendi vitesini atar, kadran oyuncunun devrini gösterir.
@@ -625,9 +625,9 @@ func _advance(delta: float) -> void:
 		_shift_dial.over = over
 		if over:
 			_set_hot(false)
-			_set_status("DEVİR SINIRI!  VİTES AT")
+			_set_status(Loc.t("DEVİR SINIRI!  VİTES AT"))
 		else:
-			_set_status("VİTES  %d / %d" % [_player.gear + 1, _player.gear_count()])
+			_set_status(Loc.t("VİTES  %d / %d") % [_player.gear + 1, _player.gear_count()])
 	var in_window: bool = can_shift and not over and _player.in_shift_window()
 	_set_hot(in_window)
 	if in_window:
@@ -636,7 +636,7 @@ func _advance(delta: float) -> void:
 		var optimal: float = _player.spec.shift_rpm[_player.gear]
 		var perfect: bool = absf(_player.rpm - optimal) / maxf(optimal, 1.0) \
 			<= DragRaceSim.PERFECT_BAND
-		_shift_caption.text = "ŞİMDİ!" if perfect else "HAZIRLAN"
+		_shift_caption.text = Loc.t("ŞİMDİ!") if perfect else Loc.t("HAZIRLAN")
 		_shift_dial.flash = false
 	if _debug_label:
 		_update_debug()
@@ -655,13 +655,13 @@ func _advance(delta: float) -> void:
 func _advance_overrun(delta: float) -> void:
 	if _first_finish_time < 0.0 and (_player.finish_time >= 0.0 or _rival.finish_time >= 0.0):
 		_first_finish_time = _time
-		_set_status("BİTİŞ!")
+		_set_status(Loc.t("BİTİŞ!"))
 		_tap_button.disabled = true
 		_set_hot(false)
 	if _player.finish_time >= 0.0:
 		if _player_over_speed < 0.0:
 			_player_over_speed = _player.speed
-			_status_label.text = "BİTİRDİN!"
+			_status_label.text = Loc.t("BİTİRDİN!")
 		_player_over += _player_over_speed * delta
 		_player_over_speed = maxf(_player_over_speed - OVERRUN_BRAKE * delta, 0.0)
 	if _rival.finish_time >= 0.0:
@@ -703,10 +703,10 @@ func _build_debug() -> void:
 func _update_debug() -> void:
 	var p: DragRaceSim.Runner = _player
 	var r: DragRaceSim.Runner = _rival
-	_debug_label.text = "OYUNCU %s\n  devir %5.0f / %.0f   vites %d/%d   %6.1f km/s  %5.1f m\n  %s%s%s%s  isabet %d (kusursuz %d)  sınır %.2f sn  patinaj %.2f sn\nRAKİP  %s  devir %5.0f  vites %d  %6.1f km/s  %5.1f m  hedef %.0f" % [
+	_debug_label.text = Loc.t("OYUNCU %s\n  devir %5.0f / %.0f   vites %d/%d   %6.1f km/s  %5.1f m\n  %s%s%s%s  isabet %d (kusursuz %d)  sınır %.2f sn  patinaj %.2f sn\nRAKİP  %s  devir %5.0f  vites %d  %6.1f km/s  %5.1f m  hedef %.0f") % [
 		p.vehicle_id, p.rpm, p.spec.redline_rpm, p.gear + 1, p.gear_count(), p.speed_kmh(), p.distance,
-		"GEÇİŞ " if p.shifting else "", "PATİNAJ " if p.wheelspin else "",
-		"SINIR " if p.limiter else "", "DEBRİYAJ " if p.clutch > 0.0 else "",
+		Loc.t("GEÇİŞ ") if p.shifting else "", Loc.t("PATİNAJ ") if p.wheelspin else "",
+		Loc.t("SINIR ") if p.limiter else "", Loc.t("DEBRİYAJ ") if p.clutch > 0.0 else "",
 		p.good_shifts, p.perfect_shifts, p.limiter_time, p.spin_time,
 		r.vehicle_id, r.rpm, r.gear + 1, r.speed_kmh(), r.distance, _rival_target]
 
@@ -737,7 +737,7 @@ func _set_hot(value: bool) -> void:
 	_shift_dial.hot = value
 	_tap_button.highlight = value
 	_caption_plate.modulate = Color(1.0, 0.90, 0.66) if value else Color.WHITE
-	_shift_caption.text = "ŞİMDİ!" if value else _shift_status
+	_shift_caption.text = Loc.t("ŞİMDİ!") if value else _shift_status
 	if not value:
 		_tap_button.scale = Vector2.ONE
 
@@ -761,20 +761,20 @@ func _register_shift() -> void:
 	var shifts: int = _player.gear_count() - 1
 	match quality:
 		DragRaceSim.Shift.PERFECT:
-			_set_status("KUSURSUZ!  %d / %d" % [_player.good_shifts, shifts])
+			_set_status(Loc.t("KUSURSUZ!  %d / %d") % [_player.good_shifts, shifts])
 		DragRaceSim.Shift.GOOD:
-			_set_status("İYİ VİTES  %d / %d" % [_player.good_shifts, shifts])
+			_set_status(Loc.t("İYİ VİTES  %d / %d") % [_player.good_shifts, shifts])
 		DragRaceSim.Shift.LATE:
-			_set_status("GEÇ KALDIN  ·  DEVİR YÜKSEK")
+			_set_status(Loc.t("GEÇ KALDIN  ·  DEVİR YÜKSEK"))
 		DragRaceSim.Shift.REDLINE:
-			_set_status("SINIRDA ATTIN  ·  ZAMAN KAYBI")
+			_set_status(Loc.t("SINIRDA ATTIN  ·  ZAMAN KAYBI"))
 		DragRaceSim.Shift.MISS:
-			_set_status("IŞKA  ·  DEVİR ÇOK DÜŞTÜ")
+			_set_status(Loc.t("IŞKA  ·  DEVİR ÇOK DÜŞTÜ"))
 		_:
-			_set_status("ERKEN ATTIN  ·  DEVİR DÜŞTÜ")
+			_set_status(Loc.t("ERKEN ATTIN  ·  DEVİR DÜŞTÜ"))
 	if _player.gear >= _player.top_gear():
 		_tap_button.disabled = true
-		_set_status("SON VİTES  ·  %d / %d İSABET" % [_player.good_shifts, shifts])
+		_set_status(Loc.t("SON VİTES  ·  %d / %d İSABET") % [_player.good_shifts, shifts])
 
 
 ## Oyuncunun aracı KENDİ ilerlemesine göre durur; rakip ona göre çizilir. (Eskiden ikisi de iki
@@ -867,7 +867,7 @@ func _finish() -> void:
 	var player_time: float = _player.finish_time if _player.finish_time >= 0.0 else _time
 	var rival_time: float = _rival.finish_time if _rival.finish_time >= 0.0 else _time
 	var won: bool = player_time <= rival_time
-	_status_label.text = "KAZANDIN!" if won else "KAYBETTİN"
+	_status_label.text = Loc.t("KAZANDIN!") if won else Loc.t("KAYBETTİN")
 	race_completed.emit(won, player_time, rival_time)
 
 

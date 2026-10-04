@@ -21,6 +21,17 @@ func show_rewarded(_slot: StringName, _on_earned: Callable, on_finished: Callabl
 	on_finished.call()
 
 
+## Oyuncunun reklam onayını sonradan değiştirebileceği giriş noktası GEREKLİ mi? (UMP: onay istenen
+## bölgelerde Google zorunlu kılar; AYARLAR ekranı yalnızca gerekliyse düğmeyi gösterir.)
+func privacy_options_required() -> bool:
+	return false
+
+
+## Reklam gizlilik seçenekleri formunu gösterir; kapanınca on_done().
+func show_privacy_options(on_done: Callable) -> void:
+	on_done.call()
+
+
 ## Yuvada yüklenmiş ve gösterilmeye hazır reklam var mı?
 func has_rewarded(_slot: StringName) -> bool:
 	return false

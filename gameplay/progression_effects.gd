@@ -23,34 +23,34 @@ static func garage_level_lines(tree: SceneTree, next_level: int) -> PackedString
 		return lines
 	var faster: float = float(supply[from]["interval"]) / maxf(float(supply[to]["interval"]), 0.01)
 	if faster > 1.01:
-		lines.append("+%%%d DAHA SIK MÜŞTERİ" % roundi((faster - 1.0) * 100.0))
+		lines.append(Loc.t("+%%%d DAHA SIK MÜŞTERİ") % roundi((faster - 1.0) * 100.0))
 	var spots: int = int(supply[to]["spots"]) - int(supply[from]["spots"])
 	if spots > 0:
-		lines.append("+%d BEKLEME NOKTASI" % spots)
+		lines.append(Loc.t("+%d BEKLEME NOKTASI") % spots)
 	var richer: float = float(supply[to]["reward"]) / maxf(float(supply[from]["reward"]), 0.01)
 	if richer > 1.01:
-		lines.append("+%%%d DAHA DEĞERLİ MÜŞTERİ" % roundi((richer - 1.0) * 100.0))
+		lines.append(Loc.t("+%%%d DAHA DEĞERLİ MÜŞTERİ") % roundi((richer - 1.0) * 100.0))
 	var bays: RepairBayManager = tree.get_first_node_in_group("repair_bays") as RepairBayManager
 	if bays:
 		for index: int in RepairBayManager.BAY_PRICES.size():
 			if bays.required_level(index) == next_level:
-				lines.append("%d. TAMİR ALANI ALINABİLİR (%s ₺)" % [index + 1, Hud.format_thousands(bays.price(index))])
+				lines.append(Loc.t("%d. TAMİR ALANI ALINABİLİR (%s ₺)") % [index + 1, Hud.format_thousands(bays.price(index))])
 	# "YENİ İŞ" yalnızca garaj seviyesi SON kilitse yazılır: işin ayrıca alan şartı varsa (min_bays)
 	# onu o alanın plakası duyurur — yoksa oyuncuya tutulmayacak bir söz verilmiş olur.
 	var bay_count: int = bays.unlocked_count() if bays else 1
 	for type: RepairType in _types(tree):
 		if type.min_garage_level == next_level and type.min_bays <= bay_count:
-			lines.append("YENİ İŞ: %s" % type.title)
+			lines.append(Loc.t("YENİ İŞ: %s") % type.title)
 	return lines
 
 
 ## Bir TAMİR ALANININ getirdikleri.
 static func bay_lines(tree: SceneTree, index: int) -> PackedStringArray:
 	var lines: PackedStringArray = PackedStringArray()
-	lines.append("+1 EŞZAMANLI TAMİR")
+	lines.append(Loc.t("+1 EŞZAMANLI TAMİR"))
 	for type: RepairType in _types(tree):
 		if type.min_bays == index + 1:
-			lines.append("%s AÇILIR (%d sn · %s ₺)" % [
+			lines.append(Loc.t("%s AÇILIR (%d sn · %s ₺)") % [
 				type.title, int(type.duration), Hud.format_thousands(type.reward)])
 	return lines
 
@@ -64,23 +64,23 @@ static func vehicle_lines(tree: SceneTree, vehicle_id: StringName) -> PackedStri
 		return lines
 	var ownership: VehicleOwnership = tree.get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 	if ownership and ownership.is_owned(vehicle_id):
-		lines.append("GARAJINDA  ·  SATIŞ %s ₺" % Hud.format_thousands(ownership.sell_price(vehicle_id)))
+		lines.append(Loc.t("GARAJINDA  ·  SATIŞ %s ₺") % Hud.format_thousands(ownership.sell_price(vehicle_id)))
 		return lines
-	lines.append("GARAJ DEĞERİ +%s ₺" % Hud.format_thousands(int(entry.get("price", 0))))
+	lines.append(Loc.t("GARAJ DEĞERİ +%s ₺") % Hud.format_thousands(int(entry.get("price", 0))))
 	if ownership == null:
 		return lines
 	match ownership.status(vehicle_id):
 		VehicleOwnership.Status.LOCKED_LEVEL:
 			var progress: PlayerProgress = tree.get_first_node_in_group("player_progress") as PlayerProgress
-			lines.append("SEVİYE %d GEREKLİ (şu an %d)" % [
+			lines.append(Loc.t("SEVİYE %d GEREKLİ (şu an %d)") % [
 				ownership.required_level(vehicle_id), progress.level if progress else 1])
 		VehicleOwnership.Status.LOCKED_RANK:
-			lines.append("GARAJ RÜTBESİ %d GEREKLİ (şu an %d)" % [
+			lines.append(Loc.t("GARAJ RÜTBESİ %d GEREKLİ (şu an %d)") % [
 				ownership.required_rank(vehicle_id), GarageValue.current_rank(tree)])
 		VehicleOwnership.Status.TOO_EXPENSIVE:
 			var economy: EconomyManager = tree.get_first_node_in_group("economy") as EconomyManager
 			if economy:
-				lines.append("%s ₺ DAHA GEREKLİ" % Hud.format_thousands(
+				lines.append(Loc.t("%s ₺ DAHA GEREKLİ") % Hud.format_thousands(
 					maxi(int(entry.get("price", 0)) - economy.money, 0)))
 	return lines
 
@@ -92,9 +92,9 @@ static func vehicle_subtitle(vehicle_id: StringName) -> String:
 		return ""
 	var parts: PackedStringArray = PackedStringArray()
 	if String(entry.get("class", "")) != "":
-		parts.append("%s SINIFI" % String(entry["class"]))
+		parts.append(Loc.t("%s SINIFI") % String(entry["class"]))
 	parts.append(str(int(entry.get("year", 0))))
-	parts.append("%%%d" % roundi(float(entry.get("condition", 1.0)) * 100.0))
+	parts.append(Loc.percent(str(roundi(float(entry.get("condition", 1.0)) * 100.0))))
 	return "  ·  ".join(parts)
 
 
@@ -109,14 +109,14 @@ static func upgrade_summary(tree: SceneTree, id: StringName, next_level: int) ->
 		var next: float = upgrade.value_at(next_level)
 		if now <= 0.0 or next >= now:
 			return ""
-		return "-%%%d TAMİR SÜRESİ" % roundi((1.0 - next / now) * 100.0)
+		return Loc.t("-%%%d TAMİR SÜRESİ") % roundi((1.0 - next / now) * 100.0)
 	var lines: PackedStringArray = garage_level_lines(tree, next_level)
 	if lines.is_empty():
 		return ""
 	# Alan/iş açan satır varsa o öne alınır: oyuncu için en somut kazanç odur
 	var ordered: PackedStringArray = PackedStringArray()
 	for line: String in lines:
-		if line.contains("AÇILIR") or line.begins_with("YENİ İŞ"):
+		if line.contains(Loc.t("AÇILIR")) or line.begins_with(Loc.t("YENİ İŞ")):
 			ordered.append(line)
 	for line: String in lines:
 		if not ordered.has(line):
@@ -131,8 +131,8 @@ static func bay_summary(tree: SceneTree, index: int) -> String:
 		if type.min_bays == index + 1:
 			jobs.append(type.short_title())
 	if jobs.is_empty():
-		return "%d. ALAN → +1 EŞZAMANLI TAMİR" % (index + 1)
-	return "%d. ALAN → %s AÇILIR" % [index + 1, ", ".join(jobs)]
+		return Loc.t("%d. ALAN → +1 EŞZAMANLI TAMİR") % (index + 1)
+	return Loc.t("%d. ALAN → %s AÇILIR") % [index + 1, ", ".join(jobs)]
 
 
 ## Arıza kataloğu: sahnedeki RepairManager'ın listesi, yoksa varsayılan katalog.

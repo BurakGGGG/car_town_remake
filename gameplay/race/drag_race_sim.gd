@@ -540,12 +540,12 @@ static func launch_gauge(rpm: float, spec: EngineSpec) -> float:
 ## Kalite adı (UI ve rapor).
 static func shift_name(quality: int) -> String:
 	match quality:
-		Shift.PERFECT: return "KUSURSUZ"
-		Shift.GOOD: return "İYİ"
-		Shift.EARLY: return "ERKEN"
-		Shift.LATE: return "GEÇ"
-		Shift.REDLINE: return "DEVİR SINIRI"
-		_: return "IŞKA"
+		Shift.PERFECT: return Loc.t("KUSURSUZ")
+		Shift.GOOD: return Loc.t("İYİ")
+		Shift.EARLY: return Loc.t("ERKEN")
+		Shift.LATE: return Loc.t("GEÇ")
+		Shift.REDLINE: return Loc.t("DEVİR SINIRI")
+		_: return Loc.t("IŞKA")
 
 
 ## Aracın yarış statları (cars.json "race" bloğu; kayıt yoksa güvenli varsayılan).

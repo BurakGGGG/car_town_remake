@@ -63,7 +63,7 @@ func _build() -> void:
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	# Soru doğrudan panoda: oyuncu "ne istiyor bu araç?" diye düşünmesin
-	var title: Label = _label(&"HudSignTitle", "YARIŞMAK İSTER MİSİN?")
+	var title: Label = _label(&"HudSignTitle", Loc.t("YARIŞMAK İSTER MİSİN?"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sign.add_child(title)
 	_column.add_child(sign)
@@ -71,8 +71,8 @@ func _build() -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override(&"separation", 8)
-	_player_plate = _car_plate(row, "SENİN ARACIN", _player_labels)
-	_rival_plate = _car_plate(row, "RAKİP", _rival_labels)
+	_player_plate = _car_plate(row, Loc.t("SENİN ARACIN"), _player_labels)
+	_rival_plate = _car_plate(row, Loc.t("RAKİP"), _rival_labels)
 	_column.add_child(row)
 
 	var reward_plate: PlatePanel = PlatePanel.new()
@@ -92,13 +92,13 @@ func _build() -> void:
 	accept.name = "AcceptButton"
 	accept.theme_type_variation = &"HudPlate"
 	accept.kind = HudIcon.Kind.NONE
-	accept.text = "YARIŞ"
+	accept.text = Loc.t("YARIŞ")
 	accept.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
 	accept.focus_mode = Control.FOCUS_NONE
 	accept.pressed.connect(func() -> void: race_accepted.emit())
 	var cancel: PlateButton = PlateButton.new()
 	cancel.theme_type_variation = &"HudPlateSmall"
-	cancel.text = "VAZGEÇ"
+	cancel.text = Loc.t("VAZGEÇ")
 	cancel.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
 	cancel.focus_mode = Control.FOCUS_NONE
 	cancel.pressed.connect(close)
@@ -137,15 +137,15 @@ func _refresh() -> void:
 	_fill(_rival_labels, rival)
 	var reward: Dictionary = race.reward_for(rival, true)
 	var loss: Dictionary = race.reward_for(rival, false)
-	_reward_label.text = "KAZANIRSAN  +%s ₺  ·  +%d XP\nKAYBEDERSEN  +%d XP" % [
+	_reward_label.text = Loc.t("KAZANIRSAN  +%s ₺  ·  +%d XP\nKAYBEDERSEN  +%d XP") % [
 		Hud.format_thousands(int(reward["money"])), int(reward["xp"]), int(loss["xp"])]
 
 
 func _fill(labels: Dictionary, vehicle_id: StringName) -> void:
 	var entry: Dictionary = CarCatalog.get_entry(vehicle_id)
 	(labels["name"] as Label).text = String(entry.get("display_name", vehicle_id)).to_upper()
-	(labels["class"] as Label).text = "%s SINIFI" % String(entry.get("class", "?"))
-	(labels["overall"] as Label).text = "GENEL  %d" % DragRaceSim.overall_of(vehicle_id)
+	(labels["class"] as Label).text = Loc.t("%s SINIFI") % String(entry.get("class", "?"))
+	(labels["overall"] as Label).text = Loc.t("GENEL  %d") % DragRaceSim.overall_of(vehicle_id)
 
 
 func _label(variation: StringName, text: String) -> Label:

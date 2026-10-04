@@ -4,8 +4,11 @@ extends Node
 ##  - Kaydırma çubuğu görünmez (SHOW_NEVER: kaydırma sürer, çubuk çizilmez).
 ##  - Parmak bırakılınca içerik ATALETLE akar (yavaşlayarak durur); kenarda hemen durur.
 ##  - snap açıksa (yatay seçim şeridi) bırakınca en yakın kartın başına KAYARAK oturur.
-##  - Kaptaki düğmeler MOUSE_FILTER_PASS yapılır: STOP olan kart parmak sürüklemesini yutar ve şerit
-##    kaymaz (ölçüldü). Kaydırma başlayınca kap kartın basışını kendisi iptal eder.
+##  - TUT-ÇEK her yerde: telefonda parmak (kabın kendi sürüklemesi), masaüstünde fare sol tuşu (burada);
+##    tekerlek yalnızca ek kolaylıktır. Öncelik mobil: dokunmadan türetilen fare olayları yok sayılır.
+##  - Kaptaki STOP öğeler (düğmeler VE plakalar / paneller) MOUSE_FILTER_PASS yapılır: STOP olan öğe parmak
+##    sürüklemesini yutar ve liste kaymaz (ölçüldü: görev plakaları PanelContainer'dı, liste telefonda da
+##    kaymıyordu). Düğme PASS iken de basılır; kaydırma başlayınca kap basışı kendisi iptal eder.
 ## Kare başına iş yalnızca parmak basılıyken ya da içerik akarken yapılır (_process kapalı bekler).
 
 ## Akış yavaşlama katsayısı (1/sn): büyük = çabuk durur.
@@ -26,6 +29,11 @@ var _vel: float = 0.0
 var _pos: float = 0.0
 var _last: float = 0.0
 var _tween: Tween
+## Fareyle tut-çek durumu.
+var _mouse_down: bool = false
+var _mouse_dragging: bool = false
+var _mouse_origin: Vector2 = Vector2.ZERO
+var _mouse_start: float = 0.0
 
 
 ## `scroll`'a dokunmatik kaydırma ekler (yatay mı dikey mi kabın açık eksenine göre belli olur).
@@ -48,8 +56,8 @@ func _ready() -> void:
 		_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	_scroll.scroll_deadzone = DEADZONE
 	_scroll.gui_input.connect(_on_gui_input)
-	for button: Node in _scroll.find_children("*", "BaseButton", true, false):
-		_pass(button)
+	for control: Node in _scroll.find_children("*", "Control", true, false):
+		_pass(control)
 	get_tree().node_added.connect(_on_node_added)   # sonradan kurulan kartlar da (liste yenilenince)
 	set_process(false)
 
@@ -60,7 +68,7 @@ func _exit_tree() -> void:
 
 
 func _on_node_added(node: Node) -> void:
-	if node is BaseButton and _scroll and _scroll.is_ancestor_of(node):
+	if node is Control and _scroll and _scroll.is_ancestor_of(node):
 		_pass(node)
 
 
@@ -87,23 +95,59 @@ func _max_value() -> float:
 
 
 func _on_gui_input(event: InputEvent) -> void:
-	var down: bool = false
-	var up: bool = false
+	# 1) GERÇEK FARE: tut-çek (masaüstü / editörde deneme). Kabın kendisi fareyle sürüklemez (yalnızca
+	#    tekerlek); burada parmak gibi davranır. Dokunmadan türetilen fare olayları (DEVICE_ID_EMULATION)
+	#    yok sayılır: telefonda parmak sürüklemesini kabın kendisi işler, ikisi birden çift kaydırırdı.
+	if event is InputEventMouseButton and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+		if event.device == InputEvent.DEVICE_ID_EMULATION:
+			return
+		if (event as InputEventMouseButton).pressed:
+			_mouse_down = true
+			_mouse_dragging = false
+			_mouse_origin = (event as InputEventMouseButton).global_position
+			_mouse_start = _value()
+			_press()
+		elif _mouse_down:
+			_mouse_down = false
+			if _mouse_dragging:
+				_scroll.accept_event()   # sürükleme bitti: altındaki kart "basıldı" sayılmasın
+			_mouse_dragging = false
+			_release_press()
+		return
+	if event is InputEventMouseMotion:
+		if not _mouse_down or event.device == InputEvent.DEVICE_ID_EMULATION:
+			return
+		var delta: Vector2 = (event as InputEventMouseMotion).global_position - _mouse_origin
+		var along: float = delta.x if _horizontal else delta.y
+		if not _mouse_dragging and absf(along) > DEADZONE:
+			_mouse_dragging = true
+			# Kaptaki düğmeler basışı bıraksın (parmakla kaydırmada kabın yaptığı gibi)
+			_scroll.propagate_notification(Control.NOTIFICATION_SCROLL_BEGIN)
+		if _mouse_dragging:
+			_set_value(clampf(_mouse_start - along, 0.0, _max_value()))
+			_scroll.accept_event()
+		return
+	# 2) PARMAK: sürüklemeyi kabın kendisi yapar; burada yalnızca basış / bırakış izlenir (atalet için)
 	if event is InputEventScreenTouch:
-		down = (event as InputEventScreenTouch).pressed
-		up = not down
-	elif event is InputEventMouseButton and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
-		down = (event as InputEventMouseButton).pressed
-		up = not down
-	if down:
-		_stop_motion()
-		_pressed = true
-		_vel = 0.0
-		_last = _value()
-		set_process(true)
-	elif up and _pressed:
-		_pressed = false
-		_release()
+		if (event as InputEventScreenTouch).pressed:
+			_press()
+		else:
+			_release_press()
+
+
+func _press() -> void:
+	_stop_motion()
+	_pressed = true
+	_vel = 0.0
+	_last = _value()
+	set_process(true)
+
+
+func _release_press() -> void:
+	if not _pressed:
+		return
+	_pressed = false
+	_release()
 
 
 func _stop_motion() -> void:

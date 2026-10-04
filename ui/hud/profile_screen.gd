@@ -71,7 +71,7 @@ func _build() -> void:
 	var sign: PlatePanel = PlatePanel.new()
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var title: Label = _label(&"HudSignTitle", "İLERLEME")
+	var title: Label = _label(&"HudSignTitle", Loc.t("İLERLEME"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sign.add_child(title)
 	column.add_child(sign)
@@ -83,7 +83,7 @@ func _build() -> void:
 	var level_box: VBoxContainer = VBoxContainer.new()
 	level_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	level_box.add_theme_constant_override(&"separation", 2)
-	_level_title = _label(&"HudPlateTitle", "SEVİYE 1")
+	_level_title = _label(&"HudPlateTitle", Loc.t("SEVİYE 1"))
 	_level_lane = XpLane.new()
 	_level_lane.segments = 10
 	_level_lane.custom_minimum_size = Vector2(PLATE_WIDTH - 40.0, 9.0)
@@ -102,7 +102,7 @@ func _build() -> void:
 
 	var close_button: PlateButton = PlateButton.new()
 	close_button.theme_type_variation = &"HudPlateSmall"
-	close_button.text = "KAPAT"
+	close_button.text = Loc.t("KAPAT")
 	close_button.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
 	close_button.focus_mode = Control.FOCUS_NONE
 	close_button.pressed.connect(close)
@@ -127,38 +127,38 @@ func _refresh() -> void:
 	var tree: SceneTree = get_tree()
 	var progress: PlayerProgress = tree.get_first_node_in_group("player_progress") as PlayerProgress
 	if progress:
-		_level_title.text = "SEVİYE %d" % progress.level
+		_level_title.text = Loc.t("SEVİYE %d") % progress.level
 		_level_lane.ratio = progress.xp_ratio()
-		_level_caption.text = "%s / %s XP  ·  SONRAKİ SEVİYEDE +%s ₺" % [
+		_level_caption.text = Loc.t("%s / %s XP  ·  SONRAKİ SEVİYEDE +%s ₺") % [
 			Hud.format_thousands(progress.xp), Hud.format_thousands(progress.xp_to_next()),
 			Hud.format_thousands(int(PlayerProgress.reward_for(progress.level + 1)["money"]))]
 
 	var value: int = GarageValue.compute(tree)
 	var rank: int = GarageValue.rank(value)
-	_value_button.text = "GARAJ DEĞERİ        %s ₺  ·  %d. RÜTBE" % [Hud.format_thousands(value), rank]
+	_value_button.text = Loc.t("GARAJ DEĞERİ        %s ₺  ·  %d. RÜTBE") % [Hud.format_thousands(value), rank]
 
 	var mastery: JobMastery = tree.get_first_node_in_group("job_mastery") as JobMastery
 	var stars: int = mastery.total_stars() if mastery else 0
 	var mastered: int = mastery.mastered_jobs().size() if mastery else 0
-	_mastery_button.text = "USTALIK             %d ★%s" % [
-		stars, "  ·  %d İŞTE USTA" % mastered if mastered > 0 else ""]
+	_mastery_button.text = Loc.t("USTALIK             %d ★%s") % [
+		stars, Loc.t("  ·  %d İŞTE USTA") % mastered if mastered > 0 else ""]
 
 	var quests: QuestManager = tree.get_first_node_in_group("quests") as QuestManager
 	if quests:
 		var claimed: int = quests.state().get("claimed", []).size()
 		var claimable: int = quests.claimable_count()
-		_quest_button.text = "GÖREVLER            %d / %d%s" % [
+		_quest_button.text = Loc.t("GÖREVLER            %d / %d%s") % [
 			claimed, QuestCatalog.all().size(),
-			"  ·  %d ÖDÜL HAZIR" % claimable if claimable > 0 else ""]
+			Loc.t("  ·  %d ÖDÜL HAZIR") % claimable if claimable > 0 else ""]
 		_quest_button.highlight = claimable > 0
 	else:
-		_quest_button.text = "GÖREVLER"
+		_quest_button.text = Loc.t("GÖREVLER")
 
 	var cloud: Node = tree.get_first_node_in_group("cloud_save")
 	var who: String = ""
 	if cloud and cloud.has_method(&"get_profile"):
 		who = String((cloud.call(&"get_profile") as Dictionary).get("display_name", ""))
-	_account_button.text = "HESAP               %s" % (who.to_upper() if who != "" else "OTURUM AÇ")
+	_account_button.text = Loc.t("HESAP               %s") % (who.to_upper() if who != "" else Loc.t("OTURUM AÇ"))
 
 
 func _label(variation: StringName, text: String) -> Label:
