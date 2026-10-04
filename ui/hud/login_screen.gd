@@ -18,6 +18,8 @@ signal closed
 
 const PANEL_WIDTH: float = 380.0
 const CHOICE_WIDTH: float = 200.0
+## Google ile giriş düğmesinde resmi "G" logosu (Google marka kuralı: dört renkli, değiştirilmeden).
+const GOOGLE_MARK: Texture2D = preload("res://ui/icons/google_g.svg")
 
 var _cloud: CloudSaveManager
 var _title: Label
@@ -252,6 +254,13 @@ func _summary_text(summary: Dictionary) -> String:
 
 # --- Görünüm ---------------------------------------------------------------------
 
+## Giriş düğmesi: kask yerine logo, öteki plaka düğmelerindeki ikon gibi yazının üstünde ortada.
+func _google_mark(on: bool) -> void:
+	_primary.kind = HudIcon.Kind.NONE if on else HudIcon.Kind.HELMET
+	_primary.avatar = GOOGLE_MARK if on else null
+	_primary.avatar_frame = not on   # logo çerçevesiz, olduğu gibi
+
+
 func _refresh() -> void:
 	var state: CloudSaveManager.State = _cloud.get_state() if _cloud else CloudSaveManager.State.UNAVAILABLE
 	var profile: Dictionary = _cloud.get_profile() if _cloud else {}
@@ -267,6 +276,7 @@ func _refresh() -> void:
 	_primary.visible = true
 	_primary.disabled = false
 	_primary.remove_theme_color_override(&"font_color")
+	_google_mark(false)
 	_delete.visible = false
 	if _confirm_delete and not (_cloud and _cloud.can_delete_account()):
 		_confirm_delete = false   # bu arada oturum / durum değişti
@@ -288,10 +298,12 @@ func _refresh() -> void:
 		CloudSaveManager.State.SIGNED_OUT:
 			_body.text = Loc.t("Misafir olarak oynuyorsun. İlerlemen bu cihazda kayıtlı.\nGoogle ile giriş yaparsan ilerlemen buluta yedeklenir.")
 			_primary.text = Loc.t("GOOGLE İLE GİRİŞ")
+			_google_mark(true)
 			_secondary.text = Loc.t("MİSAFİR OLARAK DEVAM ET")
 		CloudSaveManager.State.SIGNING_IN, CloudSaveManager.State.SYNCING:
 			_body.text = Loc.t("Bağlanıyor…")
 			_primary.text = Loc.t("GOOGLE İLE GİRİŞ") if not signed_in else Loc.t("ÇIKIŞ YAP")
+			_google_mark(not signed_in)
 			_primary.disabled = true
 			_secondary.text = Loc.t("KAPAT")
 		CloudSaveManager.State.CONFLICT:

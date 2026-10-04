@@ -59,6 +59,12 @@ const GROUP: StringName = &"plate_buttons"
 		avatar = value
 		queue_redraw()
 
+## Fotoğrafın çevresine ince çerçeve çizilir; marka logosu (Google "G") çerçevesiz kalmalı.
+@export var avatar_frame: bool = true:
+	set(value):
+		avatar_frame = value
+		queue_redraw()
+
 ## Dikkat çeken plaka (ör. alınabilir ödül): temadaki stilin kopyası amber (seçili plaka rengi) olur.
 ## Her varyasyonda çalışır; tema dosyası değişmez.
 @export var highlight: bool = false:
@@ -171,7 +177,8 @@ func _draw() -> void:
 			var side: float = icon_size + 2.0
 			var rect: Rect2 = Rect2(center - Vector2(side, side) * 0.5, Vector2(side, side))
 			draw_texture_rect(avatar, rect, false)
-			draw_rect(rect, ink, false, 1.5, true)
+			if avatar_frame:
+				draw_rect(rect, ink, false, 1.5, true)
 		else:
 			HudIcon.draw_icon(self, kind, center, icon_size, ink, bg)
 

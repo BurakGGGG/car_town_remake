@@ -155,7 +155,7 @@ func _ready() -> void:
 		button.button_group = _nav_group
 		button.toggled.connect(_on_nav_toggled.bind(button))
 		button.pressed.connect(_on_nav_pressed.bind(button))
-	garage_button.button_pressed = true
+	_sync_nav_tab.call_deferred(&"")   # açılışta hiçbir sekme sarı değil (GARAJ yalnızca paneli açıkken)
 	_build_garage_panel()
 	_build_router()
 	_build_showroom()
@@ -866,7 +866,7 @@ func _on_nav_pressed(button: PlateButton) -> void:
 		var in_world: bool = router.top() == &""
 		router.close_all()
 		_garage_panel_open = not (in_world and _garage_panel_open)
-		_sync_garage_panel()
+		_sync_nav_tab(router.current_place())
 		return
 	_garage_panel_open = false   # başka sekme: panel kapanır
 	_sync_garage_panel()
@@ -992,14 +992,20 @@ func _on_ui_stack_changed(top: StringName, place_open: bool) -> void:
 	_refresh_quest_button()
 
 
-## Alt sekme, açık olan yeri gösterir (hiçbir yer açık değilse GARAJ sekmesi işaretli kalır).
+## Alt sekme yalnızca AÇIK olanı sarı gösterir: ARAÇLAR / MAĞAZA ekranı, PROFİL panosu ya da GARAJ paneli.
+## Hiçbiri açık değilse hiçbir sekme sarı değildir (GARAJ eskiden hep sarı kalıyordu).
 func _sync_nav_tab(place: StringName) -> void:
-	var target: PlateButton = garage_button
+	var target: PlateButton = null
 	match place:
 		&"showroom":
 			target = shop_button
 		&"garage":
 			target = cars_button
+		&"":
+			if router and (router.top() == &"profile" or router.top() == &"account"):
+				target = profile_button
+			elif _garage_panel_open:
+				target = garage_button
 	# ButtonGroup set_pressed_no_signal ile diğerlerini bırakmıyor: iki sekme birden amber kalıyordu.
 	for button: PlateButton in _nav_ids:
 		button.set_pressed_no_signal(button == target)

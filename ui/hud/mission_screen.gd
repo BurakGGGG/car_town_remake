@@ -182,13 +182,17 @@ func _select_default_tab() -> void:
 	_set_tab(pick)
 
 
+## Yalnızca SEÇİLİ sekme sarıdır; alınabilir ödül sayısı sekmenin yazısında durur.
+## (ButtonGroup set_pressed_no_signal ile ötekileri bırakmıyor: hepsi tek tek yazılır.)
 func _set_tab(tab: int) -> void:
 	_tab = tab
-	(_tabs[tab] as PlateButton).set_pressed_no_signal(true)
+	for key: int in _tabs:
+		(_tabs[key] as PlateButton).set_pressed_no_signal(key == tab)
+		(_tabs[key] as PlateButton).highlight = key == tab
 
 
 func _on_tab_pressed(tab: int) -> void:
-	_tab = tab
+	_set_tab(tab)
 	_body_scroll.scroll_vertical = 0
 	_refresh()
 
@@ -229,7 +233,7 @@ func _badge(tab: int, count: int) -> void:
 	var button: PlateButton = _tabs[tab]
 	var base: String = [Loc.t("GÜNLÜK"), Loc.t("HAFTALIK"), Loc.t("BAŞARIMLAR"), Loc.t("REHBER")][tab]
 	button.text = "%s (%d)" % [base, count] if count > 0 else base
-	button.highlight = count > 0
+	button.highlight = tab == _tab
 
 
 func _claimable_in_tab() -> int:
@@ -333,7 +337,8 @@ func _task_plate(task: Dictionary, weekly: bool, index: int) -> PlatePanel:
 	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	texts.add_theme_constant_override(&"separation", 2)
-	texts.add_child(_label(&"HudPlateTitle", MissionCatalog.text_of(task["id"], target)))
+	var title: Label = _label(&"HudPlateTitle", MissionCatalog.text_of(task["id"], target))
+	texts.add_child(title)
 	var gauge_row: HBoxContainer = HBoxContainer.new()
 	gauge_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	gauge_row.add_theme_constant_override(&"separation", 8)
@@ -356,7 +361,34 @@ func _task_plate(task: Dictionary, weekly: bool, index: int) -> PlatePanel:
 		else:
 			_claimed(_missions.claim_daily(index)))
 	row.add_child(button)
+	_mark(plate, Mark.CLAIMED if claimed else (Mark.READY if done else Mark.NORMAL), title)
 	return plate
+
+
+## Görev plakasının durumu görünür olsun: ödülü alınabilir (yeşil zemin, kalın yeşil kenar, başlıkta "✔"),
+## ödülü alınmış (soluk), devam ediyor (olağan krem plaka).
+enum Mark { NORMAL, READY, CLAIMED }
+const READY_BG: Color = Color("DDEFC6")
+const READY_EDGE: Color = Color("5E8F2E")
+
+
+func _mark(plate: PlatePanel, mark: int, title: Label = null) -> void:
+	if mark == Mark.CLAIMED:
+		plate.modulate = Color(0.78, 0.78, 0.74)   # opak soluk: saydam olsa arkadaki oyun görünür
+	if title and mark != Mark.NORMAL:
+		title.text = "✔  " + title.text
+	if mark != Mark.READY:
+		return
+	if title:
+		title.add_theme_color_override(&"font_color", READY_EDGE)
+	plate.ready.connect(func() -> void:
+		var base: StyleBox = plate.get_theme_stylebox(&"panel")
+		if base is StyleBoxFlat:
+			var box: StyleBoxFlat = base.duplicate() as StyleBoxFlat
+			box.bg_color = READY_BG
+			box.border_color = READY_EDGE
+			box.set_border_width_all(3)
+			plate.add_theme_stylebox_override(&"panel", box), CONNECT_ONE_SHOT)
 
 
 func _reward_text(task: Dictionary, weekly: bool) -> String:
@@ -396,7 +428,8 @@ func _bonus_plate(title: String, reward: String, ready: bool, claimed: bool, cla
 	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	texts.add_theme_constant_override(&"separation", 2)
-	texts.add_child(_label(&"HudPlateTitle", "%s   ·   %s" % [title, progress]))
+	var title_label: Label = _label(&"HudPlateTitle", "%s   ·   %s" % [title, progress])
+	texts.add_child(title_label)
 	var gem_label: Label = _label(&"HudInkCaption", reward)
 	gem_label.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
 	texts.add_child(gem_label)
@@ -404,6 +437,7 @@ func _bonus_plate(title: String, reward: String, ready: bool, claimed: bool, cla
 	var button: PlateButton = _claim_button(ready, claimed)
 	button.pressed.connect(func() -> void: _claimed(claim.call()))
 	row.add_child(button)
+	_mark(plate, Mark.CLAIMED if claimed else (Mark.READY if ready else Mark.NORMAL), title_label)
 	return plate
 
 
@@ -471,7 +505,8 @@ func _achievement_plate(line: Dictionary) -> PlatePanel:
 	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	texts.add_theme_constant_override(&"separation", 2)
 	var stars: String = "★".repeat(reached) + "☆".repeat(tiers.size() - reached)
-	texts.add_child(_label(&"HudPlateTitle", "%s   %s" % [Loc.t(String(line["title"])), stars]))
+	var title: Label = _label(&"HudPlateTitle", "%s   %s" % [Loc.t(String(line["title"])), stars])
+	texts.add_child(title)
 	var line_text: String = Loc.tn(String(line["text"]), threshold)
 	var text: Label = _label(&"HudInkCaption", line_text % Hud.format_thousands(threshold) if line_text.contains("%s") else line_text)
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -499,6 +534,7 @@ func _achievement_plate(line: Dictionary) -> PlatePanel:
 	var button: PlateButton = _claim_button(ready, claimed >= tiers.size())
 	button.pressed.connect(func() -> void: _claimed(_missions.claim_achievement(line["id"])))
 	row.add_child(button)
+	_mark(plate, Mark.CLAIMED if claimed >= tiers.size() else (Mark.READY if ready else Mark.NORMAL), title)
 	return plate
 
 
