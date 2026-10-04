@@ -55,6 +55,7 @@ func _init() -> void:
 	var rename: bool = args.has("rename")
 	var splits: Dictionary = {}  # parça adı → split_z tanımı (CarPartMap)
 	var extracts: Array[Dictionary] = []  # CarPartMap "extract" tanımları
+	var fills: Array[Dictionary] = []     # CarPartMap "fill_arc" tanımları (eksik lastik yayı)
 	if map_path != "":
 		var map: Dictionary = CarPartMap.get_map(map_path)
 		if map.is_empty():
@@ -69,6 +70,7 @@ func _init() -> void:
 		for spec: Dictionary in map.get("split_z", []):
 			splits[CarPartMap.part_name(spec["part"])] = spec
 		extracts.assign(map.get("extract", []))
+		fills.assign(map.get("fill_arc", []))
 
 	var doc: GLTFDocument = GLTFDocument.new()
 	var state: GLTFState = GLTFState.new()
@@ -85,6 +87,8 @@ func _init() -> void:
 		if spec.has("hue") and albedo_img == null:
 			albedo_img = _source_albedo(state)
 		_extract_part(source, spec, albedo_img)
+	for spec: Dictionary in fills:
+		_fill_arc(source, spec)
 	# Dokulu kaynak: tek albedo dokusu küçültülür, çıkışın tüm yüzeyleri tek materyali paylaşır
 	var out_material: StandardMaterial3D = _output_material(state, tex_size)
 
@@ -308,6 +312,66 @@ func _extract_part(source: Node, spec: Dictionary, albedo: Image = null) -> void
 	mi.transform = src_node.transform
 	src_node.get_parent().add_child(mi)
 	print("extract: %s -> %s  ucgen %d / kalan %d" % [src_node.name, mi.name, inside.size() / 3, outside.size() / 3])
+
+
+## CarPartMap "fill_arc": {"part", "center": [x,y,z], "from", "to"} — lastiğin MODELLENMEMİŞ yayını doldurur.
+## Tripo bazen çamurluğun içinde kalan lastik üstünü hiç üretmiyor (GT3 sağ-ön: üstte ~80°); teker dönünce
+## o boşluk alta gelip görünüyordu. Lastik dönel simetrik olduğundan karşı yaydaki (açı + 180°) üçgenler
+## aks etrafında 180° döndürülüp eklenir. Açı dünya uzayında, X ekseni etrafında: 0° = yukarı (+Y),
+## 90° = ön (+Z); from > to ise yay 0°'dan geçer.
+func _fill_arc(source: Node, spec: Dictionary) -> void:
+	var node: MeshInstance3D = source.find_child(String(CarPartMap.part_name(spec["part"])), true, false) as MeshInstance3D
+	if node == null or node.mesh == null:
+		push_error("fill_arc: parca %s bulunamadi" % spec["part"])
+		return
+	var g: Transform3D = _global_of(node)
+	var inv: Transform3D = g.affine_inverse()
+	var c: Array = spec["center"]
+	var center: Vector3 = Vector3(c[0], c[1], c[2])
+	var from: float = fposmod(float(spec["from"]) + 180.0, 360.0)
+	var to: float = fposmod(float(spec["to"]) + 180.0, 360.0)
+	var arrays: Array = node.mesh.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var spin: Basis = Basis(Vector3.RIGHT, PI)
+	var new_verts: PackedVector3Array = verts.duplicate()
+	var new_normals: PackedVector3Array = normals.duplicate()
+	var new_uvs: PackedVector2Array = (arrays[Mesh.ARRAY_TEX_UV] as PackedVector2Array).duplicate()
+	var out_idx: PackedInt32Array = indices.duplicate()
+	var copied: Dictionary = {}   # eski vertex → yeni vertex
+	var added: int = 0
+	for t: int in indices.size() / 3:
+		var w: Vector3 = Vector3.ZERO
+		for k: int in 3:
+			w += g * verts[indices[t * 3 + k]]
+		w /= 3.0
+		var deg: float = fposmod(rad_to_deg(atan2(w.z - center.z, w.y - center.y)), 360.0)
+		var inside: bool = (deg >= from and deg <= to) if from <= to else (deg >= from or deg <= to)
+		if not inside:
+			continue
+		for k: int in 3:
+			var old: int = indices[t * 3 + k]
+			if not copied.has(old):
+				var world: Vector3 = center + spin * (g * verts[old] - center)
+				new_verts.append(inv * world)
+				new_normals.append((inv.basis * (spin * (g.basis * normals[old]))).normalized())
+				new_uvs.append((arrays[Mesh.ARRAY_TEX_UV] as PackedVector2Array)[old])
+				copied[old] = new_verts.size() - 1
+			out_idx.append(copied[old])
+		added += 1
+	var out: Array = []
+	out.resize(Mesh.ARRAY_MAX)
+	out[Mesh.ARRAY_VERTEX] = new_verts
+	out[Mesh.ARRAY_NORMAL] = new_normals
+	out[Mesh.ARRAY_TEX_UV] = new_uvs
+	out[Mesh.ARRAY_INDEX] = out_idx
+	var material: Material = node.mesh.surface_get_material(0)
+	var mesh: ArrayMesh = ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, out)
+	mesh.surface_set_material(0, material)
+	node.mesh = mesh
+	print("fill_arc: %s  %d ucgen eklendi (%.0f-%.0f derece yayindan)" % [node.name, added, from, to])
 
 
 static func _color_match(img: Image, uv: Vector2, spec: Dictionary) -> bool:

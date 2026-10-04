@@ -7,6 +7,9 @@ extends Node3D
 ## çizim çağrısıdır. Kaplama malzemesi dünya uzayında üç düzlemli eşlendiği için segmentler arası ek
 ## yeri görünmez (vfx/decor_textures.gd). Dış duvarlarla aynı boydadır (kullanıcı kararı: orijinaldeki gibi).
 ##
+## Oyun sırasında tamir alanının / sergilenen aracın ÖNÜNE düşen segmentler ayrı bir gövdede yarı saydam
+## çizilir (OCCLUDER_FADE); hangilerinin önde kaldığını GarageDecorView hesaplar. Düzenlemede hepsi opaktır.
+##
 ## Segment boyu garajın zemin dikdörtgenine kırpılır: son göz kısmi olduğundan dış duvara değen
 ## segment duvarın iç yüzüne kadar uzar (arada boşluk kalmaz).
 
@@ -25,6 +28,8 @@ const FRAME: float = 0.012
 const DOOR_COLOR: Color = Color("4A4F57")
 const FRAME_COLOR: Color = Color("2B2E33")
 const GLASS_COLOR: Color = Color(0.72, 0.86, 0.95, 0.32)
+## Aracın önündeki duvarın saydamlığı (0 opak, 1 görünmez): duvar belli olsun, arkası okunsun.
+const OCCLUDER_FADE: float = 0.62
 
 static var _default_wall: StandardMaterial3D
 static var _door_mat: StandardMaterial3D
@@ -32,6 +37,9 @@ static var _frame_mat: StandardMaterial3D
 static var _glass_mat: StandardMaterial3D
 
 var _mesh: MeshInstance3D
+## Önde kalan (yarı saydam) segmentlerin gövdesi.
+var _faded_mesh: MeshInstance3D
+var _faded: Dictionary = {}
 var _preview: MeshInstance3D
 ## Son kurulan segmentlerin dünya kutuları (seçim için): anahtar → AABB.
 var _boxes: Dictionary = {}
@@ -43,26 +51,51 @@ func _ready() -> void:
 	_mesh = MeshInstance3D.new()
 	_mesh.name = "WallMesh"
 	add_child(_mesh)
+	_faded_mesh = MeshInstance3D.new()
+	_faded_mesh.name = "FadedWallMesh"
+	_faded_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_faded_mesh)
 
 
 ## Segmentleri yeniden kurar (değişmediyse hiçbir şey yapmaz).
 ## floor_y / top: zemin üstü ve duvar tepesi; lot: zemin dikdörtgeni (kırpma için, iç yüzlerden).
-func rebuild(walls: Dictionary, floor_y: float, top: float, clip: Rect2) -> void:
-	var sig: String = "%s|%.4f|%.4f|%s" % [str(walls), floor_y, top, str(clip)]
+## faded: yarı saydam çizilecek segment anahtarları (aracın önündekiler).
+func rebuild(walls: Dictionary, floor_y: float, top: float, clip: Rect2, faded: Dictionary = {}) -> void:
+	var sig: String = "%s|%.4f|%.4f|%s|%s" % [str(walls), floor_y, top, str(clip), str(faded.keys())]
 	if sig == _signature:
 		return
 	_signature = sig
 	_boxes.clear()
+	_faded = faded.duplicate()
 	var tools: Dictionary = {}   # malzeme anahtarı → [SurfaceTool, Material]
+	var faded_tools: Dictionary = {}
 	for key: String in walls:
 		var rec: Dictionary = walls[key]
 		var seg: Dictionary = segment(key, walls, clip)
 		if seg.is_empty():
 			continue
 		_boxes[key] = _segment_box(seg, floor_y, top)
-		_add_piece(tools, rec["piece"], rec.get("finish", &""), seg, floor_y, top)
+		_add_piece(faded_tools if faded.has(key) else tools, rec["piece"], rec.get("finish", &""), seg, floor_y, top)
 	var mesh: ArrayMesh = _commit(tools)
 	_mesh.mesh = mesh if mesh.get_surface_count() > 0 else null
+	# Saydamlık MALZEMEDE: GeometryInstance3D.transparency mobil (Compatibility) çizicide bu duvarları
+	# simsiyah çiziyordu (ölçüldü). Önde kalan yüzeyler malzemenin saydam kopyasıyla yazılır.
+	for mat_key: String in faded_tools:
+		var pair: Array = faded_tools[mat_key]
+		pair[1] = _faded_material(pair[1])
+	var faded_mesh: ArrayMesh = _commit(faded_tools)
+	_faded_mesh.mesh = faded_mesh if faded_mesh.get_surface_count() > 0 else null
+
+
+## Şu an yarı saydam çizilen segmentler.
+func faded_keys() -> Array:
+	return _faded.keys()
+
+
+## Segmentin dünya kutusu (geometri kurulmadan, kural hesabı için).
+static func segment_box(key: String, walls: Dictionary, clip: Rect2, floor_y: float, top: float) -> AABB:
+	var seg: Dictionary = segment(key, walls, clip)
+	return _segment_box(seg, floor_y, top) if not seg.is_empty() else AABB()
 
 
 ## Ekran ışınının değdiği en yakın segment ("" yoksa). Kutu düzeyinde: segment ince ve düz.
@@ -299,6 +332,23 @@ static func _glass() -> Material:
 	return _glass_mat
 
 
+static var _faded_cache: Dictionary = {}
+
+
+## Malzemenin yarı saydam kopyası (önbellekli; kaplama başına bir kez).
+static func _faded_material(material: Material) -> Material:
+	if material == null or not (material is BaseMaterial3D):
+		return material
+	if _faded_cache.has(material):
+		return _faded_cache[material]
+	var copy: BaseMaterial3D = (material as BaseMaterial3D).duplicate() as BaseMaterial3D
+	copy.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	copy.albedo_color.a = (material as BaseMaterial3D).albedo_color.a * (1.0 - OCCLUDER_FADE)
+	copy.cull_mode = BaseMaterial3D.CULL_BACK
+	_faded_cache[material] = copy
+	return copy
+
+
 static func _preview_mat(color: Color) -> Material:
 	var mat: StandardMaterial3D = StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -347,7 +397,7 @@ static func _box_aabb(st: SurfaceTool, box: AABB) -> void:
 	for face: Array in faces:
 		var n: Vector3 = face[0]
 		var q: Array = face[1]
-		for idx: int in [0, 1, 2, 0, 2, 3]:
+		for idx: int in [0, 2, 1, 0, 3, 2]:   # Godot: ön yüz SAAT YÖNÜNDE (kameradan bakınca)
 			st.set_normal(n)
 			st.set_uv(uvs[idx])
 			st.add_vertex(q[idx])

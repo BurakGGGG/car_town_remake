@@ -30,6 +30,10 @@ while IFS='|' read -r id src out scene extra; do
 done < /tmp/ct_cars.txt
 # Yeni dokular başsız import'ta sıkıştırılmadan geliyor (mode=0 → 16 MB VRAM); mode=2'ye çek.
 sed -i 's|^compress/mode=0|compress/mode=2|' assets/cars/optimized/*_albedo.jpg.import 2>/dev/null
+# Teğet ve ayrı gölge mesh'i üretilmesin: araç başına 5,3 → 2,7 MB, görsel fark yok (normal haritası
+# yok; gölge ana mesh'ten çizilir). Ölçüm: docs/MESH_BUTCESI.md "Paket boyutu".
+sed -i 's|^meshes/ensure_tangents=true|meshes/ensure_tangents=false|; s|^meshes/create_shadow_meshes=true|meshes/create_shadow_meshes=false|' \
+	assets/cars/optimized/*.glb.import 2>/dev/null
 echo "=== import ==="
 timeout 1800 "$GODOT" --headless --path . --import 2>&1 | grep -c reimport
 echo "=== boya maskeleri ==="

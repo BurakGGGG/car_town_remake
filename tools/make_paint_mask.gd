@@ -41,11 +41,24 @@ const PART_SKIP_RATIO: float = 0.12
 ## eşik gölgeli tamponları yakalayacak kadar düşük tutulur.
 const PROMOTE_RATIO: float = 0.70
 const PROMOTE_ROLES: Array[StringName] = [&"black_trim", &"grille", &"plate", &"fog_lights", &"exhaust", &"antenna"]
+## YUMUŞAK engel rolleri: teker parçaları ve (yükseltilmeyen) trim. Tripo dokusunda bir texel'i birden çok
+## parça paylaşabiliyor; Ferrari'nin lastik ve trim parçalarına çamurluk kenarından kırmızı üçgenler karışmıştı
+## ve "engel her zaman kazanır" kuralı GÖVDENİN aynı texel'lerini boyasız bırakıyordu (maviye boyanınca
+## kaputta / kenarlarda kırmızı çizgiler ve lekeler). Doygun boyalarda yumuşak engelin BOYA RENGİNDEKİ
+## texel'i engel sayılmaz. Cam, far, stop ve gizli parçalar KATI engel olarak kalır; gümüş / beyaz boyada
+## renk testi ayırt edemediği için yumuşak engel de tamamen engeldir (eski davranış).
+const SOFT_BLOCK_ROLES: Array[StringName] = [&"wheels", &"tires", &"rims"]
 ## Renk tonu toleransı: texel ile boya vektörü arasındaki açı (radyan, ~14°). Açı ölçüsü doygun
 ## boyalarda da çalışır (kırmızının açık/koyu tonları aynı açıda kalır; RGB uzaklığı kalmaz).
 const HUE_TOLERANCE: float = 0.25
 ## Boyadan bu kadar oktav koyu texel'ler hâlâ boya (pişmiş gölge), bu kadar açık olanlar parlama.
 const SHADE_DARK: float = 2.6
+## Doygun boyalarda (kırmızı Ferrari / Golf, yeşil GT3) panel kenarı ve kıvrımlardaki KOYU gölge bu kadar
+## oktava kadar boya sayılır — tonu boyayla aynı ve doygunluğu en az DARK_SATURATION ise. Eskiden 2,6
+## oktavın altı atlanıyordu: Ferrari maviye boyanınca kaputta ve kenarlarda kırmızı çizgiler kalıyordu.
+## Siyah plastik doygun değildir (sat < 0,4), bu kurala girmez.
+const SHADE_DARK_SATURATED: float = 5.0
+const DARK_SATURATION: float = 0.55
 const SHADE_LIGHT: float = 0.9
 ## Doygunluğu bunun altındaki texel'ler renk tonu testinden muaf (parlama/gölge boyayı soldurur);
 ## RENKLİ boyada bu muafiyet yalnızca dar bir parlaklık bandında geçerlidir (gri trim sızmasın).
@@ -94,12 +107,15 @@ func _build(id: StringName) -> void:
 	var paintable: Dictionary = {}
 	var promotable: Dictionary = {}
 	var blocked: Dictionary = {}
+	var soft_names: Dictionary = {}
 	for role: StringName in CarPartMap.ROLES:
 		var target: Dictionary = blocked
 		if role == &"body" or role == &"mirrors":
 			target = paintable
 		elif PROMOTE_ROLES.has(role):
 			target = promotable
+		elif SOFT_BLOCK_ROLES.has(role):
+			target = soft_names
 		for index: int in map.get(role, []):
 			target[String(CarPartMap.part_name(index))] = true
 	for spec: Dictionary in map.get("split_z", []):
@@ -115,6 +131,7 @@ func _build(id: StringName) -> void:
 
 	# 1) Geometri: parça bazında aday maskeler + tüm engeller
 	var block: PackedByteArray = PackedByteArray(); block.resize(_size * _size)
+	var soft: PackedByteArray = PackedByteArray(); soft.resize(_size * _size)   # yumuşak engel (bkz. SOFT_BLOCK_ROLES)
 	var parts: Array[Dictionary] = []   # {name, mask}
 	var stats: Dictionary = {"paint_tris": 0, "block_tris": 0, "other_tris": 0}
 	var pending: Array[Dictionary] = []   # yükseltme adayları: {name, mask}
@@ -124,7 +141,8 @@ func _build(id: StringName) -> void:
 		var part_mask: PackedByteArray = PackedByteArray()
 		if is_paint or is_pending:
 			part_mask.resize(_size * _size)
-		var target: PackedByteArray = part_mask if (is_paint or is_pending) else block
+		var target: PackedByteArray = part_mask if (is_paint or is_pending) \
+				else (soft if soft_names.has(mesh.name) else block)
 		var key: String = "paint_tris" if is_paint else ("block_tris" if blocked.has(mesh.name) or is_pending else "other_tris")
 		for si: int in mesh.mesh.get_surface_count():
 			# Atlası KULLANMAYAN yüzey maskeye girmez: UV'si anlamsızdır ve engel olarak
@@ -176,7 +194,19 @@ func _build(id: StringName) -> void:
 		else:
 			for i: int in pm.size():
 				if pm[i] != 0:
-					block[i] = 255
+					soft[i] = 255   # yükseltilmeyen trim: yumuşak engel
+	# Yumuşak engel: doygun boyada boya rengindeki texel'i engel sayılmaz (paylaşılan kaporta texel'i)
+	var saturated: bool = _saturation(paint) >= NEUTRAL_PAINT
+	var released: int = 0
+	for i: int in soft.size():
+		if soft[i] == 0 or block[i] != 0:
+			continue
+		if saturated and candidate[i] != 0 and _is_paint(_texel(albedo, i, scale), paint):
+			released += 1
+			continue
+		block[i] = 255
+	if released > 0:
+		print("        yumuşak engelden boyaya bırakılan texel: %d" % released)
 	_dilate(block, 1)  # engel kenarını bir texel genişlet (UV dikişi boyayı sızdırmasın)
 	for i: int in candidate.size():
 		if block[i] != 0:
@@ -184,6 +214,7 @@ func _build(id: StringName) -> void:
 
 	# 4) Parça kararı: tamamı boya / hiç / karışıksa texel bazında
 	var mask: PackedByteArray = PackedByteArray(); mask.resize(_size * _size)
+	var solid: PackedByteArray = PackedByteArray(); solid.resize(_size * _size)   # bütün boyanan parçalar
 	var kept: int = 0
 	var mixed: PackedStringArray = PackedStringArray()
 	var skipped: PackedStringArray = PackedStringArray()
@@ -204,6 +235,7 @@ func _build(id: StringName) -> void:
 			for i: int in pm.size():
 				if pm[i] != 0 and block[i] == 0:
 					mask[i] = 255
+					solid[i] = 255
 					kept += 1
 		elif ratio >= PART_SKIP_RATIO:
 			mixed.append("%s(%%%.0f)" % [String(part["name"]).trim_prefix("tripo_part_"), ratio * 100.0])
@@ -216,8 +248,19 @@ func _build(id: StringName) -> void:
 
 	# 5) Temizlik: gürültüyü at, panel içindeki delikleri kapat (morfolojik kapama — yalnızca aday
 	# alan içinde, böylece boya cama/trime taşmaz)
+	# Temizlik yalnızca EKLER, var olanı silmez: ince UV şeritleri (panel kenarı, kaput çizgisi) kapamanın
+	# daraltma adımında tamamen siliniyordu — kısıtlı genişletme şeridin dışına taşamadığı için daraltma onu
+	# yiyordu (Ferrari maviye boyanınca kaputta ve kenarlarda kırmızı çizgiler). Gürültü temizliği de yalnızca
+	# texel bazında elenen (karışık) parçaların benekleri içindir; bütün boyanan parçaya dokunmaz.
 	_despeckle(mask)
+	for i: int in mask.size():
+		if solid[i] != 0:
+			mask[i] = 255
+	var before_close: PackedByteArray = mask.duplicate()
 	_close_within(mask, candidate, 4)
+	for i: int in mask.size():
+		if before_close[i] != 0:
+			mask[i] = 255
 	_fill_holes(mask)
 	# UV adası kenarlarına taşır (bilinear örnekleme ve ada sınırındaki üçgen kenarları boyasız
 	# ince çizgiler bırakmasın); engel adalarına taşan kısım geri alınır
@@ -225,6 +268,25 @@ func _build(id: StringName) -> void:
 	for i: int in mask.size():
 		if block[i] != 0:
 			mask[i] = 0
+	# Teşhis: MASK_DEBUG=1 ile her boya parçasının texel dağılımı (engel / beyaz / boya renkli ama siyah)
+	if OS.get_environment("MASK_DEBUG") != "":
+		for part: Dictionary in parts:
+			var pm2: PackedByteArray = part["mask"]
+			var n_all: int = 0
+			var n_block: int = 0
+			var n_white: int = 0
+			var n_red_lost: int = 0
+			for i: int in pm2.size():
+				if pm2[i] == 0:
+					continue
+				n_all += 1
+				if block[i] != 0:
+					n_block += 1
+				if mask[i] != 0:
+					n_white += 1
+				elif _is_paint(_texel(albedo, i, scale), paint):
+					n_red_lost += 1
+			print("DBG %s texel=%d engel=%d beyaz=%d boyarenkli-ama-siyah=%d" % [part["name"], n_all, n_block, n_white, n_red_lost])
 	var image: Image = Image.create_from_data(_size, _size, false, Image.FORMAT_L8, mask)
 	_blur(image)
 	var out_path: String = String(entry["optimized_path"]).get_basename() + "_paintmask.png"
@@ -302,9 +364,12 @@ static func _close(a: Color, b: Color) -> bool:
 
 ## Texel fabrika boyası mı? Kromatiklik (gölgeden bağımsız) + asimetrik parlaklık bandı + doygunluk muafiyeti.
 static func _is_paint(texel: Color, paint: Color) -> bool:
-	var l: float = maxf(texel.get_luminance(), 0.02)
+	var l: float = maxf(texel.get_luminance(), 0.005)
 	var pl: float = maxf(paint.get_luminance(), 0.02)
 	var oct: float = log(l / pl) / log(2.0)
+	if oct < -SHADE_DARK and oct >= -SHADE_DARK_SATURATED and _saturation(paint) >= NEUTRAL_PAINT \
+			and _saturation(texel) >= DARK_SATURATION and _hue_close(texel, paint):
+		return true   # boyanın KOYU gölgesi (kıvrım, panel kenarı): tonu ve doygunluğu boyayla aynı
 	if oct > SHADE_LIGHT or oct < -SHADE_DARK:
 		return false  # cam / krom / far parlaması ya da siyah plastik / derin gölge
 	var sat: float = _saturation(texel)
@@ -313,6 +378,10 @@ static func _is_paint(texel: Color, paint: Color) -> bool:
 		return sat < DESAT_LIMIT * 1.6
 	if sat < DESAT_LIMIT:
 		return oct > -DESAT_OCTAVE  # soluk texel: boyanın parlaması (üst sınır zaten SHADE_LIGHT)
+	return _hue_close(texel, paint)
+
+
+static func _hue_close(texel: Color, paint: Color) -> bool:
 	var tv: Vector3 = Vector3(texel.r, texel.g, texel.b)
 	var pv: Vector3 = Vector3(paint.r, paint.g, paint.b)
 	if tv.length() < 0.001 or pv.length() < 0.001:

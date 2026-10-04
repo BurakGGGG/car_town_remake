@@ -22,6 +22,8 @@ class_name CarPartMap
 ##   (tools/wheel_fit.gd üretir, tools/wheel_blur.gd ile görsel doğrulanır). Varsa CarRig grubu elemeden
 ##   kullanır; yoksa eski davranış (kutu merkezi + boyut / eksen elemesi).
 ## split_z: tek mesh'te iki rol (Fluence ön cam + tavan): z > z eşiği → front rolü, gerisi → back.
+## fill_arc: lastiğin modellenmemiş yayı ({part, center, from, to} derece; 0 = yukarı, 90 = ön): karşı yay
+##   180° döndürülüp eklenir (tools/optimize_car.gd)
 ## extract: kaynakta başka parçaya kaynamış teker; tools/optimize_car.gd silindir bölgesini yeni parçaya ayırır
 ##   ({part, new_part, center, radius, half_width}); çalışma zamanında ek bir şey gerekmez.
 
@@ -91,12 +93,13 @@ const MAPS: Dictionary = {
 	},
 	"res://assets/cars/renault_fluence.tscn": {
 		"default_paint": Color(0.659, 0.678, 0.682),  # dokunun baskın kaporta rengi (#A8ADAE); paint mask ile aynı olmalı
-		"body": [0, 3, 5, 6, 7, 9, 11, 13, 14, 15, 16, 19, 21, 22, 24, 26, 27, 29, 30, 35, 36, 37, 38, 39, 40, 42, 45, 49],
+		"body": [0, 3, 5, 6, 7, 9, 11, 12, 13, 14, 15, 16, 19, 21, 22, 24, 26, 27, 28, 29, 30, 35, 36, 37, 38, 39, 40, 42, 45, 49],
 		"mirrors": [23, 56],
 		"wheels": [1, 2],
 		"tires": [4, 10],
 		"rims": [8, 17, 20, 25, 32, 50],
-		"glass": [12, 18, 28, 31, 34, 52, 53, 54, 57, 58, 61, 62],
+		# 12 sol arka çamurluk + tavan çıtası, 28 sağ tavan çıtası: cam sanılmıştı, boyanmıyordu (2026-10-05)
+		"glass": [18, 31, 34, 52, 53, 54, 57, 58, 61, 62],
 		"headlights": [41, 51, 59, 60],
 		"taillights": [43, 44, 55],
 		"grille": [33, 46, 47, 48],
@@ -327,16 +330,19 @@ const MAPS: Dictionary = {
 		"wheel_axes": {"fl": [0.0814, 0.3129, 0.0816], "fr": [0.0824, 0.3127, 0.0814], "rl": [0.0803, -0.2828, 0.0806], "rr": [0.0817, -0.2829, 0.0804]},
 	},
 	"res://assets/cars/ferrari_488_pista.tscn": {
-		"default_paint": Color(0.769, 0.000, 0.012),  # boya maskesi aracının ölçtüğü fabrika rengi (#C40003)
-		"body": [1, 4, 5, 6, 8, 11, 12, 15, 17, 19, 20, 21, 22, 26, 28, 29, 31, 37, 38, 39, 40, 42, 46, 47, 55, 56, 57],
+		"default_paint": Color(0.765, 0.000, 0.012),  # boya maskesi aracının ölçtüğü fabrika rengi (#C30003)
+		"body": [1, 3, 4, 5, 6, 7, 8, 11, 12, 15, 17, 18, 19, 20, 21, 22, 23, 25, 26, 28, 29, 30, 31, 37, 38, 39, 40, 42, 46, 47, 55, 56, 57],
 		"mirrors": [16, 27],
 		"wheels": [0, 59, 60, 61],
 		"rims": [9, 24, 62, 63, 64, 65, 66, 67],
-		"taillights": [23, 25, 30, 50, 51, 52, 54, 58],
+		"taillights": [50, 51, 52, 54, 58],
 		"grille": [14, 32, 44, 48, 53],
-		"black_trim": [2, 3, 7, 10, 13, 18, 33, 34, 35, 36, 41, 43, 45, 49],
-		# Elle düzeltildi (vurgu render'ı): 18 ön çamurluk içi, 41/45 ön hava girişi (teker değil);
-		# 9 arka-sol jant (gövde sanılmıştı); arka-sağ teker difüzörle (1) kaynamış → extract.
+		"black_trim": [2, 10, 13, 33, 34, 35, 36, 41, 43, 45, 49],
+		# Elle düzeltildi (vurgu render'ı): 41/45 ön hava girişi (teker değil); 18 armalı sol ön çamurluk,
+		# 23 arka kanat, 25 arka tampon, 30 kanat altı panel GÖVDE (stop / trim sanılıp boyanmıyordu);
+		# 9 arka-sol jant (gövde sanılmıştı); arka-sağ teker difüzörle (1) kaynamış → extract;
+		# 3 / 7 lastik ayrıldıktan sonra kalan çamurluk kenarı (gövde). Lastikteki turuncu-kırmızı fren diski
+		# bilerek lastikte kalır (dönmeli, boyanmamalı).
 		"extract": [{"part": 1, "new_part": 59, "center": [-0.1904, 0.0866, -0.3275], "radius": 0.0895, "half_width": 0.046},
 			{"part": 3, "new_part": 60, "center": [-0.1873, 0.0856, 0.244], "radius": 0.0874, "half_width": 0.0463},
 			{"part": 7, "new_part": 61, "center": [0.1873, 0.0866, -0.3275], "radius": 0.089, "half_width": 0.0499},
@@ -394,6 +400,8 @@ const MAPS: Dictionary = {
 		"grille": [14, 21],
 		"black_trim": [0, 19, 54, 60],
 		"extract": [{"part": 11, "new_part": 62, "center": [-0.1803, 0.0826, 0.2873], "radius": 0.0915, "half_width": 0.0498}],
+		# Sağ-ön lastiğin üstü (~80°, çamurluğun içi) kaynakta hiç yok: karşı yay döndürülüp eklenir
+		"fill_arc": [{"part": 62, "center": [-0.1803, 0.0826, 0.2873], "from": 318, "to": 42}],
 		"wheel_groups": {"fl": [15, 6], "fr": [62, 4, 33, 49], "rl": [7, 3], "rr": [8, 2, 41]},
 		"wheel_axes": {"fl": [0.0826, 0.2873, 0.0861], "fr": [0.0826, 0.2873, 0.0861], "rl": [0.0844, -0.2712, 0.0863], "rr": [0.0844, -0.2714, 0.0863]},
 	},

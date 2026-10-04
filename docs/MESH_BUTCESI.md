@@ -175,3 +175,35 @@ Mesh küçültmesinden sonra debug APK **175,6 MB** (arm64). Dökümü:
 Sürüm için yapılacak tek zorunlu şey derlemeyi **AAB** olarak almak (`export_presets.cfg`,
 `gradle_build/export_format`). Bu, Play hesabına bağlı bir **yükleme anahtarı** gerektirir —
 kalıcı bir kimlik olduğu için sahibi tarafından oluşturulmalı.
+
+---
+
+## Paket boyutu (2026-10-05)
+
+Ölçüm: release APK, arm64 (MiB, APK içindeki sıkıştırılmış boyut).
+
+| Kalem | Önce | Sonra | Not |
+|---|---|---|---|
+| Araç + dekor modelleri | ~92 | 50,0 | Teğet ve ayrı gölge mesh'i artık üretilmiyor |
+| Dokular | 38,8 | 37,2 | Boya maskeleri pakette değil (boya MVP'de kapalı) |
+| Motor (libgodot_android.so) | 69,3 | 69,3 | Sıkıştırılmadan duruyor |
+| Java (Firebase, AdMob) | 9,4 | 9,4 | R8 küçültme kapalı |
+| Diğer | 4,5 | 4,4 | `tools/`, `locale/strings.json` hariç |
+| **APK** | **~215** | **170,6** | |
+
+**Kayıpsızlık:** 22 araç gölgeli güneş altında önce/sonra çizildi. 1,2 milyon pikselin 88'i farklı çıktı;
+bunlar tek tük gölge kenarı pikselleri, gözle görülmüyor. Teğetler yalnızca normal haritası için gerekir:
+araç malzemelerinde ve shader'larda normal haritası yok. Ayrı gölge mesh'i yalnızca gölge geçişini hızlandıran
+bir kopyadır. LOD'lar BİLEREK duruyor: trafikteki uzak araçları hızlandırıyorlar; kapatılsaydı araç başına
+~1 MB daha kazanılırdı.
+
+**Kalan büyük kalemler (yapılmadı):**
+1. *Motor:* Kullanılmayan modüller çıkarılıp boyut için optimize edilmiş özel bir export şablonu derlenebilir:
+   GLTF (çalışma anında), navigasyon, gürültü, video, WebSocket / WebRTC / ENet, XR, 2B fizik, ışık
+   haritası / GI, iskelet animasyonu. Beklenen kazanç 69 → ~30–35 MiB. Gerekenler: SCons, Godot 4.7.2
+   kaynağı, ~1 saat derleme, 5–8 GB disk.
+2. *Java:* R8 küçültmeyle ~4–5 MiB kazanılabilir. Firebase / AdMob yansıma kullandığı için telefonda
+   denenmesi şart.
+3. *Sıkıştırılmış native kütüphane* (`gradle_build/compress_native_libraries`): APK ~45 MiB küçülür, ama
+   cihaz kurulumda kütüphaneyi açtığı için kurulu boyut büyür. Mağaza indirmesi zaten sıkıştırılarak
+   yapılıyor; önerilmez.

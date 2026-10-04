@@ -382,8 +382,8 @@ TABELA · SERGİ (araçlar) · DEPO.**
 
 ## 8. Uygulama (2026-10-04)
 
-Dört aşamanın üçü ve dördüncünün cam / pencere / geçit kısmı uygulandı (oyun modunda duvar silikleştirme ve
-sezonluk eşya yapılmadı).
+Dört aşamanın üçü ve dördüncünün cam / pencere / geçit kısmı uygulandı. Oyun modunda duvar silikleştirme de
+2026-10-05'te eklendi; sezonluk eşya yapılmadı.
 
 | Parça | Dosya |
 |---|---|
@@ -415,3 +415,12 @@ sezonluk eşya yapılmadı).
 **Test:** `tests/decor_v2_test.gd` (59 kontrol, run_tests listesinde). `decor_test` ve
 `garage_decoration_placement_test` yeni kurallara göre güncellendi. Görsel QA gerçek fare olaylarıyla
 yapıldı (telefon 1040×480 ve masaüstü): `qa/dekor_v2_qa.gd`; görüntüler `~/Projects/ct_shots/dekor_v2/`.
+
+**Oyunda duvar silikleştirme (2026-10-05):** Kameradan bakınca bir tamir alanının ya da sergilenen aracın
+önüne düşen iç duvar segmentleri yarı saydam çizilir. Saydamlık malzemenin kopyasında tutulur, çünkü
+örnek saydamlığı mobil çizicide siyah çiziliyordu. Kamera açısı sabit olduğu için hesap yalnızca duvar,
+alan ya da sergi değişince yapılır, kare başına iş yoktur. Düzenleme modunda bütün duvarlar opaktır.
+
+Aynı sırada bulunan hata: kutu yüzlerinin üçgen sırası tersti (Godot'ta ön yüz saat yönündedir). Kameraya
+bakan yüz kesiliyor, ışığa sırtı dönük iç yüz görünüyordu; duvarlar koyu, kimi durumda siyah çiziliyordu.
+

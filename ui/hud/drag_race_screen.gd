@@ -159,6 +159,16 @@ func open() -> void:
 	_countdown = 3.0 * COUNTDOWN_STEP
 	_tap_delay = -1.0
 	_hold_until = 0.0
+	# Önceki yarışın bitiş sonrası yolu ARAÇLAR YERLEŞMEDEN sıfırlanır: _load_cars → _place_cars bu
+	# değerlerle konum hesaplıyor. Eskiden sıfırlama sonradan yapılıyordu ve ikinci yarışta araçlar
+	# çizginin ~3 birim önünde (bitişe doğru) doğup geri sayım boyunca orada bekliyordu.
+	_player_over = 0.0
+	_rival_over = 0.0
+	_player_over_speed = -1.0
+	_rival_over_speed = -1.0
+	_first_finish_time = -1.0
+	_player_distance = DragTrack.START_Z
+	_rival_distance = DragTrack.START_Z
 	_player = DragRaceSim.Runner.new()
 	_player.setup(_player_id, _rng)
 	_rival = DragRaceSim.Runner.new()
@@ -174,13 +184,6 @@ func open() -> void:
 	if _sign:
 		_sign.visible = true
 	_punch = 0.0
-	_player_distance = DragTrack.START_Z
-	_rival_distance = DragTrack.START_Z
-	_player_over = 0.0
-	_rival_over = 0.0
-	_player_over_speed = -1.0
-	_rival_over_speed = -1.0
-	_first_finish_time = -1.0
 	_place_camera(0.0)   # önceki yarıştan kalan kadraj (bitiş çizgisi) sıfırlanır
 	_status_label.text = Loc.t("HAZIR OL")
 	_last_step = -1

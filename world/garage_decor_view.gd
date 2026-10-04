@@ -174,8 +174,7 @@ func refresh() -> void:
 		return
 	_rebuild_area()
 	_apply_surfaces()
-	if _walls:
-		_walls.rebuild(_decor.walls(), _area.floor_y, _area.wall_top, wall_clip())
+	_rebuild_walls()
 	var alive: Dictionary = {}
 	for inst: Dictionary in _decor.instances():
 		var iid: String = inst["iid"]
@@ -435,6 +434,7 @@ func ground_point(camera: Camera3D, screen: Vector2) -> Vector2:
 ## tabelası gizlenir (eşyaların önüne biniyor; izi yine de engel sayılır).
 func set_editing(value: bool) -> void:
 	_editing = value
+	_rebuild_walls()   # düzenlemede bütün duvarlar opak, oyunda aracın önündekiler yarı saydam
 	if _garage == null:
 		return
 	for path: String in ["BuildGrid/BuildGrid", "BuildGrid/BuildGrid/GridPreview"]:
@@ -607,6 +607,56 @@ static func _edge_between(a: Vector2i, b: Vector2i) -> String:
 
 func interior_walls() -> InteriorWalls:
 	return _walls
+
+
+func _rebuild_walls() -> void:
+	if _walls == null or _decor == null:
+		return
+	var walls: Dictionary = _decor.walls()
+	_walls.rebuild(walls, _area.floor_y, _area.wall_top, wall_clip(), {} if _editing else occluding_walls(walls))
+
+
+## Kameradan bakınca bir tamir alanının ya da sergilenen aracın ÖNÜNE düşen iç duvar segmentleri.
+## Aracın izinde birkaç örnek noktadan kameraya doğru ışın atılır; ışının geçtiği segment öndedir.
+## Kamera açısı sabit (yalnızca kayar / yakınlaşır) olduğundan sonuç kameranın konumuna bağlı değildir:
+## yalnızca duvar / alan / sergi değişince yeniden hesaplanır, kare başına iş yoktur.
+func occluding_walls(walls: Dictionary) -> Dictionary:
+	var out: Dictionary = {}
+	if walls.is_empty() or not is_inside_tree():
+		return out
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	if camera == null:
+		return out
+	var toward: Vector3 = camera.global_transform.basis.z   # kameranın baktığı yönün tersi
+	var points: Array[Vector3] = []
+	var bays: RepairBayManager = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
+	if bays:
+		for i: int in bays.bay_count():
+			if bays.is_bay_revealed(i):
+				_sample_footprint(points, bays.bay_position(i), RepairBayManager.BAY_SIZE * 0.8, bays.bay_yaw(i))
+	for inst: Dictionary in _decor.instances():
+		if GarageDecor.is_vehicle(inst["item"]):
+			_sample_footprint(points, Vector2((inst["pos"] as Vector3).x, (inst["pos"] as Vector3).z),
+				footprint_size(inst["item"]) * 0.8, float((inst["rot"] as Vector3).y))
+	if points.is_empty():
+		return out
+	var clip: Rect2 = wall_clip()
+	for key: String in walls:
+		var box: AABB = InteriorWalls.segment_box(key, walls, clip, _area.floor_y, _area.wall_top)
+		if box.size == Vector3.ZERO:
+			continue
+		for p: Vector3 in points:
+			if _ray_box(p, toward, box) < INF:
+				out[key] = true
+				break
+	return out
+
+
+## İz dikdörtgeninde örnek noktalar: merkez + dört köşe, araç gövdesinin iki yüksekliğinde.
+func _sample_footprint(points: Array[Vector3], center: Vector2, size: Vector2, yaw: float) -> void:
+	for corner: Vector2 in [Vector2.ZERO] + Array(DecorArea.corners(center, size, yaw)).map(func(c: Vector2) -> Vector2: return c - center):
+		for h: float in [0.05, 0.13]:
+			points.append(Vector3(center.x + corner.x, _area.floor_y + h, center.y + corner.y))
 
 
 ## Segmentlerin kırpıldığı dikdörtgen: dış duvarların iç yüzlerinden garajın açık ön / sağ kenarına.

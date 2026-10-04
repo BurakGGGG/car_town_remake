@@ -230,3 +230,32 @@ bulanık leke / hale yapar. Parça teşhisi: `tools/part_highlight.gd`.
 GT3 sağ-ön ve 488 sağ-arka ekseni lastikten yanlış ölçülüyordu (lastiğin çamurluk içindeki üst kısmı
 modelde yok → merkez aşağı kayıyor); karşı tekerin ekseni aynalandı. Sol-sağ eksen farkı artık her araçta
 < 3 mm. Kalan küçük kusur: GT3 ön lastiklerin üstü eksik modellendiği için dönerken altta hafif iz kalıyor.
+
+---
+
+# Boya maskesi ve lastik cilası (2026-10-05)
+
+**Ferrari maviye boyanınca kırmızı kalan yerler — üç ayrı sebep:**
+1. *Rol hatası:* Arka kanat (23), arka tampon (25) ve kanat altı panel (30) "stop lambası"; armalı sol ön
+   çamurluk (18) "siyah trim"; lastik ayrıldıktan sonra kalan çamurluk kenarları (3, 7) "siyah trim"
+   sayılıyordu. Hepsi gövdeye alındı. Fren diski bilerek lastikte kalır: döner, boyanmaz.
+2. *Temizlik adımı ince şeritleri siliyordu (bütün araçları etkiliyordu):* Maskeyi pürüzsüzleştiren
+   morfolojik kapamada genişletme UV adasının dışına taşamıyordu; daraltma adımı da 1–4 texel kalınlıktaki
+   panel kenarı şeritlerini tamamen yiyordu. Kaput çizgilerindeki kırmızı buydu. Artık kapama ve gürültü
+   temizliği yalnızca EKLER. Tamamen boyanan parçaların texel'leri korunur. Boyanan alan araç başına
+   %3–13 arttı (Ferrari %11,7 → %21,4). Görsel karşılaştırmada cama, lambaya ya da trime taşma yok.
+3. *Yumuşak engel:* Teker / trim parçasının boya rengindeki texel'i, gövdeyle paylaşıldığında artık engel
+   sayılmaz (yalnızca doygun boyalarda). Cam, far ve stop katı engel olarak kalır.
+
+Ayrıca doygun boyalarda kıvrımdaki koyu gölge (aynı ton, doygun) 5 oktava kadar boya sayılır.
+
+**Fluence:** Sol arka çamurluk + tavan çıtası (12) ve sağ tavan çıtası (28) "cam" sanılmıştı, gövdeye alındı.
+
+**GT3 sağ-ön lastik:** Lastiğin üstündeki ~80°'lik yay kaynakta hiç yok; teker dönünce boşluk alta
+geliyordu. Bunun için `optimize_car.gd` "fill_arc" adımı eklendi: eksik yay, karşı yayın 180° döndürülmüş
+kopyasıyla doldurulur. 22 aracın 88 lastiği açısal kapsama için tarandı; gerçek boşluk yalnızca buradaydı.
+
+**Araçlar:**
+- `tools/paint_preview.gd`: aracı bir renge boyayıp dört açıdan çizer.
+- `tools/mask_audit.gd`: boya renginde olup maskede boyanmayan üçgenleri parça ve rol bazında sayar.
+- `MASK_DEBUG=1 make_paint_mask.gd`: parça başına texel dağılımını döker.

@@ -897,9 +897,9 @@
       "scene_path": "res://assets/cars/ferrari_488_pista.tscn",
       "source_path": "res://assets/cars/source/ferrari_488_pista.glb",
       "optimized_path": "res://assets/cars/optimized/ferrari_488_pista.glb",
-      "default_color": "#C40003",
+      "default_color": "#C30003",
       "available_colors": [
-        "#C40003",
+        "#C30003",
         "#C2C4CC",
         "#F2F2EB",
         "#1F1F21",

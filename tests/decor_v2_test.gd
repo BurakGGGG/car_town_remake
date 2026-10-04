@@ -44,6 +44,7 @@ func _initialize() -> void:
 	_legacy()
 	_walls()
 	await _rules()
+	await _fading()
 	await _editor_tools()
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
@@ -210,8 +211,44 @@ func _rules() -> void:
 	await frames(2)
 
 
+func _fading() -> void:
+	print("== 7) OYUNDA ARACIN ÖNÜNDEKİ DUVAR YARI SAYDAM ==")
+	economy.set_money(1000000)
+	var bays: RepairBayManager = get_first_node_in_group("repair_bays")
+	var bay: Vector2 = bays.bay_position(0)
+	var cam: Camera3D = get_root().get_camera_3d()
+	var toward: Vector3 = cam.global_transform.basis.z
+	var flat: Vector2 = Vector2(toward.x, toward.z).normalized()
+	# Kameraya doğru ve tersine, alanın dışında kalan ilk geçerli kenarlar
+	var front: String = ""
+	var back: String = ""
+	for k: int in range(3, 30):
+		var p: Vector2 = bay + flat * (0.06 * k)
+		var key: String = DecorGrid.nearest_edge(p)
+		if front == "" and view.wall_edge_valid(key):
+			front = key
+		var q: Vector2 = bay - flat * (0.06 * k)
+		var key2: String = DecorGrid.nearest_edge(q)
+		if back == "" and view.wall_edge_valid(key2):
+			back = key2
+	check(front != "" and back != "", "alanın önünde ve arkasında boş kenar bulundu (%s / %s)" % [front, back])
+	decor.build_walls([front, back] as Array[String], &"wall_plain")
+	await frames(2)
+	var faded: Array = view.interior_walls().faded_keys()
+	check(faded.has(front), "kamerayla tamir alanı arasındaki duvar yarı saydam (%s)" % [faded])
+	check(not faded.has(back), "alanın arkasındaki duvar opak")
+	view.set_editing(true)
+	await frames(1)
+	check(view.interior_walls().faded_keys().is_empty(), "düzenleme modunda bütün duvarlar opak")
+	view.set_editing(false)
+	await frames(1)
+	check(view.interior_walls().faded_keys().has(front), "düzenlemeden çıkınca yeniden yarı saydam")
+	decor.reset()
+	await frames(2)
+
+
 func _editor_tools() -> void:
-	print("== 7) DÜZENLEYİCİ ARAÇLARI (ekran noktasıyla) ==")
+	print("== 8) DÜZENLEYİCİ ARAÇLARI (ekran noktasıyla) ==")
 	var router: UiRouter = (current_scene.find_child("HUD", true, false) as Hud).router
 	router.open(&"garage_edit")
 	await frames(30)
