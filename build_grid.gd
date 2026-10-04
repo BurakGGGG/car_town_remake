@@ -4,6 +4,11 @@ extends Node3D
 @export var width: int = 4
 @export var depth: int = 3
 @export var cell_size: float = 0.5
+## Dekorasyon v2: çizgiler düğümün +X / +Z köşesinden (garajın sabit ön-sağ köşesi) başlayıp `extent`
+## boyunca −X / −Z'ye sayılır ve garaj zemininde kırpılır. Böylece zemin karoları, iç duvarlar ve eşya
+## oturtma ile aynı çizgiler görünür ve garaj büyüyünce çizgiler kaymaz (bkz. world/decor_grid.gd).
+@export var anchor_corner: bool = false
+@export var extent: Vector2 = Vector2.ZERO
 
 func _ready():
 	create_grid()
@@ -23,6 +28,28 @@ func create_grid():
 	material.albedo_color = Color(0.16, 0.19, 0.23, 0.22)
 
 	mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
+
+	if anchor_corner and extent.x > 0.0 and extent.y > 0.0:
+		var hx: float = extent.x / 2.0
+		var hz: float = extent.y / 2.0
+		var k: int = 0
+		while hx - k * cell_size >= -hx - 1e-4:
+			var px: float = hx - k * cell_size
+			mesh.surface_add_vertex(Vector3(px, 0.02, -hz))
+			mesh.surface_add_vertex(Vector3(px, 0.02, hz))
+			k += 1
+		k = 0
+		while hz - k * cell_size >= -hz - 1e-4:
+			var pz: float = hz - k * cell_size
+			mesh.surface_add_vertex(Vector3(-hx, 0.02, pz))
+			mesh.surface_add_vertex(Vector3(hx, 0.02, pz))
+			k += 1
+		mesh.surface_end()
+		var anchored := MeshInstance3D.new()
+		anchored.name = "Grid"
+		anchored.mesh = mesh
+		add_child(anchored)
+		return
 
 	var total_width = width * cell_size
 	var total_depth = depth * cell_size

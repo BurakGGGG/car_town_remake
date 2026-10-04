@@ -419,6 +419,7 @@ func _connect_auto_save() -> void:
 	if _decor:
 		# Eşya yalnızca taşınınca / döndürülünce para değişmez: yerleşim ayrıca kaydı tetikler.
 		_decor.placement_changed.connect(request_save)
+		_decor.tiles_changed.connect(request_save)   # zemin karoları (dekorasyon v2) ayrı sinyalle gelir
 
 
 ## Kaydı DEBOUNCE saniye sonraya planlar; bu süre içinde gelen yeni istekler tek yazmada birleşir.

@@ -34,6 +34,14 @@ var wall_top: float = 0.4
 var wall_mount_y: float = 0.25
 ## Zemin eşyasının giremeyeceği yerler (tamir alanları, genişletme tabelası…), dünya X/Z.
 var obstacles: Array[Rect2] = []
+## İç duvar segmentlerinin zemin izleri (dekorasyon v2). Zemin eşyası ve tamir alanı bunlara binemez;
+## ayrı tutulur çünkü düzenleme modunda "yasak alan" örtüsüyle boyanmazlar (duvarın kendisi görünür).
+var wall_rects: Array[Rect2] = []
+## Duvar eşyası asılabilen İÇ DUVAR yüzleri (yalnızca kameraya bakan yüz, düz duvar koşuları):
+## {"id": String, "axis": &"x" | &"z" (yüzün uzandığı eksen), "plane": float (dik koordinat),
+##  "span": Vector2 (eksen boyunca aralık), "yaw": 0 (+Z'ye bakar) | 90 (+X'e bakar)}.
+## Dış duvarlar (arka / sol) bu listede değildir; aşağıdaki işlevler onları da "back" / "left" olarak katar.
+var inner_faces: Array[Dictionary] = []
 ## Görünen ızgaranın ilk çizgisi (dünya X/Z). Izgara garaj merkezine ortalanır ve göz sayısı
 ## yuvarlanır, yani çizgiler zemin kenarından BAŞLAMAZ (seviye 1'de 0,0375 içeride) — oturtma
 ## bu noktaya göre yapılmazsa eşya çizilen ızgaradan kaymış görünür.
@@ -94,32 +102,98 @@ func hits_obstacle(poly: PackedVector2Array) -> bool:
 	return false
 
 
+## Bu iz bir iç duvar segmentine biniyor mu?
+func hits_wall(poly: PackedVector2Array) -> bool:
+	for rect: Rect2 in wall_rects:
+		if overlaps(poly, rect_corners(rect)):
+			return true
+	return false
+
+
 # --- Duvar ---------------------------------------------------------------------------
 
-## Duvar eşyasının hangi duvara ve nereye oturacağı: zemindeki işaret noktasına EN YAKIN duvar.
-## Dönüş: {"wall": &"back"|&"left", "along": float, "yaw": float, "position": Vector3}.
+## Bütün asılabilir yüzler: dış arka ("back"), dış sol ("left") ve iç duvar yüzleri.
+func faces() -> Array[Dictionary]:
+	var out: Array[Dictionary] = [
+		{"id": "back", "axis": &"x", "plane": back_face_z, "span": back_span, "yaw": 0.0},
+		{"id": "left", "axis": &"z", "plane": left_face_x, "span": left_span, "yaw": 90.0},
+	]
+	out.append_array(inner_faces)
+	return out
+
+
+func face(id: String) -> Dictionary:
+	for f: Dictionary in faces():
+		if f["id"] == id:
+			return f
+	return {}
+
+
+## Zemin noktasının yüze uzaklığı: yüze dik mesafe + yüz aralığının dışında kalan kısım. İç yüz
+## yalnızca ÖNÜNDEN seçilir (arkası görünmez; arkasındaki noktaya en yakın yüz o değildir).
+static func _face_distance(f: Dictionary, near: Vector2) -> float:
+	var perp: float = (near.y if f["axis"] == &"x" else near.x) - float(f["plane"])
+	var along: float = near.x if f["axis"] == &"x" else near.y
+	var span: Vector2 = f["span"]
+	var outside: float = maxf(span.x - along, 0.0) + maxf(along - span.y, 0.0)
+	if f["id"] != "back" and f["id"] != "left" and perp < -0.02:
+		return INF
+	return absf(perp) + outside
+
+
+## Duvar eşyasının hangi yüze ve nereye oturacağı: zemindeki işaret noktasına EN YAKIN yüz.
+## Dönüş: {"wall": yüz kimliği, "along": float, "yaw": float, "position": Vector3}.
 func wall_mount(near: Vector2, width: float) -> Dictionary:
-	var side: StringName = &"back" if absf(near.y - back_face_z) <= absf(near.x - left_face_x) else &"left"
-	return mount_on(side, near.x if side == &"back" else near.y, width)
+	var best: Dictionary = {}
+	var best_d: float = INF
+	for f: Dictionary in faces():
+		if (f["span"] as Vector2).y - (f["span"] as Vector2).x < width - 1e-4:
+			continue   # eşya bu yüze sığmaz
+		var d: float = _face_distance(f, near)
+		if d < best_d:
+			best_d = d
+			best = f
+	if best.is_empty():
+		best = faces()[0]
+	return mount_on(best["id"], near.x if best["axis"] == &"x" else near.y, width)
 
 
-## Belirli duvara, duvar boyunca `along` noktasına asar (duvar aralığına sıkıştırılır).
-func mount_on(side: StringName, along: float, width: float) -> Dictionary:
-	if side == &"back":
-		var x: float = clampf(along, back_span.x + width * 0.5, back_span.y - width * 0.5)
-		return {"wall": &"back", "along": x, "yaw": 0.0,
-			"position": Vector3(x, wall_mount_y, back_face_z + WALL_OFFSET)}
-	var z: float = clampf(along, left_span.x + width * 0.5, left_span.y - width * 0.5)
-	return {"wall": &"left", "along": z, "yaw": 90.0,
-		"position": Vector3(left_face_x + WALL_OFFSET, wall_mount_y, z)}
+## Belirli yüze, yüz boyunca `along` noktasına asar (yüz aralığına sıkıştırılır).
+func mount_on(side: Variant, along: float, width: float) -> Dictionary:
+	var f: Dictionary = face(String(side))
+	if f.is_empty():
+		f = face("back")
+	var span: Vector2 = f["span"]
+	var a: float = clampf(along, span.x + width * 0.5, span.y - width * 0.5)
+	var id: Variant = StringName(f["id"]) if f["id"] == "back" or f["id"] == "left" else f["id"]
+	if f["axis"] == &"x":
+		return {"wall": id, "along": a, "yaw": 0.0,
+			"position": Vector3(a, wall_mount_y, float(f["plane"]) + WALL_OFFSET)}
+	return {"wall": id, "along": a, "yaw": 90.0,
+		"position": Vector3(float(f["plane"]) + WALL_OFFSET, wall_mount_y, a)}
 
 
-## Kayıtlı bir duvar eşyasını GÜNCEL duvara yeniden oturtur (garaj büyüyünce duvar geriye kayar;
+## Kayıtlı bir duvar eşyasının bulunduğu yüz: aynı yöndeki yüzlerden düzlemi konuma en yakın olan
+## (iç duvar düzlemi kalınlığın yarısı kadar öndedir; tolerans içinde eşleşir). Bulunamazsa dış duvar.
+func face_of(position: Vector3, yaw: float) -> Dictionary:
+	var axis: StringName = &"x" if wall_side(yaw) == &"back" else &"z"
+	var perp: float = position.z if axis == &"x" else position.x
+	var along: float = position.x if axis == &"x" else position.z
+	for f: Dictionary in inner_faces:
+		if f["axis"] != axis:
+			continue
+		var span: Vector2 = f["span"]
+		if absf(perp - (float(f["plane"]) + WALL_OFFSET)) < 0.008 and along >= span.x - 0.01 and along <= span.y + 0.01:
+			return f
+	return face("back" if axis == &"x" else "left")
+
+
+## Kayıtlı bir duvar eşyasını GÜNCEL yüzüne yeniden oturtur (garaj büyüyünce dış duvar geriye kayar;
 ## eşya havada kalmasın diye duvar boyunca konumu korunur, duvara dik bileşen yeniden hesaplanır).
-## Taraf yönden okunur, "en yakın duvar" kuralından değil: köşede yanlış duvara atlamasın.
+## Yüz yönden ve düzlemden okunur, "en yakın duvar" kuralından değil: köşede yanlış duvara atlamasın.
 func reattach_wall(position: Vector3, yaw: float, width: float) -> Vector3:
-	var side: StringName = wall_side(yaw)
-	return mount_on(side, position.x if side == &"back" else position.z, width)["position"]
+	var f: Dictionary = face_of(position, yaw)
+	return mount_on(f["id"], position.x if f["axis"] == &"x" else position.z, width)["position"]
 
 
 ## Duvar eşyasının duvardaki aralığı (1B): aynı duvardaki iki eşya bu aralıklarla çakışmamalı.

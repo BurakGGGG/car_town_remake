@@ -137,9 +137,10 @@ func _catalog() -> void:
 		var placement: StringName = GarageDecor.placement(id)
 		if String(item.get("title", "")) == "" or int(item["price"]) <= 0 or int(item["value"]) <= 0 \
 				or int(item["value"]) >= int(item["price"]) or int(item["min_rank"]) < 1 \
-				or not [GarageDecor.PLACE_FLOOR, GarageDecor.PLACE_WALL, GarageDecor.PLACE_SURFACE].has(placement):
+				or not [GarageDecor.PLACE_FLOOR, GarageDecor.PLACE_WALL, GarageDecor.PLACE_SURFACE,
+					GarageDecor.PLACE_TILE, GarageDecor.PLACE_EDGE].has(placement):
 			bad.append(String(id))
-		elif not GarageDecor.is_surface(id):
+		elif not GarageDecor.is_surface(id) and not GarageDecor.is_pattern(id):
 			var size: Vector3 = DecorBuilder.local_size(id)   # boyut veriden değil modelden ölçülür
 			if size.x <= 0.0 or size.y <= 0.0 or size.z <= 0.0:
 				bad.append(String(id) + " (model ölçülemedi)")
@@ -701,7 +702,9 @@ func _migration() -> void:
 		"seviyesi açılmamış yuvadaki (%s) kanepe depoda" % closed_slot)
 	var clock: Array[Dictionary] = decor.instances().filter(func(i: Dictionary) -> bool: return i["item"] == CLOCK)
 	check(24, clock.size() == 1 and view.body_of(clock[0]["iid"]) != null, "pano yuvasındaki saat duvarda")
-	check(24, decor.surface(DecorManager.SURFACE_FLOOR) == &"floor_tile", "zemin yuvası → zemin kaplaması")
+	check(24, decor.surface(DecorManager.SURFACE_FLOOR) == &"" and decor.tile(Vector2i(0, 0)) == &"tile_grey"
+		and decor.tile_count() == DecorGrid.MAX_COLS * DecorGrid.MAX_ROWS,
+		"zemin yuvası → (v1 kaplaması) → dekorasyon v2'de bütün karolar aynı desen (%d göz)" % decor.tile_count())
 	var iids: Dictionary = {}
 	for inst: Dictionary in decor.instances():
 		iids[inst["iid"]] = true

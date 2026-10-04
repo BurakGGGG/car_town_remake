@@ -20,6 +20,9 @@ const WORLD_SCALE: float = DecorBuilder.PLACER_SCALE
 const MIN_PICK: float = 0.16
 ## Tamir alanı çevresinde bırakılan pay (park eden araç alanın biraz dışına taşıyor).
 const OBSTACLE_MARGIN: float = 0.03
+## İç duvar, dış duvara bu kadardan yakın paralel örülemez (iki duvar üst üste binerdi).
+const WALL_CLEARANCE: float = 0.04
+const FLOOR_SHADER: Shader = preload("res://vfx/floor_tiles.gdshader")
 
 signal area_changed
 
@@ -34,6 +37,12 @@ var _blocked: Node3D
 ## izi engel sayılmasın diye ayrı tutulur.
 var _fixed_obstacles: Array[Rect2] = []
 var _content_top: float = 0.4
+## Dekorasyon v2: zemin karoları (tek shader + veri dokusu) ve iç duvarlar.
+var _walls: InteriorWalls
+var _floor_mat: ShaderMaterial
+var _tile_image: Image
+var _tile_texture: ImageTexture
+var _pattern_ids: Array[StringName] = []
 
 
 func _ready() -> void:
@@ -42,6 +51,8 @@ func _ready() -> void:
 	_root = Node3D.new()
 	_root.name = "DecorBodies"
 	add_child(_root)
+	_walls = InteriorWalls.new()
+	add_child(_walls)
 	_connect.call_deferred()
 
 
@@ -50,6 +61,9 @@ func _connect() -> void:
 	_decor = get_tree().get_first_node_in_group("decor") as DecorManager
 	if _decor and not _decor.placement_changed.is_connected(refresh):
 		_decor.placement_changed.connect(refresh)
+	if _decor and not _decor.tiles_changed.is_connected(_update_tiles):
+		_decor.tiles_changed.connect(_update_tiles)
+	_setup_floor()
 	var upgrades: GarageUpgradeManager = get_tree().get_first_node_in_group("garage_upgrades") as GarageUpgradeManager
 	if upgrades and not upgrades.levels_changed.is_connected(refresh):
 		upgrades.levels_changed.connect(refresh)
@@ -127,13 +141,15 @@ func _rebuild_area() -> void:
 			fixed.append(rect.grow(OBSTACLE_MARGIN))
 	a.obstacles = obstacles
 	_fixed_obstacles = fixed
-	a.grid_origin = Vector2(a.floor_rect.position)
-	var grid: Node3D = _garage.get_node_or_null("BuildGrid/BuildGrid") as Node3D if _garage else null
-	if grid and grid.is_inside_tree():
-		var cell: float = float(grid.get("cell_size"))
-		var g: Vector3 = grid.global_position
-		a.grid_origin = Vector2(g.x - int(grid.get("width")) * cell * 0.5,
-			g.z - int(grid.get("depth")) * cell * 0.5)
+	# Izgara sabit ön-sağ köşeye bağlı (DecorGrid): karolar, duvarlar ve eşya oturtma aynı çizgileri kullanır
+	a.grid_origin = DecorGrid.CORNER
+	if _decor:
+		var walls: Dictionary = _decor.walls()
+		for key: String in walls:
+			var seg: Dictionary = InteriorWalls.segment(key, walls, wall_clip(a), false)
+			if not seg.is_empty():
+				a.wall_rects.append(_seg_rect(seg))
+		a.inner_faces = _inner_faces(walls, a)
 	_area = a
 
 
@@ -158,6 +174,8 @@ func refresh() -> void:
 		return
 	_rebuild_area()
 	_apply_surfaces()
+	if _walls:
+		_walls.rebuild(_decor.walls(), _area.floor_y, _area.wall_top, wall_clip())
 	var alive: Dictionary = {}
 	for inst: Dictionary in _decor.instances():
 		var iid: String = inst["iid"]
@@ -250,7 +268,7 @@ func is_valid(item: StringName, pos: Vector3, yaw: float, ignore: String = "") -
 	if GarageDecor.placement(item) == GarageDecor.PLACE_WALL:
 		return _wall_valid(item, pos, yaw, ignore)
 	var poly: PackedVector2Array = footprint(item, pos, yaw)
-	if not _area.inside_floor(poly) or _area.hits_obstacle(poly):
+	if not _area.inside_floor(poly) or _area.hits_obstacle(poly) or _area.hits_wall(poly):
 		return false
 	for inst: Dictionary in _decor.instances():
 		if inst["iid"] == ignore or GarageDecor.placement(inst["item"]) == GarageDecor.PLACE_WALL:
@@ -266,7 +284,7 @@ func is_valid(item: StringName, pos: Vector3, yaw: float, ignore: String = "") -
 ## görünen tamir alanına ya da zemin eşyasına binmeden. `index` taşınan alanın kendisidir.
 func is_bay_valid(index: int, pos: Vector2, yaw: float) -> bool:
 	var poly: PackedVector2Array = DecorArea.corners(pos, RepairBayManager.BAY_SIZE, yaw)
-	if not _area.inside_floor(poly):
+	if not _area.inside_floor(poly) or _area.hits_wall(poly):
 		return false
 	for rect: Rect2 in _fixed_obstacles:
 		if DecorArea.overlaps(poly, DecorArea.rect_corners(rect)):
@@ -316,8 +334,8 @@ static func bay_index_of(iid: String) -> int:
 
 func _wall_valid(item: StringName, pos: Vector3, yaw: float, ignore: String) -> bool:
 	var width: float = wall_width(item)
-	var side: StringName = DecorArea.wall_side(yaw)
-	var span: Vector2 = _area.back_span if side == &"back" else _area.left_span
+	var f: Dictionary = _area.face_of(pos, yaw)
+	var span: Vector2 = f["span"]
 	var mine: Vector2 = DecorArea.wall_interval(pos, yaw, width)
 	if mine.x < span.x - 1e-4 or mine.y > span.y + 1e-4:
 		return false
@@ -325,7 +343,8 @@ func _wall_valid(item: StringName, pos: Vector3, yaw: float, ignore: String) -> 
 		if inst["iid"] == ignore or GarageDecor.placement(inst["item"]) != GarageDecor.PLACE_WALL:
 			continue
 		var other_yaw: float = float((inst["rot"] as Vector3).y)
-		if DecorArea.wall_side(other_yaw) != side:
+		if String(_area.face_of(_area.reattach_wall(inst["pos"], other_yaw, wall_width(inst["item"])),
+				other_yaw)["id"]) != String(f["id"]):
 			continue
 		var other: Vector2 = DecorArea.wall_interval(
 			_area.reattach_wall(inst["pos"], other_yaw, wall_width(inst["item"])), other_yaw,
@@ -468,17 +487,246 @@ func grid_cell() -> float:
 func _apply_surfaces() -> void:
 	if _garage == null or _decor == null:
 		return
-	var floor_id: StringName = _decor.surface(DecorManager.SURFACE_FLOOR)
 	var floor_node: Node = _garage.get_node_or_null("Floor/GarageFloor")
-	if floor_node is GeometryInstance3D:
-		(floor_node as GeometryInstance3D).material_override = \
-				DecorBuilder.floor_material(floor_id) if floor_id != &"" else null
+	if floor_node is GeometryInstance3D and _floor_mat:
+		(floor_node as GeometryInstance3D).material_override = _floor_mat
 	var wall_id: StringName = _decor.surface(DecorManager.SURFACE_WALL)
 	for path: String in ["Walls/GarageLeftWall", "Walls/GarageBackWall"]:
 		var node: Node = _garage.get_node_or_null(path)
 		if node is GeometryInstance3D:
 			(node as GeometryInstance3D).material_override = \
-					DecorBuilder.wall_material(wall_id) if wall_id != &"" else null
+					DecorTextures.wall_material(wall_id) if wall_id != &"" else null
+
+
+# --- Zemin karoları --------------------------------------------------------------------
+
+## Zemin shader'ını kurar: desen dizisi katalog sırasıyla, varsayılan renk sahnedeki zeminden okunur.
+func _setup_floor() -> void:
+	if _floor_mat != null or _garage == null:
+		return
+	_pattern_ids.clear()
+	for item: Dictionary in GarageDecor.items_in(GarageDecor.Kind.FLOOR_PATTERN):
+		_pattern_ids.append(item["id"])
+	_floor_mat = ShaderMaterial.new()
+	_floor_mat.shader = FLOOR_SHADER
+	_floor_mat.set_shader_parameter(&"patterns", DecorTextures.pattern_array(_pattern_ids))
+	var rough: PackedFloat32Array = PackedFloat32Array()
+	var metal: PackedFloat32Array = PackedFloat32Array()
+	rough.resize(32)
+	metal.resize(32)
+	for k: int in mini(_pattern_ids.size(), 32):
+		var sm: Vector2 = DecorTextures.pattern_surface(_pattern_ids[k])
+		rough[k] = sm.x
+		metal[k] = sm.y
+	_floor_mat.set_shader_parameter(&"roughness_of", rough)
+	_floor_mat.set_shader_parameter(&"metallic_of", metal)
+	_floor_mat.set_shader_parameter(&"corner", DecorGrid.CORNER)
+	_floor_mat.set_shader_parameter(&"cell", DecorGrid.CELL)
+	_floor_mat.set_shader_parameter(&"grid_size", Vector2(DecorGrid.MAX_COLS, DecorGrid.MAX_ROWS))
+	var floor_node: GeometryInstance3D = _garage.get_node_or_null("Floor/GarageFloor") as GeometryInstance3D
+	if floor_node and floor_node.material_override is StandardMaterial3D:
+		_floor_mat.set_shader_parameter(&"base_color",
+			(floor_node.material_override as StandardMaterial3D).albedo_color)
+	_tile_image = Image.create(DecorGrid.MAX_COLS, DecorGrid.MAX_ROWS, false, Image.FORMAT_R8)
+	_tile_texture = ImageTexture.create_from_image(_tile_image)
+	_floor_mat.set_shader_parameter(&"tile_index", _tile_texture)
+	_update_tiles()
+
+
+## Karo veri dokusunu DecorManager'dan yeniden yazar (32 × 21 bayt; boyama başına bir kez).
+func _update_tiles() -> void:
+	if _tile_image == null or _decor == null:
+		return
+	_tile_image.fill(Color(0, 0, 0))
+	var tiles: Dictionary = _decor.tiles()
+	for cell: Vector2i in tiles:
+		var k: int = _pattern_ids.find(tiles[cell])
+		if k >= 0 and DecorGrid.in_bounds(cell):
+			_tile_image.set_pixel(cell.x, cell.y, Color8(k + 1, 0, 0))
+	_tile_texture.update(_tile_image)
+
+
+## Boyama önizlemesi: bu göz dikdörtgeni (dahil) zeminde vurgulanır. Boş dikdörtgen = kapalı.
+func set_tile_preview(from: Vector2i, to: Vector2i, active: bool) -> void:
+	if _floor_mat == null:
+		return
+	if not active:
+		_floor_mat.set_shader_parameter(&"preview_rect", Vector4(-1, -1, -2, -2))
+		return
+	_floor_mat.set_shader_parameter(&"preview_rect", Vector4(mini(from.x, to.x), mini(from.y, to.y),
+		maxi(from.x, to.x), maxi(from.y, to.y)))
+
+
+## Bu göz boyanabilir mi? (Garaj zemininin içinde kalan ya da ona değen gözler.)
+func tile_valid(cell: Vector2i) -> bool:
+	if not DecorGrid.in_bounds(cell):
+		return false
+	var lot: Rect2 = lot_rect()
+	var r: Rect2 = DecorGrid.cell_rect(cell)
+	return r.end.x > lot.position.x + 0.01 and r.end.y > lot.position.y + 0.01 \
+		and r.position.x < lot.end.x - 0.001 and r.position.y < lot.end.y - 0.001
+
+
+## Zemindeki noktanın gözü (garaj dışındaysa Vector2i(-1, -1)).
+func tile_at(ground: Vector2) -> Vector2i:
+	var c: Vector2i = DecorGrid.cell_of(ground)
+	return c if tile_valid(c) else Vector2i(-1, -1)
+
+
+## Kova: aynı desenli, birbirine komşu gözleri doldurur; iç duvarlar sınırdır (oda doldurma).
+func flood_cells(start: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	if not tile_valid(start) or _decor == null:
+		return out
+	var target: StringName = _decor.tile(start)
+	var walls: Dictionary = _decor.walls()
+	var seen: Dictionary = {start: true}
+	var queue: Array[Vector2i] = [start]
+	while not queue.is_empty():
+		var c: Vector2i = queue.pop_back()
+		out.append(c)
+		for step: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var n: Vector2i = c + step
+			if seen.has(n) or not tile_valid(n) or _decor.tile(n) != target:
+				continue
+			if walls.has(_edge_between(c, n)):
+				continue
+			seen[n] = true
+			queue.append(n)
+	return out
+
+
+## İki komşu gözü ayıran kenarın anahtarı.
+static func _edge_between(a: Vector2i, b: Vector2i) -> String:
+	if a.x != b.x:   # yan yana (x'te): aradaki dikey çizgi = x-çizgisi max(a.x, b.x), z boyunca
+		return DecorGrid.edge_key(&"z", maxi(a.x, b.x), a.y)
+	return DecorGrid.edge_key(&"x", a.x, maxi(a.y, b.y))
+
+
+# --- İç duvarlar -----------------------------------------------------------------------
+
+func interior_walls() -> InteriorWalls:
+	return _walls
+
+
+## Segmentlerin kırpıldığı dikdörtgen: dış duvarların iç yüzlerinden garajın açık ön / sağ kenarına.
+func wall_clip(a: DecorArea = null) -> Rect2:
+	var area: DecorArea = a if a else _area
+	var lot: Rect2 = lot_rect()
+	return Rect2(Vector2(area.left_face_x, area.back_face_z),
+		Vector2(lot.end.x - area.left_face_x, lot.end.y - area.back_face_z))
+
+
+static func _seg_rect(seg: Dictionary) -> Rect2:
+	var t: float = InteriorWalls.THICKNESS
+	if seg["axis"] == &"x":
+		return Rect2(Vector2(seg["from"], float(seg["line"]) - t * 0.5), Vector2(float(seg["to"]) - float(seg["from"]), t))
+	return Rect2(Vector2(float(seg["line"]) - t * 0.5, seg["from"]), Vector2(t, float(seg["to"]) - float(seg["from"])))
+
+
+## Duvar eşyası asılabilen iç yüzler: aynı çizgideki ardışık DÜZ duvar segmentleri tek yüz olur.
+func _inner_faces(walls: Dictionary, a: DecorArea) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var clip: Rect2 = wall_clip(a)
+	var lines: Dictionary = {}   # "x:b" / "z:a" → [[from, to], ...]
+	for key: String in walls:
+		if (walls[key] as Dictionary)["piece"] != &"wall_plain":
+			continue
+		var seg: Dictionary = InteriorWalls.segment(key, walls, clip, false)
+		if seg.is_empty():
+			continue
+		var line_key: String = "%s:%.4f" % [seg["axis"], seg["line"]]
+		if not lines.has(line_key):
+			lines[line_key] = []
+		(lines[line_key] as Array).append([float(seg["from"]), float(seg["to"]), seg["axis"], float(seg["line"])])
+	for line_key: String in lines:
+		var parts: Array = lines[line_key]
+		parts.sort_custom(func(p: Array, q: Array) -> bool: return float(p[0]) < float(q[0]))
+		var start: float = parts[0][0]
+		var end: float = parts[0][1]
+		for i: int in range(1, parts.size() + 1):
+			if i < parts.size() and float(parts[i][0]) <= end + 1e-3:
+				end = maxf(end, float(parts[i][1]))
+				continue
+			var axis: StringName = parts[0][2]
+			var plane: float = float(parts[0][3]) + InteriorWalls.THICKNESS * 0.5
+			out.append({"id": "%s@%.4f:%.4f" % [axis, plane, start], "axis": axis, "plane": plane,
+				"span": Vector2(start, end), "yaw": 0.0 if axis == &"x" else 90.0})
+			if i < parts.size():
+				start = parts[i][0]
+				end = parts[i][1]
+	return out
+
+
+## Bu kenara duvar örülebilir mi? Kenar garajın içinde (dış duvara paralel çok yakın değil), tamir
+## alanı / kasa / zemin eşyası izine binmiyor. Kenarın başka parçayla değiştirilmesi serbesttir.
+func wall_edge_valid(key: String) -> bool:
+	if _decor == null:
+		return false
+	var e: Dictionary = DecorGrid.parse_edge(key)
+	if e.is_empty() or int(e["a"]) < 0 or int(e["b"]) < 0:
+		return false
+	var seg: Dictionary = InteriorWalls.segment(key, {}, wall_clip(), false)
+	if seg.is_empty():
+		return false
+	var line: float = seg["line"]
+	if seg["axis"] == &"x":
+		if line < _area.back_face_z + WALL_CLEARANCE or line > DecorGrid.CORNER.y + 1e-4:
+			return false
+	elif line < _area.left_face_x + WALL_CLEARANCE or line > DecorGrid.CORNER.x + 1e-4:
+		return false
+	var poly: PackedVector2Array = DecorArea.rect_corners(_seg_rect(seg).grow(-0.002))
+	if _area.hits_obstacle(poly):
+		return false
+	for inst: Dictionary in _decor.instances():
+		if GarageDecor.placement(inst["item"]) == GarageDecor.PLACE_WALL:
+			continue
+		if DecorArea.overlaps(poly, footprint(inst["item"], inst["pos"], float((inst["rot"] as Vector3).y))):
+			return false
+	return true
+
+
+## Bu segmentlerin üstünde asılı duvar eşyaları (sökülmeden önce kaldırılmalı).
+func items_on_walls(keys: Array[String]) -> Array[String]:
+	var out: Array[String] = []
+	if _decor == null:
+		return out
+	var walls: Dictionary = _decor.walls()
+	for inst: Dictionary in _decor.instances():
+		if GarageDecor.placement(inst["item"]) != GarageDecor.PLACE_WALL:
+			continue
+		var yaw: float = float((inst["rot"] as Vector3).y)
+		var pos: Vector3 = inst["pos"]
+		var f: Dictionary = _area.face_of(pos, yaw)
+		if f["id"] == "back" or f["id"] == "left":
+			continue
+		var mine: Vector2 = DecorArea.wall_interval(pos, yaw, wall_width(inst["item"]))
+		for key: String in keys:
+			var seg: Dictionary = InteriorWalls.segment(key, walls, wall_clip(), false)
+			if seg.is_empty() or seg["axis"] != f["axis"] \
+					or absf(float(seg["line"]) + InteriorWalls.THICKNESS * 0.5 - float(f["plane"])) > 0.004:
+				continue
+			if mine.x < float(seg["to"]) - 1e-3 and float(seg["from"]) < mine.y - 1e-3:
+				out.append(inst["iid"])
+				break
+	return out
+
+
+## Ekran noktasındaki duvar: iç segment anahtarı, dış duvar ise "back" / "left", hiçbiri ise "".
+func pick_wall(camera: Camera3D, screen: Vector2) -> String:
+	var origin: Vector3 = camera.project_ray_origin(screen)
+	var dir: Vector3 = camera.project_ray_normal(screen)
+	var key: String = _walls.pick(origin, dir) if _walls else ""
+	var best_t: float = _ray_box(origin, dir, _walls.box_of(key).grow(0.012)) if key != "" else INF
+	for pair: Array in [["back", "Walls/GarageBackWall"], ["left", "Walls/GarageLeftWall"]]:
+		var node: Node3D = _garage.get_node_or_null(pair[1]) as Node3D if _garage else null
+		if node == null:
+			continue
+		var t: float = _ray_box(origin, dir, _tree_box(node))
+		if t < best_t:
+			best_t = t
+			key = pair[0]
+	return key
 
 
 # --- Yardımcılar ----------------------------------------------------------------------

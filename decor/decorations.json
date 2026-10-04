@@ -3,12 +3,14 @@
   "_readme": [
     "GARAJ DEKORASYONU KATALOĞU — tek kaynak (gameplay/garage_decor.gd okur).",
     "Yeni eşya = buraya bir kayıt + assets/decor/<id>.glb (ya da scene_path). Başka kod gerekmez.",
-    "kind: floor_surface | wall_surface | workshop | lounge | wall_item | yard | plant (palet kategorileri)",
-    "placement: floor (zemine) | wall (duvara) | surface (zemin/duvar kaplaması, yerleştirilmez uygulanır)",
+    "kind: floor_pattern | wall_piece | floor_surface | wall_surface | workshop | lounge | wall_item | yard | plant (palet kategorileri)",
+    "placement: floor (zemine) | wall (duvara) | surface (kaplama, uygulanır) | tile (zemin karosu, göze boyanır) | edge (iç duvar, ızgara kenarına örülür)",
     "value: garaj değerine katkı (adet başına, fiyatın ~%40'ı). min_rank: garaj rütbesi kilidi.",
     "İsteğe bağlı: scene_path (varsayılan assets/decor/<id>.glb), rotation_step (derece),",
     "functional + gameplay_scene (işlevli eşya: gövdeyle aynı dönüşümü paylaşan oyun düğümü).",
-    "Boyut YAZILMAZ: yerleşim izi modelin gerçek sınırlarından ölçülür (elle yazılan boyut kayar)."
+    "Boyut YAZILMAZ: yerleşim izi modelin gerçek sınırlarından ölçülür (elle yazılan boyut kayar).",
+    "floor_pattern: price/value GÖZ BAŞINA (her boyanan karo ücretlidir, silmek ücretsiz). wall_piece: adet başına, depoya döner.",
+    "retired: true → mağazada / paletten kalkar, eski kayıttaki kopya yüklenir (floor_surface → karolara taşındı)."
   ],
   "defaults": {
     "rotation_step": 45,
@@ -23,7 +25,8 @@
       "price": 6000,
       "value": 2400,
       "min_rank": 1,
-      "desc": "Açık gri karo. Avluyu aydınlatır."
+      "desc": "Açık gri karo. Avluyu aydınlatır.",
+      "retired": true
     },
     {
       "id": "floor_epoxy",
@@ -33,11 +36,12 @@
       "price": 22000,
       "value": 8800,
       "min_rank": 3,
-      "desc": "Koyu asfalt kaplama. Profesyonel görünüm."
+      "desc": "Koyu asfalt kaplama. Profesyonel görünüm.",
+      "retired": true
     },
     {
       "id": "wall_brick",
-      "title": "TUĞLA DUVAR",
+      "title": "KIRMIZI TUĞLA",
       "kind": "wall_surface",
       "placement": "surface",
       "price": 9000,
@@ -47,7 +51,7 @@
     },
     {
       "id": "wall_panel",
-      "title": "PANEL DUVAR",
+      "title": "BEYAZ PANEL",
       "kind": "wall_surface",
       "placement": "surface",
       "price": 30000,
@@ -755,6 +759,656 @@
       "min_rank": 7,
       "desc": "İki sütunlu hidrolik lift.",
       "retired": true
+    },
+    {
+      "id": "tile_grey",
+      "title": "AÇIK GRİ KARO",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 60,
+      "value": 24,
+      "min_rank": 1,
+      "desc": "İnce derzli açık gri karo."
+    },
+    {
+      "id": "concrete_light",
+      "title": "AÇIK BETON",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 50,
+      "value": 20,
+      "min_rank": 1,
+      "desc": "Pürüzlü açık beton."
+    },
+    {
+      "id": "concrete_dark",
+      "title": "KOYU BETON",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 50,
+      "value": 20,
+      "min_rank": 1,
+      "desc": "Koyu atölye betonu."
+    },
+    {
+      "id": "asphalt",
+      "title": "ASFALT",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 80,
+      "value": 32,
+      "min_rank": 1,
+      "desc": "Koyu asfalt kaplama."
+    },
+    {
+      "id": "tile_white",
+      "title": "BEYAZ FAYANS",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 120,
+      "value": 48,
+      "min_rank": 2,
+      "desc": "Üçe üç beyaz fayans."
+    },
+    {
+      "id": "checker_bw",
+      "title": "SİYAH-BEYAZ DAMA",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 150,
+      "value": 60,
+      "min_rank": 2,
+      "desc": "Küçük kareli klasik dama."
+    },
+    {
+      "id": "checker_bw_big",
+      "title": "BÜYÜK DAMA",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 150,
+      "value": 60,
+      "min_rank": 2,
+      "desc": "İri kareli siyah-beyaz dama."
+    },
+    {
+      "id": "checker_blue",
+      "title": "MAVİ DAMA",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 180,
+      "value": 72,
+      "min_rank": 2,
+      "desc": "Mavi-siyah dama."
+    },
+    {
+      "id": "checker_red",
+      "title": "KIRMIZI DAMA",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 180,
+      "value": 72,
+      "min_rank": 2,
+      "desc": "Kırmızı-siyah dama."
+    },
+    {
+      "id": "rubber",
+      "title": "KAUÇUK MAT",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 140,
+      "value": 56,
+      "min_rank": 2,
+      "desc": "Kabartmalı kauçuk zemin."
+    },
+    {
+      "id": "hazard",
+      "title": "TEHLİKE ŞERİDİ",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 160,
+      "value": 64,
+      "min_rank": 2,
+      "desc": "Sarı-siyah çapraz şerit."
+    },
+    {
+      "id": "wood_light",
+      "title": "AÇIK PARKE",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 200,
+      "value": 80,
+      "min_rank": 3,
+      "desc": "Açık renk ahşap parke."
+    },
+    {
+      "id": "wood_dark",
+      "title": "KOYU PARKE",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 220,
+      "value": 88,
+      "min_rank": 3,
+      "desc": "Koyu ceviz parke."
+    },
+    {
+      "id": "epoxy_grey",
+      "title": "GRİ EPOKSİ",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 200,
+      "value": 80,
+      "min_rank": 3,
+      "desc": "Parlak gri epoksi."
+    },
+    {
+      "id": "epoxy_blue",
+      "title": "MAVİ EPOKSİ",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 240,
+      "value": 96,
+      "min_rank": 3,
+      "desc": "Parlak mavi epoksi."
+    },
+    {
+      "id": "epoxy_red",
+      "title": "KIRMIZI EPOKSİ",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 240,
+      "value": 96,
+      "min_rank": 3,
+      "desc": "Parlak kırmızı epoksi."
+    },
+    {
+      "id": "race_stripe",
+      "title": "YARIŞ ŞERİDİ",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 200,
+      "value": 80,
+      "min_rank": 3,
+      "desc": "Koyu zeminde çift beyaz şerit."
+    },
+    {
+      "id": "diamond_silver",
+      "title": "ELMAS SAC",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 260,
+      "value": 104,
+      "min_rank": 4,
+      "desc": "Gümüş kabartmalı sac."
+    },
+    {
+      "id": "diamond_black",
+      "title": "SİYAH ELMAS SAC",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 280,
+      "value": 112,
+      "min_rank": 4,
+      "desc": "Siyah kabartmalı sac."
+    },
+    {
+      "id": "carbon",
+      "title": "KARBON",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 320,
+      "value": 128,
+      "min_rank": 4,
+      "desc": "Karbon fiber örgü."
+    },
+    {
+      "id": "wall_plain",
+      "title": "DÜZ DUVAR",
+      "kind": "wall_piece",
+      "placement": "edge",
+      "price": 400,
+      "value": 160,
+      "min_rank": 1,
+      "desc": "Tam boy düz duvar parçası."
+    },
+    {
+      "id": "wall_half",
+      "title": "YARIM DUVAR",
+      "kind": "wall_piece",
+      "placement": "edge",
+      "price": 300,
+      "value": 120,
+      "min_rank": 1,
+      "desc": "Bel hizasında alçak duvar."
+    },
+    {
+      "id": "wall_door",
+      "title": "KAPILI DUVAR",
+      "kind": "wall_piece",
+      "placement": "edge",
+      "price": 1500,
+      "value": 600,
+      "min_rank": 1,
+      "desc": "İçinde kapı olan duvar parçası."
+    },
+    {
+      "id": "wall_arch",
+      "title": "AÇIK GEÇİT",
+      "kind": "wall_piece",
+      "placement": "edge",
+      "price": 900,
+      "value": 360,
+      "min_rank": 2,
+      "desc": "Üstü kapalı, altı açık geçit."
+    },
+    {
+      "id": "wall_window",
+      "title": "PENCERELİ DUVAR",
+      "kind": "wall_piece",
+      "placement": "edge",
+      "price": 1800,
+      "value": 720,
+      "min_rank": 2,
+      "desc": "Alt yarısı duvar, üstü cam."
+    },
+    {
+      "id": "wall_glass",
+      "title": "CAM BÖLME",
+      "kind": "wall_piece",
+      "placement": "edge",
+      "price": 2500,
+      "value": 1000,
+      "min_rank": 3,
+      "desc": "Çerçeveli tam boy cam."
+    },
+    {
+      "id": "wall_plaster",
+      "title": "BEYAZ SIVA",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 4000,
+      "value": 1600,
+      "min_rank": 1,
+      "desc": "Temiz beyaz sıva."
+    },
+    {
+      "id": "wall_block",
+      "title": "BETON BLOK",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 7000,
+      "value": 2800,
+      "min_rank": 1,
+      "desc": "Derzli beton blok."
+    },
+    {
+      "id": "wall_yellow",
+      "title": "SARI BOYA",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 8000,
+      "value": 3200,
+      "min_rank": 1,
+      "desc": "Canlı sarı boya."
+    },
+    {
+      "id": "wall_blue",
+      "title": "MAVİ BOYA",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 8000,
+      "value": 3200,
+      "min_rank": 1,
+      "desc": "Koyu mavi boya."
+    },
+    {
+      "id": "wall_red",
+      "title": "KIRMIZI BOYA",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 8000,
+      "value": 3200,
+      "min_rank": 1,
+      "desc": "Yarış kırmızısı boya."
+    },
+    {
+      "id": "wall_brick_grey",
+      "title": "GRİ TUĞLA",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 9000,
+      "value": 3600,
+      "min_rank": 2,
+      "desc": "Gri endüstriyel tuğla."
+    },
+    {
+      "id": "wall_black",
+      "title": "SİYAH DUVAR",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 12000,
+      "value": 4800,
+      "min_rank": 2,
+      "desc": "Mat siyah boya."
+    },
+    {
+      "id": "wall_metal",
+      "title": "OLUKLU SAC",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 14000,
+      "value": 5600,
+      "min_rank": 2,
+      "desc": "Galvaniz oluklu sac."
+    },
+    {
+      "id": "wall_tile",
+      "title": "BEYAZ FAYANS DUVAR",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 15000,
+      "value": 6000,
+      "min_rank": 3,
+      "desc": "Beyaz fayans kaplama."
+    },
+    {
+      "id": "wall_wood",
+      "title": "AHŞAP LAMBRİ",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 16000,
+      "value": 6400,
+      "min_rank": 3,
+      "desc": "Yatay ahşap lambri."
+    },
+    {
+      "id": "wall_checker",
+      "title": "DAMALI DUVAR",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 22000,
+      "value": 8800,
+      "min_rank": 4,
+      "desc": "Siyah-beyaz dama kaplama."
+    },
+    {
+      "id": "sign_oil",
+      "title": "YAĞ TABELASI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 6000,
+      "value": 2400,
+      "min_rank": 1,
+      "desc": "Emaye motor yağı tabelası."
+    },
+    {
+      "id": "sign_service",
+      "title": "SERVİS TABELASI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 7500,
+      "value": 3000,
+      "min_rank": 1,
+      "desc": "Anahtarlı servis levhası."
+    },
+    {
+      "id": "sign_no_entry",
+      "title": "GİRİLMEZ LEVHASI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 4500,
+      "value": 1800,
+      "min_rank": 1,
+      "desc": "Kırmızı yuvarlak giriş yasağı."
+    },
+    {
+      "id": "sign_street",
+      "title": "SOKAK TABELASI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 5500,
+      "value": 2200,
+      "min_rank": 1,
+      "desc": "Mavi emaye sokak levhası."
+    },
+    {
+      "id": "sign_arrows",
+      "title": "YÖN OKLARI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 6500,
+      "value": 2600,
+      "min_rank": 2,
+      "desc": "Üç sarı ok levhası."
+    },
+    {
+      "id": "poster_red",
+      "title": "KIRMIZI POSTER",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 7000,
+      "value": 2800,
+      "min_rank": 1,
+      "desc": "Kırmızı yarış arabası posteri."
+    },
+    {
+      "id": "poster_blue",
+      "title": "MAVİ POSTER",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 7000,
+      "value": 2800,
+      "min_rank": 1,
+      "desc": "Mavi rali posteri."
+    },
+    {
+      "id": "poster_vintage",
+      "title": "KLASİK POSTER",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 9000,
+      "value": 3600,
+      "min_rank": 2,
+      "desc": "Krem zeminli klasik araç posteri."
+    },
+    {
+      "id": "neon_bolt",
+      "title": "NEON ŞİMŞEK",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 28000,
+      "value": 11200,
+      "min_rank": 4,
+      "desc": "Sarı neon şimşek."
+    },
+    {
+      "id": "neon_open",
+      "title": "NEON 'OPEN'",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 32000,
+      "value": 12800,
+      "min_rank": 4,
+      "desc": "Kırmızı-mavi neon açık tabelası."
+    },
+    {
+      "id": "neon_flag",
+      "title": "NEON BAYRAK",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 34000,
+      "value": 13600,
+      "min_rank": 5,
+      "desc": "Damalı bayrak neonu."
+    },
+    {
+      "id": "neon_piston",
+      "title": "NEON PİSTON",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 36000,
+      "value": 14400,
+      "min_rank": 5,
+      "desc": "Çapraz piston neonu."
+    },
+    {
+      "id": "neon_car",
+      "title": "NEON ARABA",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 45000,
+      "value": 18000,
+      "min_rank": 6,
+      "desc": "Araç silueti neonu."
+    },
+    {
+      "id": "pegboard",
+      "title": "TAKIM PANOSU",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 12000,
+      "value": 4800,
+      "min_rank": 2,
+      "desc": "Asılı aletli delikli pano."
+    },
+    {
+      "id": "wall_shelf",
+      "title": "DUVAR RAFI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 9000,
+      "value": 3600,
+      "min_rank": 1,
+      "desc": "Kutularla dolu iki katlı raf."
+    },
+    {
+      "id": "tyre_hanger",
+      "title": "LASTİK ASKISI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 11000,
+      "value": 4400,
+      "min_rank": 2,
+      "desc": "Duvara asılı üç lastik."
+    },
+    {
+      "id": "rim_display",
+      "title": "JANT VİTRİNİ",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 18000,
+      "value": 7200,
+      "min_rank": 3,
+      "desc": "Duvarda sergilenen iki jant."
+    },
+    {
+      "id": "extinguisher_wall",
+      "title": "YANGIN TÜPÜ",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 3000,
+      "value": 1200,
+      "min_rank": 1,
+      "desc": "Duvar askılı yangın tüpü."
+    },
+    {
+      "id": "first_aid",
+      "title": "İLK YARDIM DOLABI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 3500,
+      "value": 1400,
+      "min_rank": 1,
+      "desc": "Beyaz ilk yardım dolabı."
+    },
+    {
+      "id": "vent_grille",
+      "title": "HAVALANDIRMA",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 4000,
+      "value": 1600,
+      "min_rank": 1,
+      "desc": "Panjurlu havalandırma ızgarası."
+    },
+    {
+      "id": "plate_frame",
+      "title": "ÇERÇEVELİ PLAKA",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 6000,
+      "value": 2400,
+      "min_rank": 2,
+      "desc": "Çerçeve içinde eski plaka."
+    },
+    {
+      "id": "checkered_flags",
+      "title": "ÇAPRAZ BAYRAKLAR",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 10000,
+      "value": 4000,
+      "min_rank": 3,
+      "desc": "İki çapraz damalı bayrak."
+    },
+    {
+      "id": "wall_tv",
+      "title": "DUVAR TV",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 20000,
+      "value": 8000,
+      "min_rank": 3,
+      "desc": "Yarış yayını açık ekran."
+    },
+    {
+      "id": "job_board",
+      "title": "İŞ TAHTASI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 8000,
+      "value": 3200,
+      "min_rank": 2,
+      "desc": "İş listesi yazılı tahta."
+    },
+    {
+      "id": "trophy_shelf",
+      "title": "KUPA RAFI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 26000,
+      "value": 10400,
+      "min_rank": 4,
+      "desc": "Üç kupalı duvar rafı."
+    },
+    {
+      "id": "wall_lamp",
+      "title": "ENDÜSTRİYEL APLİK",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 5000,
+      "value": 2000,
+      "min_rank": 1,
+      "desc": "Kafesli duvar lambası."
+    },
+    {
+      "id": "led_strip",
+      "title": "ŞERİT LED",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 15000,
+      "value": 6000,
+      "min_rank": 3,
+      "desc": "Uzun mavi LED şeridi."
+    },
+    {
+      "id": "wall_window_deco",
+      "title": "SAHTE PENCERE",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 8500,
+      "value": 3400,
+      "min_rank": 2,
+      "desc": "Perdeli küçük pencere."
     }
   ]
 }

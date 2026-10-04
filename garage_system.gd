@@ -206,6 +206,9 @@ func _update_grid(garage_width: float, garage_depth: float) -> void:
 	grid.position.z = FIXED_FRONT_Z - garage_depth / 2.0
 	grid.width = int(round(garage_width / grid.cell_size))
 	grid.depth = int(round(garage_depth / grid.cell_size))
+	# Çizgiler sabit ön-sağ köşeden sayılır (zemin karoları ve iç duvarlarla aynı ızgara, DecorGrid)
+	grid.anchor_corner = true
+	grid.extent = Vector2(garage_width, garage_depth)
 	grid.create_grid()
 	var preview: MeshInstance3D = grid.get_node_or_null("GridPreview")
 	if preview and preview.mesh is PlaneMesh:

@@ -100,10 +100,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			_pinch_start_size = _target_size
 	elif event is InputEventScreenDrag:
 		var sd: InputEventScreenDrag = event
+		var before: Vector2 = _touch_midpoint()
 		_touches[sd.index] = sd.position
 		if _touches.size() == 2 and _pinch_start_dist > 1.0:
 			# Parmaklar açılınca yaklaş (size küçülür), kapanınca uzaklaş
 			_target_size = clampf(_pinch_start_size * (_pinch_start_dist / maxf(_touch_distance(), 1.0)), min_zoom, _max_zoom_fit())
+			# İki parmağın ortası kayınca görüntü de kayar: tek parmağın zemine boya / duvar çizdiği
+			# düzenleme araçlarında kamera iki parmakla gezdirilir (sürükleme bir parmağın yarısı kadar).
+			pan_by_pixels((_touch_midpoint() - before))
 			get_viewport().set_input_as_handled()
 
 
@@ -231,6 +235,11 @@ func _max_zoom_fit() -> float:
 func _on_viewport_resized() -> void:
 	_target_size = clampf(_target_size, min_zoom, _max_zoom_fit())
 	_apply_focus()
+
+
+func _touch_midpoint() -> Vector2:
+	var positions: Array = _touches.values()
+	return ((positions[0] as Vector2) + (positions[1] as Vector2)) * 0.5 if positions.size() >= 2 else Vector2.ZERO
 
 
 func _touch_distance() -> float:

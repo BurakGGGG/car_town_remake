@@ -212,6 +212,9 @@ func _free(area: DecorArea, rect: Rect2, decor_polys: Array[PackedVector2Array],
 	for obstacle: Rect2 in area.obstacles:
 		if obstacle.intersects(grown):
 			return false
+	for wall: Rect2 in area.wall_rects:   # iç duvarlar (dekorasyon v2): kasa duvarın içine inmesin
+		if wall.intersects(grown):
+			return false
 	for other: Rect2 in taken:
 		if other.intersects(grown):
 			return false

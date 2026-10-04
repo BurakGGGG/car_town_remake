@@ -6,6 +6,12 @@ extends Node
 ## ayrı bir ÖRNEKTİR (kimlik, konum, dönüş, ölçek). Silinen örnek yok olmaz, depoya döner:
 ##   sahip 3 sandalye · yerleşik 2 · depoda 1 → biri silinince yerleşik 1 · depoda 2.
 ## Kaplamalar (zemin / duvar) yerleştirilmez, UYGULANIR: her türden tek seçim.
+## DEKORASYON v2 (docs/DEKORASYON_V2_ARASTIRMA.md):
+##   ZEMİN KAROLARI — göz göz boyanır (DecorGrid). Her boyanan göz için desenin `price`'ı kadar ücret
+##     alınır, silmek ücretsizdir; değer = boyalı göz başına desenin `value`'su. Karolar sahiplik değildir.
+##   İÇ DUVARLAR — ızgara kenarına örülen parçalar. Parça DEPO mantığıyla çalışır (eşya gibi): örerken
+##     depodaki kopya kullanılır, yoksa kopya satın alınır; sökülen parça depoya döner. Her segmentin
+##     görünen yüzüne sahip olunan bir DUVAR KAPLAMASI uygulanabilir (dış duvarların kaplaması ayrı slot).
 ##
 ## Bu sınıf GEOMETRİ BİLMEZ: konumun geçerliliğini (garaj sınırı, çakışma, duvar) düzenleyici
 ## world/decor_area.gd ile sınar. Burada yalnızca tutarlılık korunur (sahip olunandan fazlası
@@ -17,13 +23,17 @@ extends Node
 
 signal purchased(id: StringName)
 signal purchase_failed(id: StringName, price: int)
-## Herhangi bir yerleşim / kaplama değişikliği (görünüm ve otomatik kayıt dinler).
+## Herhangi bir yerleşim / kaplama / duvar değişikliği (görünüm ve otomatik kayıt dinler).
 signal placement_changed()
+## Zemin karoları değişti (görünüm yalnızca veri dokusunu yeniler; otomatik kayıt dinler).
+signal tiles_changed()
 ## Depodaki bir kopya garaja KONDU (araç sergisi dahil; görev sayaçları dinler). Taşıma / döndürme değil.
 signal instance_added(item: StringName)
 
 ## Bir eşyadan en çok kaç kopya sahiplenilebilir (kayıt dosyası akıl dışı büyümesin).
 const MAX_COPIES: int = 99
+## Duvar parçası daha çok gerekir (büyük garajı odalara bölmek yüzlerce segment olabilir).
+const MAX_WALL_COPIES: int = 600
 const SURFACE_FLOOR: StringName = &"floor"
 const SURFACE_WALL: StringName = &"wall"
 
@@ -34,6 +44,15 @@ var _owned: Dictionary = {}
 var _instances: Array[Dictionary] = []
 ## &"floor" / &"wall" → uygulanan kaplama id'si.
 var _surfaces: Dictionary = {}
+## Zemin karoları: Vector2i göz → desen id (boyanmamış göz kayıtta yoktur).
+var _tiles: Dictionary = {}
+## İç duvarlar: kenar anahtarı ("x:a:b" / "z:a:b") → {"piece": StringName, "finish": StringName}.
+var _walls: Dictionary = {}
+
+## Eski tüm-zemin kaplamasının karşılığı olan desen (v1 kaydı karolara taşınırken).
+const LEGACY_FLOOR_PATTERN: Dictionary = {&"floor_tile": &"tile_grey", &"floor_epoxy": &"asphalt"}
+## Kayıtta karo satırlarının alfabesi: '.' boş, sonraki karakterler paletteki sıra.
+const TILE_ALPHABET: String = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 var _next_iid: int = 1
 
 
@@ -81,10 +100,16 @@ func owned_of(id: StringName) -> int:
 	return int(_owned.get(id, 0))
 
 
-## Garajda duran kopya sayısı (kaplamalar için: uygulanıyorsa 1).
+## Garajda duran kopya sayısı (kaplamalar için: uygulanıyorsa 1; duvar parçası: örülü segment sayısı).
 func placed_of(id: StringName) -> int:
 	if GarageDecor.is_surface(id):
 		return 1 if _surfaces.values().has(id) else 0
+	if GarageDecor.is_wall_piece(id):
+		var walls: int = 0
+		for key: String in _walls:
+			if (_walls[key] as Dictionary)["piece"] == id:
+				walls += 1
+		return walls
 	var n: int = 0
 	for inst: Dictionary in _instances:
 		if inst["item"] == id:
@@ -128,8 +153,9 @@ func is_unlocked(id: StringName) -> bool:
 
 ## Satın alınabilir mi? Kaplama bir kez alınır; eşyadan birden çok kopya alınabilir.
 func can_purchase(id: StringName) -> bool:
-	if not GarageDecor.exists(id) or not is_unlocked(id) or GarageDecor.is_vehicle(id):
-		return false   # sergilenen araç satın alınmaz: sahip olunan araçtır
+	if not GarageDecor.exists(id) or not is_unlocked(id) or GarageDecor.is_vehicle(id) \
+			or GarageDecor.is_pattern(id):
+		return false   # sergilenen araç satın alınmaz; karo deseni göz başına boyarken ödenir
 	if GarageDecor.is_surface(id) and is_owned(id):
 		return false
 	if owned_of(id) >= MAX_COPIES:
@@ -147,7 +173,7 @@ func value() -> int:
 	var total: int = 0
 	for id: StringName in _owned:
 		total += int(GarageDecor.get_item(id).get("value", 0)) * int(_owned[id])
-	return total
+	return total + tile_value()
 
 
 ## Bir kopya satın alır: para düşer, kopya DEPOYA girer (yerleştirmek düzenleyicinin işi).
@@ -186,7 +212,7 @@ func instance_count() -> int:
 ## Depodaki bir kopyayı garaja koyar. `iid` verilirse o kimlikle (geri al'ın silineni aynı
 ## kimlikle geri getirmesi için). Başarısızsa "" döner.
 func add_instance(item: StringName, pos: Vector3, yaw: float, iid: String = "") -> String:
-	if not GarageDecor.exists(item) or GarageDecor.is_surface(item):
+	if not GarageDecor.exists(item) or not GarageDecor.is_placeable(item):
 		return ""
 	if available_of(item) <= 0 or not _finite(pos) or not is_finite(yaw):
 		return ""
@@ -242,6 +268,280 @@ func remove_instance(iid: String) -> Dictionary:
 	return removed.duplicate()
 
 
+# --- Zemin karoları ---------------------------------------------------------------------
+
+func tile(cell: Vector2i) -> StringName:
+	return _tiles.get(cell, &"")
+
+
+## Boyalı gözlerin kopyası (göz → desen).
+func tiles() -> Dictionary:
+	return _tiles.duplicate()
+
+
+func tile_count() -> int:
+	return _tiles.size()
+
+
+## Bir gözü bu desene boyamanın ücreti (silmek ücretsiz).
+func tile_price(pattern: StringName) -> int:
+	return price_of(pattern) if pattern != &"" else 0
+
+
+## Boyalı gözlerin garaj değerine katkısı.
+func tile_value() -> int:
+	var total: int = 0
+	var per: Dictionary = {}
+	for cell: Vector2i in _tiles:
+		var id: StringName = _tiles[cell]
+		if not per.has(id):
+			per[id] = int(GarageDecor.get_item(id).get("value", 0))
+		total += int(per[id])
+	return total
+
+
+## Gözleri boyar (pattern "" = siler, ücretsiz). Zaten o desende olan göz atlanır, ücret alınmaz.
+## Para yetmezse sıradaki gözlerden yetecek kadarı boyanır ("short" = true). Desen kilitliyse hiçbiri.
+## Dönüş: {"changes": [[göz, eski, yeni], ...], "cost": int, "short": bool}.
+func paint_tiles(cells: Array[Vector2i], pattern: StringName) -> Dictionary:
+	var result: Dictionary = {"changes": [], "cost": 0, "short": false}
+	if pattern != &"" and (not GarageDecor.is_pattern(pattern) or not is_unlocked(pattern)):
+		return result
+	var price: int = tile_price(pattern)
+	var economy: EconomyManager = _economy()
+	var budget: int = economy.money if economy and price > 0 else 1 << 62
+	var changes: Array = []
+	var seen: Dictionary = {}
+	for cell: Vector2i in cells:
+		if seen.has(cell) or not DecorGrid.in_bounds(cell):
+			continue
+		seen[cell] = true
+		var from: StringName = tile(cell)
+		if from == pattern:
+			continue
+		if price > 0 and budget < price:
+			result["short"] = true
+			break
+		budget -= price
+		changes.append([cell, from, pattern])
+	var cost: int = price * changes.size()
+	if cost > 0 and economy and not economy.spend_money(cost):
+		result["short"] = true
+		return result
+	for change: Array in changes:
+		_set_tile(change[0], change[2])
+	result["changes"] = changes
+	result["cost"] = cost
+	if not changes.is_empty():
+		tiles_changed.emit()
+	return result
+
+
+## Boyamayı geri alır: gözler eski desenine döner, `refund` iade edilir (geri al).
+func revert_tiles(changes: Array, refund: int) -> void:
+	for i: int in range(changes.size() - 1, -1, -1):
+		var change: Array = changes[i]
+		_set_tile(change[0], change[1])
+	if refund > 0:
+		var economy: EconomyManager = _economy()
+		if economy:
+			economy.add_money(refund)
+	tiles_changed.emit()
+
+
+func _set_tile(cell: Vector2i, pattern: StringName) -> void:
+	if pattern == &"":
+		_tiles.erase(cell)
+	else:
+		_tiles[cell] = pattern
+
+
+func _fill_all(pattern: StringName) -> void:
+	for j: int in DecorGrid.MAX_ROWS:
+		for i: int in DecorGrid.MAX_COLS:
+			_tiles[Vector2i(i, j)] = pattern
+
+
+func _tiles_out() -> Dictionary:
+	var palette: Array[String] = []
+	var rows: Array[String] = []
+	var last: int = -1
+	for j: int in DecorGrid.MAX_ROWS:
+		var row: String = ""
+		for i: int in DecorGrid.MAX_COLS:
+			var id: StringName = tile(Vector2i(i, j))
+			if id == &"":
+				row += "."
+				continue
+			var k: int = palette.find(String(id))
+			if k < 0:
+				palette.append(String(id))
+				k = palette.size() - 1
+			row += TILE_ALPHABET[mini(k, TILE_ALPHABET.length() - 1)]
+		rows.append(row)
+		if row.replace(".", "") != "":
+			last = j
+	rows.resize(last + 1)   # sondaki boş satırlar yazılmaz
+	return {"palette": palette, "rows": rows}
+
+
+func _tiles_in(raw: Variant) -> void:
+	if not (raw is Dictionary):
+		return
+	var palette: Variant = (raw as Dictionary).get("palette", [])
+	var rows: Variant = (raw as Dictionary).get("rows", [])
+	if not (palette is Array) or not (rows is Array):
+		return
+	var ids: Array[StringName] = []
+	for p: Variant in (palette as Array):
+		var id: StringName = StringName(SaveSafe.s(p))
+		ids.append(id if GarageDecor.is_pattern(id) else &"")
+	for j: int in mini((rows as Array).size(), DecorGrid.MAX_ROWS):
+		var row: String = SaveSafe.s((rows as Array)[j])
+		for i: int in mini(row.length(), DecorGrid.MAX_COLS):
+			var k: int = TILE_ALPHABET.find(row[i])
+			if k >= 0 and k < ids.size() and ids[k] != &"":
+				_tiles[Vector2i(i, j)] = ids[k]
+
+
+# --- İç duvarlar -------------------------------------------------------------------------
+
+## Örülü segmentlerin kopyası: anahtar → {"piece", "finish"}.
+func walls() -> Dictionary:
+	var out: Dictionary = {}
+	for key: String in _walls:
+		out[key] = (_walls[key] as Dictionary).duplicate()
+	return out
+
+
+func wall_at(key: String) -> Dictionary:
+	return (_walls[key] as Dictionary).duplicate() if _walls.has(key) else {}
+
+
+func wall_count() -> int:
+	return _walls.size()
+
+
+## Kenarlara duvar örer. Depodaki kopyalar kullanılır, eksik kalanlar satın alınır (para yetmezse HİÇBİRİ
+## örülmez). Aynı parça olan kenar atlanır; başka parça olan kenarın parçası depoya döner, kaplaması korunur.
+## Dönüş: {"changes": [[anahtar, eski kayıt ya da {}, yeni kayıt]], "bought": int, "spent": int}; olmadıysa {}.
+func build_walls(keys: Array[String], piece: StringName) -> Dictionary:
+	if not GarageDecor.is_wall_piece(piece) or not is_unlocked(piece):
+		return {}
+	var todo: Array[String] = []
+	for key: String in keys:
+		if DecorGrid.parse_edge(key).is_empty() or todo.has(key):
+			continue
+		if _walls.has(key) and (_walls[key] as Dictionary)["piece"] == piece:
+			continue
+		todo.append(key)
+	if todo.is_empty():
+		return {"changes": [], "bought": 0, "spent": 0}
+	# Değiştirilen başka parçalar depoya döner: bu parça için gereken kopya sayısı yalnızca todo kadardır
+	var need: int = maxi(todo.size() - available_of(piece), 0)
+	var spent: int = need * price_of(piece)
+	if need > 0:
+		if owned_of(piece) + need > MAX_WALL_COPIES:
+			return {}
+		var economy: EconomyManager = _economy()
+		if economy and not economy.spend_money(spent):
+			purchase_failed.emit(piece, spent)
+			return {}
+		_owned[piece] = owned_of(piece) + need
+	var changes: Array = []
+	for key: String in todo:
+		var from: Dictionary = wall_at(key)
+		var to: Dictionary = {"piece": piece, "finish": from.get("finish", &"")}
+		_walls[key] = to
+		changes.append([key, from, to.duplicate()])
+	placement_changed.emit()
+	return {"changes": changes, "bought": need, "spent": spent}
+
+
+## Segmentleri söker; parçalar depoya döner. Dönüş: [[anahtar, eski kayıt, {}]].
+func remove_walls(keys: Array[String]) -> Array:
+	var changes: Array = []
+	for key: String in keys:
+		if not _walls.has(key):
+			continue
+		changes.append([key, wall_at(key), {}])
+		_walls.erase(key)
+	if not changes.is_empty():
+		placement_changed.emit()
+	return changes
+
+
+## Segmentlerin görünen yüzüne kaplama uygular (finish "" = varsayılan). Kaplamaya sahip olunmalı.
+func set_wall_finish(keys: Array[String], finish: StringName) -> Array:
+	if finish != &"" and (not is_owned(finish) or surface_slot_of(finish) != SURFACE_WALL):
+		return []
+	var changes: Array = []
+	for key: String in keys:
+		if not _walls.has(key) or (_walls[key] as Dictionary)["finish"] == finish:
+			continue
+		var from: Dictionary = wall_at(key)
+		var to: Dictionary = from.duplicate()
+		to["finish"] = finish
+		_walls[key] = to
+		changes.append([key, from, to.duplicate()])
+	if not changes.is_empty():
+		placement_changed.emit()
+	return changes
+
+
+## Duvar değişikliğini geri alır: kayıtlar eski haline döner; o işlemde satın alınan kopyalar geri
+## verilir ve ödenen iade edilir.
+func revert_walls(changes: Array, piece: StringName = &"", bought: int = 0, spent: int = 0) -> void:
+	for i: int in range(changes.size() - 1, -1, -1):
+		var change: Array = changes[i]
+		var from: Dictionary = change[1]
+		if from.is_empty():
+			_walls.erase(String(change[0]))
+		else:
+			_walls[String(change[0])] = from.duplicate()
+	if bought > 0 and piece != &"":
+		var left: int = owned_of(piece) - bought
+		if left > 0:
+			_owned[piece] = left
+		else:
+			_owned.erase(piece)
+		var economy: EconomyManager = _economy()
+		if economy and spent > 0:
+			economy.add_money(spent)
+	placement_changed.emit()
+
+
+func _walls_out() -> Array:
+	var keys: Array = _walls.keys()
+	keys.sort()
+	var out: Array = []
+	for key: String in keys:
+		var rec: Dictionary = _walls[key]
+		out.append({"edge": key, "piece": String(rec["piece"]), "finish": String(rec["finish"])})
+	return out
+
+
+func _walls_in(raw: Variant) -> void:
+	if not (raw is Array):
+		return
+	for entry: Variant in (raw as Array):
+		if not (entry is Dictionary):
+			continue
+		var key: String = SaveSafe.s((entry as Dictionary).get("edge", ""))
+		var e: Dictionary = DecorGrid.parse_edge(key)
+		var piece: StringName = StringName(SaveSafe.s((entry as Dictionary).get("piece", "")))
+		var finish: StringName = StringName(SaveSafe.s((entry as Dictionary).get("finish", "")))
+		if e.is_empty() or int(e["a"]) < 0 or int(e["b"]) < 0 or int(e["a"]) > DecorGrid.MAX_COLS \
+				or int(e["b"]) > DecorGrid.MAX_ROWS or _walls.has(key):
+			continue
+		if not GarageDecor.is_wall_piece(piece) or available_of(piece) <= 0:
+			push_warning("DecorManager: kayıttaki duvar '%s' (%s) atlandı" % [key, piece])
+			continue
+		if finish != &"" and (not is_owned(finish) or surface_slot_of(finish) != SURFACE_WALL):
+			finish = &""
+		_walls[key] = {"piece": piece, "finish": finish}
+
+
 # --- Kaplamalar ------------------------------------------------------------------------
 
 func surface(slot: StringName) -> StringName:
@@ -250,8 +550,8 @@ func surface(slot: StringName) -> StringName:
 
 ## Sahip olunan kaplamayı uygular (zemin ya da duvar, kataloğa göre). id = "" → varsayılana döner.
 func apply_surface(slot: StringName, id: StringName) -> bool:
-	if slot != SURFACE_FLOOR and slot != SURFACE_WALL:
-		return false
+	if slot != SURFACE_WALL:
+		return false   # tüm-zemin kaplaması v2'de karolara taşındı (bkz. paint_tiles)
 	if id == &"":
 		_surfaces.erase(slot)
 		placement_changed.emit()
@@ -290,7 +590,8 @@ func state() -> Dictionary:
 	var surfaces: Dictionary = {}
 	for slot: StringName in _surfaces:
 		surfaces[String(slot)] = String(_surfaces[slot])
-	return {"owned": owned, "instances": list, "surfaces": surfaces, "next_instance": _next_iid}
+	return {"owned": owned, "instances": list, "surfaces": surfaces, "next_instance": _next_iid,
+		"tiles": _tiles_out(), "walls": _walls_out()}
 
 
 ## v9 ya da v8 kaydını yükler. Bozuk parçalar atlanır, oyun bozulmaz.
@@ -298,6 +599,8 @@ func load_state(data: Dictionary) -> void:
 	_owned.clear()
 	_instances.clear()
 	_surfaces.clear()
+	_tiles.clear()
+	_walls.clear()
 	_next_iid = 1
 	if data.get("owned") is Array:
 		data = _migrate_v8(data)   # v8: sahiplik dizi, yerleşim yuva → eşya
@@ -308,7 +611,8 @@ func load_state(data: Dictionary) -> void:
 			if not GarageDecor.exists(id):
 				push_warning("DecorManager: kayıttaki '%s' katalogda yok, atlandı" % id)
 				continue
-			var n: int = clampi(SaveSafe.i((owned as Dictionary)[raw]), 0, MAX_COPIES)
+			var n: int = clampi(SaveSafe.i((owned as Dictionary)[raw]), 0,
+				MAX_WALL_COPIES if GarageDecor.is_wall_piece(id) else MAX_COPIES)
 			if GarageDecor.is_surface(id):
 				n = mini(n, 1)
 			if n > 0:
@@ -325,15 +629,28 @@ func load_state(data: Dictionary) -> void:
 			if is_owned(id) and surface_slot_of(id) == slot:
 				_surfaces[slot] = id
 	_next_iid = maxi(SaveSafe.i(data.get("next_instance", 1)), _max_iid_number() + 1)
+	_tiles_in(data.get("tiles"))
+	# v1 → v2: uygulanmış tüm-zemin kaplaması, karo kaydı yoksa bütün gözlere aynı desen olarak yayılır
+	# (zaten ödenmişti; ücret alınmaz). Eski kaplama artık slot değildir, sahipliği değer olarak kalır.
+	var legacy: StringName = _surfaces.get(SURFACE_FLOOR, &"")
+	if legacy != &"":
+		if not data.has("tiles") and LEGACY_FLOOR_PATTERN.has(legacy):
+			_fill_all(LEGACY_FLOOR_PATTERN[legacy])
+		_surfaces.erase(SURFACE_FLOOR)
+	_walls_in(data.get("walls"))
 	placement_changed.emit()
+	tiles_changed.emit()
 
 
 func reset() -> void:
 	_owned.clear()
 	_instances.clear()
 	_surfaces.clear()
+	_tiles.clear()
+	_walls.clear()
 	_next_iid = 1
 	placement_changed.emit()
+	tiles_changed.emit()
 
 
 func _load_instance(raw: Variant) -> void:
@@ -345,7 +662,7 @@ func _load_instance(raw: Variant) -> void:
 	if iid == "" or _index_of(iid) >= 0:
 		push_warning("DecorManager: kimliksiz ya da yinelenen örnek atlandı (%s)" % iid)
 		return
-	if not GarageDecor.exists(item) or GarageDecor.is_surface(item):
+	if not GarageDecor.exists(item) or not GarageDecor.is_placeable(item):
 		return
 	if available_of(item) <= 0:
 		push_warning("DecorManager: '%s' sahip olunandan fazla yerleştirilmiş, fazlası atlandı" % item)

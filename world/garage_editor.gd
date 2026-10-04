@@ -17,6 +17,8 @@ extends Node
 ## geri getirir.
 
 signal selection_changed(iid: String)
+## Araç (eşya / karo boyama / duvar örme / duvar kaplama) ya da aracın ayarı değişti.
+signal tool_changed
 signal placing_changed(item: StringName)
 ## Geri al yığını, ızgara ya da seçimin durumu değişti (arayüz yeniler).
 signal state_changed
@@ -50,6 +52,25 @@ const MARKER_BAD: Color = Color(0.86, 0.32, 0.26)
 
 var active: bool = false
 var snap_enabled: bool = true
+
+## DEKORASYON v2 ARAÇLARI. OBJECT: eşya seç / taşı (eski davranış). PAINT: zemine karo boya.
+## WALL: ızgara kenarına duvar ör / sök. FINISH: duvara kaplama uygula. Araç açıkken tek parmak
+## zemine çizer; kamera iki parmakla kaydırılır / yakınlaştırılır.
+enum Tool { OBJECT, PAINT, WALL, FINISH }
+const PAINT_MODES: Array[StringName] = [&"brush", &"rect", &"fill", &"pick", &"erase"]
+const WALL_MODES: Array[StringName] = [&"build", &"remove"]
+var tool: int = Tool.OBJECT
+var paint_pattern: StringName = &""
+var paint_mode: StringName = &"brush"
+var wall_piece: StringName = &"wall_plain"
+var wall_mode: StringName = &"build"
+var finish_id: StringName = &""
+## Süren araç vuruşu: {"kind", "changes", "cost", ...} — bırakınca tek geri al adımı olur.
+var _stroke: Dictionary = {}
+var _stroke_from: Vector2i = Vector2i(-1, -1)
+var _stroke_last: Vector2 = Vector2.INF
+var _stroke_keys: Array[String] = []
+var _short_noticed: bool = false
 
 var _view: GarageDecorView
 var _decor: DecorManager
@@ -175,6 +196,8 @@ func deactivate() -> void:
 		return
 	cancel_ghost()
 	_end_drag(false)
+	_finish_stroke(false)
+	end_tool()
 	select("")
 	active = false
 	_pressing = false
@@ -239,14 +262,23 @@ func _find_traffic(node: Node) -> TrafficManager:
 
 
 ## Kamerayı garaja odaklar: zemin + duvar yüksekliği, arayüzün bıraktığı banda sığsın.
-func _frame_garage(band: Vector2) -> void:
+## keep_saved: düzenleme içinde yeniden sığdırma (şerit katlanınca) — çıkışta dönülecek görünüm korunur.
+func _frame_garage(band: Vector2, keep_saved: bool = false) -> void:
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	if camera == null or not camera.has_method("frame_box"):
 		return
 	var a: DecorArea = _view.area()
 	var box: AABB = AABB(Vector3(a.floor_rect.position.x, a.floor_y, a.floor_rect.position.y),
 		Vector3(a.floor_rect.size.x, a.wall_top - a.floor_y, a.floor_rect.size.y))
-	_saved_view = camera.call("frame_box", box, band.x, band.y)
+	var before: Dictionary = camera.call("frame_box", box, band.x, band.y)
+	if not keep_saved:
+		_saved_view = before
+
+
+## Arayüz bandı değişti (eşya şeridi katlandı / açıldı): garaj yeni boş alana yeniden sığdırılır.
+func reframe(band: Vector2) -> void:
+	if active and _bind():
+		_frame_garage(band, true)
 
 
 func set_snap(on: bool) -> void:
@@ -458,7 +490,8 @@ func can_undo() -> bool:
 	return not _history.is_empty()
 
 
-## Son işlemi geri alır (yerleştir, taşı, döndür, sil, kaplama).
+## Son işlemi geri alır (yerleştir, taşı, döndür, sil, kaplama, karo vuruşu — ödenen iade edilir —,
+## duvar örme / sökme / kaplama — o işlemde satın alınan parça kopyaları iade edilir).
 func undo() -> bool:
 	if _history.is_empty():
 		return false
@@ -482,6 +515,11 @@ func undo() -> bool:
 			_decor.apply_surface(op["slot"], op["from"])
 		"bay":
 			_bays.set_layout(int(op["index"]), op["from"], float(op["from_yaw"]))
+		"tiles":
+			_decor.revert_tiles(op["changes"], int(op["cost"]))
+		"walls":
+			_decor.revert_walls(op["changes"], op.get("piece", &""), int(op.get("bought", 0)),
+				int(op.get("spent", 0)))
 	_update_marker()
 	state_changed.emit()
 	return true
@@ -513,7 +551,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			# İkinci parmak: hareket artık KAMERANIN (pinch). Sürüklenen eşya geldiği yerde kalır
 			# (geçerliyse kaydedilir, değilse eski yerine döner); hayalet hayalet olarak bekler.
 			# Basış bırakılır — parmaklardan biri kalkınca kalan parmak eşyayı yeniden kapmasın.
-			_end_drag(_press_target != "ghost")
+			# Araç vuruşu: fırça o ana kadar boyadığını tutar, dikdörtgen / duvar önizlemesi iptal olur.
+			if tool != Tool.OBJECT:
+				_finish_stroke(tool == Tool.PAINT and (paint_mode == &"brush" or paint_mode == &"erase"))
+			else:
+				_end_drag(_press_target != "ghost")
 			_pressing = false
 		return   # tüketilmez: iki parmak kamerayı yakınlaştırır
 	if event is InputEventKey:
@@ -532,6 +574,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		var mm: InputEventMouseMotion = event
 		if not _pressing or not (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) or _touch_ids.size() >= 2:
 			return
+		if tool != Tool.OBJECT:
+			_tool_move(mm.position)
+			get_viewport().set_input_as_handled()
+			return
 		if _press_target == "":
 			return   # boş zemin sürükleniyor: kamera kaydırır
 		if not _dragging and mm.position.distance_to(_press_at) > DRAG_THRESHOLD:
@@ -548,6 +594,10 @@ func _on_press(at: Vector2) -> void:
 	_pressing = true
 	_dragging = false
 	_press_at = at
+	if tool != Tool.OBJECT:
+		_tool_press(at)
+		get_viewport().set_input_as_handled()
+		return
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	_press_target = ""
 	_press_cycle.clear()
@@ -573,6 +623,10 @@ func _on_release(at: Vector2) -> void:
 	if not _pressing:
 		return
 	_pressing = false
+	if tool != Tool.OBJECT:
+		_tool_release(at)
+		get_viewport().set_input_as_handled()
+		return
 	if _dragging:
 		_end_drag(true)
 		_last_tap_at = Vector2.INF
@@ -710,6 +764,318 @@ func _end_drag(commit: bool) -> void:
 			notice.emit(Loc.t("BURAYA SIĞMIYOR — ESKİ YERİNE DÖNDÜ"))
 		_view.refresh()   # gövdeyi kayıtlı yerine geri koy
 	_update_marker()
+
+
+# --- Araçlar (dekorasyon v2) -----------------------------------------------------------
+
+## Zemin boyama aracı: desen seçilir, fırça son kullanılan kipte kalır (silgi seçiliyse fırçaya döner).
+func begin_paint(pattern: StringName) -> void:
+	_enter_tool(Tool.PAINT)
+	paint_pattern = pattern
+	if paint_mode == &"erase" or paint_mode == &"pick":
+		paint_mode = &"brush"
+	tool_changed.emit()
+	state_changed.emit()
+
+
+func set_paint_mode(mode: StringName) -> void:
+	if not PAINT_MODES.has(mode):
+		return
+	if tool != Tool.PAINT:
+		_enter_tool(Tool.PAINT)
+	paint_mode = mode
+	tool_changed.emit()
+	state_changed.emit()
+
+
+## Duvar örme aracı: parça seçilir, kip "ör"e döner.
+func begin_walls(piece: StringName) -> void:
+	_enter_tool(Tool.WALL)
+	wall_piece = piece
+	wall_mode = &"build"
+	tool_changed.emit()
+	state_changed.emit()
+
+
+func set_wall_mode(mode: StringName) -> void:
+	if not WALL_MODES.has(mode):
+		return
+	if tool != Tool.WALL:
+		_enter_tool(Tool.WALL)
+	wall_mode = mode
+	tool_changed.emit()
+	state_changed.emit()
+
+
+## Duvar kaplama aracı: dokunulan duvara (iç segment ya da dış duvarlar) bu kaplama uygulanır.
+func begin_finish(finish: StringName) -> void:
+	_enter_tool(Tool.FINISH)
+	finish_id = finish
+	tool_changed.emit()
+	state_changed.emit()
+
+
+## Eşya düzenine döner.
+func end_tool() -> void:
+	if tool == Tool.OBJECT:
+		return
+	_finish_stroke(false)
+	tool = Tool.OBJECT
+	tool_changed.emit()
+	state_changed.emit()
+
+
+func _enter_tool(t: int) -> void:
+	if tool != t:
+		_finish_stroke(false)
+	cancel_ghost()
+	select("")
+	tool = t
+
+
+## Süren vuruşun önizleme maliyeti (arayüz bilgi satırı için; yoksa -1).
+func stroke_preview_cost() -> int:
+	if _stroke.is_empty():
+		return -1
+	return int(_stroke.get("preview_cost", _stroke.get("cost", 0)))
+
+
+func _ground(at: Vector2) -> Vector2:
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	return _view.ground_point(camera, at) if camera else Vector2.INF
+
+
+func _tool_press(at: Vector2) -> void:
+	if not _bind():
+		return
+	_short_noticed = false
+	var ground: Vector2 = _ground(at)
+	_stroke_last = ground
+	match tool:
+		Tool.PAINT:
+			var cell: Vector2i = _view.tile_at(ground) if ground != Vector2.INF else Vector2i(-1, -1)
+			_stroke_from = cell
+			if paint_mode == &"brush" or paint_mode == &"erase":
+				_stroke = {"kind": "tiles", "changes": [], "cost": 0}
+				if cell.x >= 0:
+					_paint_cells([cell])
+			elif paint_mode == &"rect":
+				_stroke = {"kind": "rect", "preview_cost": 0}
+				if cell.x >= 0:
+					_view.set_tile_preview(cell, cell, true)
+					_stroke["preview_cost"] = _rect_cost(cell, cell)
+		Tool.WALL, Tool.FINISH:
+			_stroke = {"kind": "walls"}
+			_stroke_from = DecorGrid.nearest_node(ground) if ground != Vector2.INF else Vector2i(-1, -1)
+			_stroke_keys.clear()
+			_dragging = false
+	state_changed.emit()
+
+
+func _tool_move(at: Vector2) -> void:
+	if _stroke.is_empty():
+		return
+	var ground: Vector2 = _ground(at)
+	if ground == Vector2.INF:
+		return
+	match tool:
+		Tool.PAINT:
+			var cell: Vector2i = _view.tile_at(ground)
+			if paint_mode == &"brush" or paint_mode == &"erase":
+				# İki olay arasında hızlı sürüklemede göz atlanmasın: çizgi boyunca örneklenir
+				var cells: Array[Vector2i] = []
+				var from: Vector2 = _stroke_last if _stroke_last != Vector2.INF else ground
+				var steps: int = maxi(1, ceili(from.distance_to(ground) / (DecorGrid.CELL * 0.4)))
+				for k: int in steps + 1:
+					var c: Vector2i = _view.tile_at(from.lerp(ground, float(k) / float(steps)))
+					if c.x >= 0 and not cells.has(c):
+						cells.append(c)
+				_paint_cells(cells)
+			elif paint_mode == &"rect" and cell.x >= 0:
+				if _stroke_from.x < 0:
+					_stroke_from = cell
+				_view.set_tile_preview(_stroke_from, cell, true)
+				_stroke["to"] = cell
+				_stroke["preview_cost"] = _rect_cost(_stroke_from, cell)
+		Tool.WALL, Tool.FINISH:
+			if _stroke_from.x < 0:
+				return
+			if not _dragging and at.distance_to(_press_at) > DRAG_THRESHOLD:
+				_dragging = true
+			if _dragging:
+				_stroke_keys = DecorGrid.run_edges(_stroke_from, DecorGrid.nearest_node(ground))
+				_preview_walls()
+	_stroke_last = ground
+	state_changed.emit()
+
+
+func _tool_release(at: Vector2) -> void:
+	var ground: Vector2 = _ground(at)
+	match tool:
+		Tool.PAINT:
+			match paint_mode:
+				&"brush", &"erase":
+					_finish_stroke(true)
+				&"rect":
+					var to: Vector2i = _stroke.get("to", _stroke_from)
+					_view.set_tile_preview(Vector2i.ZERO, Vector2i.ZERO, false)
+					_stroke = {}
+					if _stroke_from.x >= 0:
+						_stroke = {"kind": "tiles", "changes": [], "cost": 0}
+						_paint_cells(_rect_cells(_stroke_from, to))
+						_finish_stroke(true)
+				&"fill":
+					var cell: Vector2i = _view.tile_at(ground) if ground != Vector2.INF else Vector2i(-1, -1)
+					_stroke = {}
+					if cell.x >= 0:
+						_stroke = {"kind": "tiles", "changes": [], "cost": 0}
+						_paint_cells(_view.flood_cells(cell))
+						_finish_stroke(true)
+				&"pick":
+					var picked: Vector2i = _view.tile_at(ground) if ground != Vector2.INF else Vector2i(-1, -1)
+					_stroke = {}
+					if picked.x >= 0:
+						var id: StringName = _decor.tile(picked)
+						if id == &"":
+							notice.emit(Loc.t("BU KARO BOYALI DEĞİL"))
+						else:
+							begin_paint(id)
+							notice.emit(Loc.t("%s SEÇİLDİ") % Loc.t(String(GarageDecor.get_item(id).get("title", ""))))
+		Tool.WALL, Tool.FINISH:
+			if not _dragging and ground != Vector2.INF:
+				var camera: Camera3D = get_viewport().get_camera_3d()
+				var hit: String = _view.pick_wall(camera, at) if camera and (tool == Tool.FINISH or wall_mode == &"remove") else ""
+				if tool == Tool.FINISH and (hit == "back" or hit == "left"):
+					_stroke = {}
+					_stroke_keys.clear()
+					_apply_outer_finish()
+					state_changed.emit()
+					return
+				_stroke_keys.clear()
+				_stroke_keys.append(hit if hit != "" and hit != "back" and hit != "left" else DecorGrid.nearest_edge(ground))
+			_apply_wall_stroke()
+	_stroke_last = Vector2.INF
+	state_changed.emit()
+
+
+## Fırça / dikdörtgen / kova: gözleri boyar, vuruşun değişikliklerini biriktirir.
+func _paint_cells(cells: Array[Vector2i]) -> void:
+	if cells.is_empty() or _stroke.is_empty():
+		return
+	var pattern: StringName = &"" if paint_mode == &"erase" else paint_pattern
+	var result: Dictionary = _decor.paint_tiles(cells, pattern)
+	(_stroke["changes"] as Array).append_array(result["changes"])
+	_stroke["cost"] = int(_stroke["cost"]) + int(result["cost"])
+	if bool(result["short"]) and not _short_noticed:
+		_short_noticed = true
+		notice.emit(Loc.t("PARA YETERSİZ"))
+
+
+## Vuruşu bitirir. commit: değişiklik varsa tek geri al adımı olarak kaydedilir; değilse yalnızca temizlenir.
+func _finish_stroke(commit: bool) -> void:
+	if _view:
+		_view.set_tile_preview(Vector2i.ZERO, Vector2i.ZERO, false)
+		var walls: InteriorWalls = _view.interior_walls()
+		if walls:
+			walls.clear_preview()
+	if commit and String(_stroke.get("kind", "")) == "tiles" and not (_stroke["changes"] as Array).is_empty():
+		_push({"type": "tiles", "changes": _stroke["changes"], "cost": int(_stroke["cost"])})
+	_stroke = {}
+	_stroke_keys.clear()
+	_stroke_from = Vector2i(-1, -1)
+
+
+func _rect_cells(a: Vector2i, b: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for j: int in range(mini(a.y, b.y), maxi(a.y, b.y) + 1):
+		for i: int in range(mini(a.x, b.x), maxi(a.x, b.x) + 1):
+			var c: Vector2i = Vector2i(i, j)
+			if _view.tile_valid(c):
+				out.append(c)
+	return out
+
+
+## Dikdörtgenin ücreti: yalnızca deseni DEĞİŞECEK gözler ücretlidir.
+func _rect_cost(a: Vector2i, b: Vector2i) -> int:
+	var pattern: StringName = paint_pattern
+	var n: int = 0
+	for c: Vector2i in _rect_cells(a, b):
+		if _decor.tile(c) != pattern:
+			n += 1
+	return n * _decor.tile_price(pattern)
+
+
+func _preview_walls() -> void:
+	var walls: InteriorWalls = _view.interior_walls()
+	if walls == null:
+		return
+	var ok: Array[bool] = []
+	var current: Dictionary = _decor.walls()
+	for key: String in _stroke_keys:
+		match tool:
+			Tool.WALL:
+				ok.append(_view.wall_edge_valid(key) if wall_mode == &"build" else current.has(key))
+			_:
+				ok.append(current.has(key))
+	var a: DecorArea = _view.area()
+	walls.show_preview(_stroke_keys, ok, a.floor_y, a.wall_top, _view.wall_clip(), current)
+	var need: int = 0
+	if tool == Tool.WALL and wall_mode == &"build":
+		for i: int in _stroke_keys.size():
+			if ok[i] and not (current.has(_stroke_keys[i]) and current[_stroke_keys[i]]["piece"] == wall_piece):
+				need += 1
+		_stroke["preview_cost"] = maxi(need - _decor.available_of(wall_piece), 0) * _decor.price_of(wall_piece)
+
+
+func _apply_wall_stroke() -> void:
+	var keys: Array[String] = _stroke_keys.duplicate()
+	_finish_stroke(false)
+	if keys.is_empty():
+		return
+	var current: Dictionary = _decor.walls()
+	match tool:
+		Tool.WALL:
+			if wall_mode == &"build":
+				var valid: Array[String] = []
+				for key: String in keys:
+					if _view.wall_edge_valid(key):
+						valid.append(key)
+				if valid.is_empty():
+					notice.emit(Loc.t("BURAYA DUVAR ÖRÜLEMEZ"))
+					return
+				var result: Dictionary = _decor.build_walls(valid, wall_piece)
+				if result.is_empty():
+					notice.emit(Loc.t("PARA YETERSİZ"))
+					return
+				if not (result["changes"] as Array).is_empty():
+					_push({"type": "walls", "changes": result["changes"], "piece": wall_piece,
+						"bought": int(result["bought"]), "spent": int(result["spent"])})
+				if valid.size() < keys.size():
+					notice.emit(Loc.t("BAZI PARÇALAR SIĞMADI"))
+			else:
+				var targets: Array[String] = []
+				for key: String in keys:
+					if current.has(key):
+						targets.append(key)
+				var held: Array[String] = _view.items_on_walls(targets)
+				if not held.is_empty():
+					notice.emit(Loc.t("ÖNCE DUVARDAKİ EŞYAYI KALDIR"))
+					return
+				var changes: Array = _decor.remove_walls(targets)
+				if not changes.is_empty():
+					_push({"type": "walls", "changes": changes})
+					notice.emit(Loc.t("DEPOYA KALDIRILDI"))
+		Tool.FINISH:
+			if finish_id != &"" and not _decor.is_owned(finish_id):
+				return
+			var changes2: Array = _decor.set_wall_finish(keys, finish_id)
+			if not changes2.is_empty():
+				_push({"type": "walls", "changes": changes2})
+
+
+func _apply_outer_finish() -> void:
+	if apply_surface(DecorManager.SURFACE_WALL, finish_id):
+		notice.emit(Loc.t("DIŞ DUVARLARA UYGULANDI"))
 
 
 # --- Görsel ----------------------------------------------------------------------------

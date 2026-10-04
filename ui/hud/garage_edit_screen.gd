@@ -12,8 +12,13 @@ extends Control
 ##   sağ üst   : IZGARA · GERİ AL · BİTİR
 ##   alt       : kategori sekmeleri, altında eşya şeridi (depo adedi / fiyat / rütbe kilidi);
 ##               açık sekmeye yeniden dokunmak şeridi katlar, garajın tamamı görünür
-##   alt üstü  : seçim / hayalet denetim çubuğu (döndür · depoya kaldır / yerleştir · vazgeç)
+##   alt üstü  : seçim / hayalet denetim çubuğu (döndür · depoya kaldır / yerleştir · vazgeç);
+##               araç açıkken araç çubuğu (zemin: fırça · dikdörtgen · kova · damlalık · silgi,
+##               duvar: ör · sök)
 ## Kategoriler katalogdaki GERÇEK türlerden gelir (GarageDecor.categories()).
+## Dekorasyon v2: ZEMİN sekmesinde desen kartına dokunmak boyama aracını, DUVAR ÖR'de parça kartı
+## örme aracını, DUVAR KAPLAMASI'nda kaplama kartı kaplama aracını açar; başka sekmeye geçmek eşya
+## düzenine döndürür.
 
 signal closed
 
@@ -22,6 +27,8 @@ const MARGIN: float = 14.0
 const CARD_WIDTH: float = 124.0
 const THUMB_TOP: float = 8.0
 const THUMB_AREA: Vector2 = Vector2(108.0, 60.0)
+## Denetim / araç çubuğu için kamera bandında ayrılan yükseklik (plaka satırı + aralık).
+const BAR_RESERVE: float = 58.0
 
 var _editor: GarageEditor
 var _decor: DecorManager
@@ -38,6 +45,7 @@ var _snap_button: PlateButton
 var _undo_button: PlateButton
 var _done_button: PlateButton
 var _tabs: HBoxContainer
+var _tab_scroll: ScrollContainer
 var _tab_group: ButtonGroup = ButtonGroup.new()
 var _tab_buttons: Dictionary = {}   # kind → PlateButton
 var _strip_panel: PlatePanel
@@ -53,6 +61,8 @@ var _rot_right: PlateButton
 var _delete_button: PlateButton
 var _place_button: PlateButton
 var _cancel_button: PlateButton
+## Araç çubuğu düğmeleri: kip → PlateButton (zemin ve duvar kipleri).
+var _tool_buttons: Dictionary = {}
 
 
 func _ready() -> void:
@@ -94,6 +104,7 @@ func _bind() -> void:
 		_editor = get_tree().get_first_node_in_group("garage_editor") as GarageEditor
 		if _editor:
 			_editor.state_changed.connect(_refresh)
+			_editor.tool_changed.connect(_refresh_cards)
 			_editor.selection_changed.connect(func(_iid: String) -> void: _refresh())
 			_editor.placing_changed.connect(func(_item: StringName) -> void: _refresh())
 			_editor.notice.connect(_show_notice)
@@ -189,10 +200,18 @@ func _build() -> void:
 	_bar.add_theme_constant_override(&"separation", 6)
 	_bar.visible = false
 	bar_row.add_child(_bar)
+	# Sekmeler kayan şeritte: dekorasyon v2 ile 9 sekme oldu, telefonda (770 birim genişlik) sığmıyordu
+	var tab_scroll: ScrollContainer = ScrollContainer.new()
+	tab_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	tab_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	tab_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	bottom.add_child(tab_scroll)
+	TouchScroll.attach(tab_scroll)
 	_tabs = HBoxContainer.new()
 	_tabs.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tabs.add_theme_constant_override(&"separation", 6)
-	bottom.add_child(_tabs)
+	tab_scroll.add_child(_tabs)
+	_tab_scroll = tab_scroll
 	_strip_panel = PlatePanel.new()
 	_strip_panel.theme_type_variation = &"HudCarPlate"
 	# Şeritteki dokunuş dünyaya sızmasın (kamera kaymasın, arkadaki eşya seçilmesin): kartlar
@@ -249,6 +268,16 @@ func _build() -> void:
 		if _editor:
 			_editor.delete_selected())
 	_bar.add_child(_delete_button)
+	# Araç çubuğu: aynı satırda, araç açıkken eşya düğmelerinin yerine görünür
+	var modes: Array = [[&"brush", "FIRÇA"], [&"rect", "DİKDÖRTGEN"], [&"fill", "KOVA"], [&"pick", "DAMLALIK"],
+		[&"erase", "SİLGİ"], [&"build", "ÖR"], [&"remove", "SÖK"]]
+	for pair: Array in modes:
+		var mode: StringName = pair[0]
+		var button: PlateButton = _plate(Loc.t(String(pair[1])), &"HudPlateSmall")
+		button.toggle_mode = true
+		button.pressed.connect(_on_tool_mode.bind(mode))
+		_bar.add_child(button)
+		_tool_buttons[mode] = button
 
 
 func _label(variation: StringName, text: String) -> Label:
@@ -289,38 +318,62 @@ func _sign_button(left: bool) -> PlateButton:
 # --- Sekmeler ve kartlar -----------------------------------------------------------------
 
 func _first_useful_kind() -> int:
-	# Oyuncunun deposunda bir şey varsa onun kategorisi; yoksa ilk nesne kategorisi (kaplama değil)
+	# Oyuncunun deposunda bir eşya varsa onun kategorisi; yoksa ilk EŞYA kategorisi (zemin / duvar /
+	# kaplama araç sekmeleri açılışta seçilmez: düzenleyici eşya düzeninde açılır)
 	if _decor:
 		for kind: int in GarageDecor.categories():
 			for item: Dictionary in GarageDecor.items_in(kind):
-				if not GarageDecor.is_surface(item["id"]) and _decor.available_of(item["id"]) > 0:
+				if GarageDecor.is_placeable(item["id"]) and _decor.available_of(item["id"]) > 0:
 					return kind
 	for kind: int in GarageDecor.categories():
-		if kind != GarageDecor.Kind.FLOOR_SURFACE and kind != GarageDecor.Kind.WALL_SURFACE:
+		if not _is_tool_kind(kind):
 			return kind
 	return GarageDecor.categories()[0]
 
 
+static func _is_tool_kind(kind: int) -> bool:
+	return kind == GarageDecor.Kind.FLOOR_PATTERN or kind == GarageDecor.Kind.WALL_PIECE \
+		or kind == GarageDecor.Kind.FLOOR_SURFACE or kind == GarageDecor.Kind.WALL_SURFACE
+
+
 func _on_tab_pressed(kind: int) -> void:
 	if kind == _kind and _strip_panel.visible:
-		# Açık sekmeye yeniden dokunmak şeridi katlar: garajın tamamı görünsün
+		# Açık sekmeye yeniden dokunmak şeridi katlar: garaj açılan boşluğa yeniden sığdırılır (telefonda
+		# boyarken / duvar örerken garaj büyür; desen değiştirmek için sekmeye yeniden dokunulur)
 		_strip_panel.visible = false
 		_tab_buttons[kind].set_pressed_no_signal(false)
+		_reframe_later()
 		return
+	var was_hidden: bool = not _strip_panel.visible
 	_select_tab(kind)
+	if was_hidden:
+		_reframe_later()
+
+
+## Düzen oturduktan sonra (bir kare) kamera bandı yeniden ölçülür.
+func _reframe_later() -> void:
+	if _editor == null:
+		return
+	await get_tree().process_frame
+	if visible:
+		_editor.reframe(_view_band())
 
 
 func _select_tab(kind: int) -> void:
+	if _editor and _kind != kind:
+		_editor.end_tool()   # başka sekme: eşya düzenine dönülür (araç kartına dokununca yeniden açılır)
 	_kind = kind
 	_confirm_buy = &""
 	_strip_panel.visible = true
 	for k: int in _tab_buttons:
 		(_tab_buttons[k] as PlateButton).set_pressed_no_signal(k == kind)
+	if _tab_scroll and _tab_buttons.has(kind) and is_inside_tree():
+		_tab_scroll.ensure_control_visible.call_deferred(_tab_buttons[kind])
 	for child: Node in _strip.get_children():
 		child.queue_free()
 	_cards.clear()
 	if kind == GarageDecor.Kind.FLOOR_SURFACE or kind == GarageDecor.Kind.WALL_SURFACE:
-		_add_card(&"")   # varsayılan kaplamaya dönüş
+		_add_card(&"")   # varsayılan kaplamaya dönüş (duvar kaplaması: kaplamasız duvar)
 	if kind == GarageDecor.Kind.VEHICLE:
 		var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 		if ownership:
@@ -359,6 +412,13 @@ func _draw_card(card: PlateButton, id: StringName) -> void:
 		var ink: Color = Color(card.get_theme_color(&"font_color"), 0.35)
 		card.draw_rect(area.grow(-10.0), ink, false, 2.0, true)
 		return
+	if GarageDecor.is_pattern(id) or GarageDecor.is_surface(id):
+		# Desen / kaplama: dokunun kendisinden kare önizleme (3B küçük resim yok)
+		var side: float = minf(area.size.x, area.size.y) - 6.0
+		var sw: Rect2 = Rect2(area.get_center() - Vector2(side, side) * 0.5, Vector2(side, side))
+		card.draw_texture_rect(DecorTextures.swatch(id), sw, false)
+		card.draw_rect(sw, Color(card.get_theme_color(&"font_color"), 0.45), false, 1.5, true)
+		return
 	var texture: Texture2D = DecorThumbs.cached(id)
 	if texture:
 		var s: Vector2 = texture.get_size()
@@ -378,6 +438,27 @@ func _on_thumb_ready(id: StringName) -> void:
 
 func _on_card_pressed(id: StringName) -> void:
 	if _editor == null or _decor == null:
+		return
+	if GarageDecor.is_pattern(id):
+		if not _decor.is_unlocked(id):
+			_show_notice(Loc.t("%d. RÜTBEDE AÇILIR") % int(GarageDecor.get_item(id).get("min_rank", 1)))
+			return
+		_editor.begin_paint(id)
+		_refresh_cards()
+		return
+	if GarageDecor.is_wall_piece(id):
+		if not _decor.is_unlocked(id):
+			_show_notice(Loc.t("%d. RÜTBEDE AÇILIR") % int(GarageDecor.get_item(id).get("min_rank", 1)))
+			return
+		_editor.begin_walls(id)
+		_refresh_cards()
+		return
+	if _kind == GarageDecor.Kind.WALL_SURFACE and (id == &"" or GarageDecor.is_surface(id)):
+		# Duvar kaplaması: sahipse (ya da varsayılansa) kaplama aracı açılır, değilse iki dokunuşta alınır
+		if id == &"" or _decor.is_owned(id) or _buy(id):
+			_confirm_buy = &""
+			_editor.begin_finish(id)
+		_refresh_cards()
 		return
 	# Kaplama: sahipse uygula, değilse iki dokunuşta satın al + uygula
 	if id == &"" or GarageDecor.is_surface(id):
@@ -431,15 +512,47 @@ func _refresh_cards() -> void:
 		if not is_instance_valid(card):
 			continue
 		if id == &"":
-			var slot: StringName = DecorManager.SURFACE_FLOOR if _kind == GarageDecor.Kind.FLOOR_SURFACE \
-					else DecorManager.SURFACE_WALL
 			card.text = Loc.t("VARSAYILAN")
-			card.button_pressed = _decor.surface(slot) == &""
+			card.button_pressed = _editor != null and _editor.tool == GarageEditor.Tool.FINISH and _editor.finish_id == &""
 			card.disabled = false
 			continue
 		var item: Dictionary = GarageDecor.get_item(id)
 		var title: String = Loc.t(String(item.get("title", id)))
 		var status: String
+		if GarageDecor.is_pattern(id):
+			status = _price_status(id) if not _decor.is_unlocked(id) \
+				else Loc.t("%s ₺ / KARO") % Hud.format_thousands(_decor.price_of(id))
+			card.text = "%s\n%s" % [title, status]
+			_fit_card(card)
+			card.disabled = not _decor.is_unlocked(id)
+			card.button_pressed = _editor != null and _editor.tool == GarageEditor.Tool.PAINT \
+				and _editor.paint_pattern == id and _editor.paint_mode != &"erase"
+			card.queue_redraw()
+			continue
+		if GarageDecor.is_wall_piece(id):
+			status = Loc.t("DEPODA %d") % _decor.available_of(id) if _decor.available_of(id) > 0 \
+				else _price_status(id)
+			card.text = "%s\n%s" % [title, status]
+			_fit_card(card)
+			card.disabled = not _decor.is_unlocked(id)
+			card.button_pressed = _editor != null and _editor.tool == GarageEditor.Tool.WALL \
+				and _editor.wall_piece == id and _editor.wall_mode == &"build"
+			card.queue_redraw()
+			continue
+		if GarageDecor.is_surface(id) and _kind == GarageDecor.Kind.WALL_SURFACE:
+			if _decor.is_owned(id):
+				status = Loc.t("DIŞ DUVARDA") if _decor.surface(DecorManager.SURFACE_WALL) == id else Loc.t("SAHİPSİN")
+			else:
+				status = _price_status(id)
+			if _confirm_buy == id:
+				status = Loc.t("SATIN AL? %s ₺") % Hud.format_thousands(_decor.price_of(id))
+			card.text = "%s\n%s" % [title, status]
+			_fit_card(card)
+			card.disabled = not _decor.is_unlocked(id)
+			card.button_pressed = _confirm_buy == id or (_editor != null \
+				and _editor.tool == GarageEditor.Tool.FINISH and _editor.finish_id == id)
+			card.queue_redraw()
+			continue
 		if GarageDecor.is_vehicle(id):
 			card.text = "%s\n%s" % [title, Loc.t("SERGİLE") if _decor.available_of(id) > 0 else Loc.t("SERGİLENİYOR")]
 			_fit_card(card)
@@ -491,6 +604,12 @@ func _refresh() -> void:
 		return
 	_undo_button.disabled = not _editor.can_undo()
 	_snap_button.set_pressed_no_signal(_editor.snap_enabled)
+	if _editor.tool != GarageEditor.Tool.OBJECT:
+		_refresh_tool()
+		_refresh_cards()
+		return
+	for mode: StringName in _tool_buttons:
+		(_tool_buttons[mode] as PlateButton).visible = false
 	var placing: bool = _editor.is_placing()
 	var selected: String = _editor.selected()
 	var wall: bool = false
@@ -517,6 +636,53 @@ func _refresh() -> void:
 	_refresh_cards()
 
 
+## Araç açıkken: bilgi satırı ve araç çubuğu (eşya düğmeleri gizli).
+func _refresh_tool() -> void:
+	for button: PlateButton in [_rot_left, _rot_right, _place_button, _cancel_button, _delete_button]:
+		button.visible = false
+	var paint: bool = _editor.tool == GarageEditor.Tool.PAINT
+	var wall: bool = _editor.tool == GarageEditor.Tool.WALL
+	for mode: StringName in _tool_buttons:
+		var button: PlateButton = _tool_buttons[mode]
+		var visible_now: bool = (paint and GarageEditor.PAINT_MODES.has(mode)) or (wall and GarageEditor.WALL_MODES.has(mode))
+		button.visible = visible_now
+		var on: bool = (paint and _editor.paint_mode == mode) or (wall and _editor.wall_mode == mode)
+		button.set_pressed_no_signal(on)
+		button.highlight = on
+	_bar.visible = paint or wall
+	var cost: int = _editor.stroke_preview_cost()
+	var cost_text: String = "  ·  %s ₺" % Hud.format_thousands(cost) if cost > 0 else ""
+	match _editor.tool:
+		GarageEditor.Tool.PAINT:
+			var title: String = Loc.t(String(GarageDecor.get_item(_editor.paint_pattern).get("title", "")))
+			match _editor.paint_mode:
+				&"erase": _info.text = Loc.t("SİLGİ · SÜRÜKLE: KAROYU SİL (ÜCRETSİZ)")
+				&"pick": _info.text = Loc.t("DAMLALIK · KAROYA DOKUN: DESENİNİ AL")
+				&"rect": _info.text = Loc.t("%s · SÜRÜKLE: ALANI DOLDUR") % title + cost_text
+				&"fill": _info.text = Loc.t("%s · DOKUN: ODAYI DOLDUR") % title
+				_: _info.text = Loc.t("%s · SÜRÜKLE: BOYA (%s ₺ / KARO)") % [title,
+					Hud.format_thousands(_decor.tile_price(_editor.paint_pattern))]
+		GarageEditor.Tool.WALL:
+			var piece: String = Loc.t(String(GarageDecor.get_item(_editor.wall_piece).get("title", "")))
+			_info.text = Loc.t("%s · ÇİZGİ BOYUNCA SÜRÜKLE: ÖR") % piece + cost_text if _editor.wall_mode == &"build" \
+				else Loc.t("DUVARA DOKUN YA DA SÜRÜKLE: SÖK")
+		GarageEditor.Tool.FINISH:
+			var finish: String = Loc.t(String(GarageDecor.get_item(_editor.finish_id).get("title", ""))) \
+				if _editor.finish_id != &"" else Loc.t("VARSAYILAN")
+			_info.text = Loc.t("%s · DUVARA DOKUN: KAPLA") % finish
+
+
+func _on_tool_mode(mode: StringName) -> void:
+	if _editor == null:
+		return
+	if GarageEditor.PAINT_MODES.has(mode):
+		if _editor.paint_pattern == &"" and mode != &"erase" and mode != &"pick":
+			_show_notice(Loc.t("ÖNCE BİR DESEN SEÇ"))
+		_editor.set_paint_mode(mode)
+	else:
+		_editor.set_wall_mode(mode)
+
+
 ## Ekranın arayüzsüz dikey bandı (0..1): üstte başlık grubunun, altta sekmeler + şerit + denetim
 ## çubuğunun ALTINDA/ÜSTÜNDE kalan kısım. Kamera garajı bu banda sığdırır; böylece çubuk ya da
 ## sekmeler garajın ön köşesindeki eşyanın üstüne binmez (telefon oranında 0.64 sabiti çubuğun
@@ -526,7 +692,10 @@ func _view_band() -> Vector2:
 	var top: float = _top.get_combined_minimum_size().y + MARGIN
 	var bottom: float = _bottom.get_combined_minimum_size().y + MARGIN
 	if not _bar.visible:
-		bottom += _bar.get_combined_minimum_size().y
+		# Çubuk açılışta gizli ve düğmeleri de gizli olduğu için ölçüsü ~0 çıkıyordu: araç çubuğu açılınca
+		# garajın ön köşesinin üstüne biniyor, oradaki dokunuşlar düğmelere gidiyordu (telefonda boyama
+		# hiç yapılamadı). Bir plaka satırı kadar yer her zaman ayrılır.
+		bottom += maxf(_bar.get_combined_minimum_size().y, BAR_RESERVE)
 	return Vector2(top / height, 1.0 - bottom / height)
 
 

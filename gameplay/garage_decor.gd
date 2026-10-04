@@ -10,9 +10,11 @@ class_name GarageDecor
 ## YENİ EŞYA = decorations.json'a bir kayıt + assets/decor/<id>.glb (ya da kayıtta scene_path).
 ## Kod değişmez; kategori, yerleşim türü ve fiyat kayıttan gelir, boyut modelden ölçülür.
 
-## Eşya türleri (= palet kategorileri). JSON'da küçük harf ad olarak yazılır.
+## Eşya türleri (= palet kategorileri, bu sırayla). JSON'da küçük harf ad olarak yazılır.
 enum Kind {
-	FLOOR_SURFACE,   # zemin kaplaması (yerleştirilmez, uygulanır)
+	FLOOR_PATTERN,   # zemin karosu deseni: göz göz boyanır, her boyanan göz için küçük ücret (dekorasyon v2)
+	WALL_PIECE,      # iç duvar parçası: ızgara kenarına örülür (düz, kapı, pencere, cam, yarım, kemer)
+	FLOOR_SURFACE,   # ESKİ tüm-zemin kaplaması (v1; artık mağazada yok, kayıttaki karolara taşınır)
 	WALL_SURFACE,    # duvar kaplaması (yerleştirilmez, uygulanır)
 	WORKSHOP,        # atölye eşyası
 	LOUNGE,          # yaşam alanı eşyası
@@ -26,9 +28,12 @@ enum Kind {
 const PLACE_FLOOR: StringName = &"floor"      # zemine, X/Z serbest, y otomatik
 const PLACE_WALL: StringName = &"wall"        # garajın iç duvar yüzüne, yön duvardan
 const PLACE_SURFACE: StringName = &"surface"  # zemin/duvar kaplaması: tek seçim, uygulanır
+const PLACE_TILE: StringName = &"tile"        # zemin karosu deseni: göze boyanır (DecorManager.paint_tiles)
+const PLACE_EDGE: StringName = &"edge"        # iç duvar parçası: ızgara kenarına örülür (DecorManager.build_walls)
 
 const DATA_PATH: String = "res://decor/decorations.json"
 const KIND_KEYS: Dictionary = {
+	"floor_pattern": Kind.FLOOR_PATTERN, "wall_piece": Kind.WALL_PIECE,
 	"floor_surface": Kind.FLOOR_SURFACE, "wall_surface": Kind.WALL_SURFACE,
 	"workshop": Kind.WORKSHOP, "lounge": Kind.LOUNGE, "wall_item": Kind.WALL_ITEM,
 	"yard": Kind.YARD, "plant": Kind.PLANT,
@@ -105,6 +110,20 @@ static func is_surface(id: StringName) -> bool:
 	return placement(id) == PLACE_SURFACE
 
 
+static func is_pattern(id: StringName) -> bool:
+	return placement(id) == PLACE_TILE
+
+
+static func is_wall_piece(id: StringName) -> bool:
+	return placement(id) == PLACE_EDGE
+
+
+## Garaja ÖRNEK olarak konan (sürüklenip taşınan) eşya mı? Kaplama, karo deseni ve duvar parçası değildir.
+static func is_placeable(id: StringName) -> bool:
+	var p: StringName = placement(id)
+	return p == PLACE_FLOOR or p == PLACE_WALL
+
+
 ## Döndürme adımı (derece). Kayıtta yoksa katalog varsayılanı.
 static func rotation_step(id: StringName) -> float:
 	var item: Dictionary = get_item(id)
@@ -146,8 +165,11 @@ static func items_in(kind: int) -> Array[Dictionary]:
 ## Kategori başlığı (arayüz).
 static func kind_title(kind: int) -> String:
 	match kind:
+		Kind.FLOOR_PATTERN: return Loc.t("ZEMİN")
+		Kind.WALL_PIECE: return Loc.t("DUVAR ÖR")
 		Kind.FLOOR_SURFACE: return Loc.t("AVLU ZEMİNİ")
-		Kind.WALL_SURFACE: return Loc.t("GARAJ DUVARI")
+		Kind.WALL_SURFACE: return Loc.t("DUVAR KAPLAMASI")
+		Kind.WALL_ITEM: return Loc.t("DUVAR EŞYASI")
 		Kind.WORKSHOP: return Loc.t("ATÖLYE")
 		Kind.LOUNGE: return Loc.t("YAŞAM ALANI")
 		Kind.YARD: return Loc.t("AVLU DÜZENİ")
@@ -185,8 +207,13 @@ static func load_from(path: String = DATA_PATH) -> bool:
 		entry["value"] = int(entry.get("value", 0))
 		entry["min_rank"] = int(entry.get("min_rank", 1))
 		if not entry.has("placement"):
-			entry["placement"] = String(PLACE_SURFACE) if kind_key.ends_with("_surface") \
-					else (String(PLACE_WALL) if kind_key == "wall_item" else String(PLACE_FLOOR))
+			if kind_key == "floor_pattern":
+				entry["placement"] = String(PLACE_TILE)
+			elif kind_key == "wall_piece":
+				entry["placement"] = String(PLACE_EDGE)
+			else:
+				entry["placement"] = String(PLACE_SURFACE) if kind_key.ends_with("_surface") \
+						else (String(PLACE_WALL) if kind_key == "wall_item" else String(PLACE_FLOOR))
 		if _by_id.has(entry["id"]):
 			push_warning("GarageDecor: yinelenen id '%s' atlandı" % entry["id"])
 			continue

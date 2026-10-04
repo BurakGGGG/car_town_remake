@@ -187,6 +187,8 @@ static func _load_model(id: StringName) -> Node3D:
 static func build(id: StringName) -> Node3D:
 	if GarageDecor.is_vehicle(id):
 		return _vehicle(id)
+	if GarageDecor.is_wall_piece(id):
+		return InteriorWalls.build_piece_preview(id)   # kart küçük resmi: tek göz boyunda segment
 	if has_model(id):
 		return _load_model(id)
 	var root: Node3D = Node3D.new()
@@ -334,12 +336,11 @@ static func floor_material(id: StringName) -> StandardMaterial3D:
 			return null
 
 
-## Duvar kaplamasının malzemesi.
+## Duvar kaplamasının malzemesi (dokulu, dünya uzayında; vfx/decor_textures.gd). Bilinmeyen → null.
 static func wall_material(id: StringName) -> StandardMaterial3D:
-	match id:
-		&"wall_brick": return _material(Color("8C4A3A"), 0.85)
-		&"wall_panel": return _material(Color("EDEAE3"), 0.45)
-		_: return null
+	if not GarageDecor.is_surface(id) or DecorManager.surface_slot_of(id) != DecorManager.SURFACE_WALL:
+		return null
+	return DecorTextures.wall_material(id)
 
 
 # --- ATÖLYE (ek) ---------------------------------------------------------------------
