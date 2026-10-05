@@ -47,8 +47,14 @@ func _ready():
 	add_to_group("garage_system")
 	_ensure_decor_manager()
 	_ensure_decor_view()
-	_ensure_crate_system()
-	_ensure_editor.call_deferred()
+	if GarageVisit.is_visiting():
+		# ARKADAŞ GARAJI: yalnızca görünüm. Kasa / görev / reklam / sosyal / düzenleyici kurulmaz;
+		# ayarlar (grafik kalitesi) cihazındır, o yine uygulanır.
+		_ensure_settings()
+	else:
+		_ensure_crate_system()
+		_ensure_social()
+		_ensure_editor.call_deferred()
 	_ensure_world_dressing.call_deferred()
 	_hide_build_grid()
 	_connect_upgrade.call_deferred()
@@ -77,11 +83,7 @@ func _ensure_crate_system() -> void:
 		var gems: GemRewards = GemRewards.new()
 		gems.name = "GemRewards"
 		add_child(gems)
-	# AYARLAR (grafik / performans / ses; cihaza özel, kayda girmez)
-	if get_tree().get_first_node_in_group("settings") == null:
-		var settings: GameSettings = GameSettings.new()
-		settings.name = "GameSettings"
-		add_child(settings)
+	_ensure_settings()
 	# GÖREVLER (günlük / haftalık / başarım): gün saati GemRewards'tan, sayaçlar oyun sinyallerinden
 	if get_tree().get_first_node_in_group("missions") == null:
 		var missions: MissionManager = MissionManager.new()
@@ -94,6 +96,22 @@ func _ensure_crate_system() -> void:
 		var ads: AdService = AdService.new()
 		ads.name = "AdService"
 		add_child(ads)
+
+
+## AYARLAR (grafik / performans / ses; cihaza özel, kayda girmez)
+func _ensure_settings() -> void:
+	if get_tree().get_first_node_in_group("settings") == null:
+		var settings: GameSettings = GameSettings.new()
+		settings.name = "GameSettings"
+		add_child(settings)
+
+
+## ARKADAŞLIK (SocialManager, "social"): oturumu CloudSaveManager'dan alır, kayıttan sonra açık garajı yayınlar.
+func _ensure_social() -> void:
+	if get_tree().get_first_node_in_group("social") == null:
+		var social: SocialManager = SocialManager.new()
+		social.name = "SocialManager"
+		add_child(social)
 
 
 ## Avludaki dekorasyon görünümü de kodla kurulur (sahne dosyası elle düzenlenmiyor).

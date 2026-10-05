@@ -189,6 +189,11 @@ func get_profile() -> Dictionary:
 	}
 
 
+## Bir Firestore / Auth işlemi ya da çıkış sürüyor mu (ziyarete giderken sahne donmadan önce bakılır).
+func is_busy() -> bool:
+	return _op != Op.NONE or _signing_out
+
+
 ## Son okumada bulutta kayıt vardı mı.
 func has_cloud_save() -> bool:
 	return _cloud_exists
@@ -300,7 +305,7 @@ func _on_auth_success(user: Dictionary) -> void:
 				_on_google_user(user)
 				return
 			_user = user
-			_delete_cloud_doc()
+			_delete_social_then_doc()
 
 
 func _on_auth_failure(message: String) -> void:
@@ -374,6 +379,17 @@ func _on_sign_out_result(success: bool) -> void:
 
 
 # --- Hesap silme -------------------------------------------------------------------
+
+## Önce arkadaşlık verileri (açık garaj, kod, istekler, arkadaşlıklar: SocialManager), sonra bulut
+## kaydı. Auth kullanıcısı silinince bu belgelere yetki kalmaz; bu yüzden en başta silinirler.
+## Silinemezlerse hesap silinmez (oyuncu tekrar dener).
+func _delete_social_then_doc() -> void:
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
+	if social and not await social.delete_all():
+		_abort_delete(Loc.t("Hesap silinmedi: arkadaşlık verilerine ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene."))
+		return
+	_delete_cloud_doc()
+
 
 func _delete_cloud_doc() -> void:
 	_op = Op.DELETE_DOC

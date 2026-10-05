@@ -961,6 +961,46 @@
       "desc": "Karbon fiber örgü."
     },
     {
+      "id": "checker_pink",
+      "title": "PEMBE DAMA",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 190,
+      "value": 76,
+      "min_rank": 2,
+      "desc": "Pastel pembe-krem dama."
+    },
+    {
+      "id": "checker_mint",
+      "title": "NANE DAMA",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 190,
+      "value": 76,
+      "min_rank": 2,
+      "desc": "Pastel nane-krem dama."
+    },
+    {
+      "id": "tile_pastel",
+      "title": "PASTEL KARO",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 220,
+      "value": 88,
+      "min_rank": 3,
+      "desc": "Pembe, nane, mavi ve sarı karolar."
+    },
+    {
+      "id": "wood_white",
+      "title": "BEYAZ PARKE",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 210,
+      "value": 84,
+      "min_rank": 3,
+      "desc": "Beyaza boyanmış ahşap parke."
+    },
+    {
       "id": "wall_plain",
       "title": "DÜZ DUVAR",
       "kind": "wall_piece",
@@ -1129,6 +1169,46 @@
       "value": 8800,
       "min_rank": 4,
       "desc": "Siyah-beyaz dama kaplama."
+    },
+    {
+      "id": "wall_pink",
+      "title": "PEMBE BOYA",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 9000,
+      "value": 3600,
+      "min_rank": 2,
+      "desc": "Pastel pembe boya."
+    },
+    {
+      "id": "wall_mint",
+      "title": "NANE BOYA",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 9000,
+      "value": 3600,
+      "min_rank": 2,
+      "desc": "Pastel nane yeşili boya."
+    },
+    {
+      "id": "wall_lilac",
+      "title": "LİLA BOYA",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 9000,
+      "value": 3600,
+      "min_rank": 2,
+      "desc": "Pastel lila boya."
+    },
+    {
+      "id": "wall_candy",
+      "title": "ŞEKER ÇİZGİ",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 18000,
+      "value": 7200,
+      "min_rank": 3,
+      "desc": "Pembe-krem dikey çizgili tapet."
     },
     {
       "id": "sign_oil",

@@ -49,6 +49,10 @@ const MAX_LEVEL: int = 99
 @export var create_save_on_first_run: bool = true
 ## Değişikliklerde otomatik kayıt.
 @export var auto_save: bool = true
+## ARKADAŞ GARAJI ziyareti (GarageVisit sahne ağaca girmeden açar): diskteki kayıt OKUNMAZ, arkadaşın
+## açık garajı (GarageVisit.garage) uygulanır ve HİÇBİR ŞEY YAZILMAZ (save_game / new_game /
+## apply_snapshot reddedilir). Oyuncunun kendi kaydı ziyaret boyunca dokunulmadan kalır.
+var visit_mode: bool = false
 
 var _economy: EconomyManager
 var _progress: PlayerProgress
@@ -90,6 +94,12 @@ func _setup() -> void:
 	_gem_rewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
 	_missions = get_tree().get_first_node_in_group("missions") as MissionManager
 	_ads = get_tree().get_first_node_in_group("ads") as AdService
+	if visit_mode:
+		_loading = true
+		_apply(GarageVisit.garage())
+		_loading = false
+		game_loaded.emit(true)
+		return   # otomatik kayıt bağlanmaz
 	if _gem_rewards and not has_save():
 		# Yeni kurulum: ilk günün giriş ödülü başlangıç değerine dahil olsun, yoksa bu cihaz
 		# "ilerleme var" sayılır ve Google girişinde bulut kaydı otomatik gelmez (çakışma sorulur).
@@ -114,6 +124,8 @@ func has_save() -> bool:
 ## (uygulama öldürüldü, pil bitti) eski kayıt bozulmadan kalır — kasa satın alma / açma gibi tek
 ## yazımlık işlemler ya tamamen diskte olur ya hiç olmaz.
 func save_game() -> bool:
+	if visit_mode:
+		return false
 	var tmp_path: String = SAVE_PATH + ".tmp"
 	var file: FileAccess = FileAccess.open(tmp_path, FileAccess.WRITE)
 	if file == null:
@@ -147,7 +159,7 @@ func load_game() -> bool:
 
 
 func delete_save() -> bool:
-	if not has_save():
+	if visit_mode or not has_save():
 		return false
 	var err: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	if err != OK:
@@ -158,6 +170,8 @@ func delete_save() -> bool:
 
 ## Yeni oyun: kayıt silinir, manager'lar başlangıç değerlerine döner ve yeni kayıt yazılır.
 func new_game() -> void:
+	if visit_mode:
+		return
 	delete_save()
 	_loading = true
 	if _economy:
@@ -222,6 +236,8 @@ func _progress_json() -> String:
 ## Dışarıdan gelen (bulut) kaydı load_game ile aynı doğrulamadan geçirir, uygular ve diske yazar.
 ## Geçersizse hiçbir şey değişmez ve false döner.
 func apply_snapshot(raw: Variant) -> bool:
+	if visit_mode:
+		return false
 	var data: Dictionary = validate(raw)
 	if data.is_empty():
 		return false

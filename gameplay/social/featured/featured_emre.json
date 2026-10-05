@@ -1,0 +1,1642 @@
+{
+	"garage": {
+		"decor": {
+			"instances": [
+				{
+					"catalog_id": "car:lambo_huracan",
+					"instance_id": "i1",
+					"position": {
+						"x": -3.525,
+						"y": 0.01,
+						"z": -2.5625
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 30.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "car:ferrari_488_pista",
+					"instance_id": "i2",
+					"position": {
+						"x": -4.4,
+						"y": 0.01,
+						"z": -3.0875
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 30.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "car:porsche_gt3",
+					"instance_id": "i3",
+					"position": {
+						"x": -5.275,
+						"y": 0.01,
+						"z": -2.5625
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 30.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "car:audi_rs6",
+					"instance_id": "i4",
+					"position": {
+						"x": -0.7425,
+						"y": 0.01,
+						"z": -1.425
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "car:bmw_e60",
+					"instance_id": "i5",
+					"position": {
+						"x": -0.7425,
+						"y": 0.01,
+						"z": -1.9675
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "car:mercedes_cls",
+					"instance_id": "i6",
+					"position": {
+						"x": -2.3,
+						"y": 0.01,
+						"z": -1.425
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "tool_cabinet",
+					"instance_id": "i7",
+					"position": {
+						"x": -5.68,
+						"y": 0.01,
+						"z": -0.4625
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "parts_shelf",
+					"instance_id": "i8",
+					"position": {
+						"x": -5.68,
+						"y": 0.01,
+						"z": -1.1975
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "workbench",
+					"instance_id": "i9",
+					"position": {
+						"x": -4.4,
+						"y": 0.01,
+						"z": -1.4425
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "tool_trolley",
+					"instance_id": "i10",
+					"position": {
+						"x": -3.9625,
+						"y": 0.01,
+						"z": -1.4425
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "compressor",
+					"instance_id": "i11",
+					"position": {
+						"x": -4.925,
+						"y": 0.01,
+						"z": -1.4425
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "tyre_rack",
+					"instance_id": "i12",
+					"position": {
+						"x": -5.3625,
+						"y": 0.01,
+						"z": -1.4425
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "barrel_rack",
+					"instance_id": "i13",
+					"position": {
+						"x": -3.6475,
+						"y": 0.01,
+						"z": -1.4425
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "oil_drums",
+					"instance_id": "i14",
+					"position": {
+						"x": -3.3675,
+						"y": 0.01,
+						"z": -1.5825
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "engine_block",
+					"instance_id": "i15",
+					"position": {
+						"x": -3.315,
+						"y": 0.01,
+						"z": -0.4625
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "jack_stand",
+					"instance_id": "i16",
+					"position": {
+						"x": -4.05,
+						"y": 0.01,
+						"z": -0.4625
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "welding_set",
+					"instance_id": "i17",
+					"position": {
+						"x": -4.75,
+						"y": 0.01,
+						"z": -0.3925
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "mechanic",
+					"instance_id": "i18",
+					"position": {
+						"x": -4.78,
+						"y": 0.01,
+						"z": -1.0575
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "traffic_cones",
+					"instance_id": "i19",
+					"position": {
+						"x": -2.9125,
+						"y": 0.01,
+						"z": -0.3575
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "trophy_case",
+					"instance_id": "i20",
+					"position": {
+						"x": -3.175,
+						"y": 0.01,
+						"z": -3.6825
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "trophy_case",
+					"instance_id": "i21",
+					"position": {
+						"x": -3.8225,
+						"y": 0.01,
+						"z": -3.6825
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "floodlight",
+					"instance_id": "i22",
+					"position": {
+						"x": -5.6425,
+						"y": 0.01,
+						"z": -3.7
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "floodlight",
+					"instance_id": "i23",
+					"position": {
+						"x": -5.6425,
+						"y": 0.01,
+						"z": -2.0025
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "floodlight",
+					"instance_id": "i24",
+					"position": {
+						"x": -4.8025,
+						"y": 0.01,
+						"z": -3.7
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "bollards",
+					"instance_id": "i25",
+					"position": {
+						"x": -3.525,
+						"y": 0.01,
+						"z": -2.1075
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "bollards",
+					"instance_id": "i26",
+					"position": {
+						"x": -5.275,
+						"y": 0.01,
+						"z": -2.1075
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "bollards",
+					"instance_id": "i27",
+					"position": {
+						"x": -4.4,
+						"y": 0.01,
+						"z": -2.6325
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "sofa",
+					"instance_id": "i28",
+					"position": {
+						"x": -1.25,
+						"y": 0.01,
+						"z": -3.66
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "sofa",
+					"instance_id": "i29",
+					"position": {
+						"x": -0.375,
+						"y": 0.01,
+						"z": -3.0875
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "coffee_table",
+					"instance_id": "i30",
+					"position": {
+						"x": -1.25,
+						"y": 0.01,
+						"z": -3.2975
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "jukebox",
+					"instance_id": "i31",
+					"position": {
+						"x": -0.4625,
+						"y": 0.01,
+						"z": -3.66
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "vending",
+					"instance_id": "i32",
+					"position": {
+						"x": -1.95,
+						"y": 0.01,
+						"z": -3.66
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "vending",
+					"instance_id": "i33",
+					"position": {
+						"x": -2.2125,
+						"y": 0.01,
+						"z": -3.66
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "foosball",
+					"instance_id": "i34",
+					"position": {
+						"x": -1.25,
+						"y": 0.01,
+						"z": -2.79
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "trophy_case",
+					"instance_id": "i35",
+					"position": {
+						"x": -2.475,
+						"y": 0.01,
+						"z": -3.6825
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "potted_plant",
+					"instance_id": "i36",
+					"position": {
+						"x": -2.5275,
+						"y": 0.01,
+						"z": -2.5975
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "cooler",
+					"instance_id": "i37",
+					"position": {
+						"x": -1.7925,
+						"y": 0.01,
+						"z": -2.5975
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "motorcycle",
+					"instance_id": "i38",
+					"position": {
+						"x": -2.65,
+						"y": 0.01,
+						"z": -0.725
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 45.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "bollards",
+					"instance_id": "i39",
+					"position": {
+						"x": -1.25,
+						"y": 0.01,
+						"z": -0.34
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "bollards",
+					"instance_id": "i40",
+					"position": {
+						"x": -2.0375,
+						"y": 0.01,
+						"z": -0.34
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "arrow_sign",
+					"instance_id": "i41",
+					"position": {
+						"x": -0.97,
+						"y": 0.01,
+						"z": -0.3575
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "speed_bump",
+					"instance_id": "i42",
+					"position": {
+						"x": -1.6,
+						"y": 0.01,
+						"z": -0.6375
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "floodlight",
+					"instance_id": "i43",
+					"position": {
+						"x": -0.34,
+						"y": 0.01,
+						"z": -2.1425
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "floodlight",
+					"instance_id": "i44",
+					"position": {
+						"x": -3.0875,
+						"y": 0.01,
+						"z": -0.375
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "fuel_pump",
+					"instance_id": "i45",
+					"position": {
+						"x": -2.5625,
+						"y": 0.01,
+						"z": -2.09
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "air_station",
+					"instance_id": "i46",
+					"position": {
+						"x": -2.3525,
+						"y": 0.01,
+						"z": -2.09
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "parking_sign",
+					"instance_id": "i47",
+					"position": {
+						"x": -0.34,
+						"y": 0.01,
+						"z": -1.0575
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "wall_tv",
+					"instance_id": "i48",
+					"position": {
+						"x": -0.55,
+						"y": 0.2549,
+						"z": -3.748
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "led_strip",
+					"instance_id": "i49",
+					"position": {
+						"x": -0.8825,
+						"y": 0.2549,
+						"z": -3.748
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "neon_garage",
+					"instance_id": "i50",
+					"position": {
+						"x": -1.25,
+						"y": 0.2549,
+						"z": -3.748
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "wall_lamp",
+					"instance_id": "i51",
+					"position": {
+						"x": -1.6175,
+						"y": 0.2549,
+						"z": -3.748
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "neon_open",
+					"instance_id": "i52",
+					"position": {
+						"x": -2.0375,
+						"y": 0.2549,
+						"z": -3.748
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "neon_sign",
+					"instance_id": "i53",
+					"position": {
+						"x": -2.5625,
+						"y": 0.2549,
+						"z": -3.748
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "checkered_flags",
+					"instance_id": "i54",
+					"position": {
+						"x": -3.0175,
+						"y": 0.2549,
+						"z": -3.748
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "led_strip",
+					"instance_id": "i55",
+					"position": {
+						"x": -3.525,
+						"y": 0.2549,
+						"z": -3.748
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "plate_frame",
+					"instance_id": "i56",
+					"position": {
+						"x": -3.9275,
+						"y": 0.2549,
+						"z": -3.748
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "neon_car",
+					"instance_id": "i57",
+					"position": {
+						"x": -4.4,
+						"y": 0.2549,
+						"z": -3.748
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "wall_lamp",
+					"instance_id": "i58",
+					"position": {
+						"x": -4.8375,
+						"y": 0.2549,
+						"z": -3.748
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "led_strip",
+					"instance_id": "i59",
+					"position": {
+						"x": -5.275,
+						"y": 0.2549,
+						"z": -3.748
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "poster_red",
+					"instance_id": "i60",
+					"position": {
+						"x": -5.6075,
+						"y": 0.2549,
+						"z": -3.748
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "wall_shelf",
+					"instance_id": "i61",
+					"position": {
+						"x": -5.773,
+						"y": 0.2549,
+						"z": -0.3925
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "pegboard",
+					"instance_id": "i62",
+					"position": {
+						"x": -5.773,
+						"y": 0.2549,
+						"z": -0.8125
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "extinguisher_wall",
+					"instance_id": "i63",
+					"position": {
+						"x": -5.773,
+						"y": 0.2549,
+						"z": -1.1975
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "tyre_hanger",
+					"instance_id": "i64",
+					"position": {
+						"x": -5.773,
+						"y": 0.2549,
+						"z": -1.5825
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "neon_piston",
+					"instance_id": "i65",
+					"position": {
+						"x": -5.773,
+						"y": 0.2549,
+						"z": -2.0375
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "rim_display",
+					"instance_id": "i66",
+					"position": {
+						"x": -5.773,
+						"y": 0.2549,
+						"z": -2.3
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "neon_flag",
+					"instance_id": "i67",
+					"position": {
+						"x": -5.773,
+						"y": 0.2549,
+						"z": -2.5625
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "led_strip",
+					"instance_id": "i68",
+					"position": {
+						"x": -5.773,
+						"y": 0.2549,
+						"z": -2.8775
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "neon_bolt",
+					"instance_id": "i69",
+					"position": {
+						"x": -5.773,
+						"y": 0.2549,
+						"z": -3.175
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				},
+				{
+					"catalog_id": "trophy_shelf",
+					"instance_id": "i70",
+					"position": {
+						"x": -5.773,
+						"y": 0.2549,
+						"z": -3.6125
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 90.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					}
+				}
+			],
+			"next_instance": 71,
+			"owned": {
+				"air_station": 1,
+				"arrow_sign": 1,
+				"barrel_rack": 1,
+				"bollards": 5,
+				"checkered_flags": 1,
+				"coffee_table": 1,
+				"compressor": 1,
+				"cooler": 1,
+				"engine_block": 1,
+				"extinguisher_wall": 1,
+				"floodlight": 5,
+				"foosball": 1,
+				"fuel_pump": 1,
+				"jack_stand": 1,
+				"jukebox": 1,
+				"led_strip": 4,
+				"mechanic": 1,
+				"motorcycle": 1,
+				"neon_bolt": 1,
+				"neon_car": 1,
+				"neon_flag": 1,
+				"neon_garage": 1,
+				"neon_open": 1,
+				"neon_piston": 1,
+				"neon_sign": 1,
+				"oil_drums": 1,
+				"parking_sign": 1,
+				"parts_shelf": 1,
+				"pegboard": 1,
+				"plate_frame": 1,
+				"poster_red": 1,
+				"potted_plant": 1,
+				"rim_display": 1,
+				"sofa": 2,
+				"speed_bump": 1,
+				"tool_cabinet": 1,
+				"tool_trolley": 1,
+				"traffic_cones": 1,
+				"trophy_case": 3,
+				"trophy_shelf": 1,
+				"tyre_hanger": 1,
+				"tyre_rack": 1,
+				"vending": 2,
+				"wall_black": 1,
+				"wall_glass": 23,
+				"wall_lamp": 2,
+				"wall_shelf": 1,
+				"wall_tv": 1,
+				"wall_window": 10,
+				"welding_set": 1,
+				"workbench": 1
+			},
+			"surfaces": {
+				"wall": "wall_black"
+			},
+			"tiles": {
+				"palette": [
+					"checker_bw_big",
+					"diamond_black",
+					"race_stripe",
+					"hazard",
+					"rubber",
+					"diamond_silver",
+					"carbon",
+					"checker_bw",
+					"wood_dark",
+					"checker_red"
+				],
+				"rows": [
+					"aaaabbbccbbbbbbbbdeeeeeeeeeeeeee",
+					"aaaabbbccbbbffffbdeeeeeeeeeeeeee",
+					"aaaabbbccbbbffffbdeeeeeeeeeeeeee",
+					"aaaabbbccbbbffffbdeeeeeeeeeeeeee",
+					"ddddddbccddddddfbdeeeeeeeeeeeeee",
+					"ffffffbccffffffbbdeeeeeeeeeeeeee",
+					"ffffffbccffffffbbdeeeeeeeeeeeeee",
+					"ffffffbccffffffbbdeeeeeeeeeeeeee",
+					"ffffffbccffffffbbddddddddddddddd",
+					"ffffffbccbbbbbbggggggggggggggggg",
+					"ffffffbccbbbbbbggggggggggggggggg",
+					"ffffffbccbbbbbbgghhhhgggggghhhhg",
+					"iiiiiiiiiiiiiibgghhhhgggggghhhhg",
+					"iiiiiiiiiiiiiibgghhhhgggggghhhhg",
+					"iiiiiiiiiiiiiibgghhhhghhhhghhhhg",
+					"iiijjjjjjiiiiibgghhhhghhhhghhhhg",
+					"iiijjjjjjiiiiibggggggghhhhgggggg",
+					"iiijjjjjjiiiiibggggggghhhhgggggg",
+					"iiijjjjjjiiiiibggggggghhhhgggggg",
+					"iiiiiiiiiiiiiibggggggggggggggggg",
+					"iiiiiiiiiiiiiibggggggggggggggggg"
+				]
+			},
+			"walls": [
+				{
+					"edge": "x:10:12",
+					"finish": "wall_black",
+					"piece": "wall_window"
+				},
+				{
+					"edge": "x:11:12",
+					"finish": "wall_black",
+					"piece": "wall_window"
+				},
+				{
+					"edge": "x:12:12",
+					"finish": "wall_black",
+					"piece": "wall_window"
+				},
+				{
+					"edge": "x:13:12",
+					"finish": "wall_black",
+					"piece": "wall_window"
+				},
+				{
+					"edge": "x:15:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:16:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:17:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:18:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:19:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:20:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:21:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:22:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:23:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:24:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:25:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:26:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:27:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:28:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:29:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:30:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:31:9",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "x:4:12",
+					"finish": "wall_black",
+					"piece": "wall_window"
+				},
+				{
+					"edge": "x:5:12",
+					"finish": "wall_black",
+					"piece": "wall_window"
+				},
+				{
+					"edge": "x:6:12",
+					"finish": "wall_black",
+					"piece": "wall_window"
+				},
+				{
+					"edge": "x:7:12",
+					"finish": "wall_black",
+					"piece": "wall_window"
+				},
+				{
+					"edge": "x:8:12",
+					"finish": "wall_black",
+					"piece": "wall_window"
+				},
+				{
+					"edge": "x:9:12",
+					"finish": "wall_black",
+					"piece": "wall_window"
+				},
+				{
+					"edge": "z:15:10",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "z:15:11",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "z:15:12",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "z:15:13",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "z:15:14",
+					"finish": "",
+					"piece": "wall_glass"
+				},
+				{
+					"edge": "z:15:9",
+					"finish": "",
+					"piece": "wall_glass"
+				}
+			]
+		},
+		"garage_upgrades": {
+			"garage_level": 4,
+			"repair_speed": 5
+		},
+		"progress": {
+			"level": 48
+		},
+		"repair_bays": {
+			"layout": [
+				{
+					"x": -3.70000004768372,
+					"yaw": 0.0,
+					"z": -0.8125
+				},
+				{
+					"x": -4.40000009536743,
+					"yaw": 0.0,
+					"z": -0.8125
+				},
+				{
+					"x": -5.09999990463257,
+					"yaw": 0.0,
+					"z": -0.8125
+				}
+			],
+			"unlocked": 3
+		},
+		"vehicles": {
+			"owned": [
+				"ferrari_488_pista",
+				"lambo_huracan",
+				"porsche_gt3",
+				"bmw_e60",
+				"audi_rs6",
+				"mercedes_cls"
+			],
+			"paint": {}
+		},
+		"version": 10
+	},
+	"id": "featured_emre",
+	"level": 48,
+	"name": "Emre Usta",
+	"value": 2667356
+}

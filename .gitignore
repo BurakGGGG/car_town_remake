@@ -6,3 +6,4 @@ assets/cars/source/
 assets/cars/optimized_old/
 __pycache__/
 *.pyc
+firebase/*-debug.log

@@ -75,6 +75,10 @@ var settings_button: PlateButton
 ## Kodla kurulan GÖREVLER tabelası ve onu açan plaka.
 var quest_screen: MissionScreen
 var quest_button: PlateButton
+## Kodla kurulan ARKADAŞLAR tabelası ve onu açan plaka (GÖREVLER'in altında).
+var friends_screen: FriendsScreen
+var friends_button: PlateButton
+var _social: SocialManager
 var _quests: QuestManager
 var _missions: MissionManager
 @onready var top_left: MarginContainer = %TopLeft
@@ -162,6 +166,7 @@ func _ready() -> void:
 	_build_login_screen()
 	_build_settings()
 	_build_quests()
+	_build_friends()
 	_build_progress_screens()
 	_build_race_screens()
 	_register_screens()
@@ -402,6 +407,7 @@ func _connect_gameplay() -> void:
 		_bays.bays_changed.connect(_check_garage_rank)
 	_check_garage_rank()
 	_connect_crates()
+	_connect_social()
 	var cloud: CloudSaveManager = get_tree().get_first_node_in_group("cloud_save") as CloudSaveManager
 	if cloud:
 		cloud.user_changed.connect(_on_cloud_user_changed)
@@ -975,6 +981,7 @@ func _register_screens() -> void:
 	router.register(&"drag_race", drag_race_screen, UiRouter.Kind.PLACE)
 	router.register(&"race_result", race_result_screen, UiRouter.Kind.MODAL)
 	router.register(&"collection", collection_screen, UiRouter.Kind.MODAL)
+	router.register(&"friends", friends_screen, UiRouter.Kind.MODAL)
 
 
 ## Yığın değişti: oyun HUD'u yalnızca bir YER (garaj/showroom) açıkken gizlenir; panolar
@@ -1148,6 +1155,38 @@ func _build_quests() -> void:
 	quest_screen = MissionScreen.new()
 	garage_screen.get_parent().add_child(quest_screen)
 	quest_screen.reward_claimed.connect(func(text: String) -> void: _show_notice(text, HudPalette.COIN_DARK))
+
+
+## ARKADAŞLAR plakası GÖREVLER plakasının hemen altına eklenir; gelen istek varsa amber olur.
+func _build_friends() -> void:
+	friends_button = PlateButton.new()
+	friends_button.name = "FriendsButton"
+	friends_button.theme_type_variation = &"HudPlateSmall"
+	friends_button.text = Loc.t("ARKADAŞLAR")
+	friends_button.focus_mode = Control.FOCUS_NONE
+	friends_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	friends_button.pressed.connect(func() -> void: router.open(&"friends"))
+	var column: Node = quest_button.get_parent()
+	column.add_child(friends_button)
+	column.move_child(friends_button, quest_button.get_index() + 1)
+	friends_screen = FriendsScreen.new()
+	garage_screen.get_parent().add_child(friends_screen)
+	friends_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
+
+
+func _connect_social() -> void:
+	_social = get_tree().get_first_node_in_group("social") as SocialManager
+	if _social:
+		_social.changed.connect(_refresh_friends_button)
+	_refresh_friends_button()
+
+
+func _refresh_friends_button() -> void:
+	if friends_button == null:
+		return
+	var count: int = _social.incoming.size() if _social else 0
+	friends_button.text = Loc.t("ARKADAŞLAR (%d)") % count if count > 0 else Loc.t("ARKADAŞLAR")
+	friends_button.highlight = count > 0
 
 
 func _on_quest_button_pressed() -> void:

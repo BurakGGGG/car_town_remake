@@ -28,7 +28,8 @@ static func pattern_surface(id: StringName) -> Vector2:
 		&"epoxy_blue", &"epoxy_red", &"epoxy_grey": return Vector2(0.18, 0.05)
 		&"tile_white", &"tile_grey": return Vector2(0.45, 0.0)
 		&"checker_bw", &"checker_bw_big", &"checker_blue", &"checker_red": return Vector2(0.4, 0.0)
-		&"wood_light", &"wood_dark": return Vector2(0.6, 0.0)
+		&"checker_pink", &"checker_mint", &"tile_pastel": return Vector2(0.45, 0.0)
+		&"wood_light", &"wood_dark", &"wood_white": return Vector2(0.6, 0.0)
 		_: return Vector2(0.85, 0.0)
 
 
@@ -58,6 +59,10 @@ static func pattern_image(id: StringName) -> Image:
 		&"hazard": _hazard(img)
 		&"race_stripe": _race_stripe(img)
 		&"rubber": _rubber(img)
+		&"checker_pink": _checker(img, 2, Color("F4C3D2"), Color("FFF4E6"))
+		&"checker_mint": _checker(img, 2, Color("B4E2D0"), Color("FFF4E6"))
+		&"tile_pastel": _pastel_tiles(img)
+		&"wood_white": _planks(img, Color("E8DDCC"), 19)
 		_: img.fill(Color("777777"))
 	img.generate_mipmaps()
 	_pattern_images[id] = img
@@ -118,6 +123,10 @@ static func wall_color(id: StringName) -> Color:
 		&"wall_red": return Color("B53A30")
 		&"wall_tile": return Color("EEEDE8")
 		&"wall_checker": return Color("1E1F22")
+		&"wall_pink": return Color("F2B6C9")
+		&"wall_mint": return Color("AADDC9")
+		&"wall_lilac": return Color("CBBAE6")
+		&"wall_candy": return Color("F4BFD0")
 		_: return Color(0.6, 0.6, 0.6)
 
 
@@ -136,6 +145,7 @@ static func wall_image(id: StringName) -> Image:
 		&"wall_metal": _corrugated(img, Color("8E979F"))
 		&"wall_tile": _tiles(img, 4, Color("EEEDE8"), Color("BEBDB8"), 2)
 		&"wall_checker": _checker(img, 4, Color("EFEEE9"), Color("1E1F22"))
+		&"wall_candy": _candy_stripes(img, Color("F4BFD0"), Color("FFF4E6"))
 		_: return null
 	img.generate_mipmaps()
 	_pattern_images[key] = img
@@ -213,6 +223,26 @@ static func _planks(img: Image, base: Color, seed_value: int) -> void:
 		_rect(img, Rect2i(0, r * h, SIZE, 1), _shade(base, 0.62))
 		var joint: int = (offset % SIZE)
 		_rect(img, Rect2i(joint, r * h, 1, h), _shade(base, 0.62))
+
+
+## 2×2 pastel karo: pembe, nane, bebek mavisi, tereyağı sarısı; ince krem derz.
+static func _pastel_tiles(img: Image) -> void:
+	var colors: Array[Color] = [Color("F4C3D2"), Color("B4E2D0"), Color("B9DAF2"), Color("F7E3A6")]
+	var half: int = SIZE / 2
+	for k: int in 4:
+		_rect(img, Rect2i((k % 2) * half, (k / 2) * half, half, half), colors[k])
+	var grout: Color = Color("FFF4E6")
+	for p: int in [0, half - 2, SIZE - 2]:
+		_rect(img, Rect2i(p, 0, 2, SIZE), grout)
+		_rect(img, Rect2i(0, p, SIZE, 2), grout)
+
+
+## Dikey çizgili tapet (duvarda triplanar: çizgiler düşey durur).
+static func _candy_stripes(img: Image, a: Color, b: Color) -> void:
+	var w: int = SIZE / 8
+	for x: int in SIZE:
+		var c: Color = a if (x / w) % 2 == 0 else b
+		_rect(img, Rect2i(x, 0, 1, SIZE), c)
 
 
 static func _diamond(img: Image, base: Color) -> void:

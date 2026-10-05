@@ -1,8 +1,12 @@
 rules_version = '2';
 
-// car-town-remake — oyuncu kayıtları.
+// car-town-remake — oyuncu kayıtları + arkadaşlık.
 // Her oyuncu YALNIZCA kendi players/{uid} dokümanını okuyup yazabilir.
 // Anonim hesaplar da giriş yapmış sayılır ama oyun buluta yalnızca Google hesabıyla yazar.
+//
+// ARKADAŞLIK belgelerinin kimliği hiçbir zaman çıplak UID değildir (g_ / r_ / o_ / f_ öneki):
+// Firebase eklentisi sonuçları yalnızca belge kimliğiyle bildirir, koleksiyonu söylemez. Bulut kaydı
+// (players/{uid}) kendi sonucunu kimlik == UID diye tanır; önek iki sistemin yanıtlarını ayırır.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -11,9 +15,70 @@ service cloud.firestore {
       allow create, update: if isOwner(userId) && isValidPlayer(request.resource.data);
     }
 
+    // HERKESE AÇIK GARAJ: yalnızca görsel veri (para / gem / kasa yok). Giriş yapmış herkes okur
+    // (arkadaş kodu ile bulunur, ziyaret edilir), yalnızca sahibi yazar.
+    match /garages/{garageId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && garageId == 'g_' + request.auth.uid
+        && isValidGarage(request.resource.data);
+      allow delete: if signedIn() && garageId == 'g_' + request.auth.uid;
+    }
+
+    // ARKADAŞ KODU → UID. Kod bir kez alınır (üzerine yazılamaz), yalnızca sahibi siler.
+    match /codes/{code} {
+      allow read: if signedIn();
+      allow create: if signedIn() && code.matches('^[A-HJ-NP-Z2-9]{6}$')
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /users/{uid} {
+      // GELEN İSTEK: users/{alıcı}/inbox/r_{gönderen}. Gönderen yazar; alıcı ve gönderen okur / siler.
+      match /inbox/{reqId} {
+        allow read, delete: if signedIn()
+          && (request.auth.uid == uid || reqId == 'r_' + request.auth.uid);
+        allow create, update: if signedIn() && reqId == 'r_' + request.auth.uid
+          && uid != request.auth.uid && isValidRequest(request.resource.data);
+      }
+
+      // GİDEN İSTEK (gönderenin bekleyen listesi): users/{gönderen}/outbox/o_{alıcı}.
+      // Sahibi yazar / okur; alıcı kabul ya da ret edince siler.
+      match /outbox/{outId} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && outId.matches('^o_.+')
+          && outId != 'o_' + uid && isValidRequest(request.resource.data);
+        allow delete: if isOwner(uid) || (signedIn() && outId == 'o_' + request.auth.uid);
+      }
+
+      // ARKADAŞLAR: users/{sahip}/friends/f_{diğer}. İlişki karşılıklıdır ve YALNIZCA ALICI kabul
+      // ederken kurulur: iki belgeyi de alıcı yazar, o anda kendi gelen kutusunda istek durmalıdır.
+      //   alıcı kendi listesine:      sahip == alıcı,  inbox/alıcı/r_{diğer} var
+      //   alıcı gönderenin listesine:  diğer == alıcı,  inbox/alıcı/r_{sahip} var
+      // Silme (arkadaşlıktan çıkarma): iki taraf da iki belgeyi silebilir.
+      match /friends/{friendId} {
+        allow read: if isOwner(uid);
+        allow create, update: if signedIn() && friendId.matches('^f_.+')
+          && request.resource.data.keys().hasOnly(['since'])
+          && request.resource.data.since is int
+          && (
+            (request.auth.uid == uid
+              && exists(/databases/$(database)/documents/users/$(uid)/inbox/$('r_' + friendId[2:])))
+            || (friendId == 'f_' + request.auth.uid
+              && exists(/databases/$(database)/documents/users/$(request.auth.uid)/inbox/$('r_' + uid)))
+          );
+        allow delete: if signedIn()
+          && (request.auth.uid == uid || friendId == 'f_' + request.auth.uid);
+      }
+    }
+
     // Başka her yol kapalı.
     match /{document=**} {
       allow read, write: if false;
+    }
+
+    function signedIn() {
+      return request.auth != null;
     }
 
     function isOwner(userId) {
@@ -36,6 +101,29 @@ service cloud.firestore {
         && (!('display_name' in p) || p.display_name is string)
         && (!('email' in p) || p.email is string)
         && (!('photo_url' in p) || p.photo_url is string);
+    }
+
+    // Takma ad: 3–16 karakter, harf / rakam / boşluk / . _ - (Türkçe harfler dahil).
+    function isValidName(n) {
+      return n is string && n.matches('^[A-Za-z0-9ÇĞİÖŞÜçğıöşü ._-]{3,16}$');
+    }
+
+    function isValidGarage(data) {
+      return data.keys().hasOnly(['name', 'code', 'level', 'value', 'garage_json', 'updated_at'])
+        && isValidName(data.name)
+        && data.code is string && data.code.matches('^[A-HJ-NP-Z2-9]{6}$')
+        && data.level is int
+        && data.value is int
+        && data.garage_json is string
+        && data.garage_json.size() < 20000
+        && data.updated_at is int;
+    }
+
+    function isValidRequest(data) {
+      return data.keys().hasOnly(['name', 'code', 'at'])
+        && isValidName(data.name)
+        && data.code is string && data.code.matches('^[A-HJ-NP-Z2-9]{6}$')
+        && data.at is int;
     }
   }
 }
