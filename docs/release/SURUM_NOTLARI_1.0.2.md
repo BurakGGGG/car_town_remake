@@ -2,7 +2,7 @@
 
 Play Console sınırı dil başına 500 karakterdir. Her bölüm doğrudan yapıştırılabilir.
 
-## tr-TR
+## tr-TR (467 karakter)
 
 ```
 AUTO YARD 1.0.2
@@ -14,7 +14,7 @@ AUTO YARD 1.0.2
 • Bazı telefonlarda drag yarışında görülen görüntü bozulması düzeltildi
 ```
 
-## en-US
+## en-US (417 karakter)
 
 ```
 AUTO YARD 1.0.2
@@ -26,13 +26,13 @@ AUTO YARD 1.0.2
 • Fixed broken graphics in drag races on some phones
 ```
 
-## es-419
+## es-419 (499 karakter)
 
 ```
 AUTO YARD 1.0.2
 • AMIGOS: elige un apodo, agrega amigos con tu código y acepta solicitudes
 • Visita los talleres de tus amigos (requiere iniciar sesión con Google)
-• Dos nuevos maestros en la lista de todos: el oscuro Taller Nocturno de Emre y el tierno Taller Algodón de Elif
+• Dos nuevos maestros para todos: el oscuro Taller Nocturno de Emre y el tierno Taller Algodón de Elif
 • Nuevas decoraciones pastel: 4 diseños de piso y 4 revestimientos de pared
 • Los teléfonos de gama baja inician con gráficos bajos automáticamente
 • Corregidos los gráficos dañados en las carreras de arrancones en algunos teléfonos
