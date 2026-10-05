@@ -81,6 +81,7 @@ var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 
 func _ready() -> void:
+	add_to_group("traffic")   # GameSettings düşük kalitede max_vehicles'ı azaltır
 	_rng.randomize()
 	_collect_spawn_points(self)
 	for entry: Dictionary in CarCatalog.all():

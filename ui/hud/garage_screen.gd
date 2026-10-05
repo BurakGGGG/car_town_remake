@@ -334,6 +334,11 @@ func open() -> void:
 		return
 	_closing = false
 	show()
+	# Kalite / GPU'ya göre: MSAA (sahnede 2×) ve anahtar ışığın gölgesi (DÜŞÜK'te kapalı)
+	car_viewport.msaa_3d = GameSettings.subviewport_msaa(Viewport.MSAA_2X)
+	var key_light: DirectionalLight3D = car_viewport.get_node_or_null("KeyLight") as DirectionalLight3D
+	if key_light:
+		key_light.shadow_enabled = GameSettings.shadows_enabled()
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	car_list.open()   # listeyi güncel sahiplikle kurar (yeni alınan araç burada belirir)
 	# Gösterilecek araç: listede seçili olan, yoksa sahip olunan ilk araç

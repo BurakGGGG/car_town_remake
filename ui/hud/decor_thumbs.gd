@@ -60,7 +60,7 @@ func _render(ids: Array[StringName]) -> void:
 		viewport.size = THUMB_SIZE
 		viewport.transparent_bg = true
 		viewport.own_world_3d = true
-		viewport.msaa_3d = Viewport.MSAA_4X
+		viewport.msaa_3d = GameSettings.subviewport_msaa(Viewport.MSAA_4X)
 		viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		var camera: Camera3D = Camera3D.new()
 		camera.projection = Camera3D.PROJECTION_ORTHOGONAL

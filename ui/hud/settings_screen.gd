@@ -484,6 +484,8 @@ func _refresh() -> void:
 		Loc.t("Tam çözünürlük: çoğu telefon için önerilen."),
 		Loc.t("Tam çözünürlük ve kenar yumuşatma: güçlü telefonlar için en net görüntü."),
 	][_settings.quality]
+	if not _settings.quality_chosen and OS.has_feature("mobile"):
+		_quality_note.text += "  " + Loc.t("Telefonuna göre otomatik seçildi.")
 	_saver.set_pressed_no_signal(_settings.battery_saver)
 	_paint_toggle(_saver, _settings.battery_saver)
 	_music_label.text = Loc.percent(str(roundi(_settings.music_volume * 100.0)))

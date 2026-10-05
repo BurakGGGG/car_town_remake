@@ -201,6 +201,8 @@ func open() -> void:
 	_tap_button.text = Loc.t("DOKUN")
 	_tap_button.disabled = false
 	_tap_button.highlight = false
+	# Kalite / GPU'ya göre (PowerVR'da MSAA hareketli araçları bozuyordu: gri, delikli çizim)
+	_viewport.msaa_3d = GameSettings.subviewport_msaa(Viewport.MSAA_2X)
 	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	_apply_compact_ui()
 	show()
@@ -378,7 +380,7 @@ func _viewport_container() -> void:
 	_viewport.name = "TrackViewport"
 	_viewport.transparent_bg = false
 	_viewport.own_world_3d = true   # pist KENDİ dünyasında: şehir sahnesi buraya sızmaz
-	_viewport.msaa_3d = Viewport.MSAA_2X
+	_viewport.msaa_3d = GameSettings.subviewport_msaa(Viewport.MSAA_2X)   # açılışta yeniden bakılır
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	container.add_child(_viewport)
 	_world = Node3D.new()

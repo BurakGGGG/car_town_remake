@@ -62,6 +62,7 @@ const SPIN_DAMPING: float = 5.0            # sürükleme bırakılınca kalan h�
 var _view: SubViewportContainer
 var _viewport: SubViewport
 var _camera: Camera3D
+var _key_light: DirectionalLight3D
 var _display_root: Node3D                  # 360° dönüş bunu döndürür
 var _model_slot: Node3D                    # modeli platforma oturtan kaydırma
 var _platform: MeshInstance3D              # üst tabla (açık gri)
@@ -127,6 +128,8 @@ func open() -> void:
 	_closing = false
 	_closing_after_buy = false
 	show()
+	_viewport.msaa_3d = GameSettings.subviewport_msaa(Viewport.MSAA_2X)
+	_key_light.shadow_enabled = GameSettings.shadows_enabled()
 	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	_rebuild_list()
 	_zoom = 1.0
@@ -189,7 +192,7 @@ func _build_viewport() -> void:
 	_viewport = SubViewport.new()
 	_viewport.name = "ShowroomViewport"
 	_viewport.own_world_3d = true
-	_viewport.msaa_3d = Viewport.MSAA_2X
+	_viewport.msaa_3d = GameSettings.subviewport_msaa(Viewport.MSAA_2X)   # açılışta yeniden bakılır
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_view.add_child(_viewport)
 
@@ -226,8 +229,9 @@ func _build_lights() -> void:
 	key.light_color = Color("FFEFD6")
 	key.light_energy = 0.9
 	key.light_specular = 0.35            # cam yüzeyler patlamasın
-	key.shadow_enabled = true
+	key.shadow_enabled = GameSettings.shadows_enabled()   # DÜŞÜK kalitede gölge yok (açılışta yeniden bakılır)
 	key.directional_shadow_max_distance = 14.0
+	_key_light = key
 	key.basis = Basis.looking_at(Vector3(-0.55, -1.0, -0.45).normalized(), Vector3.UP)
 	_viewport.add_child(key)
 
