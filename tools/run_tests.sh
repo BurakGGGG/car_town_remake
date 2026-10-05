@@ -13,7 +13,7 @@ SUITE="${CT_SUITE_DIR:-$HOME/snap/godot-4/common/cloudtest}"
 GODOT="${GODOT:-godot-4}"
 OUT="${CT_OUT:-/tmp/ct_tests}"
 HEADLESS="save_test edge_test quest_test paint_test account_delete_test login_flow_test drag_transmission_test vehicle_wheel_test decor_test garage_decoration_placement_test crate_test release_test ads_test bay_move_test vehicle_display_test mission_test locale_test decor_v2_test"
-WINDOWED="touch_scroll_test scroll_drag_test settings_test ui_test login_reload_test race_test progression_test vehicle_asset_test vehicle_scale_test"
+WINDOWED="touch_scroll_test scroll_drag_test settings_test ui_test login_reload_test race_test progression_test vehicle_asset_test vehicle_scale_test traffic_pool_test"
 ALL="${*:-$HEADLESS $WINDOWED}"
 mkdir -p "$OUT"
 cd "$PROJ" || exit 1
@@ -25,7 +25,10 @@ for t in $ALL; do
 	# (ustalık sayaçları, garaj seviyesi) eşik testlerini yanlış FAIL'e düşürüyor.
 	# Snap sürüm numarası yola giriyor ve snap kendini güncelliyor (33 → 40 görüldü);
 	# sabit yazılırsa temizlik sessizce hiçbir şey silmez ve testler kirli kayıtla koşar.
-	for d in "$HOME/snap/godot-4"/*/.local/share/ct_suite; do
+	# GODOT=<snap dışı ikili> (ör. tools/engine ile derlenen motor) kaydı ~/.local/share/ct_suite'e yazar.
+	for d in "$HOME/snap/godot-4"/*/.local/share/ct_suite "${XDG_DATA_HOME:-$HOME/.local/share}/ct_suite"; do
+		[ "$GODOT" = "godot-4" ] && [[ "$d" != "$HOME/snap/"* ]] && continue
+		mkdir -p "$d"
 		rm -f "$d/savegame.json" "$d/cloud_sync.json"
 		# Dil: testler Türkçe metinleri denetler; cihaz dili (ör. en_US) oyunu İngilizce açmasın
 		printf '[general]\nlanguage="tr"\n' > "$d/settings.cfg"

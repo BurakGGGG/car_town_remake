@@ -13,6 +13,8 @@ extends Node3D
 ## (ResourceLoader threaded) yüklenir, havuzdan çıkan modelin sahnesi bırakılır ve son NPC'si
 ## despawn olunca (queue_free) mesh belleği kendiliğinden serbest kalır. Görünüm: NPC'ye özel
 ## CarAppearance kopyası + CarRig.
+## Yarış rakibi için istenen trafiğe KAPALI modeller (S sınıfı) ayrı tutulur (_race_models): rakip o modelle
+## gelir, ama şehirde rastgele doğan araçlar yalnızca şehir havuzundan (traffic=true) seçilir.
 
 ## Aynı anda sahnedeki NPC üst sınırı (Car Town tarzı sakin trafik: 3–4). Yol kenarında tamir bekleyen
 ## ve CarSpot'taki araçlar da bu sayıya dahildir (4 = 3 trafik + 1 bekleyen); yolda hiçbir zaman 4'ten
@@ -53,6 +55,8 @@ const HIDE_PROBES: Array[Vector3] = [Vector3.ZERO, Vector3(0.4, 0.0, 0.0), Vecto
 	Vector3(0.0, 0.0, 0.4), Vector3(0.0, 0.0, -0.4), Vector3(0.0, 0.35, 0.0)]
 ## Doğma yeri aranırken eski konumdan dışarı doğru adım.
 const HIDE_STEP: float = 0.3
+## Bellekte tutulan yarışa özel model sayısı (rakip değişince eskisi bırakılır).
+const RACE_MODEL_LIMIT: int = 2
 
 var vehicles: Array[TrafficVehicle] = []
 var spawn_points: Array[TrafficWaypoint] = []
@@ -67,6 +71,10 @@ var _crossing_since: float = 0.0
 var _waiting_axis: int = -1                 # geçiş bekleyen karşı eksen
 var _candidates: Array[StringName] = []  # trafiğe uygun katalog id'leri (yalnızca id, model yok)
 var _pool: Array[Dictionary] = []          # {id, scene}: yüklenmiş, spawn'a hazır modeller (en eski önde)
+## Yalnızca yarış rakibi için yüklenen, trafiğe KAPALI modeller (traffic=false: S sınıfı süper araçlar).
+## Şehir havuzuna girmezler: eskiden rakip modeli havuza girince şehirde rastgele doğan araçların
+## dörtte biri GT3 / Huracán / 488 oluyordu.
+var _race_models: Array[Dictionary] = []
 var _pending: Dictionary = {}              # id → scene_path (arka planda yükleniyor)
 var _rotate_timer: float = 0.0
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -179,9 +187,9 @@ func spawn_challenger(wanted: StringName = &"") -> TrafficVehicle:
 	return vehicle
 
 
-## Havuzdaki model kaydı ({id, scene}) — yoksa boş sözlük.
+## Yüklenmiş model kaydı ({id, scene}; şehir havuzu ya da yarışa özel) — yoksa boş sözlük.
 func _pool_entry(id: StringName) -> Dictionary:
-	for entry: Dictionary in _pool:
+	for entry: Dictionary in _pool + _race_models:
 		if entry["id"] == id:
 			return entry
 	return {}
@@ -248,6 +256,11 @@ func _poll_pending() -> void:
 				_pending.erase(id)
 				if scene == null:
 					continue
+				if not _candidates.has(id):
+					while _race_models.size() >= RACE_MODEL_LIMIT:
+						_race_models.pop_front()
+					_race_models.append({"id": id, "scene": scene})
+					continue
 				while _pool.size() >= pool_size:
 					_pool.pop_front()
 				_pool.append({"id": id, "scene": scene})
@@ -273,14 +286,19 @@ func _rotate_pool(delta: float) -> void:
 
 
 func _pool_has(id: StringName) -> bool:
-	for item: Dictionary in _pool:
-		if item["id"] == id:
-			return true
-	return false
+	return not _pool_entry(id).is_empty()
 
 
-## Şu an bellekteki NPC modelleri (ölçüm / hata ayıklama).
+## Şu an bellekteki NPC modelleri (ölçüm / hata ayıklama; yarışa özel modeller dahil).
 func loaded_model_ids() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for item: Dictionary in _pool + _race_models:
+		out.append(item["id"])
+	return out
+
+
+## Şehirde rastgele doğabilecek modeller (yalnızca traffic=true).
+func city_model_ids() -> Array[StringName]:
 	var out: Array[StringName] = []
 	for item: Dictionary in _pool:
 		out.append(item["id"])

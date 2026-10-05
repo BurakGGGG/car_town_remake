@@ -86,12 +86,14 @@ Signing: **FAIL için Play** — yalnızca debug anahtarı (CN=Android Debug)
 
 ## Logo
 
-Kaynak (kullanıcı onaylı): `~/Projects/ct_shots/store/final/logo_plaka_512_seffaf.png` — 512×512 RGBA, şeffaf arka plan, AUTO YARD plaka logosu. Piksel değiştirilmedi.
-512x512 source: `assets/branding/icon_512.png` (birebir kopya) — PASS
-Project icon: `res://assets/branding/icon_512.png` — PASS; eski Godot `icon.svg` silindi
-Launcher icon: `launcher_192.png` = logo (yalnızca küçültüldü) logodaki mavi blok renginde (#2464CD) düz zemin üzerinde (şeffaf PNG legacy ikonda siyah çıkmasın diye); adaptive ön plan = logo %60 ölçekte güvenli bölgede; adaptive arka plan = aynı düz mavi; monokrom = plaka siluet maskesi — PASS
-Release AAB icon: PASS (xxxhdpi `icon`, `icon_foreground`, `icon_background`, `icon_monochrome` AAB'den çıkarılıp görsel doğrulandı; AAB yeniden derlendi 128,9 MB)
-Not: düz mavi zemin logoya eklenen bir tasarım kararıdır (logo şeffaf olduğu için adaptive ikon zemin ister); rengi değiştirmek isterseniz `adaptive_background_432.png`/`launcher_192.png`. Monokrom harfler hafif tırtıklı. 192 px okunabilirliği cihazda denenmedi.
+**GÜNCEL (2026-10-05, sürüm 1.0.1):** yeni logo — kaynak `eksik_dosyalar/autoyard_playstore_v4_512.png` (512×512, tam kare, altın çerçeveli mavi ışın zemin + AUTO YARD yazısı; `eksik_dosyalar/` git dışı, ikon kopyası `assets/branding/icon_512.png`).
+Üretim: `python3 tools/branding/make_icons.py <kaynak.png>` (Pillow + numpy + scipy; çıktılar `assets/branding/`):
+- `icon_512.png` (proje ikonu + Play Store ikonu) = kaynağın birebir kopyası; `launcher_192.png` = kaynağın küçültülmüşü (tam kare, eski başlatıcılar)
+- adaptive ön plan = yalnızca logo (şeffaf, yumuşak gölgeli, güvenli bölge dairesine sığar); adaptive arka plan = kaynaktan ölçülen renk profiliyle yeniden üretilmiş ışınlı mavi zemin (altın çerçeve YOK: çember maskede köşeleri kesiliyordu); monokrom = logonun parlaklıktan türetilmiş siluet maskesi
+- Çember / yuvarlatılmış kare maskeleri ve temalı ikon önizlemesi bu betikten sonra elle doğrulandı; **cihazda denenmedi.**
+Not: logo kaynağın %85'ini kaplıyor; ikonu olduğu gibi ön plana koymak ya logoyu keser ya da "ikon içinde ikon" gösterir (bu yüzden logo ayrılıp zemin yeniden üretildi).
+
+**Eski (1.0.0, plaka logo):** kaynak `~/Projects/ct_shots/store/final/logo_plaka_512_seffaf.png` (şeffaf plaka logosu), düz mavi (#2464CD) zemin üzerinde; Play Store 512 ikonu da buydu.
 
 ## Save
 
