@@ -16,6 +16,7 @@ var _title: Label
 var _reward: Label
 var _times: Label
 var _winner: Label
+var _record: Label
 var _bonus_button: PlateButton
 var _bonus_amount: int = 0
 var _column: VBoxContainer
@@ -43,6 +44,22 @@ func show_result(won: bool, player_time: float, rival_time: float, money: int, x
 	_times.text = Loc.t("SEN  %.2f sn        RAKİP  %.2f sn") % [player_time, rival_time]
 	hide_bonus()
 	_winner.text = Loc.t("KAZANAN: %s") % String(CarCatalog.get_entry(winner_id).get("display_name", winner_id)).to_upper()
+
+
+## KİŞİSEL REKOR satırı: yeni rekorsa farkıyla birlikte amber, değilse mevcut rekor. Oyuncu hiç
+## kalkmadıysa (koşu yok) satır gizlenir.
+func show_record(finished: bool, is_new: bool, time: float, previous: float) -> void:
+	_record.visible = finished
+	if not finished:
+		return
+	if is_new and previous > 0.0:
+		_record.text = Loc.t("YENİ REKOR!  %.2f sn  (−%.2f)") % [time, previous - time]
+	elif is_new:
+		_record.text = Loc.t("İLK REKOR  %.2f sn") % time
+	else:
+		_record.text = Loc.t("REKORUN  %.2f sn  (+%.2f)") % [previous, time - previous]
+	_record.add_theme_color_override(&"font_color",
+		HudPalette.COIN_DARK if is_new else HudPalette.INK_SOFT)
 
 
 ## Ödüllü reklam teklifi: "REKLAM İZLE +X ₺". Yalnızca oyuncu basarsa reklam gösterilir.
@@ -123,7 +140,10 @@ func _build() -> void:
 	_times.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_winner = _label(&"HudInkCaption", "")
 	_winner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	for label: Label in [_title, _reward, _times, _winner]:
+	_record = _label(&"HudInkValue", "")
+	_record.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_record.visible = false
+	for label: Label in [_title, _reward, _times, _record, _winner]:
 		box.add_child(label)
 	plate.add_child(box)
 	_column.add_child(plate)

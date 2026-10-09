@@ -935,5 +935,15 @@
  "adreno (tm) 8": "",
  "adreno (tm) 51": "",
  "adreno (tm) 3": "",
- "adreno (tm) 612": ""
+ "adreno (tm) 612": "",
+ "FOTO FİNİŞ!": "PHOTO FINISH!",
+ "KUSURSUZ!": "PERFECT!",
+ "SÜPER ÇIKIŞ!": "GREAT LAUNCH!",
+ "İYİ!": "GOOD!",
+ "İLK REKOR  %.2f sn": "FIRST RECORD  %.2f s",
+ "İLK REKORUNU KOY": "SET YOUR FIRST RECORD",
+ "REKOR  %.2f": "BEST  %.2f",
+ "REKORUN  %.2f sn  (+%.2f)": "YOUR BEST  %.2f s  (+%.2f)",
+ "YENİ REKOR!": "NEW RECORD!",
+ "YENİ REKOR!  %.2f sn  (−%.2f)": "NEW RECORD!  %.2f s  (−%.2f)"
 }

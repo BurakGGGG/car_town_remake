@@ -66,6 +66,7 @@ var _crates: CrateManager
 var _gem_rewards: GemRewards
 var _missions: MissionManager
 var _ads: AdService
+var _race: RaceManager
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -94,6 +95,7 @@ func _setup() -> void:
 	_gem_rewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
 	_missions = get_tree().get_first_node_in_group("missions") as MissionManager
 	_ads = get_tree().get_first_node_in_group("ads") as AdService
+	_race = get_tree().get_first_node_in_group("race") as RaceManager
 	if visit_mode:
 		_loading = true
 		_apply(GarageVisit.garage())
@@ -198,6 +200,8 @@ func new_game() -> void:
 		_missions.reset()
 	if _ads:
 		_ads.reset()
+	if _race:
+		_race.reset()
 	_loading = false
 	save_game()
 
@@ -296,6 +300,8 @@ func _collect() -> Dictionary:
 		"missions": _missions.state() if _missions else {},
 		# REKLAM SAYAÇLARI: günlük izleme hakları (saat geri alınarak sıfırlanamaz). Eski kayıtta yoktur: sorun değil.
 		"ads": _ads.state() if _ads else {},
+		# KİŞİSEL YARIŞ REKORLARI: araç başına en iyi süre + hayalet izi. Eski kayıtta yoktur: rekorsuz başlanır.
+		"race": _race.state() if _race else {},
 	}
 
 
@@ -408,6 +414,9 @@ func _apply(data: Dictionary) -> void:
 	if _ads:
 		var ads_data: Variant = data.get("ads", {})
 		_ads.load_state(ads_data if ads_data is Dictionary else {})
+	if _race:
+		var race_data: Variant = data.get("race", {})
+		_race.load_state(race_data if race_data is Dictionary else {})
 	if legacy:
 		if _missions:
 			_missions.mark_legacy_repairs_passed()   # geçilmiş tamir yıldızları ödenmiş sayılır
@@ -424,6 +433,8 @@ func _connect_auto_save() -> void:
 		_economy.money_changed.connect(func(_m: int) -> void: request_save())
 	if _crates:
 		_crates.crates_changed.connect(request_save)
+	if _race:
+		_race.records_changed.connect(request_save)
 	if _ownership:
 		_ownership.ownership_changed.connect(request_save)
 	if _progress:

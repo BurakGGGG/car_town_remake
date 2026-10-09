@@ -10,8 +10,16 @@ extends Node3D
 ## Mobil bütçe: hepsi primitive mesh (BoxMesh/CylinderMesh), gölge KAPALI, ışık tek yönlü.
 ## Tekrarlayan bariyerler tek MultiMesh'te toplanır (yüzlerce çizim çağrısı olmaz).
 
-## Yarışın koşulduğu görsel uzunluk (DragRaceSim'in 150 m'sinin temsili).
-const TRACK_LENGTH: float = 22.0
+## Yarışın koşulduğu görsel uzunluk: DragRaceSim'in 300 metresi GERÇEK ÖLÇEKTE. Araç 1,2 birim
+## (≈ 4,5 m) olduğundan 1 m ≈ 0,267 birim → 300 m ≈ 80 birim. Eskiden 22 birimdi: pist araca göre
+## 3,6 kat kısaydı, 200 km/s'te araç saniyede ~3 boy ilerliyordu (gerçekte ~12) ve yarış "yavaş"
+## hissettiriyordu (kapalı test geri bildirimi). Süreler ve fizik değişmedi; yalnızca ekrandaki akış.
+const TRACK_LENGTH: float = 80.0
+## HIZ SINIFINA GÖRE ÖLÇEK: aynı 300 m, hızlı araçla yarışırken daha UZUN pist olarak çizilir
+## (1,0 → 1,6). Süreler ve sonuç değişmez; yalnızca dünyanın ekranda akış hızı. Fizik farkı
+## (Şahin 135, 488 Pista 173 km/sa) tek başına görünmüyordu: "Tofaşla da Lambo ile de aynı" (test).
+const SCALE_MIN: float = 1.0
+const SCALE_MAX: float = 1.6
 ## Şeritlerin merkez ekseninden uzaklığı (araçlar buraya oturur).
 const LANE_OFFSET: float = 0.56
 ## Asfalt genişliği ve pistin başlangıçtan geriye / bitişten ileriye uzantısı.
@@ -22,7 +30,8 @@ const RUN_IN: float = 8.0
 ## -0,60'ta olunca **burun tam çıkış çizgisinin (z = 0) üstünde** durur. Bonus: yarış bitince
 ## (merkez START_Z + TRACK_LENGTH) burun da tam bitiş çizgisine oturur.
 const START_Z: float = -0.60
-const RUN_OUT: float = 10.0
+## Bitişten sonraki pay: araçlar çizgiyi geçip frenleyerek durur (DragRaceScreen.OVERRUN_BRAKE).
+const RUN_OUT: float = 26.0
 
 # Palet — oyunun dili: koyu kontur, krem plaka, amber vurgu
 const ASPHALT_DARK: Color = Color("24272B")
@@ -48,12 +57,43 @@ const LAMP_GREEN: Color = Color("5FD36A")
 
 var _lamps: Array[MeshInstance3D] = []
 var _ready_lamps: Array[MeshInstance3D] = []
+## Bu yarışın görsel pist uzunluğu (TRACK_LENGTH × ölçek) ve bitiş payı.
+var length: float = TRACK_LENGTH
+var run_out: float = RUN_OUT
 var _total_length: float = TRACK_LENGTH + RUN_IN + RUN_OUT
 var _center_z: float = (TRACK_LENGTH + RUN_OUT - RUN_IN) * 0.5
 
 
 func _ready() -> void:
 	name = "DragTrack"
+	_build()
+
+
+## Oyuncu aracının görsel ölçeği (1,0 … SCALE_MAX): hızlanma statından. Ekonomi araçları 1,0'da
+## kalır (gerçek ölçek), süper sporlar dünyayı 1,6 kat hızlı akıtır.
+static func scale_for(vehicle_id: StringName) -> float:
+	var accel: float = float(DragRaceSim.stats_of(vehicle_id).get("acceleration", 50))
+	return lerpf(SCALE_MIN, SCALE_MAX, clampf((accel - 60.0) / 38.0, 0.0, 1.0))
+
+
+## Pisti bu ölçekte yeniden kurar (ölçek değişmediyse bir şey yapmaz).
+func set_scale_factor(factor: float) -> void:
+	var wanted: float = TRACK_LENGTH * factor
+	if is_equal_approx(wanted, length):
+		return
+	length = wanted
+	run_out = RUN_OUT * factor
+	_total_length = length + RUN_IN + run_out
+	_center_z = (length + run_out - RUN_IN) * 0.5
+	for child: Node in get_children():
+		remove_child(child)
+		child.queue_free()
+	_lamps.clear()
+	_ready_lamps.clear()
+	_build()
+
+
+func _build() -> void:
 	_build_ground()
 	_build_asphalt()
 	_build_start_grid()
@@ -63,6 +103,8 @@ func _ready() -> void:
 	_build_barriers()
 	_build_scenery()
 	_build_start_tree()
+	_build_sponsor_boards()
+	_build_distance_boards()
 	set_lights(4)
 
 
@@ -159,7 +201,7 @@ func _build_asphalt() -> void:
 	for side: int in [-1, 1]:
 		for i: int in 2:
 			var x: float = LANE_OFFSET * float(side) + (0.16 if i == 0 else -0.16)
-			_box(Vector3(0.14, 0.115, 5.0), Vector3(x, -0.043, 2.2), TIRE_DARK)
+			_box(Vector3(0.14, 0.115, 9.0), Vector3(x, -0.043, 4.2), TIRE_DARK)
 
 
 # --- Start / finish -----------------------------------------------------------------
@@ -236,23 +278,23 @@ func _build_finish() -> void:
 		for i: int in cells:
 			var dark: bool = (i + row) % 2 == 0
 			_box(Vector3(cell, 0.14, 0.24),
-				Vector3(-ASPHALT_WIDTH * 0.5 + cell * (float(i) + 0.5), -0.03, TRACK_LENGTH + float(row) * 0.24),
+				Vector3(-ASPHALT_WIDTH * 0.5 + cell * (float(i) + 0.5), -0.03, length + float(row) * 0.24),
 				TIRE_DARK if dark else LINE_WHITE)
 	# FINISH tabelası: iki direk + krem plaka + damalı şerit
 	# Kapı yüksekliği yakın kadraja göre: eskiden tabela kadrajın üstünde kalıyordu.
 	for side: int in [-1, 1]:
-		_box(Vector3(0.12, 1.50, 0.12), Vector3((ASPHALT_WIDTH * 0.5 + 0.35) * float(side), 0.75, TRACK_LENGTH + 0.1), STEEL)
+		_box(Vector3(0.12, 1.50, 0.12), Vector3((ASPHALT_WIDTH * 0.5 + 0.35) * float(side), 0.75, length + 0.1), STEEL)
 	# Tabela: tek dokulu pano (FINISH yazısı + damalı şerit görselin içinde). Dosya yoksa
 	# krem plaka + damalı bloklar yedeği devreye girer.
 	var banner_width: float = ASPHALT_WIDTH + 0.9
 	if ResourceLoader.exists(BANNER_TEXTURE):
 		_billboard(BANNER_TEXTURE, Vector2(banner_width, banner_width * 0.2),
-			Vector3(0.0, 1.25, TRACK_LENGTH + 0.06), 0.0)
+			Vector3(0.0, 1.25, length + 0.06), 0.0)
 	else:
-		_box(Vector3(banner_width, 0.44, 0.10), Vector3(0.0, 1.44, TRACK_LENGTH + 0.1), Color("F3E8CF"))
+		_box(Vector3(banner_width, 0.44, 0.10), Vector3(0.0, 1.44, length + 0.1), Color("F3E8CF"))
 		for i: int in 14:
 			_box(Vector3(0.24, 0.12, 0.12),
-				Vector3(-ASPHALT_WIDTH * 0.5 - 0.3 + float(i) * 0.28, 1.18, TRACK_LENGTH + 0.1),
+				Vector3(-ASPHALT_WIDTH * 0.5 - 0.3 + float(i) * 0.28, 1.18, length + 0.1),
 				TIRE_DARK if i % 2 == 0 else LINE_WHITE)
 
 
@@ -284,7 +326,7 @@ func _build_barriers() -> void:
 	tire_mesh.height = 0.2
 	tire_mesh.radial_segments = 10
 	tires.mesh = tire_mesh
-	var tire_count: int = int((TRACK_LENGTH + 4.0) / 1.1)
+	var tire_count: int = int((length + 4.0) / 1.1)
 	tires.instance_count = tire_count * 2
 	for i: int in tire_count:
 		var z: float = -2.0 + float(i) * 1.1
@@ -302,46 +344,135 @@ func _build_barriers() -> void:
 # --- Çevre: pit duvarı, tribün, depo siluetleri --------------------------------------
 
 func _build_scenery() -> void:
-	# Pit duvarı (sağ taraf) + sponsor plakaları
-	_box(Vector3(0.3, 0.7, 9.0), Vector3(-(ASPHALT_WIDTH * 0.5 + 3.2), 0.35, 3.0), Color("D8D2C4"))
-	for i: int in 4:
-		_box(Vector3(0.05, 0.34, 1.5), Vector3(-(ASPHALT_WIDTH * 0.5 + 3.04), 0.42, 0.2 + float(i) * 2.2),
-			LINE_AMBER if i % 2 == 0 else Color("F3E8CF"))
-	# Tribün (sol taraf): dokulu pano (yoksa kademeli kutu yedeği)
-	if ResourceLoader.exists(STAND_TEXTURE):
-		# Korkuluğun (x = yarım genişlik + 1,85) hemen ardında: kadrajda bariyerin üstünden
-		# görünür ama araçları kapatmaz. Daha uzaktayken kadrajın üst kenarında kesiliyordu.
-		# Pistin çoğu boyunca uzanır: kamera ilerlerken kalabalık kadrajın üst şeridinde akar.
-		_billboard(STAND_TEXTURE, Vector2(20.0, 2.2),
-			Vector3(ASPHALT_WIDTH * 0.5 + 1.9, 0.85, 6.0), -90.0)
-	else:
-		for i: int in 3:
-			_box(Vector3(1.0, 0.34 + float(i) * 0.30, 7.0),
-				Vector3(ASPHALT_WIDTH * 0.5 + 3.4 + float(i) * 1.0, (0.34 + float(i) * 0.30) * 0.5, 4.0),
-				Color("B9B3A4") if i % 2 == 0 else Color("CFC9BA"))
+	# Pist uzadığı için çevre TEKRARLANIR: tek parça tribün / pit duvarı yarışın ilk saniyesinde
+	# kadrajdan çıkıp geri kalan 70 birimi boş bırakıyordu.
+	# Pit duvarı (sağ taraf) + sponsor plakaları — 18 birimde bir 9 birimlik duvar
+	var pit_x: float = -(ASPHALT_WIDTH * 0.5 + 3.2)
+	var segment: float = 18.0
+	var z: float = 3.0
+	while z < length:
+		_box(Vector3(0.3, 0.7, 9.0), Vector3(pit_x, 0.35, z), Color("D8D2C4"))
+		for i: int in 4:
+			_box(Vector3(0.05, 0.34, 1.5), Vector3(pit_x + 0.16, 0.42, z - 2.8 + float(i) * 2.2),
+				LINE_AMBER if i % 2 == 0 else Color("F3E8CF"))
+		z += segment
+	# Tribün (sol taraf): dokulu pano (yoksa kademeli kutu yedeği). Korkuluğun hemen ardında:
+	# kadrajda bariyerin üstünden görünür ama araçları kapatmaz. Pist boyunca 20'şer birim döşenir.
+	var stand_z: float = 6.0
+	while stand_z < length + 12.0:
+		if ResourceLoader.exists(STAND_TEXTURE):
+			_billboard(STAND_TEXTURE, Vector2(20.0, 2.2),
+				Vector3(ASPHALT_WIDTH * 0.5 + 1.9, 0.85, stand_z), -90.0)
+		else:
+			for i: int in 3:
+				_box(Vector3(1.0, 0.34 + float(i) * 0.30, 19.0),
+					Vector3(ASPHALT_WIDTH * 0.5 + 3.4 + float(i) * 1.0, (0.34 + float(i) * 0.30) * 0.5,
+						stand_z), Color("B9B3A4") if i % 2 == 0 else Color("CFC9BA"))
+		stand_z += 20.0
+	_build_floodlights()
 	# Uzakta depo / sanayi siluetleri (düşük detay, sadece hacim)
 	var far: Array = [
-		[Vector3(6.0, 2.2, 4.0), Vector3(11.0, 1.1, TRACK_LENGTH + 6.0), Color("AEB6BC")],
-		[Vector3(4.5, 1.6, 3.2), Vector3(6.0, 0.8, TRACK_LENGTH + 9.0), Color("C2C8CD")],
-		[Vector3(7.0, 2.6, 4.5), Vector3(-10.0, 1.3, TRACK_LENGTH + 7.5), Color("B6BEC4")],
+		[Vector3(6.0, 2.2, 4.0), Vector3(11.0, 1.1, length + 6.0), Color("AEB6BC")],
+		[Vector3(4.5, 1.6, 3.2), Vector3(6.0, 0.8, length + 9.0), Color("C2C8CD")],
+		[Vector3(7.0, 2.6, 4.5), Vector3(-10.0, 1.3, length + 7.5), Color("B6BEC4")],
 		[Vector3(3.2, 1.4, 3.0), Vector3(-6.0, 0.7, -RUN_IN - 3.0), Color("BFC6CB")],
 	]
 	for item: Array in far:
 		_box(item[0], item[1], item[2])
-	# Birkaç çalı/ağaç kütlesi (basit kutu + küre değil: tek koni)
-	for i: int in 5:
-		var z: float = -RUN_IN + float(i) * 6.0
-		var tree: MeshInstance3D = MeshInstance3D.new()
-		var cone: CylinderMesh = CylinderMesh.new()
-		cone.top_radius = 0.0
-		cone.bottom_radius = 0.55
-		cone.height = 1.5
-		cone.radial_segments = 8
-		tree.mesh = cone
-		tree.position = Vector3(ASPHALT_WIDTH * 0.5 + 7.5, 0.75, z)
-		tree.material_override = _material(Color("55772F"))
-		tree.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		add_child(tree)
+	# Ağaç kütleleri (tek koni): tek MultiMesh, pist boyunca 6 birimde bir
+	var trees: MultiMesh = MultiMesh.new()
+	trees.transform_format = MultiMesh.TRANSFORM_3D
+	var cone: CylinderMesh = CylinderMesh.new()
+	cone.top_radius = 0.0
+	cone.bottom_radius = 0.55
+	cone.height = 1.5
+	cone.radial_segments = 8
+	trees.mesh = cone
+	var tree_count: int = int((_total_length + 8.0) / 6.0)
+	trees.instance_count = tree_count
+	for i: int in tree_count:
+		trees.set_instance_transform(i, Transform3D(Basis.IDENTITY,
+			Vector3(ASPHALT_WIDTH * 0.5 + 7.5, 0.75, -RUN_IN + float(i) * 6.0)))
+	_multi(trees, Color("55772F"))
+
+
+## Projektör kuleleri: tribünün ardında, yüksek ve ince — yarış sırasında kadrajın üst şeridinde
+## düzenli aralıkla akarak hızı okutur. Direkler ve başlıklar ikişer MultiMesh.
+func _build_floodlights() -> void:
+	var count: int = int((length + 10.0) / 12.0) + 1
+	var poles: MultiMesh = MultiMesh.new()
+	poles.transform_format = MultiMesh.TRANSFORM_3D
+	var pole: BoxMesh = BoxMesh.new()
+	pole.size = Vector3(0.12, 3.6, 0.12)
+	poles.mesh = pole
+	poles.instance_count = count
+	var heads: MultiMesh = MultiMesh.new()
+	heads.transform_format = MultiMesh.TRANSFORM_3D
+	var head: BoxMesh = BoxMesh.new()
+	head.size = Vector3(0.18, 0.42, 0.8)
+	heads.mesh = head
+	heads.instance_count = count
+	var x: float = ASPHALT_WIDTH * 0.5 + 3.6
+	for i: int in count:
+		var z: float = -4.0 + float(i) * 12.0
+		poles.set_instance_transform(i, Transform3D(Basis.IDENTITY, Vector3(x, 1.8, z)))
+		heads.set_instance_transform(i, Transform3D(Basis.IDENTITY, Vector3(x - 0.08, 3.6, z)))
+	_multi(poles, STEEL)
+	var lamp_material: StandardMaterial3D = _material(Color("FFF4D6"))
+	lamp_material.emission_enabled = true
+	lamp_material.emission = Color("FFE7A8")
+	lamp_material.emission_energy_multiplier = 1.4
+	var instance: MultiMeshInstance3D = MultiMeshInstance3D.new()
+	instance.multimesh = heads
+	instance.material_override = lamp_material
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(instance)
+
+
+## Sponsor panoları: beton duvarın İÇ yüzüne asılı renkli levhalar. Kameraya en yakın şey bunlar
+## (ön planda, sol altta): yarışta hızla akarak "hız hissi"nin asıl kaynağı olurlar.
+func _build_sponsor_boards() -> void:
+	var colors: Array[Color] = [LINE_AMBER, Color("EFE7D6"), Color("D9533A"), Color("3E6E9E")]
+	var spacing: float = 2.8
+	var count: int = int(_total_length / spacing)
+	var start_z: float = _center_z - _total_length * 0.5 + 1.0
+	for tone: int in colors.size():
+		var boards: MultiMesh = MultiMesh.new()
+		boards.transform_format = MultiMesh.TRANSFORM_3D
+		var board: BoxMesh = BoxMesh.new()
+		board.size = Vector3(0.03, 0.26, 1.7)
+		boards.mesh = board
+		var transforms: Array[Transform3D] = []
+		for i: int in count:
+			for s: int in 2:
+				if (i * 2 + s) % colors.size() != tone:
+					continue
+				var side: float = 1.0 if s == 0 else -1.0
+				var x: float = (ASPHALT_WIDTH * 0.5 + 1.05 - 0.145) * side
+				transforms.append(Transform3D(Basis.IDENTITY,
+					Vector3(x, 0.24, start_z + float(i) * spacing)))
+		boards.instance_count = transforms.size()
+		for i: int in transforms.size():
+			boards.set_instance_transform(i, transforms[i])
+		_multi(boards, colors[tone])
+
+
+## Mesafe levhaları (100 m · 200 m): oyuncu yarışın neresinde olduğunu pistte de görsün.
+func _build_distance_boards() -> void:
+	for meters: int in [100, 200]:
+		var z: float = length * float(meters) / DragRaceSim.DISTANCE
+		var x: float = ASPHALT_WIDTH * 0.5 + 0.82
+		_box(Vector3(0.08, 0.9, 0.08), Vector3(x, 0.45, z), STEEL)
+		_box(Vector3(0.06, 0.42, 0.9), Vector3(x, 1.02, z), Color("F3E8CF"))
+		var label: Label3D = Label3D.new()
+		label.text = "%d m" % meters
+		label.font_size = 64
+		label.pixel_size = 0.0045
+		label.modulate = Color("2F3236")
+		label.outline_size = 0
+		label.position = Vector3(x - 0.04, 1.02, z)
+		label.rotation_degrees = Vector3(0.0, -90.0, 0.0)
+		add_child(label)
 
 
 # --- Çıkış ışığı (stilize christmas tree) --------------------------------------------

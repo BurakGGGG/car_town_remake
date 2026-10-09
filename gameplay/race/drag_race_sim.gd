@@ -62,6 +62,14 @@ const VARIANCE: float = 0.012
 ## Başsız benzetim adımı (sn). Sabit adım = deterministik sonuç.
 const STEP: float = 1.0 / 120.0
 
+## TEMPO: tüm fiziği tek katsayıyla hızlandırır. İvmeler (motor kuvveti, çekiş limiti, yuvarlanma)
+## TEMPO² ile, vites boyları TEMPO ile çarpılır; hava direnci hız² ile zaten uyar. Denklemler
+## aynen korunur: her araç AYNI yarışı koşar, yalnızca hızlar TEMPO kat yüksek, süreler TEMPO
+## kat kısadır — sınıflar arası denge, vites/kalkış pencereleri ve patinaj davranışı DEĞİŞMEZ.
+## (Kapalı test: "araçlar yavaş hissettiriyor" — 488 Pista 300 m'yi 148 km/sa'te bitiriyordu.)
+## Sabit süreler (tepki, vites geçişi, debriyaj kayması) ölçeklenmez: bilerek, oyuncunun eli aynı.
+const PACE: float = 1.25
+
 ## Fizik sabitleri.
 const AIR_DENSITY: float = 1.225
 const DRAG_CD: float = 0.32
@@ -136,7 +144,7 @@ class EngineSpec:
 		var entry: Dictionary = CarCatalog.get_entry(id)
 		var stats: Dictionary = DragRaceSim.stats_of(id)
 		var accel: float = clampf(float(stats["acceleration"]) / 100.0, 0.1, 1.0)
-		var top_kmh: float = maxf(float(stats["top_speed"]), 80.0)
+		var top_kmh: float = maxf(float(stats["top_speed"]), 80.0) * DragRaceSim.PACE
 		var grip: float = clampf(float(stats["grip"]) / 100.0, 0.1, 1.0)
 		var year: int = int(entry.get("year", 2005))
 		var dims: Dictionary = entry.get("real_dimensions", {})
@@ -180,8 +188,8 @@ class EngineSpec:
 			var ratio: float = first_ratio * pow(spread, float(g)) * lerpf(1.0, 1.04, t * (1.0 - t) * 4.0)
 			spec.gear_ratios.append(ratio)
 
-		# Tepe tork: hedeflenen 0-100 süresine göre ölçeklenir (stat 30 → 14 sn, 100 → 6,2 sn).
-		var target_0_100: float = lerpf(15.5, 6.0, accel)
+		# Tepe tork: hedeflenen 0-100 süresine göre ölçeklenir (stat 30 → 14 sn, 100 → 6,2 sn; PACE² ile kısalır).
+		var target_0_100: float = lerpf(15.5, 6.0, accel) / (DragRaceSim.PACE * DragRaceSim.PACE)
 		var v100: float = 100.0 / 3.6
 		var avg_ratio: float = (spec.gear_ratios[0] + spec.gear_ratios[mini(2, gears - 1)]) * 0.5
 		var needed_force: float = spec.mass * v100 / target_0_100 * 1.55   # ortalama tork payı
@@ -417,7 +425,8 @@ class Runner:
 			if clutch > 0.0:
 				force *= _bog
 			# Çekiş limiti: aşılırsa patinaj, fazlası boşa gider.
-			var traction: float = spec.grip_mu * spec.mass * DragRaceSim.GRAVITY * 0.62
+			var traction: float = spec.grip_mu * spec.mass * DragRaceSim.GRAVITY * 0.62 \
+				* DragRaceSim.PACE * DragRaceSim.PACE
 			wheelspin = force > traction
 			if wheelspin:
 				force = traction * DragRaceSim.SPIN_GRIP
@@ -426,7 +435,8 @@ class Runner:
 			wheelspin = false
 		var drag: float = 0.5 * DragRaceSim.AIR_DENSITY * DragRaceSim.DRAG_CD \
 			* spec.frontal_area * speed * speed
-		var roll: float = DragRaceSim.ROLL_CRR * spec.mass * DragRaceSim.GRAVITY
+		var roll: float = DragRaceSim.ROLL_CRR * spec.mass * DragRaceSim.GRAVITY \
+			* DragRaceSim.PACE * DragRaceSim.PACE
 		var accel: float = (force - drag - roll) / spec.mass
 		speed = maxf(speed + accel * delta, 0.0)
 		distance += speed * delta

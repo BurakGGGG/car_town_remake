@@ -57,10 +57,12 @@ func _run() -> void:
 	await _open()
 	t = 0.0
 	var launched: bool = false
-	var line_z: float = DragTrack.START_Z + DragTrack.TRACK_LENGTH
+	var track: DragTrack = _drag.get("_track")
+	var line_z: float = DragTrack.START_Z + track.length
 	var max_car_z: float = -99.0
 	var cam_at_finish: float = -99.0
 	var cam_end: float = -99.0
+	var cam_track: Array = []
 	var first_finish_wall: float = -1.0
 	var result_wall: float = -1.0
 	var clock: float = 0.0
@@ -83,11 +85,19 @@ func _run() -> void:
 				first_finish_wall = clock
 				cam_at_finish = cam.position.z
 			cam_end = cam.position.z
+			cam_track.append([clock, cam.position.z])
 	result_wall = clock
 	_check("B: yarış tamamlandı", results.size() == 2)
 	_check("B: araç çizgiyi aşıp ilerledi (z=%.1f çizgi=%.1f)" % [max_car_z, line_z], max_car_z > line_z + 2.0)
-	_check("B: pist sonu içinde kaldı (<%.1f)" % (DragTrack.TRACK_LENGTH + DragTrack.RUN_OUT), max_car_z < DragTrack.TRACK_LENGTH + DragTrack.RUN_OUT)
-	_check("B: kamera bitişte sabit (%.2f→%.2f)" % [cam_at_finish, cam_end], absf(cam_end - cam_at_finish) < 0.3)
+	_check("B: pist sonu içinde kaldı (<%.1f)" % (track.length + track.run_out), max_car_z < track.length + track.run_out)
+	# Kamera çizgiye yaylanarak YERLEŞİR (ivme yayı, bkz. CAM_LAG_*), sonra durur: son 1 sn sabit
+	# olmalı ve araçları çizgiden öteye izlememeli.
+	var cam_late: float = cam_end
+	for sample: Array in cam_track:
+		if float(sample[0]) <= clock - 1.0:
+			cam_late = float(sample[1])
+	_check("B: kamera bitişte sabit (son 1 sn %.2f→%.2f)" % [cam_late, cam_end], absf(cam_end - cam_late) < 0.05)
+	_check("B: kamera araçları izlemedi (%.2f→%.2f)" % [cam_at_finish, cam_end], absf(cam_end - cam_at_finish) < 1.0)
 	_check("B: sonuç bitişten sonra gecikmeli (%.1fs)" % (result_wall - first_finish_wall), result_wall - first_finish_wall >= 2.0)
 	print("sonuç: ", results)
 	print("FAILS: ", _fails)

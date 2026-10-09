@@ -761,6 +761,9 @@ func _on_race_completed(won: bool, player_time: float, rival_time: float) -> voi
 		reward = _race.finish_race(won)
 	race_result_screen.show_result(won, player_time, rival_time,
 		int(reward["money"]), int(reward["xp"]), player_id if won else rival)
+	var record: Dictionary = drag_race_screen.record_result()
+	race_result_screen.show_record(bool(record["finished"]), bool(record["new"]),
+		float(record["time"]), float(record["previous"]))
 	# ÖDÜLLÜ REKLAM: yalnızca para kazanıldıysa ve politika + hazır reklam uygunsa teklif edilir (açık onay).
 	_race_bonus_amount = 0
 	var ads: AdService = _ads_service()

@@ -16,8 +16,8 @@ signal race_completed(won: bool, player_time: float, rival_time: float)
 
 enum Phase { READY, COUNTDOWN, RUNNING, DONE }
 
-## Pistin görsel uzunluğu ve şeritleri DragTrack'ten gelir (tek kaynak).
-const TRACK_LENGTH: float = DragTrack.TRACK_LENGTH
+## Pistin şeritleri DragTrack'ten gelir (tek kaynak). Görsel UZUNLUK yarışa göre değişir (oyuncu
+## aracının hız sınıfı, bkz. DragTrack.scale_for) → `_track.length`.
 const LANE_OFFSET: float = DragTrack.LANE_OFFSET
 ## Araç ölçeği: şehirdeki trafik ölçeği (0,6) pistte araçları küçük bırakıyordu.
 const CAR_SCALE: float = 1.2
@@ -45,11 +45,14 @@ const CAM_PAN_UP_COMPACT: float = 0.0
 ## Bu yüksekliğin altındaki tuval "telefon" sayılır (garaj ekranıyla aynı eşik).
 const COMPACT_HEIGHT: float = 560.0
 ## İKİ ARAÇ DA HER ZAMAN KADRAJDA: gerçek fark yumuşatılarak ekrana taşınır.
-const MAX_VISUAL_GAP: float = 0.92
+## Pist gerçek ölçeğe geçince (bkz. DragTrack.TRACK_LENGTH) aynı metre farkı ekranda daha uzun
+## görünür; tavan da biraz açıldı ama iki araç kadrajda kalır.
+const MAX_VISUAL_GAP: float = 1.15
 const GAP_SOFT: float = 6.0
 ## BİTİŞ SONRASI: araçlar çizgide durmaz, hızlarıyla geçip frenleyerek durur (gerçek drag'de
 ## paraşüt/fren pisti). Kamera çizgide kalır; sonuç, araçlar kadrajdan geçerken gelir.
-const OVERRUN_BRAKE: float = 16.0          # m/s² (≈ 60 m/s'den ~110 m'de durur: pist payına sığar)
+## Gerçek ölçekte pist payı kısa kalmasın diye sert (paraşüt) fren: 70 m/s'den ~80 m'de durur.
+const OVERRUN_BRAKE: float = 30.0          # m/s²
 ## İki araç da geçtikten sonra sonuç panosuna kadar bekleme (kazanan görüntüsü).
 const FINISH_HOLD: float = 2.2
 ## Biri geçtiği halde diğeri geçmediyse en çok bu kadar beklenir.
@@ -57,6 +60,34 @@ const FINISH_HOLD_MAX: float = 6.0
 ## Oyuncu hiç kalkmadıysa (rakip bitirdi) sonuç daha çabuk gelir.
 const FINISH_HOLD_IDLE: float = 2.0
 ## Çıkış lambası renkleri DragTrack'tedir.
+
+## --- HIZ HİSSİ (kapalı test: "yarış daha cool olmalı, araçlar daha hızlı hissettirsin") ---
+## KAMERA YAYI: ivmelenirken kamera aracı bir tık geriden izler → araç kadrajda öne fırlar,
+## viteste (çekiş kesik) geri düşer. Değer: ivme (m/s²) başına dünya birimi, alt/üst sınır.
+const CAM_LAG_PER_ACCEL: float = 0.055
+const CAM_LAG_MIN: float = -0.35
+const CAM_LAG_MAX: float = 0.70
+## Yüksek hızda kamera titrer (hız oranının karesiyle), vites/kalkış darbesi kısa sarsıntı ekler.
+const SHAKE_SPEED: float = 0.018
+const SHAKE_KICK: float = 0.06
+## Gövde: ivmede burun kalkar, frende/viteste iner (radyan / m/s²).
+const PITCH_PER_ACCEL: float = 0.0042
+const PITCH_MIN: float = -0.075
+const PITCH_MAX: float = 0.06
+## Hız çizgileri ve titreşim km/sa'e değil, dünyanın EKRANDAKİ akış hızına (birim/sn) bağlıdır:
+## aynı km/sa'te süper spor (büyük ölçek) daha çok çizgi görür. Şahin en fazla ~10, 488 Pista ~20.
+const LINES_FROM_FLOW: float = 6.0
+const LINES_FULL_FLOW: float = 19.0
+const SHAKE_FULL_FLOW: float = 20.0
+## FOTO FİNİŞ: son metrelerde iki araç bu kadar yakınsa ağır çekim (yalnızca ekran saati
+## yavaşlar; koşucular aynı fizikle adımlanır, sonuç değişmez).
+const PHOTO_FINISH_ZONE: float = 22.0      # m, bitişe kalan
+const PHOTO_FINISH_GAP: float = 3.0        # m, araçlar arası
+const PHOTO_FINISH_SCALE: float = 0.32
+## Bu performans payının altındaki araçlar (Şahin, Toros, Getz…) alev çıkarmaz.
+const FLAME_MIN_PERF: float = 0.35
+## Bu tepkinin altı "SÜPER ÇIKIŞ".
+const GREAT_REACTION: float = 0.24
 ## Yarış telemetrisini ekrana basar (devir, vites, hız, kalite). Yayında KAPALI olmalı;
 ## `DRAG_DEBUG=1` ortam değişkeni ya da `--drag-debug` ile açılır.
 static func debug_enabled() -> bool:
@@ -92,6 +123,22 @@ var _first_finish_time: float = -1.0
 ## Kalkış anı efektleri: kamera darbesi (ortografik size kısa süre daralır) ve lastik dumanı.
 var _punch: float = 0.0
 var _smoke: Array[CPUParticles3D] = []
+## Yumuşatılmış ivmeler (m/s²) ve önceki kare hızları: kamera yayı + gövde eğimi bunlardan.
+var _player_accel: float = 0.0
+var _rival_accel: float = 0.0
+var _player_prev_speed: float = 0.0
+var _rival_prev_speed: float = 0.0
+var _cam_lag: float = 0.0
+var _shake: float = 0.0
+var _player_fx: DragFx
+var _rival_fx: DragFx
+var _audio: RaceAudio
+## Ekran saati çarpanı (foto finişte < 1) ve bu yarışta foto finiş oldu mu.
+var _time_scale: float = 1.0
+var _photo_finish: bool = false
+## Sahne saati (titreme / gövde titreşimi için; yarış saatinden bağımsız).
+var _clock: float = 0.0
+static var _puff: GradientTexture2D
 var _world: Node3D
 var _track: DragTrack
 
@@ -130,6 +177,28 @@ var _corner: MarginContainer
 var _shift_caption: Label
 var _tap_button: PlateButton
 var _column: VBoxContainer
+var _speed_lines: ColorRect
+var _speed_material: ShaderMaterial
+var _flash: ColorRect
+var _flash_tween: Tween
+var _popup: Label
+var _popup_tween: Tween
+## Canlı süre ve rekor (eskiden km/sa göstergesiydi; her araçta 130-170 görünüp farkı
+## gizliyordu, kaldırıldı).
+var _time_value: Label
+var _record_label: Label
+var _time_box: VBoxContainer
+var _race: RaceManager
+## Oyuncu aracının performans payı (0 ekonomi … 1 süper spor): alev boyu, motor tınısı.
+var _player_perf: float = 0.0
+var _rival_perf: float = 0.0
+## Rekor: bu koşunun mesafe izi, önceki rekor ve izi, bitişte sonuç.
+var _trace: PackedFloat32Array = PackedFloat32Array()
+var _best_time: float = -1.0
+var _best_trace: PackedFloat32Array = PackedFloat32Array()
+var _record_new: bool = false
+var _record_submitted: bool = false
+var _progress: RaceProgressBar
 
 
 func _ready() -> void:
@@ -146,6 +215,7 @@ func _ready() -> void:
 
 func open() -> void:
 	var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager
+	_race = race
 	_player_id = race.player_vehicle_id() if race else RaceManager.FALLBACK_VEHICLE
 	_rival_id = race.rival_id() if race else &""
 	if _rival_id == &"":
@@ -179,11 +249,39 @@ func open() -> void:
 	_rival_launch_target = DragRaceSim.ai_launch_rpm(_rival.spec, _rival_skill, _rng)
 	_rival.rpm = _rival.spec.idle_rpm
 	_rival_target = DragRaceSim.ai_shift_target(_rival.spec, 0, _rival_skill, _rng)
+	# Hızlı araçla yarışırken dünya daha hızlı akar (aynı 300 m, daha uzun çizilmiş pist)
+	_track.set_scale_factor(DragTrack.scale_for(_player_id))
+	_player_perf = _performance(_player_id)
+	_rival_perf = _performance(_rival_id)
+	_audio.set_character(_player_perf, _rival_perf)
+	_best_time = race.best_time(_player_id) if race else -1.0
+	_best_trace = race.best_trace(_player_id) if race else PackedFloat32Array()
+	_trace = PackedFloat32Array()
+	_record_new = false
+	_record_submitted = false
 	_load_cars()
 	_column.visible = true
 	if _sign:
 		_sign.visible = true
 	_punch = 0.0
+	_player_accel = 0.0
+	_rival_accel = 0.0
+	_player_prev_speed = 0.0
+	_rival_prev_speed = 0.0
+	_cam_lag = 0.0
+	_shake = 0.0
+	_time_scale = 1.0
+	_photo_finish = false
+	_set_speed_lines(0.0)
+	_time_value.text = "0.00"
+	_record_label.text = Loc.t("REKOR  %.2f") % _best_time if _best_time > 0.0 \
+		else Loc.t("İLK REKORUNU KOY")
+	_progress.visible = true
+	_progress.player = 0.0
+	_progress.rival = 0.0
+	_progress.ghost = 0.0 if not _best_trace.is_empty() else -1.0
+	_popup.modulate.a = 0.0
+	_flash.modulate.a = 0.0
 	_place_camera(0.0)   # önceki yarıştan kalan kadraj (bitiş çizgisi) sıfırlanır
 	_status_label.text = Loc.t("HAZIR OL")
 	_last_step = -1
@@ -206,6 +304,7 @@ func open() -> void:
 	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	_apply_compact_ui()
 	show()
+	_audio.start()
 	set_process(true)
 
 
@@ -227,6 +326,7 @@ func close() -> void:
 	if not visible:
 		return
 	set_process(false)
+	_audio.stop()
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_viewport.size = Vector2i(4, 4)   # render hedefi VRAM'de asılı kalmasın (kapsayıcı açılışta büyütür)
 	_free_cars()   # yarış modelleri pistte asılı kalmasın
@@ -296,6 +396,9 @@ func tap() -> void:
 
 func _build() -> void:
 	_viewport_container()
+	_audio = RaceAudio.new()
+	add_child(_audio)
+	_build_speed_lines()
 	var overlay: Control = Control.new()
 	overlay.name = "Overlay"
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -367,6 +470,73 @@ func _build() -> void:
 	gauge_row.add_child(_shift_dial)
 	gauge_row.add_child(_tap_button)
 	_column.add_child(gauge_row)
+	_build_race_hud(overlay)
+
+
+## HIZ ÇİZGİLERİ katmanı: pistin üstünde, HUD'un altında. Yavaşken gizli (dolum maliyeti yok).
+func _build_speed_lines() -> void:
+	_speed_lines = ColorRect.new()
+	_speed_lines.name = "SpeedLines"
+	_speed_lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_speed_lines.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_speed_material = ShaderMaterial.new()
+	_speed_material.shader = preload("res://vfx/speed_lines.gdshader")
+	_speed_lines.material = _speed_material
+	_speed_lines.visible = false
+	add_child(_speed_lines)
+
+
+## Yarış HUD'u: kusursuz viteste beyaz parlama, ortada büyük vuruş yazısı (3 · 2 · 1 · GO!,
+## KUSURSUZ!), vites kümesinin üstünde büyük hız göstergesi ve üstte ilerleme çubuğu.
+func _build_race_hud(overlay: Control) -> void:
+	_flash = ColorRect.new()
+	_flash.name = "Flash"
+	_flash.color = Color(1.0, 0.97, 0.88, 0.55)
+	_flash.modulate.a = 0.0
+	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(_flash)
+	overlay.move_child(_flash, 0)
+
+	# Üst orta: ilerleme çubuğu
+	var top: MarginContainer = MarginContainer.new()
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	top.add_theme_constant_override(&"margin_top", 26)
+	overlay.add_child(top)
+	_progress = RaceProgressBar.new()
+	_progress.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	top.add_child(_progress)
+
+	# Vuruş yazısı: ekranın üst üçte birinde, ortada (araçların üstünde kalır)
+	var pop_box: MarginContainer = MarginContainer.new()
+	pop_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pop_box.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	pop_box.add_theme_constant_override(&"margin_top", 70)
+	overlay.add_child(pop_box)
+	_popup = _label(&"HudOutlined", "")
+	_popup.add_theme_font_size_override(&"font_size", 54)
+	_popup.add_theme_constant_override(&"outline_size", 12)
+	_popup.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_popup.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_popup.modulate.a = 0.0
+	pop_box.add_child(_popup)
+
+	# Süre + rekor: vites kümesinin üstünde, sağa yaslı. Süre GO'dan itibaren akar.
+	_time_box = VBoxContainer.new()
+	_time_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_time_box.add_theme_constant_override(&"separation", -4)
+	_time_value = _label(&"HudOutlined", "0.00")
+	_time_value.add_theme_font_size_override(&"font_size", 40)
+	_time_value.add_theme_constant_override(&"outline_size", 10)
+	_time_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_record_label = _label(&"HudOutlinedLarge", "")
+	_record_label.add_theme_constant_override(&"outline_size", 6)
+	_record_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_time_box.add_child(_time_value)
+	_time_box.add_child(_record_label)
+	_column.add_child(_time_box)
+	_column.move_child(_time_box, 0)
 
 
 func _viewport_container() -> void:
@@ -461,6 +631,13 @@ func _spawn_car(vehicle_id: StringName, lane_x: float, _rival: bool) -> Node3D:
 		_player_rig = rig
 	for child: Node in car.find_children("*", "GeometryInstance3D", true, false):
 		(child as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var fx: DragFx = DragFx.new(CAR_SCALE)
+	_world.add_child(fx)
+	fx.follow(car)
+	if _rival:
+		_rival_fx = fx
+	else:
+		_player_fx = fx
 	return car
 
 
@@ -472,14 +649,21 @@ func _free_cars() -> void:
 		if is_instance_valid(puff):
 			puff.queue_free()
 	_smoke.clear()
+	for fx: DragFx in [_player_fx, _rival_fx]:
+		if is_instance_valid(fx):
+			fx.queue_free()
+	_player_fx = null
+	_rival_fx = null
 	_player_car = null
 	_rival_car = null
 	_player_rig = null
 	_rival_rig = null
 
 
-## Duman maskesi: ortada opak, kenarda saydam radyal gradyan (64×64, kodla üretilir).
-static func _puff_texture() -> GradientTexture2D:
+## Duman maskesi: ortada opak, kenarda saydam radyal gradyan (64×64, kodla üretilir, bir kez).
+static func puff_texture() -> GradientTexture2D:
+	if _puff:
+		return _puff
 	var gradient: Gradient = Gradient.new()
 	gradient.set_color(0, Color(1.0, 1.0, 1.0, 1.0))
 	gradient.set_color(1, Color(1.0, 1.0, 1.0, 0.0))
@@ -491,6 +675,7 @@ static func _puff_texture() -> GradientTexture2D:
 	texture.fill_to = Vector2(1.0, 0.5)
 	texture.width = 64
 	texture.height = 64
+	_puff = texture
 	return texture
 
 
@@ -508,7 +693,7 @@ func _spawn_smoke(car: Node3D) -> void:
 	material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	material.albedo_color = Color(0.93, 0.92, 0.89, 0.55)
 	# Yumuşak yuvarlak duman: düz quad keskin kare gibi görünüyordu, radyal gradyan maskesi
-	material.albedo_texture = _puff_texture()
+	material.albedo_texture = puff_texture()
 	puff.mesh.material = material
 	puff.amount = 16
 	puff.lifetime = 1.3
@@ -531,6 +716,8 @@ func _spawn_smoke(car: Node3D) -> void:
 # --- Yarış akışı -------------------------------------------------------------------
 
 func _process(delta: float) -> void:
+	_clock += delta
+	_audio.drive(delta, _player, _rival)
 	if _phase == Phase.READY or _phase == Phase.COUNTDOWN:
 		# GERİ SAYIM: oyuncu gazla uğraşmaz (kullanıcı kararı). Motor kalkış devrinde HAZIR
 		# bekler, ibre yeşil dilime oturur — "yeşil yanınca dokun" mesajı böylece görselleşir.
@@ -555,12 +742,17 @@ func _process(delta: float) -> void:
 			if step != _last_step:
 				_last_step = step
 				_pop_sign()
+				if step >= 1:
+					_show_popup(str(step), HudPalette.TEXT_LIGHT)
+					_audio.countdown_beep()
 			_status_label.text = str(maxi(step, 1))
 			_track.set_lights(maxi(step, 1))
 			if _countdown <= 0.0:
 				_status_label.text = Loc.t("GO!")
 				_track.set_lights(0)
 				_pop_sign()
+				_show_popup(Loc.t("GO!"), HudPalette.PLATE_SELECTED)
+				_audio.go_beep()
 				_set_status(Loc.t("ŞİMDİ DOKUN"))
 				_time = 0.0
 				_phase = Phase.RUNNING
@@ -574,9 +766,11 @@ func _process(delta: float) -> void:
 				# Yuvarlak tabela da nabız atsın: efekt tek bir yerde kalmasın
 				_tap_button.pivot_offset = _tap_button.size * 0.5
 				_tap_button.scale = Vector2.ONE * (1.0 + 0.055 * _shift_dial.pulse())
-			_time += delta
+			# Foto finişte yalnızca ekran saati yavaşlar: iki koşucu aynı (küçük) adımla ilerler.
+			var sim_delta: float = delta * _time_scale
+			_time += sim_delta
 			if not _rival.running:
-				_rival.rev(delta, _rival_launch_rpm())
+				_rival.rev(sim_delta, _rival_launch_rpm())
 				if _time >= _rival.reaction:
 					_rival.launch()
 					_spawn_smoke(_rival_car)
@@ -584,7 +778,7 @@ func _process(delta: float) -> void:
 				_launch_player(_time)   # hatalı çıkış cezası doldu, araç kalkıyor
 			# Dokunulmazsa araç KALKMAZ: yeşili kaçırmak oyuncunun hatası, oyun onun yerine
 			# başlatmaz (rakip gider, oyuncu geç kalkarsa yarışı kaybeder).
-			_advance(delta)
+			_advance(sim_delta, delta)
 		Phase.DONE:
 			pass
 
@@ -599,7 +793,10 @@ func _launch_player(at_time: float) -> void:
 	_player.reaction = maxf(at_time, 0.0)
 	_player.launch()
 	_punch = 1.0
+	_shake = 1.0
 	_spawn_smoke(_player_car)
+	if not _player.false_start and _player.reaction <= GREAT_REACTION:
+		_show_popup(Loc.t("SÜPER ÇIKIŞ!"), HudPalette.PLATE_SELECTED)
 	_status_label.text = Loc.t("GİT!")
 	_set_status(Loc.t("VİTES  1 / %d") % (_player.gear_count() - 1))
 	_tap_button.text = Loc.t("VİTES")
@@ -614,10 +811,12 @@ func _false_start() -> void:
 
 
 ## Canlı adım: iki koşucu da ilerler, rakip kendi vitesini atar, kadran oyuncunun devrini gösterir.
-func _advance(delta: float) -> void:
+## `delta` yarış saatidir (foto finişte yavaş), `real_delta` ekran saati (kamera, efekt sönümü).
+func _advance(delta: float, real_delta: float) -> void:
 	_player.step(delta, _time)
 	_rival.step(delta, _time)
 	_drive_rival(delta)
+	_track_feel(delta, real_delta)
 
 	# Kadran: ibre motor devrinin YAY KARŞILIĞI (yeşil dilim = iyi vites, sağdaki kırmızı = geç
 	# kaldın, en sağ = devir sınırı; ibre oradan öteye geçmez).
@@ -647,13 +846,148 @@ func _advance(delta: float) -> void:
 		_update_debug()
 
 	_place_cars(delta)
-	_punch = maxf(_punch - delta * 2.2, 0.0)
+	_punch = maxf(_punch - real_delta * 2.2, 0.0)
+	_shake = maxf(_shake - real_delta * 3.0, 0.0)
 	_place_camera(_time)
 	_advance_overrun(delta)
 	if _should_finish():
 		_finish()
 	elif _time > 40.0:
 		_finish()   # güvenlik: kilitlenmiş bir koşu ekranı sonsuza kadar açık tutmasın
+
+
+## HIZ HİSSİ: ivmeler (kamera yayı + gövde), patinaj dumanı, hız çizgileri, hız göstergesi,
+## ilerleme çubuğu ve foto finiş ağır çekimi. Hepsi koşuculardan OKUNUR; fiziği etkilemez.
+func _track_feel(delta: float, real_delta: float) -> void:
+	if delta > 0.0:
+		var player_speed: float = _player_over_speed if _player_over_speed >= 0.0 else _player.speed
+		var rival_speed: float = _rival_over_speed if _rival_over_speed >= 0.0 else _rival.speed
+		var smooth: float = 1.0 - exp(-delta * 9.0)
+		_player_accel = lerpf(_player_accel, (player_speed - _player_prev_speed) / delta, smooth)
+		_rival_accel = lerpf(_rival_accel, (rival_speed - _rival_prev_speed) / delta, smooth)
+		_player_prev_speed = player_speed
+		_rival_prev_speed = rival_speed
+	# Patinaj dumanı: kalkışta debriyaj kayarken ve lastik patinajındayken
+	if _player_fx:
+		_player_fx.set_smoke(_smoke_amount(_player))
+	if _rival_fx:
+		_rival_fx.set_smoke(_smoke_amount(_rival))
+	# Hız çizgileri: dünyanın ekrandaki akışından (oyuncu bitirdiyse frenleyen hız)
+	_set_speed_lines(clampf(inverse_lerp(LINES_FROM_FLOW, LINES_FULL_FLOW, _player_flow()), 0.0, 1.0))
+	_progress.player = _player.progress()
+	_progress.rival = _rival.progress()
+	_update_record_hud()
+	# Foto finiş: iki araç da son düzlükte ve burun buruna → ekran saati yavaşlar
+	var left: float = DragRaceSim.DISTANCE - maxf(_player.distance, _rival.distance)
+	var close: bool = _player.running and _rival.running and _first_finish_time < 0.0 \
+		and left < PHOTO_FINISH_ZONE and absf(_player.distance - _rival.distance) < PHOTO_FINISH_GAP
+	if close and not _photo_finish:
+		_photo_finish = true
+		_show_popup(Loc.t("FOTO FİNİŞ!"), HudPalette.PLATE_SELECTED)
+	var target_scale: float = PHOTO_FINISH_SCALE if close else 1.0
+	if _first_finish_time >= 0.0 and _photo_finish:
+		# Çizgi anı ağır çekimde kalır, sonra normale döner
+		target_scale = PHOTO_FINISH_SCALE if _time - _first_finish_time < 0.25 else 1.0
+	_time_scale = move_toward(_time_scale, target_scale, real_delta * 3.0)
+
+
+## Dünyanın ekranda akış hızı (birim/sn): oyuncunun hızı × bu yarışın görsel ölçeği.
+func _player_flow() -> float:
+	if _player == null:
+		return 0.0
+	var speed: float = _player_over_speed if _player_over_speed >= 0.0 else _player.speed
+	return speed * _track.length / DragRaceSim.DISTANCE
+
+
+## Araç karakteri (0-1): hızlanma statından. Ekonomi araçları ~0, süper sporlar 1.
+static func _performance(vehicle_id: StringName) -> float:
+	var accel: float = float(DragRaceSim.stats_of(vehicle_id).get("acceleration", 50))
+	return clampf((accel - 55.0) / 42.0, 0.0, 1.0)
+
+
+## Canlı süre, rekor izi ve hayalet. Süre oyuncu kalkmadan da akar (yarış saati GO'da başlar).
+func _update_record_hud() -> void:
+	var finished: bool = _player.finish_time >= 0.0
+	var shown: float = _player.finish_time if finished else _time
+	_time_value.text = "%.2f" % shown
+	# İz: her TRACE_STEP'te oyuncunun mesafesi (rekor olursa hayalet olarak saklanır)
+	while not finished and float(_trace.size()) * RaceManager.TRACE_STEP <= _time:
+		_trace.append(_player.distance)
+	if not _best_trace.is_empty():
+		_progress.ghost = _ghost_distance(_time) / DragRaceSim.DISTANCE
+	if finished and not _record_submitted:
+		_record_submitted = true
+		_trace.append(DragRaceSim.DISTANCE)
+		if _race and _player.running:
+			_record_new = _race.submit_time(_player_id, _player.finish_time, _trace)
+		if _record_new:
+			_record_label.text = Loc.t("YENİ REKOR!")
+			_show_popup(Loc.t("YENİ REKOR!"), HudPalette.PLATE_SELECTED)
+			_flash_screen(0.35)
+
+
+## Rekor koşusunun bu andaki mesafesi (iz doğrusal ara değerlenir; iz bittiyse bitiş).
+func _ghost_distance(t: float) -> float:
+	var index: float = t / RaceManager.TRACE_STEP
+	var i: int = int(index)
+	if i >= _best_trace.size() - 1:
+		return DragRaceSim.DISTANCE
+	return lerpf(_best_trace[i], _best_trace[i + 1], index - float(i))
+
+
+## Sonuç panosu için: bu koşu rekor mu, önceki rekor ne (-1: yoktu), bitirdi mi.
+func record_result() -> Dictionary:
+	return {"finished": _record_submitted and _player != null and _player.running,
+		"new": _record_new, "previous": _best_time,
+		"time": _player.finish_time if _player else -1.0}
+
+
+func _smoke_amount(runner: DragRaceSim.Runner) -> float:
+	if runner == null or not runner.running or runner.finish_time >= 0.0:
+		return 0.0
+	if runner.wheelspin:
+		return 1.0
+	return clampf(runner.clutch / DragRaceSim.CLUTCH_SLIP, 0.0, 1.0) * 0.8
+
+
+func _set_speed_lines(value: float) -> void:
+	_speed_lines.visible = value > 0.01
+	if not _speed_lines.visible:
+		return
+	_speed_material.set_shader_parameter(&"intensity", value)
+	var rect: Vector2 = _speed_lines.size
+	_speed_material.set_shader_parameter(&"aspect", rect.x / maxf(rect.y, 1.0))
+	if is_instance_valid(_player_car):
+		# Dünyanın ekranda aktığı yön = aracın gidiş yönünün tersi (kamera açısından türetilir)
+		var a: Vector2 = _camera.unproject_position(_player_car.position)
+		var b: Vector2 = _camera.unproject_position(_player_car.position + Vector3(0.0, 0.0, 1.0))
+		var flow: Vector2 = (a - b).normalized()
+		_speed_material.set_shader_parameter(&"flow", flow)
+
+
+## Ortadaki vuruş yazısı: büyük gelir, yerine oturur, kısa süre durup söner.
+func _show_popup(text: String, color: Color) -> void:
+	if _popup_tween and _popup_tween.is_valid():
+		_popup_tween.kill()
+	_popup.text = text
+	_popup.add_theme_color_override(&"font_color", color)
+	_popup.pivot_offset = _popup.size * 0.5
+	_popup.modulate.a = 1.0
+	_popup.scale = Vector2.ONE * 1.7
+	_popup_tween = create_tween()
+	_popup_tween.tween_property(_popup, "scale", Vector2.ONE, 0.22) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_popup_tween.tween_interval(0.45)
+	_popup_tween.tween_property(_popup, "modulate:a", 0.0, 0.25)
+
+
+## Kusursuz viteste kısa beyaz parlama.
+func _flash_screen(strength: float) -> void:
+	if _flash_tween and _flash_tween.is_valid():
+		_flash_tween.kill()
+	_flash.modulate.a = strength
+	_flash_tween = create_tween()
+	_flash_tween.tween_property(_flash, "modulate:a", 0.0, 0.28)
 
 
 ## Çizgiyi geçen araç hızıyla yoluna devam eder ve frenler; ilk geçiş anı kaydedilir.
@@ -728,8 +1062,12 @@ func _drive_rival(_delta: float) -> void:
 		return
 	if _rival.rpm < _rival_target:
 		return
-	if _rival.shift() < 0:
+	var quality: int = _rival.shift()
+	if quality < 0:
 		return
+	if _rival_fx and _rival_perf >= FLAME_MIN_PERF:
+		_rival_fx.flame(_shift_strength(quality) * _flame_scale(_rival_perf) * 0.8)
+	_audio.backfire(_shift_strength(quality) * _flame_scale(_rival_perf), true)
 	_rival_target = DragRaceSim.ai_shift_target(_rival.spec, _rival.gear, _rival_skill, _rng)
 
 
@@ -763,6 +1101,21 @@ func _register_shift() -> void:
 	_set_hot(false)
 	_shift_dial.over = false
 	_shift_dial.flash = quality == DragRaceSim.Shift.PERFECT
+	var strength: float = _shift_strength(quality)
+	if _player_fx and _player_perf >= FLAME_MIN_PERF:
+		_player_fx.flame(strength * _flame_scale(_player_perf))
+	_audio.backfire(strength * _flame_scale(_player_perf))
+	_shake = maxf(_shake, 0.35 + 0.65 * strength)
+	match quality:
+		DragRaceSim.Shift.PERFECT:
+			_punch = maxf(_punch, 0.75)
+			_flash_screen(0.45)
+			_show_popup(Loc.t("KUSURSUZ!"), HudPalette.PLATE_SELECTED)
+		DragRaceSim.Shift.GOOD:
+			_punch = maxf(_punch, 0.4)
+			_show_popup(Loc.t("İYİ!"), HudPalette.TEXT_LIGHT)
+		_:
+			pass
 	var shifts: int = _player.gear_count() - 1
 	match quality:
 		DragRaceSim.Shift.PERFECT:
@@ -780,6 +1133,25 @@ func _register_shift() -> void:
 	if _player.gear >= _player.top_gear():
 		_tap_button.disabled = true
 		_set_status(Loc.t("SON VİTES  ·  %d / %d İSABET") % [_player.good_shifts, shifts])
+
+
+## Egzoz alevi aracın karakterine göre: ekonomi araçlarında hiç yok, sporlarda küçük, süper
+## sporlarda büyük ("yavaş ve hızlı araç arasında görünür fark").
+static func _flame_scale(perf: float) -> float:
+	return lerpf(0.35, 1.0, perf)
+
+
+## Vites kalitesinin efekt gücü (0-1): kusursuz en büyük alev, ıska küçük öksürük.
+static func _shift_strength(quality: int) -> float:
+	match quality:
+		DragRaceSim.Shift.PERFECT:
+			return 1.0
+		DragRaceSim.Shift.GOOD:
+			return 0.7
+		DragRaceSim.Shift.LATE, DragRaceSim.Shift.REDLINE:
+			return 0.55   # yüksek devirde atılan vites gür patlar
+		_:
+			return 0.25
 
 
 ## Oyuncunun aracı KENDİ ilerlemesine göre durur; rakip ona göre çizilir. (Eskiden ikisi de iki
@@ -806,17 +1178,33 @@ func _move_car(car: Node3D, rig: CarRig, target_z: float, delta: float, is_playe
 		_rival_distance = target_z
 	if rig and delta > 0.0 and moved > 0.0:
 		rig.spin_wheels(rad_to_deg(moved / (WHEEL_RADIUS * CAR_SCALE)))
-	# Kalkış çömelmesi: hızlanırken burun hafif yukarı, sonra düzelir
-	var squat: float = clampf(moved / maxf(delta, 0.0001) * 0.06, 0.0, 1.0) if delta > 0.0 else 0.0
-	car.rotation.x = lerpf(car.rotation.x, deg_to_rad(-1.6) * squat, 0.18)
+	var fx: DragFx = _player_fx if is_player else _rival_fx
+	if fx:
+		fx.follow(car)
+	# GÖVDE: ivmede burun kalkar (kalkış çömelmesi), viteste/frende burun iner — değer gerçek
+	# ivmeden gelir, yani her vites geçişinde araç belirgin şekilde "baş sallar".
+	var accel: float = _player_accel if is_player else _rival_accel
+	var runner: DragRaceSim.Runner = _player if is_player else _rival
+	var pitch: float = clampf(-accel * PITCH_PER_ACCEL, PITCH_MIN, PITCH_MAX)
+	car.rotation.x = lerpf(car.rotation.x, pitch, 0.22)
+	# Patinajda arka hafifçe sağa sola kayar; yüksek devirde gövde ince titrer.
+	var wiggle: float = 0.0
+	var buzz: float = 0.0
+	if runner and runner.running and runner.finish_time < 0.0:
+		if runner.wheelspin or runner.clutch > 0.0:
+			wiggle = sin(_clock * 17.0 + (0.0 if is_player else 1.7)) * 0.022
+		buzz = sin(_clock * 61.0 + (0.0 if is_player else 2.3)) * 0.004 \
+			* clampf(runner.rpm / maxf(runner.spec.redline_rpm, 1.0), 0.0, 1.0)
+	car.rotation.y = lerpf(car.rotation.y, wiggle, 0.25)
+	car.position.y = buzz
 
 
 ## Oyuncunun pistteki yeri (dünya birimi, START_Z'den): bitişten sonra da ilerlemeye devam eder.
 func _player_track_z() -> float:
 	if _player == null:
 		return 0.0
-	return _player.progress() * TRACK_LENGTH \
-		+ _player_over * (TRACK_LENGTH / DragRaceSim.DISTANCE)
+	return _player.progress() * _track.length \
+		+ _player_over * (_track.length / DragRaceSim.DISTANCE)
 
 
 ## İki aracın ortalama ilerlemesi (0-1) — doğrudan canlı koşuculardan.
@@ -842,10 +1230,16 @@ func _place_camera(_t: float) -> void:
 	# Kamera araçların ÇİZİLDİĞİ iki noktanın ortasını izler: oyuncu geride kalırsa ekranda da
 	# geride kalır ama iki araç da kadrajda durur.
 	var player_z: float = _player_track_z()
+	# KAMERA YAYI: ivmelenirken kamera bir tık geride kalır (araç öne fırlar), viteste ve frende
+	# öne geçer (araç geri düşer). Yumuşatılır: titremez, "yaylanır".
+	var lag_target: float = clampf(_player_accel * CAM_LAG_PER_ACCEL, CAM_LAG_MIN, CAM_LAG_MAX)
+	if _phase != Phase.RUNNING:
+		lag_target = 0.0
+	_cam_lag = lerpf(_cam_lag, lag_target, 0.12)
 	# Kamera bitiş çizgisinde KALIR: araçlar çizgiyi geçip kadrajdan ilerler.
-	var center_z: float = minf(player_z + _visual_gap() * 0.5, TRACK_LENGTH)
+	var center_z: float = minf(player_z + _visual_gap() * 0.5 - _cam_lag, _track.length)
 	# Yarış ilerledikçe kamera biraz daha ileriyi gösterir: son bölümde FINISH kapısı kadraja girer.
-	var progress: float = clampf(center_z / TRACK_LENGTH, 0.0, 1.0)
+	var progress: float = clampf(center_z / _track.length, 0.0, 1.0)
 	var look: float = CAM_LOOK_AHEAD + CAM_LOOK_AHEAD_END * progress * progress
 	var focus: Vector3 = Vector3(0.25, 0.25, DragTrack.START_Z + center_z + look)
 	var basis: Basis = Basis.from_euler(Vector3(
@@ -858,8 +1252,15 @@ func _place_camera(_t: float) -> void:
 	if compact:
 		pan_up = CAM_PAN_UP_COMPACT
 	_camera.size = (CAM_SIZE_COMPACT if compact else CAM_SIZE) * (1.0 - CAM_PUNCH * _punch)
+	# Sarsıntı: hızla artan ince titreşim + kalkış/vites darbesi. İki farklı frekansın toplamı
+	# (rastgele değil): kare hızından bağımsız, mide bulandırmayan bir sallantı.
+	# Akış hızından (bitişten sonra frenleyen hız): süper sporda kamera daha çok titrer.
+	var speed_ratio: float = clampf(_player_flow() / SHAKE_FULL_FLOW, 0.0, 1.0)
+	var amp: float = SHAKE_SPEED * speed_ratio * speed_ratio + SHAKE_KICK * _shake * _shake
+	var shake: Vector3 = basis.x * amp * (sin(_clock * 41.0) + sin(_clock * 27.3)) * 0.5 \
+		+ basis.y * amp * (sin(_clock * 37.0 + 1.3) + sin(_clock * 23.1)) * 0.5
 	_camera.position = focus + basis.z * CAM_DISTANCE \
-		+ basis.x * CAM_PAN_RIGHT + basis.y * pan_up
+		+ basis.x * CAM_PAN_RIGHT + basis.y * pan_up + shake
 
 
 func _finish() -> void:
@@ -869,6 +1270,9 @@ func _finish() -> void:
 	_column.visible = false
 	if _sign:
 		_sign.visible = false
+	_progress.visible = false
+	_set_speed_lines(0.0)
+	_audio.fade_out()   # motorlar sonuç panosunun altında uğuldamasın
 	var player_time: float = _player.finish_time if _player.finish_time >= 0.0 else _time
 	var rival_time: float = _rival.finish_time if _rival.finish_time >= 0.0 else _time
 	var won: bool = player_time <= rival_time

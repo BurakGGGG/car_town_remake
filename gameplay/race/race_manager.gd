@@ -18,7 +18,9 @@ extends Node
 ##   - ekranlar UiRouter'dan açılır (kendi ESC/navigation mantığı yok).
 ##
 ## Sahnede World/Gameplay/RaceManager olarak durur, "race" grubundan bulunur (autoload yok).
-## Kayıt: ilk sürümde yarış istatistiği SAKLANMAZ — kayıt şeması (v7) değişmedi.
+## Kayıt: yalnızca KİŞİSEL REKORLAR saklanır (araç başına en iyi 300 m süresi + rekor koşunun
+## mesafe izi, ilerleme çubuğundaki "hayalet" için). SaveManager "race" bölümü olarak okur/yazar;
+## eski kayıtta bölüm yoktur → rekorsuz başlanır (sürüm atlamaz).
 
 ## Yoldan gelen rakip durdu ve davet açık (HUD balonu/plakası için).
 signal challenger_ready(vehicle: Node3D)
@@ -28,6 +30,8 @@ signal challenger_left(vehicle: Node3D)
 signal race_finished(won: bool, money: int, xp: int)
 ## Oyuncu rakibin 🏁 balonuna/aracına dokundu → davet panosu açılmalı.
 signal challenge_clicked(vehicle: Node3D)
+## Kişisel rekor değişti (otomatik kayıt için).
+signal records_changed
 
 ## Bir rakip gittikten sonra yenisi ne kadar sonra gelir (sn).
 @export var challenge_interval_min: float = 5.0
@@ -54,6 +58,13 @@ const WIN_REWARD: Dictionary = {
 ## Sahiplik düğümü yoksa (test sahnesi) yarışa çıkan araç.
 const FALLBACK_VEHICLE: StringName = &"tofas_sahin"
 
+## Rekor izinin örnek aralığı (sn, yarış saatine göre: GO'dan itibaren).
+const TRACE_STEP: float = 0.25
+## Kayıttan gelen süre bu aralık dışındaysa yok sayılır (bozuk / elle oynanmış kayıt).
+const RECORD_MIN: float = 3.0
+const RECORD_MAX: float = 60.0
+const TRACE_MAX: int = 240
+
 ## Kaybedince verilen XP oranı (para yok).
 const LOSS_XP_RATIO: float = 0.3
 
@@ -79,6 +90,8 @@ var _wait: float = 0.0
 var _racing: bool = false
 ## Aynı yarışın ödülü iki kez verilmesin diye: ödül verildiğinde işaretlenir.
 var _reward_paid: bool = false
+## KİŞİSEL REKORLAR: araç id → {"time": sn, "trace": PackedFloat32Array (her TRACE_STEP'te metre)}.
+var _records: Dictionary = {}
 
 
 func _ready() -> void:
@@ -212,6 +225,68 @@ func release_challenger() -> void:
 	if is_instance_valid(vehicle):
 		vehicle.end_race_challenge()
 		challenger_left.emit(vehicle)
+
+
+# --- Kişisel rekor ----------------------------------------------------------------
+
+## Bu aracın rekoru (sn); yoksa -1.
+func best_time(vehicle_id: StringName) -> float:
+	var record: Dictionary = _records.get(vehicle_id, {})
+	return float(record.get("time", -1.0))
+
+
+## Rekor koşunun mesafe izi (metre, her TRACE_STEP saniyede bir); yoksa boş.
+func best_trace(vehicle_id: StringName) -> PackedFloat32Array:
+	var record: Dictionary = _records.get(vehicle_id, {})
+	return record.get("trace", PackedFloat32Array())
+
+
+## Bitmiş bir koşuyu bildirir. Rekoru geçtiyse kaydeder ve true döner (ilk koşu da rekordur).
+func submit_time(vehicle_id: StringName, time: float, trace: PackedFloat32Array) -> bool:
+	if vehicle_id == &"" or time < RECORD_MIN or time > RECORD_MAX:
+		return false
+	var previous: float = best_time(vehicle_id)
+	if previous > 0.0 and time >= previous:
+		return false
+	_records[vehicle_id] = {"time": time, "trace": trace.slice(0, TRACE_MAX)}
+	records_changed.emit()
+	return true
+
+
+func state() -> Dictionary:
+	var best: Dictionary = {}
+	for id: StringName in _records:
+		var record: Dictionary = _records[id]
+		var trace: Array = []
+		for meters: float in record["trace"]:
+			trace.append(snappedf(meters, 0.1))
+		best[String(id)] = {"time": snappedf(float(record["time"]), 0.001), "trace": trace}
+	return {"best": best}
+
+
+func load_state(data: Dictionary) -> void:
+	_records.clear()
+	var best: Variant = data.get("best", {})
+	if not best is Dictionary:
+		return
+	for key: Variant in best:
+		var raw: Variant = best[key]
+		var id: StringName = StringName(SaveSafe.s(key))
+		if not raw is Dictionary or id == &"" or CarCatalog.get_entry(id).is_empty():
+			continue
+		var time: float = SaveSafe.f((raw as Dictionary).get("time", 0.0))
+		if time < RECORD_MIN or time > RECORD_MAX:
+			continue
+		var trace: PackedFloat32Array = PackedFloat32Array()
+		var raw_trace: Variant = (raw as Dictionary).get("trace", [])
+		if raw_trace is Array:
+			for value: Variant in (raw_trace as Array).slice(0, TRACE_MAX):
+				trace.append(clampf(SaveSafe.f(value), 0.0, DragRaceSim.DISTANCE))
+		_records[id] = {"time": time, "trace": trace}
+
+
+func reset() -> void:
+	_records.clear()
 
 
 # --- İç ---------------------------------------------------------------------------
