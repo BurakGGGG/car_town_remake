@@ -157,5 +157,118 @@ func _run() -> void:
 	_touch(q, false, InputEvent.DEVICE_ID_EMULATION)
 	await frames(3)
 	check(list.scroll_vertical == 0, "türetilmiş (telefon) fare olayı TouchScroll'u sürüklemiyor: parmağı kabın kendisi işler")
+	list.queue_free()
+	await _phone_section()
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
+
+
+# --- TELEFON YOLU: gerçek ScreenTouch / ScreenDrag olayları ----------------------------------
+
+func _screen_touch(pos: Vector2, pressed: bool) -> void:
+	var e: InputEventScreenTouch = InputEventScreenTouch.new()
+	e.index = 0
+	e.position = pos
+	e.pressed = pressed
+	Input.parse_input_event(e)
+
+
+func _screen_drag(pos: Vector2, rel: Vector2) -> void:
+	var e: InputEventScreenDrag = InputEventScreenDrag.new()
+	e.index = 0
+	e.position = pos
+	e.relative = rel
+	e.screen_relative = rel
+	Input.parse_input_event(e)
+
+
+func _finger_swipe(start: Vector2, step: Vector2, steps: int = 8) -> Vector2:
+	_screen_touch(start, true)
+	await frames(2)
+	var pos: Vector2 = start
+	for i: int in steps:
+		pos += step
+		_screen_drag(pos, step)
+		await frames(1)
+	_screen_touch(pos, false)
+	await frames(3)
+	return pos
+
+
+func _phone_section() -> void:
+	print("== telefon: kart olayı kaba AKTARMASA da parmakla kayar ==")
+	# Telefonda kasa düğmesinin üstünden başlayan kaydırma kaymıyordu (yalnızca düğmeler arası
+	# boşlukta kayıyordu). Burada kartlar olayı kaba aktarmaz (STOP): kabın yerleşik sürüklemesi
+	# ÇALIŞAMAZ; kaydırma yalnızca TouchScroll'un kendi parmak izlemesiyle olabilir.
+	var list: ScrollContainer = _make(false, false)
+	await frames(3)
+	var cards: Array[Node] = list.find_children("*", "Button", true, false)
+	for card: Node in cards:
+		(card as Control).mouse_filter = Control.MOUSE_FILTER_STOP
+	await frames(2)
+	var first: Button = cards[0]
+	var presses: Array[int] = [0]
+	first.pressed.connect(func() -> void: presses[0] += 1)
+	await _finger_swipe(first.get_global_rect().get_center(), Vector2(0, -20))
+	check(list.scroll_vertical > 100, "kartın üstünden parmakla kaydı, aktarım olmadan (%d)" % list.scroll_vertical)
+	check(presses[0] == 0, "kaydırma sonrası kart BASILMADI")
+	await frames(90)
+	var settled: int = list.scroll_vertical
+	await frames(10)
+	check(list.scroll_vertical == settled, "atalet bitti, liste durdu (%d)" % settled)
+
+	print("== telefon: kısa dokunuş hâlâ basar ==")
+	var center: Vector2 = list.get_global_rect().get_center()
+	var tapped: Button = null
+	for b: Node in cards:
+		if (b as Button).get_global_rect().has_point(center):
+			tapped = b
+	var taps: Array[int] = [0]
+	tapped.pressed.connect(func() -> void: taps[0] += 1)
+	var before: int = list.scroll_vertical
+	_screen_touch(center, true)
+	await frames(2)
+	_screen_drag(center + Vector2(0, 3), Vector2(0, 3))   # parmak hiç tam durmaz: ölü bölge içinde titreme
+	await frames(1)
+	_screen_touch(center + Vector2(0, 3), false)
+	await frames(3)
+	check(taps[0] == 1, "titreyen kısa dokunuş kartı bastı (%d)" % taps[0])
+	check(absi(list.scroll_vertical - before) <= 1, "kısa dokunuş listeyi kaydırmadı")
+
+	print("== telefon: art arda kaydırmalar (durum asılı kalmaz) ==")
+	list.scroll_vertical = 0
+	await frames(2)
+	await _finger_swipe(first.get_global_rect().get_center(), Vector2(0, -15), 6)
+	var once: int = list.scroll_vertical
+	await frames(90)
+	await _finger_swipe(list.get_global_rect().get_center(), Vector2(0, -15), 6)
+	check(once > 50 and list.scroll_vertical > once + 50, "ikinci kaydırma da çalıştı (%d → %d)" % [once, list.scroll_vertical])
+
+	print("== telefon: üstte açık pencere varken kap kaymaz ==")
+	list.scroll_vertical = 0
+	await frames(2)
+	var cover: ColorRect = ColorRect.new()
+	cover.color = Color(0, 0, 0, 0.3)
+	cover.mouse_filter = Control.MOUSE_FILTER_STOP
+	cover.position = Vector2.ZERO
+	cover.size = Vector2(800, 600)
+	root.add_child(cover)
+	await frames(2)
+	await _finger_swipe(list.get_global_rect().get_center(), Vector2(0, -20))
+	await frames(30)
+	check(list.scroll_vertical == 0, "örtülü kap parmağı sahiplenmedi (%d)" % list.scroll_vertical)
+	cover.queue_free()
+	list.queue_free()
+
+	print("== telefon: yatay şerit (kart yakalama) aktarımsız ==")
+	var strip: ScrollContainer = _make(true, true)
+	await frames(3)
+	var strip_cards: Array[Node] = strip.find_children("*", "Button", true, false)
+	for card: Node in strip_cards:
+		(card as Control).mouse_filter = Control.MOUSE_FILTER_STOP
+	await _finger_swipe((strip_cards[0] as Control).get_global_rect().get_center(), Vector2(-20, 0))
+	await frames(60)
+	var pitch: int = 120 + strip.get_child(1).get_theme_constant("separation")
+	check(strip.scroll_horizontal > 0 and strip.scroll_horizontal % pitch == 0,
+		"şerit kaydı ve karta oturdu (%d, adım %d)" % [strip.scroll_horizontal, pitch])
+	strip.queue_free()
