@@ -89,6 +89,11 @@ func hide_bonus() -> void:
 	_bonus_button.visible = false
 
 
+## Eğitim spot ışığı: &"column" (başlık + sonuç + düğmeler).
+func tutorial_anchor(id: StringName) -> Control:
+	return _column if id == &"column" else null
+
+
 func open() -> void:
 	PlateAnim.pop_in(self, _column)
 

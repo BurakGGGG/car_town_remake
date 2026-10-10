@@ -88,6 +88,8 @@ var _rng := RandomNumberGenerator.new()
 var _wait: float = 0.0
 ## Yarış ekranı açıkken rakip beklemeye devam eder (zaman aşımı durur).
 var _racing: bool = false
+## EĞİTİM (drag yarışı dersi) anlatırken rakip yoldan çekilip gitmesin: zaman aşımı durur.
+var tutorial_hold: bool = false
 ## Aynı yarışın ödülü iki kez verilmesin diye: ödül verildiğinde işaretlenir.
 var _reward_paid: bool = false
 ## KİŞİSEL REKORLAR: araç id → {"time": sn, "trace": PackedFloat32Array (her TRACE_STEP'te metre)}.
@@ -114,7 +116,7 @@ func _process(delta: float) -> void:
 		if has_challenge() and CarHitbox.selected_car == _challenger:
 			CarHitbox.clear_selection(get_tree())
 			challenge_clicked.emit(_challenger)
-		if not _racing:
+		if not _racing and not tutorial_hold:
 			_wait -= delta
 			if _wait <= 0.0:
 				release_challenger()   # oyuncu ilgilenmedi: dümdüz devam edip şeritten çıkar

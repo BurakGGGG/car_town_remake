@@ -67,6 +67,7 @@ var _gem_rewards: GemRewards
 var _missions: MissionManager
 var _ads: AdService
 var _race: RaceManager
+var _tutorial: TutorialManager
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -96,6 +97,7 @@ func _setup() -> void:
 	_missions = get_tree().get_first_node_in_group("missions") as MissionManager
 	_ads = get_tree().get_first_node_in_group("ads") as AdService
 	_race = get_tree().get_first_node_in_group("race") as RaceManager
+	_tutorial = get_tree().get_first_node_in_group("tutorial") as TutorialManager
 	if visit_mode:
 		_loading = true
 		_apply(GarageVisit.garage())
@@ -202,6 +204,8 @@ func new_game() -> void:
 		_ads.reset()
 	if _race:
 		_race.reset()
+	if _tutorial:
+		_tutorial.reset()
 	_loading = false
 	save_game()
 
@@ -234,6 +238,7 @@ func _progress_json() -> String:
 	data.erase("gem_rewards")
 	data.erase("missions")   # gün / hafta değişimiyle kendiliğinden değişir; ilerleme sayılmaz
 	data.erase("ads")   # reklam sayaçları da zamanla / izlemeyle değişir; ilerleme sayılmaz
+	data.erase("tutorial")   # ders atlamak / izlemek bulut kaydını "ilerlemiş" göstermesin
 	return JSON.stringify(data, "", true)
 
 
@@ -302,6 +307,8 @@ func _collect() -> Dictionary:
 		"ads": _ads.state() if _ads else {},
 		# KİŞİSEL YARIŞ REKORLARI: araç başına en iyi süre + hayalet izi. Eski kayıtta yoktur: rekorsuz başlanır.
 		"race": _race.state() if _race else {},
+		# EĞİTİM: biten ustalık dersleri. Eski kayıtta yoktur: seviye 2+ oyuncu dersleri bitmiş sayar.
+		"tutorial": _tutorial.state() if _tutorial else {},
 	}
 
 
@@ -417,6 +424,10 @@ func _apply(data: Dictionary) -> void:
 	if _race:
 		var race_data: Variant = data.get("race", {})
 		_race.load_state(race_data if race_data is Dictionary else {})
+	if _tutorial:
+		# Seviye yukarıda yüklendi: bölümü olmayan (eski) kayıtta karar seviyeye göre verilir
+		var tutorial_data: Variant = data.get("tutorial", {})
+		_tutorial.load_state(tutorial_data if tutorial_data is Dictionary else {}, data.has("tutorial"))
 	if legacy:
 		if _missions:
 			_missions.mark_legacy_repairs_passed()   # geçilmiş tamir yıldızları ödenmiş sayılır

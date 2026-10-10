@@ -141,6 +141,9 @@ var _delivery: CrateDelivery
 var _blocked_notified: Dictionary = {}   # yer bulamayan kasa uid → uyarıldı mı
 ## Alt sekme → açtığı ekran.
 var _nav_screens: Dictionary = {}
+## EĞİTİM: Rıza Usta'nın ders katmanı (temalı kökün en üstünde) ve dersleri oynatan yönetmen.
+var tutorial_overlay: TutorialOverlay
+var tutorial: TutorialDirector
 
 
 func _ready() -> void:
@@ -202,6 +205,7 @@ func _ready() -> void:
 	_build_notice_plate()
 	_build_bay_plate()
 	_build_crate_panel()
+	_build_tutorial()
 	_apply_safe_area()
 	get_viewport().size_changed.connect(_apply_safe_area)
 	_connect_gameplay.call_deferred()  # sahnedeki yöneticiler hazır olsun
@@ -1112,6 +1116,18 @@ func _sync_nav_tab(place: StringName) -> void:
 	for button: PlateButton in _nav_ids:
 		button.set_pressed_no_signal(button == target)
 	_sync_garage_panel()
+
+
+# --- Eğitim -----------------------------------------------------------------------------
+
+## Ders katmanı bütün ekranların (showroom, yarış, düzenleyici) üstünde olmalı: temalı köke EN SON eklenir.
+func _build_tutorial() -> void:
+	tutorial_overlay = TutorialOverlay.new()
+	garage_screen.get_parent().add_child(tutorial_overlay)
+	tutorial = TutorialDirector.new()
+	tutorial.hud = self
+	tutorial.overlay = tutorial_overlay
+	add_child(tutorial)
 
 
 # --- Araç teslimat kasaları ---------------------------------------------------------------

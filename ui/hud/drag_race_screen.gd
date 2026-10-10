@@ -199,6 +199,8 @@ var _best_trace: PackedFloat32Array = PackedFloat32Array()
 var _record_new: bool = false
 var _record_submitted: bool = false
 var _progress: RaceProgressBar
+## EĞİTİM: ilk yarışta Rıza Usta kuralları anlatırken geri sayım başlamasın (HAZIR OL'da bekler).
+var hold_start: bool = false
 
 
 func _ready() -> void:
@@ -361,6 +363,21 @@ func _gui_input(event: InputEvent) -> void:
 	if pressed:
 		tap()
 	accept_event()
+
+
+## Eğitim spot ışığının gösterdiği parçalar: &"sign" (geri sayım tabelası), &"dial" (devir kadranı),
+## &"tap" (DOKUN / VİTES tabelası), &"progress" (üstteki ilerleme çubuğu).
+func tutorial_anchor(id: StringName) -> Control:
+	match id:
+		&"sign":
+			return _sign
+		&"dial":
+			return _shift_dial
+		&"tap":
+			return _tap_button
+		&"progress":
+			return _progress
+	return null
 
 
 func shift_count() -> int:
@@ -745,7 +762,8 @@ func _process(delta: float) -> void:
 		_shift_dial.over = false
 	match _phase:
 		Phase.READY:
-			_countdown -= delta
+			if not hold_start:
+				_countdown -= delta
 			if _countdown <= 0.0:
 				_phase = Phase.COUNTDOWN
 				_countdown = 3.0 * COUNTDOWN_STEP

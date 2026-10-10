@@ -354,6 +354,16 @@ func _build_about() -> void:
 	var box: VBoxContainer = _new_page(Page.ABOUT)
 	var support: PlateButton = _link_row(box, Loc.t("DESTEK / İLETİŞİM"), Loc.t("Sorununu ya da önerini web sitemizden ilet."), "↗")
 	support.pressed.connect(func() -> void: OS.shell_open(SUPPORT_URL))
+	# EĞİTİM: Rıza Usta'nın dersleri baştan (ödüller ikinci kez verilmez). Ayarlar kapanır, ilk ders başlar.
+	var tutorial: PlateButton = _link_row(box, Loc.t("NASIL OYNANIR?"), Loc.t("Rıza Usta'nın derslerini baştan izle: tamir, yarış, araçlar, dekorasyon."), Loc.t("BAŞLAT"))
+	tutorial.pressed.connect(func() -> void:
+		var director: TutorialDirector = get_tree().get_first_node_in_group("tutorial_director") as TutorialDirector
+		if director == null:
+			return
+		var router: UiRouter = get_tree().get_first_node_in_group("ui_router") as UiRouter
+		if router:
+			router.close_all()
+		director.restart())
 	box.add_child(_rule())
 	var info: Label = _caption(Loc.t("AUTO YARD  ·  SÜRÜM %s\nautoyardwebsite.vercel.app") % VERSION)
 	box.add_child(info)

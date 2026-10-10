@@ -92,6 +92,11 @@ func _ensure_crate_system() -> void:
 		add_child(missions)
 	if get_tree().get_first_node_in_group("crate_delivery") == null:
 		add_child(CrateDelivery.new())
+	# EĞİTİM durumu (biten dersler). Dersleri HUD'daki TutorialDirector oynatır.
+	if get_tree().get_first_node_in_group("tutorial") == null:
+		var tutorial: TutorialManager = TutorialManager.new()
+		tutorial.name = "TutorialManager"
+		add_child(tutorial)
 	# REKLAM servisi (ödüllü): kodla kurulur, SaveManager'dan ÖNCE hazır olmalı (sayaçları o yükler).
 	if get_tree().get_first_node_in_group("ads") == null:
 		var ads: AdService = AdService.new()

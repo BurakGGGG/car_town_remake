@@ -119,6 +119,23 @@ func _bind() -> void:
 			_economy.money_changed.connect(func(_m: int) -> void: _refresh_cards())
 
 
+## Eğitim spot ışığının gösterdiği parçalar: &"bottom" (sekmeler + eşya şeridi), &"strip" (eşya
+## şeridi), &"tabs" (kategori sekmeleri), &"place" (YERLEŞTİR), &"done" (BİTİR).
+func tutorial_anchor(id: StringName) -> Control:
+	match id:
+		&"bottom":
+			return _bottom
+		&"strip":
+			return _strip_panel
+		&"tabs":
+			return _tab_scroll
+		&"place":
+			return _place_button if _place_button.is_visible_in_tree() else null
+		&"done":
+			return _done_button
+	return null
+
+
 # --- Kurulum -----------------------------------------------------------------------------
 
 func _build() -> void:

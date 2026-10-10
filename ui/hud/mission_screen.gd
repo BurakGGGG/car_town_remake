@@ -591,6 +591,7 @@ func _guide_plate(entry: Dictionary) -> PlatePanel:
 	texts.add_child(reward)
 	row.add_child(texts)
 	var button: PlateButton = _claim_button(done, false)
+	button.name = "Claim_%s" % quest_id   # eğitim (İLK KASA) bu düğmeyi gösterir
 	button.pressed.connect(func() -> void:
 		if _quests.claim(quest_id):
 			_reward_popup.show_rewards(_guide_summary(entry))

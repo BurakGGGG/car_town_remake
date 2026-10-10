@@ -173,6 +173,11 @@ func _init() -> void:
 
 # --- Dış API -----------------------------------------------------------------
 
+## Sağdaki eylem plakası (TAMİRE AL / PARA TOPLA): eğitim spot ışığı bunu gösterir.
+func action_button() -> PlateButton:
+	return _button
+
+
 ## Aktif/tamamlanmış iş bilgisi (ilerleme ve TAMAMLANDI metinleri bu işe göre).
 ## Ödül / XP satırı. SÜREN bir iş için ödül RepairState'te İŞ BAŞLARKEN sabitlenmiştir (garaj o
 ## sırada büyüse bile kasaya giren değişmez), bu yüzden çağıran gerçek tutarı verebilir; verilmezse
