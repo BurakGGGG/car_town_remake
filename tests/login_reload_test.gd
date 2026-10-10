@@ -142,6 +142,21 @@ func _run() -> void:
 	check(first_scene != null and cloud() != null and cloud().is_available(), "Main.tscn açıldı, CloudSaveManager sahte Firebase'e bağlı")
 	check(cloud().get_state() == CloudSaveManager.State.SIGNED_OUT and fb.user.is_empty(), "misafir, oturumsuz")
 
+	print("Giriş önerisi: açılışta değil, ilk ders bitince bir kez")
+	var prompt_screen: LoginScreen = get_first_node_in_group("login_screen") as LoginScreen
+	await create_timer(4.5).timeout
+	check(not prompt_screen.visible and cloud().should_prompt_login(), "açılışta giriş ekranı AÇILMADI")
+	(get_first_node_in_group("tutorial") as TutorialManager).mark_done(TutorialManager.BASICS)
+	await create_timer(1.5).timeout
+	check(not prompt_screen.visible, "ders biter bitmez araya girmez (oyuncu boşta beklenir)")
+	await create_timer(4.0).timeout
+	check(prompt_screen.visible and prompt_screen._notice.text.contains("Garajın büyümeye başladı"), "ilk ders bitince giriş önerildi")
+	check(not cloud().should_prompt_login(), "öneri bir kez: işaretlendi")
+	var hud_node: Hud = current_scene.find_child("HUD", true, false) as Hud
+	hud_node.router.close_all()
+	await create_timer(5.0).timeout
+	check(not prompt_screen.visible, "kapatılınca bir daha açılmaz")
+
 	print("Giriş: Dana ilerler, buluta yazılır")
 	eco().set_money(54321)
 	(get_first_node_in_group("save_manager") as SaveManager).save_game()

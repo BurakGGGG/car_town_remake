@@ -83,7 +83,7 @@
   "gameplay/missions/mission_catalog.gd:76"
  ],
  "%s GARAJINA GELİYOR": [
-  "ui/hud/hud.gd:1199"
+  "ui/hud/hud.gd:1243"
  ],
  "%s GARAJINDA": [
   "ui/hud/hud.gd:901"
@@ -199,7 +199,7 @@
   "ui/hud/car_gallery.gd:279"
  ],
  "%s ₺\nSEVİYE %d\n%d ARAÇ\n%s": [
-  "ui/hud/login_screen.gd:247"
+  "ui/hud/login_screen.gd:252"
  ],
  "%s ₺ / KARO": [
   "ui/hud/garage_edit_screen.gd:541"
@@ -370,12 +370,12 @@
   "ui/hud/friends_screen.gd:113"
  ],
  "ARKADAŞLAR": [
-  "ui/hud/hud.gd:1308",
-  "ui/hud/hud.gd:1331",
+  "ui/hud/hud.gd:1352",
+  "ui/hud/hud.gd:1375",
   "ui/hud/friends_screen.gd:88"
  ],
  "ARKADAŞLAR (%d)": [
-  "ui/hud/hud.gd:1331"
+  "ui/hud/hud.gd:1375"
  ],
  "ARKADAŞLARIN (%d)": [
   "ui/hud/friends_screen.gd:240",
@@ -626,13 +626,13 @@
   "gameplay/missions/mission_catalog.gd:100"
  ],
  "BU CİHAZDAKİ KAYIT": [
-  "ui/hud/login_screen.gd:126"
+  "ui/hud/login_screen.gd:128"
  ],
  "BU KARO BOYALI DEĞİL": [
   "world/garage_editor.gd:940"
  ],
  "BULUT KAYDI": [
-  "ui/hud/login_screen.gd:127"
+  "ui/hud/login_screen.gd:129"
  ],
  "BURAYA DUVAR ÖRÜLEMEZ": [
   "world/garage_editor.gd:1044"
@@ -648,7 +648,7 @@
   "decor/decorations.json:cooler.title"
  ],
  "Bağlanıyor…": [
-  "ui/hud/login_screen.gd:304"
+  "ui/hud/login_screen.gd:309"
  ],
  "Başlangıç Değerleri (test)": [
   "ui/hud/hud.gd:36"
@@ -690,7 +690,7 @@
   "decor/decorations.json:tyre_planter.desc"
  ],
  "Bu cihazda kayıt bulundu.\nBulut kaydı bulundu.\nHangisini kullanmak istiyorsun?": [
-  "ui/hud/login_screen.gd:310"
+  "ui/hud/login_screen.gd:315"
  ],
  "Bu garaj oyunun daha yeni bir sürümüyle kaydedilmiş. Oyunu güncelle.": [
   "gameplay/social/social_manager.gd:302"
@@ -720,13 +720,13 @@
   "gameplay/cloud_save_manager.gd:514"
  ],
  "Bulut kaydı bu sürümle açılamıyor. Bulut kaydına dokunulmadı; bu cihazdaki kayıt kullanılıyor.": [
-  "ui/hud/login_screen.gd:322"
+  "ui/hud/login_screen.gd:327"
  ],
  "Bulut kaydı güncel.\nÇıkış yaparsan bu cihazda yeni bir misafir oyunu başlar; ilerlemen hesabında güvende kalır, tekrar girince geri gelir.": [
-  "ui/hud/login_screen.gd:314"
+  "ui/hud/login_screen.gd:319"
  ],
  "Buluta ulaşılamıyor. Bu cihazdaki kayıt kullanılıyor; bağlantı gelince eşitlenecek.\nEşitlenmemiş değişiklik varken çıkış yapılamaz.": [
-  "ui/hud/login_screen.gd:318"
+  "ui/hud/login_screen.gd:323"
  ],
  "Burada iki aracı ve kazanırsan alacağın ödülü görürsün. YARIŞ'a bas!": [
   "ui/tutorial/tutorial_director.gd:604"
@@ -771,7 +771,7 @@
   "gameplay/missions/mission_catalog.gd:57"
  ],
  "BİRAZ DEKORASYONU KALDIR": [
-  "ui/hud/hud.gd:1244"
+  "ui/hud/hud.gd:1288"
  ],
  "BİTKİ": [
   "gameplay/garage_decor.gd:176"
@@ -863,7 +863,7 @@
   "ui/hud/mission_screen.gd:419"
  ],
  "DEVAM ET": [
-  "ui/hud/login_screen.gd:297"
+  "ui/hud/login_screen.gd:302"
  ],
  "DEVİR SINIRI": [
   "gameplay/race/drag_race_sim.gd:557"
@@ -1033,7 +1033,7 @@
   "gameplay/garage_value.gd:39"
  ],
  "EVET, KALICI OLARAK SİL": [
-  "ui/hud/login_screen.gd:288"
+  "ui/hud/login_screen.gd:293"
  ],
  "Emaye motor yağı tabelası.": [
   "decor/decorations.json:sign_oil.desc"
@@ -1219,11 +1219,11 @@
  ],
  "GOOGLE HESABI": [
   "ui/hud/settings_screen.gd:336",
-  "ui/hud/login_screen.gd:111"
+  "ui/hud/login_screen.gd:113"
  ],
  "GOOGLE İLE GİRİŞ": [
-  "ui/hud/login_screen.gd:300",
-  "ui/hud/login_screen.gd:305"
+  "ui/hud/login_screen.gd:305",
+  "ui/hud/login_screen.gd:310"
  ],
  "GRAFİK VE PERFORMANS": [
   "ui/hud/settings_screen.gd:187",
@@ -1277,6 +1277,9 @@
  "Garajı 3. seviyeye genişlet": [
   "gameplay/quest_catalog.gd:41"
  ],
+ "Garajın büyümeye başladı! Google ile giriş yap, ilerlemen hesabına kaydedilsin. Telefon değişse de kaybolmaz.": [
+  "ui/hud/login_screen.gd:229"
+ ],
  "Garajına bir araç teslimat kasası geldi. İçinde ne var? Kasaya dokun!": [
   "ui/tutorial/tutorial_director.gd:672"
  ],
@@ -1308,7 +1311,7 @@
   "gameplay/cloud_save_manager.gd:322"
  ],
  "Google hesabın oyundan silinir. Bulut kaydın ve bu cihazdaki tüm ilerlemen (para, elmas, araçlar, garaj, görevler) kalıcı olarak silinir ve oyun baştan başlar.\n\nBu işlem GERİ ALINAMAZ. Devam edersen Google hesabını bir kez daha seçmen istenecek.": [
-  "ui/hud/login_screen.gd:287"
+  "ui/hud/login_screen.gd:292"
  ],
  "Google hesabın, reklam tercihlerin ve yasal metinler.": [
   "ui/hud/settings_screen.gd:271"
@@ -1329,20 +1332,20 @@
   "ui/tutorial/tutorial_director.gd:654"
  ],
  "GÖREV TAMAMLANDI: %s": [
-  "ui/hud/hud.gd:1352"
+  "ui/hud/hud.gd:1396"
  ],
  "GÖREVLER": [
   "ui/hud/mission_screen.gd:92",
   "ui/hud/profile_screen.gd:155",
-  "ui/hud/hud.gd:1291",
-  "ui/hud/hud.gd:1346",
+  "ui/hud/hud.gd:1335",
+  "ui/hud/hud.gd:1390",
   "ui/tutorial/tutorial_director.gd:570"
  ],
  "GÖREVLER            %d / %d%s": [
   "ui/hud/profile_screen.gd:150"
  ],
  "GÖREVLER (%d)": [
-  "ui/hud/hud.gd:1346"
+  "ui/hud/hud.gd:1390"
  ],
  "GÖZ KORKUTAN GARAJ": [
   "gameplay/garage_value.gd:42"
@@ -1447,10 +1450,10 @@
   "ui/hud/mission_screen.gd:132"
  ],
  "HESABI SİL": [
-  "ui/hud/login_screen.gd:285"
+  "ui/hud/login_screen.gd:290"
  ],
  "HESABIMI SİL": [
-  "ui/hud/login_screen.gd:155"
+  "ui/hud/login_screen.gd:157"
  ],
  "HESAP               %s": [
   "ui/hud/profile_screen.gd:161"
@@ -1488,13 +1491,13 @@
  ],
  "Hesabın ve tüm verilerin silindi. Yeni bir oyunla misafir olarak devam ediyorsun.": [
   "gameplay/cloud_save_manager.gd:449",
-  "ui/hud/login_screen.gd:241"
+  "ui/hud/login_screen.gd:246"
  ],
  "Hesabın yüklendi.": [
   "gameplay/cloud_save_manager.gd:552"
  ],
  "Hesap siliniyor… Google hesabını seçtiysen bu birkaç saniye sürer.": [
-  "ui/hud/login_screen.gd:326"
+  "ui/hud/login_screen.gd:331"
  ],
  "Hesap silinmedi: Google hesabı doğrulanamadı.": [
   "gameplay/cloud_save_manager.gd:330"
@@ -1566,11 +1569,11 @@
   "ui/hud/gem_store_screen.gd:108",
   "ui/hud/mastery_screen.gd:84",
   "ui/hud/friends_screen.gd:167",
-  "ui/hud/login_screen.gd:308",
-  "ui/hud/login_screen.gd:316",
-  "ui/hud/login_screen.gd:320",
-  "ui/hud/login_screen.gd:324",
-  "ui/hud/login_screen.gd:329"
+  "ui/hud/login_screen.gd:313",
+  "ui/hud/login_screen.gd:321",
+  "ui/hud/login_screen.gd:325",
+  "ui/hud/login_screen.gd:329",
+  "ui/hud/login_screen.gd:334"
  ],
  "KAPILI DUVAR": [
   "decor/decorations.json:wall_door.title"
@@ -1591,7 +1594,7 @@
   "gameplay/missions/mission_manager.gd:721",
   "ui/hud/mission_screen.gd:613",
   "ui/hud/mission_screen.gd:627",
-  "ui/hud/hud.gd:1199",
+  "ui/hud/hud.gd:1243",
   "ui/hud/crate_panel.gd:75",
   "world/crate_visual.gd:308"
  ],
@@ -1605,10 +1608,10 @@
   "ui/tutorial/tutorial_director.gd:666"
  ],
  "KASA YOLDA: GARAJDA YER YOK\n%s": [
-  "ui/hud/hud.gd:1245"
+  "ui/hud/hud.gd:1289"
  ],
  "KASA ŞU AN AÇILAMIYOR": [
-  "ui/hud/hud.gd:1226"
+  "ui/hud/hud.gd:1270"
  ],
  "KASADAN ÇIKAR": [
   "ui/hud/showroom_screen.gd:992"
@@ -1633,7 +1636,7 @@
   "ui/hud/friends_screen.gd:226"
  ],
  "KAYIT SEÇ": [
-  "ui/hud/login_screen.gd:269"
+  "ui/hud/login_screen.gd:274"
  ],
  "KAYNAK TAKIMI": [
   "decor/decorations.json:welding_set.title"
@@ -1952,10 +1955,10 @@
   "decor/decorations.json:checker_blue.desc"
  ],
  "Misafir olarak oynuyorsun. İlerlemen bu cihazda kayıtlı.\nGoogle girişi yalnızca Android sürümünde.": [
-  "ui/hud/login_screen.gd:295"
+  "ui/hud/login_screen.gd:300"
  ],
  "Misafir olarak oynuyorsun. İlerlemen bu cihazda kayıtlı.\nGoogle ile giriş yaparsan ilerlemen buluta yedeklenir.": [
-  "ui/hud/login_screen.gd:299"
+  "ui/hud/login_screen.gd:304"
  ],
  "MÜKEMMEL GÜN": [
   "gameplay/missions/mission_catalog.gd:111"
@@ -1985,7 +1988,7 @@
   "ui/hud/repair_panel.gd:310"
  ],
  "MİSAFİR OLARAK DEVAM ET": [
-  "ui/hud/login_screen.gd:302"
+  "ui/hud/login_screen.gd:307"
  ],
  "NANE": [
   "vehicles/paint_catalog.gd:23"
@@ -2098,8 +2101,8 @@
  ],
  "PLAYER": [
   "ui/hud/hud.tscn:73",
-  "ui/hud/login_screen.gd:93",
-  "ui/hud/login_screen.gd:269"
+  "ui/hud/login_screen.gd:95",
+  "ui/hud/login_screen.gd:274"
  ],
  "POSTER": [
   "decor/decorations.json:wall_poster.title"
@@ -2273,7 +2276,7 @@
   "ui/hud/gem_store_screen.gd:199"
  ],
  "SATIN ALMA TAMAMLANDI\n+%d GEM": [
-  "ui/hud/hud.gd:1190"
+  "ui/hud/hud.gd:1234"
  ],
  "SATIN ALMA TAMAMLANDI!": [
   "ui/hud/gem_store_screen.gd:210"
@@ -2383,7 +2386,7 @@
   "ui/tutorial/tutorial_director.gd:511"
  ],
  "SONRA KARAR VER": [
-  "ui/hud/login_screen.gd:312"
+  "ui/hud/login_screen.gd:317"
  ],
  "SPOR": [
   "vehicles/crates.json:sport_crate.short_name"
@@ -2461,7 +2464,7 @@
   "ui/hud/garage_edit_screen.gd:676"
  ],
  "SİLİNİYOR": [
-  "ui/hud/login_screen.gd:327"
+  "ui/hud/login_screen.gd:332"
  ],
  "SİYAH": [
   "vehicles/paint_catalog.gd:14"
@@ -2743,7 +2746,7 @@
   "ui/hud/garage_edit_screen.gd:278",
   "ui/hud/garage_screen.gd:733",
   "ui/hud/hud.gd:618",
-  "ui/hud/login_screen.gd:290",
+  "ui/hud/login_screen.gd:295",
   "ui/hud/crate_panel.gd:45"
  ],
  "VW GRUBU": [
@@ -3015,10 +3018,10 @@
   "decor/decorations.json:car_ramps.title"
  ],
  "ÇIKIŞ YAP": [
-  "ui/hud/login_screen.gd:305",
-  "ui/hud/login_screen.gd:315",
-  "ui/hud/login_screen.gd:319",
-  "ui/hud/login_screen.gd:323"
+  "ui/hud/login_screen.gd:310",
+  "ui/hud/login_screen.gd:320",
+  "ui/hud/login_screen.gd:324",
+  "ui/hud/login_screen.gd:328"
  ],
  "ÇIRAK": [
   "gameplay/quest_catalog.gd:27"
@@ -3091,7 +3094,7 @@
   "ui/hud/showroom_screen.gd:958"
  ],
  "ÖNCE GARAJDAKİ BİR KASAYI AÇ": [
-  "ui/hud/hud.gd:1244"
+  "ui/hud/hud.gd:1288"
  ],
  "ÖNCE GARAJI SEVİYE %d'E GENİŞLET": [
   "ui/hud/hud.gd:645"
@@ -3175,7 +3178,7 @@
   "ui/tutorial/tutorial_director.gd:742"
  ],
  "İLK ARAÇ KASAN GARAJINA GELDİ\nKASAYA DOKUN VE AÇ": [
-  "ui/hud/hud.gd:1212"
+  "ui/hud/hud.gd:1256"
  ],
  "İLK KASA": [
   "gameplay/quest_catalog.gd:25"

@@ -1126,6 +1126,49 @@ func _sync_nav_tab(place: StringName) -> void:
 # --- Eğitim -----------------------------------------------------------------------------
 
 ## Ders katmanı bütün ekranların (showroom, yarış, düzenleyici) üstünde olmalı: temalı köke EN SON eklenir.
+## GİRİŞ ÖNERİSİ: açılışta değil, oyuncu biraz ilerleyince bir kez. Koşul: ilk ders (İLK TAMİR)
+## bitti — eğitim atlandıysa / yoksa LOGIN_PROMPT_LEVEL — ve oyuncu boşta (açık ekran, ders, kasa
+## panosu yok) en az LOGIN_PROMPT_IDLE saniye. Bir kez gösterildi mi (cloud_sync.json) tekrar gelmez.
+const LOGIN_PROMPT_LEVEL: int = 2
+const LOGIN_PROMPT_IDLE: float = 3.0
+var _login_idle: float = 0.0
+
+
+func _setup_login_prompt() -> void:
+	var cloud: CloudSaveManager = get_tree().get_first_node_in_group("cloud_save") as CloudSaveManager
+	if cloud == null or not cloud.should_prompt_login():
+		return   # masaüstü / zaten giriş yapılmış / daha önce önerilmiş
+	var timer: Timer = Timer.new()
+	timer.name = "LoginPromptTimer"
+	timer.wait_time = 1.0
+	add_child(timer)
+	timer.timeout.connect(_tick_login_prompt.bind(cloud, timer))
+	timer.start()
+
+
+func _tick_login_prompt(cloud: CloudSaveManager, timer: Timer) -> void:
+	if not cloud.should_prompt_login():
+		timer.queue_free()
+		return
+	if not _login_prompt_ready() or not router.top().is_empty() or (tutorial and tutorial.is_running()) \
+			or (crate_panel and crate_panel.visible):
+		_login_idle = 0.0
+		return
+	_login_idle += timer.wait_time
+	if _login_idle < LOGIN_PROMPT_IDLE:
+		return
+	timer.queue_free()
+	router.open(&"account")
+	login_screen.show_prompt()
+
+
+func _login_prompt_ready() -> bool:
+	var manager: TutorialManager = get_tree().get_first_node_in_group("tutorial") as TutorialManager
+	if manager and manager.is_done(TutorialManager.BASICS):
+		return true
+	return _player_progress != null and _player_progress.level >= LOGIN_PROMPT_LEVEL
+
+
 func _build_tutorial() -> void:
 	tutorial_overlay = TutorialOverlay.new()
 	garage_screen.get_parent().add_child(tutorial_overlay)
@@ -1162,6 +1205,7 @@ func _connect_crates() -> void:
 			if text != "":
 				_show_notice(text, HudPalette.INK, 1.8))
 	_setup_gem_store()
+	_setup_login_prompt.call_deferred()   # CloudSaveManager kendi kaydını (cloud_sync.json) okusun
 
 
 ## GEM MAĞAZASI: sol üstteki gem sayacına dokunmak mağazayı açar. Mağaza kapalıyken tamamlanan ödeme

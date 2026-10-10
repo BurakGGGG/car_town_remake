@@ -6,8 +6,10 @@ extends Control
 ## durumunu gösterir ve butonları ona iletir. CloudSaveManager yoksa (PC / node eklenmemiş) misafir
 ## metni gösterilir.
 ##
-## Oyuncuyu engellemez: açılışta yalnızca bir kez (Android, misafir) kendiliğinden açılır;
-## MİSAFİR OLARAK DEVAM ET / KAPAT ile oyun sürer. Kayıt seçimi (CONFLICT) çıkınca kendiliğinden
+## Oyuncuyu engellemez: açılışta AÇILMAZ. Oyuncu biraz ilerleyince (ilk ders bitince) HUD bir kez
+## açar (Hud._tick_login_prompt → show_prompt); MİSAFİR OLARAK DEVAM ET / KAPAT ile oyun sürer.
+## Misafir ilerlemesi giriş yapılan hesaba taşınır: hesabın bulut kaydı yoksa bu cihazın oyunu
+## buluta yazılır; varsa KAYIT SEÇ ile oyuncu hangisinin kalacağını seçer. Kayıt seçimi (CONFLICT) çıkınca kendiliğinden
 ## açılır; SONRA KARAR VER ile kapatılabilir, seçim yapılana kadar buluta yazılmaz.
 ##
 ## HESABIMI SİL iki adımlıdır: ilk basış yalnızca neyin silineceğini anlatan onay görünümünü açar,
@@ -212,16 +214,19 @@ func _connect_cloud() -> void:
 	_cloud.notice.connect(_on_notice)
 	_cloud.account_deleted.connect(_on_account_deleted)
 	_refresh()
-	# İlk açılış: Android'de misafire bir kez giriş seçeneği sunulur (engellemez)
 	await get_tree().process_frame
 	# Dünya yenilendiyse (giriş / çıkış / hesap silme) sonucu bir kez söyle
 	var pending: String = _cloud.take_pending_notice()
 	if not pending.is_empty():
 		open()
 		_on_notice(pending)
-	elif _cloud.should_prompt_login():
+
+
+## Oyuncu biraz ilerledi: giriş BİR KEZ, nedeniyle birlikte önerilir (HUD açar, router üstünden).
+func show_prompt() -> void:
+	if _cloud:
 		_cloud.mark_login_prompt_seen()
-		open()
+	_on_notice(Loc.t("Garajın büyümeye başladı! Google ile giriş yap, ilerlemen hesabına kaydedilsin. Telefon değişse de kaybolmaz."))
 
 
 func _on_conflict_found(local_summary: Dictionary, cloud_summary: Dictionary) -> void:
