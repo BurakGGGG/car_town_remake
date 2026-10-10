@@ -1044,6 +1044,7 @@ func _load_preview(scene_path: String) -> void:
 	_preview_rig = CarRig.for_node(_preview)
 	_preview_rig.apply(CarAppearance.get_for(scene_path))
 	_preview_rig.set_lod_bias(CarRig.LOD_BIAS_GARAGE)   # showroom: tam detay
+	_preview_rig.optimize(true)   # vitrin aracı tekeriyle döner (kök dönüşü): parçalar birleşir
 	_fit_to_platform()
 
 
@@ -1232,3 +1233,13 @@ func _kill_tweens() -> void:
 		if _group_targets.has(group):
 			group.position = _group_targets[group]
 	_group_targets.clear()
+
+
+## İLK AÇILIŞ TAKILMASINI ÖNLER: sahne görünmeden bir kez küçük boyutta çizilir — shader derleme
+## ve doku yükleme ilk açılışta değil oyun yüklenirken olur (GL Compatibility shader'ları ilk
+## kullanımda derler; ölçüldü: ilk açılışta bir kare 151 ms, sonrakilerde 17 ms). Hud çağırır.
+func prewarm() -> void:
+	if visible or _viewport == null:
+		return
+	_viewport.size = Vector2i(64, 36)
+	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE

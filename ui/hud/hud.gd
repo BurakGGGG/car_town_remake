@@ -138,6 +138,7 @@ var _nav_screens: Dictionary = {}
 
 
 func _ready() -> void:
+	FontFallback.install()   # ₺ ★ → … için paketli yedek yazı tipi (sistem taraması yok; bkz. sınıf)
 	camera_controls.visible = false
 	car_info_panel.visible = false
 
@@ -985,12 +986,16 @@ func _register_screens() -> void:
 	router.register(&"race_result", race_result_screen, UiRouter.Kind.MODAL)
 	router.register(&"collection", collection_screen, UiRouter.Kind.MODAL)
 	router.register(&"friends", friends_screen, UiRouter.Kind.MODAL)
+	# 3D ekranların shader'ları oyun yüklenirken derlensin (ilk açılış takılmasız)
+	drag_race_screen.prewarm.call_deferred()
+	showroom.prewarm.call_deferred()
 
 
 ## Yığın değişti: oyun HUD'u yalnızca bir YER (garaj/showroom) açıkken gizlenir; panolar
 ## (görevler, ustalık, rütbe, profil, hesap) HUD'un üstünde durur.
 func _on_ui_stack_changed(top: StringName, place_open: bool) -> void:
 	_set_gameplay_hud_visible(not place_open)
+	_sync_world_rendering()
 	if place_open:
 		_garage_panel_open = false
 	if top != &"":
@@ -1000,6 +1005,33 @@ func _on_ui_stack_changed(top: StringName, place_open: bool) -> void:
 			crate_panel.hide_panel()
 	_sync_nav_tab(router.current_place())
 	_refresh_quest_button()
+
+
+## DÜNYAYI TAMAMEN ÖRTEN yerler: açıkken ana görünümün 3D çizimi kapanır (ekranların kendi 3D
+## sahneleri ayrı SubViewport'larda, etkilenmez). Ölçüldü (dekorlu garaj): showroom / garaj / yarış
+## açıkken arkadaki şehir ~500 çizim çağrısı ve ~600k üçgen harcıyordu — hiç görünmediği hâlde.
+## Dekorasyon düzenleyici dünyayı arka planda gösterdiği için listede YOK.
+const WORLD_COVERING_PLACES: Array[StringName] = [&"garage", &"showroom", &"settings", &"drag_race"]
+## Açılış geçişi bitmeden dünya kapanırsa arkada siyah parlama görünür: bu kadar beklenir.
+const WORLD_HIDE_DELAY: float = 0.4
+
+var _world_hide_timer: SceneTreeTimer
+
+
+func _sync_world_rendering() -> void:
+	var covered: bool = WORLD_COVERING_PLACES.has(router.current_place())
+	var viewport: Viewport = get_viewport()
+	if not covered:
+		viewport.disable_3d = false   # kapanış geçişi dünyanın üstünde oynar: hemen aç
+		_world_hide_timer = null
+		return
+	if viewport.disable_3d or _world_hide_timer != null:
+		return
+	_world_hide_timer = get_tree().create_timer(WORLD_HIDE_DELAY)
+	_world_hide_timer.timeout.connect(func() -> void:
+		_world_hide_timer = null
+		if WORLD_COVERING_PLACES.has(router.current_place()):
+			get_viewport().disable_3d = true)
 
 
 ## Alt sekme yalnızca AÇIK olanı sarı gösterir: ARAÇLAR / MAĞAZA ekranı, PROFİL panosu ya da GARAJ paneli.

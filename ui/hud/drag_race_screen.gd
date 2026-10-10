@@ -308,6 +308,16 @@ func open() -> void:
 	set_process(true)
 
 
+
+## İLK AÇILIŞ TAKILMASINI ÖNLER: sahne görünmeden bir kez küçük boyutta çizilir — shader derleme
+## ve doku yükleme ilk açılışta değil oyun yüklenirken olur (GL Compatibility shader'ları ilk
+## kullanımda derler; ölçüldü: ilk açılışta bir kare 126 ms, sonrakilerde 17 ms). Hud çağırır.
+func prewarm() -> void:
+	if visible or _viewport == null:
+		return
+	_viewport.size = Vector2i(64, 36)
+	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+
 ## Telefon tuvalinde alt plakalar küçülür: araçların üstüne binmesinler.
 func _apply_compact_ui() -> void:
 	var compact: bool = get_viewport_rect().size.y < COMPACT_HEIGHT
@@ -625,6 +635,7 @@ func _spawn_car(vehicle_id: StringName, lane_x: float, _rival: bool) -> Node3D:
 	if rig:
 		rig.apply(CarAppearance.get_for(path))
 		rig.set_lod_bias(CarRig.LOD_BIAS_WORLD)
+		rig.optimize(false)   # gövde parçaları birleşir; tekerler yarışta döndüğü için ayrı
 	if _rival:
 		_rival_rig = rig
 	else:

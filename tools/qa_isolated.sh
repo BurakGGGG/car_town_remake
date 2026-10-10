@@ -3,6 +3,7 @@
 # araç / rekor yazan QA'lar (ör. qa/drag_feel.gd) gerçek ilerlemeyi kirletmesin.
 # run_tests.sh ile aynı override.cfg yöntemi; ikisi AYNI ANDA çalıştırılmamalı.
 # Kullanım: tools/qa_isolated.sh <res://qa/betik.gd> [godot argümanları ...] [-- betik argümanları]
+# QA_SAVE=<savegame.json> verilirse temiz kayıt yerine o kaydın KOPYASIYLA başlar (asıl dosyaya dokunulmaz).
 set -u
 PROJ="$(cd "$(dirname "$0")/.." && pwd)"
 GODOT="${GODOT:-godot-4}"
@@ -14,6 +15,7 @@ for d in "$HOME/snap/godot-4"/*/.local/share/ct_qa "${XDG_DATA_HOME:-$HOME/.loca
 	[ "$GODOT" = "godot-4" ] && [[ "$d" != "$HOME/snap/"* ]] && continue
 	mkdir -p "$d"
 	rm -f "$d/savegame.json" "$d/cloud_sync.json"
+	[ -n "${QA_SAVE:-}" ] && cp "$QA_SAVE" "$d/savegame.json"
 	printf '[general]\nlanguage="tr"\n' > "$d/settings.cfg"
 done
 stdbuf -oL "$GODOT" --path . --script "$SCRIPT" "$@"

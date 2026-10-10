@@ -99,7 +99,9 @@ static func build_placeable(id: StringName) -> Node3D:
 ## Gövdenin kendi birimindeki boyutu (x genişlik, y yükseklik, z derinlik), WORLD_SCALE öncesi.
 static func local_size(id: StringName) -> Vector3:
 	if not _norm.has(id):
+		_measuring = true   # ölçü için kurulan kopya hemen atılır: sergi aracı parça birleştirmesin
 		var body: Node3D = build_placeable(id)
+		_measuring = false
 		if body == null:
 			return Vector3.ZERO
 		body.free()
@@ -146,6 +148,8 @@ static func _local_bounds(root: Node3D) -> AABB:
 ## garaj-içi ölçüsünde üretilir (view WORLD_SCALE uygular): trafik ölçeği / WORLD_SCALE × aracın
 ## gerçek-boyut çarpanı. Tekerlek / far gibi canlı davranışlar sergide kapalıdır (yalnızca boya).
 const VEHICLE_WORLD_SCALE: float = 0.6   # TrafficManager.model_scale ile aynı bağlam
+## local_size ölçüm kopyası kuruluyor (birleştirme isteği boşa gitmesin).
+static var _measuring: bool = false
 
 static func _vehicle(id: StringName) -> Node3D:
 	var vehicle: StringName = GarageDecor.vehicle_of(id)
@@ -164,6 +168,11 @@ static func _vehicle(id: StringName) -> Node3D:
 	rig.apply(CarAppearance.get_for(path))
 	rig.set_steer(0.0)
 	rig.set_lod_bias(CarRig.LOD_BIAS_GARAGE)
+	# Sergi aracı durur: parçalar (tekerler dahil) materyal başına birleşir (~70 → ~8 çizim). Rig
+	# düğümün meta'sında yaşar: birleştirme arka planda biter, yerel değişken o ana kadar ölürdü.
+	car.set_meta(CarRig.META_KEY, rig)
+	if not _measuring:
+		rig.optimize(true)
 	return holder
 
 

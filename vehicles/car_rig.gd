@@ -66,6 +66,11 @@ const LAMP_MAX_VOLUME: float = 0.0045
 const LOD_BIAS_GARAGE: float = 4.0  # LOD0: garaj önizlemesi, tam detay
 const LOD_BIAS_WORLD: float = 1.0   # LOD1: şehirdeki oyuncu araçları ve galeri thumbnail'leri
 const LOD_BIAS_NPC: float = 0.5     # LOD2–LOD3: trafik araçları (uzaktakiler en sade kademeye iner)
+## Birleşik mesh'in LOD katsayısı çarpanı: Godot kademeyi örneğin KUTUSUNA uzaklıkla seçer; tek
+## büyük kutu kameraya "daha yakın" sayılıp daha detaylı kademe seçiliyordu (üçgen +%18-30).
+## Ölçüldü (dekorlu garaj): 1,0 → 704k, 0,6 → 542k, birleştirme öncesi 598k; 0,7 eşdeğerin
+## biraz üstünde kalır (kalite payı).
+static var MERGED_LOD_SCALE: float = 0.7
 
 ## Görünümden bağımsız sabit materyaller (rol → StandardMaterial3D), tüm rig'ler paylaşır.
 static var _fixed_materials: Dictionary = {}
@@ -93,6 +98,13 @@ var _albedo: Texture2D               # GLB'nin albedo dokusu (dokusuz modelde nu
 var _paint_mask: Texture2D           # UV paint mask (yoksa null → boyama kapalı)
 var _mask_probed: bool = false        # maske diskten bir kez arandı mı (tembel yükleme)
 var _default_paint: Color = Color.WHITE  # CarPartMap.default_paint (dokudaki fabrika boyası)
+
+## --- Parça birleştirme (bkz. optimize / CarMeshMerger) ---
+var _optimize: bool = false
+var _merge_wheels: bool = false
+var _merge_key: String = ""
+var _merged: MeshInstance3D
+var _merge_hidden: Array[MeshInstance3D] = []   # birleşik mesh'e girdiği için gizlenen parçalar
 
 
 ## Node'a bağlı rig'i döndürür (yoksa kurar, node meta'sında saklar ve kayıt defterine ekler).
@@ -182,6 +194,8 @@ func apply(appearance: CarAppearance) -> void:
 
 	for mesh: MeshInstance3D in _parts.get(&"hidden", []):
 		mesh.visible = false
+	if _optimize:
+		_request_merge()
 
 
 ## Dokulu model: doku korunur; CarAppearance yalnızca boya anahtarı / ton / emisyon olarak uygulanır.
@@ -235,6 +249,8 @@ func _apply_textured(appearance: CarAppearance) -> void:
 	# tires, grille, black_trim, plate, fog_lights, exhaust, antenna: GLB'nin dokulu materyalinde kalır
 	for mesh: MeshInstance3D in _parts.get(&"hidden", []):
 		mesh.visible = false
+	if _optimize:
+		_request_merge()
 
 
 ## Renk / varsayılan renk oranı (kanal başına, ≤ 1): varsayılanda beyaz → doku aynen.
@@ -394,6 +410,104 @@ func set_lod_bias(bias: float) -> void:
 	for mesh: MeshInstance3D in _all_meshes:
 		if is_instance_valid(mesh):
 			mesh.lod_bias = bias
+	if is_instance_valid(_merged):
+		_merged.lod_bias = bias * MERGED_LOD_SCALE
+
+
+# --- Parça birleştirme (çizim çağrısı) ---------------------------------------------
+
+## AYNI MATERYALİ kullanan parçaları tek yüzeyde birleştirir: araç 47–80 parça yerine 5–11 çizim
+## çağrısıyla çizilir (bkz. CarMeshMerger). Birleşik geometri arka planda kurulur; o sırada araç
+## parçalı çizilmeye devam eder. `include_wheels`: tekerlekler de birleşsin mi — yalnızca DURAN
+## araçlar için (sergi, park, showroom, kasa); dönen tekerli araçlarda (trafik, yarış) false.
+## Sonradan apply() çağrılırsa (renk / far) birleştirme kendini yeniler.
+func optimize(include_wheels: bool) -> void:
+	_optimize = true
+	_merge_wheels = include_wheels
+	_request_merge()
+
+
+## Birleşik mesh hazır mı (test / QA)?
+func is_merged() -> bool:
+	return is_instance_valid(_merged) and _merged.visible
+
+
+func _request_merge() -> void:
+	if not is_instance_valid(root):
+		return
+	var wheel_meshes: Dictionary = {}
+	if not _merge_wheels:
+		for group: Dictionary in _wheel_groups:
+			for mesh: MeshInstance3D in group["meshes"]:
+				wheel_meshes[mesh] = true
+	var sources: Array[MeshInstance3D] = []
+	var candidates: Array = _all_meshes if not _all_meshes.is_empty() \
+		else root.find_children("*", "MeshInstance3D", true, false)
+	for node: Variant in candidates:
+		var mesh: MeshInstance3D = node as MeshInstance3D
+		if mesh == null or not is_instance_valid(mesh) or mesh == _merged or mesh.mesh == null:
+			continue
+		if wheel_meshes.has(mesh):
+			continue
+		# Görünür parçalar + bizim gizlediklerimiz ("hidden" rolü ve başka nedenle gizliler hariç)
+		if mesh.visible or _merge_hidden.has(mesh):
+			sources.append(mesh)
+	if sources.size() < 2:
+		return
+	# Bölüşüm: etkin materyale göre grup; imza = model + tekerlek + her parçanın grubu
+	var group_of: Dictionary = {}       # materyal kimliği → grup
+	var materials: Array[Material] = []
+	var parts: Array = []
+	var signature: PackedStringArray = PackedStringArray([scene_path, str(_merge_wheels)])
+	for mesh: MeshInstance3D in sources:
+		var xf: Transform3D = CarMeshMerger.relative(mesh, root)
+		for surface: int in mesh.mesh.get_surface_count():
+			var material: Material = mesh.get_active_material(surface)
+			var id: int = material.get_instance_id() if material else 0
+			if not group_of.has(id):
+				group_of[id] = materials.size()
+				materials.append(material)
+			parts.append([mesh.mesh, surface, xf, group_of[id]])
+			signature.append("%s:%d:%d" % [mesh.name, surface, group_of[id]])
+	var key: String = ",".join(signature)
+	if key == _merge_key and is_instance_valid(_merged):
+		_set_merged_materials(materials)   # aynı bölüşüm: yalnızca materyaller tazelenir
+		return
+	_merge_key = key
+	CarMeshMerger.request(key, parts, materials.size(), _on_merged.bind(key, sources, materials))
+
+
+func _on_merged(mesh: ArrayMesh, key: String, sources: Array[MeshInstance3D], materials: Array[Material]) -> void:
+	if key != _merge_key or not is_instance_valid(root) or mesh == null:
+		return
+	if not is_instance_valid(_merged):
+		_merged = MeshInstance3D.new()
+		_merged.name = "MergedParts"
+		root.add_child(_merged)
+	var first: MeshInstance3D = sources[0]
+	_merged.mesh = mesh
+	_merged.cast_shadow = first.cast_shadow
+	_merged.lod_bias = first.lod_bias * MERGED_LOD_SCALE
+	_merged.layers = first.layers
+	_merged.visible = true
+	_set_merged_materials(materials)
+	# Önceki birleştirmede gizlenip bu sefer dışarıda kalanlar geri açılır
+	for mesh_instance: MeshInstance3D in _merge_hidden:
+		if is_instance_valid(mesh_instance) and not sources.has(mesh_instance):
+			mesh_instance.visible = true
+	_merge_hidden.assign(sources)
+	for source: MeshInstance3D in sources:
+		if is_instance_valid(source):
+			source.visible = false
+
+
+func _set_merged_materials(materials: Array[Material]) -> void:
+	if not is_instance_valid(_merged) or _merged.mesh == null:
+		return
+	for i: int in _merged.mesh.get_surface_count():
+		var group: int = CarMeshMerger.group_of(_merged.mesh, i)
+		if group < materials.size():
+			_merged.set_surface_override_material(i, materials[group])
 
 
 # --- Tekerlek ------------------------------------------------------------------

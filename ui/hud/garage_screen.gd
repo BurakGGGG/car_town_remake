@@ -517,6 +517,7 @@ func _load_preview(scene_path: String) -> void:
 	_preview_rig = CarRig.for_node(_preview)
 	_preview_rig.apply(CarAppearance.get_for(scene_path))
 	_preview_rig.set_lod_bias(CarRig.LOD_BIAS_GARAGE)  # garaj: tam detay (LOD0)
+	_preview_rig.optimize(true)   # lifteki araç durur: parçalar materyal başına birleşir
 	if visible and not _closing and _tweens.is_empty():
 		car_slot.scale = Vector3.ONE * 0.92
 		var tween: Tween = create_tween()
@@ -608,6 +609,7 @@ func _spawn_parked(vehicle_id: StringName, slot: Vector3) -> Node3D:
 	var rig: CarRig = CarRig.for_node(car)
 	rig.apply(CarAppearance.get_for(scene_path))
 	rig.set_lod_bias(CarRig.LOD_BIAS_WORLD)   # park etmiş araçlar daha sade kademede (lift tam detay)
+	rig.optimize(true)   # park: ~70 parça yerine materyal başına bir çizim
 	_disable_shadows(car)   # gölgeyi yalnızca lifteki araç yazar: park başına ~100 çizim çağrısı düşer
 	car.add_child(_pick_body(car, vehicle_id))
 	return car

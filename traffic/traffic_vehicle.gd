@@ -93,6 +93,7 @@ func setup(traffic_manager: TrafficManager, scene: PackedScene, appearance: CarA
 	rig.apply(appearance)
 	rig.set_steer(0.0)        # düz gidiş: ön tekerler düz
 	rig.set_lod_bias(CarRig.LOD_BIAS_NPC)  # trafik: alt detay kademeleri
+	rig.optimize(false)   # gövde parçaları birleşir (çizim çağrısı); tekerler dönmek için ayrı kalır
 	_add_hitbox()
 	_add_bubble()
 	_place_at(start)

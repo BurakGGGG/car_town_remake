@@ -345,7 +345,9 @@ func _spawn_vehicle(v: CrateVisual, vehicle: StringName, scene_path: String) -> 
 	car.name = "RevealedVehicle"
 	car.scale = Vector3.ONE * VEHICLE_SCALE * CarCatalog.model_scale(vehicle)
 	add_child(car)
-	CarRig.for_node(car).apply(CarAppearance.get_for(scene_path))
+	var rig: CarRig = CarRig.for_node(car)
+	rig.apply(CarAppearance.get_for(scene_path))
+	rig.optimize(true)   # açılan araç tekerini döndürmez: parçalar materyal başına birleşir
 	# Aracın uzun ekseni kasanın uzun ekseniyle hizalanır (kasanın uzun kenarı yerel +X)
 	var bounds: AABB = _bounds(car)
 	var car_along_z: bool = bounds.size.z > bounds.size.x
