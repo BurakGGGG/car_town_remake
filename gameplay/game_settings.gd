@@ -33,6 +33,12 @@ const QUALITY_SCALE: Array[float] = [0.7, 1.0, 1.0]
 const QUALITY_MSAA: Array[int] = [Viewport.MSAA_DISABLED, Viewport.MSAA_DISABLED, Viewport.MSAA_2X]
 const QUALITY_NAMES: Array[String] = ["DÜŞÜK", "ORTA", "YÜKSEK"]
 const FPS_NORMAL: int = 60
+## Standart ses düzeyleri: müzik tam, efektler (motor, patlama) müziği bastırmasın diye %60.
+const DEFAULT_MUSIC: float = 1.0
+const DEFAULT_SFX: float = 0.6
+## Ses ayarlarının sürümü. 2: oyuna müzik geldi. Eski dosyalardaki düzeyler hiç ses yokken yazılmış
+## varsayılanlardı (kimse bilerek seçmedi): bir kez standarda çekilir.
+const AUDIO_VERSION: int = 2
 const FPS_SAVER: int = 30
 ## Düşük kalitede trafikteki en fazla araç (normalde TrafficManager.max_vehicles).
 const LOW_TRAFFIC: int = 2
@@ -56,8 +62,8 @@ var quality: int = Quality.MEDIUM
 ## Oyuncu kaliteyi AYARLAR'dan seçti mi (seçmediyse mobilde cihaza göre otomatik).
 var quality_chosen: bool = false
 var battery_saver: bool = false
-var music_volume: float = 0.8
-var sfx_volume: float = 1.0
+var music_volume: float = DEFAULT_MUSIC
+var sfx_volume: float = DEFAULT_SFX
 var muted: bool = false
 ## Dil: "" = cihaz dili (destekleniyorsa), yoksa Loc.LANGUAGES'tan biri.
 var language: String = ""
@@ -94,6 +100,7 @@ func set_language(value: String) -> void:
 	var save: Node = get_tree().get_first_node_in_group("save_manager")
 	if save and save.has_method(&"save_game"):
 		save.call(&"save_game")
+	RepairManager.carry_over(get_tree())   # süren tamirler yeni sahnede aynen sürsün
 	CAR_HITBOX.set(&"selected_car", null)   # static: eski sahnenin aracını göstermesin
 	get_tree().reload_current_scene.call_deferred()
 
@@ -223,6 +230,7 @@ func save_settings() -> void:
 	cfg.set_value("audio", "music", music_volume)
 	cfg.set_value("audio", "sfx", sfx_volume)
 	cfg.set_value("audio", "muted", muted)
+	cfg.set_value("audio", "version", AUDIO_VERSION)
 	cfg.set_value("general", "language", language)
 	cfg.save(PATH)
 
@@ -236,7 +244,11 @@ func load_settings() -> void:
 	# Eski dosyada işaret yoktur: ORTA dışında bir değer varsa oyuncu onu seçmişti (varsayılan ORTA'ydı)
 	quality_chosen = bool(cfg.get_value("graphics", "quality_chosen", quality != Quality.MEDIUM))
 	battery_saver = bool(cfg.get_value("graphics", "battery_saver", false))
-	music_volume = clampf(float(cfg.get_value("audio", "music", 0.8)), 0.0, 1.0)
-	sfx_volume = clampf(float(cfg.get_value("audio", "sfx", 1.0)), 0.0, 1.0)
+	if int(cfg.get_value("audio", "version", 1)) >= AUDIO_VERSION:
+		music_volume = clampf(float(cfg.get_value("audio", "music", DEFAULT_MUSIC)), 0.0, 1.0)
+		sfx_volume = clampf(float(cfg.get_value("audio", "sfx", DEFAULT_SFX)), 0.0, 1.0)
+	else:
+		music_volume = DEFAULT_MUSIC
+		sfx_volume = DEFAULT_SFX
 	muted = bool(cfg.get_value("audio", "muted", false))
 	language = String(cfg.get_value("general", "language", ""))

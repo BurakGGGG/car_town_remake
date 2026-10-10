@@ -348,10 +348,10 @@ func _spawn_vehicle(v: CrateVisual, vehicle: StringName, scene_path: String) -> 
 	var rig: CarRig = CarRig.for_node(car)
 	rig.apply(CarAppearance.get_for(scene_path))
 	rig.optimize(true)   # açılan araç tekerini döndürmez: parçalar materyal başına birleşir
-	# Aracın uzun ekseni kasanın uzun ekseniyle hizalanır (kasanın uzun kenarı yerel +X)
-	var bounds: AABB = _bounds(car)
-	var car_along_z: bool = bounds.size.z > bounds.size.x
-	car.rotation_degrees.y = v.rotation_degrees.y + (90.0 if car_along_z else 0.0)
+	# Aracın uzun ekseni kasanın uzun ekseniyle hizalanır ve BURNU çıkış yönüne bakar (model önü +Z);
+	# yalnızca eksen hizalanınca araç yarı yarıya ters kalıyor, kasadan geri geri çıkıyordu.
+	var out_dir: Vector3 = _exit_dir(v)
+	car.rotation.y = atan2(out_dir.x, out_dir.z)
 	var anchor: Vector3 = v.to_global(v.vehicle_anchor())
 	car.global_position = anchor - Vector3(0.0, 0.02, 0.0)
 	return car
@@ -359,11 +359,7 @@ func _spawn_vehicle(v: CrateVisual, vehicle: StringName, scene_path: String) -> 
 
 ## Araç kasadan uzun ekseni boyunca yavaşça çıkar, hafif yükselir ve zemine oturur.
 func _roll_out(v: CrateVisual, car: Node3D) -> void:
-	var out_dir: Vector3 = v.global_transform.basis.x.normalized()
-	# Kasanın girişe bakan tarafına doğru çıksın
-	var to_entry: Vector3 = Vector3(ENTRY.x, 0.0, ENTRY.y) - v.global_position
-	if out_dir.dot(to_entry) < 0.0:
-		out_dir = -out_dir
+	var out_dir: Vector3 = _exit_dir(v)
 	var start: Vector3 = car.global_position
 	var target: Vector3 = start + out_dir * ROLL_OUT
 	target.y = _floor_y()
@@ -372,6 +368,17 @@ func _roll_out(v: CrateVisual, car: Node3D) -> void:
 	tween.tween_property(car, "global_position", target + Vector3(0.0, 0.04, 0.0), 0.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(car, "global_position", target, 0.25).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 	await tween.finished
+
+
+## Aracın kasadan çıkış yönü: kasanın uzun ekseni (yerel +X), girişe bakan tarafa doğru (yatay, birim).
+func _exit_dir(v: CrateVisual) -> Vector3:
+	var out_dir: Vector3 = v.global_transform.basis.x
+	out_dir.y = 0.0
+	out_dir = out_dir.normalized()
+	var to_entry: Vector3 = Vector3(ENTRY.x, 0.0, ENTRY.y) - v.global_position
+	if out_dir.dot(to_entry) < 0.0:
+		out_dir = -out_dir
+	return out_dir
 
 
 ## VİTRİN DÖNÜŞÜ: araç kasanın içinden küçükten büyüyerek yükselir, havada bir tur döner, kısa
@@ -444,19 +451,3 @@ func _restore_camera() -> void:
 		(camera as WorldCamera).restore_view(_camera_state)
 	_camera_state = {}
 
-
-static func _bounds(root: Node3D) -> AABB:
-	var merged: AABB = AABB()
-	var first: bool = true
-	var stack: Array[Node] = [root]
-	while not stack.is_empty():
-		var node: Node = stack.pop_back()
-		if node is MeshInstance3D:
-			var mi: MeshInstance3D = node
-			var box: AABB = root.global_transform.affine_inverse() * mi.global_transform * mi.get_aabb()
-			box = AABB(box.position * root.scale, box.size * root.scale)
-			merged = box if first else merged.merge(box)
-			first = false
-		for child: Node in node.get_children():
-			stack.append(child)
-	return merged

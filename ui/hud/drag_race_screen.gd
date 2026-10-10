@@ -305,6 +305,7 @@ func open() -> void:
 	_apply_compact_ui()
 	show()
 	_audio.start()
+	GameMusic.race(get_tree(), true)
 	set_process(true)
 
 
@@ -337,6 +338,7 @@ func close() -> void:
 		return
 	set_process(false)
 	_audio.stop()
+	GameMusic.race(get_tree(), false)
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_viewport.size = Vector2i(4, 4)   # render hedefi VRAM'de asılı kalmasın (kapsayıcı açılışta büyütür)
 	_free_cars()   # yarış modelleri pistte asılı kalmasın

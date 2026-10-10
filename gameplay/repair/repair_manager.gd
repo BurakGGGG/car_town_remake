@@ -84,7 +84,16 @@ const PATH_SIDE: float = 0.55       # yanaşma yolunun bu kadar yanında duran a
 ## (konum + Y dönüşü). Kaç tanesinin açık olduğunu "repair_capacity" geliştirmesi belirler.
 @export var repair_car_spots: Array[Node3D] = []
 
+## DİL DEĞİŞİMİ sahneyi baştan kurar (GameSettings.set_language); süren işler kayda girmediği için
+## kaybolurdu. carry_over() eski sahnedeki işleri buraya yazar, yeni sahnenin RepairManager'ı alır ve
+## aynı modeli aynı renkle aynı CarSpot'a kurar (aradaki gerçek süre de işler).
+const RESTORE_TIMEOUT: float = 20.0   # model bu sürede yüklenemezse iş bırakılır (alan sonsuza dek kilitlenmesin)
+static var _carried: Array[Dictionary] = []
+static var _carried_at: int = 0
+
 var _active: Array[RepairState] = []   # açık işler (her biri bir CarSpot'ta); en fazla capacity() tane
+var _restoring: Array[Dictionary] = []   # devralınmış, aracı henüz kurulamamış işler (alanları ayrılmış)
+var _restore_time: float = 0.0
 var _target: Node3D
 var _progress_timer: float = 0.0
 var _customer_timer: float = 3.0
@@ -102,6 +111,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_tick_restore(delta)
 	_poll_target()
 	_tick_active(delta)
 	_tick_customers(delta)
@@ -227,6 +237,9 @@ func _free_bay() -> int:
 			if state.bay_index == i:
 				used = true
 				break
+		for job: Dictionary in _restoring:
+			if int(job["bay"]) == i:
+				used = true   # devralınan iş aracını bekliyor
 		if not used:
 			return i
 	return -1
@@ -331,18 +344,7 @@ func start_repair(car: Node3D, type: RepairType = null) -> bool:
 	var mastery_start: JobMastery = _mastery()
 	state.reward_scale = reward_multiplier() * (mastery_start.reward_multiplier(type.id) if mastery_start else 1.0)
 	state.start()
-	_active.append(state)
-	_progress_timer = progress_interval
-	var on_exit: Callable = _on_car_exiting.bind(vehicle)
-	if not vehicle.tree_exiting.is_connected(on_exit):
-		vehicle.tree_exiting.connect(on_exit, CONNECT_ONE_SHOT)
-	var spot: Node3D = repair_car_spots[bay]
-	var p: Vector3 = spot.global_position
-	vehicle.enter_bay(Vector3(p.x, 0.0, p.z), spot.global_rotation.y)
-	var bays_node: RepairBayManager = _bays()
-	if bays_node:
-		bays_node.raise_lift(bay, vehicle)   # lift kalkar, araç üstünde
-	repair_started.emit(vehicle)
+	_occupy_bay(vehicle, state)
 	repair_progress.emit(vehicle, 0.0)
 	return true
 
@@ -367,6 +369,96 @@ func boost_repair(car: Node3D) -> bool:
 		return false
 	repair_progress.emit(state.car, state.repair_progress)
 	return true
+
+
+## İş açılır: araç state.bay_index'teki CarSpot'a ışınlanır, lift kalkar.
+func _occupy_bay(vehicle: TrafficVehicle, state: RepairState) -> void:
+	_active.append(state)
+	_progress_timer = progress_interval
+	# Tek seferlik DEĞİL: ziyarette sahne ağaçtan çıkıp geri takılınca da bağlı kalmalı
+	var on_exit: Callable = _on_car_exiting.bind(vehicle)
+	if not vehicle.tree_exiting.is_connected(on_exit):
+		vehicle.tree_exiting.connect(on_exit)
+	var spot: Node3D = repair_car_spots[state.bay_index]
+	var p: Vector3 = spot.global_position
+	vehicle.enter_bay(Vector3(p.x, 0.0, p.z), spot.global_rotation.y)
+	var bays_node: RepairBayManager = _bays()
+	if bays_node:
+		bays_node.raise_lift(state.bay_index, vehicle)   # lift kalkar, araç üstünde
+	repair_started.emit(vehicle)
+
+
+# --- Dil değişiminde devir ------------------------------------------------------
+
+## Sahne yeniden kurulmadan hemen önce çağrılır: süren işler (araç modeli, rengi, arıza, alan, geçen
+## süre, çarpanlar) yeni sahneye devredilmek üzere saklanır.
+static func carry_over(tree: SceneTree) -> void:
+	_carried = []
+	var manager: RepairManager = tree.get_first_node_in_group("repair_manager") as RepairManager if tree else null
+	if manager == null:
+		return
+	for state: RepairState in manager._active:
+		var car: TrafficVehicle = state.car as TrafficVehicle
+		if not is_instance_valid(car) or state.repair_type == null:
+			continue
+		_carried.append({
+			"vehicle": car.vehicle_id, "appearance": car.appearance, "type": state.repair_type.id,
+			"severity": state.severity, "bay": state.bay_index, "elapsed": state.elapsed,
+			"duration_scale": state.duration_scale, "reward_scale": state.reward_scale, "boosted": state.boosted,
+		})
+	_carried_at = Time.get_ticks_msec()
+
+
+## Yeni sahnede: devredilen işleri al (araçlar model yüklendikçe _tick_restore'da kurulur).
+func _take_carried() -> void:
+	if _carried.is_empty():
+		return
+	var gap: float = float(Time.get_ticks_msec() - _carried_at) / 1000.0   # yenileme sırasında geçen süre
+	for job: Dictionary in _carried:
+		var bay: int = int(job["bay"])
+		if bay < 0 or bay >= repair_car_spots.size() or _type_by_id(job["type"]) == null:
+			continue
+		job["elapsed"] = float(job["elapsed"]) + gap
+		_restoring.append(job)
+	_carried = []
+	_restore_time = RESTORE_TIMEOUT
+
+
+func _tick_restore(delta: float) -> void:
+	if _restoring.is_empty() or _traffic == null:
+		return
+	_restore_time -= delta
+	for job: Dictionary in _restoring.duplicate():
+		if int(job["bay"]) >= capacity():
+			_restoring.erase(job)   # alan artık yok (kayıt farklı yüklendi): iş bırakılır
+			continue
+		var vehicle: TrafficVehicle = _traffic.spawn_model(job["vehicle"], job["appearance"])
+		if vehicle == null:
+			if _restore_time <= 0.0:
+				push_warning("RepairManager: '%s' modeli yüklenemedi, devralınan iş bırakıldı" % job["vehicle"])
+				_restoring.erase(job)
+			continue
+		_restoring.erase(job)
+		var type: RepairType = _type_by_id(job["type"])
+		vehicle.fault = type
+		vehicle.fault_severity = float(job["severity"])
+		var state: RepairState = RepairState.new(vehicle, type, vehicle.fault_severity)
+		state.bay_index = int(job["bay"])
+		state.duration_scale = float(job["duration_scale"])
+		state.reward_scale = float(job["reward_scale"])
+		state.boosted = bool(job["boosted"])
+		state.start()
+		state.elapsed = float(job["elapsed"])
+		_occupy_bay(vehicle, state)
+		if state.advance(0.0):
+			_finish_state(state)   # yenileme sırasında bitti (ya da zaten para bekliyordu)
+
+
+func _type_by_id(id: StringName) -> RepairType:
+	for t: RepairType in repair_types:
+		if t.id == id:
+			return t
+	return null
 
 
 ## Sayaç bitti: ödül verilmez; araç CarSpot'ta ₺ balonuyla bekler.
@@ -431,13 +523,22 @@ func _pick_return_point() -> TrafficWaypoint:
 func _cancel_state(state: RepairState) -> void:
 	var car: Node3D = state.car
 	_active.erase(state)
+	if is_instance_valid(car):
+		var on_exit: Callable = _on_car_exiting.bind(car)
+		if car.tree_exiting.is_connected(on_exit):
+			car.tree_exiting.disconnect(on_exit)
 	var bays_node: RepairBayManager = _bays()
 	if bays_node:
 		bays_node.release_lift(state.bay_index)
 	repair_cancelled.emit(car)
 
 
+## Yalnızca araç SİLİNİRKEN iş iptal olur. Arkadaş garajı ziyaretinde (GarageVisit) kendi sahne bütünüyle
+## ağaçtan çıkarılır ama silinmez: tamir dönüşte kaldığı yerden sürmeli. Doğrudan free() edilen araç
+## da _tick_active'in is_instance_valid denetimine takılır.
 func _on_car_exiting(car: Node3D) -> void:
+	if not car.is_queued_for_deletion():
+		return
 	var state: RepairState = get_state(car)
 	if state:
 		_cancel_state(state)
@@ -457,6 +558,7 @@ func _connect_traffic() -> void:
 	if upgrades and not upgrades.levels_changed.is_connected(_apply_supply):
 		upgrades.levels_changed.connect(_apply_supply)   # garaj büyüdü → trafik/arz güncellensin
 	_apply_supply()
+	_take_carried()
 
 
 ## Sayaç dolunca ve yerde yer varsa: önünde boş bekleme noktası olan trafikteki bir NPC müşteri olur.

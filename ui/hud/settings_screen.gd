@@ -18,7 +18,7 @@ signal screen_requested(id: StringName)
 enum Page { LANGUAGE, GRAPHICS, AUDIO, ACCOUNT, ABOUT }
 
 ## Sürüm adı: export_presets.cfg "version/name" ile AYNI tutulmalı (dışa aktarımda proje ayarına girmiyor).
-const VERSION: String = "1.0.2"
+const VERSION: String = "1.0.3"
 const SITE: String = "https://autoyardwebsite.vercel.app"
 const PRIVACY_URL: String = SITE + "/gizlilik"
 const TERMS_URL: String = SITE + "/kullanim-sartlari"
@@ -264,7 +264,7 @@ func _show_page(page: int) -> void:
 		Page.AUDIO:
 			_page_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_INHERIT
 			_page_title.text = Loc.t("SES")
-			_page_caption.text = Loc.t("Oyuna müzik ve efektler eklendiğinde bu düzeyler kullanılır.")
+			_page_caption.text = Loc.t("Müzik ve efekt seslerini buradan ayarla.")
 		Page.ACCOUNT:
 			_page_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_INHERIT
 			_page_title.text = Loc.t("HESAP VE GİZLİLİK")

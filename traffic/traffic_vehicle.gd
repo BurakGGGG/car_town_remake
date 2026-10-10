@@ -72,6 +72,8 @@ var vehicle_id: StringName = &""
 var fault: RepairType
 ## Arıza şiddeti (RepairType.severity_min..max arası); ilk sürümde yalnızca veri, süreyi etkilemez.
 var fault_severity: float = 1.0
+## Görünüm (boya / jant); dil değişiminde tamirdeki araç aynı renkle yeniden kurulsun diye tutulur.
+var appearance: CarAppearance
 var _bubble: CarBubble
 var _bubble_shape: CollisionShape3D  # CarHitbox altında: balon görünürken balona tıklamak da aracı seçer
 var _in_intersection: bool = false
@@ -82,15 +84,16 @@ var _arrived: bool = false        # bekleme noktasına vardı, yerinde yerleşiy
 var _race_cooldown: float = 0.0
 
 
-func setup(traffic_manager: TrafficManager, scene: PackedScene, appearance: CarAppearance, start: TrafficWaypoint, model_scale: float) -> void:
+func setup(traffic_manager: TrafficManager, scene: PackedScene, look: CarAppearance, start: TrafficWaypoint, model_scale: float) -> void:
 	manager = traffic_manager
+	appearance = look
 	model = scene.instantiate() as Node3D
 	# Bağlam çarpanı × aracın GERÇEK boyutundan türeyen ölçek: Getz gerçekten küçük, E60 gerçekten
 	# uzun görünür (CarCatalog.model_scale; cars.json "real_dimensions"dan türetilmiştir).
 	model.scale = Vector3.ONE * model_scale * CarCatalog.model_scale(vehicle_id)
 	add_child(model)
 	rig = CarRig.new(model)   # for_node değil: oyuncu araçlarının görünüm kaydına bağlanmaz
-	rig.apply(appearance)
+	rig.apply(look)
 	rig.set_steer(0.0)        # düz gidiş: ön tekerler düz
 	rig.set_lod_bias(CarRig.LOD_BIAS_NPC)  # trafik: alt detay kademeleri
 	rig.optimize(false)   # gövde parçaları birleşir (çizim çağrısı); tekerler dönmek için ayrı kalır

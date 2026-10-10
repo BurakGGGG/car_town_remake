@@ -434,7 +434,6 @@
  "OTURUM AÇ": "SIGN IN",
  "OYUNCU %s\n  devir %5.0f / %.0f   vites %d/%d   %6.1f km/s  %5.1f m\n  %s%s%s%s  isabet %d (kusursuz %d)  sınır %.2f sn  patinaj %.2f sn\nRAKİP  %s  devir %5.0f  vites %d  %6.1f km/s  %5.1f m  hedef %.0f": "",
  "Oturaklı ahşap piknik masası.": "Wooden picnic table with benches.",
- "Oyuna müzik ve efektler eklendiğinde bu düzeyler kullanılır.": "These levels will be used once music and effects are added to the game.",
  "PALET YIĞINI": "PALLET STACK",
  "PALMİYE": "PALM TREE",
  "PANO": "BOARD",
@@ -957,5 +956,9 @@
  "Kasalardan hangi aracın hangi oranla çıktığını kasa plakasında görebilirsin.": "Each crate's plate shows which cars it can drop and their odds.",
  "Arkadaş kodunla arkadaşlarının garajlarını ziyaret edebilirsin.": "Use your friend code to visit your friends' garages.",
  "Garaj değerin araçlarından, geliştirmelerden ve tamir alanlarından oluşur; rütbeni belirler.": "Your garage value comes from your cars, upgrades and repair bays — it sets your rank.",
- "Her araçla kişisel rekorunu kır: ilerleme çubuğundaki halka rekor temponu gösterir.": "Beat your record with every car: the ring on the progress bar shows your record pace."
+ "Her araçla kişisel rekorunu kır: ilerleme çubuğundaki halka rekor temponu gösterir.": "Beat your record with every car: the ring on the progress bar shows your record pace.",
+ "%d ÖDÜLÜN TOPLAMI": "TOTAL OF %d REWARDS",
+ "Müzik ve efekt seslerini buradan ayarla.": "Adjust music and sound effects here.",
+ "ÖDÜL KAZANDIN!": "REWARD EARNED!",
+ "ÖDÜLLER TOPLANDI!": "REWARDS COLLECTED!"
 }

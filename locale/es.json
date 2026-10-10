@@ -434,7 +434,6 @@
  "OTURUM AÇ": "INICIAR SESIÓN",
  "OYUNCU %s\n  devir %5.0f / %.0f   vites %d/%d   %6.1f km/s  %5.1f m\n  %s%s%s%s  isabet %d (kusursuz %d)  sınır %.2f sn  patinaj %.2f sn\nRAKİP  %s  devir %5.0f  vites %d  %6.1f km/s  %5.1f m  hedef %.0f": "",
  "Oturaklı ahşap piknik masası.": "Mesa de pícnic de madera con bancos.",
- "Oyuna müzik ve efektler eklendiğinde bu düzeyler kullanılır.": "Estos niveles se usarán cuando el juego tenga música y efectos.",
  "PALET YIĞINI": "PILA DE PALÉS",
  "PALMİYE": "PALMERA",
  "PANO": "TABLERO",
@@ -957,5 +956,9 @@
  "Kasalardan hangi aracın hangi oranla çıktığını kasa plakasında görebilirsin.": "La placa de cada caja muestra qué coches pueden salir y con qué probabilidad.",
  "Arkadaş kodunla arkadaşlarının garajlarını ziyaret edebilirsin.": "Usa tu código de amigo para visitar los talleres de tus amigos.",
  "Garaj değerin araçlarından, geliştirmelerden ve tamir alanlarından oluşur; rütbeni belirler.": "El valor del taller sale de tus coches, mejoras y bahías de reparación, y define tu rango.",
- "Her araçla kişisel rekorunu kır: ilerleme çubuğundaki halka rekor temponu gösterir.": "Bate tu récord con cada coche: el anillo de la barra muestra tu ritmo récord."
+ "Her araçla kişisel rekorunu kır: ilerleme çubuğundaki halka rekor temponu gösterir.": "Bate tu récord con cada coche: el anillo de la barra muestra tu ritmo récord.",
+ "%d ÖDÜLÜN TOPLAMI": "TOTAL DE %d RECOMPENSAS",
+ "Müzik ve efekt seslerini buradan ayarla.": "Ajusta aquí la música y los efectos de sonido.",
+ "ÖDÜL KAZANDIN!": "¡RECOMPENSA OBTENIDA!",
+ "ÖDÜLLER TOPLANDI!": "¡RECOMPENSAS RECOGIDAS!"
 }

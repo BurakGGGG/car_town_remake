@@ -103,6 +103,16 @@ func _run() -> void:
 	var track: DragTrack = drag.get("_track")
 	var expected: float = DragTrack.TRACK_LENGTH * DragTrack.scale_for(drag.get("_player_id"))
 	check(is_equal_approx(track.length, expected), "pist oyuncu aracına göre kuruldu (%.1f)" % track.length)
+
+	print("== 5) Yarış müziği ==")
+	var music: GameMusic = root.get_node_or_null(GameMusic.NODE_NAME) as GameMusic
+	check(music != null and music.is_racing(), "yarış açılınca yarış teması çalıyor")
+	await create_timer(GameMusic.SWAP_TIME + 0.4).timeout
+	check(music != null and music.stream_paused, "garaj teması duraklatıldı (yarışta duyulmaz)")
 	drag.close()
+	check(music != null and not music.stream_paused, "yarış kapanınca garaj teması kaldığı yerden sürüyor")
+	await create_timer(GameMusic.SWAP_TIME * 1.5 + 0.4).timeout
+	check(music != null and not music.is_racing() and is_equal_approx(music.volume_db, GameMusic.BASE_DB),
+		"yarış teması sustu, garaj teması tam sesinde")
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)

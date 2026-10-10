@@ -168,7 +168,34 @@ func _run() -> void:
 		await create_timer(0.1).timeout
 		waited += 0.1
 	check(not got.is_empty() and got[0][1]["vehicle"] == rolled, "ortaya çıkan araç kayıtlı sonuç: %s" % rolled)
-	check(delivery.find_child("RevealedVehicle", true, false) != null, "araç dünyada 3D olarak çıktı")
+	var revealed: Node3D = delivery.find_child("RevealedVehicle", true, false) as Node3D
+	check(revealed != null, "araç dünyada 3D olarak çıktı")
+	var crate_v: CrateVisual = delivery.visual_of(uid)
+	if revealed and crate_v:
+		# Model önü +Z: araç kasadan BURNUYLA çıkmalı (geri geri değil)
+		var moved: Vector3 = revealed.global_position - crate_v.to_global(crate_v.vehicle_anchor())
+		moved.y = 0.0
+		var nose: Vector3 = revealed.global_transform.basis.z
+		nose.y = 0.0
+		check(moved.length() > 0.1 and nose.normalized().dot(moved.normalized()) > 0.95,
+			"araç kasadan burnuyla çıktı (%.2f)" % nose.normalized().dot(moved.normalized()))
+		# Kasa hangi açıda durursa dursun burun girişe doğru (eskiden açıya göre yarısı ters çıkıyordu)
+		var rest_yaw: float = crate_v.rotation_degrees.y
+		var to_entry: Vector3 = Vector3(CrateDelivery.ENTRY.x, 0.0, CrateDelivery.ENTRY.y) - crate_v.global_position
+		to_entry.y = 0.0
+		var wrong: Array[float] = []
+		for yaw: float in [0.0, 90.0, 180.0, 270.0]:
+			crate_v.rotation_degrees.y = yaw
+			var probe: Node3D = await delivery._spawn_vehicle(crate_v, rolled, CarCatalog.scene_path(rolled))
+			var probe_nose: Vector3 = probe.global_transform.basis.z
+			probe_nose.y = 0.0
+			if probe_nose.normalized().dot(to_entry.normalized()) <= 0.0:
+				wrong.append(yaw)
+			probe.free()
+		crate_v.rotation_degrees.y = rest_yaw
+		check(wrong.is_empty(), "her kasa açısında burun girişe bakıyor (ters: %s)" % [wrong])
+	else:
+		check(false, "araç kasadan burnuyla çıktı (araç / kasa yok)")
 	check(own.is_owned(rolled), "araç koleksiyonda")
 	var expected_gv: int = gv_before + (0 if was_owned else int(CarCatalog.get_entry(rolled)["price"]))
 	check(GarageValue.vehicles_value(self) == expected_gv, "garaj değeri doğru (%d)" % GarageValue.vehicles_value(self))

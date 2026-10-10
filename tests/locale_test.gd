@@ -69,13 +69,51 @@ func _run() -> void:
 	print("== EKRANLAR: çevrilmemiş Türkçe kalmasın ==")
 	# Gerçek akış: dil değişince sahne yeniden kurulur (kaydedilir, yeniden yüklenir)
 	settings.set_language("tr")
+	# Süren tamir: yenilemeden sonra AYNI araçla, aynı alanda, kaldığı yerden sürmeli
+	var repair: RepairManager = get_first_node_in_group("repair_manager") as RepairManager
+	var traffic: TrafficManager = get_first_node_in_group("traffic") as TrafficManager
+	for i: int in 600:
+		if not traffic.vehicles.is_empty():
+			break
+		await process_frame
+	var job_car: TrafficVehicle = traffic.vehicles[0] if not traffic.vehicles.is_empty() else null
+	if job_car:
+		job_car.request_repair(repair.repair_wait_spots[0], repair.repair_types[0])
+	check(job_car != null and repair.start_repair(job_car), "yenilemeden önce tamir başladı")
+	await frames(10)
+	var old_state: RepairState = repair.get_state(job_car)
+	var job_id: StringName = job_car.vehicle_id if job_car else &""
+	var job_color: Color = job_car.appearance.body_color if job_car else Color.BLACK
+	var job_elapsed: float = old_state.elapsed if old_state else -1.0
+	var music: GameMusic = root.get_node_or_null(GameMusic.NODE_NAME) as GameMusic
+	var wav: AudioStreamWAV = music.stream as AudioStreamWAV if music else null
+	check(music != null and music.playing and music.bus == GameSettings.MUSIC_BUS, "garaj müziği Music bus'ında çalıyor")
+	check(wav != null and wav.loop_mode == AudioStreamWAV.LOOP_FORWARD and wav.get_length() > 30.0, "müzik döngüde")
 	settings.reload_on_language_change = true
 	settings.set_language("en")
 	await frames(30)
+	check(music != null and root.get_node_or_null(GameMusic.NODE_NAME) == music and music.playing,
+		"dil değişiminde müzik kesilmedi (aynı çalar)")
 	current_scene = root.get_node("World") if root.has_node("World") else current_scene
 	hud = current_scene.find_child("HUD", true, false)
 	settings = get_first_node_in_group("settings")
 	check(hud != null and Loc.current() == "en", "dil değişince sahne yeni dille yeniden kuruldu")
+	var new_repair: RepairManager = get_first_node_in_group("repair_manager") as RepairManager
+	for i: int in 600:
+		if new_repair.active_count() > 0:
+			break
+		await process_frame
+	var occupants: Array[Node3D] = new_repair.get_spot_occupants()
+	var new_car: TrafficVehicle = occupants[0] as TrafficVehicle if occupants.size() == 1 else null
+	var new_state: RepairState = new_repair.get_state(new_car) if new_car else null
+	check(new_repair != repair and new_car != null and new_car.in_bay(), "tamir yeni sahnede sürüyor (araç tamir alanında)")
+	check(new_car != null and new_car.vehicle_id == job_id and new_car.appearance.body_color == job_color,
+		"aynı model ve renk (%s)" % job_id)
+	check(new_state != null and new_state.bay_index == old_state.bay_index
+		and new_state.repair_type.id == old_state.repair_type.id, "aynı alan, aynı arıza")
+	check(new_state != null and new_state.elapsed >= job_elapsed, "ilerleme korundu (%.2f → %.2f sn)"
+		% [job_elapsed, new_state.elapsed if new_state else -1.0])
+	check(new_repair.is_busy() == (new_repair.capacity() == 1), "tamir alanı dolu sayılıyor")
 	settings.reload_on_language_change = false
 	var leftovers: Array[String] = []
 	for id: StringName in [&"quests", &"settings", &"profile", &"garage_value", &"mastery"]:

@@ -102,6 +102,15 @@ func _run() -> void:
 	marker.one_shot = true
 	home.add_child(marker)
 	marker.start(5.0)
+	# Kendi garajda süren bir tamir: ziyaret sahneyi ağaçtan çıkarınca iptal OLMAMALI
+	var repair: RepairManager = get_first_node_in_group("repair_manager") as RepairManager
+	var traffic: TrafficManager = get_first_node_in_group("traffic") as TrafficManager
+	check(await until(func() -> bool: return traffic != null and not traffic.vehicles.is_empty(), 10.0), "trafikte araç var")
+	var job_car: TrafficVehicle = traffic.vehicles[0] if traffic and not traffic.vehicles.is_empty() else null
+	if job_car:
+		job_car.request_repair(repair.repair_wait_spots[0], repair.repair_types[0])
+	check(job_car != null and repair.start_repair(job_car), "kendi garajda tamir başladı")
+	var job_progress: float = repair.get_state(job_car).repair_progress if repair.get_state(job_car) else -1.0
 
 	print("== 2) ARKADAŞLAR → GARAJA GİT ==")
 	var hud: Hud = home.find_child("HUD", true, false) as Hud
@@ -163,6 +172,10 @@ func _run() -> void:
 	check(get_first_node_in_group("economy") == eco and eco.money == 77777, "para yerinde (77777)")
 	check(get_first_node_in_group("cloud_save") == cloud and get_first_node_in_group("social") == social, "gruplar kendi yöneticileri buluyor")
 	check(get_root().get_camera_3d() == camera and camera.global_position.is_equal_approx(camera_pos), "kamera geri geldi, aynı yerde")
+	var job_state: RepairState = repair.get_state(job_car)
+	check(job_state != null and job_car.in_bay(), "tamir ziyaretten sonra sürüyor (araç tamir alanında)")
+	check(job_state != null and job_state.repair_progress >= job_progress, "tamir ilerlemesi korundu")
+	check(repair.active_count() == 1 and repair.get_spot_occupants() == [job_car], "tamir alanı hâlâ dolu sayılıyor")
 	check(absf(marker.time_left - left_before) < 0.3, "kendi sahne dondu: zamanlayıcı ilerlemedi (%.2f → %.2f)" % [left_before, marker.time_left])
 	check(screen.visible, "ARKADAŞLAR ekranı açık: oyuncu listeye döner")
 	check(file_text("savegame.json") == save_before, "dönüşten sonra da kayıt aynı")

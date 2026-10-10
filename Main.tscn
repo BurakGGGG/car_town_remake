@@ -638,6 +638,8 @@ script = ExtResource("1_glv2v")
 width = 11
 depth = 9
 cell_size = 0.175
+anchor_corner = true
+extent = Vector2(2, 1.5)
 
 [node name="PlacedObjects" type="Node3D" parent="GarageSystem/BuildGrid/BuildGrid" unique_id=392656656]
 

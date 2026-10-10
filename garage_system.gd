@@ -56,6 +56,7 @@ func _ready():
 		_ensure_social()
 		_ensure_editor.call_deferred()
 	_ensure_world_dressing.call_deferred()
+	GameMusic.ensure(get_tree())
 	_hide_build_grid()
 	_connect_upgrade.call_deferred()
 

@@ -201,9 +201,23 @@ func request_model(id: StringName) -> void:
 	_request_model(id)
 
 
+## Bu modelde ve bu görünümde bir araç doğurur (dil değişiminde tamir alanındaki aracı yeni sahnede
+## aynen kurmak için; RepairManager hemen CarSpot'a ışınlar). Model henüz yüklenmemişse yüklemeyi
+## başlatır ve null döner: çağıran sonraki karelerde yeniden dener.
+func spawn_model(id: StringName, appearance: CarAppearance) -> TrafficVehicle:
+	if spawn_points.is_empty():
+		return null
+	var entry: Dictionary = _pool_entry(id)
+	if entry.is_empty():
+		request_model(id)
+		return null
+	return _spawn_at(spawn_points[0], entry, Vector3.INF, appearance)
+
+
 ## `start`: doğma yeri (hidden_start); verilmezse noktanın kendisi. Araç noktadan bir sonrakine giden
-## doğru üzerinde kalır, yönü ve hedefi değişmez.
-func _spawn_at(point: TrafficWaypoint, entry: Dictionary = {}, start: Vector3 = Vector3.INF) -> TrafficVehicle:
+## doğru üzerinde kalır, yönü ve hedefi değişmez. `appearance` verilmezse rastgele NPC görünümü.
+func _spawn_at(point: TrafficWaypoint, entry: Dictionary = {}, start: Vector3 = Vector3.INF,
+		appearance: CarAppearance = null) -> TrafficVehicle:
 	var vehicle: TrafficVehicle = TrafficVehicle.new()
 	vehicle.name = "Npc_%d" % (_rng.randi() % 100000)
 	vehicle.max_speed = _rng.randf_range(min_speed, max_speed)
@@ -211,7 +225,7 @@ func _spawn_at(point: TrafficWaypoint, entry: Dictionary = {}, start: Vector3 = 
 	add_child(vehicle)
 	var model: Dictionary = entry if not entry.is_empty() else _pool.pick_random()
 	vehicle.vehicle_id = model["id"]
-	vehicle.setup(self, model["scene"], _random_appearance(model["id"]), point, model_scale)
+	vehicle.setup(self, model["scene"], appearance if appearance else _random_appearance(model["id"]), point, model_scale)
 	if start != Vector3.INF:
 		vehicle.global_position = Vector3(start.x, vehicle.global_position.y, start.z)
 	vehicle.reached_despawn.connect(_on_vehicle_despawn)
