@@ -945,5 +945,17 @@
  "REKOR  %.2f": "BEST  %.2f",
  "REKORUN  %.2f sn  (+%.2f)": "YOUR BEST  %.2f s  (+%.2f)",
  "YENİ REKOR!": "NEW RECORD!",
- "YENİ REKOR!  %.2f sn  (−%.2f)": "NEW RECORD!  %.2f s  (−%.2f)"
+ "YENİ REKOR!  %.2f sn  (−%.2f)": "NEW RECORD!  %.2f s  (−%.2f)",
+ "YÜKLENİYOR": "LOADING",
+ "HAZIRLANIYOR": "GETTING READY",
+ "Vitesi ibre YEŞİL dilime girince at: kusursuz vites seni rekora taşır.": "Shift when the needle hits the GREEN zone: perfect shifts set records.",
+ "Yarışta ışık yeşile dönmeden dokunursan hatalı çıkış yaparsın.": "Tap before the light turns green and it's a false start.",
+ "Yeni tamir alanı açarak aynı anda birden çok aracı tamir edebilirsin.": "Unlock more repair bays to fix several cars at once.",
+ "Garajını büyüttükçe daha çok müşteri gelir, ödüller artar.": "The bigger your garage, the more customers and the bigger the rewards.",
+ "Aynı arızayı tamir ettikçe o işte ustalık yıldızı kazanırsın.": "Repeat the same job to earn mastery stars for it.",
+ "Günlük ve haftalık görevleri tamamlayarak gem kazan.": "Complete daily and weekly tasks to earn gems.",
+ "Kasalardan hangi aracın hangi oranla çıktığını kasa plakasında görebilirsin.": "Each crate's plate shows which cars it can drop and their odds.",
+ "Arkadaş kodunla arkadaşlarının garajlarını ziyaret edebilirsin.": "Use your friend code to visit your friends' garages.",
+ "Garaj değerin araçlarından, geliştirmelerden ve tamir alanlarından oluşur; rütbeni belirler.": "Your garage value comes from your cars, upgrades and repair bays — it sets your rank.",
+ "Her araçla kişisel rekorunu kır: ilerleme çubuğundaki halka rekor temponu gösterir.": "Beat your record with every car: the ring on the progress bar shows your record pace."
 }

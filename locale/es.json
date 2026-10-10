@@ -945,5 +945,17 @@
  "REKOR  %.2f": "RÉCORD  %.2f",
  "REKORUN  %.2f sn  (+%.2f)": "TU RÉCORD  %.2f s  (+%.2f)",
  "YENİ REKOR!": "¡NUEVO RÉCORD!",
- "YENİ REKOR!  %.2f sn  (−%.2f)": "¡NUEVO RÉCORD!  %.2f s  (−%.2f)"
+ "YENİ REKOR!  %.2f sn  (−%.2f)": "¡NUEVO RÉCORD!  %.2f s  (−%.2f)",
+ "YÜKLENİYOR": "CARGANDO",
+ "HAZIRLANIYOR": "PREPARANDO",
+ "Vitesi ibre YEŞİL dilime girince at: kusursuz vites seni rekora taşır.": "Cambia cuando la aguja entre en la zona VERDE: los cambios perfectos baten récords.",
+ "Yarışta ışık yeşile dönmeden dokunursan hatalı çıkış yaparsın.": "Si tocas antes de que la luz se ponga verde, es salida en falso.",
+ "Yeni tamir alanı açarak aynı anda birden çok aracı tamir edebilirsin.": "Desbloquea más bahías de reparación para arreglar varios coches a la vez.",
+ "Garajını büyüttükçe daha çok müşteri gelir, ödüller artar.": "Cuanto más grande tu taller, más clientes y mejores premios.",
+ "Aynı arızayı tamir ettikçe o işte ustalık yıldızı kazanırsın.": "Repite el mismo trabajo para ganar estrellas de maestría.",
+ "Günlük ve haftalık görevleri tamamlayarak gem kazan.": "Completa las tareas diarias y semanales para ganar gemas.",
+ "Kasalardan hangi aracın hangi oranla çıktığını kasa plakasında görebilirsin.": "La placa de cada caja muestra qué coches pueden salir y con qué probabilidad.",
+ "Arkadaş kodunla arkadaşlarının garajlarını ziyaret edebilirsin.": "Usa tu código de amigo para visitar los talleres de tus amigos.",
+ "Garaj değerin araçlarından, geliştirmelerden ve tamir alanlarından oluşur; rütbeni belirler.": "El valor del taller sale de tus coches, mejoras y bahías de reparación, y define tu rango.",
+ "Her araçla kişisel rekorunu kır: ilerleme çubuğundaki halka rekor temponu gösterir.": "Bate tu récord con cada coche: el anillo de la barra muestra tu ritmo récord."
 }
