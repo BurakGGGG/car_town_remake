@@ -39,7 +39,7 @@
       "min_level": 1,
       "pool": ["hyundai_getz", "hyundai_accent_blue", "hyundai_era", "ford_focus", "renault_toros"],
       "color": "#C9A46A",
-      "scene_path": "",
+      "scene_path": "res://assets/crates/city_crate.glb",
       "icon": "",
       "open_effect": "",
       "scale": 1.0
@@ -52,7 +52,7 @@
       "min_level": 10,
       "pool": ["vw_passat_b55", "renault_fluence", "skoda_kamiq", "vw_golf_7"],
       "color": "#5F8FB0",
-      "scene_path": "",
+      "scene_path": "res://assets/crates/family_crate.glb",
       "icon": "",
       "open_effect": "",
       "scale": 1.0
@@ -65,7 +65,7 @@
       "min_level": 14,
       "pool": ["seat_leon", "honda_civic", "alfa_romeo_159", "bmw_e46"],
       "color": "#C4473A",
-      "scene_path": "",
+      "scene_path": "res://assets/crates/sport_crate.glb",
       "icon": "",
       "open_effect": "",
       "scale": 1.0
@@ -78,7 +78,7 @@
       "min_level": 20,
       "pool": ["audi_a3", "volvo_s60", "mercedes_cls", "bmw_e60"],
       "color": "#2E3440",
-      "scene_path": "",
+      "scene_path": "res://assets/crates/prestige_crate.glb",
       "icon": "",
       "open_effect": "",
       "scale": 1.0
@@ -91,7 +91,7 @@
       "min_level": 28,
       "pool": ["audi_rs6", "porsche_gt3", "lambo_huracan", "ferrari_488_pista"],
       "color": "#B8902F",
-      "scene_path": "",
+      "scene_path": "res://assets/crates/super_crate.glb",
       "icon": "",
       "open_effect": "",
       "scale": 1.0
