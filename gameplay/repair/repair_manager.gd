@@ -97,6 +97,7 @@ func _ready() -> void:
 	_rng.randomize()
 	if repair_types.is_empty():
 		repair_types = RepairType.defaults()
+	add_child(RepairFxDirector.new())   # yalnızca görsel: iş efektleri, bitiş parıltısı, altın paralar
 	_connect_traffic.call_deferred()
 
 

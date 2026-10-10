@@ -15,10 +15,24 @@ extends Node3D
 
 ## Kasaya dokunuldu (CrateDelivery dinler).
 signal clicked
+## Açılış anı: kapak fırladı (efekt patlaması bu anda başlar).
+signal burst_open
+## Kapak tepede kayboluyor (dünya konumu): efekt orada parıltıyla patlar.
+signal lid_vanished(at: Vector3)
 
 const PALLET_H: float = 0.04
 const WALL_T: float = 0.022
 const OPEN_ANIMATION: StringName = &"open"
+## Gerçek modelin parça adları (tools/crates/make_crates.py): kapak + dört menteşe ve açılış ekseni.
+## Modelin kendi animasyonu Blender'dan parça başına ayrı eylem olarak geliyor (open_Lid,
+## open_Hinge_xn…), tek bir "open" yok — açılış bu parçalara KODLA oynatılır (ölçüldü: eksenler
+## dışa aktarılan son karelerle aynı: xn +Z, xp −Z, yn +X, yp −X etrafında 90°).
+const MODEL_HINGES: Dictionary = {
+	"Hinge_xn": Vector3(0.0, 0.0, 1.0), "Hinge_xp": Vector3(0.0, 0.0, -1.0),
+	"Hinge_yn": Vector3(1.0, 0.0, 0.0), "Hinge_yp": Vector3(-1.0, 0.0, 0.0),
+}
+## Gerilim: zıplama sayısı nadirlikle artar (sıradan 2 … efsanevi 5).
+const SUSPENSE_HOPS: int = 2
 
 var crate_id: StringName = &""
 var uid: int = 0
@@ -85,39 +99,116 @@ func play_arrival() -> void:
 	await tween.finished
 
 
-## AÇILIŞ: kilitler/kayışlar düşer, kapak kalkar, yan paneller dışa açılır. Gerçek modelde "open"
-## animasyonu varsa o oynar. Bitince döner.
-func play_open() -> void:
+## Gerilimin süresi (sn): CrateDelivery ışığı bu sürede büyütür.
+static func suspense_time(rank: int) -> float:
+	var total: float = 0.0
+	for i: int in SUSPENSE_HOPS + rank:
+		total += _hop_time(i)
+	return total + 0.12
+
+
+static func _hop_time(i: int) -> float:
+	return maxf(0.30 - 0.04 * float(i), 0.16)
+
+
+## AÇILIŞ: önce GERİLİM (giderek şiddetlenen sarsıntılı zıplamalar, `rank` = nadirlik sırası),
+## sonra kapak dönerek havaya fırlar ve yana düşer, yan paneller yere çarpar (`burst_open` bu anda).
+## Gerçek modelde tek bir "open" animasyonu varsa (model sözleşmesi) o oynar. Bitince döner.
+func play_open(rank: int = 0) -> void:
 	set_tag_visible(false)
 	var player: AnimationPlayer = find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if _model and player and player.has_animation(OPEN_ANIMATION):
+		await _suspense(rank)
+		burst_open.emit()
 		player.play(OPEN_ANIMATION)
 		await player.animation_finished
 		return
+	var lid: Node3D = _lid
+	var hinges: Array[Node3D] = _hinges
+	var axes: Array[Vector3] = _hinge_axes
 	if _model:
-		# Animasyonsuz gerçek model: kısa bir sarsıntı ve hafif büyüme, sonra model gizlenir.
+		lid = _model.find_child("Lid", true, false) as Node3D
+		hinges = []
+		axes = []
+		for hinge_name: String in MODEL_HINGES:
+			var hinge: Node3D = _model.find_child(hinge_name, true, false) as Node3D
+			if hinge:
+				hinges.append(hinge)
+				axes.append(MODEL_HINGES[hinge_name])
+	if lid != null and not hinges.is_empty():
+		await _suspense(rank)
+		await _blow_open(lid, hinges, axes, rank)
+		return
+	if _model:
+		# Parçasız / animasyonsuz gerçek model: gerilim, sonra model büyüyüp gizlenir.
+		await _suspense(rank)
+		burst_open.emit()
 		var shake: Tween = create_tween()
 		shake.tween_property(_model, "scale", _model.scale * 1.06, 0.18)
 		shake.tween_property(_model, "scale", _model.scale * 0.01, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 		await shake.finished
 		return
-	var tween: Tween = create_tween()
-	# 1) kayışlar / kilitler
-	tween.set_parallel(true)
+	await _suspense(rank)
+	burst_open.emit()
+
+
+## GERİLİM: kasa zıplar ve sallanır; her zıplama bir öncekinden yüksek ve hızlı (içeride bir şey
+## kıpırdıyor). Kök düğüm hareket eder; bitince tam yerine döner.
+func _suspense(rank: int) -> void:
+	var rest_position: Vector3 = position
+	var rest_rotation: Vector3 = rotation
+	var hops: int = SUSPENSE_HOPS + rank
 	for strap: Node3D in _straps:
-		tween.tween_property(strap, "scale", Vector3(1.0, 0.01, 1.0), 0.18)
-	tween.set_parallel(false)
-	# 2) kapak kalkar ve yana kayar
-	tween.tween_property(_lid, "position", _lid.position + Vector3(0.0, 0.16, 0.0), 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.set_parallel(true)
-	tween.tween_property(_lid, "position", _lid.position + Vector3(-_size.x * 0.75, -_size.y + 0.02, 0.0), 0.35).set_delay(0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tween.tween_property(_lid, "rotation", Vector3(0.0, 0.0, 0.5), 0.35).set_delay(0.22)
-	tween.set_parallel(false)
-	# 3) yan paneller dışa doğru yere yatar
-	tween.set_parallel(true)
-	for i: int in _hinges.size():
-		tween.tween_property(_hinges[i], "rotation", _hinge_axes[i] * deg_to_rad(90.0), 0.45).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-	await tween.finished
+		create_tween().tween_property(strap, "scale", Vector3(1.0, 0.01, 1.0), 0.18)
+	for i: int in hops:
+		var t: float = _hop_time(i)
+		var power: float = 1.0 + 0.45 * float(i)
+		var side: float = 1.0 if i % 2 == 0 else -1.0
+		# chain(): paralel modda yeni grubun İLK adımı önceki grupla aynı anda başlamasın
+		# (yoksa iniş çıkışı ezer; kapak havada asılı kalıyordu — QA karesi).
+		var tween: Tween = create_tween().set_parallel(true)
+		tween.tween_property(self, "position:y", rest_position.y + 0.022 * power, t * 0.45) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.tween_property(self, "rotation", rest_rotation + Vector3(0.025 * side * power, 0.0, 0.04 * side * power), t * 0.45)
+		tween.tween_property(self, "scale", Vector3(0.97, 1.05, 0.97), t * 0.45)
+		tween.chain().tween_property(self, "position:y", rest_position.y, t * 0.55) \
+			.set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		tween.tween_property(self, "rotation", rest_rotation, t * 0.55)
+		tween.tween_property(self, "scale", Vector3(1.04, 0.95, 1.04), t * 0.55)
+		await tween.finished
+	# Son bir sıkışma: patlamadan hemen önce kasa çöker gibi olur
+	var squash: Tween = create_tween()
+	squash.tween_property(self, "scale", Vector3(1.08, 0.88, 1.08), 0.09)
+	await squash.finished
+	position = rest_position
+	rotation = rest_rotation
+
+
+## PATLAMA: kasa geri esner, kapak dönerek havaya fırlar ve tepede parıltıyla kaybolur; yan
+## paneller sekerek yere çarpar. `burst_open` kapak fırladığı anda yayınlanır.
+func _blow_open(lid: Node3D, hinges: Array[Node3D], axes: Array[Vector3], rank: int) -> void:
+	var stretch: Tween = create_tween()
+	stretch.tween_property(self, "scale", Vector3.ONE, 0.22).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	burst_open.emit()
+	# Kapak dönerek havaya fırlar ve tepede küçülüp kaybolur (yere DÜŞMEZ: kasa garajın arka
+	# köşesinde durduğu için yana düşen kapak duvarın dışına, yola saplanıyordu — QA karesi).
+	var start: Vector3 = lid.position
+	var up: float = 0.42 + 0.06 * float(rank)
+	var flight: Tween = create_tween().set_parallel(true)
+	flight.tween_property(lid, "position:y", start.y + up, 0.34).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	flight.tween_property(lid, "position:x", start.x - _size.x * 0.25, 0.34)
+	flight.tween_property(lid, "rotation", Vector3(TAU * 0.75, 0.6, 0.45), 0.55)
+	flight.chain().tween_callback(func() -> void: lid_vanished.emit(lid.global_position))
+	flight.tween_property(lid, "scale", lid.scale * 0.01, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	# Panellerin çarpması kapak havadayken başlar
+	var panels: Tween = create_tween()
+	panels.set_parallel(true)
+	for i: int in hinges.size():
+		panels.tween_property(hinges[i], "rotation", axes[i] * deg_to_rad(90.0), 0.5) \
+			.set_delay(0.06 + 0.03 * float(i)).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	await flight.finished
+	if panels.is_running():
+		await panels.finished
 
 
 ## Açılıştan sonra boş kasa: parçalar küçülüp kaybolur.

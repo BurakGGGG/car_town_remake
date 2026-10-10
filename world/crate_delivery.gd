@@ -35,6 +35,8 @@ const GAP: float = 0.03
 const ENTRY: Vector2 = Vector2(-0.2, -0.2)
 ## Açılışta araç kasadan bu kadar dışarı çıkar (uzun eksen boyunca).
 const ROLL_OUT: float = 0.3
+## Açılış sahnesinde kameranın inebileceği en yakın ortografik boy (oyuncu sınırı WorldCamera.min_zoom).
+const REVEAL_ZOOM: float = 1.35
 ## Dünyadaki araç ölçeği (TrafficManager.model_scale ile aynı bağlam).
 const VEHICLE_SCALE: float = 0.6
 
@@ -266,19 +268,28 @@ func open_crate(uid: int) -> bool:
 	return true
 
 
+## AÇILIŞ SAHNESİ: gerilim (kasa zıplar, ışık sızar) → patlama (kapak fırlar, şok dalgası, konfeti;
+## nadirlikle ışık sütunu / hüzmeler) → araç kasadan DÖNEREK yükselir, tozla yere iner → kasadan çıkar.
+## Nadirlik ne kadar yüksekse gerilim o kadar uzun, patlama o kadar büyük.
 func _play_reveal(uid: int, v: CrateVisual, result: Dictionary) -> void:
 	v.set_clickable(false)
-	_camera_state = _frame(v)
+	_camera_state = _frame(v, true)
 	var vehicle: StringName = result["vehicle"]
 	var scene_path: String = CarCatalog.scene_path(vehicle)
+	var rarity: StringName = StringName(result["rarity"])
+	var rank: int = CrateCatalog.rarity_rank(rarity)
 	# Araç modeli (dokunulunca başlamadıysa) açılış animasyonu sırasında arka planda yüklenir
 	_prefetch_vehicle(uid)
-	await v.play_open()
+	var fx: CrateRevealFx = _effects(v, CrateCatalog.rarity_color(rarity), rank)
+	_revealing[uid] = {"fx": fx}
+	fx.suspense(CrateVisual.suspense_time(rank))
+	v.burst_open.connect(fx.burst, CONNECT_ONE_SHOT)
+	v.lid_vanished.connect(fx.poof, CONNECT_ONE_SHOT)
+	await v.play_open(rank)
 	var car: Node3D = await _spawn_vehicle(v, vehicle, scene_path)
-	var light: OmniLight3D = _burst(v, CrateCatalog.rarity_color(result["rarity"]),
-		StringName(result["rarity"]) == &"legendary")
-	_revealing[uid] = {"car": car, "light": light}
+	_revealing[uid] = {"car": car, "fx": fx}
 	if car:
+		await _rise(v, car, fx, rank)
 		await _roll_out(v, car)
 	reveal_ready.emit(uid, result)
 
@@ -295,13 +306,13 @@ func finish_reveal(uid: int) -> void:
 	var car: Node3D = data.get("car")
 	if is_instance_valid(car):
 		tween.tween_property(car, "scale", car.scale * 0.01, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-	var light: OmniLight3D = data.get("light")
-	if is_instance_valid(light):
-		tween.tween_property(light, "light_energy", 0.0, 0.35)
+	var fx: CrateRevealFx = data.get("fx")
+	if is_instance_valid(fx):
+		fx.fade_out(0.35)
 	if v:
 		tween.tween_property(v, "scale", Vector3(1.0, 0.01, 1.0), 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	await tween.finished
-	for node: Variant in [car, light, v]:
+	for node: Variant in [car, fx, v]:
 		if is_instance_valid(node):
 			(node as Node).queue_free()
 	_visuals.erase(uid)
@@ -361,19 +372,38 @@ func _roll_out(v: CrateVisual, car: Node3D) -> void:
 	await tween.finished
 
 
-## Nadirlik renginde ışık patlaması (open_effect sahnesi varsa o da eklenir).
-func _burst(v: CrateVisual, color: Color, strong: bool) -> OmniLight3D:
-	var light: OmniLight3D = OmniLight3D.new()
-	light.name = "RevealLight"
-	light.light_color = color
-	light.omni_range = 1.4 if strong else 1.0
-	light.light_energy = 0.0
-	light.shadow_enabled = false
-	add_child(light)
-	light.global_position = v.global_position + Vector3(0.0, 0.5, 0.0)
+## VİTRİN DÖNÜŞÜ: araç kasanın içinden küçükten büyüyerek yükselir, havada bir tur döner, kısa
+## süre asılı kalır ve tozla yere iner (seker). Son açısı kasaya hizalı açıdır.
+func _rise(v: CrateVisual, car: Node3D, fx: CrateRevealFx, rank: int) -> void:
+	var rest: Vector3 = car.global_position
+	var final_scale: Vector3 = car.scale
+	var final_yaw: float = car.rotation.y
+	var lift: float = 0.22 + 0.03 * float(rank)
+	var spin_time: float = 0.85 + 0.1 * float(rank)
+	car.scale = final_scale * 0.05
+	car.rotation.y = final_yaw - TAU
 	var tween: Tween = create_tween()
-	tween.tween_property(light, "light_energy", 5.0 if strong else 3.0, 0.2)
-	tween.tween_property(light, "light_energy", 2.2 if strong else 1.2, 0.6)
+	tween.set_parallel(true)
+	tween.tween_property(car, "scale", final_scale, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(car, "global_position", rest + Vector3(0.0, lift, 0.0), spin_time * 0.6) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(car, "rotation:y", final_yaw, spin_time).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.set_parallel(false)
+	tween.tween_interval(0.12 + 0.05 * float(rank))
+	tween.tween_property(car, "global_position", rest, 0.32).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	# İlk temas anında toz (düşüşün ~%30'unda tekerler yere değer)
+	tween.parallel().tween_callback(fx.dust.bind(Vector3(rest.x, _floor_y(), rest.z))).set_delay(0.1)
+	await tween.finished
+
+
+## Açılış efektleri (nadirlik renginde ışık, kıvılcım, konfeti…). Kasanın open_effect sahnesi
+## varsa ışığa eklenir.
+func _effects(v: CrateVisual, color: Color, rank: int) -> CrateRevealFx:
+	var fx: CrateRevealFx = CrateRevealFx.new()
+	fx.setup(color, rank)
+	add_child(fx)
+	fx.global_position = Vector3(v.global_position.x, _floor_y(), v.global_position.z)
+	var light: OmniLight3D = fx.light()
 	var effect_path: String = String(CrateCatalog.get_entry(v.crate_id).get("open_effect", ""))
 	if effect_path != "" and ResourceLoader.exists(effect_path):
 		var effect: PackedScene = load(effect_path) as PackedScene
@@ -381,19 +411,29 @@ func _burst(v: CrateVisual, color: Color, strong: bool) -> OmniLight3D:
 			var node: Node3D = effect.instantiate() as Node3D
 			if node:
 				light.add_child(node)
-	return light
+	return fx
 
 
 # --- Kamera --------------------------------------------------------------------------------
 
-func _frame(v: CrateVisual) -> Dictionary:
+## `cinematic`: açılış sahnesi — oyuncu sınırından yakın çekim (restore_view ile geri dönülür).
+## Gelişte kamera geri dönmediği için orada oyuncu sınırında kalınır.
+func _frame(v: CrateVisual, cinematic: bool = false) -> Dictionary:
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	if not (camera is WorldCamera):
 		return {}
 	var s: Vector3 = v.size()
+	var world: WorldCamera = camera as WorldCamera
+	if cinematic:
+		# AÇILIŞ: sinematik yakın çekim — kasa + yükselen araç sıkı bir kutuda, ekranın üst %60'ında
+		# (sonuç plakası altta). Eski geniş kutu ve %36'lık bantla gereken boy 2,33 çıkıyordu: kamera
+		# oyuncu sınırının (2,2) altına hiç inemiyordu. Bitince restore_view ile geri dönülür.
+		var tight: AABB = AABB(v.global_position - Vector3(s.x * 0.75, 0.0, s.x * 0.75),
+			Vector3(s.x * 1.5, s.y * 1.7, s.x * 1.5))
+		return world.frame_box(tight, 0.06, 0.6, 0.05, REVEAL_ZOOM)
 	var box: AABB = AABB(v.global_position - Vector3(s.x, 0.0, s.x) * 0.9, Vector3(s.x * 1.8, s.y * 2.2, s.x * 1.8))
-	# Kasa ve çıkan araç ekranın ÜST yarısında: alt-ortadaki sonuç plakası ve bildirimler aracı örtmesin
-	return (camera as WorldCamera).frame_box(box, 0.08, 0.44)
+	# Kasa ekranın ÜST yarısında: alt-ortadaki plaka ve bildirimler kasayı örtmesin
+	return world.frame_box(box, 0.08, 0.44)
 
 
 func _restore_camera() -> void:

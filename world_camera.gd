@@ -115,7 +115,10 @@ func _unhandled_input(event: InputEvent) -> void:
 ## arasına ve yatayda kenar payları içine SIĞDIRACAK şekilde yumuşakça odaklanır. Önceki görünümü
 ## döndürür (restore_view ile geri alınır). Garaj düzenleyicisi kullanır: alt paletin üstünde
 ## kalan alana garajın tamamı sığsın.
-func frame_box(box: AABB, top: float = 0.14, bottom: float = 0.64, side: float = 0.05) -> Dictionary:
+## `closest` > 0: bu sahneye özel, oyuncunun yakınlaşma sınırından (min_zoom) DAHA yakın çekim (kasa
+## açılışı gibi sinematik anlar). Oyuncunun parmakla yakınlaşma sınırı değişmez; restore_view geri döner.
+func frame_box(box: AABB, top: float = 0.14, bottom: float = 0.64, side: float = 0.05,
+		closest: float = 0.0) -> Dictionary:
 	var before: Dictionary = {"focus": _focus, "size": _target_size}
 	var right: Vector3 = global_transform.basis.x
 	var up: Vector3 = global_transform.basis.y
@@ -131,7 +134,8 @@ func frame_box(box: AABB, top: float = 0.14, bottom: float = 0.64, side: float =
 	var aspect: float = screen.x / maxf(screen.y, 1.0)
 	var needed: float = maxf((hi.y - lo.y) / maxf(bottom - top, 0.1),
 		(hi.x - lo.x) / maxf((1.0 - side * 2.0) * aspect, 0.1))
-	var final_size: float = clampf(needed, min_zoom, _max_zoom_fit())
+	var nearest: float = closest if closest > 0.0 else min_zoom
+	var final_size: float = clampf(needed, nearest, _max_zoom_fit())
 	# Kutunun merkezi ekranda [top, bottom] aralığının ortasına düşsün: odağı zemin üzerinde
 	# kaydırıp kutunun ekrandaki yerini ölç, farkı pan_by_pixels ile kapat (aynı dönüşümle).
 	var keep_size: float = size
@@ -145,7 +149,7 @@ func frame_box(box: AABB, top: float = 0.14, bottom: float = 0.64, side: float =
 	size = keep_size
 	_focus = keep_focus
 	_apply_focus()
-	_glide_to(final_focus, final_size)
+	_glide_to(final_focus, final_size, nearest)
 	return before
 
 
@@ -163,10 +167,10 @@ func restore_view(state: Dictionary) -> void:
 var _glide: Tween
 
 
-func _glide_to(focus: Vector3, zoom: float) -> void:
+func _glide_to(focus: Vector3, zoom: float, nearest: float = 0.0) -> void:
 	if _glide:
 		_glide.kill()
-	_target_size = clampf(zoom, min_zoom, max_zoom)
+	_target_size = clampf(zoom, nearest if nearest > 0.0 else min_zoom, max_zoom)
 	_glide = create_tween()
 	_glide.tween_method(func(f: Vector3) -> void:
 		_focus = f
