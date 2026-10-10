@@ -9,8 +9,6 @@ extends Control
 
 signal opened
 signal closed
-## Ödül alındı (HUD kısa bildirim gösterir).
-signal reward_claimed(text: String)
 
 enum Tab { DAILY, WEEKLY, ACHIEVEMENTS, GUIDE }
 
@@ -33,6 +31,7 @@ var _body: VBoxContainer
 var _countdown: Label
 var _closing: bool = false
 var _tick: Timer
+var _reward_popup: RewardPopup
 
 
 func _ready() -> void:
@@ -54,11 +53,18 @@ func open() -> void:
 	opened.emit()
 
 
+## Ödül penceresi paraları bu HUD'ın sayaçlarına uçurur.
+func attach_hud(hud: Hud) -> void:
+	_reward_popup.hud = hud
+
+
 func close() -> void:
 	if not visible or _closing:
 		return
 	_closing = true
 	_tick.stop()
+	if _reward_popup.visible:
+		_reward_popup.close()
 	PlateAnim.pop_out(self, _column, func() -> void:
 		hide()
 		_closing = false
@@ -142,12 +148,16 @@ func _build() -> void:
 	add_child(_tick)
 	get_viewport().size_changed.connect(_fit_body)
 
+	_reward_popup = RewardPopup.new()   # son çocuk: tabelanın üstünde açılır
+	add_child(_reward_popup)
+
 
 func _connect() -> void:
 	_missions = get_tree().get_first_node_in_group("missions") as MissionManager
 	_quests = get_tree().get_first_node_in_group("quests") as QuestManager
 	if _missions:
 		_missions.missions_changed.connect(_refresh)
+		_missions.rewards_claimed.connect(_reward_popup.show_rewards)
 	if _quests:
 		_quests.quests_changed.connect(_refresh)
 
@@ -583,7 +593,7 @@ func _guide_plate(entry: Dictionary) -> PlatePanel:
 	var button: PlateButton = _claim_button(done, false)
 	button.pressed.connect(func() -> void:
 		if _quests.claim(quest_id):
-			reward_claimed.emit(_guide_reward_text(entry))
+			_reward_popup.show_rewards(_guide_summary(entry))
 		_refresh())
 	row.add_child(button)
 	return plate
@@ -594,6 +604,14 @@ static func _count_text(entry: Dictionary, value: int) -> String:
 	if int(entry["type"]) == QuestCatalog.Type.REPAIR_MONEY:
 		return "%s / %s ₺" % [Hud.format_thousands(value), Hud.format_thousands(target)]
 	return "%d / %d" % [value, target]
+
+
+static func _guide_summary(entry: Dictionary) -> Dictionary:
+	var crates: Array = []
+	if StringName(entry.get("crate", &"")) != &"":
+		crates.append(Loc.t(String(CrateCatalog.get_entry(entry["crate"]).get("display_name", Loc.t("KASA")))))
+	return {"money": int(entry.get("money", 0)), "gems": int(entry.get("gems", 0)), "xp": int(entry.get("xp", 0)),
+		"crates": crates, "count": 1}
 
 
 static func _guide_reward_text(entry: Dictionary) -> String:

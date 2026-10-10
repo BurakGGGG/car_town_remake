@@ -376,8 +376,24 @@ func _scene_tests() -> void:
 	mm.count(&"repair_money", 900000)
 	check(mm.stars_reached(earn_line) >= 3, "1.010.000 ₺ → 3. yıldız")
 	check(mm.value_of(&"ach_stars") >= 5, "YILDIZ TOPLAYICI meta sayacı (≥5 yıldız: %d)" % mm.value_of(&"ach_stars"))
+	var summaries: Array[Dictionary] = []
+	var notices: Array[String] = []
+	var on_summary: Callable = func(summary: Dictionary) -> void: summaries.append(summary)
+	var on_notice: Callable = func(text: String) -> void: notices.append(text)
+	mm.rewards_claimed.connect(on_summary)
+	mm.reward_granted.connect(on_notice)
+	var gems_before_all: int = pp.gems
+	var money_before_all: int = eco.money
 	var claimed_all: int = mm.claim_all_achievements()
+	mm.rewards_claimed.disconnect(on_summary)
+	mm.reward_granted.disconnect(on_notice)
 	check(claimed_all >= 3 and mm.claimable_achievements() == 0, "HEPSİNİ AL: %d yıldız alındı, bekleyen yok" % claimed_all)
+	check(summaries.size() == 1 and notices.is_empty(), "HEPSİNİ AL: tek ödül penceresi, tek tek bildirim yok (%d / %d)" % [summaries.size(), notices.size()])
+	if summaries.size() == 1:
+		var summary: Dictionary = summaries[0]
+		check(int(summary["count"]) == claimed_all, "pencere: %d ödülün toplamı" % int(summary["count"]))
+		check(int(summary["gems"]) == pp.gems - gems_before_all and int(summary["money"]) == eco.money - money_before_all,
+			"pencere toplamı verilenle aynı (+%d gem, +%d ₺)" % [int(summary["gems"]), int(summary["money"])])
 	check(mm.value_of(&"player_level") == pp.level and mm.value_of(&"garage_level") >= 1, "durum metrikleri oyundan okunuyor")
 	check(mm.value_of(&"cars_discovered") == own.discovered_count(), "cars_discovered = keşfedilen araç")
 

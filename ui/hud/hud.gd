@@ -93,6 +93,12 @@ var _car_tween: Tween
 var _repair_panel: RepairPanel
 var _repair_manager: RepairManager
 var _player_progress: PlayerProgress
+## Ödül penceresi: sayaçların gerçek değeri, pencere kapanana dek bekletilen kısım ve sayma animasyonları.
+var _coin_value: int = 0
+var _gem_value: int = 0
+var _coin_hold: int = 0
+var _gem_hold: int = 0
+var _counter_tweens: Dictionary = {}
 var _economy: EconomyManager
 var _repair_target: Node3D
 var _notice_plate: PlatePanel
@@ -239,11 +245,65 @@ func set_xp_ratio(value: float) -> void:
 
 
 func set_coins(value: int) -> void:
-	coin_label.text = format_thousands(value)
+	_coin_value = value
+	_show_counter(coin_label, _coin_value - _coin_hold)
 
 
 func set_gems(value: int) -> void:
-	gem_label.text = format_thousands(value)
+	_gem_value = value
+	_show_counter(gem_label, _gem_value - _gem_hold)
+
+
+## ÖDÜL PENCERESİ: ödül hesaba geçmiş olsa da sayaçlar ESKİ değerde bekler (pencere açıkken);
+## paralar uçup sayaca varınca land_reward ile sayarak artar. Bkz. RewardPopup.
+func hold_reward(money: int, gems_amount: int) -> void:
+	_coin_hold += maxi(money, 0)
+	_gem_hold += maxi(gems_amount, 0)
+	_show_counter(coin_label, _coin_value - _coin_hold)
+	_show_counter(gem_label, _gem_value - _gem_hold)
+
+
+func land_reward(money: int, gems_amount: int) -> void:
+	if money > 0:
+		_coin_hold = maxi(_coin_hold - money, 0)
+		_count_counter(coin_label, _coin_value - _coin_hold)
+	if gems_amount > 0:
+		_gem_hold = maxi(_gem_hold - gems_amount, 0)
+		_count_counter(gem_label, _gem_value - _gem_hold)
+
+
+## Uçan ödülün hedefi: sayacın ikonu (CoinBox / GemBox'ta yazının önündeki ikon).
+func counter_target(label: Label) -> Control:
+	var icon: Control = label.get_parent().get_child(0) as Control
+	return icon if icon else label
+
+
+## Uçan para / gem sayaca değdi: sayaç kısa bir "pıt" yapar.
+func pulse_counter(label: Label) -> void:
+	label.pivot_offset = Vector2(0.0, label.size.y * 0.5)
+	var tween: Tween = label.create_tween()
+	tween.tween_property(label, "scale", Vector2.ONE * 1.25, 0.05)
+	tween.tween_property(label, "scale", Vector2.ONE, 0.12)
+
+
+func _show_counter(label: Label, value: int) -> void:
+	var running: Tween = _counter_tweens.get(label) as Tween
+	if running and running.is_valid():
+		running.kill()
+	label.set_meta(&"shown", value)
+	label.text = format_thousands(value)
+
+
+func _count_counter(label: Label, value: int) -> void:
+	var from: int = int(label.get_meta(&"shown", value))
+	_show_counter(label, from)
+	var tween: Tween = label.create_tween()
+	tween.tween_method(func(v: float) -> void:
+		label.set_meta(&"shown", int(round(v)))
+		label.text = format_thousands(int(round(v))), float(from), float(value), 0.6) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_counter_tweens[label] = tween
+	pulse_counter(label)
 
 
 ## Avatar PROFİL plakasında kask yerine görünür; null verilirse kaska döner.
@@ -1189,7 +1249,7 @@ func _build_quests() -> void:
 	column.move_child(quest_button, camera_controls.get_index())
 	quest_screen = MissionScreen.new()
 	garage_screen.get_parent().add_child(quest_screen)
-	quest_screen.reward_claimed.connect(func(text: String) -> void: _show_notice(text, HudPalette.COIN_DARK))
+	quest_screen.attach_hud(self)
 
 
 ## ARKADAŞLAR plakası GÖREVLER plakasının hemen altına eklenir; gelen istek varsa amber olur.

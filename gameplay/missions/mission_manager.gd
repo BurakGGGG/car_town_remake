@@ -19,6 +19,10 @@ signal missions_changed
 signal task_completed(kind: StringName, text: String)
 ## Ödül verildi (HUD bildirimi).
 signal reward_granted(text: String)
+## Oyuncu ÖDÜLÜ AL / HEPSİNİ AL'a bastı: tek basışın TOPLAMI (ödül penceresi gösterir).
+## Anahtarlar: money, gems, xp (int), crates (Array: kasa adları), count (alınan ödül sayısı).
+## Bu sırada reward_granted susar: tek tek kısa bildirim yerine pencere çıkar.
+signal rewards_claimed(summary: Dictionary)
 
 const HISTORY_DAYS: int = 14
 const CHECK_INTERVAL: float = 30.0
@@ -50,6 +54,8 @@ var _yesterday_ids: Array = []
 var _last_week_ids: Array = []
 var _timer: Timer
 var _wired: bool = false
+var _tally_depth: int = 0
+var _tally: Dictionary = {}
 
 
 func _ready() -> void:
@@ -522,6 +528,15 @@ func claimable_achievements() -> int:
 # --- Ödül ------------------------------------------------------------------------------------
 
 func claim_daily(index: int) -> bool:
+	_begin_tally()
+	var ok: bool = _claim_daily(index)
+	if ok:
+		_tally["count"] = int(_tally["count"]) + 1
+	_end_tally()
+	return ok
+
+
+func _claim_daily(index: int) -> bool:
 	if index < 0 or index >= _daily.size():
 		return false
 	var task: Dictionary = _daily[index]
@@ -536,6 +551,15 @@ func claim_daily(index: int) -> bool:
 
 ## Beş günlük görev tamam ve bonus alınmadıysa gem verir.
 func claim_daily_bonus() -> bool:
+	_begin_tally()
+	var ok: bool = _claim_daily_bonus()
+	if ok:
+		_tally["count"] = int(_tally["count"]) + 1
+	_end_tally()
+	return ok
+
+
+func _claim_daily_bonus() -> bool:
 	if not daily_all_done() or _daily_bonus_claimed:
 		return false
 	_daily_bonus_claimed = true
@@ -546,6 +570,15 @@ func claim_daily_bonus() -> bool:
 
 
 func claim_weekly(index: int) -> bool:
+	_begin_tally()
+	var ok: bool = _claim_weekly(index)
+	if ok:
+		_tally["count"] = int(_tally["count"]) + 1
+	_end_tally()
+	return ok
+
+
+func _claim_weekly(index: int) -> bool:
 	if index < 0 or index >= _weekly.size():
 		return false
 	var task: Dictionary = _weekly[index]
@@ -559,6 +592,15 @@ func claim_weekly(index: int) -> bool:
 
 
 func claim_weekly_bonus() -> bool:
+	_begin_tally()
+	var ok: bool = _claim_weekly_bonus()
+	if ok:
+		_tally["count"] = int(_tally["count"]) + 1
+	_end_tally()
+	return ok
+
+
+func _claim_weekly_bonus() -> bool:
 	if not weekly_all_done() or _weekly_final_claimed:
 		return false
 	_weekly_final_claimed = true
@@ -570,6 +612,15 @@ func claim_weekly_bonus() -> bool:
 
 ## Başarım çizgisinde ulaşılmış ama alınmamış SIRADAKİ yıldızı verir.
 func claim_achievement(line_id: StringName) -> bool:
+	_begin_tally()
+	var ok: bool = _claim_achievement(line_id)
+	if ok:
+		_tally["count"] = int(_tally["count"]) + 1
+	_end_tally()
+	return ok
+
+
+func _claim_achievement(line_id: StringName) -> bool:
 	var line: Dictionary = MissionCatalog.achievement(line_id)
 	if line.is_empty():
 		return false
@@ -586,34 +637,59 @@ func claim_achievement(line_id: StringName) -> bool:
 
 
 func claim_all_daily() -> int:
+	_begin_tally()
 	var n: int = 0
 	for i: int in _daily.size():
 		if claim_daily(i):
 			n += 1
 	if claim_daily_bonus():
 		n += 1
+	_end_tally()
 	return n
 
 
 func claim_all_weekly() -> int:
+	_begin_tally()
 	var n: int = 0
 	for i: int in _weekly.size():
 		if claim_weekly(i):
 			n += 1
 	if claim_weekly_bonus():
 		n += 1
+	_end_tally()
 	return n
 
 
 func claim_all_achievements() -> int:
+	_begin_tally()
 	var n: int = 0
 	for line: Dictionary in achievements():
 		while claim_achievement(line["id"]):
 			n += 1
+	_end_tally()
 	return n
 
 
+## Bir basışın ödüllerini toplamaya başlar; iç içe çağrılabilir (HEPSİNİ AL → tek tek ÖDÜLÜ AL).
+func _begin_tally() -> void:
+	if _tally_depth == 0:
+		_tally = {"money": 0, "gems": 0, "xp": 0, "crates": [], "count": 0}
+	_tally_depth += 1
+
+
+func _end_tally() -> void:
+	_tally_depth -= 1
+	if _tally_depth > 0 or int(_tally.get("count", 0)) == 0:
+		return
+	rewards_claimed.emit(_tally.duplicate(true))
+
+
 func _pay(money: int, xp: int, gems: int, announce: bool, label: String = "") -> void:
+	if _tally_depth > 0:
+		_tally["money"] = int(_tally["money"]) + maxi(money, 0)
+		_tally["gems"] = int(_tally["gems"]) + maxi(gems, 0)
+		_tally["xp"] = int(_tally["xp"]) + maxi(xp, 0)
+		announce = false   # toplamı ödül penceresi gösterir
 	var parts: PackedStringArray = PackedStringArray()
 	var economy: EconomyManager = get_tree().get_first_node_in_group("economy") as EconomyManager
 	var player: PlayerProgress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
@@ -643,6 +719,10 @@ func _pay_weekly_bonus(announce: bool) -> void:
 		var crate_id: StringName = best_crate_for(player.level if player else 1)
 		if crate_id != &"" and crates.grant_free(crate_id, "weekly") > 0:
 			crate_name = Loc.t(String(CrateCatalog.get_entry(crate_id).get("display_name", Loc.t("KASA"))))
+	if _tally_depth > 0:
+		if crate_name != "":
+			(_tally["crates"] as Array).append(crate_name)
+		return
 	if announce:
 		reward_granted.emit(Loc.t("HAFTALIK BÜYÜK ÖDÜL\n+%d GEM%s  +%d XP") % [MissionCatalog.WEEKLY_BONUS_GEMS,
 			("  +1 %s" % crate_name) if crate_name != "" else "", xp])
