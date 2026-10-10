@@ -951,14 +951,20 @@ func _refresh_crate() -> void:
 			_buy_button.text = Loc.t("SEVİYE %d\nGEREKLİ") % int(entry["min_level"])
 			_buy_button.disabled = true
 		"gems":
-			_buy_button.text = Loc.t("%d GEM\nGEM YETERSİZ") % price
-			_buy_button.disabled = true
+			# Gem yetmiyor: plaka GEM MAĞAZASI'nı açar (mağaza bu cihazda yoksa eski "yetersiz" hali)
+			_buy_button.text = Loc.t("GEM YETERSİZ\nGEM AL") if _gem_store_available() else Loc.t("%d GEM\nGEM YETERSİZ") % price
+			_buy_button.disabled = not _gem_store_available()
 		"full":
 			_buy_button.text = Loc.t("ÖNCE GARAJDAKİ\nKASALARI AÇ")
 			_buy_button.disabled = true
 		_:
 			_buy_button.text = Loc.t("%d GEM") % price
 			_buy_button.disabled = true
+
+
+func _gem_store_available() -> bool:
+	var purchases: PurchaseManager = get_tree().get_first_node_in_group("purchases") as PurchaseManager
+	return purchases != null and purchases.is_available()
 
 
 ## GERİ AL plakası: keşfedilmiş aracın ₺ fiyatı (VehicleOwnership.status kararı).
@@ -997,6 +1003,9 @@ func _on_buy_pressed() -> void:
 		return
 	if _shown_crate != &"":
 		if _crates == null:
+			return
+		if _crates.buy_block_reason(_shown_crate) == "gems":
+			screen_requested.emit(&"gem_store")
 			return
 		var uid: int = _crates.buy(_shown_crate)   # gem + sonuç + kayıt CrateManager'da
 		if uid > 0:

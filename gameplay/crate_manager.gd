@@ -31,11 +31,11 @@ signal purchase_failed(crate_id: StringName, reason: String)
 enum State { PURCHASED, DELIVERED, WAITING_TO_OPEN, OPENING, REVEALED, CLAIMED }
 
 ## Kopya hurdası (gem) — nadirliğe göre.
-const DUP_SCRAP: Dictionary = {&"common": 2, &"rare": 5, &"epic": 12, &"legendary": 30}
+const DUP_SCRAP: Dictionary = {&"common": 1, &"rare": 2, &"epic": 5, &"legendary": 12}
 ## İlk keşif ödülü (gem) — nadirliğe göre.
-const DISCOVERY_GEMS: Dictionary = {&"common": 3, &"rare": 8, &"epic": 20, &"legendary": 40}
+const DISCOVERY_GEMS: Dictionary = {&"common": 1, &"rare": 3, &"epic": 8, &"legendary": 15}
 ## Koleksiyon kilometre taşları: keşfedilen araç sayısı → gem (Şahin dahil, 16'da).
-const COLLECTION_MILESTONES: Dictionary = {5: 15, 10: 30, 14: 50, 16: 100}
+const COLLECTION_MILESTONES: Dictionary = {5: 5, 10: 10, 14: 20, 16: 40}
 ## Aynı anda bekleyebilecek kasa sayısı (teslimat noktası sayısından bağımsız bir üst sınır).
 const MAX_PENDING: int = 6
 

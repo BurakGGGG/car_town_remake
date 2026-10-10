@@ -363,11 +363,12 @@ func _scene_tests() -> void:
 	check(mm.stars_reached(line) >= 1, "50 tamir → 1. yıldız (TAMİRCİ)")
 	var g0: int = pp.gems
 	check(mm.claim_achievement(&"a_repairs"), "1. yıldız alındı")
-	check(pp.gems - g0 == 10, "TAMİRCİ 1. yıldız = 10 gem (eski kilometre taşı gemi)")
+	check(pp.gems - g0 == MissionCatalog.ach_gems(line, 0) and MissionCatalog.ach_value(line, 0) == 10,
+		"TAMİRCİ 1. yıldız: değer 10 (eski kilometre taşı), gem %d" % MissionCatalog.ach_gems(line, 0))
 	check(not mm.claim_achievement(&"a_repairs") or mm.stars_reached(line) >= 2, "ulaşılmamış 2. yıldız alınamaz")
 	mm.count(&"repairs", 250)
 	var g1: int = pp.gems
-	check(mm.claim_achievement(&"a_repairs") and pp.gems - g1 == 20, "2. yıldız 20 gem")
+	check(mm.claim_achievement(&"a_repairs") and pp.gems - g1 == MissionCatalog.ach_gems(line, 1), "2. yıldız %d gem" % MissionCatalog.ach_gems(line, 1))
 	var earn_line: Dictionary = MissionCatalog.achievement(&"a_earn")
 	mm.count(&"repair_money", 10000)
 	check(mm.stars_reached(earn_line) >= 1, "10.000 ₺ kazanç → KAZANÇLI 1. yıldız")

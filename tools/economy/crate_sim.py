@@ -16,10 +16,10 @@ Gem kaynaklarının oyundaki karşılıkları (değer değişirse burası da gü
   7 hikâye görevi (125) + İLK KASA ........ gameplay/quest_catalog.gd
   seviye 5, her 5. seviyede +25 ........... PlayerProgress.LEVEL_GEMS / LEVEL_GEM_MILESTONE
   giriş 10·10·15·10·15·10·40 .............. GemRewards.LOGIN_CYCLE
-  günlük görev 3×10 + 20, haftalık 100 .... GemRewards.TASK_GEMS / ALL_TASKS_BONUS / WEEKLY_*
+  günlük 5/5 bonusu, haftalık görev + büyük ödül  MissionCatalog.DAILY_BONUS_GEMS / WEEKLY_GEMS / WEEKLY_BONUS_GEMS
+  başarım yıldızları ...................... MissionCatalog.ACHIEVEMENTS / ACH_GEMS (ölçülebilen çizgiler)
   bahşiş 20 tamirde 1, günde en çok 40 .... GemRewards.TIP_EVERY / TIP_DAILY_CAP
   ustalık yıldızı 10 ...................... GemRewards.MASTERY_STAR_GEMS
-  tamir kilometre taşları ................. GemRewards.REPAIR_MILESTONES
   keşif / koleksiyon / kopya hurdası ...... CrateManager.DISCOVERY_GEMS / COLLECTION_MILESTONES / DUP_SCRAP
 Oynanış dakikası → seviye / ustalık / tamir eğrileri ölçülmüş simülasyondan (docs/AUDIT_2026_09.md §6).
 """
@@ -59,16 +59,15 @@ STARTING_VEHICLE = "tofas_sahin"
 START_GEMS = 40
 STORY = [(0, 0), (25, 10), (41, 15), (45, 10), (78, 15), (80, 20), (90, 25), (95, 30)]   # (dk, gem)
 FIRST_CRATE_LEVEL = 2
-LEVEL_GEMS, LEVEL_GEM_MILESTONE = 5, 25
+LEVEL_GEMS, LEVEL_GEM_MILESTONE = 2, 10
 LOGIN_CYCLE = [10, 10, 15, 10, 15, 10, 40]
-TASK_GEMS, ALL_TASKS_BONUS, TASK_MIN_LEVEL = 10, 20, 3
-WEEKLY_GEMS, WEEKLY_NEED = 100, 12
-TIP_EVERY, TIP_DAILY_CAP = 20, 40
-MASTERY_STAR_GEMS = 10
-REPAIR_MILESTONES = [(50, 10), (250, 20), (1000, 30), (2500, 50), (5000, 75)]
-DISCOVERY_GEMS = {"common": 3, "rare": 8, "epic": 20, "legendary": 40}
-COLLECTION_MILESTONES = {5: 15, 10: 30, 14: 50, 16: 100}
-DUP_SCRAP = {"common": 2, "rare": 5, "epic": 12, "legendary": 30}
+DAILY_BONUS_GEMS, TASK_MIN_LEVEL = 10, 3
+WEEKLY_GEMS, WEEKLY_BONUS_GEMS = 0, 40
+TIP_EVERY, TIP_DAILY_CAP = 50, 3
+MASTERY_STAR_GEMS = 3
+DISCOVERY_GEMS = {"common": 1, "rare": 3, "epic": 8, "legendary": 15}
+COLLECTION_MILESTONES = {5: 5, 10: 10, 14: 20, 16: 40}
+DUP_SCRAP = {"common": 1, "rare": 2, "epic": 5, "legendary": 12}
 STAR_THRESHOLDS = [1, 3, 6, 10, 15]
 
 # --- Ölçülmüş eğriler ------------------------------------------------------------------------
@@ -77,7 +76,40 @@ LEVEL_CURVE = [(0, 1), (5, 2), (10, 3), (20, 5), (30, 6), (60, 11), (120, 16), (
                (4080, 35), (5050, 36)]
 STAR_CURVE = [(0, 0), (20, 4), (60, 8), (120, 13), (300, 21), (600, 28), (1500, 32), (3000, 35)]
 REPAIRS_PER_MIN = 3.8
-PROFILES = {"CASUAL": (20, 2), "ACTIVE": (60, 3), "HEAVY": (150, 3)}   # dk/gün, günde tamamlanan görev
+# dk/gün, günlük 5/5 olasılığı, haftalık 5/5 olasılığı, haftalık tamamlanan görev (5/5 değilse) —
+# olasılıklar qa/mission_sim.gd çıktısından (2026-10-11).
+PROFILES = {"CASUAL": (20, 0.45, 0.46, 3), "ACTIVE": (60, 0.62, 0.81, 4), "HEAVY": (150, 0.65, 0.89, 4)}
+
+
+def _round(x):
+    """GDScript round(): yarım sıfırdan uzağa (Python round bankacı yuvarlaması yapar)."""
+    return int(math.floor(x + 0.5))
+
+
+def _load_achievements():
+    """MissionCatalog.ACHIEVEMENTS: yalnızca dakikadan / simülasyon durumundan ölçülebilen çizgiler.
+    Ölçülemeyenler (₺, yarış, dekor, garaj, rütbe …) DAHİL DEĞİL → başarım gemi alt sınırdır."""
+    import re
+    src = open(os.path.join(ROOT, "gameplay", "missions", "mission_catalog.gd"), encoding="utf-8").read()
+    base = [int(x) for x in re.findall(r"\d+", re.search(r"const ACH_VALUE[^=]*=\s*\[(.*?)\]", src).group(1))]
+    share = float(re.search(r"const ACH_GEM_SHARE[^=]*=\s*([\d.]+)", src).group(1))
+    lines = {}
+    for m in re.finditer(r'\{"id": &"(a_\w+)".*?"metric": &"(\w+)".*?"tiers": \[([^\]]*)\](.*?)\},?\n', src):
+        tiers = [int(x) for x in m.group(3).split(",")]
+        g = re.search(r'"value": \[([^\]]*)\]', m.group(4))
+        if g:
+            value = [int(x) for x in g.group(1).split(",")]
+        else:
+            mult = float(re.search(r'"mult": ([\d.]+)', m.group(4)).group(1))
+            value = [max(_round(b * mult), 1) for b in base[:len(tiers)]]
+        gems = [max(_round(v * share), 1) for v in value]
+        lines[m.group(2)] = list(zip(tiers, gems))
+    return base, lines
+
+
+ACH_BASE, ACH_LINES = _load_achievements()
+ACH_MEASURED = ("repairs", "player_level", "job_stars", "days_played", "best_streak", "daily_done", "daily_all",
+                "weekly_all", "cars_discovered", "crates_opened")
 
 
 def interp(curve, m):
@@ -147,28 +179,25 @@ def _const(src, name):
 def sync_check():
     """Simülasyon sabitleri oyundaki GDScript sabitleriyle aynı mı? Farklıysa sonuç yanlıştır."""
     import re
-    gr, cm, pp, qc = _gd("gameplay/gem_rewards.gd"), _gd("gameplay/crate_manager.gd"), \
-        _gd("gameplay/player_progress.gd"), _gd("gameplay/quest_catalog.gd")
+    gr, cm, pp, qc, mc = _gd("gameplay/gem_rewards.gd"), _gd("gameplay/crate_manager.gd"), \
+        _gd("gameplay/player_progress.gd"), _gd("gameplay/quest_catalog.gd"), _gd("gameplay/missions/mission_catalog.gd")
     ints = lambda s: [int(x) for x in re.findall(r"-?\d+", s)]
     game = {
         "LOGIN_CYCLE": ints(_const(gr, "LOGIN_CYCLE")),
-        "TASK_GEMS": ints(_const(gr, "TASK_GEMS"))[0], "ALL_TASKS_BONUS": ints(_const(gr, "ALL_TASKS_BONUS"))[0],
-        "WEEKLY_GEMS": ints(_const(gr, "WEEKLY_GEMS"))[0], "WEEKLY_NEED": ints(_const(gr, "WEEKLY_NEED"))[0],
-        "TASK_MIN_LEVEL": ints(_const(gr, "TASK_MIN_LEVEL"))[0],
+        "DAILY_BONUS_GEMS": ints(_const(mc, "DAILY_BONUS_GEMS"))[0], "TASK_MIN_LEVEL": ints(_const(mc, "MIN_LEVEL"))[0],
+        "WEEKLY_GEMS": ints(_const(mc, "WEEKLY_GEMS"))[0], "WEEKLY_BONUS_GEMS": ints(_const(mc, "WEEKLY_BONUS_GEMS"))[0],
         "TIP_EVERY": ints(_const(gr, "TIP_EVERY"))[0], "TIP_DAILY_CAP": ints(_const(gr, "TIP_DAILY_CAP"))[0],
         "MASTERY_STAR_GEMS": ints(_const(gr, "MASTERY_STAR_GEMS"))[0],
-        "REPAIR_MILESTONES": [(int(a), int(b)) for a, b in re.findall(r"Vector2i\((\d+),\s*(\d+)\)",
-                                                                       re.search(r"REPAIR_MILESTONES[^\[]*\[(.*?)\]\n", gr, re.S).group(1))],
         "LEVEL_GEMS": ints(_const(pp, "LEVEL_GEMS"))[0], "LEVEL_GEM_MILESTONE": ints(_const(pp, "LEVEL_GEM_MILESTONE"))[0],
         "STORY_GEMS": sum(int(x) for x in re.findall(r'"gems":\s*(\d+)', qc)),
     }
     for name in ("DUP_SCRAP", "DISCOVERY_GEMS"):
         game[name] = {k: int(v) for k, v in re.findall(r'&"(\w+)":\s*(\d+)', _const(cm, name))}
     game["COLLECTION_MILESTONES"] = {int(k): int(v) for k, v in re.findall(r"(\d+):\s*(\d+)", _const(cm, "COLLECTION_MILESTONES"))}
-    sim = {"LOGIN_CYCLE": LOGIN_CYCLE, "TASK_GEMS": TASK_GEMS, "ALL_TASKS_BONUS": ALL_TASKS_BONUS,
-           "WEEKLY_GEMS": WEEKLY_GEMS, "WEEKLY_NEED": WEEKLY_NEED, "TASK_MIN_LEVEL": TASK_MIN_LEVEL,
+    sim = {"LOGIN_CYCLE": LOGIN_CYCLE, "DAILY_BONUS_GEMS": DAILY_BONUS_GEMS, "TASK_MIN_LEVEL": TASK_MIN_LEVEL,
+           "WEEKLY_GEMS": WEEKLY_GEMS, "WEEKLY_BONUS_GEMS": WEEKLY_BONUS_GEMS,
            "TIP_EVERY": TIP_EVERY, "TIP_DAILY_CAP": TIP_DAILY_CAP, "MASTERY_STAR_GEMS": MASTERY_STAR_GEMS,
-           "REPAIR_MILESTONES": REPAIR_MILESTONES, "LEVEL_GEMS": LEVEL_GEMS, "LEVEL_GEM_MILESTONE": LEVEL_GEM_MILESTONE,
+           "LEVEL_GEMS": LEVEL_GEMS, "LEVEL_GEM_MILESTONE": LEVEL_GEM_MILESTONE,
            "STORY_GEMS": sum(g for _, g in STORY), "DUP_SCRAP": DUP_SCRAP, "DISCOVERY_GEMS": DISCOVERY_GEMS,
            "COLLECTION_MILESTONES": COLLECTION_MILESTONES}
     bad = [k for k in sim if sim[k] != game[k]]
@@ -252,19 +281,37 @@ def report_ncrates(n_players, rng):
 
 
 def simulate_player(profile, rng, days=30):
-    mpd, tasks = PROFILES[profile]
+    mpd, p_daily_all, p_weekly_all, weekly_partial = PROFILES[profile]
     owned = {STARTING_VEHICLE}
     discovered = set(owned)
     earned = {"hikaye": START_GEMS, "seviye": 0, "giris": 0, "gunluk": 0, "haftalik": 0, "ustalik": 0,
-              "tamir_tasi": 0, "bahsis": 0, "kesif": 0, "koleksiyon": 0, "kopya": 0}
+              "basarim": 0, "bahsis": 0, "kesif": 0, "koleksiyon": 0, "kopya": 0}
     spent = opened = dups = 0
     dup_by = {"common": 0, "rare": 0, "epic": 0, "legendary": 0}
-    story_prev = lv_prev = stars_prev = rep_step = 0
+    story_prev = stars_prev = 0
     lv_prev = 1
     paid_ms = set()
     free_crate = True
-    week_tasks = 0
+    metrics = {k: 0 for k in ACH_MEASURED}
+    ach_paid = {k: 0 for k in ACH_MEASURED}   # ödenmiş yıldız sayısı
     snaps = {}
+
+    def pay_achievements():
+        stars = sum(ach_paid.values())
+        for k in ACH_MEASURED:
+            for tier, gm in ACH_LINES.get(k, [])[ach_paid[k]:]:
+                if metrics[k] < tier:
+                    break
+                ach_paid[k] += 1
+                earned["basarim"] += gm
+        # YILDIZ TOPLAYICI: diğer çizgilerin yıldızları (ölçülmeyen çizgiler sayılmaz → alt sınır)
+        meta = ACH_LINES.get("ach_stars", [])
+        total = sum(ach_paid.values())
+        while ach_paid.get("_meta", 0) < len(meta) and total >= meta[ach_paid.get("_meta", 0)][0]:
+            earned["basarim"] += meta[ach_paid.get("_meta", 0)][1]
+            ach_paid["_meta"] = ach_paid.get("_meta", 0) + 1
+        return sum(ach_paid.values()) != stars
+
     for day in range(1, days + 1):
         m = mpd * day
         story = sum(gm for t, gm in STORY if t <= m)
@@ -275,19 +322,24 @@ def simulate_player(profile, rng, days=30):
         lv_prev = lv
         earned["giris"] += LOGIN_CYCLE[(day - 1) % 7]
         if lv >= TASK_MIN_LEVEL:
-            earned["gunluk"] += tasks * TASK_GEMS + (ALL_TASKS_BONUS if tasks >= 3 else 0)
-            week_tasks += tasks
+            metrics["daily_done"] += 4
+            if rng.random() < p_daily_all:
+                earned["gunluk"] += DAILY_BONUS_GEMS
+                metrics["daily_done"] += 1
+                metrics["daily_all"] += 1
+            if day % 7 == 0:
+                if rng.random() < p_weekly_all:
+                    earned["haftalik"] += 5 * WEEKLY_GEMS + WEEKLY_BONUS_GEMS
+                    metrics["weekly_all"] += 1
+                else:
+                    earned["haftalik"] += weekly_partial * WEEKLY_GEMS
         earned["bahsis"] += min(int(mpd * REPAIRS_PER_MIN / TIP_EVERY), TIP_DAILY_CAP)
-        if day % 7 == 0:
-            if week_tasks >= WEEKLY_NEED:
-                earned["haftalik"] += WEEKLY_GEMS
-            week_tasks = 0
         s = int(interp(STAR_CURVE, m))
         earned["ustalik"] += (s - stars_prev) * MASTERY_STAR_GEMS
         stars_prev = s
-        while rep_step < len(REPAIR_MILESTONES) and m * REPAIRS_PER_MIN >= REPAIR_MILESTONES[rep_step][0]:
-            earned["tamir_tasi"] += REPAIR_MILESTONES[rep_step][1]
-            rep_step += 1
+        metrics.update(repairs=int(m * REPAIRS_PER_MIN), player_level=lv, job_stars=s, days_played=day,
+                       best_streak=day, cars_discovered=len(discovered), crates_opened=opened)
+        pay_achievements()
         gems = sum(earned.values()) - spent
         while True:
             crate = pick_crate(owned, lv)
@@ -318,6 +370,8 @@ def simulate_player(profile, rng, days=30):
                         paid_ms.add(th)
                         earned["koleksiyon"] += gm
                         gems += gm
+        metrics.update(cars_discovered=len(discovered), crates_opened=opened)
+        pay_achievements()
         snaps[day] = {"lv": lv, "earned": sum(earned.values()), "spent": spent, "opened": opened, "owned": len(owned),
                       "dups": dups, "dup_by": dict(dup_by), "src": dict(earned),
                       "epic": sum(1 for c in owned if CAR[c]["rarity"] == "epic"),
@@ -340,6 +394,9 @@ def report_days(n_players, rng):
                 100 * sum(o == TOTAL for o in own) / n_players, st.mean(s["dups"] for s in S),
                 st.mean(s["epic"] for s in S), st.mean(s["leg"] for s in S),
                 100 * st.mean(s["e46"] for s in S), 100 * st.mean(s["e60"] for s in S)))
+        for a_, b_ in ((1, 7), (7, 30)):
+            print("gün %d→%d arası ortalama gem/gün: %.1f" % (a_, b_, st.mean(
+                (r[b_]["earned"] - r[a_]["earned"]) / (b_ - a_) for r in runs)))
         S = [r[30] for r in runs]
         print("30. gün gem kaynakları:", {k: round(st.mean(s["src"][k] for s in S)) for k in S[0]["src"]})
         print("30. gün kopya nadirliği:", {k: round(st.mean(s["dup_by"][k] for s in S), 2) for k in S[0]["dup_by"]})

@@ -64,6 +64,7 @@ var _mastery: JobMastery
 var _decor: DecorManager
 var _crates: CrateManager
 var _gem_rewards: GemRewards
+var _purchases: PurchaseManager
 var _missions: MissionManager
 var _ads: AdService
 var _race: RaceManager
@@ -96,6 +97,7 @@ func _setup() -> void:
 	_gem_rewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
 	_missions = get_tree().get_first_node_in_group("missions") as MissionManager
 	_ads = get_tree().get_first_node_in_group("ads") as AdService
+	_purchases = get_tree().get_first_node_in_group("purchases") as PurchaseManager
 	_race = get_tree().get_first_node_in_group("race") as RaceManager
 	_tutorial = get_tree().get_first_node_in_group("tutorial") as TutorialManager
 	if visit_mode:
@@ -202,6 +204,8 @@ func new_game() -> void:
 		_missions.reset()
 	if _ads:
 		_ads.reset()
+	if _purchases:
+		_purchases.reset()
 	if _race:
 		_race.reset()
 	if _tutorial:
@@ -250,8 +254,12 @@ func apply_snapshot(raw: Variant) -> bool:
 	var data: Dictionary = validate(raw)
 	if data.is_empty():
 		return false
+	# Parayla alınmış gem kaybolmasın: gelen kayıtta olmayan yerel satın almalar geri eklenir
+	var previous_purchases: Dictionary = _purchases.state() if _purchases else {}
 	_loading = true
 	_apply(data)
+	if _purchases:
+		_purchases.carry_over(previous_purchases)
 	_loading = false
 	save_game()
 	game_loaded.emit(true)
@@ -305,6 +313,9 @@ func _collect() -> Dictionary:
 		"missions": _missions.state() if _missions else {},
 		# REKLAM SAYAÇLARI: günlük izleme hakları (saat geri alınarak sıfırlanamaz). Eski kayıtta yoktur: sorun değil.
 		"ads": _ads.state() if _ads else {},
+		# GEM SATIN ALMA DEFTERİ: Play satın alması başına (token özeti) verilen gem. Aynı satın alma iki
+		# kez gem vermesin, bulut kaydı parayla alınan gemi silmesin. Eski kayıtta yoktur: boş defter.
+		"purchases": _purchases.state() if _purchases else {},
 		# KİŞİSEL YARIŞ REKORLARI: araç başına en iyi süre + hayalet izi. Eski kayıtta yoktur: rekorsuz başlanır.
 		"race": _race.state() if _race else {},
 		# EĞİTİM: biten ustalık dersleri. Eski kayıtta yoktur: seviye 2+ oyuncu dersleri bitmiş sayar.
@@ -421,6 +432,9 @@ func _apply(data: Dictionary) -> void:
 	if _ads:
 		var ads_data: Variant = data.get("ads", {})
 		_ads.load_state(ads_data if ads_data is Dictionary else {})
+	if _purchases:
+		var purchase_data: Variant = data.get("purchases", {})
+		_purchases.load_state(purchase_data if purchase_data is Dictionary else {})
 	if _race:
 		var race_data: Variant = data.get("race", {})
 		_race.load_state(race_data if race_data is Dictionary else {})

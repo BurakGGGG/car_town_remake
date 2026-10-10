@@ -21,12 +21,12 @@ const TIER_FACTOR: Dictionary = {Tier.EASY: 0.35, Tier.MEDIUM: 0.65, Tier.HARD: 
 const DAILY_SHARE: Dictionary = {Tier.EASY: 0.02, Tier.MEDIUM: 0.04, Tier.HARD: 0.07}
 const REWARD_FLOOR_MIN: float = 0.5
 ## Günlük görevlerin hepsi bitince verilen gem.
-const DAILY_BONUS_GEMS: int = 40
+const DAILY_BONUS_GEMS: int = 10
 ## Haftalık görev başına ödül: ₺ ve XP (tipik HAFTALIK kazancın / XP'nin payı) + sabit gem.
 const WEEKLY_SHARE: float = 0.03
-const WEEKLY_GEMS: int = 10
+const WEEKLY_GEMS: int = 0
 ## Haftalık BÜYÜK ÖDÜL: gem + bedava kasa + XP (tipik haftalık XP'nin payı).
-const WEEKLY_BONUS_GEMS: int = 120
+const WEEKLY_BONUS_GEMS: int = 40
 const WEEKLY_BONUS_XP_SHARE: float = 0.06
 ## Günlük görevler bu oyuncu seviyesinden sonra açılır (eski GemRewards kuralı).
 const MIN_LEVEL: int = 3
@@ -82,13 +82,15 @@ const WEEKLY_POOL: Array[Dictionary] = [
 
 ## --- BAŞARIM ÇİZGİLERİ -----------------------------------------------------------------------
 ## id, title, metric, kind ("counter": yaşam boyu sayaç · "state": oyunun anlık durumu), tiers (eşikler),
-## mult (gem zorluk çarpanı), gems (verilirse yıldız başına gem listesi: eski tamir kilometre taşları).
-## Yıldız başına taban gem: 5 · 15 · 30 · 60 · 100; ₺ ve XP gemle orantılı (§6.3).
-const ACH_GEMS: Array[int] = [5, 15, 30, 60, 100]
-const ACH_MONEY_PER_GEM: int = 60
-const ACH_XP_PER_GEM: int = 6
+## mult (değer zorluk çarpanı), value (verilirse yıldız başına değer listesi: eski tamir kilometre taşları).
+## Yıldız başına taban DEĞER: 5 · 15 · 30 · 60 · 100; ₺ ve XP değerle orantılı (§6.3). Gem değerin
+## ACH_GEM_SHARE'idir (2026-10-11 elmas ekonomisi: gem kısıldı, ₺ / XP aynı kaldı).
+const ACH_VALUE: Array[int] = [5, 15, 30, 60, 100]
+const ACH_GEM_SHARE: float = 0.2
+const ACH_MONEY_PER_VALUE: int = 60
+const ACH_XP_PER_VALUE: int = 6
 const ACHIEVEMENTS: Array[Dictionary] = [
-	{"id": &"a_repairs", "title": "TAMİRCİ", "text": "%s tamir tamamla", "metric": &"repairs", "kind": &"counter", "tiers": [50, 250, 1000, 2500, 5000], "gems": [10, 20, 30, 50, 75]},
+	{"id": &"a_repairs", "title": "TAMİRCİ", "text": "%s tamir tamamla", "metric": &"repairs", "kind": &"counter", "tiers": [50, 250, 1000, 2500, 5000], "value": [10, 20, 30, 50, 75]},
 	{"id": &"a_earn", "title": "KAZANÇLI", "text": "Tamirlerden toplam %s ₺ kazan", "metric": &"repair_money", "kind": &"counter", "tiers": [10000, 100000, 1000000, 5000000], "mult": 1.0},
 	{"id": &"a_spend", "title": "HARCAMACI", "text": "Toplam %s ₺ harca", "metric": &"money_spent", "kind": &"counter", "tiers": [20000, 200000, 1000000, 5000000], "mult": 0.8},
 	{"id": &"a_race_wins", "title": "YARIŞÇI", "text": "%s yarış kazan", "metric": &"race_wins", "kind": &"counter", "tiers": [3, 15, 50, 150], "mult": 1.0},
@@ -109,7 +111,7 @@ const ACHIEVEMENTS: Array[Dictionary] = [
 	{"id": &"a_perfect", "title": "MÜKEMMEL GÜN", "text": "%s günün tüm görevlerini bitir", "metric": &"daily_all", "kind": &"counter", "tiers": [3, 15, 50, 150], "mult": 1.0},
 	{"id": &"a_weekly", "title": "HAFTA YILDIZI", "text": "%s haftanın tüm görevlerini bitir", "metric": &"weekly_all", "kind": &"counter", "tiers": [1, 4, 12, 26], "mult": 1.2},
 	{"id": &"a_meta", "title": "YILDIZ TOPLAYICI", "text": "Toplam %s başarım yıldızı topla", "metric": &"ach_stars", "kind": &"state", "tiers": [10, 25, 50, 80], "mult": 1.0},
-	{"id": &"a_legend", "title": "EFSANE GARAJ SAHİBİ", "text": "Tüm araçlar, garaj Sv.4, 3 alan, 10. rütbe ve 35 ustalık yıldızı", "metric": &"legend", "kind": &"state", "tiers": [1], "gems": [500]},
+	{"id": &"a_legend", "title": "EFSANE GARAJ SAHİBİ", "text": "Tüm araçlar, garaj Sv.4, 3 alan, 10. rütbe ve 35 ustalık yıldızı", "metric": &"legend", "kind": &"state", "tiers": [1], "value": [500]},
 ]
 ## Dönem anahtarları (kayıt).
 const LIFE: StringName = &"life"
@@ -169,18 +171,23 @@ static func text_of(template_id: StringName, target: int) -> String:
 	return text % shown if text.contains("%s") else text
 
 
-## Başarım çizgisinin n. yıldızının (0 tabanlı) gem ödülü.
-static func ach_gems(line: Dictionary, star: int) -> int:
-	if line.has("gems"):
-		var list: Array = line["gems"]
+## Başarım çizgisinin n. yıldızının (0 tabanlı) ödül değeri (₺ / XP / gem bundan türer).
+static func ach_value(line: Dictionary, star: int) -> int:
+	if line.has("value"):
+		var list: Array = line["value"]
 		return int(list[clampi(star, 0, list.size() - 1)])
-	var base: int = ACH_GEMS[clampi(star, 0, ACH_GEMS.size() - 1)]
+	var base: int = ACH_VALUE[clampi(star, 0, ACH_VALUE.size() - 1)]
 	return maxi(int(round(float(base) * float(line.get("mult", 1.0)))), 1)
 
 
+## Başarım çizgisinin n. yıldızının (0 tabanlı) gem ödülü.
+static func ach_gems(line: Dictionary, star: int) -> int:
+	return maxi(int(round(float(ach_value(line, star)) * ACH_GEM_SHARE)), 1)
+
+
 static func ach_money(line: Dictionary, star: int) -> int:
-	return ach_gems(line, star) * ACH_MONEY_PER_GEM
+	return ach_value(line, star) * ACH_MONEY_PER_VALUE
 
 
 static func ach_xp(line: Dictionary, star: int) -> int:
-	return ach_gems(line, star) * ACH_XP_PER_GEM
+	return ach_value(line, star) * ACH_XP_PER_VALUE

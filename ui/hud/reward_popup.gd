@@ -48,10 +48,13 @@ func _ready() -> void:
 	_build()
 
 
-## summary: money, gems, xp (int), crates (Array: kasa adları), count (alınan ödül sayısı).
+## summary: money, gems, xp (int), crates (Array: kasa adları), count (alınan ödül sayısı),
+## title (isteğe bağlı başlık, ör. gem satın alma).
 func show_rewards(summary: Dictionary) -> void:
 	var count: int = int(summary.get("count", 1))
 	_title.text = Loc.t("ÖDÜLLER TOPLANDI!") if count > 1 else Loc.t("ÖDÜL KAZANDIN!")
+	if summary.has("title"):
+		_title.text = String(summary["title"])
 	_subtitle.text = Loc.t("%d ÖDÜLÜN TOPLAMI") % count if count > 1 else ""
 	_subtitle.visible = count > 1
 	for child: Node in _rows.get_children():

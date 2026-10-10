@@ -102,6 +102,11 @@ func _ensure_crate_system() -> void:
 		var ads: AdService = AdService.new()
 		ads.name = "AdService"
 		add_child(ads)
+	# GEM MAĞAZASI (Google Play Billing): satın alma defteri kayıtta; SaveManager'dan ÖNCE hazır olmalı.
+	if get_tree().get_first_node_in_group("purchases") == null:
+		var purchases: PurchaseManager = PurchaseManager.new()
+		purchases.name = "PurchaseManager"
+		add_child(purchases)
 
 
 ## AYARLAR (grafik / performans / ses; cihaza özel, kayda girmez)

@@ -26,9 +26,9 @@ signal daily_changed
 signal day_changed(day: int)
 
 const LOGIN_CYCLE: Array[int] = [10, 10, 15, 10, 15, 10, 40]
-const TIP_EVERY: int = 20
-const TIP_DAILY_CAP: int = 40
-const MASTERY_STAR_GEMS: int = 10
+const TIP_EVERY: int = 50
+const TIP_DAILY_CAP: int = 3
+const MASTERY_STAR_GEMS: int = 3
 ## Saatin "geri alındı" sayılması için tolerans (sn).
 const ROLLBACK_TOLERANCE: int = 600
 

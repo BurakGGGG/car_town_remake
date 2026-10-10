@@ -41,8 +41,8 @@ const LEVEL_REWARDS: Dictionary = {
 const LEVEL_REWARD_STEP: int = 250
 ## Seviye gemi (kasa ekonomisi, docs/vehicle_crate_design_v2.md §3.2): her seviyede bu kadar,
 ## her 5. seviyede ek LEVEL_GEM_MILESTONE.
-const LEVEL_GEMS: int = 5
-const LEVEL_GEM_MILESTONE: int = 25
+const LEVEL_GEMS: int = 2
+const LEVEL_GEM_MILESTONE: int = 10
 
 var _default_level: int = 1
 var _default_xp: int = 0

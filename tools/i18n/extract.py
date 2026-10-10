@@ -22,7 +22,7 @@ SKIP_CALLS = ("push_warning", "push_error", "print", "printerr", "assert", "get_
 STR = re.compile(r'(?<![&\^$])"((?:[^"\\\n]|\\.)*)"')
 
 TR_UPPER = "ÇĞİÖŞÜ"
-EXCLUDE = {"Master", "Document does not exist", "TÜRKÇE", "ENGLISH", "ESPAÑOL", "DİL · LANGUAGE · IDIOMA"}
+EXCLUDE = {"Master", "Document does not exist", "USD", "mock: hata", "mock: hazır değil", "mock: iptal", "mock: kapalı", "TÜRKÇE", "ENGLISH", "ESPAÑOL", "DİL · LANGUAGE · IDIOMA"}
 
 
 def user_facing(s: str) -> bool:

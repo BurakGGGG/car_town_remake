@@ -134,6 +134,7 @@ var _garage_panel_open: bool = false
 var garage_value_screen: GarageValueScreen
 ## KOLEKSİYON tabelası (showroom ve garaj ekranından açılır).
 var collection_screen: CollectionScreen
+var gem_store_screen: GemStoreScreen
 ## Dünyadaki teslimat kasasının AÇ / sonuç plakası.
 var crate_panel: CratePanel
 var _crates: CrateManager
@@ -1013,6 +1014,9 @@ func _build_progress_screens() -> void:
 	host.add_child(profile_screen)
 	collection_screen = CollectionScreen.new()
 	host.add_child(collection_screen)
+	gem_store_screen = GemStoreScreen.new()
+	gem_store_screen.hud = self
+	host.add_child(gem_store_screen)
 	profile_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
 	garage_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
 
@@ -1050,6 +1054,7 @@ func _register_screens() -> void:
 	router.register(&"race_result", race_result_screen, UiRouter.Kind.MODAL)
 	router.register(&"collection", collection_screen, UiRouter.Kind.MODAL)
 	router.register(&"friends", friends_screen, UiRouter.Kind.MODAL)
+	router.register(&"gem_store", gem_store_screen, UiRouter.Kind.MODAL)
 	# 3D ekranların shader'ları oyun yüklenirken derlensin (ilk açılış takılmasız)
 	drag_race_screen.prewarm.call_deferred()
 	showroom.prewarm.call_deferred()
@@ -1156,6 +1161,33 @@ func _connect_crates() -> void:
 		gem_rewards.reward_granted.connect(func(_amount: int, text: String) -> void:
 			if text != "":
 				_show_notice(text, HudPalette.INK, 1.8))
+	_setup_gem_store()
+
+
+## GEM MAĞAZASI: sol üstteki gem sayacına dokunmak mağazayı açar. Mağaza kapalıyken tamamlanan ödeme
+## (Play'de bekleyen ödeme sonradan onaylandı) bildirimle duyurulur; açıkken mağaza kendi penceresini açar.
+func _setup_gem_store() -> void:
+	var purchases: PurchaseManager = get_tree().get_first_node_in_group("purchases") as PurchaseManager
+	if purchases == null:
+		return   # arkadaş garajı ziyareti: mağaza yok
+	var box: Control = gem_label.get_parent() as Control
+	box.mouse_filter = Control.MOUSE_FILTER_STOP
+	box.gui_input.connect(func(event: InputEvent) -> void:
+		var mb: InputEventMouseButton = event as InputEventMouseButton   # dokunuş fareye çevrilir
+		if mb and mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+			router.open(&"gem_store"))
+	# GEM AL düğmesi: sayaç satırının (Currency) altına, aynı sütuna (Info) eklenir
+	var shop_button: GemShopButton = GemShopButton.new()
+	shop_button.name = "GemShopButton"
+	box.get_parent().get_parent().add_child(shop_button)
+	shop_button.pressed.connect(func() -> void: router.open(&"gem_store"))
+	var refresh_badge: Callable = func() -> void:
+		shop_button.show_badge = purchases.is_available() and purchases.block_reason(GemProducts.STARTER) != "owned"
+	purchases.products_changed.connect(refresh_badge)
+	refresh_badge.call()
+	purchases.gems_purchased.connect(func(_id: StringName, gems: int) -> void:
+		if router.top() != &"gem_store":
+			_show_notice(Loc.t("SATIN ALMA TAMAMLANDI\n+%d GEM") % gems, HudPalette.GEM_DARK, 2.4))
 
 
 ## Showroom'dan kasa alındı: showroom kapanır, kamera garajın teslimat alanına, kasanın gelişine gider.

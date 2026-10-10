@@ -18,7 +18,7 @@ signal screen_requested(id: StringName)
 enum Page { LANGUAGE, GRAPHICS, AUDIO, ACCOUNT, ABOUT }
 
 ## Sürüm adı: export_presets.cfg "version/name" ile AYNI tutulmalı (dışa aktarımda proje ayarına girmiyor).
-const VERSION: String = "1.0.3"
+const VERSION: String = "1.0.4"
 const SITE: String = "https://autoyardwebsite.vercel.app"
 const PRIVACY_URL: String = SITE + "/gizlilik"
 const TERMS_URL: String = SITE + "/kullanim-sartlari"
