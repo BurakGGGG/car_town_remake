@@ -16,10 +16,14 @@ const BASICS: StringName = &"basics"
 const RACE: StringName = &"race"
 const VEHICLES: StringName = &"vehicles"
 const DECOR: StringName = &"decor"
+## Hurdacı Necati'nin dersi (ilk hurdalık ziyareti). Rıza Usta'nın dört ustalık dersinden AYRI sayılır:
+## "DERS x/4" numaraları ve all_done() onları kapsar; eski kayıt kuralı bu dersi bitmiş saymaz (yeni içerik).
+const JUNKYARD: StringName = &"junkyard"
+const EXTRA: Array[StringName] = [JUNKYARD]
 ## Ders sırası yalnızca numara için (DERS 2/4): dersler oyunda koşulu oluşunca başlar.
 const ALL: Array[StringName] = [BASICS, RACE, VEHICLES, DECOR]
 ## Ders bitince verilen ödül (₺). Atlanan ders ödül vermez.
-const REWARD: Dictionary = {BASICS: 500, RACE: 750, VEHICLES: 750, DECOR: 1000}
+const REWARD: Dictionary = {BASICS: 500, RACE: 750, VEHICLES: 750, DECOR: 1000, JUNKYARD: 750}
 ## Eski kayıtta bu seviyeye ulaşmış oyuncu oyunu biliyor sayılır.
 const LEGACY_LEVEL: int = 2
 
@@ -41,13 +45,22 @@ func all_done() -> bool:
 	return true
 
 
+## Biten ustalık dersi sayısı (Rıza Usta'nın dört dersi; "DERS x/4" için).
 func done_count() -> int:
-	return _done.size()
+	var n: int = 0
+	for id: StringName in _done:
+		if ALL.has(id):
+			n += 1
+	return n
+
+
+func is_known(id: StringName) -> bool:
+	return ALL.has(id) or EXTRA.has(id)
 
 
 ## Ders tamamlandı ya da oyuncu atladı (ikisi de bir daha gösterilmez).
 func mark_done(id: StringName) -> void:
-	if _done.has(id) or not ALL.has(id):
+	if _done.has(id) or not is_known(id):
 		return
 	_done.append(id)
 	changed.emit()
@@ -57,7 +70,7 @@ func mark_done(id: StringName) -> void:
 ## EĞİTİMİ ATLA: bütün dersler bitmiş sayılır.
 func skip_all() -> void:
 	var any: bool = false
-	for id: StringName in ALL:
+	for id: StringName in ALL + EXTRA:
 		if not _done.has(id):
 			_done.append(id)
 			any = true
@@ -106,7 +119,7 @@ func load_state(data: Dictionary, present: bool) -> void:
 	if raw is Array:
 		for value: Variant in raw:
 			var id: StringName = StringName(SaveSafe.s(value))
-			if ALL.has(id) and not _done.has(id):
+			if is_known(id) and not _done.has(id):
 				_done.append(id)
 	var replay: Variant = data.get("replay", false)
 	_replay = replay is bool and replay   # bozuk değer ödülü kapatmasın / açmasın

@@ -97,6 +97,11 @@ func _ensure_crate_system() -> void:
 		var junkyard: JunkyardManager = JunkyardManager.new()
 		junkyard.name = "JunkyardManager"
 		add_child(junkyard)
+	# Restorasyon projelerinin garajdaki görünümü (tamir alanının liftinde şasi / paslı / temiz araç)
+	if get_tree().get_first_node_in_group("restoration_bays") == null:
+		var restoration_bays: RestorationBays = RestorationBays.new()
+		restoration_bays.name = "RestorationBays"
+		add_child(restoration_bays)
 	# EĞİTİM durumu (biten dersler). Dersleri HUD'daki TutorialDirector oynatır.
 	if get_tree().get_first_node_in_group("tutorial") == null:
 		var tutorial: TutorialManager = TutorialManager.new()

@@ -1,8 +1,10 @@
 class_name CoachCard
 extends HBoxContainer
-## RIZA USTA'NIN KARTI — eğitim adımının metni. Solda ustanın yuvarlak rozeti (kodla çizilen yüz:
-## kasket, bıyık), sağda plaka: adım çipi, başlık, yazı yazılıyormuş gibi akan metin, adım noktaları,
-## GEÇ ve (adım bir düğmeyle ilerliyorsa) eylem düğmesi. Yazı akarken karta dokunmak metni tamamlar.
+## RIZA USTA'NIN KARTI — eğitim adımının metni. Solda konuşanın yuvarlak rozeti (kodla çizilen yüz),
+## sağda plaka: adım çipi, başlık, yazı yazılıyormuş gibi akan metin, adım noktaları, GEÇ ve (adım bir
+## düğmeyle ilerliyorsa) eylem düğmesi. Yazı akarken karta dokunmak metni tamamlar.
+## Konuşanlar (COACH_*): Rıza Usta (garaj dersleri), Hurdacı Necati ve Çırak Cemo (hurdalık dersi) —
+## hurdalıktaki 3D figürlerle aynı kıyafet ve renkler (tools/world/junk_kit.py necati_standing / cemo).
 ## Kodla kurulur (.tscn yok); TutorialOverlay sahibidir.
 
 ## Eylem düğmesine (İLERİ / TAMAM / HAZIRIM) basıldı.
@@ -10,6 +12,9 @@ signal action_pressed
 ## GEÇ: oyuncu bu dersi geçmek istiyor.
 signal skip_pressed
 
+const COACH_RIZA: StringName = &"riza"
+const COACH_NECATI: StringName = &"necati"
+const COACH_CEMO: StringName = &"cemo"
 const BODY_WIDTH: float = 390.0
 const TITLE_SIZE: int = 22
 const BODY_SIZE: int = 17
@@ -100,7 +105,9 @@ func _ready() -> void:
 
 ## Kartı yeni adımın içeriğiyle doldurur ve yazıyı baştan akıtır.
 ## action "" ise düğme gizlenir (adım oyundaki bir eylemle ilerler).
-func present(chip: String, title: String, body: String, action: String, index: int, count: int) -> void:
+func present(chip: String, title: String, body: String, action: String, index: int, count: int,
+		coach: StringName = COACH_RIZA) -> void:
+	_badge.coach = coach
 	_chip.text = chip
 	_chip.visible = chip != ""
 	_title.text = title
@@ -160,8 +167,10 @@ func _label(variation: StringName, text: String) -> Label:
 	return label
 
 
-## Rıza Usta: gök mavisi yuvarlak tabelada kasketli, bıyıklı usta yüzü; altında isim şeridi.
-## Konuşurken (yazı akarken) hafifçe sallanır.
+## Konuşanın rozeti, altında isim şeridi. Konuşurken (yazı akarken) hafifçe sallanır.
+##   Rıza Usta   gök mavisi zemin, mavi kasket, kahve bıyık, mavi iş tulumu
+##   Necati      pas turuncusu zemin, gri yassı kasket, beyaz kalın bıyık + kaşlar, ekose gömlek
+##   Cemo        kum sarısı zemin, ters kırmızı şapka, bıyıksız sırıtış, yanakta yağ lekesi, turuncu tulum
 class _Badge extends Control:
 	const RADIUS: float = 42.0
 	const SKIN: Color = Color("F2C49B")
@@ -171,6 +180,10 @@ class _Badge extends Control:
 	const MUSTACHE: Color = Color("5B3A29")
 
 	var talking: bool = false
+	var coach: StringName = &"riza":
+		set(value):
+			coach = value
+			queue_redraw()
 	var _t: float = 0.0
 
 	func _init() -> void:
@@ -190,10 +203,19 @@ class _Badge extends Control:
 
 	func _draw() -> void:
 		var c: Vector2 = Vector2(size.x * 0.5, RADIUS + 4.0)
-		# Tabela: gölge, koyu kenar, krem çember, gök mavisi zemin
+		# Tabela: gölge, koyu kenar, krem çember, konuşanın zemin rengi
 		draw_circle(c + Vector2(0.0, 4.0), RADIUS + 3.0, HudPalette.SHADOW)
 		draw_circle(c, RADIUS + 3.0, HudPalette.PLATE_SELECTED_EDGE)
 		draw_circle(c, RADIUS, HudPalette.PLATE_SELECTED)
+		match coach:
+			&"necati":
+				_draw_necati(c)
+				_ribbon(c, Loc.t("HURDACI NECATİ"))
+				return
+			&"cemo":
+				_draw_cemo(c)
+				_ribbon(c, Loc.t("ÇIRAK CEMO"))
+				return
 		draw_circle(c, RADIUS - 5.0, HudPalette.GLASS)
 		# Omuzlar (iş tulumu)
 		draw_colored_polygon(_clip_to_circle(c, RADIUS - 5.0, c + Vector2(0.0, 44.0), 30.0), CAP)
@@ -231,9 +253,11 @@ class _Badge extends Control:
 				var k: float = float(i) / 8.0
 				points.append(c + Vector2(side * lerpf(1.0, 13.0, k), 14.0 + lerpf(4.5, 1.0, k) + k * k * 3.0))
 			draw_colored_polygon(points, MUSTACHE)
-		# İsim şeridi
+		_ribbon(c, Loc.t("RIZA USTA"))
+
+	## İsim şeridi (rozetin altında).
+	func _ribbon(c: Vector2, label: String) -> void:
 		var font: Font = get_theme_default_font()
-		var label: String = Loc.t("RIZA USTA")
 		var font_size: int = 12
 		var width: float = font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x + 16.0
 		var ribbon: Rect2 = Rect2(Vector2(c.x - width * 0.5, c.y + RADIUS - 6.0), Vector2(width, 18.0))
@@ -241,6 +265,96 @@ class _Badge extends Control:
 		draw_rect(ribbon, HudPalette.INK)
 		draw_string(font, Vector2(ribbon.position.x + 8.0, ribbon.position.y + 13.5), label,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, HudPalette.TEXT_LIGHT)
+
+	func _eyes(c: Vector2, y: float, gap: float) -> void:
+		var blink: bool = fmod(_t + (0.7 if coach == &"cemo" else 0.0), 3.6) > 3.45
+		for x: float in [-gap, gap]:
+			if blink:
+				draw_line(c + Vector2(x - 2.5, y), c + Vector2(x + 2.5, y), HudPalette.INK, 2.0, true)
+			else:
+				draw_circle(c + Vector2(x, y), 2.4, HudPalette.INK)
+
+	## Hurdacı Necati: yaşlı; gri yassı kasket, kalın beyaz bıyık ve kaşlar, ekose gömlek, mavi tulum askısı.
+	func _draw_necati(c: Vector2) -> void:
+		var skin: Color = Color("E4B48C")
+		var skin_shade: Color = Color("C99370")
+		var white: Color = Color("EDEAE3")
+		draw_circle(c, RADIUS - 5.0, Color("C9773D"))
+		# Gömlek (ekose: kırmızı zemin, koyu çizgiler) + tulum askıları
+		var shoulders: PackedVector2Array = _clip_to_circle(c, RADIUS - 5.0, c + Vector2(0.0, 46.0), 31.0)
+		draw_colored_polygon(shoulders, Color("B5463A"))
+		for k: int in 5:
+			var x: float = -24.0 + k * 12.0
+			draw_line(c + Vector2(x, 22.0), c + Vector2(x, 37.0), Color("7E2B24"), 2.0, true)
+		draw_line(c + Vector2(-26.0, 30.0), c + Vector2(26.0, 30.0), Color("7E2B24"), 2.0, true)
+		for side: float in [-1.0, 1.0]:
+			draw_line(c + Vector2(side * 10.0, 22.0), c + Vector2(side * 12.0, 37.0), Color("355E8C"), 5.0, true)
+		# Kulaklar, yüz (biraz uzun), kırışıklar
+		draw_circle(c + Vector2(-18.5, 6.0), 5.5, skin_shade)
+		draw_circle(c + Vector2(18.5, 6.0), 5.5, skin_shade)
+		draw_colored_polygon(_oval(c + Vector2(0.0, 7.0), Vector2(18.0, 20.0)), skin)
+		# Yassı kasket: geniş, öne eğik
+		draw_colored_polygon(_oval(c + Vector2(0.0, -8.0), Vector2(21.5, 10.0)), Color("6D6862"))
+		draw_colored_polygon(PackedVector2Array([c + Vector2(-19.0, -6.0), c + Vector2(23.0, -4.0),
+			c + Vector2(25.0, 0.5), c + Vector2(-18.0, -1.0)]), Color("4F4B46"))
+		# Kaşlar (gür, beyaz), gözler, burun
+		for side: float in [-1.0, 1.0]:
+			draw_colored_polygon(PackedVector2Array([c + Vector2(side * 3.0, 0.5), c + Vector2(side * 12.0, -0.5),
+				c + Vector2(side * 12.5, 2.5), c + Vector2(side * 3.5, 3.0)]), white)
+		_eyes(c, 6.0, 7.0)
+		draw_circle(c + Vector2(0.0, 11.5), 3.8, skin_shade)
+		# Kalın beyaz pala bıyık; konuşurken altında ağız
+		var mouth: float = absf(sin(_t * 14.0)) * 3.0 if talking else 0.0
+		draw_circle(c + Vector2(0.0, 20.5), 2.0 + mouth, Color("7A3B2E"))
+		for side: float in [-1.0, 1.0]:
+			var points: PackedVector2Array = PackedVector2Array()
+			for i: int in 9:
+				var k: float = float(i) / 8.0
+				points.append(c + Vector2(side * lerpf(0.5, 15.0, k), 14.5 - sin(k * PI) * 1.5 + k * k * 5.0))
+			for i: int in range(8, -1, -1):
+				var k: float = float(i) / 8.0
+				points.append(c + Vector2(side * lerpf(0.5, 15.0, k), 14.5 + lerpf(6.0, 1.5, k) + k * k * 5.0))
+			draw_colored_polygon(points, white)
+
+	## Çırak Cemo: genç; ters kırmızı şapka (siperi arkada), bıyıksız sırıtış, yanakta yağ lekesi, turuncu tulum.
+	func _draw_cemo(c: Vector2) -> void:
+		var skin: Color = Color("EDBE93")
+		var skin_shade: Color = Color("D39C72")
+		draw_circle(c, RADIUS - 5.0, Color("E7C26A"))
+		draw_colored_polygon(_clip_to_circle(c, RADIUS - 5.0, c + Vector2(0.0, 46.0), 31.0), Color("E07B2A"))
+		draw_rect(Rect2(c + Vector2(-6.0, 24.0), Vector2(12.0, 9.0)), Color("B85E1C"))   # cep
+		draw_circle(c + Vector2(-18.5, 7.0), 5.0, skin_shade)
+		draw_circle(c + Vector2(18.5, 7.0), 5.0, skin_shade)
+		draw_colored_polygon(_oval(c + Vector2(0.0, 7.0), Vector2(17.5, 18.5)), skin)
+		# Ters şapka: kubbe + arkaya (sola) taşan siper, önde ayar bandı
+		var dome: PackedVector2Array = PackedVector2Array()
+		for i: int in 17:
+			dome.append(c + Vector2(0.0, -3.0) + Vector2.from_angle(PI + PI * float(i) / 16.0) * Vector2(19.5, 16.0))
+		draw_colored_polygon(dome, Color("C8352B"))
+		draw_colored_polygon(PackedVector2Array([c + Vector2(-27.0, -1.0), c + Vector2(4.0, -4.5),
+			c + Vector2(4.0, -0.5), c + Vector2(-25.0, 3.0)]), Color("98261F"))
+		draw_rect(Rect2(c + Vector2(4.0, -5.5), Vector2(9.0, 3.0)), Color("F2E6D0"))
+		# Saç perçemi, gözler, burun, yağ lekesi
+		draw_colored_polygon(PackedVector2Array([c + Vector2(6.0, -2.0), c + Vector2(17.0, -2.5),
+			c + Vector2(14.0, 3.0)]), Color("3A2A20"))
+		_eyes(c, 6.0, 6.5)
+		draw_circle(c + Vector2(0.0, 11.0), 3.0, skin_shade)
+		draw_colored_polygon(_oval(c + Vector2(-11.0, 13.5), Vector2(4.5, 2.2)), Color(0.18, 0.15, 0.13, 0.55))
+		# Sırıtış (konuşurken açılır)
+		var open: float = absf(sin(_t * 14.0)) * 3.0 if talking else 0.0
+		var smile: PackedVector2Array = PackedVector2Array()
+		for i: int in 11:
+			var k: float = float(i) / 10.0
+			smile.append(c + Vector2(lerpf(-8.0, 8.0, k), 17.0 + sin(k * PI) * (3.0 + open)))
+		draw_colored_polygon(smile, Color("7A3B2E"))
+		draw_line(c + Vector2(-6.0, 17.3), c + Vector2(6.0, 17.3), Color.WHITE, 1.6, true)
+
+	func _oval(center: Vector2, r: Vector2) -> PackedVector2Array:
+		var pts: PackedVector2Array = PackedVector2Array()
+		for i: int in 28:
+			var a: float = TAU * float(i) / 28.0
+			pts.append(center + Vector2(cos(a) * r.x, sin(a) * r.y))
+		return pts
 
 	## Omuz dairesinin tabela dairesi içinde kalan kısmı (çokgen yaklaşık).
 	func _clip_to_circle(c: Vector2, r: float, oc: Vector2, orad: float) -> PackedVector2Array:

@@ -59,6 +59,9 @@ func _connect() -> void:
 	var mastery: JobMastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
 	if mastery:
 		mastery.mastery_up.connect(func(_id: StringName, _stars: int) -> void: _check_completed())
+	var junkyard: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
+	if junkyard:
+		junkyard.visited.connect(func(_count: int) -> void: _check_completed())
 	var crates: CrateManager = get_tree().get_first_node_in_group("crates") as CrateManager
 	if crates:
 		crates.crate_added.connect(func(uid: int) -> void:
@@ -112,6 +115,9 @@ func progress(quest_id: StringName) -> int:
 		QuestCatalog.Type.JOB_STARS:
 			var mastery: JobMastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
 			value = mastery.total_stars() if mastery else 0
+		QuestCatalog.Type.JUNKYARD_VISITS:
+			var junkyard: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
+			value = junkyard.visit_count() if junkyard else 0
 		_:
 			value = int(_counters.get(quest_id, 0))
 	return clampi(value, 0, target)

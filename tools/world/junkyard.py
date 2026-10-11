@@ -223,7 +223,13 @@ def junk_pile(col, name, cx, cy, radius, height, count, seed, shells=0.45, hero=
             b.cyl((px, py, pz + 0.2), 0.42, 0.28, tire, segs=9, rot=(r.uniform(-70, 70), r.uniform(-40, 40), 0))
         else:
             b.cyl((px, py, pz + 0.15), 0.34, 0.18, steel, segs=9, rot=(r.uniform(-70, 70), 0, 0))
-    return b.finish(col)
+    # Orijin yığının merkezine (oyun seçimi / sallanma animasyonu bu noktayı kullanır; eskiden sahne
+    # köşesindeydi, altı yığın aynı noktaya izdüşüyordu)
+    from mathutils import Matrix
+    o = b.finish(col)
+    o.data.transform(Matrix.Translation((-cx, -cy, 0.0)))
+    o.location = (cx, cy, 0.0)
+    return o
 
 
 def car_tower(col, name, x, y, levels, seed):

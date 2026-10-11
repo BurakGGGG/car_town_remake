@@ -193,6 +193,192 @@ func _run() -> void:
 	check(jy.total_parts() == 0 and jy.project_count() == 0 and jy.completed_ids().is_empty(), "yeni oyun hurdalığı sıfırladı")
 	check((disk().get("junkyard", {}) as Dictionary).get("projects", [1]).is_empty(), "diskteki kayıt da boş")
 
+	print("== 11) SAHA: GÜNÜN ARAÇLARI ==")
+	var gem: GemRewards = g(&"gem_rewards")
+	var t0: int = 1_800_000_000
+	gem.test_now = t0
+	var yard: Array[StringName] = jy.yard_cars()
+	check(yard.size() == 2 and yard.has(&"opel_corsa") and yard.has(&"hyundai_getz"),
+		"sahada havuzun 2 temel aracı (usta kilitli, modelsiz yok)")
+	check(jy.yard_cars() == yard, "aynı gün aynı araçlar")
+	jy.load_state(jy.state())
+	check(jy.yard_cars() == yard, "kayıttan yüklenince aynı saha (gün + tuz kayıtta)")
+	var left: int = jy.seconds_to_yard_refresh()
+	check(left > 0 and left <= 86400, "yenilenmeye kalan süre bir günü aşmaz (%d sn)" % left)
+	check(jy.start(&"opel_corsa"), "sahadaki araç başlatıldı")
+	var after: Array[StringName] = jy.yard_cars()
+	check(after.size() == 2 and after[yard.find(&"opel_corsa")] == &"", "başlatılan araç sahadan kalktı, yeri boş")
+	gem.test_now = t0 + 86400
+	var only_getz: Array[StringName] = [&"hyundai_getz"]
+	check(jy.yard_cars() == only_getz, "ertesi gün yeniden çekildi; projedeki araç havuzda yok")
+	check(jy.quit(&"opel_corsa") and jy.yard_cars() == only_getz,
+		"bırakılan araç aynı gün sahaya dönmez (çekiliş günde bir)")
+	gem.test_now = t0 - 86400
+	check(jy.yard_cars() == only_getz, "saat geri alınınca saha geri gitmez")
+
+	print("== 12) SAHA: HURDA YIĞINLARI ==")
+	gem.test_now = t0 + 86400
+	var refill: int = RestorationCatalog.yard_int("refill_minutes") * 60
+	check(jy.pile_count() == 6 and jy.ready_pile_count() == 6, "6 yığın, hepsi dolu")
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 7
+	var parts_before: int = jy.total_parts()
+	var first: Dictionary = jy.search_pile(0, rng)
+	check(first["ok"] and not (first["parts"] as Dictionary).is_empty(), "ilk arama her zaman dolu (Cemo'nun dersi)")
+	var got: int = 0
+	for n: Variant in (first["parts"] as Dictionary).values():
+		got += int(n)
+	check(jy.total_parts() == parts_before + got, "bulunanlar envantere girdi")
+	check(not jy.pile_ready(0) and jy.pile_seconds_left(0) == refill, "aranan yığın dolma süresi kadar boş")
+	check(not jy.search_pile(0, rng)["ok"], "boş yığın aranamaz")
+	check(jy.next_pile_seconds() == refill and jy.ready_pile_count() == 5, "en yakın dolma süresi, 5 dolu yığın")
+	var empty: int = 0
+	var seen: Dictionary = {}
+	var runs: int = 2000
+	for k: int in runs:
+		gem.test_now += refill
+		var result: Dictionary = jy.search_pile(1, rng)
+		if (result["parts"] as Dictionary).is_empty():
+			empty += 1
+		for part_id: StringName in result["parts"]:
+			seen[part_id] = int(seen.get(part_id, 0)) + int(result["parts"][part_id])
+	var rate: float = float(empty) / float(runs)
+	check(absf(rate - RestorationCatalog.yard_rule("empty_chance")) < 0.04, "boş çıkma oranı kurala uyuyor (%.3f)" % rate)
+	check(seen.keys().all(func(p: StringName) -> bool: return p in [&"bolt", &"nut", &"piston", &"gear"]),
+		"yalnız açık kademenin reçete parçaları düştü %s" % [seen.keys()])
+	check(seen.size() == 4, "açık kademenin her parçası düşebiliyor")
+	jy.search_pile(2, rng)
+	var searches: int = jy.search_count()
+	var st: Dictionary = jy.state()
+	jy.load_state(st)
+	check(not jy.pile_ready(2) and jy.pile_ready(3) and jy.search_count() == searches, "yığın zamanlayıcıları kayıtta")
+	(st["yard"] as Dictionary)["piles"] = [9_999_999_999, 0]
+	jy.load_state(st)
+	check(jy.pile_seconds_left(0) <= refill and jy.pile_ready(1), "bozuk kayıttan gelen ileri zaman süreyi aşamaz")
+	print("== 12b) TAMİRDEN PARÇA DÜŞMESİ ==")
+	var bay_manager: RepairBayManager = g(&"repair_bays")
+	bay_manager.load_state(1)
+	var drop_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	drop_rng.seed = 11
+	var closed_drops: int = 0
+	for k: int in 300:
+		if jy.roll_repair_drop(drop_rng) != &"":
+			closed_drops += 1
+	check(not jy.is_open() and closed_drops == 0, "hurdalık kapalıyken tamirden parça düşmez")
+	bay_manager.load_state(2)
+	var drops: int = 0
+	var before_parts: int = jy.total_parts()
+	for k: int in 3000:
+		if jy.roll_repair_drop(drop_rng) != &"":
+			drops += 1
+	var drop_rate: float = float(drops) / 3000.0
+	check(jy.is_open() and absf(drop_rate - RestorationCatalog.yard_rule("repair_drop")) < 0.02,
+		"hurdalık açıkken tamirde %%%d olasılıkla parça (%.3f)" % [int(RestorationCatalog.yard_rule("repair_drop") * 100), drop_rate])
+	check(jy.total_parts() == before_parts + drops, "düşen parçalar envantere girdi")
+	gem.test_now = -1
+
+	print("== 13) HARİTA ROTASI ==")
+	# Yolculuk animasyonu yolun ortasında donuyordu: kesik çizgi döngüsü kayan nokta hatasıyla bitmiyordu.
+	var map_data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(MapScreen.MAP_DATA))
+	var route: PackedVector2Array = PackedVector2Array()
+	for p: Variant in map_data["route"]:
+		route.append(Vector2(float(p[0]), float(p[1])) * Vector2(1152.0, 648.0))
+	check(route.size() >= 4 and (map_data["places"] as Dictionary).has("junkyard"), "harita verisi: rota + mekânlar")
+	var route_started: int = Time.get_ticks_msec()
+	var monotonic: bool = true
+	var previous: int = 0
+	var end_head: Vector2 = Vector2.ZERO
+	for dash: float in [6.0, 13.824, 7.3333333, 0.37, 41.0]:
+		previous = 0
+		for k: int in 3001:
+			var drawn: Dictionary = MapScreen.dashes(route, float(k) / 3000.0, dash)
+			var count: int = (drawn["spans"] as PackedVector2Array).size()
+			if count < previous:
+				monotonic = false
+			previous = count
+			end_head = drawn["head"]
+	var elapsed: int = Time.get_ticks_msec() - route_started
+	check(elapsed < 20000, "15.000 kare rota çizimi takılmadan bitti (%d ms)" % elapsed)
+	check(monotonic, "ilerledikçe çizgi sayısı azalmıyor")
+	check(end_head.distance_to(route[route.size() - 1]) < 0.01, "%100'de araç işareti yolun sonunda")
+	var reversed_route: PackedVector2Array = route.duplicate()
+	reversed_route.reverse()
+	check((MapScreen.dashes(reversed_route, 1.0, 13.8)["head"] as Vector2).distance_to(route[0]) < 0.01, "ters yön (şehre dönüş) de sona varıyor")
+
+	print("== 13b) HURDALIK DÜNYASI: YIĞIN MERKEZLERİ ==")
+	var yard_world: JunkyardWorld = JunkyardWorld.new()
+	root.add_child(yard_world)
+	await frames(2)
+	# Blender'daki arama yığınları (junkyard.py search_piles) → Godot (x, 0, -y)
+	var expected: Array[Vector2] = [Vector2(17, 26), Vector2(30, 33), Vector2(44, 34.5), Vector2(16, 9), Vector2(38.5, 30), Vector2(21, 37.5)]
+	var near: bool = yard_world.piles.size() == expected.size()
+	for i: int in mini(yard_world.piles.size(), expected.size()):
+		var p: Vector3 = yard_world.pile_position(i)
+		near = near and Vector2(p.x, -p.z).distance_to(expected[i]) < 2.5
+	check(near, "her yığının seçim / sallanma merkezi kendi yerinde (eskiden hepsi sahne köşesindeydi)")
+	check(yard_world.spots.size() == JunkyardWorld.DAILY_COUNT, "günün araçları için 3 yer")
+	yard_world.free()
+
+	print("== 14) GARAJDA PROJE: 3 AŞAMA + PANO ==")
+	var restoration_bays: RestorationBays = g(&"restoration_bays")
+	check(restoration_bays != null, "RestorationBays kodla kuruldu")
+	jy.reset()
+	for p: StringName in [&"bolt", &"nut", &"piston", &"gear"]:
+		jy.add_parts(p, 1, &"debug")
+	check(jy.start(&"opel_corsa"), "proje başladı")
+	await frames(3)
+	var display: RestorationDisplay = restoration_bays.display_of(&"opel_corsa")
+	check(display != null and display.is_inside_tree(), "projenin görünümü tamir alanında kuruldu")
+	if display:
+		check(display.get_parent() == rm.repair_car_spots[jy.bay_of(&"opel_corsa")], "görünüm alanın (CarSpot) çocuğu: alan taşınınca birlikte gider")
+		check(display.stage == 0 and display.chassis != null and display.chassis.visible and not display.model.visible, "%0: yalnız çıplak şasi")
+		jy.install(&"opel_corsa", &"bolt")
+		jy.install(&"opel_corsa", &"nut")
+		check(display.stage == 1 and display.model.visible and display.chassis.visible, "%50: araç şasinin üstünde")
+		var overlay: bool = false
+		for node: Node in display.model.find_children("*", "MeshInstance3D", true, false):
+			overlay = overlay or (node as MeshInstance3D).material_overlay != null
+		check(overlay, "%50: pas katmanı takılı")
+		var wheels_hidden: bool = true
+		for role: StringName in [&"tires", &"rims", &"wheels"]:
+			for mesh: MeshInstance3D in display.rig.get_meshes(role):
+				wheels_hidden = wheels_hidden and not mesh.visible
+		check(wheels_hidden, "%50: tekerlekler gizli")
+	var hud_node: Hud = main.find_child("HUD", true, false) as Hud
+	hud_node.restoration_panel.vehicle_id = &"opel_corsa"
+	hud_node.router.open(&"restoration")
+	await frames(3)
+	var rows: VBoxContainer = hud_node.restoration_panel.get("_rows")
+	check(rows.get_child_count() == RestorationCatalog.recipe(&"opel_corsa").size(), "panoda reçete satırları")
+	check(not (hud_node.restoration_panel.get("_install_all") as PlateButton).disabled, "HEPSİNİ TAK açık (envanterde parça var)")
+	jy.install_all(&"opel_corsa")
+	await frames(2)
+	if display:
+		check(display.stage == 2 and display.model.visible and not display.chassis.visible, "%100: temiz araç, şasi gizli")
+		var overlay_left: bool = false
+		for node: Node in display.model.find_children("*", "MeshInstance3D", true, false):
+			overlay_left = overlay_left or (node as MeshInstance3D).material_overlay != null
+		check(not overlay_left, "%100: pas katmanı kalktı")
+	check((hud_node.restoration_panel.get("_finish") as PlateButton).visible, "panoda BİTİR göründü")
+	hud_node.restoration_panel.call("_on_finish")
+	await frames(30)
+	check(jy.is_completed(&"opel_corsa") and own.is_owned(&"opel_corsa"), "BİTİR: araç garaja girdi")
+	check(restoration_bays.display_of(&"opel_corsa") == null, "görünüm kaldırıldı, alan boşaldı")
+	hud_node.router.close_all()
+
+	print("== 15) HURDALIK EKRANI + MÜZİK ==")
+	var music: GameMusic = root.get_node_or_null(GameMusic.NODE_NAME) as GameMusic
+	hud_node.router.open(&"junkyard")
+	await frames(5)
+	check(hud_node.junkyard_screen.world() != null and hud_node.junkyard_screen.world().spots.size() == 3,
+		"hurdalık ekranı dünyayı kurdu")
+	var yard_theme: AudioStreamPlayer = music.get_node_or_null("JunkyardTheme") as AudioStreamPlayer if music else null
+	check(yard_theme != null and yard_theme.playing, "hurdalıkta hurdalık teması çalıyor")
+	hud_node.router.close_all()
+	await create_timer(1.6).timeout
+	check(hud_node.junkyard_screen.world() == null, "kapanınca hurdalık dünyası bellekten silindi")
+	check(yard_theme != null and not yard_theme.playing and not music.stream_paused, "çıkınca garaj teması geri geldi")
+
 	RestorationCatalog.load_from()
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)

@@ -15,7 +15,13 @@ static var _tiers: Array[Dictionary] = []
 static var _tier_by_id: Dictionary = {}
 static var _planned: Array[Dictionary] = []   # json'daki sırayla, modeli olsun olmasın
 static var _by_id: Dictionary = {}
+static var _yard: Dictionary = {}
 static var _loaded_from: String = ""
+## Saha kuralları eksikse (eski / bozuk veri) kullanılan değerler.
+const YARD_DEFAULTS: Dictionary = {
+	"daily_cars": 3, "piles": 6, "refill_minutes": 480, "empty_chance": 0.25, "parts_min": 1, "parts_max": 1,
+	"repair_drop": 0.1,
+}
 
 
 # --- Parçalar ------------------------------------------------------------------------
@@ -118,6 +124,19 @@ static func total_required(vehicle_id: StringName) -> int:
 	return total
 
 
+# --- Saha ---------------------------------------------------------------------------
+
+## Hurdalık sahası kuralı (restorations.json "yard"): daily_cars, piles, refill_minutes, empty_chance,
+## parts_min, parts_max, repair_drop. Sayılar sınırlanır (bozuk veri oyunu kilitlemesin).
+static func yard_rule(key: String) -> float:
+	_ensure_loaded()
+	return float(_yard.get(key, YARD_DEFAULTS.get(key, 0)))
+
+
+static func yard_int(key: String) -> int:
+	return int(yard_rule(key))
+
+
 # --- Yükleme -----------------------------------------------------------------------
 
 static func load_from(path: String = DATA_PATH) -> bool:
@@ -127,6 +146,7 @@ static func load_from(path: String = DATA_PATH) -> bool:
 	_tier_by_id = {}
 	_planned = []
 	_by_id = {}
+	_yard = {}
 	_loaded_from = path
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if file == null:
@@ -164,6 +184,17 @@ static func load_from(path: String = DATA_PATH) -> bool:
 		t.make_read_only()
 		_tiers.append(t)
 		_tier_by_id[id] = t
+	var yard: Variant = (data as Dictionary).get("yard", {})
+	if yard is Dictionary:
+		_yard = {
+			"daily_cars": clampi(int(yard.get("daily_cars", 3)), 1, 3),
+			"piles": clampi(int(yard.get("piles", 6)), 1, 6),
+			"refill_minutes": clampi(int(yard.get("refill_minutes", 480)), 1, 7 * 24 * 60),
+			"empty_chance": clampf(float(yard.get("empty_chance", 0.25)), 0.0, 0.95),
+			"parts_min": clampi(int(yard.get("parts_min", 1)), 1, 10),
+			"repair_drop": clampf(float(yard.get("repair_drop", 0.1)), 0.0, 1.0),
+		}
+		_yard["parts_max"] = clampi(int(yard.get("parts_max", 1)), int(_yard["parts_min"]), 10)
 	for raw: Variant in (data as Dictionary).get("cars", []):
 		if raw is Dictionary:
 			var entry: Dictionary = _normalize(raw)

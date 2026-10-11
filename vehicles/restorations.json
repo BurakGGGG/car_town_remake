@@ -2,57 +2,58 @@
  "version": 1,
  "_readme": [
   "HURDALIK / RESTORASYON — tek veri kaynağı (RestorationCatalog okur). Araştırma ve kararlar: docs/HURDALIK_ARASTIRMA.md",
-  "parts: genel, yığılabilir parçalar (envanter). gem_price: eksik parçayı gemle almanın tanesi (onay plakasıyla). DENGELENMEDİ — tools/economy simülasyonuyla ayarlanacak.",
+  "parts: genel, yığılabilir parçalar (envanter). gem_price: eksik parçayı gemle almanın tanesi (onay plakasıyla). 2026-10-12 kullanıcı kararı: ilk taslağın iki katı (4–6 gem; günde ~35 gem kazanılıyor → gemle almak çoğunlukla son birkaç parçayı tamamlamak için).",
   "tiers: requires_completed = açılması için gereken TEMEL restorasyon sayısı (orijinal: 10 → Master Mechanic).",
   "cars: sıra = listede gösterim sırası (zorluk merdiveni). recipe: parça → gereken adet; ilerleme = takılan toplam / gereken toplam.",
   "  Araç ancak vehicles/cars.json'da aynı id ile kayıtlıysa (model hazırsa) oyunda görünür; yoksa 'model bekleniyor' sayılır ve atlanır.",
-  "  name / year / class burada yalnızca model gelmeden önceki plan içindir; model gelince cars.json esastır."
+  "  name / year / class burada yalnızca model gelmeden önceki plan içindir; model gelince cars.json esastır.",
+  "yard: hurdalık sahası kuralları (2026-10-12 kullanıcı kararı, tools/economy/junkyard_sim.py): daily_cars sahadaki araç (her gece yarısı yenilenir); piles aranabilir yığın; refill_minutes aranan yığının yeniden dolma süresi; empty_chance boş çıkma olasılığı; parts_min..parts_max dolu aramada parça (açık kademelerin reçetelerindeki parçalardan eşit olasılıkla); repair_drop her tamirde 1 parça düşme olasılığı (hurdalık açıksa). İlk arama her zaman dolu. Simülasyon (günde 3–4 oturum): temel araç ~1,4 gün, usta ~10,7 gün; günde 2 oturum ~1,4 / 11 gün, 6 oturum ~1,4 / 9,5 gün."
  ],
  "parts": [
   {
    "id": "bolt",
    "name": "CIVATA",
-   "gem_price": 2
+   "gem_price": 4
   },
   {
    "id": "nut",
    "name": "SOMUN",
-   "gem_price": 2
+   "gem_price": 4
   },
   {
    "id": "paint",
    "name": "BOYA",
-   "gem_price": 3
+   "gem_price": 6
   },
   {
    "id": "spark_plug",
    "name": "BUJİ",
-   "gem_price": 2
+   "gem_price": 4
   },
   {
    "id": "piston",
    "name": "PİSTON",
-   "gem_price": 3
+   "gem_price": 6
   },
   {
    "id": "gear",
    "name": "DİŞLİ",
-   "gem_price": 3
+   "gem_price": 6
   },
   {
    "id": "motor_oil",
    "name": "MOTOR YAĞI",
-   "gem_price": 2
+   "gem_price": 4
   },
   {
    "id": "belt",
    "name": "KAYIŞ",
-   "gem_price": 2
+   "gem_price": 4
   },
   {
    "id": "fiberglass",
    "name": "FİBERGLAS",
-   "gem_price": 3
+   "gem_price": 6
   }
  ],
  "tiers": [
@@ -72,6 +73,15 @@
    "requires_completed": 10
   }
  ],
+ "yard": {
+  "daily_cars": 3,
+  "piles": 6,
+  "refill_minutes": 480,
+  "empty_chance": 0.25,
+  "parts_min": 1,
+  "parts_max": 1,
+  "repair_drop": 0.1
+ },
  "cars": [
   {
    "id": "tofas_murat_124",

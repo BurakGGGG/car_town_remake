@@ -141,10 +141,11 @@ func set_target(rect: Rect2, circle: bool) -> void:
 	_target = rect
 
 
-func show_card(chip: String, title: String, body: String, action: String, index: int, count: int, place: StringName) -> void:
+func show_card(chip: String, title: String, body: String, action: String, index: int, count: int, place: StringName,
+		coach: StringName = CoachCard.COACH_RIZA) -> void:
 	place_card(place)
 	card.visible = true
-	card.present(chip, title, body, action, index, count)
+	card.present(chip, title, body, action, index, count, coach)
 	if sfx:
 		sfx.play(&"pop")
 	if _card_tween:

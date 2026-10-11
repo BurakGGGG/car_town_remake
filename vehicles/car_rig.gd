@@ -529,6 +529,18 @@ func spin_wheels(delta_degrees: float) -> void:
 	set_wheel_spin(spin_deg + delta_degrees)
 
 
+## Tekerlekleri gösterir / gizler (restorasyon projesi: araç tekerleksiz, şasinin üstünde). Teker grupları
+## ve tekerlek / lastik / jant rollerindeki bütün parçalar.
+func set_wheels_visible(on: bool) -> void:
+	for group: Dictionary in _wheel_groups:
+		for mesh: Variant in group["meshes"]:
+			if is_instance_valid(mesh):
+				(mesh as MeshInstance3D).visible = on
+	for role: StringName in [&"wheels", &"tires", &"rims"]:
+		for mesh: MeshInstance3D in get_meshes(role):
+			mesh.visible = on
+
+
 ## Ön tekerleri Y ekseninde direksiyon açısına çevirir (derece, + = sol).
 func set_steer(degrees: float) -> void:
 	steer_deg = degrees

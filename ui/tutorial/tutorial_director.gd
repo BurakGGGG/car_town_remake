@@ -8,11 +8,14 @@ extends Node
 ##   ARAÇ KOLEKSİYONU İLK KASA görevi bitince ya da garaja kasa gelince — ödül → kasa → AÇ → ARAÇLAR → MAĞAZA
 ##   DRAG YARIŞI      ilk rakip 🏁 balonuyla yanaşınca — davet → YARIŞ → kurallar → canlı yarış → sonuç
 ##   GARAJINI SÜSLE   seviye 3'te — GARAJ → DÜZENLE → eşya seç → yerleştir → BİTİR
+##   HURDALIK         ilk hurdalık ziyaretinde (Necati + Cemo) — yığın ara → PARÇALAR → araç → RESTORE ET
+##                    Rıza Usta'nın dört dersinden ayrı sayılır (TutorialManager.EXTRA).
 ## Ders yalnızca oyuncu boştayken açılır (açık ekran, kasa açılışı yokken) ve dersler arasında nefes
 ## payı bırakılır. Her ders kartında SONRA (bir süre sonra yeniden sorulur), her adımda DERSİ GEÇ var.
 ##
 ## ADIM = sözlük. Anahtarlar:
 ##   title, text      Rıza Usta'nın kartı (Loc.t ile çevrilmiş)
+##   coach            kartta konuşan (CoachCard.COACH_*; varsayılan Rıza Usta)
 ##   target           Callable → Control | Node3D | null — spot ışığının hedefi (her karede okunur)
 ##   button           "" değilse adım bu düğmeyle ilerler
 ##   done             Callable → bool: adım tamamlandı (oyundaki eylem)
@@ -40,7 +43,7 @@ const TRIGGER_INTERVAL: float = 0.5
 const DECOR_LEVEL: int = 3
 ## Gösterim sırası: koşulu aynı anda oluşan derslerden önce gelen.
 const ORDER: Array[StringName] = [TutorialManager.BASICS, TutorialManager.VEHICLES, TutorialManager.RACE,
-	TutorialManager.DECOR]
+	TutorialManager.DECOR, TutorialManager.JUNKYARD]
 
 var hud: Hud
 var overlay: TutorialOverlay
@@ -107,6 +110,10 @@ func _connect() -> void:
 		_delivery.reveal_finished.connect(func(_u: int) -> void: _flag(&"reveal_finished"))
 	if _decor:
 		_decor.instance_added.connect(func(_i: StringName) -> void: _flag(&"decor_placed"))
+	var junkyard: JunkyardManager = tree.get_first_node_in_group("junkyard") as JunkyardManager
+	if junkyard:
+		junkyard.pile_searched.connect(func(_i: int, _p: Dictionary) -> void: _flag(&"pile_searched"))
+		junkyard.project_started.connect(func(_id: StringName, _bay: int) -> void: _flag(&"project_started"))
 	_reward_popup = RewardPopup.new()
 	_reward_popup.hud = hud
 	overlay.add_child(_reward_popup)
@@ -146,26 +153,32 @@ static func disabled_by_env() -> bool:
 
 
 func _try_start() -> void:
-	if _manager == null or _manager.all_done() or GarageVisit.is_visiting() or disabled_by_env():
+	if _manager == null or GarageVisit.is_visiting() or disabled_by_env():
+		return
+	if _manager.all_done() and _manager.is_done(TutorialManager.JUNKYARD):
 		return
 	if get_tree().root.get_node_or_null("LoadingScreen") != null:
 		_ready_at = -1.0
 		return
 	if _ready_at < 0.0:
 		_ready_at = _clock
-	if _clock - _ready_at < START_DELAY or _clock < _next_allowed or not _ui_idle():
+	if _clock - _ready_at < START_DELAY or _clock < _next_allowed:
 		return
 	for id: StringName in ORDER:
-		if _manager.is_done(id) or _clock < float(_postponed.get(id, 0.0)):
+		if _manager.is_done(id) or _clock < float(_postponed.get(id, 0.0)) or not _ui_idle(id):
 			continue
 		if _can_start(id):
 			_begin(id)
 			return
 
 
-## Oyuncu boşta mı: ekran / pano açık değil, kasa açılmıyor, satın alma plakası yok.
-func _ui_idle() -> bool:
-	if hud == null or hud.router == null or hud.router.top() != &"":
+## Oyuncu boşta mı: ekran / pano açık değil, kasa açılmıyor, satın alma plakası yok. Hurdalık dersi
+## için "boşta" = hurdalık ekranı açık ve üstünde pano yok.
+func _ui_idle(id: StringName = &"") -> bool:
+	if hud == null or hud.router == null:
+		return false
+	var screen: StringName = &"junkyard" if id == TutorialManager.JUNKYARD else &""
+	if hud.router.top() != screen:
 		return false
 	if hud.crate_panel and hud.crate_panel.visible:
 		return false
@@ -187,6 +200,8 @@ func _can_start(id: StringName) -> bool:
 			return _race != null and _race.has_challenge()
 		TutorialManager.DECOR:
 			return _player != null and _player.level >= DECOR_LEVEL
+		TutorialManager.JUNKYARD:
+			return hud.junkyard_screen != null and hud.junkyard_screen.world() != null
 	return false
 
 
@@ -267,7 +282,7 @@ func _enter_step() -> void:
 	_card_place = place
 	var chip: String = "%s  ·  %d / %d" % [_chapter_title(_chapter), _index + 1, _steps.size()]
 	overlay.show_card(chip, String(step.get("title", "")), String(step.get("text", "")),
-		String(step.get("button", "")), _index, _steps.size(), place)
+		String(step.get("button", "")), _index, _steps.size(), place, step.get("coach", CoachCard.COACH_RIZA))
 
 
 ## Kart hedefin karşı yarısına: hedef üstteyse alta, alttaysa üste. Hedef yoksa ortaya (bilgi) / alta.
@@ -485,6 +500,8 @@ func _chapter_title(id: StringName) -> String:
 			return Loc.t("ARAÇ KOLEKSİYONU")
 		TutorialManager.DECOR:
 			return Loc.t("GARAJINI SÜSLE")
+		TutorialManager.JUNKYARD:
+			return Loc.t("HURDALIK")
 	return ""
 
 
@@ -509,6 +526,10 @@ func _intro_info(id: StringName) -> Dictionary:
 			return {"caption": caption, "icon": ChapterCard.Icon.BRUSH, "title": _chapter_title(id),
 				"subtitle": Loc.t("Güzel bir garaj müşteriyi de, arkadaşlarını da etkiler. Garajını kendi zevkine göre döşe!"),
 				"primary": Loc.t("BAŞLA"), "secondary": Loc.t("SONRA")}
+		TutorialManager.JUNKYARD:
+			return {"caption": Loc.t("HURDALIK DERSİ"), "icon": ChapterCard.Icon.WRENCH, "title": Loc.t("HURDACI NECATİ"),
+				"subtitle": Loc.t("Hoş geldin evlat! Ben Necati, bu hurdalık benim. Çırağım Cemo sana sahayı gösterecek."),
+				"primary": Loc.t("BAŞLA"), "secondary": Loc.t("SONRA")}
 	return {}
 
 
@@ -522,7 +543,50 @@ func _build_steps(id: StringName) -> Array[Dictionary]:
 			return _vehicle_steps()
 		TutorialManager.DECOR:
 			return _decor_steps()
+		TutorialManager.JUNKYARD:
+			return _junkyard_steps()
 	return []
+
+
+## HURDALIK (Necati + Cemo): hoş geldin → sarı halkalı yığını ara → PARÇALAR → günün aracı → RESTORE ET → kapanış.
+## İlk arama her zaman doludur (JunkyardManager): Cemo'nun yığını boş çıkmaz.
+func _junkyard_steps() -> Array[Dictionary]:
+	var screen: JunkyardScreen = hud.junkyard_screen
+	var in_yard: Callable = func() -> bool: return hud.router.current_place() == &"junkyard"
+	var no_cars: Callable = func() -> bool:
+		var jy: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
+		return jy == null or jy.yard_cars().all(func(id: StringName) -> bool: return id == &"")
+	return [
+		{"coach": CoachCard.COACH_NECATI, "title": Loc.t("HOŞ GELDİN EVLAT"),
+			"text": Loc.t("Kırk yıldır bu sahadayım. Her hurdanın bir hikâyesi var; doğru parçalarla hepsi yeniden yola çıkar. Cemo, göster bakalım!"),
+			"button": Loc.t("İLERİ"), "fail": func() -> bool: return not in_yard.call()},
+		{"coach": CoachCard.COACH_CEMO, "title": Loc.t("SARI HALKALI YIĞIN"),
+			"text": Loc.t("Selam usta! Sarı halkalı yığınlar aranabilir. Şuna dokun, beraber bakalım!"),
+			"target": func() -> Control: return screen.tutorial_anchor(&"pile"),
+			"skip_if": func() -> bool: return screen.tutorial_anchor(&"pile") == null,
+			"done": func() -> bool: return _flags.has(&"pile_searched"),
+			"fail": func() -> bool: return not in_yard.call()},
+		{"coach": CoachCard.COACH_CEMO, "title": Loc.t("PARÇALAR"),
+			"text": Loc.t("Bulduğun parçalar PARÇALAR'da birikir. Aranan yığın 8 saatte yeniden dolar; bazen boş çıkar, moralini bozma!"),
+			"target": func() -> Control: return screen.tutorial_anchor(&"parts"), "hand": false,
+			"button": Loc.t("İLERİ"), "fail": func() -> bool: return not in_yard.call()},
+		{"coach": CoachCard.COACH_NECATI, "title": Loc.t("GÜNÜN ARABALARI"),
+			"text": Loc.t("Sahadaki arabalar bugünün malı. Birine dokun, neye ihtiyacı var bak."),
+			"target": func() -> Control: return screen.tutorial_anchor(&"car"),
+			"skip_if": no_cars,
+			"done": func() -> bool: return screen.tutorial_anchor(&"car_panel") != null,
+			"fail": func() -> bool: return not in_yard.call()},
+		{"coach": CoachCard.COACH_NECATI, "title": Loc.t("RESTORE ET"),
+			"text": Loc.t("Beğendiysen RESTORE ET: araba garajındaki bir tamir alanına taşınır, parçaları orada takarsın. Bitince senin!"),
+			"target": func() -> Control: return screen.tutorial_anchor(&"restore"), "hand": false,
+			"skip_if": func() -> bool: return no_cars.call() or screen.tutorial_anchor(&"car_panel") == null,
+			"button": Loc.t("İLERİ"),
+			"done": func() -> bool: return _flags.has(&"project_started"),
+			"fail": func() -> bool: return not in_yard.call()},
+		{"coach": CoachCard.COACH_NECATI, "title": Loc.t("HER GECE YENİ MAL"),
+			"text": Loc.t("Her gece yarısı sahaya yeni arabalar gelir. Tamir işlerinden de arada parça çıkar. Hadi kolay gelsin evlat!"),
+			"button": Loc.t("TAMAM")},
+	]
 
 
 ## İLK TAMİR: müşteri gelir → araca dokun → TAMİRE AL → süre → PARA TOPLA → kazanç → görevler → garaj.

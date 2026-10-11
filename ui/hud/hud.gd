@@ -134,6 +134,10 @@ var _garage_panel_open: bool = false
 var garage_value_screen: GarageValueScreen
 ## KOLEKSİYON tabelası (showroom ve garaj ekranından açılır).
 var collection_screen: CollectionScreen
+var junkyard_screen: JunkyardScreen
+var restoration_panel: RestorationPanel
+var map_screen: MapScreen
+var map_button: PlateButton
 var gem_store_screen: GemStoreScreen
 ## Dünyadaki teslimat kasasının AÇ / sonuç plakası.
 var crate_panel: CratePanel
@@ -180,6 +184,7 @@ func _ready() -> void:
 	_build_friends()
 	_build_progress_screens()
 	_build_race_screens()
+	_build_junkyard_screens()
 	_register_screens()
 
 	name_plate.pressed.connect(_on_name_plate_pressed)
@@ -449,7 +454,27 @@ func _connect_gameplay() -> void:
 	_quests = get_tree().get_first_node_in_group("quests") as QuestManager
 	if _quests:
 		_quests.quests_changed.connect(_refresh_quest_button)
+		_quests.quests_changed.connect(_refresh_map_button)
 		_quests.quest_completed.connect(_on_quest_completed)
+	var restoration_bays: RestorationBays = get_tree().get_first_node_in_group("restoration_bays") as RestorationBays
+	if restoration_bays:
+		restoration_bays.project_selected.connect(func(id: StringName) -> void:
+			if router.place_open():
+				return
+			restoration_panel.vehicle_id = id
+			router.open(&"restoration"))
+	var junkyard: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
+	if junkyard:
+		junkyard.parts_gained.connect(func(part_id: StringName, amount: int, source: StringName) -> void:
+			if source == &"repair":
+				_show_notice(Loc.t("HURDALIK PARÇASI  +%d %s") % [amount, RestorationCatalog.part_name(part_id)],
+					HudPalette.COIN_DARK, 2.0))
+		junkyard.opened.connect(func() -> void:
+			_refresh_map_button()
+			_show_notice(Loc.t("HURDALIK AÇILDI\nHARİTA'DAN NECATİ'YE GİT"), HudPalette.COIN_DARK, 2.6))
+	if _bays:
+		_bays.bays_changed.connect(_refresh_map_button)
+	_refresh_map_button()
 	_missions = get_tree().get_first_node_in_group("missions") as MissionManager
 	if _missions:
 		_missions.missions_changed.connect(_refresh_quest_button)
@@ -1038,6 +1063,88 @@ func _build_race_screens() -> void:
 	race_result_screen.bonus_requested.connect(_on_race_bonus_requested)
 
 
+## HARİTA + HURDALIK (docs/HURDALIK_TASARIM.md §1): ikisi de PLACE. Şehirden HARİTA plakası (alt
+## sekme sırasının sonunda) haritayı açar; harita yolculuğu bitince hedef mekân açılır. Hurdalıkta HARİTA
+## plakası haritayı "buradasın: hurdalık" olarak açar; harita kapatılırsa (yolculuksuz) hurdalığa dönülür.
+func _build_junkyard_screens() -> void:
+	var host: Node = garage_screen.get_parent()
+	map_screen = MapScreen.new()
+	host.add_child(map_screen)
+	junkyard_screen = JunkyardScreen.new()
+	host.add_child(junkyard_screen)
+	restoration_panel = RestorationPanel.new()
+	host.add_child(restoration_panel)
+	restoration_panel.screen_requested.connect(func(id: StringName) -> void: router.open(id))
+	restoration_panel.closed.connect(func() -> void:
+		var bays: RestorationBays = get_tree().get_first_node_in_group("restoration_bays") as RestorationBays
+		if bays:
+			bays.clear_selection())
+	restoration_panel.project_finished.connect(func(id: StringName) -> void:
+		var entry: Dictionary = CarCatalog.get_entry(id)
+		_show_notice(Loc.t("RESTORASYON TAMAM!\n%s GARAJINA GELDİ") % String(entry.get("display_name", id)).to_upper(),
+			HudPalette.COIN_DARK, 2.8))
+	map_screen.travel_requested.connect(_on_map_travel)
+	map_screen.travel_started.connect(func(place: StringName) -> void:
+		if place == &"junkyard":
+			var junkyard: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
+			var daily: Array[StringName] = []
+			if junkyard:
+				daily = junkyard.yard_cars()
+			JunkyardWorld.preload_assets(daily))
+	map_screen.closed.connect(_on_map_closed)
+	junkyard_screen.map_requested.connect(func() -> void: _open_map(&"junkyard"))
+	junkyard_screen.collection_requested.connect(func() -> void: router.open(&"collection"))
+	map_button = PlateButton.new()
+	map_button.name = "MapButton"
+	map_button.custom_minimum_size = garage_button.custom_minimum_size
+	map_button.theme_type_variation = &"HudPlate"
+	map_button.kind = HudIcon.Kind.MAP
+	map_button.text = Loc.t("HARİTA")
+	map_button.focus_mode = Control.FOCUS_NONE
+	map_button.visible = false   # hikâye göreviyle görünür (_refresh_map_button)
+	map_button.pressed.connect(func() -> void: _open_map(&"city"))
+	garage_button.get_parent().add_child(map_button)
+
+
+var _map_travelled: bool = false
+
+
+func _open_map(from: StringName) -> void:
+	map_screen.current = from
+	_map_travelled = false
+	router.open(&"map")
+
+
+func _on_map_travel(place: StringName) -> void:
+	_map_travelled = true
+	if place == &"junkyard":
+		router.open(&"junkyard")
+		var junkyard: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
+		if junkyard:
+			junkyard.record_visit()
+	else:
+		router.close_all()
+
+
+## Harita yolculuksuz kapandı (KAPAT / GERİ): hurdalıktan açıldıysa hurdalığa dönülür.
+func _on_map_closed() -> void:
+	if _map_travelled or map_screen.current != &"junkyard":
+		return
+	_map_travelled = true   # tekrar girme (router.open aşağıda haritayı da kapatır)
+	router.open.call_deferred(&"junkyard")
+
+
+## HARİTA plakası hurdalığın hikâye görevi aktifleşince (ya da hurdalık açıksa) görünür.
+func _refresh_map_button() -> void:
+	if map_button == null:
+		return
+	var junkyard: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
+	var shown: bool = junkyard != null and junkyard.is_open()
+	if _quests and (_quests.is_active(&"junkyard_visit") or _quests.is_claimed(&"junkyard_visit")):
+		shown = true
+	map_button.visible = shown
+
+
 func _register_screens() -> void:
 	router.register(&"garage", garage_screen, UiRouter.Kind.PLACE)
 	router.register(&"showroom", showroom, UiRouter.Kind.PLACE)
@@ -1055,6 +1162,9 @@ func _register_screens() -> void:
 	router.register(&"collection", collection_screen, UiRouter.Kind.MODAL)
 	router.register(&"friends", friends_screen, UiRouter.Kind.MODAL)
 	router.register(&"gem_store", gem_store_screen, UiRouter.Kind.MODAL)
+	router.register(&"map", map_screen, UiRouter.Kind.PLACE)
+	router.register(&"junkyard", junkyard_screen, UiRouter.Kind.PLACE)
+	router.register(&"restoration", restoration_panel, UiRouter.Kind.MODAL)
 	# 3D ekranların shader'ları oyun yüklenirken derlensin (ilk açılış takılmasız)
 	drag_race_screen.prewarm.call_deferred()
 	showroom.prewarm.call_deferred()
@@ -1083,7 +1193,8 @@ func _on_ui_stack_changed(top: StringName, place_open: bool) -> void:
 ## sahneleri ayrı SubViewport'larda, etkilenmez). Ölçüldü (dekorlu garaj): showroom / garaj / yarış
 ## açıkken arkadaki şehir ~500 çizim çağrısı ve ~600k üçgen harcıyordu — hiç görünmediği hâlde.
 ## Dekorasyon düzenleyici dünyayı arka planda gösterdiği için listede YOK.
-const WORLD_COVERING_PLACES: Array[StringName] = [&"garage", &"showroom", &"settings", &"drag_race"]
+const WORLD_COVERING_PLACES: Array[StringName] = [&"garage", &"showroom", &"settings", &"drag_race", &"map",
+	&"junkyard"]
 ## Açılış geçişi bitmeden dünya kapanırsa arkada siyah parlama görünür: bu kadar beklenir.
 const WORLD_HIDE_DELAY: float = 0.4
 

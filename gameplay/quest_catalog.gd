@@ -14,9 +14,10 @@ class_name QuestCatalog
 ##   GARAGE_RANK    garaj değeri rütbesi (1-10)                 (durum)
 ##   JOB_STARS      tüm arızalardan toplanan ustalık yıldızı    (durum)
 ##   CRATES_BOUGHT  showroom'dan GEMLE alınan kasa sayısı         (sayaç; görev ödülü kasa sayılmaz)
+##   JUNKYARD_VISITS hurdalığa harita yolculuğu sayısı           (durum: JunkyardManager.visit_count)
 ## Ödül: "xp", "gems", "money", "crate" (kasa id — ücretsiz teslimat kasası; hepsi isteğe bağlı).
 
-enum Type { REPAIRS, REPAIR_MONEY, PAINTS, OWN_VEHICLES, UPGRADE_LEVEL, PLAYER_LEVEL, REPAIR_BAYS, GARAGE_RANK, JOB_STARS, CRATES_BOUGHT }
+enum Type { REPAIRS, REPAIR_MONEY, PAINTS, OWN_VEHICLES, UPGRADE_LEVEL, PLAYER_LEVEL, REPAIR_BAYS, GARAGE_RANK, JOB_STARS, CRATES_BOUGHT, JUNKYARD_VISITS }
 
 const ENTRIES: Array[Dictionary] = [
 	# --- İLK 10 DAKİKA: döngüyü öğret ---
@@ -33,6 +34,9 @@ const ENTRIES: Array[Dictionary] = [
 	{"id": &"first_earnings", "title": "İLK KAZANÇ", "text": "Tamirlerden 3.000 ₺ kazan", "type": Type.REPAIR_MONEY, "target": 3000, "xp": 40, "money": 1000},
 	{"id": &"bigger_garage", "title": "BÜYÜK GARAJ", "text": "Garajı 2. seviyeye genişlet", "type": Type.UPGRADE_LEVEL, "upgrade": &"garage_level", "target": 2, "xp": 60, "gems": 10, "money": 2000},
 	{"id": &"second_bay", "title": "İKİNCİ ALAN", "text": "2. tamir alanını satın al", "type": Type.REPAIR_BAYS, "target": 2, "xp": 70, "money": 2500},
+	# Hurdalığın hikâye görevi (docs/HURDALIK_TASARIM.md §1): HARİTA plakası bu görevle görünür olur, hurdalık
+	# 2. tamir alanıyla açılır (JunkyardManager.OPEN_BAYS).
+	{"id": &"junkyard_visit", "title": "HURDACI NECATİ", "text": "HARİTA'dan hurdalığa git, Necati'yle tanış", "type": Type.JUNKYARD_VISITS, "target": 1, "xp": 60, "money": 1500},
 	# --- 40-90 DAKİKA: ilk araç, boya, koleksiyon ---
 	{"id": &"collector", "title": "KOLEKSİYONCU", "text": "2 araca sahip ol", "type": Type.OWN_VEHICLES, "target": 2, "xp": 80, "gems": 15, "money": 2500},
 	{"id": &"first_paint", "title": "YENİ RENK", "text": "Garajda bir aracını boya", "type": Type.PAINTS, "target": 1, "xp": 50, "gems": 10, "money": 1000},

@@ -51,8 +51,11 @@ oyuncunun gördüğü her şeyin tasarımıdır.
 ## 5. Hurda yığınları
 - **Görünüş:** karışık metal yığını (sac, jant, boru, motor parçası). Aranabilir olanın üstünde sarı
   halka / işaret.
-- **Sayı ve dolma süresi:** ekonomi simülasyonuyla belirlenecek. Hedef: temel araç ~1–2 gün, usta araç
-  ~1–2 hafta. Sonuçlar kullanıcıya getirilecek.
+- **Sayı ve dolma süresi (2026-10-12, simülasyon + kullanıcı kararı):** sahnedeki **6 yığının hepsi**
+  aktif, aranan yığın **8 saatte** dolar, her arama **1 parça**, **%25 boş**. Tamirden düşme **%10**.
+  Simülasyon (tools/economy/junkyard_sim.py, günde 3–4 oturum): temel araç ~1,4 gün, usta ~10,7 gün; günde 2
+  oturum 1,4 / 11 gün, 6 oturum 1,4 / 9,5 gün — az oynayan geride kalmıyor (en adil seçenek).
+- **Gem fiyatı (2026-10-12):** ilk taslağın **iki katı**, parça başı 4–6 gem (günde ~35 gem kazanılıyor).
 - **Arama bedava;** tek sınır zamanlayıcı. Sonuç **saf şans**, boş da çıkabilir.
 - **Dokununca:** ~1 sn animasyon. Yığın sallanıyor, toz kalkıyor, parça ikonu envantere uçuyor (görev
   ödülündeki uçan para gibi); ya da "Bir şey çıkmadı".
@@ -79,7 +82,22 @@ oyuncunun gördüğü her şeyin tasarımıdır.
 - **Satış:** düşük fiyata.
 - **Paket:** klasik modeller pakette (ayrı indirme yok).
 
-## 9. Sıradaki adımlar
+## 9. Uygulama durumu (2026-10-12)
+- **Harita:** tools/world/junkyard.py + export_junkyard.py → assets/world/junkyard.glb. Işık Cycles'la köşe
+  rengine ve zemin dokusuna PİŞİRİLİR, oyunda ışıksız çizilir (telefonda GI / gölge yok; Godot GL
+  Compatibility köşe rengini sRGB sayar → pişmiş değerler sRGB kodlanır). world/junkyard_world.gd.
+- **Günün araçları:** 24 klasiğin paslı, tekerleksiz hurda varyantları (assets/world/junk_wrecks/, ~3.000 üçgen).
+- **Ekranlar:** ui/hud/junkyard_screen.gd (saha, yığın arama, araç plakası, PARÇALAR, sayaçlar),
+  ui/hud/map_screen.gd (tools/world/map_render.py ile çizilen harita + rota animasyonu + yol kartı),
+  ui/hud/restoration_panel.gd (garajdaki proje panosu: tak, onaylı gemle al, bitir, bırak).
+- **Garaj:** gameplay/junkyard/restoration_bays.gd + world/restoration_display.gd — liftte 3 aşama
+  (assets/world/restoration_chassis.glb şasi → vfx/rust_overlay.gdshader paslı araç → temiz araç).
+- **Görev:** "HURDACI NECATİ" (QuestCatalog, 2. alandan sonra); HARİTA plakası görevle görünür, hurdalık
+  2. tamir alanıyla açılır (JunkyardManager.OPEN_BAYS).
+- **Kalan:** Necati'nin ilk ziyaret dersi (Cemo'nun ilk yığını), hurdalık müziği, 2D portreler, arkadaş
+  hediyesi (Firestore kuralları kullanıcıya gösterilecek).
+
+## 10. Sıradaki adımlar (ilk plan)
 1. **Blender'da kaba yerleşim:** zemin, çit, konteynerler, baraka, vinç, pres, araç sıraları, yığınlar.
    Render kullanıcıya gösterilip onaylanacak, sonra ayrıntıya geçilecek.
 2. Hurdalık sahnesi + kamera + HARİTA ekranı + geçiş kartı.

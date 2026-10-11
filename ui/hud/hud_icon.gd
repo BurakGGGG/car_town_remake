@@ -22,6 +22,7 @@ enum Kind {
 	GEM,
 	PAINT,  ## sprey boya kutusu (boya atölyesi) — sona eklendi: sahnelerdeki kayıtlı numaralar değişmez
 	GEAR,   ## dişli (AYARLAR) — sona eklendi
+	MAP,    ## katlanmış harita + iğne (HARİTA) — sona eklendi
 }
 
 @export var kind: Kind = Kind.COIN:
@@ -96,8 +97,29 @@ static func draw_icon(ci: CanvasItem, kind: Kind, c: Vector2, s: float, ink: Col
 			_paint(ci, c, s, ink, cutout)
 		Kind.GEAR:
 			_gear(ci, c, s, ink, cutout)
+		Kind.MAP:
+			_map(ci, c, s, ink, cutout, w)
 		_:
 			pass
+
+
+## Harita: üç katlı kâğıt (orta kat içe kırık) + üstünde iğne.
+static func _map(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+	_poly(ci, c, s, PackedVector2Array([
+		Vector2(-0.48, -0.26), Vector2(-0.16, -0.36), Vector2(0.16, -0.26), Vector2(0.48, -0.36),
+		Vector2(0.48, 0.30), Vector2(0.16, 0.40), Vector2(-0.16, 0.30), Vector2(-0.48, 0.40),
+	]), ink)
+	# Kat çizgileri ve rota
+	ci.draw_line(c + Vector2(-0.16, -0.30) * s, c + Vector2(-0.16, 0.24) * s, cutout, w * 0.5, true)
+	ci.draw_line(c + Vector2(0.16, -0.20) * s, c + Vector2(0.16, 0.34) * s, cutout, w * 0.5, true)
+	for k: int in 3:
+		var a: Vector2 = c + Vector2(-0.38 + k * 0.2, 0.18 - k * 0.1) * s
+		ci.draw_line(a, a + Vector2(0.1, -0.05) * s, cutout, w * 0.55, true)
+	# İğne: sağ üstte
+	var pin: Vector2 = c + Vector2(0.24, -0.12) * s
+	ci.draw_circle(pin, s * 0.15, cutout, true, -1.0, true)
+	ci.draw_circle(pin, s * 0.10, ink, true, -1.0, true)
+	ci.draw_circle(pin, s * 0.04, cutout, true, -1.0, true)
 
 
 ## Dişli: 8 diş + gövde + ortada delik.
