@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://dtd1w85jmrnxq"]
+
+[ext_resource type="PackedScene" uid="uid://cbf7f62c5d7m" path="res://assets/cars/optimized/aston_martin_db5.glb" id="1_aston"]
+
+[node name="aston_martin_db5" instance=ExtResource("1_aston")]

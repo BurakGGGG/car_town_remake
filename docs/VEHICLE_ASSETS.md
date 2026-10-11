@@ -315,3 +315,40 @@ kaportada siyah lekeler ve koyu dikişler. Çözüm `optimize_car.gd` `_pad_isla
 texel'ler en yakın adanın rengiyle doldurulur (kullanılan texel'lere dokunulmaz; Getz'te fark görüntüsüyle
 doğrulandı). Varsayılan açık, `--no-pad` ile kapanır; araç başına ~45 sn. 8 araç yeniden üretildi; zorlanmış
 düşük LOD'da (lod_bias 0,05) BMW'deki siyah lekeler kayboldu.
+
+---
+
+# Beşinci parti — KLASİK / RESTORASYON araçları (2026-10-11), katalog 26 → 50
+
+Hurdalık (docs/HURDALIK_ARASTIRMA.md) için 24 klasik: 12 temel, 8 usta-klasik, 4 usta-yarış (Delta Integrale,
+Quattro S1, RS200, Evo VI henüz yok). Kaynaklar `eksik_dosyalar/klasik/` (dosya adı ≠ id; eşleme
+`tools/junkyard/klasik_catalog.py` CARS tablosundaki id'lerle), aynı Tripo yapısı (tek materyal, 4096² JPEG,
+41–91 parça, ~480K üçgen) → optimize sonrası 82–134K üçgen, 6,7–7,8 MB.
+
+**Katalog:** `tools/junkyard/klasik_catalog.py` üretir (gerçek fabrika verisi; `--colors` maske aracının
+renkleri, `--classes` 300 m sınıfları). Kullanıcı kararları: trafikte yok, kasada yok, koleksiyonda ayrı bölüm
+(kasa koleksiyonu 26), BOYANAMAZ (`VehicleOwnership.is_paintable`), satış temel 10.000 / usta 25.000 ₺
+(fiyat 25.000 / 62.500), yarış rakibi olmaz. Sınıf 300 m kuralıyla, boşluklar ortadan bölündü
+(A < 11,0 ≤ B < 11,8 ≤ C < 12,9 ≤ D): 9 A, 3 B, 12 D.
+
+**Elle düzeltilenler:**
+- Vosvos 10/4/5/7 çamurluklar "teker" sanılıp teker grubunun BAŞINA girmişti (eksen çamurluktan ölçüldü,
+  çamurluk dönüyordu) → gövde. Kural: grubun ilk parçası lastik olmalı (wheel_fit ekseni ondan ölçer).
+- Miura sağ-arka: grubun başında çamurluk kemeri (31) → gövde; lastik 5.
+- Charger sağ-arka lastik sol alt gövdeye (1) kaynamış → `extract` (sol-arkanın aynası) → parça 66.
+- Bel Air (dört teker, 110–130°), T1 arka (60°), Murat 124 arka (20°): lastiğin tepesi kaynakta yok →
+  `fill_arc`. Belirti: wheel_blur'da bulanık dış çizgi; teşhis: lastiğin y uzanımı z uzanımından kısa.
+  Yoklama betiği `~/Projects/ct_shots/arcprobe.gd` (10°'lik dilim kapsaması).
+- Jaguar sağ-ön ekseni yanlış ölçüldü (yarıçap 0,067) → sol-ön aynalandı.
+- Sınıflandırıcı çıktısında özet satırı bir kaydın `},` satırına yapışabiliyor (stdout/stderr karışması):
+  bloklar haritaya eklenmeden önce `\t},#` ayrılmalı, yoksa sonraki kaydın sınırı kayar.
+
+**Boya maskesi:** klasiklerde cam çoğu yerde kaportayla aynı parçada; Charger / Stratos / Land Rover /
+Mustang / Murat 131 / Fiat 500'de bulunan "fabrika rengi" yanlış ton. Araçlar boyanamadığı için oyunda
+görünmez; pas efektinde maske ayrıca ele alınacak.
+
+**Wayland:** wheel_blur / paint_preview / pencereli testler örtülü pencerede takılıyordu →
+`--display-driver x11` (run_tests.sh pencereli paketlere kendisi ekler).
+
+Testler (depo dışı paketlerde sınırlar gerçek klasiklere göre genişletildi: son hız ≥ 90, uzunluk ≥ 2,8 m,
+genişlik ≥ 1,3 m, aks > 1,8 m; ui_test koleksiyon toplamı = kasa koleksiyonu): tam paket 0 FAIL.

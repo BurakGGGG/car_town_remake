@@ -373,7 +373,7 @@ func value_of(metric: StringName) -> int:
 
 
 func _legend_done() -> bool:
-	return value_of(&"cars_discovered") >= CarCatalog.size() and value_of(&"garage_level") >= 4 \
+	return value_of(&"cars_discovered") >= VehicleOwnership.collection_ids().size() and value_of(&"garage_level") >= 4 \
 			and value_of(&"bays") >= 3 and value_of(&"garage_rank") >= 10 and value_of(&"job_stars") >= 35
 
 

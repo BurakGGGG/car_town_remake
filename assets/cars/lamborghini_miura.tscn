@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://mx3lqoff58gr"]
+
+[ext_resource type="PackedScene" uid="uid://6fc8cstty4sq" path="res://assets/cars/optimized/lamborghini_miura.glb" id="1_lambo"]
+
+[node name="lamborghini_miura" instance=ExtResource("1_lambo")]

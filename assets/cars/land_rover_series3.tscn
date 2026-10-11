@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://dtxijapn2hkdw"]
+
+[ext_resource type="PackedScene" uid="uid://qhjfnfo0hr72" path="res://assets/cars/optimized/land_rover_series3.glb" id="1_land_"]
+
+[node name="land_rover_series3" instance=ExtResource("1_land_")]

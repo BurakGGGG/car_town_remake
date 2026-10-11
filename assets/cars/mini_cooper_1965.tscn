@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://bjo8x8caha0el"]
+
+[ext_resource type="PackedScene" uid="uid://c4ho2d7d4u840" path="res://assets/cars/optimized/mini_cooper_1965.glb" id="1_mini_"]
+
+[node name="mini_cooper_1965" instance=ExtResource("1_mini_")]

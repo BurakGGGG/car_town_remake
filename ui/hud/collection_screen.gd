@@ -14,6 +14,8 @@ const CARD_SIZE: Vector2 = Vector2(150.0, 124.0)
 const THUMB_SIZE: Vector2 = Vector2(112.0, 62.0)
 const COLUMNS: int = 5
 const PLATE_WIDTH: float = 820.0
+## Restorasyon (hurdalık) kartlarının çerçevesi: pas / bakır tonu (kasa nadirlik renklerinden ayrışsın).
+const RESTORATION_COLOR: Color = Color("B5652A")
 
 var _title: Label
 var _grid_box: VBoxContainer
@@ -127,20 +129,27 @@ func _rebuild() -> void:
 	for child: Node in _sets_box.get_children():
 		child.queue_free()
 	var own: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
-	var total: int = CarCatalog.size()
+	var total: int = VehicleOwnership.collection_ids().size()
 	var found: int = own.discovered_count() if own else 0
 	_title.text = Loc.t("KOLEKSİYON   %d / %d") % [found, total]
 
 	# Başlangıç aracı ve kasalar, kasa sırasıyla
 	var groups: Array[Dictionary] = []
 	var starters: Array[StringName] = []
-	for entry: Dictionary in CarCatalog.all():
-		if CrateCatalog.crate_of(entry["id"]) == &"":
-			starters.append(entry["id"])
+	for id: StringName in VehicleOwnership.collection_ids():
+		if CrateCatalog.crate_of(id) == &"":
+			starters.append(id)
 	if not starters.is_empty():
 		groups.append({"title": Loc.t("BAŞLANGIÇ"), "crate": &"", "cars": starters})
 	for crate: Dictionary in CrateCatalog.all():
 		groups.append({"title": Loc.t(String(crate["display_name"])), "crate": crate["id"], "cars": crate["pool"]})
+	# HURDALIK: restorasyon araçları ayrı bölümlerde (kasa koleksiyonu sayacına girmez), kademe sırasıyla
+	for tier: Dictionary in RestorationCatalog.tiers():
+		var tier_cars: Array[StringName] = []
+		for entry: Dictionary in RestorationCatalog.cars(tier["id"]):
+			tier_cars.append(entry["id"])
+		if not tier_cars.is_empty():
+			groups.append({"title": Loc.t(String(tier["name"])), "crate": &"", "cars": tier_cars})
 
 	var last_missing: StringName = _last_missing(own)
 	for group: Dictionary in groups:
@@ -183,16 +192,17 @@ func _last_missing(own: VehicleOwnership) -> StringName:
 	if own == null:
 		return &""
 	var missing: Array[StringName] = []
-	for entry: Dictionary in CarCatalog.all():
-		if not own.is_discovered(entry["id"]):
-			missing.append(entry["id"])
+	for id: StringName in VehicleOwnership.collection_ids():
+		if not own.is_discovered(id):
+			missing.append(id)
 	return missing[0] if missing.size() == 1 else &""
 
 
 func _card(id: StringName, own: VehicleOwnership, last_piece: bool) -> Control:
 	var entry: Dictionary = CarCatalog.get_entry(id)
+	var restoration: bool = RestorationCatalog.is_restoration(id)
 	var rarity: StringName = CrateCatalog.rarity_of(id)
-	var color: Color = CrateCatalog.rarity_color(rarity)
+	var color: Color = RESTORATION_COLOR if restoration else CrateCatalog.rarity_color(rarity)
 	var owned: bool = own != null and own.is_owned(id)
 	var known: bool = own != null and own.is_discovered(id)
 
@@ -222,8 +232,8 @@ func _card(id: StringName, own: VehicleOwnership, last_piece: bool) -> Control:
 	box.add_theme_constant_override(&"separation", 0)
 	frame.add_child(box)
 
-	var rarity_label: Label = _label(&"HudInkCaption", Loc.t("%s  ·  %s SINIFI") % [
-		CrateCatalog.rarity_label(rarity), String(entry.get("class", "?"))])
+	var rarity_label: Label = _label(&"HudInkCaption", Loc.t("RESTORASYON  ·  %s SINIFI") % String(entry.get("class", "?"))
+		if restoration else Loc.t("%s  ·  %s SINIFI") % [CrateCatalog.rarity_label(rarity), String(entry.get("class", "?"))])
 	rarity_label.add_theme_color_override(&"font_color", color.darkened(0.15))
 	box.add_child(rarity_label)
 
@@ -246,6 +256,8 @@ func _card(id: StringName, own: VehicleOwnership, last_piece: bool) -> Control:
 	if owned:
 		var stars: int = own.stars(id)
 		info = Loc.t("GARAJINDA") if stars == 0 else "%s  ×%d" % ["★".repeat(stars) + "☆".repeat(5 - stars), own.duplicate_count(id) + 1]
+	elif restoration:
+		info = Loc.t("SATILDI · HURDALIKTA YENİDEN RESTORE ET") if known else Loc.t("HURDALIKTA RESTORE ET")
 	elif known:
 		info = Loc.t("SATILDI · SHOWROOM'DA GERİ AL")
 	else:
@@ -255,7 +267,7 @@ func _card(id: StringName, own: VehicleOwnership, last_piece: bool) -> Control:
 		info = Loc.t("SON PARÇA  ·  ") + info
 	box.add_child(_label(&"HudInkCaption", info))
 
-	if rarity == &"legendary" or last_piece:
+	if (rarity == &"legendary" and not restoration) or last_piece:
 		var pulse: Tween = create_tween().set_loops()
 		pulse.tween_property(style, "border_color", color.lightened(0.45), 0.7).set_trans(Tween.TRANS_SINE)
 		pulse.tween_property(style, "border_color", color, 0.7).set_trans(Tween.TRANS_SINE)

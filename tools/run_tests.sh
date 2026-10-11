@@ -12,7 +12,7 @@ PROJ="$(cd "$(dirname "$0")/.." && pwd)"
 SUITE="${CT_SUITE_DIR:-$HOME/snap/godot-4/common/cloudtest}"
 GODOT="${GODOT:-godot-4}"
 OUT="${CT_OUT:-/tmp/ct_tests}"
-HEADLESS="tutorial_test save_test edge_test quest_test paint_test account_delete_test login_flow_test drag_transmission_test vehicle_wheel_test decor_test garage_decoration_placement_test crate_test release_test ads_test bay_move_test vehicle_display_test mission_test locale_test decor_v2_test social_test race_record_test purchase_test"
+HEADLESS="tutorial_test save_test edge_test quest_test paint_test account_delete_test login_flow_test drag_transmission_test vehicle_wheel_test decor_test garage_decoration_placement_test crate_test release_test ads_test bay_move_test vehicle_display_test mission_test locale_test decor_v2_test social_test race_record_test purchase_test junkyard_test"
 WINDOWED="touch_scroll_test scroll_drag_test settings_test ui_test login_reload_test race_test progression_test vehicle_asset_test vehicle_scale_test traffic_pool_test visit_test"
 ALL="${*:-$HEADLESS $WINDOWED}"
 mkdir -p "$OUT"
@@ -34,7 +34,11 @@ for t in $ALL; do
 		printf '[general]\nlanguage="tr"\n' > "$d/settings.cfg"
 	done
 	mode="--headless"
-	case " $WINDOWED " in *" $t "*) mode="--resolution 1152x648";; esac
+	# Wayland'de örtülü pencereye kare çizilmez ve frame_post_draw bekleyen test (race_test _shot) sonsuza
+	# kadar bekleyip 600 sn'de kesiliyordu; XWayland (x11 sürücüsü) örtülü pencerede de çizer.
+	x11=""
+	[ -n "${WAYLAND_DISPLAY:-}" ] && x11="--display-driver x11"
+	case " $WINDOWED " in *" $t "*) mode="--resolution 1152x648 $x11";; esac
 	script="$SUITE/$t.gd"
 	[ -f "$PROJ/tests/$t.gd" ] && script="res://tests/$t.gd"
 	# Eğitim (Rıza Usta) kapalı: temiz kayıtta hoş geldin kartı testlerin dokunuşlarını tutardı

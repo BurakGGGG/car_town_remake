@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://cakqevwt0ffgl"]
+
+[ext_resource type="PackedScene" uid="uid://3c103o6fxud3" path="res://assets/cars/optimized/chevrolet_corvette_c2.glb" id="1_chevr"]
+
+[node name="chevrolet_corvette_c2" instance=ExtResource("1_chevr")]

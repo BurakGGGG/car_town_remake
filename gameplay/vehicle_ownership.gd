@@ -259,8 +259,23 @@ func discovered_ids() -> Array[StringName]:
 	return _discovered.duplicate()
 
 
+## KASA KOLEKSİYONU sayacı (KOLEKSİYON tabelası, KOLEKSİYONCU görevleri, kasa kilometre taşları).
+## Restorasyon (hurdalık) araçları sayılmaz: onlar koleksiyonda ayrı bölümdedir (kullanıcı kararı 2026-10-11).
 func discovered_count() -> int:
-	return _discovered.size()
+	var n: int = 0
+	for id: StringName in _discovered:
+		if not RestorationCatalog.is_restoration(id):
+			n += 1
+	return n
+
+
+## Kasa koleksiyonundaki araçlar (katalog sırasıyla): restorasyon araçları hariç bütün katalog.
+static func collection_ids() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for entry: Dictionary in CarCatalog.all():
+		if not RestorationCatalog.is_restoration(entry["id"]):
+			out.append(entry["id"])
+	return out
 
 
 ## Bu araçtan kaç kopya çekildi (ilk çekiliş sayılmaz).
@@ -364,9 +379,15 @@ func paint_color(vehicle_id: StringName) -> Color:
 	return _paint.get(vehicle_id, _factory_color(vehicle_id))
 
 
-## Bu renk alınabilir mi: araç sahipte, renk katalogda, araç zaten bu renkte değil, bakiye yetiyor.
+## Boya atölyesi bu araçta açık mı? Restorasyon (hurdalık) araçları fabrika renginde kalır: orijinal Car Town'da
+## restorasyon aracının rengi seçilemiyordu (kullanıcı kararı 2026-10-11, docs/HURDALIK_ARASTIRMA.md).
+static func is_paintable(vehicle_id: StringName) -> bool:
+	return not RestorationCatalog.is_restoration(vehicle_id)
+
+
+## Bu renk alınabilir mi: araç sahipte ve boyanabilir, renk katalogda, araç zaten bu renkte değil, bakiye yetiyor.
 func can_purchase_paint(vehicle_id: StringName, paint_id: StringName) -> bool:
-	if not is_owned(vehicle_id):
+	if not is_owned(vehicle_id) or not is_paintable(vehicle_id):
 		return false
 	if paint_id == PaintCatalog.FACTORY_ID:
 		return _paint.has(vehicle_id)
@@ -380,7 +401,7 @@ func can_purchase_paint(vehicle_id: StringName, paint_id: StringName) -> bool:
 ## renk → görünüm → sinyal → kayıt. Herhangi bir adım başarısızsa HİÇBİR ŞEY değişmez (false).
 ## FACTORY_ID ücretsizdir ve aracı katalogdaki fabrika rengine döndürür.
 func purchase_paint(vehicle_id: StringName, paint_id: StringName) -> bool:
-	if not is_owned(vehicle_id):
+	if not is_owned(vehicle_id) or not is_paintable(vehicle_id):
 		paint_failed.emit(vehicle_id, paint_id)
 		return false
 	if paint_id == PaintCatalog.FACTORY_ID:

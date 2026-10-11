@@ -4,7 +4,8 @@
 Kaynaklar:
   * .gd dosyalarındaki çift tırnaklı dizgeler (StringName &"..." , yollar, sinyal/grup adları, log satırları,
     yorumlar hariç) — sezgisel: içinde en az bir harf olan ve "kod kimliği"ne benzemeyenler.
-  * veri dosyaları: decor/decorations.json (title, desc), vehicles/crates.json (display_name, sets.name).
+  * veri dosyaları: decor/decorations.json (title, desc), vehicles/crates.json (display_name, sets.name),
+    vehicles/restorations.json (parts.name, tiers.name).
 Çıktı: locale/strings.json  {"metin": ["dosya:satır", ...]}
 Kullanım: python3 tools/i18n/extract.py
 """
@@ -102,6 +103,12 @@ def scan_json(out):
     for st in crates.get("sets", []):
         if st.get("name"):
             out.setdefault(st["name"], []).append(f"vehicles/crates.json:set.{st['id']}")
+
+    resto = json.load(open(os.path.join(ROOT, "vehicles/restorations.json"), encoding="utf-8"))
+    for key in ("parts", "tiers"):
+        for it in resto.get(key, []):
+            if it.get("name"):
+                out.setdefault(it["name"], []).append(f"vehicles/restorations.json:{key}.{it['id']}")
 
 def scan_tscn(out):
     """Sahne dosyalarındaki Label / Button metinleri (text = "…"); Control kendi metnini çevirir."""

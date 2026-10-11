@@ -514,8 +514,14 @@ func _apply(entry: Dictionary) -> void:
 	_refresh_detail()
 	_actions_clear()
 	_refresh_race_pick()
+	# Restorasyon araçları boyanamaz (VehicleOwnership.is_paintable): BOYA plakası gizlenir, açık pano kapanır
+	var paintable: bool = VehicleOwnership.is_paintable(_shown_vehicle)
+	_paint_button.visible = GameFeatures.PAINT and paintable
 	if _paint_panel.visible:
-		_paint_panel.set_vehicle(_shown_vehicle)   # yeni aracın rengi seçili, önizleme yok
+		if paintable:
+			_paint_panel.set_vehicle(_shown_vehicle)   # yeni aracın rengi seçili, önizleme yok
+		else:
+			_paint_panel.close()   # closed sinyali aksiyon plakalarını geri getirir
 
 
 ## Lift üstündeki modeli serbest bırakır (garaj kapanışı / araç değişimi).
@@ -999,7 +1005,7 @@ func _build_collection_button() -> void:
 func _open_paint() -> void:
 	if not GameFeatures.PAINT:
 		return   # özellik kapalı: pano hiçbir yoldan açılmaz (plaka zaten gizli)
-	if _shown_vehicle == &"":
+	if _shown_vehicle == &"" or not VehicleOwnership.is_paintable(_shown_vehicle):
 		return
 	_actions_clear()
 	action_column.hide()

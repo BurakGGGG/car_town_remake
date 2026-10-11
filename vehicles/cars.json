@@ -49,7 +49,7 @@
         "height_m": 1.415,
         "wheelbase_m": 2.725
       },
-      "model_scale": 1.03
+      "model_scale": 1.05
     },
     {
       "id": "hyundai_getz",
@@ -149,7 +149,7 @@
         "height_m": 1.501,
         "wheelbase_m": 2.703
       },
-      "model_scale": 1.03
+      "model_scale": 1.05
     },
     {
       "id": "vw_passat_b55",
@@ -199,7 +199,7 @@
         "height_m": 1.463,
         "wheelbase_m": 2.703
       },
-      "model_scale": 1.08
+      "model_scale": 1.12
     },
     {
       "id": "hyundai_era",
@@ -1302,6 +1302,1086 @@
         "wheelbase_m": 3.035
       },
       "model_scale": 1.2
+    },
+    {
+      "id": "tofas_murat_124",
+      "brand": "TOFAŞ",
+      "model": "MURAT 124",
+      "label": "TOFAŞ\nMURAT 124",
+      "year": 1971,
+      "price": 25000,
+      "condition": 1.0,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/tofas_murat_124.tscn",
+      "source_path": "res://assets/cars/source/tofas_murat_124.glb",
+      "optimized_path": "res://assets/cars/optimized/tofas_murat_124.glb",
+      "default_color": "#C10003",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 145,
+        "acceleration": 0,
+        "reaction": 45,
+        "grip": 42
+      },
+      "performance": {
+        "variant": "Tofaş Murat 124",
+        "engine": "1.2",
+        "hp": 60,
+        "zero_100": 16.5,
+        "top_speed": 145,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.03,
+        "width_m": 1.61,
+        "height_m": 1.42,
+        "wheelbase_m": 2.42
+      },
+      "model_scale": 0.92,
+      "available_colors": [
+        "#C10003"
+      ]
+    },
+    {
+      "id": "anadol_a1",
+      "brand": "ANADOL",
+      "model": "A1",
+      "label": "ANADOL\nA1",
+      "year": 1967,
+      "price": 25000,
+      "condition": 1.0,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/anadol_a1.tscn",
+      "source_path": "res://assets/cars/source/anadol_a1.glb",
+      "optimized_path": "res://assets/cars/optimized/anadol_a1.glb",
+      "default_color": "#61BE0A",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 130,
+        "acceleration": 0,
+        "reaction": 44,
+        "grip": 40
+      },
+      "performance": {
+        "variant": "Anadol A1",
+        "engine": "1.2",
+        "hp": 53,
+        "zero_100": 20.0,
+        "top_speed": 130,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.2,
+        "width_m": 1.57,
+        "height_m": 1.41,
+        "wheelbase_m": 2.41
+      },
+      "model_scale": 0.96,
+      "available_colors": [
+        "#61BE0A"
+      ]
+    },
+    {
+      "id": "vw_beetle_1967",
+      "brand": "VOLKSWAGEN",
+      "model": "BEETLE",
+      "label": "VOLKSWAGEN\nBEETLE",
+      "year": 1967,
+      "price": 25000,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/vw_beetle_1967.tscn",
+      "source_path": "res://assets/cars/source/vw_beetle_1967.glb",
+      "optimized_path": "res://assets/cars/optimized/vw_beetle_1967.glb",
+      "default_color": "#F14F22",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 125,
+        "acceleration": 0,
+        "reaction": 44,
+        "grip": 40
+      },
+      "performance": {
+        "variant": "Volkswagen Beetle 1500",
+        "engine": "1.5",
+        "hp": 53,
+        "zero_100": 20.0,
+        "top_speed": 125,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.08,
+        "width_m": 1.54,
+        "height_m": 1.5,
+        "wheelbase_m": 2.4
+      },
+      "model_scale": 0.86,
+      "available_colors": [
+        "#F14F22"
+      ]
+    },
+    {
+      "id": "fiat_500_1965",
+      "brand": "FIAT",
+      "model": "500",
+      "label": "FIAT\n500",
+      "year": 1965,
+      "price": 25000,
+      "condition": 1.0,
+      "category": "hatchback",
+      "scene_path": "res://assets/cars/fiat_500_1965.tscn",
+      "source_path": "res://assets/cars/source/fiat_500_1965.glb",
+      "optimized_path": "res://assets/cars/optimized/fiat_500_1965.glb",
+      "default_color": "#424B51",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 95,
+        "acceleration": 0,
+        "reaction": 42,
+        "grip": 38
+      },
+      "performance": {
+        "variant": "Fiat Nuova 500 D",
+        "engine": "0.5",
+        "hp": 18,
+        "zero_100": 35.0,
+        "top_speed": 95,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 2.97,
+        "width_m": 1.32,
+        "height_m": 1.33,
+        "wheelbase_m": 1.84
+      },
+      "model_scale": 0.74,
+      "available_colors": [
+        "#424B51"
+      ]
+    },
+    {
+      "id": "tofas_murat_131",
+      "brand": "TOFAŞ",
+      "model": "MURAT 131",
+      "label": "TOFAŞ\nMURAT 131",
+      "year": 1979,
+      "price": 25000,
+      "condition": 1.0,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/tofas_murat_131.tscn",
+      "source_path": "res://assets/cars/source/tofas_murat_131.glb",
+      "optimized_path": "res://assets/cars/optimized/tofas_murat_131.glb",
+      "default_color": "#7094D5",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 155,
+        "acceleration": 15,
+        "reaction": 46,
+        "grip": 44
+      },
+      "performance": {
+        "variant": "Tofaş Murat 131",
+        "engine": "1.6",
+        "hp": 75,
+        "zero_100": 14.0,
+        "top_speed": 155,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.23,
+        "width_m": 1.65,
+        "height_m": 1.4,
+        "wheelbase_m": 2.49
+      },
+      "model_scale": 0.96,
+      "available_colors": [
+        "#7094D5"
+      ]
+    },
+    {
+      "id": "mini_cooper_1965",
+      "brand": "MINI",
+      "model": "COOPER",
+      "label": "MINI\nCOOPER",
+      "year": 1965,
+      "price": 25000,
+      "condition": 1.0,
+      "category": "hatchback",
+      "scene_path": "res://assets/cars/mini_cooper_1965.tscn",
+      "source_path": "res://assets/cars/source/mini_cooper_1965.glb",
+      "optimized_path": "res://assets/cars/optimized/mini_cooper_1965.glb",
+      "default_color": "#9BB89A",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 145,
+        "acceleration": 9,
+        "reaction": 50,
+        "grip": 52
+      },
+      "performance": {
+        "variant": "Mini Cooper 998",
+        "engine": "1.0",
+        "hp": 55,
+        "zero_100": 14.8,
+        "top_speed": 145,
+        "drivetrain": "FWD"
+      },
+      "real_dimensions": {
+        "length_m": 3.05,
+        "width_m": 1.41,
+        "height_m": 1.35,
+        "wheelbase_m": 2.04
+      },
+      "model_scale": 0.73,
+      "available_colors": [
+        "#9BB89A"
+      ]
+    },
+    {
+      "id": "willys_jeep_mb",
+      "brand": "WILLYS",
+      "model": "JEEP MB",
+      "label": "WILLYS\nJEEP MB",
+      "year": 1944,
+      "price": 25000,
+      "condition": 1.0,
+      "category": "suv",
+      "scene_path": "res://assets/cars/willys_jeep_mb.tscn",
+      "source_path": "res://assets/cars/source/willys_jeep_mb.glb",
+      "optimized_path": "res://assets/cars/optimized/willys_jeep_mb.glb",
+      "default_color": "#474726",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 105,
+        "acceleration": 0,
+        "reaction": 42,
+        "grip": 46
+      },
+      "performance": {
+        "variant": "Willys MB",
+        "engine": "2.2",
+        "hp": 60,
+        "zero_100": 30.0,
+        "top_speed": 105,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 3.36,
+        "width_m": 1.57,
+        "height_m": 1.77,
+        "wheelbase_m": 2.03
+      },
+      "model_scale": 0.77,
+      "available_colors": [
+        "#474726"
+      ]
+    },
+    {
+      "id": "peugeot_404",
+      "brand": "PEUGEOT",
+      "model": "404",
+      "label": "PEUGEOT\n404",
+      "year": 1968,
+      "price": 25000,
+      "condition": 1.0,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/peugeot_404.tscn",
+      "source_path": "res://assets/cars/source/peugeot_404.glb",
+      "optimized_path": "res://assets/cars/optimized/peugeot_404.glb",
+      "default_color": "#EDE8E4",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 145,
+        "acceleration": 0,
+        "reaction": 45,
+        "grip": 42
+      },
+      "performance": {
+        "variant": "Peugeot 404",
+        "engine": "1.6",
+        "hp": 72,
+        "zero_100": 17.0,
+        "top_speed": 145,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.44,
+        "width_m": 1.62,
+        "height_m": 1.45,
+        "wheelbase_m": 2.65
+      },
+      "model_scale": 1.01,
+      "available_colors": [
+        "#EDE8E4"
+      ]
+    },
+    {
+      "id": "mercedes_w123",
+      "brand": "MERCEDES-BENZ",
+      "model": "W123",
+      "label": "MERCEDES-BENZ\nW123",
+      "year": 1980,
+      "price": 25000,
+      "condition": 1.0,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/mercedes_w123.tscn",
+      "source_path": "res://assets/cars/source/mercedes_w123.glb",
+      "optimized_path": "res://assets/cars/optimized/mercedes_w123.glb",
+      "default_color": "#E1923B",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 143,
+        "acceleration": 0,
+        "reaction": 44,
+        "grip": 44
+      },
+      "performance": {
+        "variant": "Mercedes-Benz 240 D",
+        "engine": "2.4 Dizel",
+        "hp": 72,
+        "zero_100": 22.0,
+        "top_speed": 143,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.73,
+        "width_m": 1.79,
+        "height_m": 1.44,
+        "wheelbase_m": 2.8
+      },
+      "model_scale": 1.12,
+      "available_colors": [
+        "#E1923B"
+      ]
+    },
+    {
+      "id": "vw_t1_bus",
+      "brand": "VOLKSWAGEN",
+      "model": "T1",
+      "label": "VOLKSWAGEN\nT1",
+      "year": 1965,
+      "price": 25000,
+      "condition": 1.0,
+      "category": "van",
+      "scene_path": "res://assets/cars/vw_t1_bus.tscn",
+      "source_path": "res://assets/cars/source/vw_t1_bus.glb",
+      "optimized_path": "res://assets/cars/optimized/vw_t1_bus.glb",
+      "default_color": "#F0E9DD",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 105,
+        "acceleration": 0,
+        "reaction": 42,
+        "grip": 40
+      },
+      "performance": {
+        "variant": "Volkswagen T1 1500",
+        "engine": "1.5",
+        "hp": 44,
+        "zero_100": 40.0,
+        "top_speed": 105,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.28,
+        "width_m": 1.75,
+        "height_m": 1.94,
+        "wheelbase_m": 2.4
+      },
+      "model_scale": 0.97,
+      "available_colors": [
+        "#F0E9DD"
+      ]
+    },
+    {
+      "id": "land_rover_series3",
+      "brand": "LAND ROVER",
+      "model": "SERIES III",
+      "label": "LAND ROVER\nSERIES III",
+      "year": 1975,
+      "price": 25000,
+      "condition": 1.0,
+      "category": "suv",
+      "scene_path": "res://assets/cars/land_rover_series3.tscn",
+      "source_path": "res://assets/cars/source/land_rover_series3.glb",
+      "optimized_path": "res://assets/cars/optimized/land_rover_series3.glb",
+      "default_color": "#F2F1E9",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 110,
+        "acceleration": 0,
+        "reaction": 42,
+        "grip": 46
+      },
+      "performance": {
+        "variant": "Land Rover Series III 88",
+        "engine": "2.25",
+        "hp": 70,
+        "zero_100": 29.0,
+        "top_speed": 110,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 3.62,
+        "width_m": 1.68,
+        "height_m": 1.97,
+        "wheelbase_m": 2.24
+      },
+      "model_scale": 0.82,
+      "available_colors": [
+        "#F2F1E9"
+      ]
+    },
+    {
+      "id": "chevrolet_bel_air_1956",
+      "brand": "CHEVROLET",
+      "model": "BEL AIR",
+      "label": "CHEVROLET\nBEL AIR",
+      "year": 1956,
+      "price": 25000,
+      "condition": 1.0,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/chevrolet_bel_air_1956.tscn",
+      "source_path": "res://assets/cars/source/chevrolet_bel_air_1956.glb",
+      "optimized_path": "res://assets/cars/optimized/chevrolet_bel_air_1956.glb",
+      "default_color": "#F4EFDB",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 165,
+        "acceleration": 30,
+        "reaction": 46,
+        "grip": 42
+      },
+      "performance": {
+        "variant": "Chevrolet Bel Air 265 V8",
+        "engine": "4.3 V8",
+        "hp": 162,
+        "zero_100": 12.0,
+        "top_speed": 165,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 5.04,
+        "width_m": 1.88,
+        "height_m": 1.53,
+        "wheelbase_m": 2.92
+      },
+      "model_scale": 1.15,
+      "available_colors": [
+        "#F4EFDB"
+      ]
+    },
+    {
+      "id": "ford_mustang_1967",
+      "brand": "FORD",
+      "model": "MUSTANG",
+      "label": "FORD\nMUSTANG",
+      "year": 1967,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/ford_mustang_1967.tscn",
+      "source_path": "res://assets/cars/source/ford_mustang_1967.glb",
+      "optimized_path": "res://assets/cars/optimized/ford_mustang_1967.glb",
+      "default_color": "#928EDB",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "A",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 195,
+        "acceleration": 64,
+        "reaction": 60,
+        "grip": 55
+      },
+      "performance": {
+        "variant": "Ford Mustang Fastback GT 390",
+        "engine": "6.4 V8",
+        "hp": 320,
+        "zero_100": 7.4,
+        "top_speed": 195,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.61,
+        "width_m": 1.8,
+        "height_m": 1.31,
+        "wheelbase_m": 2.74
+      },
+      "model_scale": 1.05,
+      "available_colors": [
+        "#928EDB"
+      ]
+    },
+    {
+      "id": "chevrolet_corvette_c2",
+      "brand": "CHEVROLET",
+      "model": "CORVETTE C2",
+      "label": "CHEVROLET\nCORVETTE C2",
+      "year": 1963,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/chevrolet_corvette_c2.tscn",
+      "source_path": "res://assets/cars/source/chevrolet_corvette_c2.glb",
+      "optimized_path": "res://assets/cars/optimized/chevrolet_corvette_c2.glb",
+      "default_color": "#A1A5A7",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "A",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 225,
+        "acceleration": 72,
+        "reaction": 62,
+        "grip": 58
+      },
+      "performance": {
+        "variant": "Chevrolet Corvette Sting Ray 327",
+        "engine": "5.4 V8",
+        "hp": 360,
+        "zero_100": 6.3,
+        "top_speed": 225,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.45,
+        "width_m": 1.77,
+        "height_m": 1.26,
+        "wheelbase_m": 2.49
+      },
+      "model_scale": 1.04,
+      "available_colors": [
+        "#A1A5A7"
+      ]
+    },
+    {
+      "id": "jaguar_e_type",
+      "brand": "JAGUAR",
+      "model": "E-TYPE",
+      "label": "JAGUAR\nE-TYPE",
+      "year": 1961,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/jaguar_e_type.tscn",
+      "source_path": "res://assets/cars/source/jaguar_e_type.glb",
+      "optimized_path": "res://assets/cars/optimized/jaguar_e_type.glb",
+      "default_color": "#B49D8A",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "A",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 241,
+        "acceleration": 66,
+        "reaction": 60,
+        "grip": 58
+      },
+      "performance": {
+        "variant": "Jaguar E-Type 3.8",
+        "engine": "3.8",
+        "hp": 265,
+        "zero_100": 7.1,
+        "top_speed": 241,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.45,
+        "width_m": 1.66,
+        "height_m": 1.22,
+        "wheelbase_m": 2.44
+      },
+      "model_scale": 1.01,
+      "available_colors": [
+        "#B49D8A"
+      ]
+    },
+    {
+      "id": "aston_martin_db5",
+      "brand": "ASTON MARTIN",
+      "model": "DB5",
+      "label": "ASTON MARTIN\nDB5",
+      "year": 1964,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/aston_martin_db5.tscn",
+      "source_path": "res://assets/cars/source/aston_martin_db5.glb",
+      "optimized_path": "res://assets/cars/optimized/aston_martin_db5.glb",
+      "default_color": "#C5CED8",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "B",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 233,
+        "acceleration": 59,
+        "reaction": 60,
+        "grip": 58
+      },
+      "performance": {
+        "variant": "Aston Martin DB5",
+        "engine": "4.0",
+        "hp": 282,
+        "zero_100": 8.0,
+        "top_speed": 233,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.57,
+        "width_m": 1.68,
+        "height_m": 1.34,
+        "wheelbase_m": 2.49
+      },
+      "model_scale": 1.04,
+      "available_colors": [
+        "#C5CED8"
+      ]
+    },
+    {
+      "id": "dodge_charger_1970",
+      "brand": "DODGE",
+      "model": "CHARGER",
+      "label": "DODGE\nCHARGER",
+      "year": 1970,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/dodge_charger_1970.tscn",
+      "source_path": "res://assets/cars/source/dodge_charger_1970.glb",
+      "optimized_path": "res://assets/cars/optimized/dodge_charger_1970.glb",
+      "default_color": "#8E959B",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "A",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 210,
+        "acceleration": 69,
+        "reaction": 62,
+        "grip": 55
+      },
+      "performance": {
+        "variant": "Dodge Charger R/T 440",
+        "engine": "7.2 V8",
+        "hp": 375,
+        "zero_100": 6.7,
+        "top_speed": 210,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 5.28,
+        "width_m": 1.95,
+        "height_m": 1.35,
+        "wheelbase_m": 2.97
+      },
+      "model_scale": 1.15,
+      "available_colors": [
+        "#8E959B"
+      ]
+    },
+    {
+      "id": "porsche_911_1973",
+      "brand": "PORSCHE",
+      "model": "911 CARRERA RS",
+      "label": "PORSCHE\n911 CARRERA RS",
+      "year": 1973,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/porsche_911_1973.tscn",
+      "source_path": "res://assets/cars/source/porsche_911_1973.glb",
+      "optimized_path": "res://assets/cars/optimized/porsche_911_1973.glb",
+      "default_color": "#01922A",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "A",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 245,
+        "acceleration": 76,
+        "reaction": 66,
+        "grip": 64
+      },
+      "performance": {
+        "variant": "Porsche 911 Carrera RS 2.7",
+        "engine": "2.7",
+        "hp": 210,
+        "zero_100": 5.8,
+        "top_speed": 245,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.15,
+        "width_m": 1.65,
+        "height_m": 1.32,
+        "wheelbase_m": 2.27
+      },
+      "model_scale": 0.95,
+      "available_colors": [
+        "#01922A"
+      ]
+    },
+    {
+      "id": "mercedes_300sl",
+      "brand": "MERCEDES-BENZ",
+      "model": "300 SL",
+      "label": "MERCEDES-BENZ\n300 SL",
+      "year": 1955,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/mercedes_300sl.tscn",
+      "source_path": "res://assets/cars/source/mercedes_300sl.glb",
+      "optimized_path": "res://assets/cars/optimized/mercedes_300sl.glb",
+      "default_color": "#979C9E",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "B",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 235,
+        "acceleration": 53,
+        "reaction": 60,
+        "grip": 58
+      },
+      "performance": {
+        "variant": "Mercedes-Benz 300 SL",
+        "engine": "3.0",
+        "hp": 215,
+        "zero_100": 8.8,
+        "top_speed": 235,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.52,
+        "width_m": 1.79,
+        "height_m": 1.3,
+        "wheelbase_m": 2.4
+      },
+      "model_scale": 1.03,
+      "available_colors": [
+        "#979C9E"
+      ]
+    },
+    {
+      "id": "lamborghini_miura",
+      "brand": "LAMBORGHINI",
+      "model": "MIURA",
+      "label": "LAMBORGHINI\nMIURA",
+      "year": 1968,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/lamborghini_miura.tscn",
+      "source_path": "res://assets/cars/source/lamborghini_miura.glb",
+      "optimized_path": "res://assets/cars/optimized/lamborghini_miura.glb",
+      "default_color": "#0172F0",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "A",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 280,
+        "acceleration": 69,
+        "reaction": 64,
+        "grip": 62
+      },
+      "performance": {
+        "variant": "Lamborghini Miura P400",
+        "engine": "3.9 V12",
+        "hp": 350,
+        "zero_100": 6.7,
+        "top_speed": 280,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.36,
+        "width_m": 1.76,
+        "height_m": 1.06,
+        "wheelbase_m": 2.5
+      },
+      "model_scale": 0.99,
+      "available_colors": [
+        "#0172F0"
+      ]
+    },
+    {
+      "id": "ford_escort_rs1600",
+      "brand": "FORD",
+      "model": "ESCORT RS1600",
+      "label": "FORD\nESCORT RS1600",
+      "year": 1972,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/ford_escort_rs1600.tscn",
+      "source_path": "res://assets/cars/source/ford_escort_rs1600.glb",
+      "optimized_path": "res://assets/cars/optimized/ford_escort_rs1600.glb",
+      "default_color": "#E9E5E2",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "B",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 182,
+        "acceleration": 53,
+        "reaction": 70,
+        "grip": 70
+      },
+      "performance": {
+        "variant": "Ford Escort RS1600",
+        "engine": "1.6",
+        "hp": 120,
+        "zero_100": 8.9,
+        "top_speed": 182,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.0,
+        "width_m": 1.57,
+        "height_m": 1.37,
+        "wheelbase_m": 2.4
+      },
+      "model_scale": 0.91,
+      "available_colors": [
+        "#E9E5E2"
+      ]
+    },
+    {
+      "id": "lancia_stratos",
+      "brand": "LANCIA",
+      "model": "STRATOS HF",
+      "label": "LANCIA\nSTRATOS HF",
+      "year": 1974,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/lancia_stratos.tscn",
+      "source_path": "res://assets/cars/source/lancia_stratos.glb",
+      "optimized_path": "res://assets/cars/optimized/lancia_stratos.glb",
+      "default_color": "#6B747B",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "A",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 232,
+        "acceleration": 68,
+        "reaction": 72,
+        "grip": 72
+      },
+      "performance": {
+        "variant": "Lancia Stratos HF Stradale",
+        "engine": "2.4 V6",
+        "hp": 190,
+        "zero_100": 6.8,
+        "top_speed": 232,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 3.71,
+        "width_m": 1.75,
+        "height_m": 1.11,
+        "wheelbase_m": 2.18
+      },
+      "model_scale": 0.85,
+      "available_colors": [
+        "#6B747B"
+      ]
+    },
+    {
+      "id": "bmw_m3_e30",
+      "brand": "BMW",
+      "model": "M3 E30",
+      "label": "BMW\nM3 E30",
+      "year": 1990,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/bmw_m3_e30.tscn",
+      "source_path": "res://assets/cars/source/bmw_m3_e30.glb",
+      "optimized_path": "res://assets/cars/optimized/bmw_m3_e30.glb",
+      "default_color": "#F2010A",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "A",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 241,
+        "acceleration": 70,
+        "reaction": 72,
+        "grip": 72
+      },
+      "performance": {
+        "variant": "BMW M3 E30 Evolution",
+        "engine": "2.3",
+        "hp": 215,
+        "zero_100": 6.6,
+        "top_speed": 241,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.35,
+        "width_m": 1.68,
+        "height_m": 1.37,
+        "wheelbase_m": 2.56
+      },
+      "model_scale": 0.99,
+      "available_colors": [
+        "#F2010A"
+      ]
+    },
+    {
+      "id": "toyota_celica_gt4",
+      "brand": "TOYOTA",
+      "model": "CELICA GT-FOUR",
+      "label": "TOYOTA\nCELICA GT-FOUR",
+      "year": 1993,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/toyota_celica_gt4.tscn",
+      "source_path": "res://assets/cars/source/toyota_celica_gt4.glb",
+      "optimized_path": "res://assets/cars/optimized/toyota_celica_gt4.glb",
+      "default_color": "#E6E4E6",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "A",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 230,
+        "acceleration": 63,
+        "reaction": 72,
+        "grip": 74
+      },
+      "performance": {
+        "variant": "Toyota Celica GT-Four ST185",
+        "engine": "2.0 Turbo",
+        "hp": 208,
+        "zero_100": 7.5,
+        "top_speed": 230,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.42,
+        "width_m": 1.75,
+        "height_m": 1.3,
+        "wheelbase_m": 2.53
+      },
+      "model_scale": 1.01,
+      "available_colors": [
+        "#E6E4E6"
+      ]
     }
   ]
 }

@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://c5v3fum4qto5a"]
+
+[ext_resource type="PackedScene" uid="uid://dfsqolqrujves" path="res://assets/cars/optimized/dodge_charger_1970.glb" id="1_dodge"]
+
+[node name="dodge_charger_1970" instance=ExtResource("1_dodge")]

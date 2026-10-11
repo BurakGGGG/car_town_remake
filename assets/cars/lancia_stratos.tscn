@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://85ij0483hwwq"]
+
+[ext_resource type="PackedScene" uid="uid://danxxjjto43m1" path="res://assets/cars/optimized/lancia_stratos.glb" id="1_lanci"]
+
+[node name="lancia_stratos" instance=ExtResource("1_lanci")]

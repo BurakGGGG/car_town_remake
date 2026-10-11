@@ -1064,5 +1064,19 @@
  "ŞU ANDA": "CURRENT",
  "Şehirde arızalanan araçlar garajının önüne yanaşır. Biraz bekle, ilk müşterin geliyor...": "Cars that break down in the city pull up in front of your garage. Hang on, your first customer is coming...",
  "ŞİMDİ DOKUN": "TAP NOW",
- "ŞİMDİ!": "NOW!"
+ "ŞİMDİ!": "NOW!",
+ "BUJİ": "SPARK PLUG",
+ "CIVATA": "BOLT",
+ "DİŞLİ": "GEAR",
+ "FİBERGLAS": "FIBERGLASS",
+ "HURDALIKTA RESTORE ET": "RESTORE AT THE JUNKYARD",
+ "KAYIŞ": "BELT",
+ "MOTOR YAĞI": "MOTOR OIL",
+ "PİSTON": "PISTON",
+ "RESTORASYON": "RESTORATION",
+ "RESTORASYON  ·  %s SINIFI": "RESTORATION  ·  CLASS %s",
+ "SATILDI · HURDALIKTA YENİDEN RESTORE ET": "SOLD · RESTORE AGAIN AT THE JUNKYARD",
+ "SOMUN": "NUT",
+ "USTA · KLASİK": "MASTER · CLASSIC",
+ "USTA · YARIŞ": "MASTER · RACE"
 }

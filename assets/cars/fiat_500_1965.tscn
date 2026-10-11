@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://1kdm2wbr6l8a"]
+
+[ext_resource type="PackedScene" uid="uid://c1l64yg0r5cl7" path="res://assets/cars/optimized/fiat_500_1965.glb" id="1_fiat_"]
+
+[node name="fiat_500_1965" instance=ExtResource("1_fiat_")]

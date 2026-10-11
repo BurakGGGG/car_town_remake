@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://b5ipk2gmvln7e"]
+
+[ext_resource type="PackedScene" uid="uid://b7t0epyqfdxac" path="res://assets/cars/optimized/tofas_murat_131.glb" id="1_tofas"]
+
+[node name="tofas_murat_131" instance=ExtResource("1_tofas")]

@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://dyn3bd8qe1rsu"]
+
+[ext_resource type="PackedScene" uid="uid://bx0u376j7r32c" path="res://assets/cars/optimized/anadol_a1.glb" id="1_anado"]
+
+[node name="anadol_a1" instance=ExtResource("1_anado")]

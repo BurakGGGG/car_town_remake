@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://dkt7cimslwapw"]
+
+[ext_resource type="PackedScene" uid="uid://2q18sfwk0kh4" path="res://assets/cars/optimized/vw_t1_bus.glb" id="1_vw_t1"]
+
+[node name="vw_t1_bus" instance=ExtResource("1_vw_t1")]
