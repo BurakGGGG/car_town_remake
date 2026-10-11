@@ -203,9 +203,10 @@ func active_count() -> int:
 	return _active.size()
 
 
-## Tüm tamir alanları dolu mu (TAMİRE AL'dan para toplanana kadar)?
+## Tüm tamir alanları dolu mu (TAMİRE AL'dan para toplanana kadar)? Restorasyon projesi kaplayan alan
+## da doludur (hurdalık: "Requires one available workbay").
 func is_busy() -> bool:
-	return _active.size() >= capacity()
+	return _active.size() + _project_bays().size() >= capacity()
 
 
 ## Yol kenarında tamir bekleyen (yanaşan dahil) araç sayısı.
@@ -230,19 +231,35 @@ func can_start(car: Node3D) -> bool:
 func _free_bay() -> int:
 	var limit: int = mini(capacity(), repair_car_spots.size())
 	for i: int in limit:
-		if not is_instance_valid(repair_car_spots[i]):
-			continue
-		var used: bool = false
-		for state: RepairState in _active:
-			if state.bay_index == i:
-				used = true
-				break
-		for job: Dictionary in _restoring:
-			if int(job["bay"]) == i:
-				used = true   # devralınan iş aracını bekliyor
-		if not used:
+		if is_bay_free(i):
 			return i
 	return -1
+
+
+## Hurdalığın restorasyon projesi için boş alan (tamir işiyle aynı kural).
+func free_bay() -> int:
+	return _free_bay()
+
+
+## Bu alan açık ve boş mu: tamir işi, devralınan iş ya da restorasyon projesi yok.
+func is_bay_free(i: int) -> bool:
+	if i < 0 or i >= mini(capacity(), repair_car_spots.size()) or not is_instance_valid(repair_car_spots[i]):
+		return false
+	for state: RepairState in _active:
+		if state.bay_index == i:
+			return false
+	for job: Dictionary in _restoring:
+		if int(job["bay"]) == i:
+			return false   # devralınan iş aracını bekliyor
+	return not _project_bays().has(i)
+
+
+## Restorasyon projelerinin kapladığı alanlar (hurdalık yoksa boş).
+func _project_bays() -> Array[int]:
+	if not is_inside_tree():
+		return []
+	var junkyard: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
+	return junkyard.occupied_bays() if junkyard else []
 
 
 ## Bu iş şu anki seviyede açık mı?

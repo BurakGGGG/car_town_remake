@@ -871,7 +871,8 @@ func _rebuild_list() -> void:
 	var buyback: Array[StringName] = []
 	if _ownership:
 		for id: StringName in _ownership.discovered_ids():
-			if not _ownership.is_owned(id):
+			# Restorasyon aracı parayla geri alınmaz: yalnızca hurdalıkta yeniden restore edilir
+			if not _ownership.is_owned(id) and not RestorationCatalog.is_restoration(id):
 				buyback.append(id)
 	if not buyback.is_empty():
 		_list_box.add_child(_section_label(Loc.t("GERİ AL")))

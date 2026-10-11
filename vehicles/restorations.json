@@ -1,0 +1,497 @@
+{
+ "version": 1,
+ "_readme": [
+  "HURDALIK / RESTORASYON — tek veri kaynağı (RestorationCatalog okur). Araştırma ve kararlar: docs/HURDALIK_ARASTIRMA.md",
+  "parts: genel, yığılabilir parçalar (envanter). gem_price: eksik parçayı gemle almanın tanesi (onay plakasıyla). DENGELENMEDİ — tools/economy simülasyonuyla ayarlanacak.",
+  "tiers: requires_completed = açılması için gereken TEMEL restorasyon sayısı (orijinal: 10 → Master Mechanic).",
+  "cars: sıra = listede gösterim sırası (zorluk merdiveni). recipe: parça → gereken adet; ilerleme = takılan toplam / gereken toplam.",
+  "  Araç ancak vehicles/cars.json'da aynı id ile kayıtlıysa (model hazırsa) oyunda görünür; yoksa 'model bekleniyor' sayılır ve atlanır.",
+  "  name / year / class burada yalnızca model gelmeden önceki plan içindir; model gelince cars.json esastır."
+ ],
+ "parts": [
+  {
+   "id": "bolt",
+   "name": "CIVATA",
+   "gem_price": 2
+  },
+  {
+   "id": "nut",
+   "name": "SOMUN",
+   "gem_price": 2
+  },
+  {
+   "id": "paint",
+   "name": "BOYA",
+   "gem_price": 3
+  },
+  {
+   "id": "spark_plug",
+   "name": "BUJİ",
+   "gem_price": 2
+  },
+  {
+   "id": "piston",
+   "name": "PİSTON",
+   "gem_price": 3
+  },
+  {
+   "id": "gear",
+   "name": "DİŞLİ",
+   "gem_price": 3
+  },
+  {
+   "id": "motor_oil",
+   "name": "MOTOR YAĞI",
+   "gem_price": 2
+  },
+  {
+   "id": "belt",
+   "name": "KAYIŞ",
+   "gem_price": 2
+  },
+  {
+   "id": "fiberglass",
+   "name": "FİBERGLAS",
+   "gem_price": 3
+  }
+ ],
+ "tiers": [
+  {
+   "id": "basic",
+   "name": "RESTORASYON",
+   "requires_completed": 0
+  },
+  {
+   "id": "classic",
+   "name": "USTA · KLASİK",
+   "requires_completed": 10
+  },
+  {
+   "id": "race",
+   "name": "USTA · YARIŞ",
+   "requires_completed": 10
+  }
+ ],
+ "cars": [
+  {
+   "id": "tofas_murat_124",
+   "name": "Tofaş Murat 124",
+   "year": 1971,
+   "class": "D",
+   "tier": "basic",
+   "recipe": {
+    "bolt": 1,
+    "nut": 1,
+    "paint": 1,
+    "spark_plug": 1,
+    "piston": 1,
+    "gear": 1
+   }
+  },
+  {
+   "id": "anadol_a1",
+   "name": "Anadol A1",
+   "year": 1967,
+   "class": "D",
+   "tier": "basic",
+   "recipe": {
+    "bolt": 1,
+    "nut": 1,
+    "paint": 1,
+    "spark_plug": 1,
+    "piston": 1,
+    "gear": 1
+   }
+  },
+  {
+   "id": "vw_beetle_1967",
+   "name": "Volkswagen Beetle",
+   "year": 1967,
+   "class": "D",
+   "tier": "basic",
+   "recipe": {
+    "bolt": 1,
+    "nut": 1,
+    "paint": 1,
+    "spark_plug": 1,
+    "piston": 1,
+    "gear": 1
+   }
+  },
+  {
+   "id": "fiat_500_1965",
+   "name": "Fiat 500",
+   "year": 1965,
+   "class": "D",
+   "tier": "basic",
+   "recipe": {
+    "bolt": 2,
+    "nut": 2,
+    "paint": 2,
+    "spark_plug": 2,
+    "piston": 2,
+    "gear": 2
+   }
+  },
+  {
+   "id": "tofas_murat_131",
+   "name": "Tofaş Murat 131",
+   "year": 1979,
+   "class": "D",
+   "tier": "basic",
+   "recipe": {
+    "bolt": 2,
+    "nut": 2,
+    "paint": 2,
+    "spark_plug": 2,
+    "piston": 2,
+    "gear": 2
+   }
+  },
+  {
+   "id": "mini_cooper_1965",
+   "name": "Mini Cooper",
+   "year": 1965,
+   "class": "D",
+   "tier": "basic",
+   "recipe": {
+    "bolt": 2,
+    "nut": 2,
+    "paint": 2,
+    "spark_plug": 2,
+    "piston": 2,
+    "gear": 2
+   }
+  },
+  {
+   "id": "willys_jeep_mb",
+   "name": "Willys Jeep MB",
+   "year": 1944,
+   "class": "D",
+   "tier": "basic",
+   "recipe": {
+    "bolt": 3,
+    "nut": 3,
+    "paint": 3,
+    "spark_plug": 3,
+    "piston": 3,
+    "gear": 3
+   }
+  },
+  {
+   "id": "peugeot_404",
+   "name": "Peugeot 404",
+   "year": 1968,
+   "class": "D",
+   "tier": "basic",
+   "recipe": {
+    "bolt": 3,
+    "nut": 3,
+    "paint": 3,
+    "spark_plug": 3,
+    "piston": 3,
+    "gear": 3
+   }
+  },
+  {
+   "id": "mercedes_w123",
+   "name": "Mercedes-Benz W123",
+   "year": 1980,
+   "class": "D",
+   "tier": "basic",
+   "recipe": {
+    "bolt": 3,
+    "nut": 3,
+    "paint": 3,
+    "spark_plug": 3,
+    "piston": 3,
+    "gear": 3
+   }
+  },
+  {
+   "id": "vw_t1_bus",
+   "name": "Volkswagen T1",
+   "year": 1965,
+   "class": "D",
+   "tier": "basic",
+   "recipe": {
+    "bolt": 4,
+    "nut": 4,
+    "paint": 4,
+    "spark_plug": 4,
+    "piston": 4,
+    "gear": 4
+   }
+  },
+  {
+   "id": "land_rover_series3",
+   "name": "Land Rover Series III",
+   "year": 1975,
+   "class": "D",
+   "tier": "basic",
+   "recipe": {
+    "bolt": 4,
+    "nut": 4,
+    "paint": 4,
+    "spark_plug": 4,
+    "piston": 4,
+    "gear": 4
+   }
+  },
+  {
+   "id": "chevrolet_bel_air_1956",
+   "name": "Chevrolet Bel Air",
+   "year": 1956,
+   "class": "D",
+   "tier": "basic",
+   "recipe": {
+    "bolt": 4,
+    "nut": 4,
+    "paint": 4,
+    "spark_plug": 4,
+    "piston": 4,
+    "gear": 4
+   }
+  },
+  {
+   "id": "ford_mustang_1967",
+   "name": "Ford Mustang Fastback",
+   "year": 1967,
+   "class": "A",
+   "tier": "classic",
+   "recipe": {
+    "spark_plug": 3,
+    "piston": 3,
+    "gear": 3,
+    "motor_oil": 6,
+    "belt": 6,
+    "fiberglass": 6
+   }
+  },
+  {
+   "id": "chevrolet_corvette_c2",
+   "name": "Chevrolet Corvette C2",
+   "year": 1963,
+   "class": "A",
+   "tier": "classic",
+   "recipe": {
+    "spark_plug": 3,
+    "piston": 3,
+    "gear": 3,
+    "motor_oil": 8,
+    "belt": 8,
+    "fiberglass": 8
+   }
+  },
+  {
+   "id": "jaguar_e_type",
+   "name": "Jaguar E-Type",
+   "year": 1961,
+   "class": "A",
+   "tier": "classic",
+   "recipe": {
+    "spark_plug": 4,
+    "piston": 4,
+    "gear": 4,
+    "motor_oil": 10,
+    "belt": 10,
+    "fiberglass": 10
+   }
+  },
+  {
+   "id": "aston_martin_db5",
+   "name": "Aston Martin DB5",
+   "year": 1964,
+   "class": "B",
+   "tier": "classic",
+   "recipe": {
+    "spark_plug": 4,
+    "piston": 4,
+    "gear": 4,
+    "motor_oil": 12,
+    "belt": 12,
+    "fiberglass": 12
+   }
+  },
+  {
+   "id": "dodge_charger_1970",
+   "name": "Dodge Charger",
+   "year": 1970,
+   "class": "A",
+   "tier": "classic",
+   "recipe": {
+    "spark_plug": 5,
+    "piston": 5,
+    "gear": 5,
+    "motor_oil": 14,
+    "belt": 14,
+    "fiberglass": 14
+   }
+  },
+  {
+   "id": "porsche_911_1973",
+   "name": "Porsche 911 Carrera RS",
+   "year": 1973,
+   "class": "A",
+   "tier": "classic",
+   "recipe": {
+    "spark_plug": 5,
+    "piston": 5,
+    "gear": 5,
+    "motor_oil": 16,
+    "belt": 16,
+    "fiberglass": 16
+   }
+  },
+  {
+   "id": "mercedes_300sl",
+   "name": "Mercedes-Benz 300 SL",
+   "year": 1955,
+   "class": "B",
+   "tier": "classic",
+   "recipe": {
+    "spark_plug": 6,
+    "piston": 6,
+    "gear": 6,
+    "motor_oil": 18,
+    "belt": 18,
+    "fiberglass": 18
+   }
+  },
+  {
+   "id": "lamborghini_miura",
+   "name": "Lamborghini Miura",
+   "year": 1968,
+   "class": "A",
+   "tier": "classic",
+   "recipe": {
+    "spark_plug": 6,
+    "piston": 6,
+    "gear": 6,
+    "motor_oil": 20,
+    "belt": 20,
+    "fiberglass": 20
+   }
+  },
+  {
+   "id": "ford_escort_rs1600",
+   "name": "Ford Escort RS1600",
+   "year": 1972,
+   "class": "B",
+   "tier": "race",
+   "recipe": {
+    "spark_plug": 4,
+    "piston": 4,
+    "gear": 4,
+    "motor_oil": 8,
+    "belt": 8,
+    "fiberglass": 8
+   }
+  },
+  {
+   "id": "lancia_stratos",
+   "name": "Lancia Stratos HF",
+   "year": 1974,
+   "class": "A",
+   "tier": "race",
+   "recipe": {
+    "spark_plug": 4,
+    "piston": 4,
+    "gear": 4,
+    "motor_oil": 10,
+    "belt": 10,
+    "fiberglass": 10
+   }
+  },
+  {
+   "id": "bmw_m3_e30",
+   "name": "BMW M3 E30",
+   "year": 1990,
+   "class": "A",
+   "tier": "race",
+   "recipe": {
+    "spark_plug": 5,
+    "piston": 5,
+    "gear": 5,
+    "motor_oil": 12,
+    "belt": 12,
+    "fiberglass": 12
+   }
+  },
+  {
+   "id": "toyota_celica_gt4",
+   "name": "Toyota Celica GT-Four",
+   "year": 1993,
+   "class": "A",
+   "tier": "race",
+   "recipe": {
+    "spark_plug": 5,
+    "piston": 5,
+    "gear": 5,
+    "motor_oil": 14,
+    "belt": 14,
+    "fiberglass": 14
+   }
+  },
+  {
+   "id": "lancia_delta_integrale",
+   "name": "Lancia Delta Integrale",
+   "year": 1992,
+   "class": "A",
+   "tier": "race",
+   "recipe": {
+    "spark_plug": 6,
+    "piston": 6,
+    "gear": 6,
+    "motor_oil": 16,
+    "belt": 16,
+    "fiberglass": 16
+   }
+  },
+  {
+   "id": "audi_quattro_s1",
+   "name": "Audi Sport Quattro S1",
+   "year": 1985,
+   "class": "A",
+   "tier": "race",
+   "recipe": {
+    "spark_plug": 6,
+    "piston": 6,
+    "gear": 6,
+    "motor_oil": 18,
+    "belt": 18,
+    "fiberglass": 18
+   }
+  },
+  {
+   "id": "ford_rs200",
+   "name": "Ford RS200",
+   "year": 1986,
+   "class": "A",
+   "tier": "race",
+   "recipe": {
+    "spark_plug": 7,
+    "piston": 7,
+    "gear": 7,
+    "motor_oil": 20,
+    "belt": 20,
+    "fiberglass": 20
+   }
+  },
+  {
+   "id": "mitsubishi_evo6",
+   "name": "Mitsubishi Lancer Evo VI",
+   "year": 1999,
+   "class": "A",
+   "tier": "race",
+   "recipe": {
+    "spark_plug": 7,
+    "piston": 7,
+    "gear": 7,
+    "motor_oil": 22,
+    "belt": 22,
+    "fiberglass": 22
+   }
+  }
+ ]
+}

@@ -92,6 +92,11 @@ func _ensure_crate_system() -> void:
 		add_child(missions)
 	if get_tree().get_first_node_in_group("crate_delivery") == null:
 		add_child(CrateDelivery.new())
+	# HURDALIK: parça envanteri ve restorasyon projeleri (kayıt SaveManager'da). SaveManager'dan ÖNCE hazır olmalı.
+	if get_tree().get_first_node_in_group("junkyard") == null:
+		var junkyard: JunkyardManager = JunkyardManager.new()
+		junkyard.name = "JunkyardManager"
+		add_child(junkyard)
 	# EĞİTİM durumu (biten dersler). Dersleri HUD'daki TutorialDirector oynatır.
 	if get_tree().get_first_node_in_group("tutorial") == null:
 		var tutorial: TutorialManager = TutorialManager.new()

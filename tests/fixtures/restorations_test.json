@@ -1,0 +1,21 @@
+{
+ "version": 1,
+ "_readme": ["junkyard_test için: restorasyon modelleri henüz yok, mevcut araçlar yerine kullanılır."],
+ "parts": [
+  {"id": "bolt", "name": "CIVATA", "gem_price": 2},
+  {"id": "nut", "name": "SOMUN", "gem_price": 2},
+  {"id": "piston", "name": "PİSTON", "gem_price": 3},
+  {"id": "gear", "name": "DİŞLİ", "gem_price": 3},
+  {"id": "belt", "name": "KAYIŞ", "gem_price": 2}
+ ],
+ "tiers": [
+  {"id": "basic", "name": "RESTORASYON", "requires_completed": 0},
+  {"id": "classic", "name": "USTA · KLASİK", "requires_completed": 2}
+ ],
+ "cars": [
+  {"id": "opel_corsa", "tier": "basic", "recipe": {"bolt": 1, "nut": 1, "piston": 1, "gear": 1}},
+  {"id": "hyundai_getz", "tier": "basic", "recipe": {"bolt": 2, "piston": 2, "unknown_part": 5}},
+  {"id": "mercedes_cls", "tier": "classic", "recipe": {"gear": 3, "belt": 5}},
+  {"id": "no_model_car", "tier": "basic", "recipe": {"bolt": 1}}
+ ]
+}

@@ -69,6 +69,7 @@ var _missions: MissionManager
 var _ads: AdService
 var _race: RaceManager
 var _tutorial: TutorialManager
+var _junkyard: JunkyardManager
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -100,6 +101,7 @@ func _setup() -> void:
 	_purchases = get_tree().get_first_node_in_group("purchases") as PurchaseManager
 	_race = get_tree().get_first_node_in_group("race") as RaceManager
 	_tutorial = get_tree().get_first_node_in_group("tutorial") as TutorialManager
+	_junkyard = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
 	if visit_mode:
 		_loading = true
 		_apply(GarageVisit.garage())
@@ -210,6 +212,8 @@ func new_game() -> void:
 		_race.reset()
 	if _tutorial:
 		_tutorial.reset()
+	if _junkyard:
+		_junkyard.reset()
 	_loading = false
 	save_game()
 
@@ -320,6 +324,9 @@ func _collect() -> Dictionary:
 		"race": _race.state() if _race else {},
 		# EĞİTİM: biten ustalık dersleri. Eski kayıtta yoktur: seviye 2+ oyuncu dersleri bitmiş sayar.
 		"tutorial": _tutorial.state() if _tutorial else {},
+		# HURDALIK: parça envanteri, süren restorasyon projeleri (tamir alanıyla), tamamlananlar.
+		# Eski kayıtta yoktur: boş envanter, proje yok.
+		"junkyard": _junkyard.state() if _junkyard else {},
 	}
 
 
@@ -442,6 +449,9 @@ func _apply(data: Dictionary) -> void:
 		# Seviye yukarıda yüklendi: bölümü olmayan (eski) kayıtta karar seviyeye göre verilir
 		var tutorial_data: Variant = data.get("tutorial", {})
 		_tutorial.load_state(tutorial_data if tutorial_data is Dictionary else {}, data.has("tutorial"))
+	if _junkyard:
+		var junkyard_data: Variant = data.get("junkyard", {})
+		_junkyard.load_state(junkyard_data if junkyard_data is Dictionary else {})
 	if legacy:
 		if _missions:
 			_missions.mark_legacy_repairs_passed()   # geçilmiş tamir yıldızları ödenmiş sayılır
@@ -460,6 +470,8 @@ func _connect_auto_save() -> void:
 		_crates.crates_changed.connect(request_save)
 	if _race:
 		_race.records_changed.connect(request_save)
+	if _junkyard:
+		_junkyard.junkyard_changed.connect(request_save)
 	if _ownership:
 		_ownership.ownership_changed.connect(request_save)
 	if _progress:
