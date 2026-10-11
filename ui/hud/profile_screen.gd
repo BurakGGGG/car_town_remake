@@ -111,7 +111,9 @@ func _build() -> void:
 
 func _nav_plate(column: VBoxContainer, id: StringName) -> PlateButton:
 	var button: PlateButton = PlateButton.new()
-	button.theme_type_variation = &"HudCarPlate"
+	# HudCarPlate bir PANEL stilidir (yalnız "panel" kutusu): düğmede normal / hover / vurgu kutuları tanımsız
+	# kalıp Godot'un koyu yarı saydam varsayılanına düşüyordu; vurgulu satırda beyaz yazı amber üstündeydi.
+	button.theme_type_variation = &"HudPlateSmall"
 	button.kind = HudIcon.Kind.NONE
 	button.bolts = false
 	button.focus_mode = Control.FOCUS_NONE

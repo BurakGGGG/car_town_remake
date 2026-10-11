@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://x7ufvpsnxugg"]
+
+[ext_resource type="PackedScene" uid="uid://opapu38loost" path="res://assets/cars/optimized/mercedes_s400.glb" id="1_merce"]
+
+[node name="mercedes_s400" instance=ExtResource("1_merce")]

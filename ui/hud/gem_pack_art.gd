@@ -327,6 +327,9 @@ func _ellipse(c: Vector2, rx: float, ry: float, color: Color) -> void:
 
 ## Dört köşeli parıltı yıldızı.
 func _sparkle(p: Vector2, r: float, alpha: float) -> void:
+	# Sönerken yarıçap ~0'a iner: noktalar çakışır ve çokgen üçgenlenemez ("triangulation failed").
+	if r < 0.75:
+		return
 	var pts: PackedVector2Array = PackedVector2Array()
 	for i: int in 8:
 		var a: float = TAU * float(i) / 8.0 - PI * 0.5

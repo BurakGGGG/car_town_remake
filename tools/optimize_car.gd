@@ -13,6 +13,7 @@ extends SceneTree
 ## --keep      virgülle ayrılmış parça adları: bu parçalar için oran 2x (ör. farlar, jantlar).
 ## --tex-size  doku (albedo) kenar uzunluğu; kaynak daha büyükse küçültülür (varsayılan 2048, 0 = dokunma).
 ## --quality   GLB içine gömülen JPEG kalitesi (0–1, varsayılan 0.85). Dokusuz kaynakta etkisiz.
+## --no-pad    doku kenar dolgusunu kapat (bkz. _pad_islands; varsayılan açık).
 ## --rename    mesh node adları "tripo_part_N" değilse sırayla yeniden adlandır (tek parçalı GLB'ler için).
 ## --map       CarPartMap'teki sahne yolu (ör. res://assets/cars/bmw_e_46.tscn): DETAIL_ROLES
 ##             rollerindeki parçalar otomatik --keep listesine eklenir (elle numara yazmaya gerek yok).
@@ -90,7 +91,7 @@ func _init() -> void:
 	for spec: Dictionary in fills:
 		_fill_arc(source, spec)
 	# Dokulu kaynak: tek albedo dokusu küçültülür, çıkışın tüm yüzeyleri tek materyali paylaşır
-	var out_material: StandardMaterial3D = _output_material(state, tex_size)
+	var out_material: StandardMaterial3D = _output_material(state, tex_size, null if args.has("no-pad") else source)
 
 	var out_root: Node3D = Node3D.new()
 	out_root.name = "ROOT"
@@ -224,7 +225,7 @@ static func _surface_material(src: Material, out_material: StandardMaterial3D, c
 
 ## Kaynağın ilk materyalinden çıkış materyali: albedo dokusu tex_size'a küçültülür (Lanczos), metallic /
 ## roughness sabitleri korunur; normal / metallic-roughness dokuları atılır. Dokusuz kaynakta null.
-func _output_material(state: GLTFState, tex_size: int) -> StandardMaterial3D:
+func _output_material(state: GLTFState, tex_size: int, pad_source: Node = null) -> StandardMaterial3D:
 	if state.materials.is_empty():
 		return null
 	var src: BaseMaterial3D = state.materials[0] as BaseMaterial3D
@@ -234,6 +235,8 @@ func _output_material(state: GLTFState, tex_size: int) -> StandardMaterial3D:
 	if img.is_compressed():
 		img.decompress()
 	var w: int = img.get_width()
+	if pad_source:
+		_pad_islands(img, pad_source)
 	if tex_size > 0 and w > tex_size:
 		img.resize(tex_size, tex_size * img.get_height() / w, Image.INTERPOLATE_LANCZOS)
 	var mat: StandardMaterial3D = StandardMaterial3D.new()
@@ -246,6 +249,93 @@ func _output_material(state: GLTFState, tex_size: int) -> StandardMaterial3D:
 	mat.roughness = 0.5 if src.roughness_texture else src.roughness
 	print("doku : %dx%d -> %dx%d (kaynak dokular: albedo%s%s%s)" % [w, w, img.get_width(), img.get_height(), " +normal" if src.normal_texture else "", " +metal/rough" if src.metallic_texture or src.roughness_texture else "", " +emission" if src.emission_texture else ""])
 	return mat
+
+
+## DOKU KENAR DOLGUSU: UV adalarının arasındaki KULLANILMAYAN texel'leri en yakın adanın rengiyle doldurur
+## (bake "margin"). Kullanılan texel'lere dokunmaz — yakından görünüm birebir aynı kalır.
+##
+## Neden: 2026-10-11 kaynaklarında (BMW E46, Getz…) atlas yüzlerce küçük adaya bölünmüş ve aralar SAF SİYAH
+## (%16–20). Küçültme, mipmap ve GPU sıkıştırması (DXT/ETC blokları) siyahı adanın içine karıştırıyor: araç
+## uzaklaştıkça (küçük mip seviyeleri) beyaz kaportada koyu dikişler ve kirli benekler çıkıyordu. Eski
+## kaynakların aralıkları zaten doluydu, o yüzden sorun görülmemişti.
+##
+## Kapsama: kaynak UV üçgenlerinin texel MERKEZİNİ içerdiği texel'ler (sıkı tutulur: fazla kapsama siyah
+## kenarı korur, eksik kapsama ise yalnızca kenar texel'ini komşusuyla değiştirir — zararsız).
+## Doldurma: alfa = kapsama olan RGBA görüntü, 1, 2, 4 … piksel kaydırılmış kopyaların ALTINA konur
+## (blend_rect: kapsanan texel her zaman üstte kalır). Hepsi yerleşik Image işlemi, GDScript döngüsü yok.
+func _pad_islands(img: Image, source: Node) -> void:
+	var t0: int = Time.get_ticks_msec()
+	var w: int = img.get_width()
+	var h: int = img.get_height()
+	var cover: PackedByteArray = PackedByteArray()
+	cover.resize(w * h)
+	for node: Node in _find_mesh_nodes(source):
+		var mesh: ImporterMesh = _to_importer_mesh(node)
+		if mesh == null:
+			continue
+		for si: int in mesh.get_surface_count():
+			var mat: BaseMaterial3D = mesh.get_surface_material(si) as BaseMaterial3D
+			if mat == null or mat.albedo_texture == null:
+				continue   # dokusuz yüzey (Toros tekerleri): UV'si atlası temsil etmez
+			var arrays: Array = mesh.get_surface_arrays(si)
+			var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+			var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+			if uvs.is_empty():
+				continue
+			if idx.is_empty():
+				idx = PackedInt32Array(range(uvs.size()))
+			for t: int in idx.size() / 3:
+				_cover_triangle(uvs[idx[t * 3]], uvs[idx[t * 3 + 1]], uvs[idx[t * 3 + 2]], w, h, cover)
+	var covered: int = 0
+	var rgba: PackedByteArray
+	var work: Image = img.duplicate()
+	work.convert(Image.FORMAT_RGBA8)
+	rgba = work.get_data()
+	for i: int in cover.size():
+		if cover[i] != 0:
+			covered += 1
+			rgba[i * 4 + 3] = 255
+		else:
+			rgba[i * 4 + 3] = 0
+	if covered == 0 or covered == cover.size():
+		return
+	var acc: Image = Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, rgba)
+	var full: Rect2i = Rect2i(0, 0, w, h)
+	var step: int = 1
+	while step < maxi(w, h):
+		for dir: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1)]:
+			var shifted: Image = Image.create_empty(w, h, false, Image.FORMAT_RGBA8)
+			shifted.blit_rect(acc, full, dir * step)
+			shifted.blend_rect(acc, full, Vector2i.ZERO)   # mevcut (dolu) texel'ler üstte kalır
+			acc = shifted
+		step *= 2
+	acc.convert(img.get_format())
+	img.copy_from(acc)
+	print("dolgu: %dx%d, kullanılan texel %%%.1f, boşluk dolduruldu (%d ms)" % [w, h, 100.0 * covered / cover.size(), Time.get_ticks_msec() - t0])
+
+
+static func _cover_triangle(a: Vector2, b: Vector2, c: Vector2, w: int, h: int, cover: PackedByteArray) -> void:
+	var pa: Vector2 = Vector2(a.x * w, a.y * h)
+	var pb: Vector2 = Vector2(b.x * w, b.y * h)
+	var pc: Vector2 = Vector2(c.x * w, c.y * h)
+	var area: float = (pb - pa).cross(pc - pa)
+	var min_x: int = clampi(int(floor(minf(minf(pa.x, pb.x), pc.x))), 0, w - 1)
+	var max_x: int = clampi(int(ceil(maxf(maxf(pa.x, pb.x), pc.x))), 0, w - 1)
+	var min_y: int = clampi(int(floor(minf(minf(pa.y, pb.y), pc.y))), 0, h - 1)
+	var max_y: int = clampi(int(ceil(maxf(maxf(pa.y, pb.y), pc.y))), 0, h - 1)
+	if absf(area) < 0.000001:
+		# Dejenere (ince) üçgen: köşe texel'lerini işaretle
+		for p: Vector2 in [pa, pb, pc]:
+			cover[clampi(int(p.y), 0, h - 1) * w + clampi(int(p.x), 0, w - 1)] = 255
+		return
+	for y: int in range(min_y, max_y + 1):
+		for x: int in range(min_x, max_x + 1):
+			var p: Vector2 = Vector2(x + 0.5, y + 0.5)
+			var w0: float = (pb - pa).cross(p - pa) / area
+			var w1: float = (pc - pb).cross(p - pb) / area
+			var w2: float = (pa - pc).cross(p - pc) / area
+			if w0 >= -0.02 and w1 >= -0.02 and w2 >= -0.02:
+				cover[y * w + x] = 255
 
 
 ## Tek parçalı / adsız GLB: mesh node'larını sırayla tripo_part_N yapar (CarPartMap indeksleri için).

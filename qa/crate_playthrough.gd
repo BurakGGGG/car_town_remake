@@ -196,9 +196,16 @@ func _play() -> void:
 	print("== 3) İLK KASA ÖDÜLÜ → GARAJA GELİR ==")
 	router.open(&"quests")
 	await create_timer(0.6).timeout
-	hud.quest_screen._on_claim_pressed(&"first_crate")
+	# GÖREVLER ekranı (MissionScreen, 2026-10-04) REHBER sekmesinde her görevin "Claim_<id>" düğmesi var:
+	# gerçek düğmeye basılır. Ödül penceresi açılır; pano kendiliğinden kapanmaz, oyuncu kapatır.
+	var claim: PlateButton = hud.quest_screen.find_child("Claim_first_crate", true, false) as PlateButton
+	check(claim != null and not claim.disabled, "REHBER: İLK KASA ödül düğmesi hazır")
+	if claim:
+		claim.pressed.emit()
 	await create_timer(0.3).timeout
-	check(not hud.quest_screen.visible, "ödül alınınca görev panosu kapandı (kasa arkada kalmıyor)")
+	router.close_all()
+	await create_timer(0.3).timeout
+	check(not hud.quest_screen.visible, "görev panosu kapatıldı (kasa arkada kalmıyor)")
 	check(crates.pending_count() == 1, "garaja 1 kasa geldi")
 	var first_uid: int = crates.crates()[0]["uid"]
 	await create_timer(1.0).timeout
@@ -226,7 +233,8 @@ func _play() -> void:
 	print("== 5) KOLEKSİYON ==")
 	router.open(&"collection")
 	await create_timer(1.6).timeout
-	check(hud.collection_screen._title.text.contains("2 / 16"), "koleksiyon 2 / 16: %s" % hud.collection_screen._title.text)
+	var collection_total: String = "2 / %d" % CarCatalog.all().size()
+	check(hud.collection_screen._title.text.contains(collection_total), "koleksiyon %s: %s" % [collection_total, hud.collection_screen._title.text])
 	await shot("05_koleksiyon")
 	router.close_all()
 	await create_timer(0.4).timeout
@@ -245,11 +253,12 @@ func _play() -> void:
 	var order: Array[String] = ["D", "C", "B", "A"]
 	var pc: int = order.find(String(entry["class"]))
 	var rival_ok: bool = true
+	# 2026-10-11: rakip SINIFA göre değil aracın kusursuz 300 m süresine göre seçilir (RaceManager.rival_pool)
+	var pool: Array[StringName] = RaceManager.rival_pool(race.player_vehicle_id())
 	for i: int in 20:
-		var rid: StringName = race.rival_id_for(race.player_vehicle_id())
-		var rc: int = order.find(String(CarCatalog.get_entry(rid)["class"]))
-		rival_ok = rival_ok and (rc == pc or rc == pc + 1)
-	check(rival_ok, "rakipler oyuncunun sınıfından ya da bir üstünden (%s)" % entry["class"])
+		rival_ok = rival_ok and pool.has(race.rival_id_for(race.player_vehicle_id()))
+	check(rival_ok and pool.size() >= RaceManager.RIVAL_MIN_POOL,
+		"rakipler aracın performans havuzundan (%d araç, sınıf %s)" % [pool.size(), entry["class"]])
 	if race.request_challenge_now():
 		await frames(3)
 		hud._on_challenge_clicked(race.challenger())
@@ -263,7 +272,8 @@ func _play() -> void:
 	pp.load_state(pp.level, pp.xp, 20)
 	router.open(&"showroom")
 	await create_timer(1.2).timeout
-	check(hud.showroom._buy_button.disabled and hud.showroom._buy_button.text.contains("GEM YETERSİZ"), "20 gemde ŞEHİR alınamıyor: %s" % hud.showroom._buy_button.text.replace("\n", " "))
+	# GEM MAĞAZASI'ndan beri (2026-10-11 öncesi) düğme kilitlenmez: "GEM YETERSİZ / GEM AL" yazar ve mağazayı açar
+	check(hud.showroom._buy_button.text.contains("GEM YETERSİZ"), "20 gemde ŞEHİR alınamıyor: %s" % hud.showroom._buy_button.text.replace("\n", " "))
 	hud.showroom._on_buy_pressed()
 	check(crates.pending_count() == 0 and pp.gems == 20, "yetersiz gemde hiçbir şey değişmedi")
 	await shot("07_gem_yetersiz")
@@ -283,14 +293,26 @@ func _play() -> void:
 		"KASA SİPARİŞİ görevi saydı (aktifse)")
 
 	print("== 8) HER KASA TÜRÜ: DOĞRU GEM ==")
-	pp.load_state(20, 0, 30 + 50 + 80 + 120)
+	var all_gems: int = 0
+	for c: Dictionary in CrateCatalog.all():
+		all_gems += int(c["price_gems"])
+	pp.load_state(20, 0, all_gems)
 	for c: Dictionary in CrateCatalog.all():
 		router.open(&"showroom")
 		await create_timer(1.0).timeout
 		hud.showroom._show_crate(c["id"])
 		await create_timer(0.3).timeout
 		var before: int = pp.gems
-		var blocked: bool = crates.buy_block_reason(c["id"]) == "full"
+		var reason: String = crates.buy_block_reason(c["id"])
+		var blocked: bool = reason == "full"
+		if reason == "level":
+			# SÜPER KASA seviye 28 ister (bu oyuncu 20): satın alınamaz, gem düşmez
+			hud.showroom._on_buy_pressed()
+			await create_timer(0.4).timeout
+			check(pp.gems == before, "%s: seviye kilidi (sv. %d) → gem düşmedi" % [c["short_name"], CrateCatalog.min_level(c["id"])])
+			router.close_all()
+			await create_timer(0.4).timeout
+			continue
 		hud.showroom._on_buy_pressed()
 		await create_timer(0.6).timeout
 		if blocked:

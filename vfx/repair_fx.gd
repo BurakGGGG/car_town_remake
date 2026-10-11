@@ -45,22 +45,10 @@ func setup(car: Node3D, job: StringName) -> void:
 	_front = _front_sign(car, model, _rig)
 	# Ölçüler garajın NORMAL kamera uzaklığına göre (araç ekranda ~110 px): ilk denemedeki yarı
 	# boyutlu kıvılcım / duman bu uzaklıktan seçilmiyordu (QA karesi).
-	_sparks = _emitter(28, 0.55, CrateRevealFx.soft_texture(), 0.045, true)
-	_sparks.explosiveness = 0.35   # anlık nokta değil, kısa bir akıntı
-	_sparks.spread = 50.0
-	_sparks.gravity = Vector3(0.0, -2.8, 0.0)
-	_sparks.initial_velocity_min = 0.8
-	_sparks.initial_velocity_max = 1.7
-	_sparks.scale_amount_min = 0.6
-	_sparks.scale_amount_max = 1.2
-	_smoke = _emitter(14, 1.3, DragRaceScreen.puff_texture(), 0.17, false)
-	_smoke.explosiveness = 0.5
-	_smoke.spread = 35.0
-	_smoke.gravity = Vector3(0.0, 0.3, 0.0)
-	_smoke.initial_velocity_min = 0.12
-	_smoke.initial_velocity_max = 0.35
-	_smoke.scale_amount_min = 0.7
-	_smoke.scale_amount_max = 1.7
+	_sparks = make_sparks()
+	add_child(_sparks)
+	_smoke = make_smoke()
+	add_child(_smoke)
 	_light = OmniLight3D.new()
 	_light.omni_range = 0.75
 	_light.light_energy = 0.0
@@ -129,14 +117,7 @@ func coins(amount: int) -> void:
 	mesh.bottom_radius = 0.055
 	mesh.height = 0.012
 	mesh.radial_segments = 12
-	var gold: StandardMaterial3D = StandardMaterial3D.new()
-	# Garaj ışığında metalik altın kahverengi görünüyordu (QA karesi): parlak, kendinden ışıklı.
-	gold.albedo_color = Color("FFD24A")
-	gold.metallic = 0.25
-	gold.roughness = 0.35
-	gold.emission_enabled = true
-	gold.emission = Color("F5BE4C")
-	gold.emission_energy_multiplier = 0.9
+	var gold: StandardMaterial3D = gold_material()
 	var last: Tween = null
 	for i: int in count:
 		var coin: MeshInstance3D = MeshInstance3D.new()
@@ -169,6 +150,18 @@ func coins(amount: int) -> void:
 	if last:
 		await last.finished
 	queue_free()
+
+
+## Para malzemesi. Garaj ışığında metalik altın kahverengi görünüyordu (QA karesi): parlak, kendinden ışıklı.
+static func gold_material() -> StandardMaterial3D:
+	var gold: StandardMaterial3D = StandardMaterial3D.new()
+	gold.albedo_color = Color("FFD24A")
+	gold.metallic = 0.25
+	gold.roughness = 0.35
+	gold.emission_enabled = true
+	gold.emission = Color("F5BE4C")
+	gold.emission_energy_multiplier = 0.9
+	return gold
 
 
 ## İş iptal / araç gitti: sessizce kalk.
@@ -314,6 +307,39 @@ static func _local_bounds(car: Node3D, model: Node3D) -> AABB:
 
 
 func _emitter(amount: int, lifetime: float, texture: Texture2D, size: float, additive: bool) -> CPUParticles3D:
+	var p: CPUParticles3D = make_emitter(amount, lifetime, texture, size, additive)
+	add_child(p)
+	return p
+
+
+## Kıvılcım ve duman yayıcıları (WorldPrewarm BİREBİR aynılarını kurar).
+static func make_sparks() -> CPUParticles3D:
+	var sparks: CPUParticles3D = make_emitter(28, 0.55, CrateRevealFx.soft_texture(), 0.045, true)
+	sparks.explosiveness = 0.35   # anlık nokta değil, kısa bir akıntı
+	sparks.spread = 50.0
+	sparks.gravity = Vector3(0.0, -2.8, 0.0)
+	sparks.initial_velocity_min = 0.8
+	sparks.initial_velocity_max = 1.7
+	sparks.scale_amount_min = 0.6
+	sparks.scale_amount_max = 1.2
+	return sparks
+
+
+static func make_smoke() -> CPUParticles3D:
+	var smoke: CPUParticles3D = make_emitter(14, 1.3, DragRaceScreen.puff_texture(), 0.17, false)
+	smoke.explosiveness = 0.5
+	smoke.spread = 35.0
+	smoke.gravity = Vector3(0.0, 0.3, 0.0)
+	smoke.initial_velocity_min = 0.12
+	smoke.initial_velocity_max = 0.35
+	smoke.scale_amount_min = 0.7
+	smoke.scale_amount_max = 1.7
+	return smoke
+
+
+## Yayıcı + malzemesi (WorldPrewarm da aynısını kurar: shader'ı oyun yüklenirken derlensin).
+static func make_emitter(amount: int, lifetime: float, texture: Texture2D, size: float,
+		additive: bool) -> CPUParticles3D:
 	var p: CPUParticles3D = CPUParticles3D.new()
 	var quad: QuadMesh = QuadMesh.new()
 	quad.size = Vector2(size, size)
@@ -332,5 +358,4 @@ func _emitter(amount: int, lifetime: float, texture: Texture2D, size: float, add
 	p.one_shot = true
 	p.emitting = false
 	p.local_coords = false
-	add_child(p)
 	return p

@@ -242,7 +242,7 @@ koleksiyon sonrası birikimi emsin diye.
 | YARIŞÇI | `race_wins` | 3 · 15 · 50 · 150 | 1,0 |
 | ARENA | `races` | 10 · 50 · 200 | 0,6 |
 | KASA AVCISI | `crates_opened` | 3 · 15 · 50 · 150 | 0,9 |
-| KOLEKSİYONCU | `cars_discovered` (durum) | 3 · 6 · 10 · 14 · 16 | 1,5 |
+| KOLEKSİYONCU | `cars_discovered` (durum) | 3 · 6 · 10 · 18 · 26 | 1,5 |
 | BOYACI | `paints` | 1 · 5 · 20 | 0,7 |
 | DEKORATÖR | `decor_placed` | 5 · 20 · 50 · 100 | 0,7 |
 | SERGİCİ | `cars_on_display` (durum) | 1 · 3 · 6 · 10 | 0,8 |

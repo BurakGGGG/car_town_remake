@@ -135,22 +135,53 @@ func set_racing(value: bool) -> void:
 
 # --- Rakip seçimi -----------------------------------------------------------------
 
-## Oyuncunun sınıfına yakın bir rakip seçilir: kendi sınıfı ya da bir üst sınıf. Katı kilit yok —
-## oyuncunun sahip OLMADIĞI araçlar da rakip olabilir (Car Town'da da rakipler dışarıdan gelir).
+## RAKİP PERFORMANSA GÖRE seçilir (2026-10-11, kullanıcı onayı): oyuncunun aracının kusursuz 300 m
+## süresine yakın araçlar — en fazla RIVAL_FASTER kadar hızlı, en fazla RIVAL_SLOWER kadar yavaş. Eskiden
+## havuz "kendi sınıfı + bir üst sınıf"tı; sınıflar arası gerçek fark (~1 sn) rakibin gün formundan
+## (~±0,4 sn) büyük olduğu için bir üst sınıftan gelen rakiplerin çoğu YENİLEMEZDİ (Golf'e karşı E46 %0).
+## Pencere dar kalırsa (havuz < RIVAL_MIN_POOL) adım adım genişletilir. Katı kilit yok — oyuncunun sahip
+## OLMADIĞI araçlar da rakip olabilir. Ölçüm: qa/matchup_report.gd.
+const RIVAL_FASTER: float = 0.06
+const RIVAL_SLOWER: float = 0.08
+const RIVAL_MIN_POOL: int = 4
+
+
+## Oyuncunun İLK yarışı mı (hiç rekor yok — eğitimin drag dersi de bu). İlk yarışta rakip havuzun en yavaşıdır
+## ve GÜN FORMU çekilmez (DragRaceScreen): yeni oyuncu kusursuz oynadığı ilk yarışı rakibin iyi gününe kaybetmesin.
+func is_first_race() -> bool:
+	return _records.is_empty()
+
+
 func rival_id_for(player_id: StringName) -> StringName:
-	var player_class: String = String(CarCatalog.get_entry(player_id).get("class", "D"))
-	var order: Array[String] = ["D", "C", "B", "A", "S"]
-	var index: int = maxi(order.find(player_class), 0)
-	var wanted: Array[String] = [order[index]]
-	if index + 1 < order.size():
-		wanted.append(order[index + 1])
+	var pool: Array[StringName] = rival_pool(player_id)
+	# İLK YARIŞ (hiç rekor yok — eğitimin drag dersi de bu): havuzun EN YAVAŞ aracı. Performansa göre havuzda
+	# daha hızlı araç da var; QA'da yeni oyuncu ilk yarışını Şahin'le Corsa'ya karşı kaybediyordu (13,65 / 12,93 sn).
+	if is_first_race():
+		var slowest: StringName = pool[0]
+		for id: StringName in pool:
+			if DragRaceSim.base_time(id) > DragRaceSim.base_time(slowest):
+				slowest = id
+		return slowest
+	return pool[_rng.randi_range(0, pool.size() - 1)]
+
+
+## Oyuncunun aracına verilebilecek rakipler (oyuncunun kendi modeli dahil: aynalı yarış).
+static func rival_pool(player_id: StringName) -> Array[StringName]:
+	var mine: float = DragRaceSim.base_time(player_id)
+	var widen: float = 1.0
 	var pool: Array[StringName] = []
-	for entry: Dictionary in CarCatalog.all():
-		if wanted.has(String(entry.get("class", ""))):
-			pool.append(entry["id"])
+	while widen <= 4.0:
+		pool.clear()
+		for entry: Dictionary in CarCatalog.all():
+			var theirs: float = DragRaceSim.base_time(entry["id"])
+			if theirs >= mine * (1.0 - RIVAL_FASTER * widen) and theirs <= mine * (1.0 + RIVAL_SLOWER * widen):
+				pool.append(entry["id"])
+		if pool.size() >= RIVAL_MIN_POOL:
+			break
+		widen += 0.5
 	if pool.is_empty():
 		pool.append(player_id)
-	return pool[_rng.randi_range(0, pool.size() - 1)]
+	return pool
 
 
 ## Oyuncunun yarışa çıkaracağı araç: garajda YARIŞ ARACI olarak seçilen (VehicleOwnership.race_vehicle_id);
@@ -308,7 +339,7 @@ func _send_challenger() -> void:
 	if _stop == null:
 		_timer = 5.0
 		return
-	# Rakip modeli ÖNCE seçilir (oyuncunun sınıfına göre), araç o modelle yola çıkar: yoldan
+	# Rakip modeli ÖNCE seçilir (oyuncunun aracının performansına göre), araç o modelle yola çıkar: yoldan
 	# gelen araç ile yarışta karşına çıkan araç AYNI olur.
 	if _rival_id == &"":
 		_rival_id = rival_id_for(player_vehicle_id())

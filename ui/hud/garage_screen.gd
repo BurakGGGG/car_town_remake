@@ -194,6 +194,7 @@ var _sell_confirm: PlateButton
 var _detail_panel: PlatePanel
 var _detail_name: Label
 var _detail_overall: Label
+var _detail_specs: Label   # gerçek fabrika verisi (performance bloğu): motor · çekiş / 0-100 · son hız
 ## Genel puanı oluşturan dört stat: [statü anahtarı, etiket].
 const DETAIL_ROWS: Array = [
 	["top_speed", "HIZ"], ["acceleration", "HIZLANMA"], ["reaction", "TEPKİ"], ["grip", "TUTUŞ"]]
@@ -224,6 +225,7 @@ func _ready() -> void:
 		# Hedef 300 px (tahtanın ~%80'i): tahtanın sağ ucu telefonda aksiyon plakalarının arkasında kalıyor
 		wall_sign.font_size = clampi(int(96.0 * 300.0 / maxf(width, 1.0)), 28, wall_sign.font_size)
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	_release_render_target()   # garaj hiç açılmasa da tam ekran hedef ayrılıyordu
 	car_viewport.physics_object_picking = true      # park etmiş araçlara tıklanabilsin
 	view.mouse_filter = Control.MOUSE_FILTER_STOP   # tıklama SubViewport'a iletilsin (plakalar üstte)
 	_collection = Node3D.new()
@@ -339,6 +341,7 @@ func open() -> void:
 	var key_light: DirectionalLight3D = car_viewport.get_node_or_null("KeyLight") as DirectionalLight3D
 	if key_light:
 		key_light.shadow_enabled = GameSettings.shadows_enabled()
+	_claim_render_target()
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	car_list.open()   # listeyi güncel sahiplikle kurar (yeni alınan araç burada belirir)
 	# Gösterilecek araç: listede seçili olan, yoksa sahip olunan ilk araç
@@ -367,12 +370,36 @@ func close() -> void:
 	tween.finished.connect(_finish_close)
 
 
+## İLK AÇILIŞ TAKILMASINI ÖNLER (drag / showroom'daki gibi): garaj sahnesi görünmeden bir kez küçük boyutta
+## çizilir, shader'lar oyun yüklenirken derlenir. Ölçüldü (qa/open_repeat.gd): ilk açılış 45,7 ms, sonrakiler 23-30.
+func prewarm() -> void:
+	if visible:
+		return
+	view.stretch = false
+	car_viewport.size = Vector2i(64, 36)
+	car_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
+## ÇİZİM HEDEFİ kapalıyken VRAM'de tutulmaz (bkz. DragRaceScreen._release_render_target): `stretch` açıkken
+## görüntü alanına boyut atanamadığı için kapanışta kapatılır, açılışta boyut kapsayıcıdan alınıp geri açılır.
+func _release_render_target() -> void:
+	view.stretch = false
+	car_viewport.size = Vector2i(4, 4)
+
+
+func _claim_render_target() -> void:
+	if not view.stretch:
+		car_viewport.size = Vector2i(view.size.max(Vector2.ONE))
+		view.stretch = true
+
+
 func _finish_close() -> void:
 	_sell_panel.hide()
 	_detail_panel.hide()
 	action_column.show()
 	_paint_panel.close()   # önizleme bırakılır; yeniden açılışta aksiyon plakaları görünür
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	_release_render_target()
 	car_list.close()
 	_clear_collection()
 	_clear_preview()   # garaj kapalıyken araç modeli bellekte durmasın (açılışta yeniden yüklenir)
@@ -778,7 +805,8 @@ func _on_sell_confirmed() -> void:
 
 # --- Araç detayı (genel puan) ------------------------------------------------------
 
-## Sağ sütunda DETAY plakasının açtığı panel: GENEL puan (0-1000) ve onu oluşturan dört stat.
+## Sağ sütunda DETAY plakasının açtığı panel: GENEL puan (0-1000, kusursuz 300 m süresinden — DragRaceSim.overall_of),
+## gerçek veri satırı ve dört stat çubuğu (ayrıntı; GENEL artık bunların toplamı değil).
 func _build_detail() -> void:
 	_detail_panel = PlatePanel.new()
 	_detail_panel.name = "DetailPanel"
@@ -799,9 +827,15 @@ func _build_detail() -> void:
 	_detail_overall = Label.new()
 	_detail_overall.theme_type_variation = &"HudInkValue"
 	_detail_overall.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_detail_specs = Label.new()
+	_detail_specs.theme_type_variation = &"HudInkCaption"
+	_detail_specs.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_detail_specs.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_detail_specs.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(_detail_name)
 	box.add_child(caption)
 	box.add_child(_detail_overall)
+	box.add_child(_detail_specs)
 	for row: Array in DETAIL_ROWS:
 		var key: String = row[0]
 		var line: HBoxContainer = HBoxContainer.new()
@@ -840,11 +874,43 @@ func _refresh_detail() -> void:
 	var stats: Dictionary = DragRaceSim.stats_of(_shown_vehicle)
 	_detail_name.text = String(entry.get("display_name", _shown_vehicle)).to_upper()
 	_detail_overall.text = "%d / %d" % [DragRaceSim.overall_of(_shown_vehicle), DragRaceSim.OVERALL_MAX]
+	_detail_specs.text = spec_text(entry)
+	_detail_specs.visible = _detail_specs.text != ""
 	for row: Array in DETAIL_ROWS:
 		var key: String = row[0]
 		var ratio: float = DragRaceSim.stat_ratio(key, float(stats.get(key, 0)))
 		(_detail_lanes[key] as XpLane).ratio = ratio
 		(_detail_values[key] as Label).text = str(roundi(ratio * 100.0))
+
+
+## Gerçek fabrika verisinin iki satırlık özeti: "3.0 · ARKADAN İTİŞ" / "0-100 6,5 sn · 250 km/sa".
+static func spec_text(entry: Dictionary) -> String:
+	var perf: Dictionary = entry.get("performance", {})
+	if perf.is_empty():
+		return ""
+	var drive: String = ""
+	match StringName(String(perf.get("drivetrain", ""))):
+		&"FWD": drive = Loc.t("ÖNDEN ÇEKİŞ")
+		&"RWD": drive = Loc.t("ARKADAN İTİŞ")
+		&"AWD": drive = Loc.t("4 ÇEKER")
+	var engine: String = String(perf.get("engine", ""))
+	if engine.to_lower() == "elektrik":
+		engine = Loc.t("ELEKTRİK")
+	if int(perf.get("hp", 0)) > 0:
+		engine += Loc.t(" · %d HP") % int(perf["hp"])
+	var parts: PackedStringArray = PackedStringArray()
+	for part: String in [engine, drive]:
+		if part != "":
+			parts.append(part)
+	return " · ".join(parts) + "\n" + perf_line(entry)
+
+
+## Tek satır: "0-100 6,5 sn · 250 km/sa" (yarış davet ekranı da kullanır). Veri yoksa boş.
+static func perf_line(entry: Dictionary) -> String:
+	var perf: Dictionary = entry.get("performance", {})
+	if perf.is_empty():
+		return ""
+	return Loc.t("0-100 %s sn · %d km/sa") % [Loc.decimal(float(perf.get("zero_100", 0.0))), int(perf.get("top_speed", 0))]
 
 
 func _open_detail() -> void:

@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://dcsa21r7gor5b"]
+
+[ext_resource type="PackedScene" uid="uid://8vnh1vpvokql" path="res://assets/cars/optimized/tesla_model_y.glb" id="1_tesla"]
+
+[node name="tesla_model_y" instance=ExtResource("1_tesla")]

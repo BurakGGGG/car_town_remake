@@ -13,9 +13,9 @@
       "scene_path": "res://assets/cars/bmw_e_46.tscn",
       "source_path": "res://assets/cars/source/bmw_e46.glb",
       "optimized_path": "res://assets/cars/optimized/bmw_e46.glb",
-      "default_color": "#242E55",
+      "default_color": "#CDD3DA",
       "available_colors": [
-        "#242E55",
+        "#CDD3DA",
         "#3D4464",
         "#C2C4CC",
         "#F2F2EB",
@@ -30,10 +30,18 @@
       "min_level": 12,
       "min_garage_rank": 3,
       "race": {
-        "top_speed": 145,
-        "acceleration": 84,
+        "top_speed": 250,
+        "acceleration": 70,
         "reaction": 78,
         "grip": 80
+      },
+      "performance": {
+        "variant": "BMW E46 330i",
+        "engine": "3.0",
+        "hp": 0,
+        "zero_100": 6.5,
+        "top_speed": 250,
+        "drivetrain": "RWD"
       },
       "real_dimensions": {
         "length_m": 4.471,
@@ -41,13 +49,13 @@
         "height_m": 1.415,
         "wheelbase_m": 2.725
       },
-      "model_scale": 0.93
+      "model_scale": 1.03
     },
     {
       "id": "hyundai_getz",
-      "brand": "Hyundai",
-      "model": "Getz",
-      "display_name": "Hyundai Getz",
+      "brand": "HYUNDAI",
+      "model": "GETZ",
+      "display_name": "HYUNDAI GETZ",
       "year": 2008,
       "price": 35000,
       "condition": 0.72,
@@ -55,9 +63,9 @@
       "scene_path": "res://assets/cars/hyundai_getz.tscn",
       "source_path": "res://assets/cars/source/hyundai_getz.glb",
       "optimized_path": "res://assets/cars/optimized/hyundai_getz.glb",
-      "default_color": "#D8010A",
+      "default_color": "#E50107",
       "available_colors": [
-        "#D8010A",
+        "#E50107",
         "#D9000A",
         "#C90511",
         "#D12924",
@@ -72,10 +80,18 @@
       "min_level": 8,
       "min_garage_rank": 2,
       "race": {
-        "top_speed": 112,
-        "acceleration": 70,
+        "top_speed": 176,
+        "acceleration": 33,
         "reaction": 62,
         "grip": 64
+      },
+      "performance": {
+        "variant": "Hyundai Getz",
+        "engine": "1.5 CRDi",
+        "hp": 110,
+        "zero_100": 11.5,
+        "top_speed": 176,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 3.825,
@@ -83,13 +99,13 @@
         "height_m": 1.495,
         "wheelbase_m": 2.455
       },
-      "model_scale": 0.88
+      "model_scale": 0.85
     },
     {
       "id": "renault_fluence",
-      "brand": "Renault",
-      "model": "Fluence",
-      "display_name": "Renault Fluence",
+      "brand": "RENAULT",
+      "model": "FLUENCE",
+      "display_name": "RENAULT FLUENCE",
       "year": 2012,
       "price": 60000,
       "condition": 0.64,
@@ -97,9 +113,9 @@
       "scene_path": "res://assets/cars/renault_fluence.tscn",
       "source_path": "res://assets/cars/source/renault_fluence.glb",
       "optimized_path": "res://assets/cars/optimized/renault_fluence.glb",
-      "default_color": "#A8ADAE",
+      "default_color": "#CAD2DC",
       "available_colors": [
-        "#A8ADAE",
+        "#CAD2DC",
         "#8D9190",
         "#B2B5B6",
         "#29477A",
@@ -109,15 +125,23 @@
       "world_node": "CAR_RENAULT_FLUENCE",
       "plate_color": "#F3E8CF",
       "traffic": true,
-      "class": "B",
+      "class": "C",
       "rarity": "common",
       "min_level": 15,
       "min_garage_rank": 4,
       "race": {
-        "top_speed": 128,
-        "acceleration": 78,
+        "top_speed": 200,
+        "acceleration": 45,
         "reaction": 72,
         "grip": 74
+      },
+      "performance": {
+        "variant": "Renault Fluence",
+        "engine": "2.0",
+        "hp": 140,
+        "zero_100": 9.9,
+        "top_speed": 200,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 4.618,
@@ -125,13 +149,13 @@
         "height_m": 1.501,
         "wheelbase_m": 2.703
       },
-      "model_scale": 0.95
+      "model_scale": 1.03
     },
     {
       "id": "vw_passat_b55",
-      "brand": "Volkswagen",
-      "model": "Passat B5.5",
-      "display_name": "Volkswagen Passat B5.5",
+      "brand": "VOLKSWAGEN",
+      "model": "PASSAT B5.5",
+      "display_name": "VOLKSWAGEN PASSAT B5.5",
       "year": 2004,
       "price": 50000,
       "condition": 0.58,
@@ -139,9 +163,9 @@
       "scene_path": "res://assets/cars/volswagen_passat_b_5_5.tscn",
       "source_path": "res://assets/cars/source/vw_passat_b5.5.glb",
       "optimized_path": "res://assets/cars/optimized/volswagen_passat_b5_5.glb",
-      "default_color": "#ADB0B2",
+      "default_color": "#CAD0D7",
       "available_colors": [
-        "#ADB0B2",
+        "#CAD0D7",
         "#858888",
         "#BCBCBF",
         "#383D45",
@@ -151,15 +175,23 @@
       "world_node": "CAR_VW_PASSAT",
       "plate_color": "#83B24F",
       "traffic": true,
-      "class": "B",
+      "class": "C",
       "rarity": "common",
       "min_level": 12,
       "min_garage_rank": 3,
       "race": {
-        "top_speed": 135,
-        "acceleration": 72,
+        "top_speed": 208,
+        "acceleration": 45,
         "reaction": 66,
         "grip": 70
+      },
+      "performance": {
+        "variant": "VW Passat B5.5",
+        "engine": "1.9 TDI",
+        "hp": 130,
+        "zero_100": 9.9,
+        "top_speed": 208,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 4.704,
@@ -167,13 +199,13 @@
         "height_m": 1.463,
         "wheelbase_m": 2.703
       },
-      "model_scale": 0.95
+      "model_scale": 1.08
     },
     {
       "id": "hyundai_era",
-      "brand": "Hyundai",
-      "model": "Era",
-      "display_name": "Hyundai Era",
+      "brand": "HYUNDAI",
+      "model": "ERA",
+      "display_name": "HYUNDAI ERA",
       "year": 2007,
       "price": 30000,
       "condition": 0.7,
@@ -193,15 +225,23 @@
       "world_node": "Car_HYUNDAI_ERA",
       "plate_color": "#9FD6C8",
       "traffic": true,
-      "class": "C",
+      "class": "D",
       "rarity": "rare",
       "min_level": 6,
       "min_garage_rank": 1,
       "race": {
-        "top_speed": 118,
-        "acceleration": 64,
+        "top_speed": 177,
+        "acceleration": 27,
         "reaction": 58,
         "grip": 60
+      },
+      "performance": {
+        "variant": "Hyundai Accent Era",
+        "engine": "1.4",
+        "hp": 97,
+        "zero_100": 12.3,
+        "top_speed": 177,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 4.28,
@@ -213,9 +253,9 @@
     },
     {
       "id": "tofas_sahin",
-      "brand": "Tofaş",
-      "model": "Şahin",
-      "display_name": "Tofaş Şahin",
+      "brand": "TOFAŞ",
+      "model": "ŞAHİN",
+      "display_name": "TOFAŞ ŞAHİN",
       "label": "TOFAŞ\nŞAHİN",
       "year": 1995,
       "price": 15000,
@@ -241,10 +281,18 @@
       "min_level": 1,
       "min_garage_rank": 1,
       "race": {
-        "top_speed": 105,
-        "acceleration": 52,
+        "top_speed": 165,
+        "acceleration": 21,
         "reaction": 48,
         "grip": 45
+      },
+      "performance": {
+        "variant": "Tofaş Şahin",
+        "engine": "1.6",
+        "hp": 0,
+        "zero_100": 13.2,
+        "top_speed": 165,
+        "drivetrain": "RWD"
       },
       "real_dimensions": {
         "length_m": 4.316,
@@ -252,13 +300,13 @@
         "height_m": 1.437,
         "wheelbase_m": 2.49
       },
-      "model_scale": 1.0
+      "model_scale": 0.97
     },
     {
       "id": "renault_toros",
-      "brand": "Renault",
-      "model": "Toros",
-      "display_name": "Renault Toros",
+      "brand": "RENAULT",
+      "model": "TOROS",
+      "display_name": "RENAULT TOROS",
       "label": "RENAULT\nTOROS",
       "year": 1994,
       "price": 20000,
@@ -284,10 +332,18 @@
       "min_level": 3,
       "min_garage_rank": 1,
       "race": {
-        "top_speed": 100,
-        "acceleration": 56,
+        "top_speed": 150,
+        "acceleration": 11,
         "reaction": 50,
         "grip": 47
+      },
+      "performance": {
+        "variant": "Renault Toros",
+        "engine": "1.4",
+        "hp": 0,
+        "zero_100": 14.5,
+        "top_speed": 150,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 4.318,
@@ -299,8 +355,8 @@
     },
     {
       "id": "hyundai_accent_blue",
-      "brand": "Hyundai",
-      "model": "Accent Blue",
+      "brand": "HYUNDAI",
+      "model": "ACCENT BLUE",
       "display_name": "HYUNDAI ACCENT BLUE",
       "year": 2013,
       "price": 38000,
@@ -326,10 +382,18 @@
       "min_level": 8,
       "min_garage_rank": 2,
       "race": {
-        "top_speed": 120,
-        "acceleration": 68,
+        "top_speed": 190,
+        "acceleration": 43,
         "reaction": 62,
         "grip": 64
+      },
+      "performance": {
+        "variant": "Hyundai Accent Blue",
+        "engine": "1.6",
+        "hp": 124,
+        "zero_100": 10.2,
+        "top_speed": 190,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 4.37,
@@ -341,8 +405,8 @@
     },
     {
       "id": "ford_focus",
-      "brand": "Ford",
-      "model": "Focus",
+      "brand": "FORD",
+      "model": "FOCUS",
       "display_name": "FORD FOCUS",
       "year": 2013,
       "price": 45000,
@@ -368,10 +432,18 @@
       "min_level": 10,
       "min_garage_rank": 2,
       "race": {
-        "top_speed": 125,
-        "acceleration": 72,
+        "top_speed": 193,
+        "acceleration": 38,
         "reaction": 66,
         "grip": 68
+      },
+      "performance": {
+        "variant": "Ford Focus",
+        "engine": "1.6",
+        "hp": 125,
+        "zero_100": 10.9,
+        "top_speed": 193,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 4.358,
@@ -383,8 +455,8 @@
     },
     {
       "id": "skoda_kamiq",
-      "brand": "Skoda",
-      "model": "Kamiq",
+      "brand": "SKODA",
+      "model": "KAMIQ",
       "display_name": "SKODA KAMIQ",
       "year": 2020,
       "price": 55000,
@@ -405,15 +477,23 @@
       "world_node": "",
       "plate_color": "#E8C58A",
       "traffic": true,
-      "class": "B",
+      "class": "C",
       "rarity": "rare",
       "min_level": 12,
       "min_garage_rank": 3,
       "race": {
-        "top_speed": 131,
-        "acceleration": 76,
+        "top_speed": 193,
+        "acceleration": 43,
         "reaction": 70,
         "grip": 74
+      },
+      "performance": {
+        "variant": "Skoda Kamiq",
+        "engine": "1.6 TDI",
+        "hp": 115,
+        "zero_100": 10.2,
+        "top_speed": 193,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 4.241,
@@ -425,8 +505,8 @@
     },
     {
       "id": "vw_golf_7",
-      "brand": "Volkswagen",
-      "model": "Golf 7",
+      "brand": "VOLKSWAGEN",
+      "model": "GOLF 7",
       "display_name": "VW GOLF 7",
       "year": 2015,
       "price": 65000,
@@ -452,10 +532,18 @@
       "min_level": 15,
       "min_garage_rank": 4,
       "race": {
-        "top_speed": 134,
-        "acceleration": 80,
+        "top_speed": 216,
+        "acceleration": 58,
         "reaction": 74,
         "grip": 76
+      },
+      "performance": {
+        "variant": "VW Golf 7",
+        "engine": "1.4 TSI",
+        "hp": 150,
+        "zero_100": 8.2,
+        "top_speed": 216,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 4.255,
@@ -467,8 +555,8 @@
     },
     {
       "id": "seat_leon",
-      "brand": "Seat",
-      "model": "Leon",
+      "brand": "SEAT",
+      "model": "LEON",
       "display_name": "SEAT LEON",
       "year": 2016,
       "price": 68000,
@@ -494,10 +582,18 @@
       "min_level": 16,
       "min_garage_rank": 4,
       "race": {
-        "top_speed": 138,
-        "acceleration": 82,
+        "top_speed": 215,
+        "acceleration": 59,
         "reaction": 74,
         "grip": 78
+      },
+      "performance": {
+        "variant": "Seat Leon",
+        "engine": "1.4 TSI",
+        "hp": 150,
+        "zero_100": 8.0,
+        "top_speed": 215,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 4.271,
@@ -509,8 +605,8 @@
     },
     {
       "id": "honda_civic",
-      "brand": "Honda",
-      "model": "Civic VTEC",
+      "brand": "HONDA",
+      "model": "CIVIC VTEC",
       "display_name": "HONDA CIVIC VTEC",
       "year": 2010,
       "price": 72000,
@@ -531,15 +627,23 @@
       "world_node": "",
       "plate_color": "#7FD3F5",
       "traffic": true,
-      "class": "B",
+      "class": "C",
       "rarity": "epic",
       "min_level": 18,
       "min_garage_rank": 4,
       "race": {
-        "top_speed": 140,
-        "acceleration": 83,
+        "top_speed": 200,
+        "acceleration": 41,
         "reaction": 76,
         "grip": 78
+      },
+      "performance": {
+        "variant": "Honda Civic VTEC",
+        "engine": "1.6",
+        "hp": 125,
+        "zero_100": 10.5,
+        "top_speed": 200,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 4.435,
@@ -551,7 +655,7 @@
     },
     {
       "id": "audi_a3",
-      "brand": "Audi",
+      "brand": "AUDI",
       "model": "A3",
       "display_name": "AUDI A3",
       "year": 2014,
@@ -578,10 +682,18 @@
       "min_level": 20,
       "min_garage_rank": 5,
       "race": {
-        "top_speed": 148,
-        "acceleration": 86,
+        "top_speed": 232,
+        "acceleration": 65,
         "reaction": 80,
         "grip": 82
+      },
+      "performance": {
+        "variant": "Audi A3",
+        "engine": "1.8 TFSI",
+        "hp": 180,
+        "zero_100": 7.2,
+        "top_speed": 232,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 4.312,
@@ -593,7 +705,7 @@
     },
     {
       "id": "volvo_s60",
-      "brand": "Volvo",
+      "brand": "VOLVO",
       "model": "S60",
       "display_name": "VOLVO S60",
       "year": 2016,
@@ -620,10 +732,18 @@
       "min_level": 22,
       "min_garage_rank": 5,
       "race": {
-        "top_speed": 150,
-        "acceleration": 85,
+        "top_speed": 235,
+        "acceleration": 67,
         "reaction": 78,
         "grip": 84
+      },
+      "performance": {
+        "variant": "Volvo S60",
+        "engine": "2.5T",
+        "hp": 210,
+        "zero_100": 7.0,
+        "top_speed": 235,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 4.628,
@@ -662,10 +782,18 @@
       "min_level": 25,
       "min_garage_rank": 6,
       "race": {
-        "top_speed": 155,
-        "acceleration": 88,
+        "top_speed": 250,
+        "acceleration": 70,
         "reaction": 80,
         "grip": 82
+      },
+      "performance": {
+        "variant": "BMW E60 530i",
+        "engine": "3.0",
+        "hp": 0,
+        "zero_100": 6.5,
+        "top_speed": 250,
+        "drivetrain": "RWD"
       },
       "real_dimensions": {
         "length_m": 4.841,
@@ -699,15 +827,23 @@
       "world_node": "",
       "plate_color": "#7FD3F5",
       "traffic": true,
-      "class": "A",
+      "class": "B",
       "rarity": "rare",
       "min_level": 20,
       "min_garage_rank": 5,
       "race": {
-        "top_speed": 146,
-        "acceleration": 84,
+        "top_speed": 222,
+        "acceleration": 53,
         "reaction": 80,
         "grip": 82
+      },
+      "performance": {
+        "variant": "Alfa Romeo 159",
+        "engine": "2.2 JTS",
+        "hp": 185,
+        "zero_100": 8.8,
+        "top_speed": 222,
+        "drivetrain": "FWD"
       },
       "real_dimensions": {
         "length_m": 4.661,
@@ -746,10 +882,18 @@
       "min_level": 26,
       "min_garage_rank": 6,
       "race": {
-        "top_speed": 158,
-        "acceleration": 88,
+        "top_speed": 250,
+        "acceleration": 69,
         "reaction": 82,
         "grip": 84
+      },
+      "performance": {
+        "variant": "Mercedes CLS 350",
+        "engine": "3.5 V6",
+        "hp": 0,
+        "zero_100": 6.7,
+        "top_speed": 250,
+        "drivetrain": "RWD"
       },
       "real_dimensions": {
         "length_m": 4.988,
@@ -788,10 +932,18 @@
       "min_level": 28,
       "min_garage_rank": 7,
       "race": {
-        "top_speed": 165,
-        "acceleration": 94,
+        "top_speed": 305,
+        "acceleration": 90,
         "reaction": 84,
         "grip": 86
+      },
+      "performance": {
+        "variant": "Audi RS6",
+        "engine": "4.0 TFSI",
+        "hp": 0,
+        "zero_100": 3.9,
+        "top_speed": 305,
+        "drivetrain": "AWD"
       },
       "real_dimensions": {
         "length_m": 4.995,
@@ -830,10 +982,18 @@
       "min_level": 30,
       "min_garage_rank": 8,
       "race": {
-        "top_speed": 170,
-        "acceleration": 95,
+        "top_speed": 311,
+        "acceleration": 93,
         "reaction": 90,
         "grip": 94
+      },
+      "performance": {
+        "variant": "Porsche 911 GT3",
+        "engine": "4.0",
+        "hp": 0,
+        "zero_100": 3.4,
+        "top_speed": 311,
+        "drivetrain": "RWD"
       },
       "real_dimensions": {
         "length_m": 4.562,
@@ -872,10 +1032,18 @@
       "min_level": 32,
       "min_garage_rank": 9,
       "race": {
-        "top_speed": 175,
+        "top_speed": 325,
         "acceleration": 97,
         "reaction": 88,
         "grip": 90
+      },
+      "performance": {
+        "variant": "Lamborghini Huracán",
+        "engine": "5.2 V10",
+        "hp": 0,
+        "zero_100": 2.9,
+        "top_speed": 325,
+        "drivetrain": "AWD"
       },
       "real_dimensions": {
         "length_m": 4.459,
@@ -914,10 +1082,18 @@
       "min_level": 34,
       "min_garage_rank": 10,
       "race": {
-        "top_speed": 178,
-        "acceleration": 98,
+        "top_speed": 340,
+        "acceleration": 97,
         "reaction": 90,
         "grip": 92
+      },
+      "performance": {
+        "variant": "Ferrari 488 Pista",
+        "engine": "3.9 V8",
+        "hp": 0,
+        "zero_100": 2.9,
+        "top_speed": 340,
+        "drivetrain": "RWD"
       },
       "real_dimensions": {
         "length_m": 4.605,
@@ -926,6 +1102,206 @@
         "wheelbase_m": 2.65
       },
       "model_scale": 1.12
+    },
+    {
+      "id": "opel_corsa",
+      "brand": "OPEL",
+      "model": "CORSA",
+      "display_name": "OPEL CORSA",
+      "year": 2004,
+      "price": 26000,
+      "condition": 0.85,
+      "category": "hatchback",
+      "scene_path": "res://assets/cars/opel_corsa.tscn",
+      "source_path": "res://assets/cars/source/opel_corsa.glb",
+      "optimized_path": "res://assets/cars/optimized/opel_corsa.glb",
+      "default_color": "#E6E4E8",
+      "available_colors": [
+        "#E6E4E8",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": true,
+      "class": "C",
+      "rarity": "common",
+      "min_level": 5,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 185,
+        "acceleration": 36,
+        "reaction": 62,
+        "grip": 64
+      },
+      "performance": {
+        "variant": "Opel Corsa",
+        "engine": "1.4 Turbo",
+        "hp": 100,
+        "zero_100": 11.2,
+        "top_speed": 185,
+        "drivetrain": "FWD"
+      },
+      "real_dimensions": {
+        "length_m": 3.839,
+        "width_m": 1.646,
+        "height_m": 1.44,
+        "wheelbase_m": 2.491
+      },
+      "model_scale": 0.82
+    },
+    {
+      "id": "tesla_model_y",
+      "brand": "TESLA",
+      "model": "MODEL Y",
+      "display_name": "TESLA MODEL Y",
+      "year": 2021,
+      "price": 110000,
+      "condition": 0.85,
+      "category": "suv",
+      "scene_path": "res://assets/cars/tesla_model_y.tscn",
+      "source_path": "res://assets/cars/source/tesla_model_y.glb",
+      "optimized_path": "res://assets/cars/optimized/tesla_model_y.glb",
+      "default_color": "#DFE4E9",
+      "available_colors": [
+        "#DFE4E9",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": true,
+      "class": "A",
+      "rarity": "rare",
+      "min_level": 22,
+      "min_garage_rank": 5,
+      "race": {
+        "top_speed": 217,
+        "acceleration": 81,
+        "reaction": 84,
+        "grip": 84
+      },
+      "performance": {
+        "variant": "Tesla Model Y Long Range AWD",
+        "engine": "Elektrik",
+        "hp": 0,
+        "zero_100": 5.0,
+        "top_speed": 217,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.751,
+        "width_m": 1.921,
+        "height_m": 1.624,
+        "wheelbase_m": 2.89
+      },
+      "model_scale": 1.0
+    },
+    {
+      "id": "chevrolet_camaro",
+      "brand": "CHEVROLET",
+      "model": "CAMARO",
+      "display_name": "CHEVROLET CAMARO",
+      "year": 2012,
+      "price": 140000,
+      "condition": 0.85,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/chevrolet_camaro.tscn",
+      "source_path": "res://assets/cars/source/chevrolet_camaro.glb",
+      "optimized_path": "res://assets/cars/optimized/chevrolet_camaro.glb",
+      "default_color": "#F7D122",
+      "available_colors": [
+        "#F7D122",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": true,
+      "class": "S",
+      "rarity": "epic",
+      "min_level": 24,
+      "min_garage_rank": 6,
+      "race": {
+        "top_speed": 250,
+        "acceleration": 89,
+        "reaction": 80,
+        "grip": 80
+      },
+      "performance": {
+        "variant": "Chevrolet Camaro SS",
+        "engine": "6.2 V8",
+        "hp": 0,
+        "zero_100": 4.0,
+        "top_speed": 250,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.836,
+        "width_m": 1.917,
+        "height_m": 1.377,
+        "wheelbase_m": 2.852
+      },
+      "model_scale": 1.02
+    },
+    {
+      "id": "mercedes_s400",
+      "brand": "MERCEDES",
+      "model": "S400",
+      "display_name": "MERCEDES S400",
+      "year": 2014,
+      "price": 170000,
+      "condition": 0.85,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/mercedes_s400.tscn",
+      "source_path": "res://assets/cars/source/mercedes_s400.glb",
+      "optimized_path": "res://assets/cars/optimized/mercedes_s400.glb",
+      "default_color": "#3E4243",
+      "available_colors": [
+        "#3E4243",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": true,
+      "class": "A",
+      "rarity": "epic",
+      "min_level": 27,
+      "min_garage_rank": 6,
+      "race": {
+        "top_speed": 250,
+        "acceleration": 79,
+        "reaction": 82,
+        "grip": 86
+      },
+      "performance": {
+        "variant": "Mercedes S400",
+        "engine": "3.0 V6 Biturbo",
+        "hp": 0,
+        "zero_100": 5.3,
+        "top_speed": 250,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 5.116,
+        "width_m": 1.899,
+        "height_m": 1.496,
+        "wheelbase_m": 3.035
+      },
+      "model_scale": 1.2
     }
   ]
 }

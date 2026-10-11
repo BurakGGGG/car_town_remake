@@ -130,6 +130,7 @@ func open() -> void:
 	show()
 	_viewport.msaa_3d = GameSettings.subviewport_msaa(Viewport.MSAA_2X)
 	_key_light.shadow_enabled = GameSettings.shadows_enabled()
+	_claim_render_target()
 	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	_rebuild_list()
 	_zoom = 1.0
@@ -159,8 +160,27 @@ func close() -> void:
 	tween.finished.connect(_finish_close)
 
 
+## ÇİZİM HEDEFİ: kapalıyken VRAM'de tutulmaz. Kapsayıcı `stretch` açıkken görüntü alanına elle boyut
+## atanamıyor (Godot yok sayıp uyarı basıyordu): eskiden kapanıştaki "4×4" küçültme HİÇ ÇALIŞMIYORDU ve
+## tam ekran hedef (renk + derinlik, MSAA'lı) kapalı ekranda bellekte kalıyordu (2026-10-11 QA).
+## Kapanışta / ön ısıtmada `stretch` kapatılır; açılışta boyut kapsayıcıdan alınıp geri açılır.
+func _release_render_target(size: Vector2i = Vector2i(4, 4)) -> void:
+	var box: SubViewportContainer = _viewport.get_parent() as SubViewportContainer
+	if box:
+		box.stretch = false
+	_viewport.size = size
+
+
+func _claim_render_target() -> void:
+	var box: SubViewportContainer = _viewport.get_parent() as SubViewportContainer
+	if box and not box.stretch:
+		_viewport.size = Vector2i(box.size.max(Vector2.ONE))
+		box.stretch = true
+
+
 func _finish_close() -> void:
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	_release_render_target()
 	_clear_preview()        # showroom kapalıyken araç modeli bellekte durmaz
 	hide()
 	modulate.a = 1.0
@@ -880,7 +900,10 @@ func _list_plate(key: String, text: String, icon: HudIcon.Kind) -> PlateButton:
 
 
 func _section_label(text: String) -> Label:
-	var label: Label = _label(&"HudPlateTitle", text)
+	# Liste başlığı plakanın değil KOYU showroom duvarının üstünde durur: koyu mürekkep (HudPlateTitle) orada
+	# zor okunuyordu (2026-10-11 QA karesi) → dünya üstü yazılar gibi konturlu açık yazı.
+	var label: Label = _label(&"HudOutlined", text)
+	label.add_theme_font_size_override(&"font_size", 15)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	return label
 
@@ -1250,5 +1273,5 @@ func _kill_tweens() -> void:
 func prewarm() -> void:
 	if visible or _viewport == null:
 		return
-	_viewport.size = Vector2i(64, 36)
+	_release_render_target(Vector2i(64, 36))
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE

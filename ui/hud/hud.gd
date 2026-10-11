@@ -1058,6 +1058,9 @@ func _register_screens() -> void:
 	# 3D ekranların shader'ları oyun yüklenirken derlensin (ilk açılış takılmasız)
 	drag_race_screen.prewarm.call_deferred()
 	showroom.prewarm.call_deferred()
+	garage_screen.prewarm.call_deferred()
+	# Dünya efektleri (ilk tamirin yazılı balonu, kıvılcım / duman) — bkz. WorldPrewarm
+	WorldPrewarm.run.call_deferred(get_tree())
 
 
 ## Yığın değişti: oyun HUD'u yalnızca bir YER (garaj/showroom) açıkken gizlenir; panolar

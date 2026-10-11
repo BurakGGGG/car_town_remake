@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://dar5ctsj64386"]
+
+[ext_resource type="PackedScene" uid="uid://bk4f70ewwg4el" path="res://assets/cars/optimized/chevrolet_camaro.glb" id="1_chevr"]
+
+[node name="chevrolet_camaro" instance=ExtResource("1_chevr")]

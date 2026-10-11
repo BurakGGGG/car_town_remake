@@ -8,8 +8,9 @@ extends Node
 ## Tek seferlikler: geri sayım bipi, GO bipi, vites patlaması (backfire).
 ##
 ## ARAÇ KARAKTERİ: üç motor tınısı — ekonomi (kaba 4 silindir), spor (düzgün 6 silindir), süper
-## (V8/V10 çığlığı: daha tiz ateşleme, daha çok harmonik). `set_character` performans payından
-## seçer; döngüler ilk ihtiyaçta bir kez üretilir.
+## (V8/V10 çığlığı: daha tiz ateşleme, daha çok harmonik) — ve ELEKTRİK (Tesla: ateşleme yok, devirle
+## yükselen ince uğultu). `set_character` performans payından (DragRaceSim.performance_ratio) seçer;
+## döngüler ilk ihtiyaçta bir kez üretilir.
 ## Yalnızca SES üretir; yarış mantığını bilmez. DragRaceScreen her kare `drive()` ile besler.
 
 const MIX_RATE: int = 22050
@@ -29,7 +30,12 @@ const CHARACTERS: Array = [
 	[1.0, -2.0, 5.5, 3.0, 0.0, 0.30, 0.50],    # ekonomi: kaba, homurtulu
 	[1.3, 0.0, 4.5, 2.5, 0.25, 0.16, 0.38],    # spor: düzgün, dolgun
 	[1.8, 2.5, 3.6, 2.0, 0.55, 0.09, 0.26],    # süper: tiz, çığlık
+	[0.9, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0],      # elektrik: uğultu (_make_whine; ateşleme parametresi yok)
 ]
+const ELECTRIC: int = 3
+## Karakter eşikleri (performance_ratio): süper = S sınıfı bandı, spor = Golf / Leon / Alfa ve üstü.
+const SUPER_MIN_PERF: float = 0.85
+const SPORT_MIN_PERF: float = 0.45
 
 static var _engine_streams: Dictionary = {}
 static var _beep_stream: AudioStreamWAV
@@ -67,9 +73,10 @@ func _player(stream: AudioStream) -> AudioStreamPlayer:
 
 
 ## Araçların performans payına (0-1) göre motor tınısı seçilir.
-func set_character(player_perf: float, rival_perf: float) -> void:
-	var p: int = _character_of(player_perf)
-	var r: int = _character_of(rival_perf)
+func set_character(player_perf: float, rival_perf: float, player_electric: bool = false,
+		rival_electric: bool = false) -> void:
+	var p: int = ELECTRIC if player_electric else _character_of(player_perf)
+	var r: int = ELECTRIC if rival_electric else _character_of(rival_perf)
 	_player_engine.stream = _engine(p)
 	_rival_engine.stream = _engine(r)
 	_player_pitch = CHARACTERS[p][0]
@@ -79,9 +86,9 @@ func set_character(player_perf: float, rival_perf: float) -> void:
 
 
 static func _character_of(perf: float) -> int:
-	if perf >= 0.75:
+	if perf >= SUPER_MIN_PERF:
 		return 2
-	if perf >= 0.35:
+	if perf >= SPORT_MIN_PERF:
 		return 1
 	return 0
 
@@ -89,7 +96,8 @@ static func _character_of(perf: float) -> int:
 static func _engine(character: int) -> AudioStreamWAV:
 	if not _engine_streams.has(character):
 		var c: Array = CHARACTERS[character]
-		_engine_streams[character] = _make_engine(c[2], c[3], c[4], c[5], c[6])
+		_engine_streams[character] = _make_whine() if character == ELECTRIC \
+			else _make_engine(c[2], c[3], c[4], c[5], c[6])
 	return _engine_streams[character]
 
 
@@ -209,6 +217,25 @@ static func _make_engine(decay: float, resonance: float, harmonic: float, noise:
 			state += (raw[i] - state) * 0.32
 			out[i] = state
 	return _wav(out, 0.75, true)
+
+
+## Elektrik motoru: ateşleme darbesi yok — BASE_FIRE_HZ'in tam katlarında ince harmonikler (inverter /
+## dişli uğultusu) ve çok az hava gürültüsü. Tam katlar döngüyü dikişsiz tutar; perde yine devirle oynar.
+static func _make_whine() -> AudioStreamWAV:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 4410
+	var count: int = int(LOOP_SECONDS * float(MIX_RATE))
+	var out: PackedFloat32Array = PackedFloat32Array()
+	out.resize(count)
+	var state: float = 0.0
+	for i: int in count:
+		var t: float = float(i) / float(MIX_RATE)
+		var f: float = BASE_FIRE_HZ
+		var tone: float = 0.55 * sin(TAU * f * 4.0 * t) + 0.30 * sin(TAU * f * 8.0 * t) \
+			+ 0.12 * sin(TAU * f * 13.0 * t) + 0.18 * sin(TAU * f * 1.0 * t)
+		state += (rng.randf_range(-1.0, 1.0) - state) * 0.2
+		out[i] = tanh(1.2 * (tone + state * 0.06))
+	return _wav(out, 0.55, true)
 
 
 static func _make_tone(hz: float, seconds: float) -> AudioStreamWAV:

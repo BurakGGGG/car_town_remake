@@ -93,9 +93,13 @@ func _run() -> void:
 	save.new_game()
 
 	print("== 4) Hız sınıfı ölçeği ==")
-	var slow: float = DragTrack.scale_for(&"tofas_sahin")
+	# 2026-10-11: ölçek DragRaceSim.performance_ratio'dan (gerçek 0-100): en yavaş araç Toros (14,5 sn) tabandadır,
+	# Şahin (13,2 sn) biraz üstünde.
+	var slow: float = DragTrack.scale_for(&"renault_toros")
 	var fast: float = DragTrack.scale_for(&"lambo_huracan")
-	check(is_equal_approx(slow, DragTrack.SCALE_MIN), "ekonomi aracı gerçek ölçekte (%.2f)" % slow)
+	check(is_equal_approx(slow, DragTrack.SCALE_MIN), "en yavaş araç (Toros) gerçek ölçekte (%.2f)" % slow)
+	check(DragTrack.scale_for(&"tofas_sahin") > slow and DragTrack.scale_for(&"tofas_sahin") < fast,
+		"Şahin tabanla süper spor arasında (%.2f)" % DragTrack.scale_for(&"tofas_sahin"))
 	check(fast > 1.5 and fast <= DragTrack.SCALE_MAX, "süper spor dünyayı hızlı akıtır (%.2f)" % fast)
 	var hud: Hud = main.find_child("HUD", true, false)
 	var drag: DragRaceScreen = hud.drag_race_screen

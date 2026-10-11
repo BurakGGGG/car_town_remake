@@ -37,6 +37,8 @@ const GROUP: StringName = &"plate_buttons"
 @export var kind: HudIcon.Kind = HudIcon.Kind.NONE:
 	set(value):
 		kind = value
+		if is_inside_tree():
+			_apply_styles()
 		queue_redraw()
 
 @export_range(8.0, 40.0, 1.0) var icon_size: float = 22.0:
@@ -57,6 +59,8 @@ const GROUP: StringName = &"plate_buttons"
 @export var avatar: Texture2D:
 	set(value):
 		avatar = value
+		if is_inside_tree():
+			_apply_styles()
 		queue_redraw()
 
 ## Fotoğrafın çevresine ince çerçeve çizilir; marka logosu (Google "G") çerçevesiz kalmalı.
@@ -71,7 +75,7 @@ const GROUP: StringName = &"plate_buttons"
 	set(value):
 		highlight = value
 		if is_inside_tree():
-			_apply_highlight()
+			_apply_styles()
 
 
 ## Taban nedeniyle büyüyen yuvarlak tabelada ikonun büyütme oranı (1 = değişmedi).
@@ -80,8 +84,7 @@ var _icon_scale: float = 1.0
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
-	if highlight:
-		_apply_highlight()
+	_apply_styles()
 	if Engine.is_editor_hint() or mouse_filter == Control.MOUSE_FILTER_IGNORE:
 		return
 	add_to_group(GROUP)
@@ -137,17 +140,34 @@ static func _distance(rect: Rect2, point: Vector2) -> float:
 	return Vector2(dx, dy).length()
 
 
-func _apply_highlight() -> void:
-	for state: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed"]:
+## Tema stilinin bu düğmeye özel kopyası, iki durumda:
+##  - highlight: amber (seçili plaka rengi) zemin.
+##  - İKONSUZ "HudPlate" plakası: bu varyasyon üstte ikon için ~26 birim ayırıyor (alt 8); ikon
+##    yoksa yazı plakanın altına yapışıyordu (eğitim kartı BAŞLAYALIM, yarış sonucu düğmeleri — 2026-10-11
+##    QA). Üst/alt pay eşitlenir, yazı ortalanır. Yalnızca oyunda (editörde .tscn'e yazılmasın).
+func _apply_styles() -> void:
+	# YALNIZCA "HudPlate": galeri / koleksiyon gibi kendi küçük resmini çizen varyasyonlar üst payı BİLEREK
+	# büyük tutar (yazı resmin altında); onlara dokunulursa yazı resmin üstüne biner (2026-10-11 QA'da oldu).
+	var center: bool = not Engine.is_editor_hint() and shape == Shape.PLATE \
+		and theme_type_variation == &"HudPlate" and kind == HudIcon.Kind.NONE and avatar == null
+	for state: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed", &"disabled"]:
 		remove_theme_stylebox_override(state)
-		if not highlight:
+		var base: StyleBoxFlat = get_theme_stylebox(state) as StyleBoxFlat
+		if base == null:
 			continue
-		var base: StyleBox = get_theme_stylebox(state)
-		if base is StyleBoxFlat:
-			var amber: StyleBoxFlat = base.duplicate() as StyleBoxFlat
-			amber.bg_color = HudPalette.PLATE_SELECTED_HOVER if state == &"hover" else HudPalette.PLATE_SELECTED
-			amber.border_color = HudPalette.PLATE_SELECTED_EDGE
-			add_theme_stylebox_override(state, amber)
+		var amber: bool = highlight and state != &"disabled"
+		var lopsided: bool = center and base.content_margin_top - base.content_margin_bottom > 6.0
+		if not amber and not lopsided:
+			continue
+		var box: StyleBoxFlat = base.duplicate() as StyleBoxFlat
+		if amber:
+			box.bg_color = HudPalette.PLATE_SELECTED_HOVER if state == &"hover" else HudPalette.PLATE_SELECTED
+			box.border_color = HudPalette.PLATE_SELECTED_EDGE
+		if lopsided:
+			var even: float = (base.content_margin_top + base.content_margin_bottom) * 0.5
+			box.content_margin_top = even
+			box.content_margin_bottom = even
+		add_theme_stylebox_override(state, box)
 	queue_redraw()
 
 

@@ -118,6 +118,10 @@ func _build(id: StringName) -> void:
 			target = soft_names
 		for index: int in map.get(role, []):
 			target[String(CarPartMap.part_name(index))] = true
+	# paint_whole: dokusu fabrika boyasından belirgin farklı (fırınlanmış parlama) ama tamamı kaporta olan parça
+	var whole: Dictionary = {}
+	for index: int in map.get("paint_whole", []):
+		whole[String(CarPartMap.part_name(index))] = true
 	for spec: Dictionary in map.get("split_z", []):
 		# Tek mesh'te iki rol: her iki yüzey de kendi rolüne göre işlenir (aşağıda yüzey bazlı)
 		pass
@@ -231,7 +235,7 @@ func _build(id: StringName) -> void:
 		if total == 0:
 			continue
 		var ratio: float = float(hits) / float(total)
-		if ratio >= PART_PAINT_RATIO:
+		if ratio >= PART_PAINT_RATIO or whole.has(String(part["name"])):
 			for i: int in pm.size():
 				if pm[i] != 0 and block[i] == 0:
 					mask[i] = 255

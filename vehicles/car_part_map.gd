@@ -24,6 +24,8 @@ class_name CarPartMap
 ## split_z: tek mesh'te iki rol (Fluence ön cam + tavan): z > z eşiği → front rolü, gerisi → back.
 ## fill_arc: lastiğin modellenmemiş yayı ({part, center, from, to} derece; 0 = yukarı, 90 = ön): karşı yay
 ##   180° döndürülüp eklenir (tools/optimize_car.gd)
+## paint_whole: boya maskesinde texel anahtarı atlanıp TAMAMI boyanan gövde parçaları (dokuda parlama fırınlanmış,
+##   rengi boyadan sapan tavan gibi; tools/make_paint_mask.gd).
 ## extract: kaynakta başka parçaya kaynamış teker; tools/optimize_car.gd silindir bölgesini yeni parçaya ayırır
 ##   ({part, new_part, center, radius, half_width}); çalışma zamanında ek bir şey gerekmez.
 
@@ -39,25 +41,21 @@ const MAPS: Dictionary = {
 	# --- grupları çeyreklere göre; BMW parça parça render'la elle doğrulandı. Dokulu modelde rol yalnızca
 	# --- yeniden boyama maskesi / teker dönüşü / far emisyonu için önemlidir (görünüm dokudan gelir).
 	# --- Kaynamış camlar (ör. BMW tavan + ön/arka cam = parça 0) ve tek mesh Toros dokudan görünür.
+	# 2026-10-11: kaynak GLB yenilendi, parça numaraları değişti → otomatik sınıflandırıcıdan yeniden çıkarıldı
 	"res://assets/cars/bmw_e_46.tscn": {
-		"default_paint": Color(0.141, 0.180, 0.333),  # dokunun baskın kaporta rengi (#242E55); paint mask ile aynı olmalı
-		"body": [0, 1, 5, 7, 8, 9, 10, 11, 12, 13, 15, 19, 21, 23, 26, 27, 37, 38, 54, 58, 64],
-		"mirrors": [18, 25],
-		"wheels": [2, 3, 4, 67],
-		"glass": [28, 29, 32, 34, 59, 63],
-		"headlights": [48, 50, 60, 65],
-		"taillights": [44, 45],
-		"grille": [16, 24, 33, 39, 40, 41, 43, 46, 51, 57],
-		"black_trim": [6, 14, 20, 22, 30, 31, 35, 36, 42, 53, 55, 56, 61, 62, 66],
-		"plate": [17],
-		"fog_lights": [47, 49],
-		"exhaust": [52],
-		# Silindir merkezi aks merkezinin BİRAZ ALTINDA: alt ucu zemine değsin (lastiğin taban
-		# dilimi gövdede kalmasın, dönmeyen bir hilal bırakırdı) ama ÜST ucu çamurluğun altında
-		# kalsın (kesilirse kemerde siyah kamalar oluşuyor — ölçüldü ve geri alındı).
-		"extract": [{"part": 1, "new_part": 67, "center": [-0.199, 0.103, -0.326], "radius": 0.108, "half_width": 0.045}],  # arka-sol teker alt kabuğa (1) kaynamış
-		"wheel_groups": {"fl": [4], "fr": [3], "rl": [67], "rr": [2]},
-		"wheel_axes": {"fl": [0.1025, 0.2988, 0.1018], "fr": [0.1032, 0.2987, 0.1019], "rl": [0.1046, -0.3252, 0.1050], "rr": [0.1036, -0.3252, 0.1007]},
+		"default_paint": Color(0.804, 0.827, 0.855),  # boya maskesi aracının ölçtüğü fabrika rengi (#CDD3DA); cars.json default_color ile aynı olmalı
+		"body": [0, 3, 4, 6, 12, 15, 17, 19, 20, 21, 25, 28, 29, 31, 32, 34, 35, 36, 38, 39, 43, 44, 49, 51, 55, 56, 59],
+		"mirrors": [16, 18, 33],
+		"wheels": [1, 2, 5, 7, 13],
+		"tires": [22, 23],
+		"rims": [14, 50, 57],
+		"glass": [10, 11, 24, 26, 27, 37, 40, 46, 47],
+		"headlights": [45, 52],
+		"taillights": [41, 42, 58],
+		"grille": [9],
+		"black_trim": [8, 30, 48, 53, 54],
+		"wheel_groups": {"fl": [2], "fr": [1], "rl": [22, 5, 14, 57], "rr": [23, 7, 13, 50]},
+		"wheel_axes": {"fl": [0.0796, 0.3355, 0.0777], "fr": [0.0789, 0.3357, 0.0775], "rl": [0.0768, -0.2813, 0.0768], "rr": [0.0773, -0.2815, 0.0765]},
 	},
 	"res://assets/cars/hyundai_era.tscn": {
 		"default_paint": Color(0.918, 0.910, 0.918),  # dokunun baskın kaporta rengi (#EAE8EA); paint mask ile aynı olmalı
@@ -76,50 +74,51 @@ const MAPS: Dictionary = {
 		"wheel_groups": {"fl": [13, 4, 55], "fr": [9, 3, 39, 51, 56], "rl": [8, 5, 41], "rr": [12, 11]},
 		"wheel_axes": {"fl": [0.0849, 0.3079, 0.0839], "fr": [0.0845, 0.3116, 0.0871], "rl": [0.0853, -0.3059, 0.0843], "rr": [0.0849, -0.3054, 0.0909]},
 	},
+	# 2026-10-11: kaynak GLB yenilendi, parça numaraları değişti → otomatik sınıflandırıcıdan yeniden çıkarıldı
 	"res://assets/cars/hyundai_getz.tscn": {
-		"default_paint": Color(0.847, 0.004, 0.039),  # dokunun baskın kaporta rengi (#D8010A); paint mask ile aynı olmalı
-		"body": [0, 3, 5, 8, 9, 10, 13, 16, 17, 18, 21, 22, 23, 24, 26, 28, 32, 38, 41, 47, 50, 53, 54, 55, 56, 57, 59, 63, 64, 67],  # 3/10/23/50/54/55/57 siyah trim, 16/26 arka tampon (stop sanılmıştı): dokuda kırmızı kaporta
-		"mirrors": [15, 25],
-		"wheels": [1, 2, 19],
-		"tires": [6],
-		"rims": [4, 14, 29, 31, 62, 66],
-		"glass": [7, 33, 34, 37, 43, 60, 68],
-		"headlights": [40, 51, 52, 58, 65],
-		"taillights": [36, 44, 46, 48, 61],
-		"grille": [39],
-		"black_trim": [12, 20, 27, 30, 35, 42, 45, 49],
-		"wheel_groups": {"fl": [19, 29, 66], "fr": [1, 62], "rl": [2, 14], "rr": [6, 4, 31]},
-		"wheel_axes": {"fl": [0.1057, 0.2982, 0.1047], "fr": [0.1048, 0.2981, 0.1046], "rl": [0.1061, -0.3296, 0.1034], "rr": [0.1061, -0.3287, 0.1049]},
+		"default_paint": Color(0.898, 0.004, 0.027),  # boya maskesi aracının ölçtüğü fabrika rengi (#E50107); cars.json default_color ile aynı olmalı
+		"body": [0, 1, 5, 8, 9, 10, 12, 14, 15, 19, 20, 21, 22, 23, 24, 25, 26, 28, 35, 41, 42, 43, 50, 51, 53, 56, 62, 65, 66, 68, 69, 70, 71, 72, 75],
+		"mirrors": [11, 18, 32, 45],
+		"wheels": [2, 3, 4, 6],
+		"rims": [27, 29, 34, 40, 63],
+		"glass": [7, 16, 17, 30, 36, 37, 44, 49, 55, 58, 59, 67, 74],
+		"headlights": [38],
+		"taillights": [31, 46, 47],
+		"grille": [33, 39, 57, 60, 61],
+		"black_trim": [13, 48, 52, 54, 64, 73],
+		"wheel_groups": {"fl": [6], "fr": [4, 27, 34], "rl": [2], "rr": [3, 29, 40, 63]},
+		"wheel_axes": {"fl": [0.0875, 0.2985, 0.0843], "fr": [0.0871, 0.2990, 0.0848], "rl": [0.0861, -0.3375, 0.0853], "rr": [0.0858, -0.3376, 0.0859]},
+		"paint_whole": [12, 19],  # 19 tavan (dokuda açık pembe parlama, texel anahtarı %3 tutuyordu), 12 arka spoyler
 	},
+	# 2026-10-11: kaynak GLB yenilendi, parça numaraları değişti → otomatik sınıflandırıcıdan yeniden çıkarıldı
 	"res://assets/cars/renault_fluence.tscn": {
-		"default_paint": Color(0.659, 0.678, 0.682),  # dokunun baskın kaporta rengi (#A8ADAE); paint mask ile aynı olmalı
-		"body": [0, 3, 5, 6, 7, 9, 11, 12, 13, 14, 15, 16, 19, 21, 22, 24, 26, 27, 28, 29, 30, 35, 36, 37, 38, 39, 40, 42, 45, 49],
-		"mirrors": [23, 56],
-		"wheels": [1, 2],
-		"tires": [4, 10],
-		"rims": [8, 17, 20, 25, 32, 50],
-		# 12 sol arka çamurluk + tavan çıtası, 28 sağ tavan çıtası: cam sanılmıştı, boyanmıyordu (2026-10-05)
-		"glass": [18, 31, 34, 52, 53, 54, 57, 58, 61, 62],
-		"headlights": [41, 51, 59, 60],
-		"taillights": [43, 44, 55],
-		"grille": [33, 46, 47, 48],
-		"wheel_groups": {"fl": [2], "fr": [1], "rl": [10, 20, 25, 32, 50], "rr": [4, 8, 17]},
-		"wheel_axes": {"fl": [0.1004, 0.2979, 0.0970], "fr": [0.1007, 0.2979, 0.0979], "rl": [0.1002, -0.3246, 0.0994], "rr": [0.1007, -0.3244, 0.0992]},
+		"default_paint": Color(0.792, 0.824, 0.863),  # boya maskesi aracının ölçtüğü fabrika rengi (#CAD2DC); cars.json default_color ile aynı olmalı
+		"body": [0, 2, 4, 9, 11, 12, 13, 14, 17, 18, 19, 23, 25, 27, 30, 40, 46, 47, 49, 51, 52, 54, 56, 57, 58, 69],
+		"mirrors": [37, 45],
+		"wheels": [1, 3, 6, 21],
+		"tires": [5],
+		"rims": [10, 16, 24, 26, 29, 34, 59, 60],
+		"glass": [7, 8, 31, 32, 36, 39, 42, 55, 67],
+		"headlights": [38, 61, 63, 64, 65],
+		"taillights": [41, 43, 62, 66],
+		"grille": [15, 20, 28, 33, 44, 48, 50, 53],
+		"black_trim": [22, 35, 68],
+		"wheel_groups": {"fl": [3, 10], "fr": [1], "rl": [5, 16, 21, 26, 59], "rr": [6, 24, 29, 34, 60]},
+		"wheel_axes": {"fl": [0.0775, 0.2989, 0.0755], "fr": [0.0773, 0.2992, 0.0757], "rl": [0.0779, -0.2982, 0.0771], "rr": [0.0787, -0.2982, 0.0763]},
 	},
+	# 2026-10-11: kaynak GLB yenilendi, parça numaraları değişti → otomatik sınıflandırıcıdan yeniden çıkarıldı
 	"res://assets/cars/volswagen_passat_b_5_5.tscn": {
-		"default_paint": Color(0.678, 0.690, 0.698),  # dokunun baskın kaporta rengi (#ADB0B2); paint mask ile aynı olmalı
-		"body": [0, 6, 7, 8, 9, 11, 12, 16, 19, 20, 21, 22, 23, 30, 31, 32, 33, 35, 38, 45, 48, 61, 64, 66, 68],
-		"mirrors": [15, 27],
-		"wheels": [1, 2, 3, 4],
-		"rims": [13, 14, 24, 26],
-		"glass": [5, 17, 25, 29, 34, 46, 55],
-		"headlights": [37, 42, 50, 51, 52],
-		"taillights": [36, 67],
-		"grille": [18, 43, 44, 47, 49, 54, 57, 58, 62, 63],
-		"black_trim": [10, 39, 40, 41, 53, 56, 59, 60, 65],
-		"plate": [28],
-		"wheel_groups": {"fl": [1, 24], "fr": [4, 26], "rl": [2, 13], "rr": [3, 14]},
-		"wheel_axes": {"fl": [0.1006, 0.2760, 0.0985], "fr": [0.1002, 0.2754, 0.0993], "rl": [0.1001, -0.3230, 0.1011], "rr": [0.1009, -0.3238, 0.1008]},
+		"default_paint": Color(0.792, 0.816, 0.843),  # boya maskesi aracının ölçtüğü fabrika rengi (#CAD0D7); cars.json default_color ile aynı olmalı
+		"body": [0, 1, 7, 8, 9, 10, 13, 15, 16, 20, 22, 29, 30, 31, 34, 35, 36, 37, 38, 39, 40, 42, 44, 45, 46, 48, 54, 56, 57, 59, 63],
+		"mirrors": [25],
+		"wheels": [2, 3, 4, 5],
+		"glass": [6, 11, 19, 23, 27, 32],
+		"headlights": [47, 50, 53, 62],
+		"taillights": [51, 55],
+		"grille": [12, 21, 24, 28, 33, 43, 52, 58, 60, 61],
+		"black_trim": [14, 17, 18, 26, 41, 49],
+		"wheel_groups": {"fl": [5], "fr": [2], "rl": [3], "rr": [4]},
+		"wheel_axes": {"fl": [0.0802, 0.3012, 0.0748], "fr": [0.0759, 0.3011, 0.0729], "rl": [0.0789, -0.2694, 0.0743], "rr": [0.0778, -0.2699, 0.0746]},
 	},
 	"res://assets/cars/tofas_sahin.tscn": {
 		"default_paint": Color(0.918, 0.910, 0.918),  # dokunun baskın kaporta rengi (#EAE8EA); paint mask ile aynı olmalı
@@ -128,9 +127,9 @@ const MAPS: Dictionary = {
 		"tires": [6, 27, 77],
 		"rims": [3, 5, 26, 49, 50, 54, 55, 64, 65, 71, 76],
 		"glass": [7, 10, 12, 14, 20, 21, 23, 24, 25, 32, 34, 37, 39, 40, 42, 46, 52, 53, 61, 67],
-		"headlights": [18, 36, 43, 45, 59, 62, 63, 66, 68, 69, 73, 74, 75],
+		"headlights": [43, 45, 59, 62, 63, 66, 68, 69, 73, 74, 75],
 		"taillights": [57],
-		"grille": [48],
+		"grille": [18, 36, 48],  # 18/36: lamba olamayacak kadar büyük parçalar (CarRig eliyordu, uyarı basıyordu) — 2026-10-11
 		"black_trim": [19, 58],
 		"plate": [35],
 		"antenna": [60],
@@ -168,9 +167,9 @@ const MAPS: Dictionary = {
 		"wheels": [1, 3, 4, 5],
 		"rims": [11, 12, 28, 34],
 		"glass": [14, 18, 21, 26, 31, 39, 41, 47, 50, 63, 66, 71, 73, 76],
-		"headlights": [16, 19, 42, 55, 64, 70, 75],
+		"headlights": [42, 55, 64, 70, 75],
 		"taillights": [24, 53, 57, 67, 74, 79],
-		"grille": [15, 27, 35],
+		"grille": [15, 16, 19, 27, 35],  # 16/19: lamba olamayacak kadar büyük parçalar (CarRig eliyordu, uyarı basıyordu) — 2026-10-11
 		"black_trim": [0, 7, 30, 33, 36, 40, 45, 46, 52, 62, 72, 77],
 		"wheel_groups": {"fl": [5], "fr": [1], "rl": [3, 11], "rr": [4, 28]},
 		"wheel_axes": {"fl": [0.0860, 0.2991, 0.0877], "fr": [0.0855, 0.2992, 0.0878], "rl": [0.0855, -0.3183, 0.0875], "rr": [0.0848, -0.3183, 0.0875]},
@@ -270,9 +269,9 @@ const MAPS: Dictionary = {
 		"wheels": [2, 4],
 		"tires": [3, 44],
 		"glass": [6, 21, 22, 32, 36, 39],
-		"headlights": [11, 16, 24, 27, 29, 38, 41, 43],
+		"headlights": [16, 27, 29, 38, 41, 43],
 		"taillights": [14, 31],
-		"grille": [10, 19, 35],
+		"grille": [10, 11, 19, 24, 35],  # 11/24: lamba olamayacak kadar büyük parçalar (CarRig eliyordu, uyarı basıyordu) — 2026-10-11
 		"black_trim": [1, 13, 33, 34],
 		"rims": [45, 46, 47, 48],
 		"extract": [{"part": 1, "new_part": 44, "center": [-0.1828, 0.0873, -0.3048], "radius": 0.0849, "half_width": 0.0413},
@@ -404,6 +403,64 @@ const MAPS: Dictionary = {
 		"fill_arc": [{"part": 62, "center": [-0.1803, 0.0826, 0.2873], "from": 318, "to": 42}],
 		"wheel_groups": {"fl": [15, 6], "fr": [62, 4, 33, 49], "rl": [7, 3], "rr": [8, 2, 41]},
 		"wheel_axes": {"fl": [0.0826, 0.2873, 0.0861], "fr": [0.0826, 0.2873, 0.0861], "rl": [0.0844, -0.2712, 0.0863], "rr": [0.0844, -0.2714, 0.0863]},
+	},
+	# --- 2026-10-11 dördüncü parti (4 araç): Camaro, S400, Corsa, Model Y — roller otomatik sınıflandırıcıdan,
+	# --- teker grupları/eksenleri tools/wheel_fit.gd ile ölçüldü.
+	"res://assets/cars/chevrolet_camaro.tscn": {
+		"default_paint": Color(0.969, 0.820, 0.133),  # boya maskesi aracının ölçtüğü fabrika rengi (#F7D122); cars.json default_color ile aynı olmalı
+		"body": [0, 3, 6, 8, 9, 10, 11, 12, 14, 16, 17, 19, 20, 22, 23, 25, 26, 27, 30, 41, 44, 45, 46, 47, 48, 49],
+		"mirrors": [21],
+		"wheels": [4],
+		"tires": [1, 2, 5],
+		"rims": [18],
+		"glass": [7, 24, 28, 29, 36, 39],
+		"taillights": [34, 35, 37],
+		"grille": [13, 15, 33, 38, 40],
+		"black_trim": [31, 32, 42, 43],
+		"wheel_groups": {"fl": [2], "fr": [5], "rl": [4, 18], "rr": [1]},
+		"wheel_axes": {"fl": [0.0805, 0.3140, 0.0797], "fr": [0.0806, 0.3144, 0.0796], "rl": [0.0808, -0.2831, 0.0801], "rr": [0.0806, -0.2832, 0.0796]},
+	},
+	"res://assets/cars/mercedes_s400.tscn": {
+		"default_paint": Color(0.243, 0.259, 0.263),  # boya maskesi aracının ölçtüğü fabrika rengi (#3E4243); cars.json default_color ile aynı olmalı
+		"body": [0, 1, 2, 3, 8, 9, 14, 19, 21, 22, 23, 24, 35, 36, 38, 40, 44, 45, 47, 48, 50, 62, 63],
+		"mirrors": [16, 27],
+		"wheels": [4, 12, 13, 20],
+		"tires": [6, 7, 11],
+		"rims": [15, 17, 29, 31, 34, 37, 39, 41, 42, 46, 51, 59, 60, 61, 64, 66, 67, 68, 69, 70, 71],
+		"glass": [10, 26, 30, 32],
+		"headlights": [65],
+		"taillights": [54, 56],
+		"grille": [25, 28, 33, 43, 49, 52, 55, 57, 58, 72],
+		"black_trim": [5, 18, 53],
+		"wheel_groups": {"fl": [4, 29, 46, 60, 70, 71], "fr": [6, 20, 37, 39, 41, 51, 67, 69], "rl": [7, 13, 31, 34, 61, 68], "rr": [11, 12, 15, 17, 42, 59, 64, 66]},
+		"wheel_axes": {"fl": [0.0773, 0.3191, 0.0714], "fr": [0.0768, 0.3189, 0.0716], "rl": [0.0764, -0.2787, 0.0720], "rr": [0.0757, -0.2782, 0.0730]},
+	},
+	"res://assets/cars/opel_corsa.tscn": {
+		"default_paint": Color(0.902, 0.894, 0.910),  # boya maskesi aracının ölçtüğü fabrika rengi (#E6E4E8); cars.json default_color ile aynı olmalı
+		"body": [1, 7, 10, 15, 26, 27, 28, 33, 36, 37, 39, 42, 43],
+		"mirrors": [8, 9, 31, 34],
+		"wheels": [3, 4, 5, 6],
+		"rims": [12, 13, 14, 18],
+		"glass": [2, 11, 17, 22, 23, 24, 25, 35, 40],
+		"headlights": [29, 30, 38, 41],
+		"grille": [16, 19, 20, 21],
+		"black_trim": [0, 32],
+		"wheel_groups": {"fl": [6, 18], "fr": [3, 12], "rl": [5, 14], "rr": [4, 13]},
+		"wheel_axes": {"fl": [0.0822, 0.3109, 0.0834], "fr": [0.0843, 0.3102, 0.0839], "rl": [0.0860, -0.3527, 0.0843], "rr": [0.0843, -0.3529, 0.0845]},
+	},
+	"res://assets/cars/tesla_model_y.tscn": {
+		"default_paint": Color(0.875, 0.894, 0.914),  # boya maskesi aracının ölçtüğü fabrika rengi (#DFE4E9); cars.json default_color ile aynı olmalı
+		"body": [0, 5, 6, 7, 11, 12, 14, 16, 24, 25, 27, 33, 37, 38, 39, 40, 41, 43, 49],
+		"mirrors": [9, 13, 32, 34, 35],
+		"tires": [2, 3, 4, 19, 20],
+		"rims": [47],
+		"glass": [8, 17, 18, 26, 29, 31, 46, 48, 50, 51],
+		"headlights": [28, 30],
+		"taillights": [42, 45],
+		"grille": [15, 23],
+		"black_trim": [1, 10, 21, 22, 36, 44],
+		"wheel_groups": {"fl": [19], "fr": [2, 47], "rl": [20], "rr": [4, 3]},  # 21/22 ön çamurluk kaplaması (sınıflandırıcı "teker" sanmıştı)
+		"wheel_axes": {"fl": [0.0874, 0.3094, 0.0834], "fr": [0.0877, 0.3089, 0.0841], "rl": [0.0879, -0.3068, 0.0841], "rr": [0.0875, -0.3077, 0.0868]},
 	},
 }
 

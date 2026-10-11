@@ -44,11 +44,12 @@ const CAM_PAN_UP: float = 0.12
 const CAM_PAN_UP_COMPACT: float = 0.0
 ## Bu yüksekliğin altındaki tuval "telefon" sayılır (garaj ekranıyla aynı eşik).
 const COMPACT_HEIGHT: float = 560.0
-## İKİ ARAÇ DA HER ZAMAN KADRAJDA: gerçek fark yumuşatılarak ekrana taşınır.
-## Pist gerçek ölçeğe geçince (bkz. DragTrack.TRACK_LENGTH) aynı metre farkı ekranda daha uzun
-## görünür; tavan da biraz açıldı ama iki araç kadrajda kalır.
-const MAX_VISUAL_GAP: float = 1.15
-const GAP_SOFT: float = 6.0
+## ARADAKİ FARK GERÇEKTİR (2026-10-11, kullanıcı: "rakip ya da ben çok güçlüysem fark açılsın gitsin,
+## sabit kalıyor"): araçlar pistteki gerçek metre farkıyla çizilir. Eskiden fark tanh ile 1,15 birime
+## kırpılıyordu, güçlü araç ne kadar açarsa açsın ekranda hep aynı boşluk görünüyordu.
+## Kamera iki aracın ortasını ancak fark bu kadar (dünya birimi) olana kadar izler; fark büyüyünce
+## OYUNCUYA kilitlenir ve önde/arkada kalan araç kadrajdan çıkıp gider.
+const CAM_SHARE_GAP: float = 1.6
 ## BİTİŞ SONRASI: araçlar çizgide durmaz, hızlarıyla geçip frenleyerek durur (gerçek drag'de
 ## paraşüt/fren pisti). Kamera çizgide kalır; sonuç, araçlar kadrajdan geçerken gelir.
 ## Gerçek ölçekte pist payı kısa kalmasın diye sert (paraşüt) fren: 70 m/s'den ~80 m'de durur.
@@ -85,7 +86,7 @@ const PHOTO_FINISH_ZONE: float = 22.0      # m, bitişe kalan
 const PHOTO_FINISH_GAP: float = 3.0        # m, araçlar arası
 const PHOTO_FINISH_SCALE: float = 0.32
 ## Bu performans payının altındaki araçlar (Şahin, Toros, Getz…) alev çıkarmaz.
-const FLAME_MIN_PERF: float = 0.35
+const FLAME_MIN_PERF: float = 0.45   # performance_ratio: Golf / Leon / Alfa ve üstü (dizel Passat yok)
 ## Bu tepkinin altı "SÜPER ÇIKIŞ".
 const GREAT_REACTION: float = 0.24
 ## Yarış telemetrisini ekrana basar (devir, vites, hız, kalite). Yayında KAPALI olmalı;
@@ -156,6 +157,8 @@ var _hold_until: float = 0.0
 ## Rakip AI'si: [hedef devir, sınırda oyalanma süresi] + sayaçlar.
 ## Rakibin bu vites için hedeflediği devir (AI aynı fiziği kullanır, yalnızca isabeti değişir).
 var _rival_target: float = 0.0
+var _rival_form: DragRaceSim.Form
+var _rival_plan: PackedFloat32Array = PackedFloat32Array()   # vites başına hedef devir (DragRaceSim.rival_shift_plan)
 ## Rakibin hedef kalkış devri.
 var _rival_launch_target: float = 0.0
 ## Hata ayıklama katmanı (yalnızca DRAG_DEBUG açıkken).
@@ -192,6 +195,9 @@ var _race: RaceManager
 ## Oyuncu aracının performans payı (0 ekonomi … 1 süper spor): alev boyu, motor tınısı.
 var _player_perf: float = 0.0
 var _rival_perf: float = 0.0
+## Elektrikli araç: egzoz alevi / vites patlaması yok, motor sesi uğultu (DragRaceSim.is_electric).
+var _player_electric: bool = false
+var _rival_electric: bool = false
 ## Rekor: bu koşunun mesafe izi, önceki rekor ve izi, bitişte sonuç.
 var _trace: PackedFloat32Array = PackedFloat32Array()
 var _best_time: float = -1.0
@@ -245,17 +251,24 @@ func open() -> void:
 	_player.setup(_player_id, _rng)
 	_rival = DragRaceSim.Runner.new()
 	_rival.setup(_rival_id, _rng)
-	# Rakibin becerisi SINIFINDAN gelir: D çok hata yapar, A neredeyse kusursuz. Hile yok —
-	# aynı Runner, aynı fizik, yalnızca hedeflediği devir sapar.
-	_rival_skill = DragRaceSim.class_skill(_rival_id)
-	_rival_launch_target = DragRaceSim.ai_launch_rpm(_rival.spec, _rival_skill, _rng)
+	# Rakibin becerisi SINIFINDAN gelir (D çok hata yapar, S neredeyse kusursuz) ve her yarışta bir GÜN
+	# FORMU çekilir: güç, beceri, ara sıra kötü gün (kalkışı kaçırır, bir vitesi ıskalar) ya da iyi gün.
+	# Hile yok — aynı Runner, aynı fizik; başsız run_rival ile aynı plan (DragRaceSim.Form).
+	# İlk yarışta form yok (sınıf becerisi, güç 1,0): bkz. RaceManager.is_first_race
+	_rival_form = DragRaceSim.roll_form(_rival_id, null if race and race.is_first_race() else _rng)
+	_rival_skill = _rival_form.skill
+	_rival.power = _rival_form.power
+	_rival_launch_target = DragRaceSim.ai_launch_rpm(_rival.spec, _rival_form.launch_skill, _rng)
 	_rival.rpm = _rival.spec.idle_rpm
-	_rival_target = DragRaceSim.ai_shift_target(_rival.spec, 0, _rival_skill, _rng)
+	_rival_plan = DragRaceSim.rival_shift_plan(_rival.spec, _rival_form, _rng)
+	_rival_target = _rival_plan[0] if not _rival_plan.is_empty() else INF
 	# Hızlı araçla yarışırken dünya daha hızlı akar (aynı 300 m, daha uzun çizilmiş pist)
 	_track.set_scale_factor(DragTrack.scale_for(_player_id))
 	_player_perf = _performance(_player_id)
 	_rival_perf = _performance(_rival_id)
-	_audio.set_character(_player_perf, _rival_perf)
+	_player_electric = DragRaceSim.is_electric(_player_id)
+	_rival_electric = DragRaceSim.is_electric(_rival_id)
+	_audio.set_character(_player_perf, _rival_perf, _player_electric, _rival_electric)
 	_best_time = race.best_time(_player_id) if race else -1.0
 	_best_trace = race.best_trace(_player_id) if race else PackedFloat32Array()
 	_trace = PackedFloat32Array()
@@ -303,6 +316,7 @@ func open() -> void:
 	_tap_button.highlight = false
 	# Kalite / GPU'ya göre (PowerVR'da MSAA hareketli araçları bozuyordu: gri, delikli çizim)
 	_viewport.msaa_3d = GameSettings.subviewport_msaa(Viewport.MSAA_2X)
+	_claim_render_target()
 	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	_apply_compact_ui()
 	show()
@@ -318,7 +332,7 @@ func open() -> void:
 func prewarm() -> void:
 	if visible or _viewport == null:
 		return
-	_viewport.size = Vector2i(64, 36)
+	_release_render_target(Vector2i(64, 36))
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 ## Telefon tuvalinde alt plakalar küçülür: araçların üstüne binmesinler.
@@ -335,6 +349,24 @@ func _apply_compact_ui() -> void:
 	_corner.add_theme_constant_override(&"margin_bottom", int(margin.y))
 
 
+## ÇİZİM HEDEFİ: kapalıyken VRAM'de tutulmaz. Kapsayıcı `stretch` açıkken görüntü alanına elle boyut
+## atanamıyor (Godot yok sayıp uyarı basıyordu): eskiden kapanıştaki "4×4" küçültme HİÇ ÇALIŞMIYORDU ve
+## tam ekran hedef (renk + derinlik, MSAA'lı) kapalı ekranda bellekte kalıyordu (2026-10-11 QA).
+## Kapanışta / ön ısıtmada `stretch` kapatılır; açılışta boyut kapsayıcıdan alınıp geri açılır.
+func _release_render_target(size: Vector2i = Vector2i(4, 4)) -> void:
+	var box: SubViewportContainer = _viewport.get_parent() as SubViewportContainer
+	if box:
+		box.stretch = false
+	_viewport.size = size
+
+
+func _claim_render_target() -> void:
+	var box: SubViewportContainer = _viewport.get_parent() as SubViewportContainer
+	if box and not box.stretch:
+		_viewport.size = Vector2i(box.size.max(Vector2.ONE))
+		box.stretch = true
+
+
 func close() -> void:
 	if not visible:
 		return
@@ -342,7 +374,7 @@ func close() -> void:
 	_audio.stop()
 	GameMusic.race(get_tree(), false)
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	_viewport.size = Vector2i(4, 4)   # render hedefi VRAM'de asılı kalmasın (kapsayıcı açılışta büyütür)
+	_release_render_target()   # render hedefi VRAM'de asılı kalmasın (açılışta _claim_render_target)
 	_free_cars()   # yarış modelleri pistte asılı kalmasın
 	hide()
 	closed.emit()
@@ -788,9 +820,7 @@ func _process(delta: float) -> void:
 				_time = 0.0
 				_phase = Phase.RUNNING
 				# RAKİP YEŞİLDE KENDİ KALKAR: oyuncu dokunmasa da yarış başlar.
-				_rival.reaction = clampf(lerpf(DragRaceSim.REACTION_WORST,
-					DragRaceSim.REACTION_PERFECT, _rival_skill) + _rng.randf_range(-0.06, 0.06),
-					0.05, DragRaceSim.REACTION_WORST)
+				_rival.reaction = DragRaceSim.rival_reaction(_rival_skill, _rng)
 				_tap_button.text = Loc.t("VİTES")
 		Phase.RUNNING:
 			if _shift_hot:
@@ -932,8 +962,7 @@ func _player_flow() -> float:
 
 ## Araç karakteri (0-1): hızlanma statından. Ekonomi araçları ~0, süper sporlar 1.
 static func _performance(vehicle_id: StringName) -> float:
-	var accel: float = float(DragRaceSim.stats_of(vehicle_id).get("acceleration", 50))
-	return clampf((accel - 55.0) / 42.0, 0.0, 1.0)
+	return DragRaceSim.performance_ratio(vehicle_id)
 
 
 ## Canlı süre, rekor izi ve hayalet. Süre oyuncu kalkmadan da akar (yarış saati GO'da başlar).
@@ -1096,10 +1125,11 @@ func _drive_rival(_delta: float) -> void:
 	var quality: int = _rival.shift()
 	if quality < 0:
 		return
-	if _rival_fx and _rival_perf >= FLAME_MIN_PERF:
-		_rival_fx.flame(_shift_strength(quality) * _flame_scale(_rival_perf) * 0.8)
-	_audio.backfire(_shift_strength(quality) * _flame_scale(_rival_perf), true)
-	_rival_target = DragRaceSim.ai_shift_target(_rival.spec, _rival.gear, _rival_skill, _rng)
+	if not _rival_electric:
+		if _rival_fx and _rival_perf >= FLAME_MIN_PERF:
+			_rival_fx.flame(_shift_strength(quality) * _flame_scale(_rival_perf) * 0.8)
+		_audio.backfire(_shift_strength(quality) * _flame_scale(_rival_perf), true)
+	_rival_target = _rival_plan[_rival.gear] if _rival.gear < _rival_plan.size() else INF
 
 
 ## İDEAL DEVİR BİLDİRİMİ: ibre amber pencereye girince kadran yanar, yuvarlak tabela amber olur
@@ -1133,9 +1163,10 @@ func _register_shift() -> void:
 	_shift_dial.over = false
 	_shift_dial.flash = quality == DragRaceSim.Shift.PERFECT
 	var strength: float = _shift_strength(quality)
-	if _player_fx and _player_perf >= FLAME_MIN_PERF:
-		_player_fx.flame(strength * _flame_scale(_player_perf))
-	_audio.backfire(strength * _flame_scale(_player_perf))
+	if not _player_electric:
+		if _player_fx and _player_perf >= FLAME_MIN_PERF:
+			_player_fx.flame(strength * _flame_scale(_player_perf))
+		_audio.backfire(strength * _flame_scale(_player_perf))
 	_shake = maxf(_shake, 0.35 + 0.65 * strength)
 	match quality:
 		DragRaceSim.Shift.PERFECT:
@@ -1188,8 +1219,7 @@ static func _shift_strength(quality: int) -> float:
 ## Oyuncunun aracı KENDİ ilerlemesine göre durur; rakip ona göre çizilir. (Eskiden ikisi de iki
 ## aracın ORTALAMASI etrafında çiziliyordu: rakip yeşilde kalkınca oyuncunun duran aracı da ileri
 ## kayıyor, rakip hiç kalkmamış gibi görünüyordu — kullanıcı bunu "ben başlamadan bot başlamıyor"
-## diye bildirdi.) Aradaki gerçek fark yine yumuşatılır (bkz. MAX_VISUAL_GAP), böylece kopan
-## yarışta bile iki araç kadrajda kalır.
+## diye bildirdi.) Aradaki fark gerçektir (bkz. CAM_SHARE_GAP): kopan yarışta araç kadrajdan çıkar.
 func _place_cars(delta: float = 0.0) -> void:
 	var base: float = DragTrack.START_Z + _player_track_z()
 	_move_car(_player_car, _player_rig, base, delta, true)
@@ -1245,21 +1275,20 @@ func _track_center() -> float:
 	return (_player.progress() + _rival.progress()) * 0.5
 
 
-## Rakibin ekranda oyuncuya göre farkı (dünya birimi): rakip ÖNDEYSE artı. Gerçek metre farkı
-## tanh ile yumuşatılır, böylece kopan yarışta bile iki araç kadrajda kalır.
+## Rakibin ekranda oyuncuya göre farkı (dünya birimi): rakip ÖNDEYSE artı. Pistteki GERÇEK metre
+## farkı, pistin metre → dünya birimi ölçeğiyle (oyuncunun konumuyla aynı ölçek).
 func _visual_gap() -> float:
 	if _player == null or _rival == null:
 		return 0.0
 	var rival_total: float = _rival.distance + _rival_over
 	var player_total: float = _player.distance + _player_over
-	return MAX_VISUAL_GAP * tanh((rival_total - player_total) / GAP_SOFT)
+	return (rival_total - player_total) * (_track.length / DragRaceSim.DISTANCE)
 
 
-## Kamera izometrik açıyı koruyarak İKİ ARACIN ORTASINI takip eder; açı ne olursa olsun konum
+## Kamera izometrik açıyı koruyarak oyuncuyu (fark küçükse iki aracın ortasını) takip eder; açı ne olursa olsun konum
 ## açıdan türetildiği için kamera her zaman odağa bakar.
 func _place_camera(_t: float) -> void:
-	# Kamera araçların ÇİZİLDİĞİ iki noktanın ortasını izler: oyuncu geride kalırsa ekranda da
-	# geride kalır ama iki araç da kadrajda durur.
+	# Kamera oyuncuyu izler; fark CAM_SHARE_GAP'ten küçükken iki aracın ortasına kayar.
 	var player_z: float = _player_track_z()
 	# KAMERA YAYI: ivmelenirken kamera bir tık geride kalır (araç öne fırlar), viteste ve frende
 	# öne geçer (araç geri düşer). Yumuşatılır: titremez, "yaylanır".
@@ -1268,7 +1297,9 @@ func _place_camera(_t: float) -> void:
 		lag_target = 0.0
 	_cam_lag = lerpf(_cam_lag, lag_target, 0.12)
 	# Kamera bitiş çizgisinde KALIR: araçlar çizgiyi geçip kadrajdan ilerler.
-	var center_z: float = minf(player_z + _visual_gap() * 0.5 - _cam_lag, _track.length)
+	# Fark küçükken iki aracın ortası; büyüyünce kamera oyuncuda kalır, diğer araç kadrajdan çıkar.
+	var share: float = clampf(_visual_gap(), -CAM_SHARE_GAP, CAM_SHARE_GAP) * 0.5
+	var center_z: float = minf(player_z + share - _cam_lag, _track.length)
 	# Yarış ilerledikçe kamera biraz daha ileriyi gösterir: son bölümde FINISH kapısı kadraja girer.
 	var progress: float = clampf(center_z / _track.length, 0.0, 1.0)
 	var look: float = CAM_LOOK_AHEAD + CAM_LOOK_AHEAD_END * progress * progress

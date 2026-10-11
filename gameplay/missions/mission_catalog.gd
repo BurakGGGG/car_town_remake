@@ -96,7 +96,7 @@ const ACHIEVEMENTS: Array[Dictionary] = [
 	{"id": &"a_race_wins", "title": "YARIŞÇI", "text": "%s yarış kazan", "metric": &"race_wins", "kind": &"counter", "tiers": [3, 15, 50, 150], "mult": 1.0},
 	{"id": &"a_races", "title": "ARENA", "text": "%s yarışa katıl", "metric": &"races", "kind": &"counter", "tiers": [10, 50, 200], "mult": 0.6},
 	{"id": &"a_crates", "title": "KASA AVCISI", "text": "%s kasa aç", "metric": &"crates_opened", "kind": &"counter", "tiers": [3, 15, 50, 150], "mult": 0.9},
-	{"id": &"a_cars", "title": "KOLEKSİYONCU", "text": "%s farklı araç keşfet", "metric": &"cars_discovered", "kind": &"state", "tiers": [3, 6, 10, 16, 22], "mult": 1.5},
+	{"id": &"a_cars", "title": "KOLEKSİYONCU", "text": "%s farklı araç keşfet", "metric": &"cars_discovered", "kind": &"state", "tiers": [3, 6, 10, 18, 26], "mult": 1.5},
 	{"id": &"a_paints", "title": "BOYACI", "text": "%s boya satın al", "metric": &"paints", "kind": &"counter", "tiers": [1, 5, 20], "mult": 0.7, "feature": &"paint"},
 	{"id": &"a_decor", "title": "DEKORATÖR", "text": "Garaja toplam %s eşya yerleştir", "metric": &"decor_placed", "kind": &"counter", "tiers": [5, 20, 50, 100], "mult": 0.7},
 	{"id": &"a_display", "title": "SERGİCİ", "text": "Garajda aynı anda %s araç sergile", "metric": &"cars_on_display", "kind": &"state", "tiers": [1, 3, 6, 10], "mult": 0.8},

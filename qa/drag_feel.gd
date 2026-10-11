@@ -5,7 +5,8 @@ extends SceneTree
 ##
 ## Kullanım (araç verilirse sahiplenilip yarış aracı yapılır — KAYDI DEĞİŞTİRİR, yalıtılmış
 ## kullanıcı klasöründe çalıştırın: tools/qa_isolated.sh):
-##   godot-4 --path . --resolution 1280x720 -s res://qa/drag_feel.gd -- <çıktı_klasörü> [<araç_id>]
+##   godot-4 --path . --resolution 1280x720 -s res://qa/drag_feel.gd -- <çıktı_klasörü> [<araç_id> [<rakip_id>]]
+## Rakip verilirse RaceManager'ın seçimi ezilir (güçlü/zayıf eşleşmede farkın açılmasını görmek için).
 const DEFAULT_OUT: String = "/home/burak/Projects/ct_shots/drag_feel/"
 const SHOT_TIMES: Array[float] = [0.35, 2.5, 6.0]
 
@@ -15,12 +16,15 @@ var _hud: Node
 var _drag: DragRaceScreen
 
 
+var _rival: StringName = &""
 func _initialize() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	if args.size() > 0:
 		_out = args[0].path_join("")
 	if args.size() > 1:
 		_vehicle = StringName(args[1])
+	if args.size() > 2:
+		_rival = StringName(args[2])
 	DirAccess.make_dir_recursive_absolute(_out)
 	Engine.max_fps = 60
 	_run.call_deferred()
@@ -70,6 +74,8 @@ func _run() -> void:
 
 
 func _race(index: int) -> void:
+	if _rival != &"":
+		get_first_node_in_group("race").set("_rival_id", _rival)
 	_hud.get("router").call("open", &"drag_race")
 	await _frames(2)
 	print("yarış %d açıldı: %s" % [index, _drag.get("_player_id")])

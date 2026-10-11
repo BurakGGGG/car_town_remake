@@ -76,6 +76,12 @@ const DRAG_CD: float = 0.32
 const ROLL_CRR: float = 0.014
 const GRAVITY: float = 9.81
 const DRIVETRAIN_EFF: float = 0.88
+## Çekişe katılan ağırlık payı. Kalkışta ağırlık arkaya kayar: önden çekişli kaybeder, arkadan
+## çekişli kazanır; dört çeker hepsini kullanır (gerçek dağılımlar ~%60/40, aktarımla ~0,55 / ~0,68).
+## Yarış kutusunun son vitesi bitiş hızının bu katında tepe güce ulaşır: son vites yarışın sonunda
+## atılır ve devir sınırına dayanmadan biter.
+const RACE_GEAR_HEADROOM: float = 1.08
+const DRIVE_SHARE: Dictionary = {"FWD": 0.55, "RWD": 0.68, "AWD": 0.95}
 ## Limitçi: devir sınırındayken kalan tork oranı.
 const LIMITER_TORQUE: float = 0.12
 ## Patinajda aktarılan kuvvetin çekiş limitine oranı (dinamik sürtünme statiğin altında).
@@ -97,6 +103,10 @@ class EngineSpec:
 	var mass: float = 1200.0              # kg
 	var frontal_area: float = 2.10        # m²
 	var grip_mu: float = 1.05
+	## Ağırlığın çekişe katılan payı (FWD / RWD / AWD, kalkıştaki ağırlık aktarımı dahil).
+	var drive_share: float = 0.62
+	## Yarış kutusunun son vitesinin tepe güç devrinde ulaştığı hız (km/sa, PACE dahil).
+	var race_top_kmh: float = 0.0
 	## Her vites için OPTİMUM vites devri (son vitese ait değer yoktur).
 	var shift_rpm: PackedFloat32Array = PackedFloat32Array()
 
@@ -136,6 +146,32 @@ class EngineSpec:
 		return clampf(best, peak_torque_rpm, redline_rpm)
 
 
+	## Vites kutusu: son vites tepe GÜÇ devrinde `top_kmh`'e ulaşır, birinci vites hızlanmaya göre.
+	func build_gears(gears: int, top_kmh: float, accel: float) -> void:
+		race_top_kmh = top_kmh
+		var wheel_rps_top: float = top_kmh / 3.6 / (TAU * wheel_radius)
+		var top_ratio: float = peak_power_rpm / 60.0 / maxf(wheel_rps_top * final_drive, 0.01)
+		# Birinci vites: tutuşu zayıf araçta daha kısa (patinaj), güçlüde daha uzun.
+		var first_ratio: float = lerpf(3.05, 3.75, accel)
+		gear_ratios = PackedFloat32Array()
+		var spread: float = pow(top_ratio / first_ratio, 1.0 / float(gears - 1))
+		for g: int in gears:
+			# Geometrik dizi, ama alt kademeler biraz daha SIK (gerçek kutular böyle).
+			var t: float = float(g) / float(gears - 1)
+			gear_ratios.append(first_ratio * pow(spread, float(g)) * lerpf(1.0, 1.04, t * (1.0 - t) * 4.0))
+		shift_rpm = PackedFloat32Array()
+		for g: int in gears:
+			shift_rpm.append(solve_shift_rpm(g))
+
+	## Tepe torku, kusursuz sürüşte ölçülen 0-100 hedefe oturana kadar ölçekler. Çekiş limitine dayanan
+	## araçta tork artışı süreyi kısaltamaz — döngü o yüzden sınırlı (ölçüm: qa/performance_report.gd).
+	func calibrate(target_0_100: float) -> void:
+		for i: int in 6:
+			var measured: float = DragRaceSim.measure_0_100(self)
+			if measured <= 0.0 or absf(measured / target_0_100 - 1.0) < 0.01:
+				return
+			peak_torque_nm *= clampf(measured / target_0_100, 0.6, 1.6)
+
 	## Katalog statlarından künye üretir. Araç id'sine göre elle değer YOKTUR: her şey
 	## sınıf / kategori / ölçü / yarış statlarından çıkar.
 	static func derive(id: StringName) -> EngineSpec:
@@ -144,6 +180,8 @@ class EngineSpec:
 		var entry: Dictionary = CarCatalog.get_entry(id)
 		var stats: Dictionary = DragRaceSim.stats_of(id)
 		var accel: float = clampf(float(stats["acceleration"]) / 100.0, 0.1, 1.0)
+		var perf: Dictionary = entry.get("performance", {})
+		var real_0_100: float = float(perf.get("zero_100", 0.0))
 		var top_kmh: float = maxf(float(stats["top_speed"]), 80.0) * DragRaceSim.PACE
 		var grip: float = clampf(float(stats["grip"]) / 100.0, 0.1, 1.0)
 		var year: int = int(entry.get("year", 2005))
@@ -170,26 +208,23 @@ class EngineSpec:
 		# Tekerlek yarıçapı boyla birlikte büyür (185/65 R15 ≈ 0,30 m, 225/45 R17 ≈ 0,32 m).
 		spec.wheel_radius = 0.285 + (length - 3.8) * 0.022
 		spec.grip_mu = lerpf(0.88, 1.22, grip)
+		spec.drive_share = DragRaceSim.DRIVE_SHARE.get(String(perf.get("drivetrain", "")), 0.62)
+		if real_0_100 > 0.0:
+			# Lastik, aracın GERÇEK 0-100'ünü yapmaya yetmeli (gerçek araç bu süreyi yapıyor): ortalama
+			# ivmenin %45 fazlası çekiş payıyla karşılanabilsin (%15'te süper sporlar yarışın 6 sn'sini patinajla
+			# geçirip gerçek 0-100'e ulaşamıyordu; %80'de patinaj hiç kalmıyordu). Çekiş türü yine fark yaratır: aynı süre için
+			# FWD'ye daha çok tutuş gerekir ve kötü kalkışta önce o patinaj yapar.
+			var need_mu: float = 1.45 * (100.0 / 3.6) / real_0_100 / (DragRaceSim.GRAVITY * spec.drive_share)
+			spec.grip_mu = maxf(spec.grip_mu, need_mu)
 
 		# Vites sayısı: eski/küçük araçlar 5, modern/güçlüler 6.
 		var gears: int = 6 if accel >= 0.80 else 5
-		# Son vites: tepe GÜÇ devrinde katalog son hızına ulaşacak şekilde çözülür.
-		var top_ms: float = top_kmh / 3.6
-		var wheel_rps_top: float = top_ms / (TAU * spec.wheel_radius)
 		spec.final_drive = lerpf(4.25, 3.55, clampf((length - 3.8) / 1.0, 0.0, 1.0))
-		var top_ratio: float = spec.peak_power_rpm / 60.0 / maxf(wheel_rps_top * spec.final_drive, 0.01)
-		# Birinci vites: tutuşu zayıf araçta daha kısa (patinaj), güçlüde daha uzun.
-		var first_ratio: float = lerpf(3.05, 3.75, accel)
-		spec.gear_ratios = PackedFloat32Array()
-		var spread: float = pow(top_ratio / first_ratio, 1.0 / float(gears - 1))
-		for g: int in gears:
-			# Geometrik dizi, ama alt kademeler biraz daha SIK (gerçek kutular böyle).
-			var t: float = float(g) / float(gears - 1)
-			var ratio: float = first_ratio * pow(spread, float(g)) * lerpf(1.0, 1.04, t * (1.0 - t) * 4.0)
-			spec.gear_ratios.append(ratio)
+		spec.build_gears(gears, top_kmh, accel)
 
 		# Tepe tork: hedeflenen 0-100 süresine göre ölçeklenir (stat 30 → 14 sn, 100 → 6,2 sn; PACE² ile kısalır).
-		var target_0_100: float = lerpf(15.5, 6.0, accel) / (DragRaceSim.PACE * DragRaceSim.PACE)
+		var target_0_100: float = (real_0_100 if real_0_100 > 0.0 else lerpf(15.5, 6.0, accel)) \
+			/ (DragRaceSim.PACE * DragRaceSim.PACE)
 		var v100: float = 100.0 / 3.6
 		var avg_ratio: float = (spec.gear_ratios[0] + spec.gear_ratios[mini(2, gears - 1)]) * 0.5
 		var needed_force: float = spec.mass * v100 / target_0_100 * 1.55   # ortalama tork payı
@@ -199,7 +234,105 @@ class EngineSpec:
 		spec.shift_rpm = PackedFloat32Array()
 		for g: int in gears:
 			spec.shift_rpm.append(spec.solve_shift_rpm(g))
+		# KALİBRASYON: yukarıdaki tork kaba bir tahmin (vites, patinaj, debriyaj kayması hesaba girmiyor).
+		# Kusursuz sürüşte ölçülen 0-100 hedefe oturana kadar tork ölçeklenir; böylece oyundaki sıralama
+		# gerçek tablodakiyle aynı olur.
+		# ÖNCEDEN HESAPLANMIŞ AYAR (vehicles/race_specs.json, tools/bake_race_specs.gd): kalibrasyon araç başına
+		# ~11 ms (telefonda 5-10 kat) — yarış ekranı açılırken iki araç için takılma demekti. Girdiler
+		# (katalog alanları + TUNING_VERSION) değişmemişse dosyadaki tork ve vites kutusu kullanılır.
+		if real_0_100 > 0.0 and not DragRaceSim.ignore_baked:
+			var baked: Dictionary = DragRaceSim.baked_for(id)
+			if not baked.is_empty():
+				spec.peak_torque_nm = float(baked["torque"])
+				spec.build_gears(gears, float(baked["race_top_kmh"]), accel)
+				return spec
+		if real_0_100 > 0.0:
+			spec.calibrate(target_0_100)
+			# YARIŞ VİTESLERİ: gerçek son hıza (Ferrari 340 × PACE) göre kurulan kutu 300 m'de son viteslere
+			# hiç ulaşmıyordu (E46 5 vitesin 4'ünü kullanıyordu) — vites atmak oyunun kendisi. Son vites,
+			# tepe güç devrinde 300 m bitiş hızının biraz üstüne denk gelecek şekilde yeniden kurulur; tork
+			# yeniden kalibre edilir. Gerçek son hız yalnızca bu tavanı sınırlar (UI ve GENEL puanda durur).
+			for i: int in 2:
+				var trap: float = DragRaceSim.measure_trap(spec)
+				if trap <= 0.0:
+					break
+				spec.build_gears(gears, minf(top_kmh, trap * DragRaceSim.RACE_GEAR_HEADROOM), accel)
+				spec.calibrate(target_0_100)
 		return spec
+
+
+## Kusursuz sürüşte 300 m bitiş hızı (km/sa, PACE dahil) — yarış vites kutusunu kurmak için.
+static func measure_trap(spec: EngineSpec) -> float:
+	var runner: Runner = Runner.new()
+	runner.setup_spec(spec, null)
+	runner.rpm = spec.launch_rpm
+	runner.launch()
+	var t: float = 0.0
+	while runner.finish_time < 0.0 and t < 60.0:
+		t += STEP
+		runner.step(STEP, t)
+		if runner.gear < runner.top_gear() and not runner.shifting and runner.rpm >= spec.shift_rpm[runner.gear]:
+			runner.shift()
+	return runner.speed * 3.6 if runner.finish_time >= 0.0 else -1.0
+
+
+## Kusursuz kalkış + kusursuz viteslerle 0 → 100 km/sa süresi (simülasyon saati, PACE dahil).
+## Künyeyi doğrudan kullanır: türetme sırasında (önbelleğe girmeden) da çağrılabilir.
+static func measure_0_100(spec: EngineSpec) -> float:
+	var runner: Runner = Runner.new()
+	runner.setup_spec(spec, null)
+	runner.rpm = spec.launch_rpm
+	runner.launch()
+	var t: float = 0.0
+	while t < 40.0:
+		t += STEP
+		runner.step(STEP, t)
+		if runner.speed >= 100.0 / 3.6:
+			return t
+		if runner.gear < runner.top_gear() and not runner.shifting and runner.rpm >= spec.shift_rpm[runner.gear]:
+			runner.shift()
+	return -1.0
+
+
+## --- Önceden hesaplanmış yarış ayarı -------------------------------------------------------------
+## Ayar mantığı (derive / calibrate / build_gears / tork eğrisi) değişince bu sayı artırılmalı: dosyadaki
+## eski değerler o zaman kullanılmaz (çalışma anında yeniden hesaplanır, uyarı basılır) ve
+## vehicle_asset_test dosyanın güncel olmadığını yakalar. Yeniden üretim: tools/bake_race_specs.gd
+const TUNING_VERSION: int = 1
+const BAKED_PATH: String = "res://vehicles/race_specs.json"
+## Araç aracı (bake) çalışırken dosya yok sayılır.
+static var ignore_baked: bool = false
+static var _baked: Dictionary = {}
+static var _baked_loaded: bool = false
+static var _baked_warned: bool = false
+
+
+## Ayarın girdileri: türetmede okunan BÜTÜN katalog alanları + sürüm. Biri değişirse anahtar değişir.
+static func tuning_key(vehicle_id: StringName) -> String:
+	var entry: Dictionary = CarCatalog.get_entry(vehicle_id)
+	var parts: Array = [TUNING_VERSION, PACE, entry.get("race", {}), entry.get("performance", {}),
+		entry.get("year", 0), entry.get("real_dimensions", {}), entry.get("category", "")]
+	return JSON.stringify(parts, "", true).md5_text()
+
+
+## Aracın güncel önceden hesaplanmış ayarı; yoksa ya da eskimişse boş.
+static func baked_for(vehicle_id: StringName) -> Dictionary:
+	if not _baked_loaded:
+		_baked_loaded = true
+		if FileAccess.file_exists(BAKED_PATH):
+			var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(BAKED_PATH))
+			if parsed is Dictionary:
+				_baked = (parsed as Dictionary).get("cars", {})
+	var row: Variant = _baked.get(String(vehicle_id), null)
+	if not row is Dictionary:
+		return {}
+	if String((row as Dictionary).get("key", "")) != tuning_key(vehicle_id):
+		if not _baked_warned:
+			_baked_warned = true
+			push_warning("DragRaceSim: %s eskimiş (%s) — çalışma anında hesaplanıyor; tools/bake_race_specs.gd ile yenile"
+				% [BAKED_PATH, vehicle_id])
+		return {}
+	return row
 
 
 ## Künye önbelleği: aynı araç için tek kez türetilir (yarış başında ayırma yapılmaz).
@@ -272,11 +405,17 @@ class Runner:
 
 	var _shift_left: float = 0.0      # kalan geçiş süresi
 	var _jitter: float = 1.0          # koşuya özgü milimetrik sapma
+	## Gün formu güç çarpanı (bkz. DragRaceSim.Form): yalnızca rakip AI'de 1'den farklı.
+	var power: float = 1.0
 	var _bog: float = 1.0             # kalkış devri düşükse debriyaj kayarken tork payı
 
 	func setup(id: StringName, rng: RandomNumberGenerator) -> void:
-		vehicle_id = id
-		spec = DragRaceSim.spec_of(id)
+		setup_spec(DragRaceSim.spec_of(id), rng)
+
+	## Önbellekten değil verilen künyeyle kurar (türetme sırasındaki kalibrasyon ölçümü için).
+	func setup_spec(engine: EngineSpec, rng: RandomNumberGenerator) -> void:
+		vehicle_id = engine.vehicle_id
+		spec = engine
 		gear = 0
 		speed = 0.0
 		distance = 0.0
@@ -299,6 +438,7 @@ class Runner:
 		rpm_samples = 0
 		_shift_left = 0.0
 		_jitter = 1.0
+		power = 1.0
 		_bog = 1.0
 		launch_rpm = spec.launch_rpm
 		launch_quality = Shift.PERFECT
@@ -421,11 +561,11 @@ class Runner:
 		# 3) Kuvvetler
 		var force: float = 0.0
 		if driving:
-			force = spec.force_at(rpm, gear) * _jitter
+			force = spec.force_at(rpm, gear) * _jitter * power
 			if clutch > 0.0:
 				force *= _bog
 			# Çekiş limiti: aşılırsa patinaj, fazlası boşa gider.
-			var traction: float = spec.grip_mu * spec.mass * DragRaceSim.GRAVITY * 0.62 \
+			var traction: float = spec.grip_mu * spec.mass * DragRaceSim.GRAVITY * spec.drive_share \
 				* DragRaceSim.PACE * DragRaceSim.PACE
 			wheelspin = force > traction
 			if wheelspin:
@@ -565,22 +705,41 @@ static func stats_of(vehicle_id: StringName) -> Dictionary:
 	return stats if stats is Dictionary and not (stats as Dictionary).is_empty() else CarCatalog.RACE_STATS
 
 
-## Statların tek sayılık özeti (rakip seçimi ve UI sıralaması için).
-static func power_of(vehicle_id: StringName) -> float:
-	var stats: Dictionary = stats_of(vehicle_id)
-	return float(stats["top_speed"]) * 0.4 + float(stats["acceleration"]) * 0.45 + float(stats["grip"]) * 0.15
+## PERFORMANS ORANI (0-1) — SUNUM için (pist akış hızı, egzoz alevi, motor sesi karakteri): gerçek 0-100
+## süresinden, 14,5 sn (Toros) = 0 · 2,9 sn (488 / Huracán) = 1. Katalogda performance yoksa hızlanma statı.
+## (Eskiden her yer hızlanma statını kendi eşiğiyle okuyordu; performans v2'de stat aralığı 52-98'den 11-97'ye
+## genişleyince D/C/B'nin hepsi aynı pist hızında akıyordu ve S400 "süper araç" sesi alıyordu.)
+const PERF_SLOWEST_0_100: float = 14.5
+const PERF_FASTEST_0_100: float = 2.9
+
+static func performance_ratio(vehicle_id: StringName) -> float:
+	var perf: Dictionary = CarCatalog.get_entry(vehicle_id).get("performance", {})
+	var t: float = float(perf.get("zero_100", 0.0))
+	if t > 0.0:
+		return clampf((PERF_SLOWEST_0_100 - t) / (PERF_SLOWEST_0_100 - PERF_FASTEST_0_100), 0.0, 1.0)
+	return clampf(float(stats_of(vehicle_id).get("acceleration", 50)) / 100.0, 0.0, 1.0)
 
 
-## GENEL (OVERALL) PUAN, 0-1000: aracın dört yarış statının tek sayılık özeti. Oyuncu hız,
-## hızlanma ve tepkiyi ayrı ayrı görmez; araçları bu sayıyla karşılaştırır. Ağırlıklar yarışın
-## gerçekte neye bağlı olduğunu yansıtır: hızlanma 400 m'yi en çok belirler, tepki ve tutuş
-## ince ayardır. Hız statı 160 km/s'te tavana vurur (diğerleri zaten 0-100).
+## Elektrikli araç mı (performance.engine "Elektrik"): egzoz alevi / patlaması yok, motor sesi uğultu.
+static func is_electric(vehicle_id: StringName) -> bool:
+	var perf: Dictionary = CarCatalog.get_entry(vehicle_id).get("performance", {})
+	return String(perf.get("engine", "")).to_lower().begins_with("elektrik")
+
+
+## GENEL (OVERALL) PUAN, 0-1000: aracın drag yarışındaki GERÇEK hızının tek sayılık özeti — kusursuz 300 m
+## süresinden (base_time). Oyuncu araçları bu sayıyla karşılaştırır, rakip de bu süreye göre seçilir
+## (RaceManager.rival_pool): yüksek puanlı araç her zaman daha hızlıdır. (2026-10-11'e kadar dört statın
+## ağırlıklı toplamıydı; gerçek süreyle birkaç yerde ters sıralanıyordu: S400 782 / 9,50 sn, Model Y 757 / 9,43 sn.)
+## Referans süreler sabittir (katalogdan türetilmez): yeni araç eklenince eski araçların puanı değişmez.
+##   OVERALL_SLOW_TIME'da OVERALL_FLOOR, OVERALL_FAST_TIME'da tam puan; arası doğrusal, uçlarda kırpılır.
 const OVERALL_MAX: int = 1000
-const OVERALL_TOP_SPEED_CAP: float = 160.0
-const OVERALL_WEIGHTS: Dictionary = {
-	"top_speed": 0.35, "acceleration": 0.40, "reaction": 0.15, "grip": 0.10}
+const OVERALL_SLOW_TIME: float = 14.0   # Toros 13,83 sn ≈ 270
+const OVERALL_FAST_TIME: float = 7.2    # Huracán 7,28 sn ≈ 990
+const OVERALL_FLOOR: float = 0.25
+## Garaj çubuklarında hız statının tavanı (top_speed gerçek km/sa; en hızlı araç 488 Pista 340).
+const OVERALL_TOP_SPEED_CAP: float = 340.0
 
-## Bir statın 0-1 normalleşmiş hali (çubuklar ve genel puan aynı ölçeği kullanır).
+## Bir statın 0-1 normalleşmiş hali (garaj DETAY çubukları).
 static func stat_ratio(stat: String, value: float) -> float:
 	if stat == "top_speed":
 		return clampf(value / OVERALL_TOP_SPEED_CAP, 0.0, 1.0)
@@ -588,25 +747,108 @@ static func stat_ratio(stat: String, value: float) -> float:
 
 
 static func overall_of(vehicle_id: StringName) -> int:
-	var stats: Dictionary = stats_of(vehicle_id)
-	var total: float = 0.0
-	for stat: String in OVERALL_WEIGHTS:
-		total += float(OVERALL_WEIGHTS[stat]) * stat_ratio(stat, float(stats.get(stat, 0)))
-	return roundi(total * OVERALL_MAX)
+	var t: float = base_time(vehicle_id)
+	var ratio: float = clampf((OVERALL_SLOW_TIME - t) / (OVERALL_SLOW_TIME - OVERALL_FAST_TIME), 0.0, 1.0)
+	return roundi((OVERALL_FLOOR + (1.0 - OVERALL_FLOOR) * ratio) * OVERALL_MAX)
 
 
 ## İdeal süre (kusursuz kalkış + kusursuz vitesler, tepki yok).
 static func base_time(vehicle_id: StringName) -> float:
-	return drive(vehicle_id, 0.0, 1.0, 1.0, null).time
+	if not _base_times.has(vehicle_id):
+		var baked: Dictionary = {} if ignore_baked else baked_for(vehicle_id)
+		_base_times[vehicle_id] = float(baked["base_time"]) if baked.has("base_time") \
+			else drive(vehicle_id, 0.0, 1.0, 1.0, null).time
+	return _base_times[vehicle_id]
 
 
-## Rakibin koşusu (başsız): tepkisi ve vites isabeti statlarından türer.
+static var _base_times: Dictionary = {}
+
+
+## Önbellekleri boşaltır (katalog yeniden yüklenince / bake aracı).
+static func clear_cache() -> void:
+	_specs.clear()
+	_base_times.clear()
+	_baked.clear()
+	_baked_loaded = false
+
+
+## Rakibin koşusu (başsız): ekrandaki rakiple AYNI kural — sınıf becerisi + o günün formu.
+## (Eskiden burada `skill_of` kullanılıyordu, ekrandaki rakip ise `class_skill`: testler ve dengeleme
+## araçları oyundakinden farklı bir rakibi ölçüyordu.)
 static func run_rival(vehicle_id: StringName, rng: RandomNumberGenerator) -> Run:
-	var skill: float = skill_of(vehicle_id)
+	var form: Form = roll_form(vehicle_id, rng)
+	return drive(vehicle_id, rival_reaction(form.skill, rng), form.launch_skill, form.skill, rng,
+		rival_shift_plan(spec_of(vehicle_id), form, rng), form.power)
+
+
+## Rakibin tepki süresi: beceriden, ±0,06 sn dağınıklıkla.
+static func rival_reaction(skill: float, rng: RandomNumberGenerator) -> float:
 	var reaction: float = lerpf(REACTION_WORST, REACTION_PERFECT, skill)
 	if rng:
 		reaction += rng.randf_range(-0.06, 0.06)
-	return drive(vehicle_id, maxf(reaction, 0.05), skill, skill, rng)
+	return clampf(reaction, 0.05, REACTION_WORST)
+
+
+## GÜN FORMU — yarışların bilinmezliği (2026-10-11, kullanıcı: "rakip aynı arabayla bir tur 11 yapıyorsa
+## diğer tur düşük ihtimal de olsa 12 yapsın, bazen 10,5 yapsın"). Rakip her yarışa bir formla çıkar:
+##   power : aracın o günkü gücü (lastik sıcaklığı, hava, motor) — normal dağılım, sınırlı.
+##   skill : sürücünün o günkü becerisi — sınıf becerisi etrafında dağılır; ara sıra KÖTÜ GÜN (kalkışı
+##           kaçırır, erken vites atar, güç düşük) ya da İYİ GÜN (kusursuza yakın, güç yüksek).
+## Oran ve genlikler qa/rival_spread.gd ile ölçülerek ayarlandı (docs/PERFORMANS_V2.md).
+class Form:
+	var power: float = 1.0
+	var skill: float = 0.5            # vites becerisi (ve tepki)
+	var launch_skill: float = 0.5     # kalkış becerisi: kötü günde ayrıca çöker (debriyajı kaçırır)
+	var kind: StringName = &"normal"   # normal / good / bad
+	## Kötü günde ıskalanan vites (-1 = yok): o viteste çok erken atar → MISS (geçiş uzun, devir düşer).
+	var miss_gear: int = -1
+
+
+const FORM_POWER_SD: float = 0.03
+const FORM_POWER_RANGE: float = 0.08
+const FORM_SKILL_SD: float = 0.12
+const FORM_GOOD_CHANCE: float = 0.15
+const FORM_BAD_CHANCE: float = 0.08
+
+
+static func roll_form(vehicle_id: StringName, rng: RandomNumberGenerator) -> Form:
+	var form: Form = Form.new()
+	form.skill = class_skill(vehicle_id)
+	form.launch_skill = form.skill
+	if rng == null:
+		return form   # deterministik testler: form yok
+	form.power = 1.0 + clampf(rng.randfn(0.0, FORM_POWER_SD), -FORM_POWER_RANGE, FORM_POWER_RANGE)
+	form.skill = clampf(form.skill + rng.randfn(0.0, FORM_SKILL_SD), 0.0, 1.0)
+	form.launch_skill = form.skill
+	var roll: float = rng.randf()
+	if roll < FORM_BAD_CHANCE:
+		form.kind = &"bad"
+		form.skill = clampf(form.skill - rng.randf_range(0.30, 0.50), 0.0, 1.0)
+		form.launch_skill = rng.randf_range(0.0, 0.25)
+		form.power -= rng.randf_range(0.06, 0.12)
+		form.miss_gear = rng.randi_range(0, maxi(spec_of(vehicle_id).gear_count() - 2, 0))
+	elif roll < FORM_BAD_CHANCE + FORM_GOOD_CHANCE:
+		form.kind = &"good"
+		form.skill = maxf(form.skill, rng.randf_range(0.95, 1.0))
+		form.launch_skill = form.skill
+		# Güç bonusu sınıf becerisiyle ölçeklenir: alt sınıfın NORMAL günü zaten hatalı olduğu için kusursuz sürüş
+		# tek başına büyük fark açıyor; tam bonusla Toros ortancasından %8,6 hızlı koşup kusursuz oynayan Şahin'i
+		# yeniyordu (qa/drag_play). S sınıfı tam bonusu alır.
+		var scale: float = clampf(class_skill(vehicle_id) / CLASS_SKILL["S"], 0.3, 1.0)
+		form.power += rng.randf_range(0.12, 0.22) * scale
+	return form
+
+
+## Rakibin yarış planı: her vites için hedef devir (formdaki beceriyle; ıskalanan viteste optimumun
+## %60'ı → MISS). Ekrandaki rakip ve başsız `run_rival` AYNI planı kullanır.
+static func rival_shift_plan(spec: EngineSpec, form: Form, rng: RandomNumberGenerator) -> PackedFloat32Array:
+	var plan: PackedFloat32Array = PackedFloat32Array()
+	for g: int in maxi(spec.gear_count() - 1, 0):
+		var target: float = ai_shift_target(spec, g, form.skill, rng)
+		if g == form.miss_gear:
+			target = maxf(spec.shift_rpm[g] * 0.60, spec.idle_rpm)
+		plan.append(target)
+	return plan
 
 
 ## Oyuncunun koşusu (başsız — "ne olurdu" hesapları ve testler için).
@@ -624,12 +866,18 @@ static func skill_of(vehicle_id: StringName) -> float:
 	return clampf(float(stats_of(vehicle_id)["reaction"]) / 100.0, 0.0, 1.0)
 
 
-## Sınıfa göre AI beceri payı: D daha çok hata yapar, A neredeyse kusursuz.
+## Sınıfa göre AI beceri payı: D daha çok hata yapar, S en az. Performans v2 + gün formuyla (2026-10-11)
+## indirildi (A 0,90 → 0,72, S 0,95 → 0,78): A/S rakibi normal günde de kusursuza yakın sürdüğü için iyi
+## günün düzeltecek bir şeyi kalmıyordu ve iyi oyuncu aynı araçta S rakibi hiç yenemiyordu (%0).
+## Kusursuz sürüş artık rakibin İYİ GÜNÜ (bkz. Form).
 static func class_skill(vehicle_id: StringName) -> float:
 	var klass: String = String(CarCatalog.get_entry(vehicle_id).get("class", "C"))
-	var base: float = {"D": 0.35, "C": 0.55, "B": 0.75, "A": 0.90, "S": 0.95}.get(klass, 0.55)
+	var base: float = CLASS_SKILL.get(klass, 0.55)
 	return clampf(base * 0.7 + skill_of(vehicle_id) * 0.3, 0.0, 1.0)
 
+
+const AI_SHIFT_CEILING: float = 0.995
+const CLASS_SKILL: Dictionary = {"D": 0.35, "C": 0.50, "B": 0.62, "A": 0.72, "S": 0.78}
 
 ## AI'nin bu viteste hedefleyeceği devir: becerisi arttıkça optimuma yaklaşır. Hata YÖNÜ de
 ## rastgeledir (bazen erken, bazen sınıra kadar bekler) — AI hile yapmaz, aynı fiziğe tabidir.
@@ -641,7 +889,10 @@ static func ai_shift_target(spec: EngineSpec, gear: int, skill: float,
 	# rng yoksa (deterministik testler) sapma rastgele değil SİSTEMATİK olur: zayıf sürücü
 	# erken atar. Böylece beceri, rastgelelik olmadan da süreye yansır.
 	var offset: float = rng.randf_range(-spread, spread) if rng else -spread * 0.6
-	return clampf(optimal * (1.0 + offset), spec.idle_rpm, spec.redline_rpm)
+	# Tavan devir sınırının HEMEN ALTI: sınırda limitçi devri kestiği için tam sınır hedefi hiç tutmuyordu ve
+	# AI vites atmadan pistin sonuna kadar sınırda kalıyordu (Şahin 19,8 sn — performans v2'de devir
+	# sınırı ideal vites devrine yaklaşınca ortaya çıktı). Sınıra dayanan AI orada atar.
+	return clampf(optimal * (1.0 + offset), spec.idle_rpm, spec.redline_rpm * AI_SHIFT_CEILING)
 
 
 ## AI'nin kalkış devri: becerisi arttıkça optimuma yaklaşır.
@@ -656,10 +907,11 @@ static func ai_launch_rpm(spec: EngineSpec, skill: float, rng: RandomNumberGener
 ## doğrudan oradan okunur (shift pattern testleri ve optimum arama bunu kullanır).
 static func drive(vehicle_id: StringName, reaction: float, launch_skill: float,
 		shift_skill: float, rng: RandomNumberGenerator,
-		shift_targets: PackedFloat32Array = PackedFloat32Array()) -> Run:
+		shift_targets: PackedFloat32Array = PackedFloat32Array(), power: float = 1.0) -> Run:
 	var spec: EngineSpec = spec_of(vehicle_id)
 	var runner: Runner = Runner.new()
 	runner.setup(vehicle_id, rng)
+	runner.power = power
 	runner.reaction = reaction
 	# Kalkış devrine yüksel, sonra kavra.
 	runner.rpm = ai_launch_rpm(spec, clampf(launch_skill, 0.0, 1.0), rng)

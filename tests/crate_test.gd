@@ -221,12 +221,15 @@ func _run() -> void:
 	crates._find(dup_uid)["vehicle"] = owned_id   # testte sonucu sahip olunan araca sabitle
 	await wait_state(crates, dup_uid, CrateManager.State.WAITING_TO_OPEN, 3.0)
 	var count_before: int = own.owned_count()
+	# Önceki adımlardaki RASTGELE kasalardan biri Getz çıkarsa kopya sayacı zaten 1 olabilir (test arada bir
+	# FAIL veriyordu): kesin değer değil ARTIŞ denetlenir.
+	var dups_before: int = own.duplicate_count(owned_id)
 	var gv2: int = GarageValue.vehicles_value(self)
 	var gems_before: int = pp.gems
 	var res: Dictionary = crates.open(dup_uid)
-	check(bool(res.get("duplicate", false)) and int(res["stars"]) == 1, "kopya → ★1")
+	check(bool(res.get("duplicate", false)) and int(res["stars"]) == VehicleOwnership.stars_for(dups_before + 1), "kopya → yıldız sayısı kopyaya göre")
 	check(pp.gems == gems_before + int(CrateManager.DUP_SCRAP[&"common"]), "common hurdası +2 gem")
-	check(own.owned_count() == count_before and own.duplicate_count(owned_id) == 1, "satılabilir ikinci araç oluşmadı")
+	check(own.owned_count() == count_before and own.duplicate_count(owned_id) == dups_before + 1, "satılabilir ikinci araç oluşmadı")
 	check(GarageValue.vehicles_value(self) == gv2, "garaj değeri kopyayla şişmedi")
 	crates.claim(dup_uid)
 
@@ -237,7 +240,7 @@ func _run() -> void:
 	eco.set_money(100000)
 	check(own.status(&"bmw_e60") == VehicleOwnership.Status.UNDISCOVERED and not own.purchase_vehicle(&"bmw_e60"), "keşfedilmemiş E60 showroom'da alınamaz")
 	check(own.status(owned_id) == VehicleOwnership.Status.PURCHASABLE and own.purchase_vehicle(owned_id), "keşfedilmiş Getz geri alındı")
-	check(own.duplicate_count(owned_id) == 1, "yıldız geri almada korunur")
+	check(own.duplicate_count(owned_id) == dups_before + 1, "yıldız geri almada korunur")
 
 	print("== 12) YARIŞ SEÇİLİ ARACI KULLANIR ==")
 	race = g(&"race")
@@ -343,7 +346,7 @@ func _run() -> void:
 	for row: Dictionary in CrateCatalog.odds(&"prestige_crate"):
 		if row["id"] == &"bmw_e60":
 			e60 = float(row["chance"])
-	check(absf(e60 - 4.0 / 159.0) < 1e-6, "E60 = 4/159 = yüzde 2,52 (A3 100 + S60 40 + CLS 15 + E60 4)")
+	check(absf(e60 - 4.0 / 214.0) < 1e-6, "E60 = 4/214 = yüzde 1,87 (A3 100 + S60 40 + Model Y 40 + CLS 15 + S400 15 + E60 4)")
 
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)

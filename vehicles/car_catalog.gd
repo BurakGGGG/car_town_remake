@@ -129,11 +129,19 @@ static func _ensure_loaded() -> void:
 
 
 ## Alan türleri (SCHEMA "kind" sütunu).
-enum Kind { TEXT, NAME, INT, FLOAT, BOOL, COLOR, COLOR_LIST, STATS, DIMENSIONS }
+enum Kind { TEXT, NAME, INT, FLOAT, BOOL, COLOR, COLOR_LIST, STATS, DIMENSIONS, PERFORMANCE }
 
 ## "race" bloğundaki alanlar ve alan yoksa kullanılan değerler. Yarış istatistikleri cars.json'da
 ## TEK KAYNAKTADIR; burada yalnızca eksik alanın güvenli varsayılanı vardır (sınıfa göre kabaca D).
 const RACE_STATS: Dictionary = {"top_speed": 100, "acceleration": 55, "reaction": 50, "grip": 50}
+
+## PERFORMANS v2 (2026-10-11) — "performance" bloğu: aracın GERÇEK fabrika verisi (kullanıcının tablosu).
+## Drag fiziği 0-100, son hız ve çekişi doğrudan buradan alır (DragRaceSim.EngineSpec.derive). "race"
+## bloğundaki top_speed / acceleration bu verinin oyun ölçeğidir (garaj çubukları, GENEL puan):
+##   top_speed = gerçek son hız (km/sa) · acceleration = 0-100 süresinden doğrusal, 2,5 sn = 100, 16 sn = 0.
+##   variant (tam model adı), engine (motor metni), hp (0 = bilinmiyor), drivetrain FWD / RWD / AWD.
+const PERFORMANCE: Dictionary = {"variant": "", "engine": "", "hp": 0, "zero_100": 0.0, "top_speed": 0, "drivetrain": "FWD"}
+const DRIVETRAINS: Array[String] = ["FWD", "RWD", "AWD"]
 
 ## GERÇEK ARAÇ ÖLÇÜLERİ (metre) — "real_dimensions" bloğu. Kaynak: üretici/teknik veri siteleri,
 ## bkz. docs/VEHICLE_SCALE.md. Oyun ölçeği bu tablodan TÜRETİLİR (model_scale), koda gömülmez.
@@ -176,6 +184,7 @@ const SCHEMA: Array[Dictionary] = [
 	{"key": "plate_color", "kind": Kind.COLOR, "default": Color("F3E8CF")},
 	{"key": "traffic", "kind": Kind.BOOL, "default": true},
 	{"key": "race", "kind": Kind.STATS, "default": {}},   # drag yarışı statları (bkz. RACE_STATS)
+	{"key": "performance", "kind": Kind.PERFORMANCE, "default": {}},   # gerçek fabrika verisi (bkz. PERFORMANCE)
 	{"key": "real_dimensions", "kind": Kind.DIMENSIONS, "default": {}},  # gerçek dış ölçüler (m)
 	{"key": "model_scale", "kind": Kind.FLOAT, "default": 1.0, "min": 0.01},  # gerçek boyuta göre ölçek
 ]
@@ -240,6 +249,25 @@ static func _convert(value: Variant, field: Dictionary) -> Variant:
 				if not RACE_STATS.has(String(key)):
 					push_warning("CarCatalog: 'race' bloğunda tanınmayan alan '%s'" % key)
 			return stats
+		Kind.PERFORMANCE:
+			var src: Dictionary = value if value is Dictionary else {}
+			if src.is_empty():
+				return {}
+			var perf: Dictionary = {}
+			perf["variant"] = String(src.get("variant", ""))
+			perf["engine"] = String(src.get("engine", ""))
+			perf["hp"] = maxi(int(src.get("hp", 0)), 0)
+			perf["zero_100"] = maxf(float(src.get("zero_100", 0.0)), 0.0)
+			perf["top_speed"] = maxi(int(src.get("top_speed", 0)), 0)
+			var dt: String = String(src.get("drivetrain", "FWD")).to_upper()
+			if not DRIVETRAINS.has(dt):
+				push_warning("CarCatalog: 'performance' bloğunda geçersiz çekiş '%s' (FWD/RWD/AWD)" % dt)
+				dt = "FWD"
+			perf["drivetrain"] = dt
+			for key: Variant in src:
+				if not PERFORMANCE.has(String(key)):
+					push_warning("CarCatalog: 'performance' bloğunda tanınmayan alan '%s'" % key)
+			return perf
 		Kind.DIMENSIONS:
 			var dims_raw: Dictionary = value if value is Dictionary else {}
 			var dims: Dictionary = {}

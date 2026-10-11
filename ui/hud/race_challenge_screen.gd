@@ -118,7 +118,8 @@ func _car_plate(row: HBoxContainer, caption: String, labels: Dictionary) -> Plat
 	labels["name"] = _label(&"HudPlateTitle", "")
 	labels["class"] = _label(&"HudInkCaption", "")
 	labels["overall"] = _label(&"HudInkCaption", "")
-	for key: String in ["caption", "name", "class", "overall"]:
+	labels["perf"] = _label(&"HudInkCaption", "")   # gerçek veri: 0-100 · son hız
+	for key: String in ["caption", "name", "class", "overall", "perf"]:
 		box.add_child(labels[key])
 	plate.add_child(box)
 	row.add_child(plate)
@@ -146,6 +147,8 @@ func _fill(labels: Dictionary, vehicle_id: StringName) -> void:
 	(labels["name"] as Label).text = String(entry.get("display_name", vehicle_id)).to_upper()
 	(labels["class"] as Label).text = Loc.t("%s SINIFI") % String(entry.get("class", "?"))
 	(labels["overall"] as Label).text = Loc.t("GENEL  %d") % DragRaceSim.overall_of(vehicle_id)
+	(labels["perf"] as Label).text = GarageScreen.perf_line(entry)
+	(labels["perf"] as Label).visible = (labels["perf"] as Label).text != ""
 
 
 func _label(variation: StringName, text: String) -> Label:

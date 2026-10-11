@@ -259,3 +259,59 @@ kopyasıyla doldurulur. 22 aracın 88 lastiği açısal kapsama için tarandı; 
 - `tools/paint_preview.gd`: aracı bir renge boyayıp dört açıdan çizer.
 - `tools/mask_audit.gd`: boya renginde olup maskede boyanmayan üçgenleri parça ve rol bazında sayar.
 - `MASK_DEBUG=1 make_paint_mask.gd`: parça başına texel dağılımını döker.
+
+---
+
+# Dördüncü parti (2026-10-11) — 4 model yenilendi, katalog 22 → 26
+
+**Yenilenen kaynaklar** (aynı id / sahne / kayıt; eski GLB'nin üstüne yazıldı): BMW E46 (artık beyaz,
+#CDD3DA), Renault Fluence (#CAD2DC), Hyundai Getz (#E50107), VW Passat B5.5 (#CAD0D7). Parça numaraları
+değiştiği için dört aracın CarPartMap kaydı sınıflandırıcıdan BAŞTAN çıkarıldı (eski elle düzeltmeler geçersiz).
+**Yeni araçlar:** Chevrolet Camaro (5. nesil, sarı), Mercedes S400 (W222, siyah), Opel Corsa (C, 3 kapı),
+Tesla Model Y. Hepsi aynı Tripo yapısında (tek materyal, 4096² JPEG, 44–76 parça, ~480K üçgen).
+
+| Araç | GLB MB (tanjantsız) | Üçgen | Boya maskesi % | Fabrika rengi |
+|---|---|---|---|---|
+| bmw_e46 | 3,8 | 118.766 | 38,5 | #CDD3DA |
+| renault_fluence | 5,4 | 115.464 | 30,4 | #CAD2DC |
+| hyundai_getz | 5,4 | 118.602 | 19,8 (2048²) | #E50107 |
+| vw_passat_b55 | 5,0 | 111.550 | 20,0 | #CAD0D7 |
+| chevrolet_camaro | 5,7 | 123.170 | 23,9 | #F7D122 |
+| mercedes_s400 | 5,5 | 123.038 | 21,9 | #3E4243 |
+| opel_corsa | 5,6 | 130.602 | 24,3 | #E6E4E8 |
+| tesla_model_y | 4,8 | 117.926 | 37,6 | #DFE4E9 |
+
+**Elle düzeltilenler** (vurgu render'ı + `mask_audit` + yeni bölge yoklaması ile):
+- Tesla 21/22 ön çamurluk kaplaması "teker" sanılmıştı → teker ekseni 3 cm yukarı kayıyor, ön tekerler
+  yalpalıyordu. black_trim'e alındı, ön gruplar gerçek lastikle (19, 2) yeniden ölçüldü.
+- "Jant/teker" sanılan ama hiçbir teker grubunda olmayan kaporta parçaları: BMW 38 (sol arka kapı alt paneli,
+  maviye boyayınca gümüş kalıyordu), Camaro 17/19/22. Kural: `wheels/tires/rims` rolündeki parça bir teker
+  grubunda değilse ya kaliperdir (bilinçli) ya da yanlış sınıflandırılmış kaportadır — bak.
+- Boyanın atlandığı gövde parçaları: S400 0/1/3 (iki yan gövde, "siyah trim"), Camaro 14/16/23/25/26 (arka
+  panel, tampon, spoyler — "stop"), Getz 12 (spoyler — "stop"), Fluence 2 ve Passat 0 (marşpiyel / çamurluk
+  kenarı — "siyah trim").
+- **Yeni harita anahtarı `paint_whole`** (tools/make_paint_mask.gd): Getz tavanı (19) dokuda açık pembe
+  parlama olarak fırınlanmış, texel anahtarı %3 tutuyordu; parça texel anahtarı atlanıp tamamen boyanır.
+  Bedeli: boyanınca tavan parlak görünür (aynı parlama fabrika renginde de var).
+
+Bilinen küçük kusurlar: Getz yan bant şeridinde ve C direğinde birkaç kırmızı benek; Camaro sarı fren
+kaliperleri boyanmaz (doğru); Tesla / S400 / BMW cam tavanları cam materyaliyle mavimsi parlar (mevcut davranış).
+
+**Katalog (GEÇİCİ denge):** Corsa C · common · 26.000 ₺ · sv.5 / rütbe 1 (ŞEHİR kasası); Model Y A · rare ·
+110.000 · sv.22 / r5 (PRESTİJ); Camaro A · epic · 140.000 · sv.24 / r6 (SPOR); S400 A · epic · 170.000 · sv.27 /
+r6 (PRESTİJ). Dördü de trafikte. Yeni set **AMERİKAN** (Camaro + Model Y), S400 → PREMIUM. PRESTİJ kasasında
+E60 oranı %2,52 → %1,87; ŞEHİR'de Getz %33,9 → %25,3. KOLEKSİYONCU kademeleri 3/6/10/18/26. `model_scale`
+kullanıcının boyut laboratuvarında elle ayarladığı değer (Corsa 0,82 · Model Y 1,00 · Camaro 1,02 · S400 1,20;
+aynı turda E46 1,03 · Getz 0,85 · Fluence 1,03 · Passat 1,08 · Şahin 0,97).
+
+Testler: tam paket 0 FAIL (vehicle_asset 528, vehicle_scale 166, crate 91, ui 60 …). ui_test (depo dışı)
+kasa oranı beklentileri güncellendi.
+
+**Uzakta kirli görünüm — doku kenar dolgusu (2026-10-11):** Kullanıcı BMW ve Getz'in yakından iyi, uzaktan
+çok kötü göründüğünü bildirdi. Sebep: yeni kaynak atlaslarında UV adalarının arası SAF SİYAH (eski kaynaklarda
+komşu renkle doluydu). Trafik araçları düşük LOD kademesinde çiziliyor (`LOD_BIAS_NPC`); sadeleşmiş üçgenler ada
+sınırını aşıp bu siyahtan örnekliyor, mipmap ve GPU sıkıştırması da siyahı kenara karıştırıyor → beyaz
+kaportada siyah lekeler ve koyu dikişler. Çözüm `optimize_car.gd` `_pad_islands`: UV kapsamasında OLMAYAN
+texel'ler en yakın adanın rengiyle doldurulur (kullanılan texel'lere dokunulmaz; Getz'te fark görüntüsüyle
+doğrulandı). Varsayılan açık, `--no-pad` ile kapanır; araç başına ~45 sn. 8 araç yeniden üretildi; zorlanmış
+düşük LOD'da (lod_bias 0,05) BMW'deki siyah lekeler kayboldu.

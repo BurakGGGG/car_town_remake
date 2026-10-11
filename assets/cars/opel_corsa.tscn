@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://ixbd0013chg2"]
+
+[ext_resource type="PackedScene" uid="uid://t4fervlhhspq" path="res://assets/cars/optimized/opel_corsa.glb" id="1_opel_"]
+
+[node name="opel_corsa" instance=ExtResource("1_opel_")]

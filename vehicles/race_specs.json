@@ -1,0 +1,162 @@
+{
+  "_readme": "OTOMATİK ÜRETİLİR — elle düzenleme. tools/bake_race_specs.gd (bkz. DragRaceSim.TUNING_VERSION).",
+  "cars": {
+    "alfa_romeo_159": {
+      "base_time": 11.5917,
+      "key": "aecf2f845574c2b9ab2f2dc064794ce2",
+      "race_top_kmh": 154.473,
+      "torque": 300.436
+    },
+    "audi_a3": {
+      "base_time": 10.7583,
+      "key": "6122aeefa864e7999eb5ffc6742b2944",
+      "race_top_kmh": 172.726,
+      "torque": 357.934
+    },
+    "audi_rs6": {
+      "base_time": 8.3583,
+      "key": "97fccfe9e281db04441bcdcf2a9c683c",
+      "race_top_kmh": 222.426,
+      "torque": 856.315
+    },
+    "bmw_e46": {
+      "base_time": 10.3417,
+      "key": "e5efe9482ecd31a2cb0c32203315b034",
+      "race_top_kmh": 175.114,
+      "torque": 386.359
+    },
+    "bmw_e60": {
+      "base_time": 10.375,
+      "key": "829cbbbfbdbc10ed0b3c6607628d5bbd",
+      "race_top_kmh": 172.44,
+      "torque": 414.707
+    },
+    "chevrolet_camaro": {
+      "base_time": 8.3667,
+      "key": "5e20b9fdf6924c30dcb9fbe0e6a471d1",
+      "race_top_kmh": 230.731,
+      "torque": 878.957
+    },
+    "ferrari_488_pista": {
+      "base_time": 7.4417,
+      "key": "c4da3c8726b521fc99c1ad91be65a3cb",
+      "race_top_kmh": 251.369,
+      "torque": 1080.527
+    },
+    "ford_focus": {
+      "base_time": 12.525,
+      "key": "e3cceb6c8531bca611a2e45dd9d11926",
+      "race_top_kmh": 142.017,
+      "torque": 226.062
+    },
+    "honda_civic": {
+      "base_time": 12.35,
+      "key": "8f15e0d84857510176639d1accb259dd",
+      "race_top_kmh": 144.467,
+      "torque": 234.927
+    },
+    "hyundai_accent_blue": {
+      "base_time": 12.2333,
+      "key": "41ec4774d8fb754fa9a3f54c8f95ebab",
+      "race_top_kmh": 145.682,
+      "torque": 231.473
+    },
+    "hyundai_era": {
+      "base_time": 13.0667,
+      "key": "64ca900a78f1581abcddc2dac5853e46",
+      "race_top_kmh": 135.987,
+      "torque": 198.635
+    },
+    "hyundai_getz": {
+      "base_time": 12.7333,
+      "key": "c3025a23bbd8ccbda2cd32f1c3978b43",
+      "race_top_kmh": 137.42,
+      "torque": 171.254
+    },
+    "lambo_huracan": {
+      "base_time": 7.275,
+      "key": "559bdc108313a89387b95619bd370394",
+      "race_top_kmh": 272.292,
+      "torque": 1151.72
+    },
+    "mercedes_cls": {
+      "base_time": 10.575,
+      "key": "f1b59fa7c52900e426bee2258f43f5fd",
+      "race_top_kmh": 171.307,
+      "torque": 405.728
+    },
+    "mercedes_s400": {
+      "base_time": 9.5,
+      "key": "0340c4294843a89360c0c18172ea7089",
+      "race_top_kmh": 197.356,
+      "torque": 648.88
+    },
+    "opel_corsa": {
+      "base_time": 12.65,
+      "key": "a0a1227d2c7c63eedb05ebe25dfaf9ca",
+      "race_top_kmh": 138.592,
+      "torque": 174.28
+    },
+    "porsche_gt3": {
+      "base_time": 7.8417,
+      "key": "c0a86b6f37a0a9da398d75475102922b",
+      "race_top_kmh": 250.492,
+      "torque": 934.085
+    },
+    "renault_fluence": {
+      "base_time": 12.1083,
+      "key": "0634a1e6799bacadaa3ca0c20754f425",
+      "race_top_kmh": 147.918,
+      "torque": 267.383
+    },
+    "renault_toros": {
+      "base_time": 13.8333,
+      "key": "151942c8528fd47afda913943b120819",
+      "race_top_kmh": 128.309,
+      "torque": 184.533
+    },
+    "seat_leon": {
+      "base_time": 11.2333,
+      "key": "5cd69eec7d0d71a9c47381d1f457b2b8",
+      "race_top_kmh": 161.905,
+      "torque": 298.715
+    },
+    "skoda_kamiq": {
+      "base_time": 12.2333,
+      "key": "0892935ee574ee1107d59555c2c3beab",
+      "race_top_kmh": 145.493,
+      "torque": 250.554
+    },
+    "tesla_model_y": {
+      "base_time": 9.4333,
+      "key": "1aad99eb1273d906454e8ee989b3ae38",
+      "race_top_kmh": 189.105,
+      "torque": 561.641
+    },
+    "tofas_sahin": {
+      "base_time": 13.4,
+      "key": "755b8733b2bbdfae57e78de8fae9d45d",
+      "race_top_kmh": 132.563,
+      "torque": 194.747
+    },
+    "volvo_s60": {
+      "base_time": 10.6,
+      "key": "c6137924509cabc553fc6767f9657591",
+      "race_top_kmh": 176.216,
+      "torque": 420.816
+    },
+    "vw_golf_7": {
+      "base_time": 11.3333,
+      "key": "97832f1a46d6c7a5341a89b0a476ed5c",
+      "race_top_kmh": 160.057,
+      "torque": 287.365
+    },
+    "vw_passat_b55": {
+      "base_time": 12.0917,
+      "key": "6fe8d46c6c4953f3aa1773fb088dd6da",
+      "race_top_kmh": 148.479,
+      "torque": 276.999
+    }
+  },
+  "tuning_version": 1
+}

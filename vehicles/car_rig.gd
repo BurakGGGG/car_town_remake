@@ -77,6 +77,8 @@ static var _fixed_materials: Dictionary = {}
 ## Geometrik olarak bölünmüş mesh'ler ("scene|part" → ArrayMesh), tüm instance'lar paylaşır.
 static var _split_meshes: Dictionary = {}
 
+## Bir kez basılmış lamba eleme uyarıları ("sahne|rol").
+static var _lamp_warned: Dictionary = {}
 ## Araç tipi (.tscn yolu) → canlı rig listesi; CarAppearance.changed → apply_to_all.
 static var _rigs: Dictionary = {}
 
@@ -308,8 +310,12 @@ func _filter_lamps(role: StringName) -> void:
 	if dropped.is_empty():
 		return
 	_parts[role] = kept
-	push_warning("CarRig: '%s' %s rolünden elenen (lamba olamayacak kadar büyük): %s" % [
-		scene_path.get_file(), role, dropped])
+	# Araç tipi başına BİR kez: trafik her doğuşta yeni rig kurar ve aynı uyarı oturumda onlarca kez basılıyordu.
+	var key: String = "%s|%s" % [scene_path, role]
+	if not _lamp_warned.has(key):
+		_lamp_warned[key] = true
+		push_warning("CarRig: '%s' %s rolünden elenen (lamba olamayacak kadar büyük): %s" % [
+			scene_path.get_file(), role, dropped])
 
 
 ## Mesh listesinin ARAÇ uzayındaki ortak kutusunun hacmi. `mesh.get_aabb()` yerel uzaydadır ve
