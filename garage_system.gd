@@ -29,13 +29,16 @@ signal level_changed(level: int)
 # Fiziksel ölçüler
 # Tamir alanları taşınabilir (RepairBayManager.DEFAULT_POSITIONS): her alanın varsayılan yeri kendi
 # seviyesinde açılan zemin şeridine düşer (Sv.3'te x ≥ -4,4 → genişlik ≥ 4,6).
-var level_widths = [2.0, 3.6, 4.6, 5.6]
-var level_depths = [1.5, 2.2, 2.9, 3.6]
+# Ölçüler dekor ızgarasının göz boyunun (GRID_CELL = 0,175) TAM katıdır: duvara bitişik sıra/sütun
+# asla yarım blok kalmaz, eşya duvara tam yanaşabilir. (12/21/27/32 × 9/13/17/21 göz)
+var level_widths = [2.1, 3.675, 4.725, 5.6]
+var level_depths = [1.575, 2.275, 2.975, 3.675]
 
 const FIXED_RIGHT_X := -0.2
 const FIXED_FRONT_Z := -0.2
 const LEFT_WALL_DEPTH := 1.5
 const BACK_WALL_WIDTH := 2.0
+const WALL_THICKNESS := 0.05   # sahnedeki duvar mesh'lerinin kalınlığı
 
 
 
@@ -213,15 +216,18 @@ func update_garage():
 	garage_floor.position.x = FIXED_RIGHT_X - garage_width / 2.0
 	garage_floor.position.z = FIXED_FRONT_Z - garage_depth / 2.0
 
+	# Duvarlar zeminin DIŞINDA başlar: iç yüzleri zemin kenarına denk gelir, zeminin hiçbir kısmı
+	# duvarın altında kalmaz (eşya tam kenara yanaşır). Sol duvar, köşede çentik kalmasın diye
+	# arka duvarın kalınlığı kadar uzar.
 	# Sol duvar
-	left_wall.scale.z = garage_depth / LEFT_WALL_DEPTH
-	left_wall.position.x = FIXED_RIGHT_X - garage_width
-	left_wall.position.z = FIXED_FRONT_Z - garage_depth / 2.0
+	left_wall.scale.z = (garage_depth + WALL_THICKNESS) / LEFT_WALL_DEPTH
+	left_wall.position.x = FIXED_RIGHT_X - garage_width - WALL_THICKNESS / 2.0
+	left_wall.position.z = FIXED_FRONT_Z - garage_depth / 2.0 - WALL_THICKNESS / 2.0
 
 	# Arka duvar
 	back_wall.scale.x = garage_width / BACK_WALL_WIDTH
 	back_wall.position.x = FIXED_RIGHT_X - garage_width / 2.0
-	back_wall.position.z = FIXED_FRONT_Z - garage_depth + 0.025
+	back_wall.position.z = FIXED_FRONT_Z - garage_depth - WALL_THICKNESS / 2.0
 
 	_update_grid(garage_width, garage_depth)
 	var view: Node = get_node_or_null("GarageDecorView")

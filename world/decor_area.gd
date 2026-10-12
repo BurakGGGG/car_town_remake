@@ -11,13 +11,15 @@ extends RefCounted
 ## 45°'de uzun eşyayı şişirirdi (römork 0,58×0,28 → 0,61×0,61) ve geçerli yerleri reddederdi.
 
 ## Duvar iç yüzü ile zemin eşyası arasında bırakılan pay (eşya duvara gömülmesin).
-const WALL_GAP: float = 0.012
+const WALL_GAP: float = 0.003
 ## Garajın açık kenarlarında (ön/sağ) bırakılan pay.
 const EDGE_GAP: float = 0.006
 ## İki izin "değiyor" sayılması için tolerans: tam bitişik eşyalar çakışma sayılmaz.
 const TOUCH_EPS: float = 0.002
 ## Duvar eşyasının duvar yüzünden ayrılması (z-fighting olmasın).
 const WALL_OFFSET: float = 0.002
+## Izgara kapalıyken de kenara bu kadar yakın eşya duvara / kenara yapışır.
+const HUG_MIN: float = 0.03
 
 ## Zemin yerleşimine uygun dikdörtgen (duvar iç yüzlerinden ve açık kenarlardan içeride).
 var floor_rect: Rect2 = Rect2()
@@ -215,6 +217,27 @@ func snap(point: Vector2, step: float) -> Vector2:
 		return point
 	return Vector2(grid_origin.x + roundf((point.x - grid_origin.x) / step) * step,
 		grid_origin.y + roundf((point.y - grid_origin.y) / step) * step)
+
+
+## Eşya izinin kenarı zemin sınırına (duvar / açık kenar) `reach`'ten yakınsa o sınıra yaslar.
+## Eşya boyları göz katı olmadığından ızgaraya oturtma kenarı duvardan 14 cm'ye kadar geride
+## bırakıyordu; oyuncu eşyayı duvara dayayamıyordu. Taşan iz de aynı yolla içeri itilir.
+func hug_edges(center: Vector2, size: Vector2, yaw_deg: float, reach: float) -> Vector2:
+	var poly: PackedVector2Array = corners(center, size, yaw_deg)
+	var lo: Vector2 = Vector2(INF, INF)
+	var hi: Vector2 = Vector2(-INF, -INF)
+	for q: Vector2 in poly:
+		lo = lo.min(q)
+		hi = hi.max(q)
+	var out: Vector2 = center
+	for axis: int in 2:
+		var d_lo: float = lo[axis] - floor_rect.position[axis]
+		var d_hi: float = floor_rect.end[axis] - hi[axis]
+		if d_lo < reach and d_lo <= d_hi:
+			out[axis] -= d_lo
+		elif d_hi < reach:
+			out[axis] += d_hi
+	return out
 
 
 static func _project(poly: PackedVector2Array, axis: Vector2) -> Vector2:

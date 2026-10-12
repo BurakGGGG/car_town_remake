@@ -53,6 +53,7 @@ var _strip: HBoxContainer
 var _scroll: ScrollContainer
 var _cards: Dictionary = {}         # id → PlateButton
 var _kind: int = -1
+var _money_label: Label
 var _confirm_buy: StringName = &""  # iki dokunuşlu satın alma: ilk dokunuş fiyatı sorar
 
 var _bar: HBoxContainer
@@ -81,12 +82,18 @@ func _ready() -> void:
 func open() -> void:
 	_bind()
 	visible = true
+	_refresh_money()
 	if _kind < 0 or not _tab_buttons.has(_kind):
 		_kind = _first_useful_kind()
 	_select_tab(_kind)   # önce şerit dolsun: bandın alt sınırı kartların yüksekliğine bağlı
 	if _editor:
 		_editor.activate(_view_band())
 	_refresh()
+
+
+func _refresh_money() -> void:
+	if _economy and _money_label:
+		_money_label.text = Hud.format_thousands(_economy.money)
 
 
 func close() -> void:
@@ -116,7 +123,9 @@ func _bind() -> void:
 	if _economy == null:
 		_economy = get_tree().get_first_node_in_group("economy") as EconomyManager
 		if _economy:
-			_economy.money_changed.connect(func(_m: int) -> void: _refresh_cards())
+			_economy.money_changed.connect(func(_m: int) -> void:
+				_refresh_money()
+				_refresh_cards())
 
 
 ## Eğitim spot ışığının gösterdiği parçalar: &"bottom" (sekmeler + eşya şeridi), &"strip" (eşya
@@ -164,6 +173,26 @@ func _build() -> void:
 	_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_notice.modulate.a = 0.0
 	top.add_child(_notice)
+
+	# Sol üst: bakiye (HUD gizli olduğu için kendi sayacımız; fiyatlar buna göre okunur)
+	var money_plate: PlatePanel = PlatePanel.new()
+	money_plate.theme_type_variation = &"HudCarPlate"
+	money_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	money_plate.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	money_plate.offset_left = MARGIN
+	money_plate.offset_top = MARGIN
+	add_child(money_plate)
+	var money_row: HBoxContainer = HBoxContainer.new()
+	money_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	money_row.add_theme_constant_override(&"separation", 8)
+	money_plate.add_child(money_row)
+	var coin_icon: HudIcon = HudIcon.new()
+	coin_icon.kind = HudIcon.Kind.COIN
+	coin_icon.icon_size = 28.0
+	coin_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	money_row.add_child(coin_icon)
+	_money_label = _label(&"HudPlateTitle", "0")
+	money_row.add_child(_money_label)
 
 	# Sağ üst: ızgara · geri al · bitir
 	var corner: HBoxContainer = HBoxContainer.new()

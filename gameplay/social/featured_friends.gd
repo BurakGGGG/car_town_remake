@@ -12,6 +12,8 @@ const DIR: String = "res://gameplay/social/featured/"
 const IDS: Array[String] = ["featured_emre", "featured_elif"]
 ## Kimlik öneki (gerçek UID'lerle karışmaz: Firebase UID'leri bu öneki taşımaz).
 const PREFIX: String = "featured_"
+## Öne çıkan garaj JSON'unun üst sınırı (açık garajlarınki PublicGarage.MAX_JSON).
+const FEATURED_MAX_JSON: int = 60000
 
 static var _entries: Array[Dictionary] = []
 static var _loaded: bool = false
@@ -66,7 +68,8 @@ static func _load(id: String) -> Dictionary:
 		push_error("FeaturedFriends: %s okunamadı" % path)
 		return {}
 	var data: Dictionary = raw
-	var garage: Dictionary = PublicGarage.parse(JSON.stringify(data.get("garage", {})))
+	# Oyunla gelir, sunucuya yazılmaz: Firestore'un 20 KB sınırı yerine geniş bir güvenlik sınırı
+	var garage: Dictionary = PublicGarage.parse(JSON.stringify(data.get("garage", {})), FEATURED_MAX_JSON)
 	if garage.is_empty():
 		push_error("FeaturedFriends: %s garajı geçersiz" % path)
 		return {}

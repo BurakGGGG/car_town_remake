@@ -39,8 +39,9 @@ static func to_json(garage: Dictionary) -> String:
 
 
 ## Sunucudan gelen JSON'u okur. Geçersizse ya da sürümü desteklenmiyorsa boş sözlük.
-static func parse(json: String) -> Dictionary:
-	if json.is_empty() or json.length() > MAX_JSON:
+## `max_len`: oyunla gelen öne çıkan garajlar sunucudan geçmez, Firestore sınırına bağlı değildir.
+static func parse(json: String, max_len: int = MAX_JSON) -> Dictionary:
+	if json.is_empty() or json.length() > max_len:
 		return {}
 	var raw: Variant = JSON.parse_string(json)
 	if not raw is Dictionary:

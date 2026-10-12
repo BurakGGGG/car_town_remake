@@ -22,6 +22,8 @@ const MIN_PICK: float = 0.16
 const OBSTACLE_MARGIN: float = 0.03
 ## İç duvar, dış duvara bu kadardan yakın paralel örülemez (iki duvar üst üste binerdi).
 const WALL_CLEARANCE: float = 0.04
+## Zemin boyama aracı açıkken eşyaların ve tamir alanlarının hayalet rengi (soluk, düz).
+const FLOOR_FOCUS_TINT: Color = Color(0.92, 0.93, 0.95, 0.22)
 const FLOOR_SHADER: Shader = preload("res://vfx/floor_tiles.gdshader")
 
 signal area_changed
@@ -32,6 +34,9 @@ var _root: Node3D
 var _bodies: Dictionary = {}   # iid → Node3D
 var _area: DecorArea = DecorArea.new()
 var _editing: bool = false
+## Zemin boyama odağı: eşyalar ve tamir alanları soluk, yasak alan örtüsü gizli.
+var _floor_focus: bool = false
+var _ghost_mat: StandardMaterial3D
 var _blocked: Node3D
 ## Tamir alanı OLMAYAN engeller (tabela izi, teslimat kasaları): tamir alanı taşınırken kendi
 ## izi engel sayılmasın diye ayrı tutulur.
@@ -102,8 +107,8 @@ func _rebuild_area() -> void:
 	var a: DecorArea = DecorArea.new()
 	var lot: Rect2 = lot_rect()
 	a.floor_y = 0.01
-	a.left_face_x = lot.position.x + 0.025
-	a.back_face_z = lot.position.y + 0.05
+	a.left_face_x = lot.position.x
+	a.back_face_z = lot.position.y
 	a.wall_top = 0.405
 	if _garage:
 		var floor_box: AABB = _tree_box(_garage.get_node_or_null("Floor/GarageFloor"))
@@ -202,6 +207,8 @@ func refresh() -> void:
 			_content_top = maxf(_content_top, _tree_box(placed).end.y)
 	if _editing:
 		_draw_blocked()
+	if _floor_focus:
+		_apply_floor_focus()   # yeni kurulan gövdeler de soluk başlasın
 	area_changed.emit()
 
 
@@ -360,6 +367,7 @@ func place_point(item: StringName, ground: Vector2, yaw: float, snap_step: float
 		var mount: Dictionary = _area.wall_mount(ground, wall_width(item))
 		return {"pos": mount["position"], "yaw": float(mount["yaw"])}
 	var p: Vector2 = _area.snap(ground, snap_step)
+	p = _area.hug_edges(p, footprint_size(item), yaw, maxf(snap_step, DecorArea.HUG_MIN))
 	return {"pos": Vector3(p.x, _area.floor_y, p.y), "yaw": yaw}
 
 
@@ -450,7 +458,7 @@ func _draw_blocked() -> void:
 	if _blocked and is_instance_valid(_blocked):
 		_blocked.queue_free()
 	_blocked = null
-	if not _editing:
+	if not _editing or _floor_focus:
 		return
 	_blocked = Node3D.new()
 	_blocked.name = "BlockedZones"
@@ -470,6 +478,55 @@ func _draw_blocked() -> void:
 		# örtü onun üstünde, sarı bariyer çıtalarının altında durur.
 		zone.position = Vector3(rect.get_center().x, _area.floor_y + 0.008, rect.get_center().y)
 		_blocked.add_child(zone)
+
+
+## Zemin boyanırken üstündeki her şey (eşyalar, tamir alanları, park eden araçlar) soluklaşır,
+## yasak alan örtüsü kalkar: karolar engel tanımaz, oyuncunun gözü desende kalsın.
+func set_floor_focus(value: bool) -> void:
+	if value == _floor_focus:
+		return
+	_floor_focus = value
+	_apply_floor_focus()
+	_draw_blocked()
+
+
+func _apply_floor_focus() -> void:
+	for iid: String in _bodies:
+		_ghost_tree(body_of(iid), _floor_focus)
+	var bays: Node = get_tree().get_first_node_in_group("repair_bays")
+	if bays and bays.has_method("revealed_spots"):
+		for spot: Node3D in bays.call("revealed_spots"):
+			_ghost_tree(spot, _floor_focus)
+
+
+## Compatibility'de GeometryInstance3D.transparency çizilmiyor: hayalet, düz yarı saydam bir
+## material_override ile yapılır. Eski override ve gölge ayarı meta'da saklanır, kapanınca geri döner
+## (dekor ve tamir lifti kendi override'larını kullanıyor).
+func _ghost_tree(node: Node, on: bool) -> void:
+	if node == null:
+		return
+	if _ghost_mat == null:
+		_ghost_mat = StandardMaterial3D.new()
+		_ghost_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_ghost_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_ghost_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS   # iç yüzler üst üste binmesin
+		_ghost_mat.albedo_color = FLOOR_FOCUS_TINT
+	var stack: Array[Node] = [node]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		stack.append_array(n.get_children())
+		if not n is GeometryInstance3D:
+			continue
+		var g: GeometryInstance3D = n as GeometryInstance3D
+		if on and not g.has_meta(&"floor_focus_prev"):
+			g.set_meta(&"floor_focus_prev", [g.material_override, g.cast_shadow])
+			g.material_override = _ghost_mat
+			g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		elif not on and g.has_meta(&"floor_focus_prev"):
+			var prev: Array = g.get_meta(&"floor_focus_prev")
+			g.material_override = prev[0] as Material
+			g.cast_shadow = prev[1] as GeometryInstance3D.ShadowCastingSetting
+			g.remove_meta(&"floor_focus_prev")
 
 
 func is_editing() -> bool:

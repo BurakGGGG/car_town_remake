@@ -123,6 +123,10 @@ func _ready() -> void:
 	name = "GarageEditor"
 	add_to_group("garage_editor")
 	set_process_unhandled_input(false)
+	# Zemin boyanırken eşyalar / tamir alanları soluklaşır: göz karolarda kalsın
+	tool_changed.connect(func() -> void:
+		if _view:
+			_view.set_floor_focus(active and tool == Tool.PAINT))
 	_invalid_mat = StandardMaterial3D.new()
 	_invalid_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_invalid_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA

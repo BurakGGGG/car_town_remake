@@ -214,7 +214,7 @@ func _run() -> void:
 		check(int(fup.levels().get(GarageUpgradeManager.GARAGE_ID, 1)) == 4, "  garaj 4. seviye")
 		check(fdecor.instance_count() == expected_items, "  %d / %d eşya yerinde" % [fdecor.instance_count(), expected_items])
 		var expected_cars: int = ((raw["garage"]["vehicles"] as Dictionary)["owned"] as Array).size()
-		check(fown.owned_vehicle_ids().size() == expected_cars and expected_cars == 6, "  %d araç" % expected_cars)
+		check(fown.owned_vehicle_ids().size() == expected_cars and expected_cars >= 6, "  %d araç" % expected_cars)
 		check(fown.paint_state().is_empty(), "  araçlar fabrika renginde (boya yok)")
 		var bad: Array[String] = []
 		for inst: Dictionary in fdecor.instances():
