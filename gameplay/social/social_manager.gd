@@ -11,6 +11,11 @@ extends Node
 ##   users/{alıcı}/inbox/r_{gön}  {name, code, at}          gelen istek (gönderen yazar)
 ##   users/{gön}/outbox/o_{alıcı} {name, code, at}          giden istek (gönderenin bekleyen listesi)
 ##   users/{a}/friends/f_{b}      {since}                   arkadaşlık; iki belgeyi de KABUL EDEN yazar
+##   users/{alıcı}/gifts/p_{gön}_{gün} {part, name, at, day} hurdalık hediyesi (arkadaş yazar, günde bir)
+## HURDALIK HEDİYESİ (orijinal "Ask Friends"): oyuncu bir parçayı İSTER → açık garaj belgesine
+## "ask" {part, at} yazılır (arkadaşlar listeyi okurken zaten bu belgeyi okuyor: ek okuma yok). Arkadaşı
+## GÖNDER'e basar → alıcının gifts koleksiyonuna 1 parça. Alıcı toplar (collect_gifts); sunucu bugünün
+## hediyesini silmeye izin vermez (günlük sınır), toplananlar JunkyardManager'da hatırlanır.
 ## Belge kimlikleri hiçbir zaman çıplak UID değildir: eklenti sonuçları yalnızca belge kimliğiyle
 ## bildirir (koleksiyon yok) ve CloudSaveManager kendi sonucunu "kimlik == UID" diye tanır. Önek iki
 ## sistemin yanıtlarını ayırır. Bu node'un istekleri SIRAYLA gider (aynı anda tek istek), sonuç
@@ -59,7 +64,7 @@ signal _op_slot_free
 ## Testler kısaltır.
 var publish_delay: float = PUBLISH_DEBOUNCE
 var request_timeout: float = REQUEST_TIMEOUT
-var friends: Array[Dictionary] = []   ## {uid, name, code, level, value}
+var friends: Array[Dictionary] = []   ## {uid, name, code, level, value, ask_part, ask_at}
 var incoming: Array[Dictionary] = []  ## {uid, name, code, at}
 var outgoing: Array[Dictionary] = []  ## {uid, name, code, at}
 
@@ -196,6 +201,7 @@ func refresh(force: bool = false) -> void:
 	_busy -= 1
 	if ok:
 		_refreshed_at = now
+		await collect_gifts()
 	else:
 		notice.emit(Loc.t("Arkadaş listesi yüklenemedi. İnternet bağlantını kontrol et."))
 	changed.emit()
@@ -340,6 +346,12 @@ func delete_all() -> bool:
 			await _call(&"delete", _inbox_of(doc_id.trim_prefix("o_")), "r_" + _uid)
 			ok = _ok(await _call(&"delete", _outbox_of(_uid), doc_id)) and ok
 		ok = _ok(await _call(&"delete", GARAGES, "g_" + _uid)) and ok
+		# Hurdalık hediyeleri GARAJDAN SONRA: sunucu bugünün hediyesini yalnızca garajı olmayan oyuncuya
+		# sildirir (günlük sınır; bkz. firestore.rules gifts)
+		var gifts: Dictionary = await _call(&"list", _gifts_of(_uid))
+		ok = _ok(gifts) and ok
+		for doc_id: String in _ids(gifts):
+			ok = _ok(await _call(&"delete", _gifts_of(_uid), doc_id)) and ok
 		var code: String = my_code()
 		if not code.is_empty():
 			var r: Dictionary = await _call(&"delete", CODES, code)
@@ -427,7 +439,7 @@ func _on_publish_timeout() -> void:
 	if _cloud and _cloud.get_state() != CloudSaveManager.State.SYNCED:
 		return   # kayıt seçimi / çevrimdışı: bulut senkronu bitince yeni bir kayıt gelir
 	var garage_json: String = _garage_json()
-	if garage_json == SaveSafe.s(_meta.get("published", "")):
+	if garage_json == SaveSafe.s(_meta.get("published", "")) and _ask_key() == SaveSafe.s(_meta.get("published_ask", "")):
 		return
 	await _publish(my_name())
 
@@ -441,19 +453,141 @@ func _publish(name: String) -> bool:
 		push_warning("SocialManager: açık garaj çok büyük (%d), yayınlanmadı" % garage_json.length())
 		return false
 	var garage: Dictionary = JSON.parse_string(garage_json)
-	var result: Dictionary = await _call(&"set", GARAGES, "g_" + _uid, {
+	var doc: Dictionary = {
 		"name": name,
 		"code": my_code(),
 		"level": PublicGarage.level_of(garage),
 		"value": GarageValue.compute(get_tree()),
 		"garage_json": garage_json,
 		"updated_at": _now(),
-	})
+	}
+	var ask: Dictionary = _current_ask()
+	if not ask.is_empty():
+		doc["ask"] = {"part": String(ask["part"]), "at": int(ask["at"])}
+	var result: Dictionary = await _call(&"set", GARAGES, "g_" + _uid, doc)
 	if not _ok(result):
 		return false
 	_meta["published"] = garage_json
+	_meta["published_ask"] = _ask_key()
 	_write_meta()
 	return true
+
+
+# --- Hurdalık hediyesi -----------------------------------------------------------
+
+## Arkadaşlardan bu parçayı ister: istek açık garajda yayınlanır (6 saatte bir).
+func ask_part(part_id: StringName) -> bool:
+	var jy: JunkyardManager = _junkyard()
+	if not is_ready() or jy == null:
+		notice.emit(Loc.t("Arkadaşlarından istemek için Google hesabınla giriş yap."))
+		return false
+	if friends.is_empty():
+		notice.emit(Loc.t("Önce ARKADAŞLAR'dan bir arkadaş ekle."))
+		return false
+	if not jy.set_ask(part_id):
+		notice.emit(Loc.t("Yeniden istemek için %s bekle.") % _clock_text(jy.ask_seconds_left()))
+		return false
+	_busy += 1
+	changed.emit()
+	var ok: bool = await _publish(my_name())
+	_busy -= 1
+	changed.emit()
+	notice.emit(Loc.t("Arkadaşlarından %s istedin.") % RestorationCatalog.part_name(part_id) if ok
+		else Loc.t("İstek gönderilemedi. İnternet bağlantını kontrol et."))
+	return ok
+
+
+## Bu arkadaşa bugün hediye gönderilebilir mi (bir şey istiyor ve bugün gönderilmedi)?
+func can_gift(uid: String) -> bool:
+	var i: int = _index_of(friends, uid)
+	if i < 0 or SaveSafe.s(friends[i].get("ask_part", "")).is_empty():
+		return false
+	return SaveSafe.i((_meta.get("gifts_sent", {}) as Dictionary).get(uid, -1)) != _today()
+
+
+## Arkadaşın istediği parçadan 1 tane gönderir (gönderene bedava). Günde bir.
+func send_gift(uid: String) -> bool:
+	var i: int = _index_of(friends, uid)
+	if not is_ready() or i < 0:
+		return false
+	var part: String = SaveSafe.s(friends[i].get("ask_part", ""))
+	if part.is_empty():
+		return false
+	_busy += 1
+	changed.emit()
+	var day: int = _today()
+	var result: Dictionary = await _call(&"set", _gifts_of(uid), "p_%s_%d" % [_uid, day],
+		{"part": part, "name": my_name(), "at": _now(), "day": day})
+	_busy -= 1
+	var ok: bool = _ok(result)
+	if ok or _permission_denied(result):
+		var sent: Dictionary = _meta.get("gifts_sent", {}) if _meta.get("gifts_sent") is Dictionary else {}
+		sent[uid] = day
+		_meta["gifts_sent"] = sent
+		_write_meta()
+	if ok:
+		notice.emit(Loc.t("%s oyuncusuna 1 %s gönderdin.") % [SaveSafe.s(friends[i].get("name", "")),
+			RestorationCatalog.part_name(StringName(part))])
+	elif _permission_denied(result):
+		notice.emit(Loc.t("Bugün bu arkadaşına zaten hediye gönderdin."))
+	else:
+		notice.emit(Loc.t("Hediye gönderilemedi. İnternet bağlantını kontrol et."))
+	changed.emit()
+	return ok
+
+
+## Gelen hediyeleri envantere ekler (her biri bir kez) ve dünkü / eski belgeleri temizler.
+## Toplanan parça sayısı.
+func collect_gifts() -> int:
+	var jy: JunkyardManager = _junkyard()
+	if not is_ready() or jy == null:
+		return 0
+	var result: Dictionary = await _call(&"list", _gifts_of(_uid))
+	if not _ok(result):
+		return 0
+	var data: Dictionary = result.get("data", {}) if result.get("data") is Dictionary else {}
+	var got: int = 0
+	var names: PackedStringArray = PackedStringArray()
+	var today: int = _today()
+	for key: Variant in data:
+		var id: String = SaveSafe.s(key)
+		var doc: Dictionary = data[key] if data[key] is Dictionary else {}
+		if not id.begins_with("p_"):
+			continue
+		if jy.receive_gift(id, StringName(SaveSafe.s(doc.get("part", "")))):
+			got += 1
+			var who: String = SaveSafe.s(doc.get("name", ""))
+			if not who.is_empty() and not names.has(who):
+				names.append(who)
+		if SaveSafe.i(doc.get("day", today)) < today and _ok(await _call(&"delete", _gifts_of(_uid), id)):
+			jy.forget_gift(id)
+	if got > 0:
+		notice.emit(Loc.t("ARKADAŞ HEDİYESİ  +%d PARÇA\n%s") % [got, ", ".join(names)])
+	return got
+
+
+func _current_ask() -> Dictionary:
+	var jy: JunkyardManager = _junkyard()
+	return jy.current_ask() if jy else {}
+
+
+func _ask_key() -> String:
+	var ask: Dictionary = _current_ask()
+	return "" if ask.is_empty() else "%s@%d" % [ask["part"], int(ask["at"])]
+
+
+func _junkyard() -> JunkyardManager:
+	return get_tree().get_first_node_in_group("junkyard") as JunkyardManager if is_inside_tree() else null
+
+
+## UTC gün numarası (kurallar sunucu saatiyle aynısını hesaplar).
+static func _today() -> int:
+	return floori(float(_now()) / 86400.0)
+
+
+static func _clock_text(seconds: int) -> String:
+	var s: int = maxi(seconds, 0)
+	return "%d:%02d" % [s / 3600, (s % 3600) / 60] if s >= 3600 else "%d dk" % maxi(s / 60, 1)
 
 
 func _garage_json() -> String:
@@ -562,12 +696,21 @@ func _friend_entry(uid: String, fallback: Dictionary) -> Dictionary:
 	if _not_found(result):
 		return {}
 	var doc: Dictionary = result.get("data", {}) if _ok(result) and result.get("data") is Dictionary else fallback
+	var ask_part: String = ""
+	var ask_at: int = 0
+	var ask: Variant = doc.get("ask", {})
+	if ask is Dictionary and RestorationCatalog.is_part(StringName(SaveSafe.s(ask.get("part", "")))) \
+			and _now() - SaveSafe.i(ask.get("at", 0)) < JunkyardManager.ASK_LIFETIME:
+		ask_part = SaveSafe.s(ask.get("part", ""))
+		ask_at = SaveSafe.i(ask.get("at", 0))
 	return {
 		"uid": uid,
 		"name": SaveSafe.s(doc.get("name", fallback.get("name", ""))),
 		"code": SaveSafe.s(doc.get("code", fallback.get("code", ""))),
 		"level": maxi(SaveSafe.i(doc.get("level", 1)), 1),
 		"value": SaveSafe.i(doc.get("value", 0)),
+		"ask_part": ask_part,
+		"ask_at": ask_at,
 	}
 
 
@@ -674,6 +817,10 @@ static func _inbox_of(uid: String) -> String:
 
 static func _outbox_of(uid: String) -> String:
 	return "users/%s/outbox" % uid
+
+
+static func _gifts_of(uid: String) -> String:
+	return "users/%s/gifts" % uid
 
 
 static func _ok(result: Dictionary) -> bool:

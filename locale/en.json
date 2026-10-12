@@ -1140,5 +1140,17 @@
  "SARI HALKALI YIĞIN": "YELLOW-RINGED PILE",
  "Sahadaki arabalar bugünün malı. Birine dokun, neye ihtiyacı var bak.": "The cars in the yard are today's stock. Tap one and see what it needs.",
  "Selam usta! Sarı halkalı yığınlar aranabilir. Şuna dokun, beraber bakalım!": "Hi boss! Piles with a yellow ring can be searched. Tap this one and let's have a look!",
- "ÇIRAK CEMO": "CEMO THE APPRENTICE"
+ "ÇIRAK CEMO": "CEMO THE APPRENTICE",
+ "  ·  %s İSTİYOR": "  ·  WANTS %s",
+ "  ·  ARKADAŞLARINDAN İSTENDİ": "  ·  ASKED FROM FRIENDS",
+ "%s oyuncusuna 1 %s gönderdin.": "Gift sent to %s: 1 %s.",
+ "ARKADAŞ HEDİYESİ  +%d PARÇA\n%s": "FRIEND GIFT  +%d PARTS\n%s",
+ "Arkadaşlarından %s istedin.": "You asked your friends for %s.",
+ "Arkadaşlarından istemek için Google hesabınla giriş yap.": "Sign in with your Google account to ask friends.",
+ "Bugün bu arkadaşına zaten hediye gönderdin.": "You already sent this friend a gift today.",
+ "GÖNDER": "SEND",
+ "Hediye gönderilemedi. İnternet bağlantını kontrol et.": "The gift could not be sent. Check your internet connection.",
+ "Yeniden istemek için %s bekle.": "Wait %s to ask again.",
+ "Önce ARKADAŞLAR'dan bir arkadaş ekle.": "Add a friend from FRIENDS first.",
+ "İSTE": "ASK"
 }

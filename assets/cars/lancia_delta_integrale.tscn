@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://xh7belfxojoc"]
+
+[ext_resource type="PackedScene" uid="uid://cgtin0tj3dhak" path="res://assets/cars/optimized/lancia_delta_integrale.glb" id="1_lanci"]
+
+[node name="lancia_delta_integrale" instance=ExtResource("1_lanci")]

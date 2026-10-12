@@ -94,8 +94,14 @@ oyuncunun gördüğü her şeyin tasarımıdır.
   (assets/world/restoration_chassis.glb şasi → vfx/rust_overlay.gdshader paslı araç → temiz araç).
 - **Görev:** "HURDACI NECATİ" (QuestCatalog, 2. alandan sonra); HARİTA plakası görevle görünür, hurdalık
   2. tamir alanıyla açılır (JunkyardManager.OPEN_BAYS).
-- **Kalan:** Necati'nin ilk ziyaret dersi (Cemo'nun ilk yığını), hurdalık müziği, 2D portreler, arkadaş
-  hediyesi (Firestore kuralları kullanıcıya gösterilecek).
+- **Necati'nin dersi, müzik, portreler:** tamam (TutorialManager.JUNKYARD, tools/music/junkyard_theme.py,
+  CoachCard COACH_NECATI / COACH_CEMO).
+- **Arkadaş hediyesi (2026-10-12, kullanıcı kararı: orijinal "Ask Friends"):** proje panosunda eksik
+  parçaya İSTE (6 saatte bir) → istek açık garaj belgesinde ("ask", 24 saat) → arkadaş ARKADAŞLAR'da
+  GÖNDER (bedava, günde bir) → users/{alıcı}/gifts/p_{gönderen}_{gün}; alıcı hurdalığa girince / liste
+  yenilenince toplar. Günlük sınır SUNUCUDA (firestore.rules gifts; emülatör testi firebase/rules_test).
+  Kurallar canlıya yüklenmeden hediye çalışmaz (yükleme kullanıcı onayıyla).
+- **Kalan:** canlı kural yüklemesi; yığın / hediye ekonomisine hediyenin etkisi simülasyonda yok.
 
 ## 10. Sıradaki adımlar (ilk plan)
 1. **Blender'da kaba yerleşim:** zemin, çit, konteynerler, baraka, vinç, pres, araç sıraları, yığınlar.

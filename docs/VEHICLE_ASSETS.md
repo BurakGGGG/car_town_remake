@@ -352,3 +352,27 @@ görünmez; pas efektinde maske ayrıca ele alınacak.
 
 Testler (depo dışı paketlerde sınırlar gerçek klasiklere göre genişletildi: son hız ≥ 90, uzunluk ≥ 2,8 m,
 genişlik ≥ 1,3 m, aks > 1,8 m; ui_test koleksiyon toplamı = kasa koleksiyonu): tam paket 0 FAIL.
+
+---
+
+# Altıncı parti (2026-10-12), katalog 50 → 55
+
+**Yarış dalının son dördü** (restorasyon, usta-yarış): Lancia Delta Integrale '92, Audi Sport Quattro S1
+'85, Ford RS200 '86, Mitsubishi Lancer Evo VI '99 (kaynak `eksik_dosyalar/klasik/`: lancia_integrale,
+audi_quattro, ford_rs200, 99_lancer). Katalog `tools/junkyard/klasik_catalog.py`; Stratos gibi YOL
+(homologasyon) sürümlerinin verisi — Group B ralli sürümleri (~470–550 hp) en hızlı normal araçları da
+geçerdi. Dördü de 300 m'de A sınıfı (8,95–10,18 sn).
+
+**Normal araç:** Volkswagen Beetle 2.0 TSI (2016, A5) — `vw_beetle` (klasik `vw_beetle_1967` ile karışmasın).
+Kullanıcı kararı: AİLE KASASI, epic, 80.000 ₺, seviye 10, rütbe 2; VW GRUBU setinde. 300 m 10,59 sn → A.
+
+**Elle düzeltilenler:**
+- Quattro: 11/12 kutu çamurluk genişletmeleri (boyları tekerin iki katı) ve 27/31 arka yan parçaları
+  "teker" sanılmıştı → gövde; sol-arka ekseni yarıçap 0,134 ölçülmüştü (27'den). Düzeltmeden sonra
+  wheel_fit sol-arka jantı (3) eksenden 0,003 kaçık diye dışarıda bıraktı (jant dönmüyordu, wheel_blur'da
+  keskin) → elle gruba alındı.
+- Beetle: sağ kapı (3) "teker" sanılmıştı → boyanmıyordu; 18/39 arka tampon alt köşeleri (gövde renginde)
+  stop / siyah trim sanılmıştı → gövde. Cam contası boyunca birkaç piksellik fabrika sarısı kalır (cam
+  dokusunun kenarı; maske camı bilerek boyamaz).
+- Yeni boya maskelerinin `.import`'u mipmap'siz geliyordu → mevcut maskelerin ayarları kopyalandı
+  (`mipmaps/generate=true`). Maske `.import`'u yoksa CarRig boyamayı sessizce kapatır.

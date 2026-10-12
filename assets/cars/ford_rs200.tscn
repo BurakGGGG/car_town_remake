@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://tp646d54eik7"]
+
+[ext_resource type="PackedScene" uid="uid://bbjt4q03k5amr" path="res://assets/cars/optimized/ford_rs200.glb" id="1_ford_"]
+
+[node name="ford_rs200" instance=ExtResource("1_ford_")]

@@ -153,6 +153,13 @@ class FakeFB extends Object:
 						var other: String = id.trim_prefix("f_")
 						return (me == owner and store.has("users/%s/inbox/r_%s" % [owner, other])) \
 							or (other == me and store.has("users/%s/inbox/r_%s" % [me, owner]))
+					"gifts":
+						# yalnız arkadaş, günde bir (üzerine yazılamaz), yalnız istenen parça
+						var day: int = floori(Time.get_unix_time_from_system() / 86400.0)
+						var ask: Dictionary = store.get("garages/g_" + owner, {}).get("ask", {})
+						return owner != me and id == "p_%s_%d" % [me, day] and int(data.get("day", -1)) == day \
+							and not store.has(col + "/" + id) and store.has("users/%s/friends/f_%s" % [owner, me]) \
+							and SaveSafe.s(ask.get("part", "")) == SaveSafe.s(data.get("part", ""))
 		return false
 
 	func _can_delete(col: String, id: String) -> bool:
@@ -173,6 +180,10 @@ class FakeFB extends Object:
 						return p[1] == me or id == "r_" + me
 					"outbox":
 						return p[1] == me or id == "o_" + me
+					"gifts":
+						var today: int = floori(Time.get_unix_time_from_system() / 86400.0)
+						return p[1] == me and (int(store.get(col + "/" + id, {}).get("day", today)) < today \
+							or not store.has("garages/g_" + me))
 					"friends":
 						return p[1] == me or id == "f_" + me
 		return false
@@ -254,10 +265,11 @@ func open_session(account: String, fresh_device: bool = true) -> void:
 	var save: SaveManager = SaveManager.new()
 	var cloud: CloudSaveManager = CloudSaveManager.new()
 	var social: SocialManager = SocialManager.new()
+	var junkyard: JunkyardManager = JunkyardManager.new()   # hurdalık hediyesi (istek / toplama)
 	social.use_firebase(fb)
 	social.publish_delay = 0.3
 	social.request_timeout = 1.0
-	for n: Node in [eco, prog, upg, own, save, cloud, social]:
+	for n: Node in [eco, prog, upg, own, junkyard, save, cloud, social]:   # hurdalık kayıttan önce (oyundaki sıra)
 		root_node.add_child(n)
 	root.add_child(root_node)
 	cloud._fb = fb
@@ -448,6 +460,43 @@ func _run() -> void:
 	fb.hang = false
 	await social().refresh(true)
 	check(social().friends.size() == 1, "sonra normal çalışır")
+	await close_session()
+
+	print("== 10b) Hurdalık hediyesi: iste → gönder → topla ==")
+	await open_session("alice", false)
+	await social().refresh(true)
+	var jy: JunkyardManager = get_first_node_in_group(&"junkyard") as JunkyardManager
+	check(social().friends.size() >= 1 and jy != null, "alice'in arkadaşı (bob) ve hurdalığı var")
+	var bolts_before: int = jy.part_count(&"bolt")
+	check(await social().ask_part(&"bolt"), "alice arkadaşlarından civata istedi")
+	check(SaveSafe.s((garage_doc("alice").get("ask", {}) as Dictionary).get("part", "")) == "bolt", "istek açık garajda")
+	check(not await social().ask_part(&"nut") and last_notice().contains("bekle"), "6 saat dolmadan yeniden istenemez")
+	check(SaveSafe.s(((jy.state()["yard"] as Dictionary)["ask"] as Dictionary).get("part", "")) == "bolt", "istek kayıtta")
+	await close_session()
+	await open_session("bob", false)
+	await social().refresh(true)
+	var alice_entry: Dictionary = social().friends[social().friends.find_custom(func(e: Dictionary) -> bool: return e["uid"] == "alice")]
+	check(alice_entry.get("ask_part") == "bolt", "bob alice'in civata istediğini görüyor")
+	check(social().can_gift("alice") and not social().can_gift("nobody"), "bob gönderebilir")
+	check(await social().send_gift("alice"), "bob 1 civata gönderdi")
+	var day: int = floori(Time.get_unix_time_from_system() / 86400.0)
+	check(fb.store.has("users/alice/gifts/p_bob_%d" % day), "hediye alice'in kutusunda")
+	check(not social().can_gift("alice"), "aynı gün ikinci hediye düğmesi yok")
+	check(not await social().send_gift("alice"), "  ...zorlansa da sunucu reddeder")
+	await close_session()
+	await open_session("alice", false)
+	await social().refresh(true)   # yenileme hediyeleri de toplar
+	jy = get_first_node_in_group(&"junkyard") as JunkyardManager
+	check(jy.part_count(&"bolt") == bolts_before + 1, "alice civatayı aldı (%d → %d)" % [bolts_before, jy.part_count(&"bolt")])
+	check(fb.store.has("users/alice/gifts/p_bob_%d" % day), "bugünün hediyesi sunucuda kalır (günlük sınır)")
+	check(await social().collect_gifts() == 0 and jy.part_count(&"bolt") == bolts_before + 1, "tekrar toplamak ikinci kez eklemez")
+	fb.store["users/alice/gifts/p_carol_%d" % (day - 3)] = {"part": "nut", "name": "Carol Usta", "at": 1, "day": day - 3}
+	var nuts_before: int = jy.part_count(&"nut")
+	check(await social().collect_gifts() == 1 and jy.part_count(&"nut") == nuts_before + 1, "eski hediye de toplandı")
+	check(not fb.store.has("users/alice/gifts/p_carol_%d" % (day - 3)), "eski hediye belgesi temizlendi")
+	check(not jy.gift_seen("p_carol_%d" % (day - 3)) and jy.gift_seen("p_bob_%d" % day), "silinen unutuldu, bugünkü hatırlanıyor")
+	# (oyuncular bu düzenekte aynı cihaz klasörünü sırayla kullanır: bob'un oturumu alice'in yerel kaydını ezdi)
+	check(((jy.state()["yard"] as Dictionary)["gift_seen"] as Array).has("p_bob_%d" % day), "toplanan hediyeler kayıtta")
 	await close_session()
 
 	print("== 11) Hesap silme: sosyal veriler de silinir ==")

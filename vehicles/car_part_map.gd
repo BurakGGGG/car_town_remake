@@ -786,6 +786,82 @@ const MAPS: Dictionary = {
 		"wheel_groups": {"fl": [1], "fr": [2], "rl": [15], "rr": [14]},
 		"wheel_axes": {"fl": [0.1162, 0.3150, 0.1172], "fr": [0.1162, 0.3155, 0.1177], "rl": [0.1168, -0.2788, 0.1171], "rr": [0.1172, -0.2788, 0.1170]},
 	},
+	# --- KLASİK / RESTORASYON: usta yarış dalının son 4 aracı (2026-10-12): sınıflandırıcı + tools/wheel_fit.gd ---
+	"res://assets/cars/lancia_delta_integrale.tscn": {
+		"default_paint": Color(0.216, 0.255, 0.302),  # boya maskesi aracının ölçtüğü fabrika rengi #37414D
+		"body": [0, 1, 8, 9, 10, 11, 12, 14, 16, 20, 24, 25, 28, 30, 34, 37, 38, 39, 40, 41],
+		"mirrors": [17, 19],
+		"wheels": [2, 3, 4, 5],
+		"tires": [6, 7],
+		"headlights": [29],
+		"taillights": [36],
+		"grille": [13, 15, 18, 22, 26, 27, 32, 33, 35],
+		"black_trim": [21, 23],
+		"rims": [31],
+		"wheel_groups": {"fl": [2], "fr": [3], "rl": [6, 5], "rr": [7, 4, 31]},
+		"wheel_axes": {"fl": [0.0824, 0.2898, 0.0785], "fr": [0.0840, 0.2889, 0.0789], "rl": [0.0828, -0.3407, 0.0823], "rr": [0.0820, -0.3407, 0.0824]},
+	},
+	"res://assets/cars/audi_quattro_s1.tscn": {
+		"default_paint": Color(0.918, 0.910, 0.922),  # boya maskesi aracının ölçtüğü fabrika rengi #EAE8EB
+		# sol-arka jant (3) eksenden 0,003 kaçık diye wheel_fit dışarıda bırakıyordu (jant dönmüyordu) → elle grupta
+		# 11/12 kutu çamurluk genişletmeleri ve 27/31 arka yan parçalar "teker" sanılmıştı → gövde (2026-10-12)
+		"body": [0, 4, 5, 7, 11, 12, 13, 14, 16, 17, 19, 23, 27, 28, 30, 31, 34, 35, 39, 40, 41, 43, 44, 50, 55, 57, 60, 61, 62, 63, 65, 66, 67, 68, 70],
+		"mirrors": [8, 10],
+		"wheels": [1, 2, 3, 6],
+		"tires": [9],
+		"rims": [15, 18],
+		"glass": [20, 26, 37, 42, 53, 58],
+		"headlights": [21, 22, 33, 36, 49, 56],
+		"grille": [25, 29, 47, 48, 51, 54],
+		"black_trim": [24, 32, 38, 45, 46, 52, 59, 64, 69],
+		"wheel_groups": {"fl": [1], "fr": [2], "rl": [15, 3], "rr": [9, 6, 18]},
+		"wheel_axes": {"fl": [0.0811, 0.2749, 0.0778], "fr": [0.0804, 0.2746, 0.0779], "rl": [0.0801, -0.2701, 0.0798], "rr": [0.0793, -0.2701, 0.0797]},
+	},
+	"res://assets/cars/ford_rs200.tscn": {
+		"default_paint": Color(0.176, 0.200, 0.235),  # boya maskesi aracının ölçtüğü fabrika rengi #2D333C
+		"body": [7, 10, 12, 13, 14, 15, 16, 17, 18, 21, 24, 26, 27, 30, 35],
+		"mirrors": [23, 28],
+		"wheels": [1, 2, 3, 4],
+		"rims": [25, 31, 50],
+		"glass": [5, 6, 29, 33],
+		"headlights": [37, 43],
+		"taillights": [36, 38, 49],
+		"grille": [19, 20, 22, 42, 44],
+		"black_trim": [0, 8, 9, 11, 32, 34, 39, 40, 41, 45, 46, 47, 48],
+		"wheel_groups": {"fl": [2, 50], "fr": [1], "rl": [4], "rr": [3]},
+		"wheel_axes": {"fl": [0.0863, 0.3017, 0.0841], "fr": [0.0867, 0.3019, 0.0854], "rl": [0.0851, -0.3388, 0.0837], "rr": [0.0852, -0.3388, 0.0834]},
+	},
+	"res://assets/cars/mitsubishi_evo6.tscn": {
+		"default_paint": Color(0.929, 0.922, 0.929),  # boya maskesi aracının ölçtüğü fabrika rengi #EDEBED
+		"body": [1, 5, 7, 10, 11, 12, 14, 16, 17, 19, 20, 21, 27, 28, 31, 32, 34, 35, 37, 41, 44, 45],
+		"mirrors": [22, 26],
+		"wheels": [2, 3, 4, 6],
+		"tires": [15],
+		"rims": [9, 38, 46],
+		"glass": [23],
+		"headlights": [43],
+		"taillights": [36, 40],
+		"grille": [18, 33, 42],
+		"black_trim": [0, 8, 13, 24, 25, 29, 30, 39],
+		"wheel_groups": {"fl": [3], "fr": [15, 6, 9, 46], "rl": [4], "rr": [2]},
+		"wheel_axes": {"fl": [0.0779, 0.2946, 0.0769], "fr": [0.0779, 0.2947, 0.0775], "rl": [0.0760, -0.2820, 0.0762], "rr": [0.0761, -0.2823, 0.0765]},
+	},
+	# --- Altıncı parti: normal araç (2026-10-12) ---
+	"res://assets/cars/vw_beetle.tscn": {
+		"default_paint": Color(0.961, 0.816, 0.184),  # boya maskesi aracının ölçtüğü fabrika rengi #F5D02F
+		# 3 sağ kapı "teker" sanılmıştı (boyanmıyordu) → gövde; 18/39 arka tampon alt köşeleri (gövde renginde) de (2026-10-12)
+		"body": [1, 3, 5, 8, 10, 15, 16, 18, 20, 21, 23, 24, 25, 34, 36, 38, 39, 40],
+		"mirrors": [30],
+		"wheels": [2, 4, 6, 7],
+		"rims": [11, 12, 13, 14, 31],
+		"glass": [9, 17],
+		"headlights": [27, 28, 37],
+		"taillights": [33, 35],
+		"grille": [19, 26, 29, 32],
+		"black_trim": [0, 22],
+		"wheel_groups": {"fl": [7, 13], "fr": [6, 12], "rl": [4, 11, 31], "rr": [2, 14]},
+		"wheel_axes": {"fl": [0.0801, 0.3000, 0.0781], "fr": [0.0801, 0.3004, 0.0793], "rl": [0.0796, -0.3049, 0.0784], "rr": [0.0798, -0.3055, 0.0783]},
+	},
 }
 
 

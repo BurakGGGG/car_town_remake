@@ -51,6 +51,27 @@ service cloud.firestore {
         allow delete: if isOwner(uid) || (signedIn() && outId == 'o_' + request.auth.uid);
       }
 
+      // HURDALIK HEDİYESİ: users/{alıcı}/gifts/p_{gönderen}_{gün}. Alıcı açık garajında bir parça İSTER
+      // (garages/g_{alıcı}.ask.part); ARKADAŞI o parçadan 1 tane gönderir. Gün = sunucu saatiyle UTC gün
+      // numarası, hem kimlikte hem belgede: bir arkadaş aynı kişiye günde EN ÇOK BİR hediye gönderebilir.
+      // Alıcı bugünün hediyesini SİLEMEZ (silseydi gönderen aynı gün yeniden yazabilirdi): toplananları
+      // kendi kaydında hatırlar, yalnızca dünkü ve daha eski belgeleri temizler. Yalnızca İSTENEN parça.
+      // HESAP SİLME: açık garaj önce silinir; garajı olmayan oyuncu bugünün hediyesini de silebilir
+      // (garaj yoksa istek de yoktur, kimse yeni hediye gönderemez: günlük sınır açılmaz).
+      match /gifts/{giftId} {
+        allow read: if isOwner(uid);
+        allow delete: if isOwner(uid) && (resource.data.day < today()
+          || !exists(/databases/$(database)/documents/garages/$('g_' + uid)));
+        allow create: if signedIn() && uid != request.auth.uid
+          && request.resource.data.keys().hasOnly(['part', 'name', 'at', 'day'])
+          && request.resource.data.day == today()
+          && giftId == 'p_' + request.auth.uid + '_' + string(today())
+          && exists(/databases/$(database)/documents/users/$(uid)/friends/$('f_' + request.auth.uid))
+          && request.resource.data.part == get(/databases/$(database)/documents/garages/$('g_' + uid)).data.ask.part
+          && isValidName(request.resource.data.name)
+          && request.resource.data.at is int;
+      }
+
       // ARKADAŞLAR: users/{sahip}/friends/f_{diğer}. İlişki karşılıklıdır ve YALNIZCA ALICI kabul
       // ederken kurulur: iki belgeyi de alıcı yazar, o anda kendi gelen kutusunda istek durmalıdır.
       //   alıcı kendi listesine:      sahip == alıcı,  inbox/alıcı/r_{diğer} var
@@ -81,6 +102,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // UTC gün numarası (sunucu saati): hediyenin günlük sınırı.
+    function today() {
+      return int(request.time.toMillis() / 86400000);
+    }
+
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
@@ -108,8 +134,18 @@ service cloud.firestore {
       return n is string && n.matches('^[A-Za-z0-9ÇĞİÖŞÜçğıöşü ._-]{3,16}$');
     }
 
+    // Hurdalık parçaları (vehicles/restorations.json "parts"): arkadaştan istenebilenler.
+    function isPart(p) {
+      return p in ['bolt', 'nut', 'paint', 'spark_plug', 'piston', 'gear', 'motor_oil', 'belt', 'fiberglass'];
+    }
+
+    function isValidAsk(a) {
+      return a is map && a.keys().hasOnly(['part', 'at']) && isPart(a.part) && a.at is int;
+    }
+
     function isValidGarage(data) {
-      return data.keys().hasOnly(['name', 'code', 'level', 'value', 'garage_json', 'updated_at'])
+      return data.keys().hasOnly(['name', 'code', 'level', 'value', 'garage_json', 'updated_at', 'ask'])
+        && (!('ask' in data) || isValidAsk(data.ask))
         && isValidName(data.name)
         && data.code is string && data.code.matches('^[A-HJ-NP-Z2-9]{6}$')
         && data.level is int

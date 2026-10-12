@@ -91,6 +91,12 @@ func open() -> void:
 	_refresh_parts_button()
 	_tick()
 	_clock.start()
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
+	if social:
+		if not social.notice.is_connected(_on_social_notice):
+			social.notice.connect(_on_social_notice)
+		if social.is_ready():
+			social.collect_gifts()   # arkadaşlardan gelen parçalar (bildirim SocialManager'dan)
 	show()
 	set_process(true)
 	GameMusic.junkyard(get_tree(), true)
@@ -101,6 +107,9 @@ func close() -> void:
 		return
 	_clock.stop()
 	set_process(false)
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
+	if social and social.notice.is_connected(_on_social_notice):
+		social.notice.disconnect(_on_social_notice)
 	GameMusic.junkyard(get_tree(), false)
 	_anchor_index.clear()
 	var jy: JunkyardManager = _jy()
@@ -620,6 +629,10 @@ func _nearest(id: StringName) -> int:
 			best_d = d
 			best = i
 	return best
+
+
+func _on_social_notice(text: String) -> void:
+	_notice(text, HudPalette.COIN_DARK, 2.4)
 
 
 # --- Yardımcılar ----------------------------------------------------------------------

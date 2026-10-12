@@ -94,6 +94,37 @@ await check("eve isteğini geri çeker", assertSucceeds(deleteDoc(doc(eve, "user
 await check("alice başkasının isteğini silemez", assertSucceeds(setDoc(doc(eve, "users/bob/inbox/r_eve"), req({ name: "Eve", code: "EVE234" }))));
 await check("  ...silme reddedilir", assertFails(deleteDoc(doc(alice, "users/bob/inbox/r_eve"))));
 
+console.log("== hurdalık hediyesi ==");
+const dayN = Math.floor(Date.now() / 86400000), day = String(dayN);
+const gift = (over = {}) => ({ part: "bolt", name: "Bob Usta", at: 1, day: dayN, ...over });
+await check("alice garajında parça ister", assertSucceeds(setDoc(doc(alice, "garages/g_alice"), garage({ ask: { part: "bolt", at: 1 } }))));
+await check("bilinmeyen parça istenemez", assertFails(setDoc(doc(alice, "garages/g_alice"), garage({ ask: { part: "money", at: 1 } }))));
+await check("isteğe ek alan eklenemez", assertFails(setDoc(doc(alice, "garages/g_alice"), garage({ ask: { part: "bolt", at: 1, n: 99 } }))));
+await check("arkadaş olmayan eve hediye gönderemez", assertFails(setDoc(doc(eve, "users/alice/gifts/p_eve_" + day), gift({ name: "Eve Usta" }))));
+// alice ↔ bob yeniden arkadaş (yukarıda çıkarılmıştı)
+await setDoc(doc(bob, "users/alice/inbox/r_bob"), req({ name: "Bob Usta", code: "BQB234" }));
+await check("alice kabul: kendi listesi", assertSucceeds(setDoc(doc(alice, "users/alice/friends/f_bob"), { since: 2 })));
+await check("alice kabul: bob'un listesi", assertSucceeds(setDoc(doc(alice, "users/bob/friends/f_alice"), { since: 2 })));
+await check("istenmeyen parça gönderilemez", assertFails(setDoc(doc(bob, "users/alice/gifts/p_bob_" + day), gift({ part: "piston" }))));
+await check("başka günün kimliğiyle gönderilemez", assertFails(setDoc(doc(bob, "users/alice/gifts/p_bob_" + (dayN - 1)), gift({ day: dayN - 1 }))));
+await check("kimlik bugün, belgedeki gün eski: reddedilir", assertFails(setDoc(doc(bob, "users/alice/gifts/p_bob_" + day), gift({ day: dayN - 1 }))));
+await check("başkası adına gönderilemez", assertFails(setDoc(doc(bob, "users/alice/gifts/p_carol_" + day), gift())));
+await check("ek alan (adet) reddedilir", assertFails(setDoc(doc(bob, "users/alice/gifts/p_bob_" + day), gift({ n: 50 }))));
+await check("arkadaş bob istenen parçayı gönderir", assertSucceeds(setDoc(doc(bob, "users/alice/gifts/p_bob_" + day), gift())));
+await check("aynı gün ikinci hediye (üzerine yazma) reddedilir", assertFails(setDoc(doc(bob, "users/alice/gifts/p_bob_" + day), gift({ at: 2 }))));
+await check("kendine hediye gönderilemez", assertFails(setDoc(doc(alice, "users/alice/gifts/p_alice_" + day), gift({ name: "Usta Ali" }))));
+await check("bob alice'in hediyelerini okuyamaz", assertFails(getDocs(collection(bob, "users/alice/gifts"))));
+await check("alice hediyelerini okur", assertSucceeds(getDocs(collection(alice, "users/alice/gifts"))));
+await check("bob gönderdiğini silemez", assertFails(deleteDoc(doc(bob, "users/alice/gifts/p_bob_" + day))));
+await check("alice BUGÜNÜN hediyesini silemez (yeniden gönderim açılmasın)", assertFails(deleteDoc(doc(alice, "users/alice/gifts/p_bob_" + day))));
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), "users/alice/gifts/p_bob_" + (dayN - 2)), gift({ day: dayN - 2 }));
+});
+await check("alice eski hediyeyi temizler", assertSucceeds(deleteDoc(doc(alice, "users/alice/gifts/p_bob_" + (dayN - 2)))));
+await check("hesap silme: garaj silinince", assertSucceeds(deleteDoc(doc(alice, "garages/g_alice"))));
+await check("  ...bugünün hediyesi de silinir", assertSucceeds(deleteDoc(doc(alice, "users/alice/gifts/p_bob_" + day))));
+await check("garajı olmayana hediye gönderilemez (istek yok)", assertFails(setDoc(doc(bob, "users/alice/gifts/p_bob_" + day), gift())));
+
 console.log("== başka yollar ==");
 await check("bilinmeyen koleksiyon kapalı", assertFails(setDoc(doc(alice, "other/x"), { a: 1 })));
 await check("users/{uid} kök belgesi kapalı", assertFails(setDoc(doc(alice, "users/alice"), { a: 1 })));

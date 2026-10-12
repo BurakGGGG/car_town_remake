@@ -1479,6 +1479,11 @@ func _connect_social() -> void:
 	_social = get_tree().get_first_node_in_group("social") as SocialManager
 	if _social:
 		_social.changed.connect(_refresh_friends_button)
+		# Hurdalık hediyesi / isteği gibi bildirimler ARKADAŞLAR ekranı dışında da görünsün (ekran açıkken
+		# kendi yazı satırında gösteriyor)
+		_social.notice.connect(func(text: String) -> void:
+			if not router.top() in [&"friends", &"junkyard", &"restoration"]:   # onlar kendisi gösterir
+				_show_notice(text, HudPalette.COIN_DARK, 2.4))
 	_refresh_friends_button()
 
 

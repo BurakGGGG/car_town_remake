@@ -25,6 +25,12 @@
       "race_top_kmh": 172.726,
       "torque": 357.934
     },
+    "audi_quattro_s1": {
+      "base_time": 9.3417,
+      "key": "898f848b6166c99572a3995839a521c1",
+      "race_top_kmh": 192.338,
+      "torque": 460.066
+    },
     "audi_rs6": {
       "base_time": 8.3583,
       "key": "97fccfe9e281db04441bcdcf2a9c683c",
@@ -103,6 +109,12 @@
       "race_top_kmh": 163.869,
       "torque": 350.195
     },
+    "ford_rs200": {
+      "base_time": 10.175,
+      "key": "9d5383a3c2a98689e78815a359dc4cdb",
+      "race_top_kmh": 172.44,
+      "torque": 325.193
+    },
     "honda_civic": {
       "base_time": 12.35,
       "key": "8f15e0d84857510176639d1accb259dd",
@@ -145,6 +157,12 @@
       "race_top_kmh": 176.285,
       "torque": 385.226
     },
+    "lancia_delta_integrale": {
+      "base_time": 9.9417,
+      "key": "ea8c191466c5de7da424a1b09f3d8aff",
+      "race_top_kmh": 175.814,
+      "torque": 330.956
+    },
     "lancia_stratos": {
       "base_time": 10.5917,
       "key": "604b53250d9f9cc70cdbfb705b908ac6",
@@ -186,6 +204,12 @@
       "key": "1a5bdbda38ec1b9765e3f390039e7a7f",
       "race_top_kmh": 125.683,
       "torque": 95.459
+    },
+    "mitsubishi_evo6": {
+      "base_time": 8.95,
+      "key": "9d9e0f6af5f47b0c08a5d2017ef7c141",
+      "race_top_kmh": 203.444,
+      "torque": 560.679
     },
     "opel_corsa": {
       "base_time": 12.65,
@@ -270,6 +294,12 @@
       "key": "c6137924509cabc553fc6767f9657591",
       "race_top_kmh": 176.216,
       "torque": 420.816
+    },
+    "vw_beetle": {
+      "base_time": 10.5917,
+      "key": "d1d7c1c8c289496bfc15603a89228f10",
+      "race_top_kmh": 177.8,
+      "torque": 387.897
     },
     "vw_beetle_1967": {
       "base_time": 15.225,

@@ -1304,6 +1304,56 @@
       "model_scale": 1.2
     },
     {
+      "id": "vw_beetle",
+      "brand": "VOLKSWAGEN",
+      "model": "BEETLE",
+      "display_name": "VW BEETLE",
+      "year": 2016,
+      "price": 80000,
+      "condition": 0.85,
+      "category": "hatchback",
+      "scene_path": "res://assets/cars/vw_beetle.tscn",
+      "source_path": "res://assets/cars/source/vw_beetle.glb",
+      "optimized_path": "res://assets/cars/optimized/vw_beetle.glb",
+      "default_color": "#F5D02F",
+      "available_colors": [
+        "#F5D02F",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#F5BE4C",
+      "traffic": true,
+      "class": "A",
+      "rarity": "epic",
+      "min_level": 10,
+      "min_garage_rank": 2,
+      "race": {
+        "top_speed": 229,
+        "acceleration": 67,
+        "reaction": 72,
+        "grip": 72
+      },
+      "performance": {
+        "variant": "Volkswagen Beetle 2.0 TSI",
+        "engine": "2.0 TSI",
+        "hp": 220,
+        "zero_100": 6.9,
+        "top_speed": 229,
+        "drivetrain": "FWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.278,
+        "width_m": 1.808,
+        "height_m": 1.486,
+        "wheelbase_m": 2.537
+      },
+      "model_scale": 0.97
+    },
+    {
       "id": "tofas_murat_124",
       "brand": "TOFAŞ",
       "model": "MURAT 124",
@@ -2381,6 +2431,186 @@
       "model_scale": 1.01,
       "available_colors": [
         "#E6E4E6"
+      ]
+    },
+    {
+      "id": "lancia_delta_integrale",
+      "brand": "LANCIA",
+      "model": "DELTA INTEGRALE",
+      "label": "LANCIA\nDELTA INTEGRALE",
+      "year": 1992,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "hatchback",
+      "scene_path": "res://assets/cars/lancia_delta_integrale.tscn",
+      "source_path": "res://assets/cars/source/lancia_delta_integrale.glb",
+      "optimized_path": "res://assets/cars/optimized/lancia_delta_integrale.glb",
+      "default_color": "#37414D",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "A",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 220,
+        "acceleration": 76,
+        "reaction": 74,
+        "grip": 78
+      },
+      "performance": {
+        "variant": "Lancia Delta HF Integrale Evoluzione",
+        "engine": "2.0 Turbo",
+        "hp": 210,
+        "zero_100": 5.7,
+        "top_speed": 220,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 3.9,
+        "width_m": 1.77,
+        "height_m": 1.37,
+        "wheelbase_m": 2.48
+      },
+      "model_scale": 0.89,
+      "available_colors": [
+        "#37414D"
+      ]
+    },
+    {
+      "id": "audi_quattro_s1",
+      "brand": "AUDI",
+      "model": "SPORT QUATTRO S1",
+      "label": "AUDI\nSPORT QUATTRO S1",
+      "year": 1985,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/audi_quattro_s1.tscn",
+      "source_path": "res://assets/cars/source/audi_quattro_s1.glb",
+      "optimized_path": "res://assets/cars/optimized/audi_quattro_s1.glb",
+      "default_color": "#EAE8EB",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "A",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 250,
+        "acceleration": 83,
+        "reaction": 74,
+        "grip": 78
+      },
+      "performance": {
+        "variant": "Audi Sport Quattro",
+        "engine": "2.1 Turbo",
+        "hp": 306,
+        "zero_100": 4.8,
+        "top_speed": 250,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.16,
+        "width_m": 1.78,
+        "height_m": 1.35,
+        "wheelbase_m": 2.22
+      },
+      "model_scale": 0.95,
+      "available_colors": [
+        "#EAE8EB"
+      ]
+    },
+    {
+      "id": "ford_rs200",
+      "brand": "FORD",
+      "model": "RS200",
+      "label": "FORD\nRS200",
+      "year": 1986,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/ford_rs200.tscn",
+      "source_path": "res://assets/cars/source/ford_rs200.glb",
+      "optimized_path": "res://assets/cars/optimized/ford_rs200.glb",
+      "default_color": "#2D333C",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "A",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 225,
+        "acceleration": 73,
+        "reaction": 74,
+        "grip": 76
+      },
+      "performance": {
+        "variant": "Ford RS200",
+        "engine": "1.8 Turbo",
+        "hp": 250,
+        "zero_100": 6.1,
+        "top_speed": 225,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.0,
+        "width_m": 1.76,
+        "height_m": 1.32,
+        "wheelbase_m": 2.53
+      },
+      "model_scale": 0.91,
+      "available_colors": [
+        "#2D333C"
+      ]
+    },
+    {
+      "id": "mitsubishi_evo6",
+      "brand": "MITSUBISHI",
+      "model": "LANCER EVO VI",
+      "label": "MITSUBISHI\nLANCER EVO VI",
+      "year": 1999,
+      "price": 62500,
+      "condition": 1.0,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/mitsubishi_evo6.tscn",
+      "source_path": "res://assets/cars/source/mitsubishi_evo6.glb",
+      "optimized_path": "res://assets/cars/optimized/mitsubishi_evo6.glb",
+      "default_color": "#EDEBED",
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": false,
+      "class": "A",
+      "rarity": "common",
+      "min_level": 1,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 240,
+        "acceleration": 86,
+        "reaction": 76,
+        "grip": 78
+      },
+      "performance": {
+        "variant": "Mitsubishi Lancer Evolution VI GSR",
+        "engine": "2.0 Turbo",
+        "hp": 280,
+        "zero_100": 4.4,
+        "top_speed": 240,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.35,
+        "width_m": 1.77,
+        "height_m": 1.41,
+        "wheelbase_m": 2.51
+      },
+      "model_scale": 0.99,
+      "available_colors": [
+        "#EDEBED"
       ]
     }
   ]

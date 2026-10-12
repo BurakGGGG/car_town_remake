@@ -39,6 +39,12 @@ CARS = {
  "lancia_stratos": ("LANCIA", "STRATOS HF", 1974, "race", "coupe", "Lancia Stratos HF Stradale", "2.4 V6", 190, 6.8, 232, "RWD", (3.71, 1.75, 1.11, 2.18), 72, 72),
  "bmw_m3_e30": ("BMW", "M3 E30", 1990, "race", "coupe", "BMW M3 E30 Evolution", "2.3", 215, 6.6, 241, "RWD", (4.35, 1.68, 1.37, 2.56), 72, 72),
  "toyota_celica_gt4": ("TOYOTA", "CELICA GT-FOUR", 1993, "race", "coupe", "Toyota Celica GT-Four ST185", "2.0 Turbo", 208, 7.5, 230, "AWD", (4.42, 1.75, 1.30, 2.53), 72, 74),
+ # 2026-10-12: yarış dalının son dördü. Stratos gibi YOL (homologasyon) sürümlerinin verisi: Group B ralli
+ # sürümleri (S1 E2 ~470 hp, RS200 Evo ~550 hp) normal araçların en hızlılarını da geçip dengeyi bozardı.
+ "lancia_delta_integrale": ("LANCIA", "DELTA INTEGRALE", 1992, "race", "hatchback", "Lancia Delta HF Integrale Evoluzione", "2.0 Turbo", 210, 5.7, 220, "AWD", (3.90, 1.77, 1.37, 2.48), 74, 78),
+ "audi_quattro_s1": ("AUDI", "SPORT QUATTRO S1", 1985, "race", "coupe", "Audi Sport Quattro", "2.1 Turbo", 306, 4.8, 250, "AWD", (4.16, 1.78, 1.35, 2.22), 74, 78),
+ "ford_rs200": ("FORD", "RS200", 1986, "race", "coupe", "Ford RS200", "1.8 Turbo", 250, 6.1, 225, "AWD", (4.00, 1.76, 1.32, 2.53), 74, 76),
+ "mitsubishi_evo6": ("MITSUBISHI", "LANCER EVO VI", 1999, "race", "sedan", "Mitsubishi Lancer Evolution VI GSR", "2.0 Turbo", 280, 4.4, 240, "AWD", (4.35, 1.77, 1.41, 2.51), 76, 78),
 }
 REFERENCE_LENGTH_M = 4.39   # CarCatalog.REFERENCE_LENGTH_M: model_scale ilk tahmini = gerçek boy / 4,39
 

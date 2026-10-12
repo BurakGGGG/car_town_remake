@@ -23,6 +23,10 @@ extends Node
 ##    zaman doludur (Cemo'nun dersi). Kurallar restorations.json "yard" (ekonomi simülasyonu ayarlar).
 ##  * Tamirden düşme: hurdalık açıksa PARA TOPLA ile biten her tamirde repair_drop olasılıkla 1 parça
 ##    (aynı havuzdan; parts_gained kaynağı &"repair").
+##  * Arkadaştan isteme (orijinal "Ask Friends", kullanıcı kararı 2026-10-12): oyuncu bir parçayı
+##    ASK_COOLDOWN'da bir İSTER (set_ask); istek açık garajda ASK_LIFETIME boyunca görünür (SocialManager
+##    yayınlar). Gelen hediyeler (SocialManager.collect_gifts) bir kez eklensin diye kimlikleri burada,
+##    kayıtta hatırlanır (gift_seen): sunucu bugünün hediyesini silmeye izin vermez.
 ##
 ## Kodla kurulur (GarageSystem._ensure_crate_system), "junkyard" grubundan bulunur. Kayıt: SaveManager
 ## state() / load_state() / reset() üzerinden "junkyard" bölümü (eski kayıtta yoktur: boş envanter).
@@ -54,6 +58,11 @@ const BASIC_TIER: StringName = &"basic"
 ## Hurdalık bu kadar tamir alanı açılınca açılır (docs/HURDALIK_TASARIM.md §1): proje bir alanı
 ## kapladığı için tamir hiç durmaz.
 const OPEN_BAYS: int = 2
+## Arkadaştan parça isteme aralığı ve isteğin açık garajda görünme süresi (sn).
+const ASK_COOLDOWN: int = 6 * 3600
+const ASK_LIFETIME: int = 24 * 3600
+## Hatırlanan en çok hediye kimliği (eski kayıtlar düşer).
+const MAX_SEEN_GIFTS: int = 400
 ## Envanterde parça başına üst sınır (bozuk / şişirilmiş kayda karşı).
 const MAX_STACK: int = 9999
 
@@ -67,6 +76,8 @@ var _yard_salt: int = 0                    # oyuncuya özel çekiliş tuzu (ilk 
 var _pile_ready_at: Array[int] = []        # yığın başına yeniden dolma anı (unix; ≤ şimdi → dolu)
 var _searches: int = 0                     # toplam arama (ilki her zaman dolu)
 var _visits: int = 0                       # hurdalığa kaç kez gelindi
+var _ask: Dictionary = {}                  # {"part": StringName, "at": unix} — arkadaşlardan istenen parça
+var _gift_seen: Array[String] = []         # toplanmış hediye belge kimlikleri
 ## Test: -1 değilse saat ve gün bundan (GemRewards yoksa).
 var test_now: int = -1
 
@@ -104,6 +115,54 @@ func record_visit() -> void:
 
 func visit_count() -> int:
 	return _visits
+
+
+# --- Arkadaştan isteme / hediye ------------------------------------------------------------
+
+## Açık (süresi dolmamış) istek: {"part", "at"} ya da boş.
+func current_ask() -> Dictionary:
+	if _ask.is_empty() or _now() - int(_ask.get("at", 0)) >= ASK_LIFETIME:
+		return {}
+	return _ask.duplicate()
+
+
+## Yeni istek için kalan süre (0 = istenebilir).
+func ask_seconds_left() -> int:
+	if _ask.is_empty():
+		return 0
+	return maxi(int(_ask.get("at", 0)) + ASK_COOLDOWN - _now(), 0)
+
+
+func can_ask() -> bool:
+	return ask_seconds_left() <= 0
+
+
+## Arkadaşlardan bu parçayı ister (yayınlamak SocialManager'ın işi). Bekleme sürüyorsa false.
+func set_ask(part_id: StringName) -> bool:
+	if not can_ask() or not RestorationCatalog.is_part(part_id):
+		return false
+	_ask = {"part": part_id, "at": _now()}
+	junkyard_changed.emit()
+	return true
+
+
+func gift_seen(gift_id: String) -> bool:
+	return _gift_seen.has(gift_id)
+
+
+## Arkadaştan gelen hediye: bir kez eklenir (aynı kimlik ikinci kez gelirse false).
+func receive_gift(gift_id: String, part_id: StringName) -> bool:
+	if gift_id.is_empty() or _gift_seen.has(gift_id) or not RestorationCatalog.is_part(part_id):
+		return false
+	_gift_seen.append(gift_id)
+	while _gift_seen.size() > MAX_SEEN_GIFTS:
+		_gift_seen.pop_front()
+	return add_parts(part_id, 1, &"gift")
+
+
+## Sunucudan temizlenen eski hediye kimliği artık hatırlanmaz.
+func forget_gift(gift_id: String) -> void:
+	_gift_seen.erase(gift_id)
 
 
 # --- Envanter ------------------------------------------------------------------------
@@ -551,6 +610,8 @@ func state() -> Dictionary:
 	return {"parts": parts, "projects": projects_out, "completed": done, "yard": {
 		"day": _yard_day, "cars": yard_cars_out, "prev": yard_prev_out, "salt": _yard_salt,
 		"piles": _pile_ready_at.duplicate(), "searches": _searches, "visits": _visits,
+		"ask": {"part": String(_ask.get("part", "")), "at": int(_ask.get("at", 0))} if not _ask.is_empty() else {},
+		"gift_seen": _gift_seen.duplicate(),
 	}}
 
 
@@ -610,8 +671,20 @@ func _load_yard(raw: Variant) -> void:
 	_pile_ready_at = []
 	_searches = 0
 	_visits = 0
+	_ask = {}
+	_gift_seen = []
 	if not (raw is Dictionary):
 		return
+	var ask: Variant = raw.get("ask", {})
+	if ask is Dictionary and RestorationCatalog.is_part(StringName(SaveSafe.s(ask.get("part", "")))):
+		_ask = {"part": StringName(SaveSafe.s(ask.get("part", ""))),
+			"at": clampi(SaveSafe.i(ask.get("at", 0)), 0, _now())}   # gelecekten gelen zaman beklemeyi uzatmasın
+	var seen: Variant = raw.get("gift_seen", [])
+	if seen is Array:
+		for v: Variant in seen:
+			var id: String = SaveSafe.s(v)
+			if id.begins_with("p_") and not _gift_seen.has(id) and _gift_seen.size() < MAX_SEEN_GIFTS:
+				_gift_seen.append(id)
 	_visits = maxi(SaveSafe.i(raw.get("visits", 0)), 0)
 	_yard_day = SaveSafe.i(raw.get("day", -1))
 	_yard_salt = clampi(SaveSafe.i(raw.get("salt", 0)), 0, 0x7FFFFFFF)

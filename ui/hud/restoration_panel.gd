@@ -5,6 +5,8 @@ extends Control
 ##   * İlerleme çubuğu + aşama (çıplak şasi / paslı araç / hazır).
 ##   * Parça satırları: takılan / gereken, envanterdeki adet; TAK (envanterden), eksiği gemle AL.
 ##   * HEPSİNİ TAK, EKSİKLERİ AL (tek ödeme), %100'de BİTİR (araç garaja girer), PROJEYİ BIRAK.
+##   * Eksik parçayı ARKADAŞLARDAN İSTE (6 saatte bir; SocialManager.ask_part — Google girişi ve en az bir
+##     arkadaş gerekir, yoksa düğme görünmez).
 ## GEM HARCAYAN ve PROJEYİ BIRAKAN her işlem önce onay ister (orijinaldeki onaysız "Buy All" en çok
 ## şikâyet edilen şeydi — docs/HURDALIK_ARASTIRMA.md). Gem yetmezse GEM MAĞAZASI önerilir.
 
@@ -20,6 +22,7 @@ var vehicle_id: StringName = &""
 var _column: VBoxContainer
 var _title: Label
 var _stage_label: Label
+var _notice_label: Label
 var _bar: ProgressStrip
 var _rows: VBoxContainer
 var _gem_label: Label
@@ -49,6 +52,11 @@ func open() -> void:
 	var player: PlayerProgress = _player()
 	if player and not player.gems_changed.is_connected(_on_gems):
 		player.gems_changed.connect(_on_gems)
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
+	if social and not social.notice.is_connected(_on_social_notice):
+		social.notice.connect(_on_social_notice)
+		social.changed.connect(_refresh)
+	_notice_label.visible = false
 	_confirm_layer.hide()
 	_refresh()
 	PlateAnim.pop_in(self, _column)
@@ -64,6 +72,10 @@ func close() -> void:
 	var player: PlayerProgress = _player()
 	if player and player.gems_changed.is_connected(_on_gems):
 		player.gems_changed.disconnect(_on_gems)
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
+	if social and social.notice.is_connected(_on_social_notice):
+		social.notice.disconnect(_on_social_notice)
+		social.changed.disconnect(_refresh)
 	PlateAnim.pop_out(self, _column, func() -> void:
 		hide()
 		_closing = false
@@ -97,6 +109,11 @@ func _build() -> void:
 	head_box.add_child(_title)
 	head_box.add_child(_stage_label)
 	head_box.add_child(_bar)
+	_notice_label = _label(&"HudInkCaption", "")
+	_notice_label.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
+	_notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_notice_label.visible = false
+	head_box.add_child(_notice_label)
 	head.add_child(head_box)
 	_column.add_child(head)
 
@@ -256,18 +273,34 @@ func _part_row(part_id: StringName, need: int, done: int, missing: int, have: in
 	text.add_theme_constant_override(&"separation", -2)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text.add_child(_label(&"HudInkValue", "%s  %d/%d" % [RestorationCatalog.part_name(part_id), done, need]))
-	text.add_child(_label(&"HudInkCaption", Loc.t("TAMAM") if missing == 0 else Loc.t("ENVANTERDE %d") % have))
+	var jy: JunkyardManager = _jy()
+	var asked: bool = jy != null and StringName(SaveSafe.s(jy.current_ask().get("part", ""))) == part_id
+	var caption: String = Loc.t("TAMAM") if missing == 0 else Loc.t("ENVANTERDE %d") % have
+	if asked and missing > 0:
+		caption += Loc.t("  ·  ARKADAŞLARINDAN İSTENDİ")
+	text.add_child(_label(&"HudInkCaption", caption))
 	row.add_child(text)
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
+	if missing > 0 and not asked and jy and jy.can_ask() and social and social.is_ready() and not social.friends.is_empty():
+		var ask: PlateButton = _button(Loc.t("İSTE"), func() -> void: social.ask_part(part_id))
+		ask.disabled = social.is_busy()
+		row.add_child(ask)
 	if missing > 0:
 		if have > 0:
 			row.add_child(_button(Loc.t("TAK"), func() -> void:
-				var jy: JunkyardManager = _jy()
-				if jy:
-					jy.install(vehicle_id, part_id)))
+				var manager: JunkyardManager = _jy()
+				if manager:
+					manager.install(vehicle_id, part_id)))
 		if cost > 0:
 			row.add_child(_button(Loc.t("%d GEM") % cost, func() -> void:
 				_buy_part(part_id, missing, cost)))
 	return row
+
+
+## İstek / hediye bildirimi panonun başlığında görünür (HUD'un plakası panonun arkasında kalır).
+func _on_social_notice(text: String) -> void:
+	_notice_label.text = text
+	_notice_label.visible = true
 
 
 func _on_gems(gems: int) -> void:

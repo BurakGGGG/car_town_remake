@@ -22,7 +22,7 @@
   "sets": [
     {"id": "yerli_klasikler", "name": "YERLİ KLASİKLER", "cars": ["tofas_sahin", "renault_toros"]},
     {"id": "kore_hatti", "name": "KORE HATTI", "cars": ["hyundai_era", "hyundai_getz", "hyundai_accent_blue"]},
-    {"id": "vw_grubu", "name": "VW GRUBU", "cars": ["vw_passat_b55", "vw_golf_7", "skoda_kamiq", "seat_leon", "audi_a3"]},
+    {"id": "vw_grubu", "name": "VW GRUBU", "cars": ["vw_passat_b55", "vw_golf_7", "vw_beetle", "skoda_kamiq", "seat_leon", "audi_a3"]},
     {"id": "sicak_kompakt", "name": "SICAK KOMPAKT", "cars": ["ford_focus", "vw_golf_7", "seat_leon", "honda_civic"]},
     {"id": "aile_sedani", "name": "AİLE SEDANI", "cars": ["hyundai_era", "vw_passat_b55", "renault_fluence", "volvo_s60"]},
     {"id": "bavyera", "name": "BAVYERA", "cars": ["bmw_e46", "bmw_e60"]},
@@ -51,7 +51,7 @@
       "short_name": "AİLE",
       "price_gems": 50,
       "min_level": 10,
-      "pool": ["vw_passat_b55", "renault_fluence", "skoda_kamiq", "vw_golf_7"],
+      "pool": ["vw_passat_b55", "renault_fluence", "skoda_kamiq", "vw_golf_7", "vw_beetle"],
       "color": "#5F8FB0",
       "scene_path": "res://assets/crates/family_crate.glb",
       "icon": "",

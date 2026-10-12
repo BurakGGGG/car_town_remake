@@ -252,7 +252,15 @@ func _build_lists(busy: bool, ready: bool) -> void:
 	_add_featured_rows(featured, busy)
 	for entry: Dictionary in _social.friends:
 		var uid: String = entry["uid"]
-		var row: HBoxContainer = _person_row(entry["name"], Loc.t("SEVİYE %d") % int(entry["level"]))
+		var caption: String = Loc.t("SEVİYE %d") % int(entry["level"])
+		var asked: String = SaveSafe.s(entry.get("ask_part", ""))
+		if not asked.is_empty():
+			caption += Loc.t("  ·  %s İSTİYOR") % RestorationCatalog.part_name(StringName(asked))
+		var row: HBoxContainer = _person_row(entry["name"], caption)
+		if _social.can_gift(uid):
+			var gift: PlateButton = _small_button(Loc.t("GÖNDER"), func() -> void: _social.send_gift(uid), busy, true)
+			gift.name = "Gift_" + uid
+			row.add_child(gift)
 		var go: PlateButton = _small_button(Loc.t("GARAJA GİT"), func() -> void: _on_visit_pressed(uid), busy, true)
 		go.name = "Visit_" + uid
 		row.add_child(go)
