@@ -1294,5 +1294,9 @@
  "şimdi": "now",
  "⏱ %s · 1 tamir alanı · SEVİYE %d": "⏱ %s · 1 repair bay · LEVEL %d",
  "★ BU ARAÇ İÇİN ÖNERİLEN": "★ RECOMMENDED FOR THIS CAR",
- "✔ TAKILI": "✔ INSTALLED"
+ "✔ TAKILI": "✔ INSTALLED",
+ "PARÇA KATEGORİLERİ": "PART CATEGORIES",
+ "Dokun, içine gir": "Tap to open",
+ "Kademeler sırayla takılır": "Stages install in order",
+ "%s  ·  %d / %d TAKILI": "%s  ·  %d / %d INSTALLED"
 }

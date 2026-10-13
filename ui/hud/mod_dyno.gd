@@ -8,9 +8,9 @@ extends Control
 ##   Güç eğrisi (yalnız MOTOR / TURBO / HAVA AKIŞI): devir → beygir; şimdiki eğri mürekkep, takınca olacak yeşil.
 ## Mantık yok: ModWorkshop hazır sayıları set_data ile verir. Sabit boyutlu, kodla çizilir (TextureRect yok).
 
-const ROW_HEIGHT: float = 34.0
+const ROW_HEIGHT: float = 31.0
 const BAR_HEIGHT: float = 9.0
-const CURVE_HEIGHT: float = 112.0
+const CURVE_HEIGHT: float = 96.0
 const LEGEND_HEIGHT: float = 16.0
 const GAIN: Color = Color("3FA45F")
 const GAIN_LIGHT: Color = Color("7ED89A")

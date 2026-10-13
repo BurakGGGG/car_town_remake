@@ -203,6 +203,8 @@ const DETAIL_ROWS: Array = [
 var _detail_lanes: Dictionary = {}
 ## ARAÇLAR → MODİFİYE kipi (alt parça şeridi, sağda parça plakası, solda değerler).
 var _workshop: ModWorkshop
+## Sağ sütunun sahnedeki yerleşimi (modifiye kipinde üste sabitlenir, çıkınca geri konur).
+var _right_layout: Dictionary = {}
 var _detail_values: Dictionary = {}
 
 
@@ -1043,6 +1045,10 @@ func open_mods() -> void:
 	if list_scroll:
 		list_scroll.hide()
 	_set_title(Loc.t("MODİFİYE"))
+	_right_layout = {}
+	for key: String in ["anchor_left", "anchor_top", "anchor_right", "anchor_bottom", "offset_left", "offset_top",
+			"offset_right", "offset_bottom", "grow_horizontal", "grow_vertical"]:
+		_right_layout[key] = right_group.get(key)
 	_workshop.open(_shown_vehicle)
 	_fit_mod_column.call_deferred()
 	_place_car_list.call_deferred()
@@ -1054,6 +1060,9 @@ func _close_mods() -> void:
 		return
 	_kill_tweens()
 	_workshop.close()
+	for key: String in _right_layout:   # sağ sütun sahnedeki (dikey ortalı) yerine
+		right_group.set(key, _right_layout[key])
+	_right_layout = {}
 	action_column.show()
 	_info_scroll.show()
 	var list_scroll: Control = bottom_group.get_node_or_null("CarListScroll") as Control
@@ -1089,6 +1098,17 @@ func _fit_mod_column() -> void:
 	left_group.offset_bottom = COLUMN_TOP + _workshop.left_panel().get_combined_minimum_size().y
 	if _group_targets.has(left_group):
 		_group_targets[left_group] = left_group.position
+	# Sağ sütun üste sabit: dikey ortalıyken uzun parça plakası alttaki rafa biniyordu
+	var right_size: Vector2 = right_group.get_combined_minimum_size()
+	right_group.set_anchors_preset(Control.PRESET_TOP_RIGHT, false)
+	right_group.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	right_group.grow_vertical = Control.GROW_DIRECTION_END
+	right_group.offset_right = 0.0
+	right_group.offset_left = -right_size.x
+	right_group.offset_top = COLUMN_TOP
+	right_group.offset_bottom = COLUMN_TOP + right_size.y
+	if _group_targets.has(right_group):
+		_group_targets[right_group] = right_group.position
 
 
 func _set_title(text: String) -> void:

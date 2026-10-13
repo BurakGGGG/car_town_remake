@@ -35,14 +35,16 @@ const CARD_HEIGHT: float = 136.0
 const ICON_AREA: float = 76.0
 const NOTCH: Vector2 = Vector2(14.0, 5.0)
 const ICON_TOP: float = 28.0
-const STAGE_WIDTH: float = 146.0
-const STAGE_HEIGHT: float = 186.0
-const STAGE_ICON: float = 70.0
+const STAGE_WIDTH: float = 136.0
+const STAGE_HEIGHT: float = 166.0
+const STAGE_ICON: float = 60.0
 const STAGE_BAND: float = 17.0
 const PANEL_WIDTH: float = 214.0
 const STATS_WIDTH: float = 196.0
 const DYNO_WIDTH: float = 296.0
 const GAIN: Color = Color("3FA45F")
+## Parça rafı: kartların oturduğu koyu, yuvarlak köşeli şerit (zeminin çizgileri kartların arasından görünmesin).
+const TRAY_COLOR: Color = Color(0.11, 0.12, 0.14, 0.84)
 ## Pano açıkken sayaç / durumlar bu aralıkla tazelenir (sn).
 const TICK: float = 0.5
 
@@ -53,8 +55,8 @@ var selected_stage: int = 1
 var view: View = View.OVERVIEW
 
 ## Kurulan kontroller (GarageScreen bunları kendi gruplarında gösterir / gizler).
-var strip: ScrollContainer
-var stage_strip: ScrollContainer
+var strip: PanelContainer
+var stage_strip: PanelContainer
 var detail: PlatePanel
 var advice: PlatePanel
 var stats: PlatePanel
@@ -85,6 +87,9 @@ var _gem_armed_until: int = 0   # ELMASLA BİTİR onayı (Time.get_ticks_msec)
 var _tick: float = 0.0
 var _warm_generation: int = 0
 var _recommended: StringName = &""
+var _strip_header: Label
+var _stage_header: Label
+var _stage_hint: Label
 
 
 func _ready() -> void:
@@ -105,9 +110,12 @@ func _connect() -> void:
 
 ## Kontrolleri kurar ve verilen gruplara ekler (hepsi gizli başlar).
 func build(bottom: Control, left: Control, right: Control) -> void:
-	strip = _build_strip()
+	_strip_header = _tray_label(Loc.t("PARÇA KATEGORİLERİ"), 1.0)
+	strip = _tray(_build_strip(), _strip_header, _tray_label(Loc.t("Dokun, içine gir"), 0.6))
 	bottom.add_child(strip)
-	stage_strip = _build_stage_strip()
+	_stage_header = _tray_label("", 1.0)
+	_stage_hint = _tray_label(Loc.t("Kademeler sırayla takılır"), 0.6)
+	stage_strip = _tray(_build_stage_strip(), _stage_header, _stage_hint)
 	bottom.add_child(stage_strip)
 	stats = _build_stats()
 	left.add_child(stats)
@@ -249,6 +257,42 @@ func _full_build() -> Dictionary:
 
 
 # --- Kurulum ------------------------------------------------------------------------------------
+
+## Raf: koyu yuvarlak şerit, üstte başlık satırı (sol: ne, sağ: ipucu), altında kaydırılabilir kart sırası.
+func _tray(scroll: ScrollContainer, title: Label, hint: Label) -> PanelContainer:
+	var tray: PanelContainer = PanelContainer.new()
+	tray.name = scroll.name.replace("Scroll", "Tray")
+	tray.mouse_filter = Control.MOUSE_FILTER_PASS
+	tray.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = TRAY_COLOR
+	style.set_corner_radius_all(14)
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 7.0
+	style.content_margin_bottom = 10.0
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.25)
+	style.shadow_size = 6
+	tray.add_theme_stylebox_override(&"panel", style)
+	var column: VBoxContainer = VBoxContainer.new()
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_theme_constant_override(&"separation", 6)
+	var head: HBoxContainer = HBoxContainer.new()
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(title)
+	head.add_child(hint)
+	column.add_child(head)
+	column.add_child(scroll)
+	tray.add_child(column)
+	return tray
+
+
+func _tray_label(text: String, alpha: float) -> Label:
+	var label: Label = _label(&"HudInkCaption", text)
+	label.add_theme_color_override(&"font_color", Color(HudPalette.TEXT_LIGHT, alpha))
+	return label
+
 
 func _build_strip() -> ScrollContainer:
 	var scroll: ScrollContainer = _scroll("ModPartScroll")
@@ -437,10 +481,13 @@ func _refresh_category() -> void:
 	for i: int in _stages.size():
 		var card: PlateButton = _stages[i]
 		var s: int = i + 1
-		(card.get_node("Icon") as TextureRect).texture = PerformanceMods.part_icon(vehicle_id, category, s)
-		card.modulate = Color(1.0, 1.0, 1.0, 0.72) if s > PerformanceMods.stage_of(vehicle_id, category) + 1 \
+		var icon: TextureRect = card.get_node("Icon") as TextureRect
+		icon.texture = PerformanceMods.part_icon(vehicle_id, category, s)
+		icon.modulate = Color(0.8, 0.8, 0.8, 0.5) if s > PerformanceMods.stage_of(vehicle_id, category) + 1 \
 			else Color.WHITE
 		card.queue_redraw()
+	_stage_header.text = Loc.t("%s  ·  %d / %d TAKILI") % [PerformanceMods.category_name(vehicle_id, category),
+		PerformanceMods.stage_of(vehicle_id, category), PerformanceMods.STAGES]
 	_refresh_dyno()
 	_refresh_detail()
 
@@ -687,7 +734,11 @@ func _draw_stage(card: PlateButton, s: int) -> void:
 	var ink: Color = card.get_theme_color(&"font_color")
 	var current: int = PerformanceMods.stage_of(vehicle_id, category)
 	var installed: bool = s <= current
+	var ahead: bool = s > current + 1   # henüz sırası gelmemiş: soluk (kart opak kalır)
 	var color: Color = PerformanceMods.tier_color(s)
+	if ahead:
+		color = color.lerp(Color(0.62, 0.62, 0.62), 0.5)
+		ink = HudPalette.INK_SOFT
 	# Kademe bandı
 	var band: Rect2 = Rect2(5.0, 4.0 - lift, w - 10.0, STAGE_BAND)
 	card.draw_rect(band, color)
@@ -700,7 +751,8 @@ func _draw_stage(card: PlateButton, s: int) -> void:
 	# 0-100 katkısı
 	var gain: Dictionary = _gain(category, s, true)
 	var chip: String = (_signed(-float(gain["zero_100"])) + Loc.t(" sn")) if not gain.is_empty() else "…"
-	_pill(card, Vector2(w * 0.5, name_y + 35.0), chip, GAIN if not installed else Color(GAIN, 0.7), 10, false, true)
+	_pill(card, Vector2(w * 0.5, name_y + 33.0), chip, GAIN.lerp(Color(0.6, 0.6, 0.6), 0.45) if ahead else GAIN, 10,
+		false, true)
 	# Durum
 	var status: String = ""
 	var status_color: Color = ink
@@ -727,8 +779,13 @@ func _draw_stage(card: PlateButton, s: int) -> void:
 		card.draw_circle(badge, 8.0, GAIN, true, -1.0, true)
 		card.draw_polyline(PackedVector2Array([badge + Vector2(-4.0, 0.0), badge + Vector2(-1.0, 3.0),
 			badge + Vector2(4.0, -3.0)]), HudPalette.TEXT_LIGHT, 2.0, true)
-	if s == current + 1 and installed == false and job.is_empty():   # sıradaki: parlak çerçeve
-		card.draw_rect(Rect2(2.0, 1.0 - lift, w - 4.0, STAGE_HEIGHT - 3.0), Color(color, 0.9), false, 2.5)
+	if s == current + 1 and job.is_empty() and not card.button_pressed:   # sıradaki: kademe renginde ince çerçeve
+		var frame: StyleBoxFlat = StyleBoxFlat.new()
+		frame.draw_center = false
+		frame.border_color = color
+		frame.set_border_width_all(2)
+		frame.set_corner_radius_all(6)
+		card.draw_style_box(frame, Rect2(Vector2(0.0, -lift), card.size))
 
 
 func _draw_notches(card: Control, stage: int, center_top: Vector2) -> void:
@@ -806,15 +863,16 @@ func _mods() -> PerformanceModManager:
 func _scroll(scroll_name: String) -> ScrollContainer:
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.name = scroll_name
+	# Kaydırma yok: tuval yüksekliği 648'de sabit, en dar ekran 1152 birim — 6 kart da 5 kademe de sığar; böylece
+	# raf içeriği kadar olur ve ortalanır (kaydırılabilir kap yatayda içeriğe göre boyut almaz)
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
-	TouchScroll.attach(scroll)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.name = "Row"
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override(&"separation", 8)
+	row.add_theme_constant_override(&"separation", 10)
 	scroll.add_child(row)
 	return scroll
 
