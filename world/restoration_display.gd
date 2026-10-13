@@ -117,6 +117,24 @@ func _build_chassis() -> void:
 			mi.set_surface_override_material(i, material)
 
 
+## Teslim töreni başlıyor (RestorationFinale): balon ve seçim kalkar, araç artık dokunulacak bir proje değil.
+func begin_finale() -> void:
+	if _bubble:
+		_bubble.queue_free()
+		_bubble = null
+	for node_name: String in ["CarHitbox", "SelectionRing"]:
+		var node: Node = get_node_or_null(node_name)
+		if node:
+			node.queue_free()
+	if CarHitboxScript.get(&"selected_car") == self:
+		CarHitboxScript.set(&"selected_car", null)
+
+
+## Aracın dünya kutusu (kamera kadrajı).
+func world_box() -> AABB:
+	return global_transform * _box
+
+
 ## Aracın kutusu (bu düğümün uzayında): şasi ölçüsü, seçim kutusu, balon yüksekliği.
 func _model_box() -> AABB:
 	var box: AABB = AABB()

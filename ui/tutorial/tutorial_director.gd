@@ -182,6 +182,9 @@ func _ui_idle(id: StringName = &"") -> bool:
 		return false
 	if hud.crate_panel and hud.crate_panel.visible:
 		return false
+	var restoration: RestorationBays = get_tree().get_first_node_in_group("restoration_bays") as RestorationBays
+	if restoration and restoration.is_celebrating():
+		return false   # restorasyon teslim töreni
 	if _delivery and _delivery.is_revealing():
 		return false
 	return not (_reward_popup and _reward_popup.visible)

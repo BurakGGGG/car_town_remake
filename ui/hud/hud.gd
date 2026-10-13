@@ -141,6 +141,8 @@ var map_button: PlateButton
 var gem_store_screen: GemStoreScreen
 ## Dünyadaki teslimat kasasının AÇ / sonuç plakası.
 var crate_panel: CratePanel
+var restoration_result: RestorationResult
+var _new_tiers: Array[StringName] = []   # teslim töreni sürerken açılan restorasyon sınıfları
 var _crates: CrateManager
 var _delivery: CrateDelivery
 var _blocked_notified: Dictionary = {}   # yer bulamayan kasa uid → uyarıldı mı
@@ -463,12 +465,23 @@ func _connect_gameplay() -> void:
 				return
 			restoration_panel.vehicle_id = id
 			router.open(&"restoration"))
+		# TESLİM TÖRENİ: efektler bitince sonuç plakası; GARAJA AL → araç alandan çıkar
+		restoration_bays.finale_ready.connect(func(id: StringName) -> void:
+			hide_bay_plate()
+			hide_car_info()
+			restoration_result.show_result(id, _new_tiers)
+			_new_tiers = [])
+		restoration_result.done_pressed.connect(restoration_bays.drive_away)
+		restoration_bays.finale_finished.connect(func(id: StringName) -> void:
+			if restoration_result.visible and restoration_result.vehicle_id == id:
+				restoration_result.hide_panel())   # tören atlandı (kayıt değişti)
 	var junkyard: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
 	if junkyard:
 		junkyard.parts_gained.connect(func(part_id: StringName, amount: int, source: StringName) -> void:
 			if source == &"repair":
 				_show_notice(Loc.t("HURDALIK PARÇASI  +%d %s") % [amount, RestorationCatalog.part_name(part_id)],
 					HudPalette.COIN_DARK, 2.0))
+		junkyard.tier_unlocked.connect(func(tier_id: StringName) -> void: _new_tiers.append(tier_id))
 		junkyard.opened.connect(func() -> void:
 			_refresh_map_button()
 			_show_notice(Loc.t("HURDALIK AÇILDI\nHARİTA'DAN NECATİ'YE GİT"), HudPalette.COIN_DARK, 2.6))
@@ -1079,10 +1092,7 @@ func _build_junkyard_screens() -> void:
 		var bays: RestorationBays = get_tree().get_first_node_in_group("restoration_bays") as RestorationBays
 		if bays:
 			bays.clear_selection())
-	restoration_panel.project_finished.connect(func(id: StringName) -> void:
-		var entry: Dictionary = CarCatalog.get_entry(id)
-		_show_notice(Loc.t("RESTORASYON TAMAM!\n%s GARAJINA GELDİ") % String(entry.get("display_name", id)).to_upper(),
-			HudPalette.COIN_DARK, 2.8))
+	# BİTİR: duyuruyu teslim töreni yapar (RestorationBays → RestorationFinale → RestorationResult)
 	map_screen.travel_requested.connect(_on_map_travel)
 	map_screen.travel_started.connect(func(place: StringName) -> void:
 		if place == &"junkyard":
@@ -1185,6 +1195,8 @@ func _on_ui_stack_changed(top: StringName, place_open: bool) -> void:
 		hide_car_info()
 		if crate_panel and crate_panel.mode() == &"prompt":
 			crate_panel.hide_panel()
+		if restoration_result and restoration_result.visible:
+			restoration_result.confirm()   # bir ekran açıldı: araç garaja gider, alan boşalır
 	_sync_nav_tab(router.current_place())
 	_refresh_quest_button()
 
@@ -1265,7 +1277,7 @@ func _tick_login_prompt(cloud: CloudSaveManager, timer: Timer) -> void:
 		timer.queue_free()
 		return
 	if not _login_prompt_ready() or not router.top().is_empty() or (tutorial and tutorial.is_running()) \
-			or (crate_panel and crate_panel.visible):
+			or (crate_panel and crate_panel.visible) or (restoration_result and restoration_result.visible):
 		_login_idle = 0.0
 		return
 	_login_idle += timer.wait_time
@@ -1302,6 +1314,9 @@ func _build_crate_panel() -> void:
 	column.move_child(crate_panel, car_info_panel.get_index())
 	crate_panel.open_pressed.connect(_on_crate_open_pressed)
 	crate_panel.done_pressed.connect(_on_crate_done_pressed)
+	restoration_result = RestorationResult.new()
+	column.add_child(restoration_result)
+	column.move_child(restoration_result, crate_panel.get_index())
 
 
 func _connect_crates() -> void:

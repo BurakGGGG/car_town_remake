@@ -156,7 +156,13 @@ func _run() -> void:
 	check(not jy.finish(&"hyundai_getz"), "eksik proje bitmez")
 	check(jy.finish(&"opel_corsa") and done == [&"opel_corsa"], "Corsa bitti")
 	check(own.is_owned(&"opel_corsa") and jy.is_completed(&"opel_corsa"), "Corsa garajda, tamamlananlarda")
-	check(jy.status(&"opel_corsa") == JunkyardManager.Status.COMPLETED and rm.is_bay_free(0), "0. alan boşaldı")
+	# Alan, garajdaki teslim töreni (RestorationFinale) bitene kadar dolu: müşteri aracı lifte girmesin
+	var bays_node: RestorationBays = g(&"restoration_bays")
+	check(jy.status(&"opel_corsa") == JunkyardManager.Status.COMPLETED and not rm.is_bay_free(0)
+		and bays_node.is_celebrating(), "Corsa tamamlandı; teslim töreni sürerken 0. alan dolu")
+	bays_node.skip_finales()
+	await frames(2)
+	check(rm.is_bay_free(0) and not bays_node.is_celebrating(), "tören bitince 0. alan boşaldı")
 	check(not jy.start(&"opel_corsa"), "sahip olunan restorasyon aracı yeniden başlamaz")
 	check(jy.quit(&"hyundai_getz") and rm.is_bay_free(1), "Getz bırakıldı, 1. alan boşaldı")
 	check(jy.part_count(&"bolt") == 2 and jy.part_count(&"piston") == 1, "takılı parçalar envantere döndü")
@@ -445,10 +451,29 @@ func _run() -> void:
 			overlay_left = overlay_left or (node as MeshInstance3D).material_overlay != null
 		check(not overlay_left, "%100: pas katmanı kalktı")
 	check((hud_node.restoration_panel.get("_finish") as PlateButton).visible, "panoda BİTİR göründü")
+	var finished_bay: int = jy.bay_of(&"opel_corsa")
 	hud_node.restoration_panel.call("_on_finish")
-	await frames(30)
-	check(jy.is_completed(&"opel_corsa") and own.is_owned(&"opel_corsa"), "BİTİR: araç garaja girdi")
-	check(restoration_bays.display_of(&"opel_corsa") == null, "görünüm kaldırıldı, alan boşaldı")
+	await frames(3)
+	# Kayıt hemen: araç garajda. Görünüm teslim törenine devredilir, alan tören bitene kadar dolu
+	check(jy.is_completed(&"opel_corsa") and own.is_owned(&"opel_corsa"), "BİTİR: araç garaja girdi (kayıt hemen)")
+	check(restoration_bays.display_of(&"opel_corsa") == null and restoration_bays.is_celebrating(),
+		"teslim töreni başladı (görünüm projeden törene geçti)")
+	check(not rm.is_bay_free(finished_bay), "tören sürerken alana müşteri girmez")
+	check(display != null and is_instance_valid(display) and display.is_inside_tree(), "araç törende liftte duruyor")
+	var waited: int = 0
+	while not hud_node.restoration_result.visible and waited < 600:
+		await process_frame
+		waited += 1
+	check(hud_node.restoration_result.visible and hud_node.restoration_result.vehicle_id == &"opel_corsa",
+		"efektler bitti: sonuç plakası (%d kare)" % waited)
+	hud_node.restoration_result.confirm()
+	waited = 0
+	while restoration_bays.is_celebrating() and waited < 600:
+		await process_frame
+		waited += 1
+	await frames(2)
+	check(not restoration_bays.is_celebrating() and not is_instance_valid(display), "GARAJA AL: araç alandan çıktı")
+	check(rm.is_bay_free(finished_bay), "tören bitti, alan boşaldı")
 	hud_node.router.close_all()
 
 	print("== 15) HURDALIK EKRANI + MÜZİK ==")

@@ -254,12 +254,19 @@ func is_bay_free(i: int) -> bool:
 	return not _project_bays().has(i)
 
 
-## Restorasyon projelerinin kapladığı alanlar (hurdalık yoksa boş).
+## Restorasyon projelerinin kapladığı alanlar (hurdalık yoksa boş) + teslim töreni sürenler (proje
+## kayıtta bitti ama araç henüz liftte kutlanıyor).
 func _project_bays() -> Array[int]:
 	if not is_inside_tree():
 		return []
 	var junkyard: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
-	return junkyard.occupied_bays() if junkyard else []
+	var out: Array[int] = junkyard.occupied_bays() if junkyard else []
+	var restoration: RestorationBays = get_tree().get_first_node_in_group("restoration_bays") as RestorationBays
+	if restoration:
+		for bay: int in restoration.celebrating_bays():
+			if not out.has(bay):
+				out.append(bay)
+	return out
 
 
 ## Bu iş şu anki seviyede açık mı?
