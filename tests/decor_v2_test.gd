@@ -46,6 +46,7 @@ func _initialize() -> void:
 	await _rules()
 	await _fading()
 	await _editor_tools()
+	await _hold_to_move()
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
 
@@ -313,6 +314,91 @@ func _editor_tools() -> void:
 	check(editor.tool == GarageEditor.Tool.OBJECT, "eşya düzenine dönüldü")
 	router.close_all()
 	await frames(4)
+
+
+## Oyun modunda eşyaya BASILI TUT → düzenleyici o eşya tutulmuş açılır, parmak kalkmadan taşınır.
+## Gerçek fare olaylarıyla (root.push_input): HUD'daki DecorHoldGesture → GarageEditScreen → GarageEditor.
+func _hold_to_move() -> void:
+	print("== 9) BASILI TUT → TAŞI ==")
+	var hud: Hud = current_scene.find_child("HUD", true, false) as Hud
+	check(hud.decor_hold != null, "HUD'da basılı tutma algılayıcısı var")
+	decor.reset()
+	economy.set_money(100000)
+	var item: StringName = &"tool_cabinet"
+	check(decor.purchase(item), "dolap alındı")
+	# Biri eşyanın, biri taşınacağı yer: iki geçerli göz, arada en az 2 göz
+	var spots: Array[Vector3] = []
+	for j: int in range(2, 10):
+		for i: int in range(2, 14):
+			var p: Vector2 = cell_pos(i + 0.5, j + 0.5)
+			var pos: Vector3 = Vector3(p.x, 0.0, p.y)
+			if view.is_valid(item, pos, 0.0) and (spots.is_empty() or Vector2(spots[0].x, spots[0].z).distance_to(p) > DecorGrid.CELL * 2.5):
+				spots.append(pos)
+			if spots.size() == 2:
+				break
+		if spots.size() == 2:
+			break
+	check(spots.size() == 2, "iki boş yer bulundu")
+	if spots.size() < 2:
+		return
+	var iid: String = decor.add_instance(item, spots[0], 0.0)
+	await frames(4)
+	var body: Node3D = view.body_of(iid)
+	var at: Vector2 = camera.unproject_position(body.global_position + Vector3.UP * 0.05)
+	var to: Vector2 = camera.unproject_position(spots[1] + Vector3.UP * 0.05)
+	var router: UiRouter = hud.router
+	# Kısa dokunuş: düzenleyici açılmaz
+	_mouse(at, true)
+	await frames(2)
+	_mouse(at, false)
+	await create_timer(DecorHoldGesture.HOLD_TIME + 0.2).timeout
+	check(not editor.active and router.top() == &"", "kısa dokunuş düzenleyiciyi açmadı")
+	# Boş zemine basılı tutmak: açılmaz
+	var empty: Vector2 = camera.unproject_position(spots[1])
+	_mouse(empty, true)
+	await create_timer(DecorHoldGesture.HOLD_TIME + 0.2).timeout
+	_mouse(empty, false)
+	await frames(2)
+	check(not editor.active, "boş zemine basılı tutmak düzenleyiciyi açmadı")
+	# Eşyaya basılı tut: düzenleyici açılır, eşya tutulmuş (kalkmış), kamera kıpırdamaz
+	var cam_before: Vector3 = camera.global_position
+	_mouse(at, true)
+	await create_timer(DecorHoldGesture.HOLD_TIME + 0.2).timeout
+	await frames(3)
+	check(router.top() == &"garage_edit" and editor.active, "basılı tutunca düzenleme modu açıldı")
+	check(editor.selected() == iid and bool(editor.get("_dragging")), "eşya seçili ve parmağın altında tutuluyor")
+	check(camera.global_position.distance_to(cam_before) < 0.001, "kamera kıpırdamadı (eşya parmağın altında kaldı)")
+	# Parmak kalkmadan sürükle, bırak: yeni yerine kaydedilir
+	for k: int in range(1, 9):
+		_motion(at.lerp(to, k / 8.0))
+		await frames(1)
+	_mouse(to, false)
+	await frames(3)
+	var moved: Vector3 = decor.instance(iid).get("pos", Vector3.ZERO)
+	check(Vector2(moved.x, moved.z).distance_to(Vector2(spots[1].x, spots[1].z)) < DecorGrid.CELL * 0.6,
+		"bırakınca eşya yeni yerine kondu (%s → %s)" % [spots[0], moved])
+	check(not bool(editor.get("_dragging")) and editor.active, "sürükleme bitti, düzenleyici açık kaldı")
+	router.close_all()
+	await frames(4)
+	check(not editor.active, "BİTİR: oyuna dönüldü")
+
+
+func _mouse(at: Vector2, pressed: bool) -> void:
+	var event: InputEventMouseButton = InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = pressed
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT if pressed else 0
+	event.position = at
+	event.global_position = at
+	root.push_input(event, true)   # görünüm alanı koordinatı (headless pencere boyutundan bağımsız)
+
+
+func _motion(at: Vector2) -> void:
+	var event: InputEventMouseMotion = InputEventMouseMotion.new()
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT
+	event.position = at
+	event.global_position = at
+	root.push_input(event, true)
 
 
 func _screen(p: Vector2) -> Vector2:

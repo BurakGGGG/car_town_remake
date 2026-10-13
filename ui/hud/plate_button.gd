@@ -28,6 +28,8 @@ const MIN_FONT_SIZE: int = 14
 const MIN_TOUCH: float = 72.0
 ## Kenar payları çakışınca hakem: bu gruptaki düğmelerden görünür dikdörtgeni en yakın olan alır.
 const GROUP: StringName = &"plate_buttons"
+## icon_left: ikon ile yazı arası.
+const ICON_LEFT_GAP: float = 7.0
 
 @export var shape: Shape = Shape.PLATE:
 	set(value):
@@ -44,6 +46,18 @@ const GROUP: StringName = &"plate_buttons"
 @export_range(8.0, 40.0, 1.0) var icon_size: float = 22.0:
 	set(value):
 		icon_size = value
+		if is_inside_tree() and icon_left:
+			_apply_styles()
+		queue_redraw()
+
+## İkon yazının SOLUNDA (yatay araç çubukları: GARAJI DÜZENLE). Kapalıyken (varsayılan) ikon yazının
+## üstünde, temanın üst boşluğuna çizilir — küçük plakalarda o boşluk yok. Açıkken sol kenar payı ikon
+## kadar genişler; stiller her yeniden kurulduğunda (highlight / kind) aynı pay yeniden eklenir.
+@export var icon_left: bool = false:
+	set(value):
+		icon_left = value
+		if is_inside_tree():
+			_apply_styles()
 		queue_redraw()
 
 ## Plakanın köşelerindeki cıvata noktaları.
@@ -148,8 +162,9 @@ static func _distance(rect: Rect2, point: Vector2) -> float:
 func _apply_styles() -> void:
 	# YALNIZCA "HudPlate": galeri / koleksiyon gibi kendi küçük resmini çizen varyasyonlar üst payı BİLEREK
 	# büyük tutar (yazı resmin altında); onlara dokunulursa yazı resmin üstüne biner (2026-10-11 QA'da oldu).
+	var side_icon: bool = icon_left and shape == Shape.PLATE and kind != HudIcon.Kind.NONE
 	var center: bool = not Engine.is_editor_hint() and shape == Shape.PLATE \
-		and theme_type_variation == &"HudPlate" and kind == HudIcon.Kind.NONE and avatar == null
+		and theme_type_variation == &"HudPlate" and (side_icon or kind == HudIcon.Kind.NONE) and avatar == null
 	for state: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed", &"disabled"]:
 		remove_theme_stylebox_override(state)
 		var base: StyleBoxFlat = get_theme_stylebox(state) as StyleBoxFlat
@@ -157,9 +172,11 @@ func _apply_styles() -> void:
 			continue
 		var amber: bool = highlight and state != &"disabled"
 		var lopsided: bool = center and base.content_margin_top - base.content_margin_bottom > 6.0
-		if not amber and not lopsided:
+		if not amber and not lopsided and not side_icon:
 			continue
 		var box: StyleBoxFlat = base.duplicate() as StyleBoxFlat
+		if side_icon:
+			box.content_margin_left += icon_size + ICON_LEFT_GAP
 		if amber:
 			box.bg_color = HudPalette.PLATE_SELECTED_HOVER if state == &"hover" else HudPalette.PLATE_SELECTED
 			box.border_color = HudPalette.PLATE_SELECTED_EDGE
@@ -184,12 +201,19 @@ func _draw() -> void:
 		return
 
 	var has_icon: bool = kind != HudIcon.Kind.NONE or avatar != null
+	var side_icon: bool = icon_left and kind != HudIcon.Kind.NONE
 	if bolts:
 		var bolt: Color = Color(ink, 0.45)
-		var y: float = (7.0 if has_icon else size.y * 0.5) - lift
+		var y: float = (7.0 if has_icon and not side_icon else size.y * 0.5) - lift
 		draw_circle(Vector2(7.0, y), 1.7, bolt, true, -1.0, true)
 		draw_circle(Vector2(size.x - 7.0, y), 1.7, bolt, true, -1.0, true)
-	if has_icon:
+	if side_icon:
+		# Yazının hemen solunda, yazıyla aynı dikey ortada (kenar payları temadan)
+		var sb: StyleBox = get_theme_stylebox(&"normal")
+		var x: float = sb.content_margin_left - ICON_LEFT_GAP - icon_size * 0.5
+		var cy: float = (sb.content_margin_top + size.y - sb.content_margin_bottom) * 0.5 - lift
+		HudIcon.draw_icon(self, kind, Vector2(x, cy), icon_size, ink, bg)
+	elif has_icon:
 		# İkon, stylebox'ın üst content margin'inin ortasına oturur; yazı onun altında.
 		var zone: float = get_theme_stylebox(&"normal").content_margin_top
 		var center: Vector2 = Vector2(size.x * 0.5, zone * 0.5 + 3.0 - lift)

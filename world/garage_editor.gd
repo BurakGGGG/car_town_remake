@@ -24,6 +24,8 @@ signal placing_changed(item: StringName)
 signal state_changed
 ## Kısa bildirim ("BURAYA SIĞMIYOR" gibi).
 signal notice(text: String)
+## Eşya / tamir alanı / hayalet sürüklemesi bitti (bırakıldı ya da iptal).
+signal drag_ended
 
 ## Geri alınabilecek son işlem sayısı.
 const HISTORY: int = 10
@@ -162,7 +164,9 @@ func _bind() -> bool:
 # --- Mod -------------------------------------------------------------------------------
 
 ## band: ekranın arayüzsüz dikey aralığı (0..1, üst/alt); garaj bu banda sığdırılır.
-func activate(band: Vector2 = Vector2(0.14, 0.64)) -> void:
+## frame = false: kamera yerinden oynamaz (eşyaya basılı tutarak girildi: eşya parmağın altında kalsın);
+## çıkışta dönülecek görünüm yine kaydedilir.
+func activate(band: Vector2 = Vector2(0.14, 0.64), frame: bool = true) -> void:
 	if active or not _bind():
 		return
 	active = true
@@ -182,7 +186,10 @@ func activate(band: Vector2 = Vector2(0.14, 0.64)) -> void:
 	if camera is WorldCamera:
 		_saved_min_zoom = (camera as WorldCamera).min_zoom
 		(camera as WorldCamera).min_zoom = minf(_saved_min_zoom, EDIT_MIN_ZOOM)
-	_frame_garage(band)
+	if frame:
+		_frame_garage(band)
+	elif camera and camera.has_method("view_state"):
+		_saved_view = camera.call("view_state")
 	_focus.show_focus(_view)
 	if camera is WorldCamera:
 		(camera as WorldCamera).set_world_ui_visible(false)
@@ -658,6 +665,25 @@ func _on_release(at: Vector2) -> void:
 		select("")
 
 
+## Basılı tutarak girildi (DecorHoldGesture): parmak hâlâ eşyanın üstünde. Düzenleyici bu basışı
+## görmediği için durum burada kurulur: eşya seçilir ve hemen kalkar (tutulduğu belli olsun); parmak
+## kaydıkça sürüklenir, bırakınca yeni yerine konur (_on_release → _end_drag).
+func grab(iid: String, at: Vector2) -> void:
+	if not active or tool != Tool.OBJECT or _decor.instance(iid).is_empty():
+		return
+	_pressing = true
+	_dragging = false
+	_press_at = at
+	_press_target = iid
+	_press_cycle.clear()
+	_last_tap_at = Vector2.INF
+	_touch_ids[0] = true   # ilk parmak (masaüstünde dokunma olayı hiç gelmez; sayaç yalnız dokunmada okunur)
+	select(iid)
+	_begin_drag()
+	if _dragging:
+		_drag_to(at)
+
+
 func _key(key: InputEventKey) -> void:
 	if not key.pressed or key.echo:
 		return
@@ -746,6 +772,7 @@ func _end_drag(commit: bool) -> void:
 	if not _dragging:
 		return
 	_dragging = false
+	drag_ended.emit.call_deferred()
 	if _press_target == "ghost":
 		if commit and _view.is_valid(_ghost_item, _ghost_pos, _ghost_yaw):
 			confirm_ghost()   # bırak = yerleştir

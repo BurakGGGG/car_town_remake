@@ -142,6 +142,8 @@ var gem_store_screen: GemStoreScreen
 ## Dünyadaki teslimat kasasının AÇ / sonuç plakası.
 var crate_panel: CratePanel
 var restoration_result: RestorationResult
+## Garajdaki eşyaya basılı tutmak düzenleyiciyi o eşya tutulmuş açar.
+var decor_hold: DecorHoldGesture
 var _new_tiers: Array[StringName] = []   # teslim töreni sürerken açılan restorasyon sınıfları
 var _crates: CrateManager
 var _delivery: CrateDelivery
@@ -475,6 +477,19 @@ func _connect_gameplay() -> void:
 		restoration_bays.finale_finished.connect(func(id: StringName) -> void:
 			if restoration_result.visible and restoration_result.vehicle_id == id:
 				restoration_result.hide_panel())   # tören atlandı (kayıt değişti)
+	# EŞYAYA BASILI TUT → TAŞI: düzenleyici o eşya parmağın altında tutulmuş açılır
+	if get_tree().get_first_node_in_group("garage_editor"):
+		decor_hold = DecorHoldGesture.new()
+		add_child(decor_hold)
+		decor_hold.allowed = func() -> bool:
+			return router.top() == &"" and not (tutorial and tutorial.is_running())
+		decor_hold.held.connect(func(iid: String, at: Vector2) -> void:
+			if router.top() != &"":
+				return
+			hide_bay_plate()
+			hide_car_info()
+			garage_edit_screen.grab_on_open(iid, at)
+			router.open(&"garage_edit"))
 	var junkyard: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
 	if junkyard:
 		junkyard.parts_gained.connect(func(part_id: StringName, amount: int, source: StringName) -> void:

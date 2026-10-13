@@ -23,6 +23,22 @@ enum Kind {
 	PAINT,  ## sprey boya kutusu (boya atölyesi) — sona eklendi: sahnelerdeki kayıtlı numaralar değişmez
 	GEAR,   ## dişli (AYARLAR) — sona eklendi
 	MAP,    ## katlanmış harita + iğne (HARİTA) — sona eklendi
+	# GARAJI DÜZENLE ikonları — sona eklendi (sahnelerdeki kayıtlı numaralar değişmez)
+	GRID,      ## ızgara (yapış)
+	UNDO,      ## geri al oku
+	CHECK,     ## onay (yerleştir / bitir)
+	CROSS,     ## iptal (vazgeç / sök)
+	BOX,       ## depo kutusu (depoya kaldır)
+	ROLLER,    ## boya rulosu (fırça)
+	AREA,      ## kesik çizgili alan (dikdörtgen)
+	BUCKET,    ## boya kovası (doldur)
+	PICKER,    ## damlalık (desen al)
+	ERASER,    ## silgi
+	BRICKS,    ## tuğla duvar (ör)
+	HAMMER,    ## çekiç (sök)
+	LOCK,      ## kilit (rütbede açılır)
+	CHAIR,     ## koltuk (eşyalar)
+	TILES,     ## dama karo (zemin)
 }
 
 @export var kind: Kind = Kind.COIN:
@@ -99,6 +115,36 @@ static func draw_icon(ci: CanvasItem, kind: Kind, c: Vector2, s: float, ink: Col
 			_gear(ci, c, s, ink, cutout)
 		Kind.MAP:
 			_map(ci, c, s, ink, cutout, w)
+		Kind.GRID:
+			_grid(ci, c, s, ink, w)
+		Kind.UNDO:
+			_undo(ci, c, s, ink, w)
+		Kind.CHECK:
+			_check(ci, c, s, ink)
+		Kind.CROSS:
+			_cross(ci, c, s, ink)
+		Kind.BOX:
+			_box(ci, c, s, ink, cutout, w)
+		Kind.ROLLER:
+			_roller(ci, c, s, ink, cutout, w)
+		Kind.AREA:
+			_area(ci, c, s, ink, w)
+		Kind.BUCKET:
+			_bucket(ci, c, s, ink, cutout, w)
+		Kind.PICKER:
+			_picker(ci, c, s, ink, w)
+		Kind.ERASER:
+			_eraser(ci, c, s, ink, cutout)
+		Kind.BRICKS:
+			_bricks(ci, c, s, ink, cutout, w)
+		Kind.HAMMER:
+			_hammer(ci, c, s, ink)
+		Kind.LOCK:
+			_lock(ci, c, s, ink, cutout, w)
+		Kind.CHAIR:
+			_chair(ci, c, s, ink, cutout)
+		Kind.TILES:
+			_tiles(ci, c, s, ink, cutout)
 		_:
 			pass
 
@@ -281,6 +327,139 @@ static func _rotate(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) 
 	ci.draw_colored_polygon(PackedVector2Array([
 		base + tangent * s * 0.20, base + radial * s * 0.14, base - radial * s * 0.14,
 	]), ink)
+
+
+# --- Garajı düzenle ----------------------------------------------------------
+
+static func _grid(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) -> void:
+	var r: Rect2 = Rect2(c - Vector2(0.40, 0.40) * s, Vector2(0.80, 0.80) * s)
+	ci.draw_rect(r, ink, false, w, true)
+	for k: float in [1.0 / 3.0, 2.0 / 3.0]:
+		ci.draw_line(r.position + Vector2(r.size.x * k, 0.0), r.position + Vector2(r.size.x * k, r.size.y), ink, w * 0.6, true)
+		ci.draw_line(r.position + Vector2(0.0, r.size.y * k), r.position + Vector2(r.size.x, r.size.y * k), ink, w * 0.6, true)
+
+
+## Geri al: üstten sola dönen yay, ucu solda aşağı bakan ok.
+static func _undo(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) -> void:
+	var o: Vector2 = c + Vector2(0.06, 0.10) * s
+	var r: float = s * 0.30
+	ci.draw_arc(o, r, deg_to_rad(-200.0), deg_to_rad(40.0), 24, ink, w * 1.1, true)
+	var tip: Vector2 = o + Vector2.from_angle(deg_to_rad(-200.0)) * r
+	ci.draw_colored_polygon(PackedVector2Array([
+		tip + Vector2(-0.18, -0.02) * s, tip + Vector2(0.14, -0.06) * s, tip + Vector2(-0.04, 0.20) * s,
+	]), ink)
+
+
+static func _check(ci: CanvasItem, c: Vector2, s: float, ink: Color) -> void:
+	ci.draw_polyline(_pts(c, s, PackedVector2Array([Vector2(-0.36, 0.0), Vector2(-0.10, 0.26), Vector2(0.38, -0.28)])),
+		ink, s * 0.16, true)
+
+
+static func _cross(ci: CanvasItem, c: Vector2, s: float, ink: Color) -> void:
+	ci.draw_line(c + Vector2(-0.30, -0.30) * s, c + Vector2(0.30, 0.30) * s, ink, s * 0.15, true)
+	ci.draw_line(c + Vector2(0.30, -0.30) * s, c + Vector2(-0.30, 0.30) * s, ink, s * 0.15, true)
+
+
+## Depo kutusu: gövde + açık kapak kanatları, içine inen ok.
+static func _box(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+	_rect(ci, c, s, Vector2(-0.40, -0.02), Vector2(0.80, 0.46), ink)
+	_poly(ci, c, s, PackedVector2Array([Vector2(-0.40, -0.02), Vector2(-0.50, -0.20), Vector2(-0.10, -0.20), Vector2(0.0, -0.02)]), ink)
+	_poly(ci, c, s, PackedVector2Array([Vector2(0.40, -0.02), Vector2(0.50, -0.20), Vector2(0.10, -0.20), Vector2(0.0, -0.02)]), ink)
+	_rect(ci, c, s, Vector2(-0.14, 0.08), Vector2(0.28, 0.08), cutout)   # tutamak
+	ci.draw_line(c + Vector2(0.0, -0.52) * s, c + Vector2(0.0, -0.26) * s, ink, w * 1.1, true)
+	_poly(ci, c, s, PackedVector2Array([Vector2(-0.12, -0.30), Vector2(0.12, -0.30), Vector2(0.0, -0.16)]), ink)
+
+
+## Boya rulosu: üstte rulo, sapı aşağı iner.
+static func _roller(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+	_round_rect(ci, c, s, Vector2(-0.42, -0.42), Vector2(0.70, 0.26), 0.08, ink)
+	_rect(ci, c, s, Vector2(-0.34, -0.34), Vector2(0.10, 0.10), cutout)  # parlama
+	ci.draw_polyline(_pts(c, s, PackedVector2Array([Vector2(0.28, -0.29), Vector2(0.40, -0.29), Vector2(0.40, -0.06),
+		Vector2(-0.04, -0.06), Vector2(-0.04, 0.12)])), ink, w, true)
+	_round_rect(ci, c, s, Vector2(-0.10, 0.10), Vector2(0.12, 0.36), 0.05, ink)
+
+
+static func _area(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) -> void:
+	var r: Rect2 = Rect2(c - Vector2(0.36, 0.32) * s, Vector2(0.72, 0.64) * s)
+	var corners: PackedVector2Array = PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y), r.position])
+	for i: int in 4:
+		ci.draw_dashed_line(corners[i], corners[i + 1], ink, w * 0.9, s * 0.12, true, true)
+	for i: int in 4:
+		ci.draw_rect(Rect2(corners[i] - Vector2.ONE * s * 0.07, Vector2.ONE * s * 0.14), ink, true)
+
+
+## Kova: eğik gövde, ağzından damla.
+static func _bucket(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+	_poly(ci, c, s, PackedVector2Array([Vector2(-0.44, -0.12), Vector2(0.12, -0.38), Vector2(0.30, 0.14), Vector2(-0.16, 0.36)]), ink)
+	ci.draw_line(c + Vector2(-0.38, -0.10) * s, c + Vector2(0.08, -0.32) * s, cutout, w * 0.6, true)  # ağız
+	ci.draw_arc(c + Vector2(-0.10, -0.30) * s, s * 0.22, PI, TAU * 0.92, 12, ink, w * 0.8, true)    # sap
+	ci.draw_circle(c + Vector2(0.38, 0.30) * s, s * 0.10, ink, true, -1.0, true)                      # damla
+	_poly(ci, c, s, PackedVector2Array([Vector2(0.30, 0.26), Vector2(0.46, 0.26), Vector2(0.38, 0.10)]), ink)
+
+
+## Damlalık: çapraz cam tüp + üstte lastik puar.
+static func _picker(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) -> void:
+	ci.draw_line(c + Vector2(-0.38, 0.38) * s, c + Vector2(0.10, -0.10) * s, ink, s * 0.13, true)
+	ci.draw_line(c + Vector2(-0.44, 0.44) * s, c + Vector2(-0.34, 0.34) * s, ink, w * 0.6, true)
+	ci.draw_line(c + Vector2(0.0, -0.20) * s, c + Vector2(0.20, 0.0) * s, ink, s * 0.12, true)   # bilezik
+	ci.draw_circle(c + Vector2(0.24, -0.24) * s, s * 0.17, ink, true, -1.0, true)                 # puar
+
+
+## Silgi: eğik dikdörtgen, ucu açık renkli.
+static func _eraser(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+	var body: PackedVector2Array = PackedVector2Array([Vector2(-0.46, 0.12), Vector2(0.06, -0.40), Vector2(0.40, -0.06), Vector2(-0.12, 0.46)])
+	_poly(ci, c, s, body, ink)
+	_poly(ci, c, s, PackedVector2Array([Vector2(-0.40, 0.12), Vector2(-0.20, -0.08), Vector2(0.10, 0.22), Vector2(-0.10, 0.40)]), cutout)
+	ci.draw_line(c + Vector2(-0.10, 0.46) * s, c + Vector2(0.42, 0.46) * s, ink, s * 0.06, true)   # zemin çizgisi
+
+
+## Tuğla duvar: üç sıra, aralar oyuk.
+static func _bricks(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+	_rect(ci, c, s, Vector2(-0.46, -0.36), Vector2(0.92, 0.72), ink)
+	for row: int in 2:
+		var y: float = -0.12 + row * 0.24
+		ci.draw_line(c + Vector2(-0.46, y) * s, c + Vector2(0.46, y) * s, cutout, w * 0.55, true)
+	for x: float in [-0.10, 0.26]:
+		ci.draw_line(c + Vector2(x, -0.36) * s, c + Vector2(x, -0.12) * s, cutout, w * 0.55, true)
+		ci.draw_line(c + Vector2(x, 0.12) * s, c + Vector2(x, 0.36) * s, cutout, w * 0.55, true)
+	for x: float in [-0.28, 0.08]:
+		ci.draw_line(c + Vector2(x, -0.12) * s, c + Vector2(x, 0.12) * s, cutout, w * 0.55, true)
+
+
+## Çekiç: çapraz sap + başlık.
+static func _hammer(ci: CanvasItem, c: Vector2, s: float, ink: Color) -> void:
+	ci.draw_line(c + Vector2(-0.36, 0.40) * s, c + Vector2(0.12, -0.08) * s, ink, s * 0.14, true)
+	_poly(ci, c, s, PackedVector2Array([Vector2(-0.10, -0.24), Vector2(0.18, -0.52), Vector2(0.46, -0.24), Vector2(0.18, 0.04)]), ink)
+
+
+static func _lock(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+	ci.draw_arc(c + Vector2(0.0, -0.08) * s, s * 0.22, PI, TAU, 16, ink, w * 1.4, true)
+	ci.draw_line(c + Vector2(-0.22, -0.08) * s, c + Vector2(-0.22, 0.04) * s, ink, w * 1.4, true)
+	ci.draw_line(c + Vector2(0.22, -0.08) * s, c + Vector2(0.22, 0.04) * s, ink, w * 1.4, true)
+	_round_rect(ci, c, s, Vector2(-0.36, 0.0), Vector2(0.72, 0.46), 0.08, ink)
+	ci.draw_circle(c + Vector2(0.0, 0.16) * s, s * 0.07, cutout, true, -1.0, true)
+	_rect(ci, c, s, Vector2(-0.03, 0.18), Vector2(0.06, 0.14), cutout)
+
+
+## Koltuk: arkalık + kolçaklar + oturak + ayaklar.
+static func _chair(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+	_round_rect(ci, c, s, Vector2(-0.32, -0.40), Vector2(0.64, 0.44), 0.10, ink)   # arkalık
+	_round_rect(ci, c, s, Vector2(-0.48, -0.10), Vector2(0.20, 0.42), 0.08, ink)   # kolçaklar
+	_round_rect(ci, c, s, Vector2(0.28, -0.10), Vector2(0.20, 0.42), 0.08, ink)
+	_round_rect(ci, c, s, Vector2(-0.30, 0.04), Vector2(0.60, 0.22), 0.06, ink)    # oturak
+	ci.draw_line(c + Vector2(-0.30, 0.10) * s, c + Vector2(0.30, 0.10) * s, cutout, maxf(1.0, s * 0.04), true)
+	_rect(ci, c, s, Vector2(-0.42, 0.30), Vector2(0.08, 0.14), ink)
+	_rect(ci, c, s, Vector2(0.34, 0.30), Vector2(0.08, 0.14), ink)
+
+
+## Dama karo: 3 × 3, köşeleri dolu.
+static func _tiles(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+	var cell: float = 0.27
+	_rect(ci, c, s, Vector2(-0.43, -0.43), Vector2(0.86, 0.86), ink)
+	for i: int in 3:
+		for j: int in 3:
+			if (i + j) % 2 == 1:
+				_rect(ci, c, s, Vector2(-0.405 + i * cell, -0.405 + j * cell), Vector2(cell - 0.03, cell - 0.03), cutout)
 
 
 # --- Para birimleri ----------------------------------------------------------
