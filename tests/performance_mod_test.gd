@@ -273,9 +273,34 @@ func _run() -> void:
 	check(cards == 6, "altta 6 parça kartı, hepsinde 3D ikon")
 	var list_scroll: Control = garage.find_child("CarListScroll", true, false)
 	check(list_scroll != null and not list_scroll.is_visible_in_tree(), "araç şeridi gizli")
-	(garage.find_child("Part_gear", true, false) as PlateButton).button_pressed = true
+	for i: int in 40:   # önizlemeler kare kare ölçülür
+		await process_frame
+	var advice: Control = garage.find_child("ModAdvice", true, false)
+	check(advice != null and advice.is_visible_in_tree(), "ÖNERİLEN plakası (₺ başına en çok kazandıran kategori)")
+	check(PerformanceMods.CATEGORIES.has(PerformanceMods.recommend(passat)), "öneri: %s" % PerformanceMods.recommend(passat))
+	(garage.find_child("Part_gear", true, false) as PlateButton).pressed.emit()
+	await frames(2)
+	var workshop: ModWorkshop = garage.find_child("ModWorkshop", true, false)
+	check(workshop.in_category() and workshop.category == &"gear", "ŞANZIMAN kategorisine girildi")
+	var stage_cards: int = 0
+	for s: int in range(1, 6):
+		var stage_card: PlateButton = garage.find_child("Stage_%d" % s, true, false)
+		if stage_card and stage_card.is_visible_in_tree() and (stage_card.get_node("Icon") as TextureRect).texture != null:
+			stage_cards += 1
+	check(stage_cards == 5, "5 kademe kartı (SOKAK … EFSANE), hepsinde 3D ikon")
+	check(workshop.selected_stage == 1, "sıradaki kademe seçili")
+	for i: int in 20:
+		await process_frame
+	var dyno_rows: Array = workshop._dyno.data.get("rows", [])
+	check(dyno_rows.size() == 4 and float(dyno_rows[1]["frac_after"]) > float(dyno_rows[1]["frac_now"]),
+		"dinamometre: 4 çubuk, son hız çubuğunda yeşil kazanç")
+	check(String(dyno_rows[0]["delta"]).begins_with("−"), "0-100 kazancı: %s" % dyno_rows[0]["delta"])
+	(garage.find_child("Stage_3", true, false) as PlateButton).button_pressed = true
 	await frames(2)
 	var upgrade: PlateButton = garage.find_child("UpgradeButton", true, false)
+	check(upgrade.disabled and upgrade.text == "ÖNCE SOKAK", "ileri kademe seçilince: ÖNCE SOKAK")
+	(garage.find_child("Stage_1", true, false) as PlateButton).button_pressed = true
+	await frames(2)
 	check(upgrade != null and not upgrade.disabled, "YÜKSELT açık (ŞANZIMAN SOKAK)")
 	upgrade.pressed.emit()
 	await frames(2)
@@ -293,7 +318,16 @@ func _run() -> void:
 	await frames(5)
 	garage.open_mods()
 	await frames(3)
-	check(upgrade.disabled and upgrade.text == "PARÇA TAKILIYOR", "takma sürerken YÜKSELT kapalı")
+	(garage.find_child("Part_turbo", true, false) as PlateButton).pressed.emit()
+	await frames(2)
+	check(upgrade.disabled and upgrade.text == "PARÇA TAKILIYOR", "takma sürerken başka parça alınamaz")
+	garage.call(&"_on_exit_pressed")
+	await frames(2)
+	check(garage.is_modding() and not workshop.in_category(), "GERİ: kategoriden genel bakışa")
+	(garage.find_child("Part_gear", true, false) as PlateButton).pressed.emit()
+	await frames(2)
+	check(not upgrade.disabled and upgrade.text == "HEMEN BİTİR", "takılan parçanın kartında HEMEN BİTİR")
+	garage.call(&"_on_exit_pressed")
 	garage.call(&"_on_exit_pressed")
 	await frames(3)
 	check(not garage.is_modding() and garage.visible and list_scroll.is_visible_in_tree(), "GERİ: araç listesine döndü")

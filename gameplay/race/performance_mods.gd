@@ -370,6 +370,7 @@ static func measure(vehicle_id: StringName, build: Dictionary) -> Dictionary:
 	var band_count: int = 0
 	var prev_speed: float = 0.0
 	var t300: float = -1.0
+	var spin: float = 0.0
 	while (t300 < 0.0 or tref < 0.0) and t < SINGLE_LIMIT:
 		t += DragRaceSim.STEP
 		runner.step(DragRaceSim.STEP, t)
@@ -383,6 +384,7 @@ static func measure(vehicle_id: StringName, build: Dictionary) -> Dictionary:
 			tref = band_sum / float(REF_BAND)
 		if t300 < 0.0 and runner.finish_time >= 0.0:
 			t300 = runner.finish_time
+			spin = runner.spin_time
 		if runner.finish_time >= 0.0:
 			runner.finish_time = -1.0   # 300 m'de durma: yavaş araç karşılaştırma hızına sonra ulaşır
 			runner.distance = 0.0
@@ -392,10 +394,16 @@ static func measure(vehicle_id: StringName, build: Dictionary) -> Dictionary:
 	var power: float = spec.peak_torque_nm * spec.peak_power_rpm / (base.peak_torque_nm * base.peak_power_rpm)
 	var drag: float = spec.frontal_area / base.frontal_area
 	var top: float = pow(power / drag, 1.0 / 3.0) * (1.0 + GEAR_TOP_DISPLAY[int(clean.get(&"gear", 0))])
-	var out: Dictionary = {"tref": maxf(tref, 0.001), "t300": t300 if t300 > 0.0 else SINGLE_LIMIT, "power": power,
+	var out: Dictionary = {"tref": maxf(tref, 0.001), "t300": t300 if t300 > 0.0 else SINGLE_LIMIT, "spin": spin,
+		"power": power,
 		"top": top}
 	_measures[key] = out
 	return out
+
+
+## Bu yapı ölçülmüş mü (önbellekte)? Arayüz ölçülmemiş önizlemeleri kare kare hesaplar (telefonda takılmasın).
+static func is_measured(vehicle_id: StringName, build: Dictionary) -> bool:
+	return _measures.has(String(vehicle_id) + "|" + build_key(normalized(build)))
 
 
 ## Fabrikaya göre gösterilen 0-100 oranı, ölçülen haliyle (taban uygulanmamış).
@@ -444,6 +452,109 @@ static func performance_ratio(vehicle_id: StringName) -> float:
 		return DragRaceSim.performance_ratio(vehicle_id)
 	var zero_100: float = float(stats(vehicle_id)["zero_100"])
 	return DragRaceSim.performance_ratio_of(zero_100) if zero_100 > 0.0 else DragRaceSim.performance_ratio(vehicle_id)
+
+
+## --- Parça plakası: etkinin tarifi, teknik değerler, güç eğrisi, öneri ---
+
+## Kademenin ÖNCEKİ kademeye göre fiziksel etkisi, bu aracın motor profiliyle ("Tork +%1,5 · bütün devir bandı").
+static func effect_text(vehicle_id: StringName, category: StringName, stage: int) -> String:
+	var p: Dictionary = PROFILES[profile_of(vehicle_id)]
+	var s: int = clampi(stage, 1, STAGES)
+	var d: Callable = func(table: Array[float], scale: float = 1.0) -> float:
+		return (table[s] - table[s - 1]) * scale * 100.0
+	var pct: Callable = func(value: float) -> String:
+		return ("%.1f" % absf(value)).replace(".", ",") if Loc.current() != "en" else "%.1f" % absf(value)
+	var parts: PackedStringArray = PackedStringArray()
+	match category:
+		&"motor":
+			parts.append(Loc.t("Tork +%%%s") % pct.call(d.call(MOTOR_TORQUE, float(p["motor"]))))
+			parts.append(Loc.t("bütün devir bandı"))
+		&"turbo":
+			parts.append(Loc.t("Tork +%%%s") % pct.call(d.call(TURBO_TORQUE, float(p["turbo"]))))
+			if float(p["lag"]) > 0.0:
+				parts.append(Loc.t("tepe tork %%%s yukarı (gecikme)") % pct.call(d.call(TURBO_LAG, float(p["lag"]))))
+		&"air":
+			if float(p["rev"]) > 0.0:
+				parts.append(Loc.t("Devir sınırı +%%%s") % pct.call(d.call(AIR_REV, float(p["rev"]))))
+			parts.append(Loc.t("tork +%%%s") % pct.call(d.call(AIR_TORQUE, float(p["air"]))))
+		&"gear":
+			parts.append(Loc.t("Vites geçişi −%d ms") % roundi(85.0 * (GEAR_SHIFT[s - 1] - GEAR_SHIFT[s])))
+			parts.append(Loc.t("son vites +%%%s") % pct.call(d.call(GEAR_RACE_TOP)))
+			if GEAR_INERTIA[s] > GEAR_INERTIA[s - 1]:
+				parts.append(Loc.t("hafif volan"))
+			if GEAR_LOW[s] > GEAR_LOW[s - 1]:
+				parts.append(Loc.t("kısa alt vitesler"))
+		&"tire":
+			parts.append(Loc.t("Tutuş +%%%s") % pct.call(d.call(TIRE_GRIP)))
+			if TIRE_INERTIA[s] > TIRE_INERTIA[s - 1]:
+				parts.append(Loc.t("dönen kütle −%%%s") % pct.call(d.call(TIRE_INERTIA)))
+		&"body":
+			parts.append(Loc.t("Ağırlık −%%%s") % pct.call(d.call(BODY_MASS)))
+			if BODY_DRAG[s] > BODY_DRAG[s - 1]:
+				parts.append(Loc.t("hava direnci −%%%s") % pct.call(d.call(BODY_DRAG)))
+	return " · ".join(parts)
+
+
+## Parça plakasının teknik satırları (bu yapıyla): tork / devir sınırı (gösterge ölçeğinde), vites geçişi (ms),
+## tutuş (fabrikaya göre %), ağırlık (kg), hava direnci (%), kalkış patinajı (sn).
+static func tech(vehicle_id: StringName, build: Dictionary) -> Dictionary:
+	var base: DragRaceSim.EngineSpec = DragRaceSim.spec_of(vehicle_id)
+	var spec: DragRaceSim.EngineSpec = spec_with(vehicle_id, build)
+	var clean: Dictionary = normalized(build)
+	var b: int = int(clean.get(&"body", 0))
+	var curve: Dictionary = power_curve(vehicle_id, clean)
+	return {
+		"torque": spec.peak_torque_nm * float(curve["scale"]),
+		"redline": spec.redline_rpm,
+		"shift_ms": 85.0 * spec.shift_time_scale,
+		"grip": (spec.grip_mu / base.grip_mu - 1.0) * 100.0,
+		"mass": base.mass * (1.0 - BODY_MASS[b]),
+		"drag": (spec.frontal_area / base.frontal_area - 1.0) * 100.0,
+		"spin": float(measure(vehicle_id, clean).get("spin", 0.0)) if is_measured(vehicle_id, clean) else -1.0,
+	}
+
+
+## GÜÇ EĞRİSİ (dinamometre): devir → beygir, gösterge ölçeğinde (fabrika tepe gücü = katalog beygiri).
+## {"points": PackedVector2Array (rpm, bg), "peak": bg, "peak_rpm": rpm, "scale": tork ölçeği}
+static func power_curve(vehicle_id: StringName, build: Dictionary, samples: int = 40) -> Dictionary:
+	var base: DragRaceSim.EngineSpec = DragRaceSim.spec_of(vehicle_id)
+	var spec: DragRaceSim.EngineSpec = spec_with(vehicle_id, build)
+	var catalog_hp: float = float(CarCatalog.get_entry(vehicle_id).get("performance", {}).get("hp", 0))
+	var stock_peak: float = 0.0
+	for i: int in samples:
+		var rpm: float = lerpf(base.idle_rpm, base.redline_rpm, float(i) / float(samples - 1))
+		stock_peak = maxf(stock_peak, DragRaceSim.torque_fraction(rpm, base) * base.peak_torque_nm * rpm / 7121.0)
+	var scale: float = catalog_hp / stock_peak if catalog_hp > 0.0 and stock_peak > 0.0 else 1.0
+	var points: PackedVector2Array = PackedVector2Array()
+	var peak: float = 0.0
+	var peak_rpm: float = 0.0
+	for i: int in samples:
+		var rpm: float = lerpf(spec.idle_rpm, spec.redline_rpm * 0.999, float(i) / float(samples - 1))
+		var hp: float = DragRaceSim.torque_fraction(rpm, spec) * spec.peak_torque_nm * rpm / 7121.0 * scale
+		points.append(Vector2(rpm, hp))
+		if hp > peak:
+			peak = hp
+			peak_rpm = rpm
+	return {"points": points, "peak": peak, "peak_rpm": peak_rpm, "scale": scale}
+
+
+## ÖNERİLEN: sıradaki kademesi alınabilecek kategoriler arasında ₺ başına en çok 300 m kazandıran (yarışın
+## kendisi). Ölçülmemiş yapı varsa ölçer — çağıran ölçümleri önceden ısıtmalıdır (is_measured).
+static func recommend(vehicle_id: StringName) -> StringName:
+	var build: Dictionary = _builds.get(vehicle_id, {})
+	var now: float = float(measure(vehicle_id, build)["t300"])
+	var best: StringName = &""
+	var best_value: float = 0.0
+	for category: StringName in CATEGORIES:
+		var stage: int = stage_of(vehicle_id, category) + 1
+		if stage > STAGES:
+			continue
+		var gain: float = now - float(measure(vehicle_id, with_stage(build, category, stage))["t300"])
+		var value: float = gain / float(maxi(price(vehicle_id, category, stage), 1))
+		if value > best_value:
+			best_value = value
+			best = category
+	return best
 
 
 ## Oyuncu aracının kusursuz 300 m süresi (rakip havuzu ve GENEL bunu kullanır).

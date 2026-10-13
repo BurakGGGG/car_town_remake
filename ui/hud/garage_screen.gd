@@ -256,6 +256,10 @@ func _ready() -> void:
 	_workshop.upgrade_requested.connect(func(id: StringName, category: StringName) -> void:
 		mod_upgrade_requested.emit(id, category))
 	_workshop.gem_store_requested.connect(func() -> void: screen_requested.emit(&"gem_store"))
+	_workshop.title_changed.connect(_set_title)
+	_workshop.layout_changed.connect(func() -> void:
+		_fit_mod_column.call_deferred()
+		_place_car_list.call_deferred())
 	_apply_responsive_layout()
 	get_viewport().size_changed.connect(_apply_responsive_layout)
 
@@ -1064,9 +1068,11 @@ func is_modding() -> bool:
 	return _workshop != null and _workshop.is_active()
 
 
-## GERİ: modifiye kipindeyse araç listesine, değilse garajdan çık.
+## GERİ: modifiye kategorisindeyse genel bakışa, modifiye kipindeyse araç listesine, değilse garajdan çık.
 func _on_exit_pressed() -> void:
-	if is_modding():
+	if is_modding() and _workshop.in_category():
+		_workshop.show_overview()
+	elif is_modding():
 		_close_mods()
 	else:
 		close()
@@ -1080,7 +1086,7 @@ func _fit_mod_column() -> void:
 	left_group.offset_left = 0.0
 	left_group.offset_top = COLUMN_TOP
 	left_group.offset_right = left_group.get_combined_minimum_size().x
-	left_group.offset_bottom = COLUMN_TOP + _workshop.stats.get_combined_minimum_size().y
+	left_group.offset_bottom = COLUMN_TOP + _workshop.left_panel().get_combined_minimum_size().y
 	if _group_targets.has(left_group):
 		_group_targets[left_group] = left_group.position
 

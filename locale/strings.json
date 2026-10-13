@@ -1,4 +1,7 @@
 {
+ "\nKALKIŞ PATİNAJI  %s → %s sn": [
+  "ui/hud/mod_workshop.gd:519"
+ ],
  "  ·  %d ÖDÜL HAZIR": [
   "ui/hud/profile_screen.gd:154"
  ],
@@ -19,7 +22,7 @@
   "ui/hud/repair_panel.gd:453"
  ],
  " · %d HP": [
-  "ui/hud/garage_screen.gd:923"
+  "ui/hud/garage_screen.gd:927"
  ],
  "%d   USTA": [
   "ui/hud/mastery_screen.gd:124"
@@ -36,7 +39,7 @@
  "%d GEM": [
   "ui/hud/gem_store_screen.gd:165",
   "ui/hud/restoration_panel.gd:295",
-  "ui/hud/mod_workshop.gd:313",
+  "ui/hud/mod_workshop.gd:572",
   "ui/hud/showroom_screen.gd:965",
   "ui/hud/showroom_screen.gd:985",
   "ui/hud/paint_panel.gd:192"
@@ -48,11 +51,14 @@
   "ui/hud/restoration_panel.gd:322",
   "ui/hud/restoration_panel.gd:336"
  ],
+ "%d bg @ %s d/dk": [
+  "ui/hud/mod_dyno.gd:126"
+ ],
  "%d km/sa": [
-  "ui/hud/mod_workshop.gd:237"
+  "ui/hud/mod_workshop.gd:404"
  ],
  "%d sa %d dk": [
-  "ui/hud/mod_workshop.gd:419"
+  "ui/hud/mod_workshop.gd:793"
  ],
  "%d ÖDÜLÜN TOPLAMI": [
   "ui/hud/reward_popup.gd:58"
@@ -131,7 +137,7 @@
   "gameplay/missions/mission_catalog.gd:80"
  ],
  "%s HAZIR\nTamir alanındaki araca dokun": [
-  "ui/hud/mod_workshop.gd:367"
+  "ui/hud/mod_workshop.gd:637"
  ],
  "%s KASA AÇ": [
   "gameplay/missions/mission_catalog.gd:56",
@@ -261,7 +267,7 @@
  ],
  "%s → %s SINIFI!": [
   "ui/hud/hud.gd:493",
-  "ui/hud/mod_workshop.gd:287"
+  "ui/hud/mod_workshop.gd:499"
  ],
  "%s. seviyeye ulaş": [
   "gameplay/missions/mission_catalog.gd:107"
@@ -320,13 +326,13 @@
  "-%%%d TAMİR SÜRESİ": [
   "gameplay/progression_effects.gd:112"
  ],
- "0-100  %s → %s sn": [
-  "ui/hud/mod_workshop.gd:276"
- ],
  "0-100 %s sn · %d km/sa": [
-  "ui/hud/garage_screen.gd:940",
-  "ui/hud/garage_screen.gd:942",
+  "ui/hud/garage_screen.gd:944",
+  "ui/hud/garage_screen.gd:946",
   "ui/hud/race_challenge_screen.gd:163"
+ ],
+ "0-100 %s sn · 300 m %s sn\n%s ₺ başına en çok kazanç": [
+  "ui/hud/mod_workshop.gd:428"
  ],
  "100 tamir tamamla": [
   "gameplay/quest_catalog.gd:49"
@@ -352,9 +358,6 @@
  "3. tamir alanını satın al": [
   "gameplay/quest_catalog.gd:46"
  ],
- "300 m  %s → %s sn": [
-  "ui/hud/mod_workshop.gd:285"
- ],
  "3B çözünürlük %70: zayıf telefonlar için en akıcı seçenek.": [
   "ui/hud/settings_screen.gd:493"
  ],
@@ -362,7 +365,7 @@
   "gameplay/quest_catalog.gd:50"
  ],
  "4 ÇEKER": [
-  "ui/hud/garage_screen.gd:916"
+  "ui/hud/garage_screen.gd:920"
  ],
  "5 FARKLI GÜN OYNA": [
   "gameplay/missions/mission_catalog.gd:79"
@@ -402,7 +405,7 @@
   "ui/tutorial/tutorial_director.gd:773"
  ],
  "ARACI SAT": [
-  "ui/hud/garage_screen.gd:764"
+  "ui/hud/garage_screen.gd:768"
  ],
  "ARANABİLİR YIĞIN  %d": [
   "ui/hud/junkyard_screen.gd:712"
@@ -426,7 +429,7 @@
   "ui/hud/hud.tscn:295",
   "ui/hud/garage_screen.gd:222",
   "ui/hud/garage_screen.gd:225",
-  "ui/hud/garage_screen.gd:1058",
+  "ui/hud/garage_screen.gd:1062",
   "ui/hud/garage_value_screen.gd:139",
   "ui/hud/garage_edit_screen.gd:489",
   "ui/hud/garage_edit_screen.gd:507"
@@ -441,7 +444,7 @@
   "ui/hud/repair_panel.gd:94"
  ],
  "ARKADAN İTİŞ": [
-  "ui/hud/garage_screen.gd:915"
+  "ui/hud/garage_screen.gd:919"
  ],
  "ARKADAŞ GARAJI": [
   "ui/hud/visit_bar.gd:45"
@@ -614,6 +617,12 @@
  "Açık renk ahşap parke.": [
   "decor/decorations.json:wood_light.desc"
  ],
+ "AĞIRLIK  %s → %s kg\nHAVA DİRENCİ  %%%d": [
+  "ui/hud/mod_workshop.gd:526"
+ ],
+ "Ağırlık −%%%s": [
+  "gameplay/race/performance_mods.gd:492"
+ ],
  "AİLE": [
   "vehicles/crates.json:family_crate.short_name"
  ],
@@ -711,7 +720,7 @@
  ],
  "BOYA": [
   "gameplay/repair/repair_type.gd:64",
-  "ui/hud/garage_screen.gd:970",
+  "ui/hud/garage_screen.gd:974",
   "ui/hud/garage_value_screen.gd:142",
   "ui/hud/paint_panel.gd:158",
   "vehicles/restorations.json:parts.paint"
@@ -815,9 +824,6 @@
  ],
  "Bu iş sabır ister. Sende o göz var.": [
   "ui/hud/junkyard_screen.gd:37"
- ],
- "Bu kategoride en üst kademe takılı.": [
-  "ui/hud/mod_workshop.gd:264"
  ],
  "Bu kodla bir oyuncu bulunamadı.": [
   "gameplay/social/social_manager.gd:614",
@@ -1024,6 +1030,9 @@
  "DEVİR SINIRI": [
   "gameplay/race/drag_race_sim.gd:699"
  ],
+ "DEVİR SINIRI  %s → %s d/dk\nTORK  %d → %d Nm": [
+  "ui/hud/mod_workshop.gd:511"
+ ],
  "DEVİR SINIRI!  VİTES AT": [
   "ui/hud/drag_race_screen.gd:893"
  ],
@@ -1098,6 +1107,9 @@
  "Derzli beton blok.": [
   "decor/decorations.json:wall_block.desc"
  ],
+ "Devir sınırı +%%%s": [
+  "gameplay/race/performance_mods.gd:478"
+ ],
  "Dil değişince oyun yeni dille yeniden açılır; ilerlemen korunur.": [
   "ui/hud/settings_screen.gd:259"
  ],
@@ -1159,6 +1171,12 @@
  "Dünya Sınırları (zemin X/Z — ekranın hiçbir köşesi dışarı taşmaz)": [
   "world_camera.gd:19"
  ],
+ "DİNAMOMETRE": [
+  "ui/hud/mod_workshop.gd:316"
+ ],
+ "DİNAMOMETRE · %s": [
+  "ui/hud/mod_workshop.gd:456"
+ ],
  "DİŞLİ": [
   "vehicles/restorations.json:parts.gear"
  ],
@@ -1174,9 +1192,6 @@
  "EFSANE GARAJ SAHİBİ": [
   "gameplay/missions/mission_catalog.gd:114"
  ],
- "EFSANE ✔": [
-  "ui/hud/mod_workshop.gd:267"
- ],
  "EKLE": [
   "ui/hud/friends_screen.gd:140"
  ],
@@ -1184,7 +1199,7 @@
   "ui/hud/restoration_panel.gd:247"
  ],
  "ELEKTRİK": [
-  "ui/hud/garage_screen.gd:919"
+  "ui/hud/garage_screen.gd:923"
  ],
  "ELMAS SAC": [
   "decor/decorations.json:diamond_silver.title"
@@ -1388,8 +1403,8 @@
   "ui/hud/gem_store_screen.gd:131"
  ],
  "GENEL": [
-  "ui/hud/mod_workshop.gd:173",
-  "ui/hud/garage_screen.gd:846"
+  "ui/hud/mod_workshop.gd:293",
+  "ui/hud/garage_screen.gd:850"
  ],
  "GENEL  %d": [
   "ui/hud/race_challenge_screen.gd:152"
@@ -1602,10 +1617,11 @@
   "ui/tutorial/tutorial_director.gd:576"
  ],
  "GÜÇ": [
-  "ui/hud/mod_workshop.gd:172"
+  "ui/hud/mod_workshop.gd:292",
+  "ui/hud/mod_workshop.gd:469"
  ],
- "GÜÇ  %d → %d bg": [
-  "ui/hud/mod_workshop.gd:279"
+ "GÜÇ EĞRİSİ": [
+  "ui/hud/mod_dyno.gd:124"
  ],
  "Gümüş kabartmalı sac.": [
   "decor/decorations.json:diamond_silver.desc"
@@ -1620,7 +1636,7 @@
   "ui/tutorial/tutorial_director.gd:530"
  ],
  "Güç patinaja gidiyor: önce LASTİK": [
-  "ui/hud/mod_workshop.gd:281"
+  "ui/hud/mod_workshop.gd:497"
  ],
  "GİRİLMEZ LEVHASI": [
   "decor/decorations.json:sign_no_entry.title"
@@ -1688,6 +1704,7 @@
   "decor/decorations.json:vent_grille.title"
  ],
  "HAZIR": [
+  "ui/hud/mod_workshop.gd:713",
   "ui/hud/repair_panel.gd:327",
   "world/performance_bay_display.gd:57",
   "world/restoration_display.gd:72"
@@ -1710,7 +1727,7 @@
   "ui/loading/loading_screen.gd:113"
  ],
  "HEMEN BİTİR": [
-  "ui/hud/mod_workshop.gd:312"
+  "ui/hud/mod_workshop.gd:571"
  ],
  "HEPSİNİ AL": [
   "ui/hud/mission_screen.gd:132"
@@ -1918,7 +1935,7 @@
   "ui/hud/login_screen.gd:334",
   "ui/hud/profile_screen.gd:105",
   "ui/hud/collection_screen.gd:114",
-  "ui/hud/garage_screen.gd:882",
+  "ui/hud/garage_screen.gd:886",
   "ui/hud/garage_value_screen.gd:115",
   "ui/hud/map_screen.gd:142"
  ],
@@ -2037,7 +2054,7 @@
  "KOLEKSİYON": [
   "ui/hud/junkyard_screen.gd:238",
   "ui/hud/collection_screen.gd:86",
-  "ui/hud/garage_screen.gd:1100",
+  "ui/hud/garage_screen.gd:1106",
   "ui/hud/showroom_screen.gd:744"
  ],
  "KOLEKSİYON   %d / %d": [
@@ -2312,8 +2329,10 @@
   "ui/hud/paint_panel.gd:155"
  ],
  "MODİFİYE": [
-  "ui/hud/garage_screen.gd:1020",
-  "ui/hud/garage_screen.gd:1041"
+  "ui/hud/mod_workshop.gd:141",
+  "ui/hud/mod_workshop.gd:176",
+  "ui/hud/garage_screen.gd:1024",
+  "ui/hud/garage_screen.gd:1045"
  ],
  "MOR": [
   "vehicles/paint_catalog.gd:26"
@@ -2438,8 +2457,8 @@
   "decor/decorations.json:wall_metal.title"
  ],
  "ONAYLA": [
-  "ui/hud/mod_workshop.gd:312",
-  "ui/hud/garage_screen.gd:775"
+  "ui/hud/mod_workshop.gd:571",
+  "ui/hud/garage_screen.gd:779"
  ],
  "ONAYLA  %d": [
   "ui/hud/repair_panel.gd:383"
@@ -2491,7 +2510,7 @@
   "decor/decorations.json:parts_shelf.title"
  ],
  "PARÇA TAKILIYOR": [
-  "ui/hud/mod_workshop.gd:322"
+  "ui/hud/mod_workshop.gd:586"
  ],
  "PARÇALAR": [
   "ui/hud/restoration_panel.gd:128",
@@ -2525,7 +2544,7 @@
   "decor/decorations.json:wall_window.title"
  ],
  "PERFORMANS": [
-  "ui/hud/mod_workshop.gd:171"
+  "ui/hud/mod_workshop.gd:291"
  ],
  "PERMISSION": [
   "gameplay/social/social_manager.gd:836"
@@ -2584,7 +2603,7 @@
   "decor/decorations.json:epoxy_blue.desc"
  ],
  "Parça hazır": [
-  "ui/hud/mod_workshop.gd:306"
+  "ui/hud/mod_workshop.gd:566"
  ],
  "Parça takılıyor": [
   "ui/hud/repair_panel.gd:325"
@@ -2609,6 +2628,12 @@
  ],
  "Pastel pembe-krem dama.": [
   "decor/decorations.json:checker_pink.desc"
+ ],
+ "Patinaj bitiyor!": [
+  "ui/hud/mod_workshop.gd:523"
+ ],
+ "Patinaj yok: lastik yalnız hafif jantla kazandırır": [
+  "ui/hud/mod_workshop.gd:521"
  ],
  "Pembe, nane, mavi ve sarı karolar.": [
   "decor/decorations.json:tile_pastel.desc"
@@ -2780,7 +2805,7 @@
   "ui/hud/race_challenge_screen.gd:74"
  ],
  "SENİN DEĞİL": [
-  "ui/hud/mod_workshop.gd:326"
+  "ui/hud/mod_workshop.gd:590"
  ],
  "SERGİCİ": [
   "gameplay/missions/mission_catalog.gd:102"
@@ -2811,7 +2836,8 @@
   "ui/hud/friends_screen.gd:255",
   "ui/hud/hud.gd:766",
   "ui/hud/hud.gd:770",
-  "ui/hud/profile_screen.gd:132"
+  "ui/hud/profile_screen.gd:132",
+  "ui/hud/mod_workshop.gd:716"
  ],
  "SEVİYE %d\nGEREKLİ": [
   "ui/hud/car_gallery.gd:273",
@@ -2824,7 +2850,7 @@
   "ui/hud/visit_bar.gd:49"
  ],
  "SEVİYE %d GEREKLİ": [
-  "ui/hud/mod_workshop.gd:320"
+  "ui/hud/mod_workshop.gd:584"
  ],
  "SEVİYE %d GEREKLİ (şu an %d)": [
   "gameplay/progression_effects.gd:75"
@@ -2843,7 +2869,7 @@
   "vehicles/crates.json:set.sicak_kompakt"
  ],
  "SINIF": [
-  "ui/hud/mod_workshop.gd:172"
+  "ui/hud/mod_workshop.gd:292"
  ],
  "SINIR ": [
   "ui/hud/drag_race_screen.gd:1108"
@@ -2867,10 +2893,8 @@
   "vehicles/restorations.json:parts.nut"
  ],
  "SON HIZ": [
-  "ui/hud/mod_workshop.gd:172"
- ],
- "SON HIZ  %d → %d km/sa": [
-  "ui/hud/mod_workshop.gd:283"
+  "ui/hud/mod_workshop.gd:292",
+  "ui/hud/mod_workshop.gd:468"
  ],
  "SON PARÇA  ·  ": [
   "ui/hud/collection_screen.gd:267"
@@ -3031,13 +3055,16 @@
  ],
  "TAK": [
   "ui/hud/restoration_panel.gd:290",
-  "ui/hud/mod_workshop.gd:305"
+  "ui/hud/mod_workshop.gd:565"
  ],
  "TAKILDI: %s · %s": [
   "ui/hud/hud.gd:490"
  ],
+ "TAKILI ✔": [
+  "ui/hud/mod_workshop.gd:557"
+ ],
  "TAKILIYOR: %s\n%s kaldı": [
-  "ui/hud/mod_workshop.gd:369"
+  "ui/hud/mod_workshop.gd:639"
  ],
  "TAKIM DOLABI": [
   "decor/decorations.json:tool_cabinet.title"
@@ -3053,13 +3080,13 @@
  ],
  "TAMAM": [
   "ui/hud/restoration_panel.gd:278",
+  "ui/hud/mod_workshop.gd:665",
   "ui/hud/reward_popup.gd:165",
   "ui/hud/crate_panel.gd:104",
   "ui/tutorial/tutorial_director.gd:591",
   "ui/tutorial/tutorial_director.gd:699"
  ],
  "TAMAMLANDI": [
-  "ui/hud/mod_workshop.gd:261",
   "ui/hud/restoration_result.gd:110",
   "ui/tutorial/chapter_card.gd:422"
  ],
@@ -3087,7 +3114,7 @@
   "ui/hud/garage_edit_screen.gd:862"
  ],
  "TAMİR ALANI DOLU": [
-  "ui/hud/mod_workshop.gd:324",
+  "ui/hud/mod_workshop.gd:588",
   "ui/hud/repair_panel.gd:426"
  ],
  "TAMİR ALANI KALDIRILAMAZ — TAŞIYABİLİRSİN": [
@@ -3145,7 +3172,7 @@
   "decor/decorations.json:hazard.title"
  ],
  "TEK ARACINI SATAMAZSIN": [
-  "ui/hud/garage_screen.gd:803"
+  "ui/hud/garage_screen.gd:807"
  ],
  "TEK SEFERLİK TEKLİF": [
   "ui/hud/gem_store_screen.gd:173"
@@ -3168,6 +3195,9 @@
  "TOPLAM %d ★   ·   HER YILDIZ: +%%%d XP, +%%%d ÖDÜL   ·   5★ İŞ: %d": [
   "ui/hud/mastery_screen.gd:102"
  ],
+ "TORK  %d → %d Nm\nDEVİR SINIRI  %s d/dk": [
+  "ui/hud/mod_workshop.gd:508"
+ ],
  "TRAFİK KONİLERİ": [
   "decor/decorations.json:traffic_cones.title"
  ],
@@ -3179,6 +3209,9 @@
  ],
  "TUTUŞ": [
   "ui/hud/garage_screen.gd:202"
+ ],
+ "TUTUŞ  +%%%d → +%%%d": [
+  "ui/hud/mod_workshop.gd:524"
  ],
  "Takma ad": [
   "ui/hud/friends_screen.gd:125"
@@ -3258,6 +3291,10 @@
  "Toplam %s ₺ harca": [
   "gameplay/missions/mission_catalog.gd:95"
  ],
+ "Tork +%%%s": [
+  "gameplay/race/performance_mods.gd:470",
+  "gameplay/race/performance_mods.gd:473"
+ ],
  "Tulumlu, şapkalı tamirci.": [
   "decor/decorations.json:mechanic.desc"
  ],
@@ -3267,6 +3304,9 @@
  ],
  "Turbo Yükseltme": [
   "gameplay/race/performance_mods.gd:73"
+ ],
+ "Tutuş +%%%s": [
+  "gameplay/race/performance_mods.gd:488"
  ],
  "Twin-Screw Kompresör": [
   "gameplay/race/performance_mods.gd:83"
@@ -3338,13 +3378,16 @@
   "ui/hud/restoration_panel.gd:204",
   "ui/hud/login_screen.gd:295",
   "ui/hud/hud.gd:714",
-  "ui/hud/garage_screen.gd:781",
+  "ui/hud/garage_screen.gd:785",
   "ui/hud/garage_edit_screen.gd:374",
   "ui/hud/race_challenge_screen.gd:101",
   "ui/hud/crate_panel.gd:45"
  ],
  "VW GRUBU": [
   "vehicles/crates.json:set.vw_grubu"
+ ],
+ "Vites geçişi −%d ms": [
+  "gameplay/race/performance_mods.gd:481"
  ],
  "Vitesi ibre YEŞİL dilime girince at: kusursuz vites seni rekora taşır.": [
   "ui/loading/loading_screen.gd:35"
@@ -3358,6 +3401,9 @@
  ],
  "VİTES  1 / %d": [
   "ui/hud/drag_race_screen.gd:862"
+ ],
+ "VİTES GEÇİŞİ  %d → %d ms (kusursuz vites)": [
+  "ui/hud/mod_workshop.gd:515"
  ],
  "Weber Karbüratör": [
   "gameplay/race/performance_mods.gd:84"
@@ -3383,11 +3429,11 @@
   "ui/tutorial/tutorial_director.gd:762"
  ],
  "YARIŞ ARACI YAP": [
-  "ui/hud/garage_screen.gd:994",
-  "ui/hud/garage_screen.gd:1009"
+  "ui/hud/garage_screen.gd:998",
+  "ui/hud/garage_screen.gd:1013"
  ],
  "YARIŞ ARACI ✔": [
-  "ui/hud/garage_screen.gd:1009"
+  "ui/hud/garage_screen.gd:1013"
  ],
  "YARIŞ BİTTİ": [
   "ui/hud/race_result_screen.gd:128"
@@ -3569,7 +3615,7 @@
   "gameplay/game_settings.gd:34"
  ],
  "YÜKSELT": [
-  "ui/hud/mod_workshop.gd:328",
+  "ui/hud/mod_workshop.gd:592",
   "ui/hud/garage_panel.gd:94"
  ],
  "Yükleniyor…": [
@@ -3630,6 +3676,27 @@
  "adreno (tm) 8": [
   "gameplay/game_settings.gd:56"
  ],
+ "bu parça": [
+  "ui/hud/mod_dyno.gd:143"
+ ],
+ "bütün devir bandı": [
+  "gameplay/race/performance_mods.gd:471"
+ ],
+ "dönen kütle −%%%s": [
+  "gameplay/race/performance_mods.gd:490"
+ ],
+ "hafif volan": [
+  "gameplay/race/performance_mods.gd:484"
+ ],
+ "hava direnci −%%%s": [
+  "gameplay/race/performance_mods.gd:494"
+ ],
+ "kategori EFSANE": [
+  "ui/hud/mod_dyno.gd:143"
+ ],
+ "kısa alt vitesler": [
+  "gameplay/race/performance_mods.gd:486"
+ ],
  "mali-g57 mc1": [
   "gameplay/game_settings.gd:50"
  ],
@@ -3638,6 +3705,21 @@
  ],
  "puşt": [
   "gameplay/social/social_names.gd:19"
+ ],
+ "sağ uç: FULL": [
+  "ui/hud/mod_dyno.gd:152"
+ ],
+ "son vites +%%%s": [
+  "gameplay/race/performance_mods.gd:482"
+ ],
+ "takınca": [
+  "ui/hud/mod_dyno.gd:133"
+ ],
+ "tepe tork %%%s yukarı (gecikme)": [
+  "gameplay/race/performance_mods.gd:475"
+ ],
+ "tork +%%%s": [
+  "gameplay/race/performance_mods.gd:479"
  ],
  "zaman aşımı": [
   "gameplay/cloud_save_manager.gd:649"
@@ -3736,6 +3818,9 @@
  "ÖDÜLÜ AL'a bas. Bu görevin ödülü bir ARAÇ KASASI!": [
   "ui/tutorial/tutorial_director.gd:728"
  ],
+ "ÖNCE %s": [
+  "ui/hud/mod_workshop.gd:577"
+ ],
  "ÖNCE BİR DESEN SEÇ": [
   "ui/hud/garage_edit_screen.gd:920"
  ],
@@ -3752,7 +3837,7 @@
   "ui/hud/hud.gd:741"
  ],
  "ÖNDEN ÇEKİŞ": [
-  "ui/hud/garage_screen.gd:914"
+  "ui/hud/garage_screen.gd:918"
  ],
  "ÖR": [
   "ui/hud/garage_edit_screen.gd:385"
@@ -3763,6 +3848,9 @@
  ],
  "Ödül: 750 ₺": [
   "ui/hud/repair_panel.gd:176"
+ ],
+ "Ölçülüyor…": [
+  "ui/hud/mod_workshop.gd:459"
  ],
  "Önce ARKADAŞLAR'dan bir arkadaş ekle.": [
   "gameplay/social/social_manager.gd:485"
@@ -3870,6 +3958,9 @@
  ],
  "İNCE AĞAÇ": [
   "decor/decorations.json:tree_slim.title"
+ ],
+ "İNCELE": [
+  "ui/hud/mod_workshop.gd:379"
  ],
  "İSTE": [
   "ui/hud/restoration_panel.gd:285"
@@ -3996,7 +4087,17 @@
   "ui/hud/drag_race_screen.gd:904",
   "ui/hud/drag_race_screen.gd:1144"
  ],
- "⏱ %s · 1 tamir alanı": [
-  "ui/hud/mod_workshop.gd:289"
+ "şimdi": [
+  "ui/hud/mod_dyno.gd:131",
+  "ui/hud/mod_dyno.gd:143"
+ ],
+ "⏱ %s · 1 tamir alanı · SEVİYE %d": [
+  "ui/hud/mod_workshop.gd:541"
+ ],
+ "★ BU ARAÇ İÇİN ÖNERİLEN": [
+  "ui/hud/mod_workshop.gd:363"
+ ],
+ "✔ TAKILI": [
+  "ui/hud/mod_workshop.gd:710"
  ]
 }

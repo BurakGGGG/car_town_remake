@@ -267,16 +267,33 @@ Okuma:
 
 ## 8. Oyunda nasıl görünür
 
-**ARAÇLAR → MODİFİYE** (garaj ekranı, `ui/hud/mod_workshop.gd`). Lifteki araç yerinde döner; sağdaki aksiyon
-plakaları ve alttaki araç şeridi kalkar:
+**ARAÇLAR → MODİFİYE** (garaj ekranı, `ui/hud/mod_workshop.gd`), iki seviye. Türdeki örneklerle aynı kalıp:
+CSR2'de 7 parça × 5 kademe ve kademe başına güç / maliyet, 4-5. kademe "ithal parça" bekleme + altınla atlama;
+Forza'da kategori → parça listesi, parçanın üstüne gelince güç / ağırlık / PI değişiminin önizlemesi; NFS
+Heat / Unbound'da parça başına performans puanı farkı ve dinamometre.
 
-- **Altta 6 parça kartı:** her kategori için sıradaki parçanın **3D ikonu**, kategori adı, takılı kademe çentikleri
-  (kademe renginde: gri · yeşil · mavi · mor · altın). Kartın üst şeridi sıradaki kademenin rengidir.
-- **Sağda parça plakası:** kategori, kademe, parça adı, büyük ikon, takınca ne değişeceği (0-100 her zaman; güç
-  parçalarında beygir, şanzımanda son hız, lastik / gövdede 300 m; sınıf atlıyorsa "C → B SINIFI!"), takma süresi,
-  fiyat ve **YÜKSELT** (alınamıyorsa nedeni: SEVİYE 5 GEREKLİ · TAMİR ALANI DOLU · PARÇA TAKILIYOR).
-- **Solda değerler:** sınıf, 0-100, son hız, güç, 300 m, GENEL; süren takmada kalan süre.
-- **GERİ** araç listesine döner (ikinci GERİ garajdan çıkar).
+**Genel bakış** — lifteki araç döner; sağdaki plakalar ve alttaki araç şeridi kalkar:
+- **Altta 6 kategori kartı:** sıradaki parçanın 3D ikonu, kategori adı, takılı kademe çentikleri, sıradaki
+  parçanın 0-100 kazancı (yeşil "−0,18 sn"). ₺ başına en çok 300 m kazandıran kategori **ÖNERİLEN** (yıldız +
+  amber çerçeve; `PerformanceMods.recommend`). Karta dokunmak kategoriye girer.
+- **Solda değerler** (sınıf, 0-100, son hız, güç, 300 m, GENEL) ve süren takma; **sağda ÖNERİLEN plakası**
+  (parça, kazanç, İNCELE).
+
+**Kategori** (ör. MOTOR) — başlık tabelası kategori adını alır, GERİ genel bakışa döner:
+- **Altta 5 kademe kartı (merdiven):** kademe renginde bant, 3D ikon, parça adı, o kademenin 0-100 katkısı,
+  durum: ✔ TAKILI · fiyat · SEVİYE kilidi (kilit ikonu) · ⏱ kalan süre / HAZIR. Sıradaki kademe renkli çerçeveli,
+  ilerideki kademeler soluk.
+- **Solda DİNAMOMETRE** (`ui/hud/mod_dyno.gd`): 0-100 / son hız / güç / 300 m çubukları — sol uç fabrika, sağ
+  uç bu aracın FULL yapısı; koyu = şimdi, yeşil = seçilen kademenin kazancı (önce → sonra + fark etiketi), kesik
+  çerçeve = bu kategori EFSANE'ye kadar giderse. MOTOR / TURBO / HAVA'da **güç eğrisi** (devir → beygir; şimdi ve
+  takınca üst üste, tepe gücü). Altında teknik satırlar: tork + devir sınırı · vites geçişi (ms) · tutuş + kalkış
+  patinajı ("Patinaj yok…" / "Patinaj bitiyor!") · ağırlık + hava direnci; güç parçası 0-100'ü kıpırdatmıyorsa
+  "Güç patinaja gidiyor: önce LASTİK"; sınıf atlıyorsa "C → B SINIFI!".
+- **Sağda parça plakası:** kademe, ad, **ne yaptığı** (bu aracın motor profiliyle: "Tork +%1,8 · bütün devir
+  bandı"), süre · tamir alanı · seviye, fiyat ve YÜKSELT. İleri bir kademe seçilirse "ÖNCE SOKAK"; takılı kademede
+  "TAKILI ✔" (dinamometre o kademenin katkısını gösterir); takılan parçada HEMEN BİTİR (elmas) / TAK.
+- Önizlemeler simülasyonla ölçülür (~5 ms): ölçülmemiş yapılar kare başına bir tane hesaplanır, kartlar o sırada
+  "…" gösterir.
 
 **YÜKSELT** (`Hud._on_mod_upgrade` → `PerformanceBays.present`): para düşer, garaj kapanır, oyun ana dünyaya döner;
 kamera tamir alanına yaklaşır, araç alanın önünden küçükten büyüyerek lifte sürülür, lift kalkar, kıvılcım; üstünde
