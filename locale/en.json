@@ -1158,7 +1158,6 @@
  "%d sa %d dk": "%d h %d min",
  "%s GARAJA YOLA ÇIKTI\nTamir alanında parçalarını bekliyor": "%s IS ON ITS WAY TO THE GARAGE\nIt waits for its parts in the repair bay",
  "%s HAZIR\nTamir alanındaki araca dokun": "%s READY\nTap the car in the repair bay",
- "%s TAKILIYOR\n%s KALDI": "INSTALLING %s\n%s LEFT",
  "%s → %s SINIFI!": "CLASS %s → %s!",
  "0-100  %s → %s sn": "0-100  %s → %s s",
  "300 m  %s → %s sn": "300 m  %s → %s s",
@@ -1258,5 +1257,11 @@
  "İÇ DUVAR": "INNER WALL",
  "İŞ ALINDI": "JOB TAKEN",
  "ŞANZIMAN": "GEARBOX",
- "⏱ %s · 1 tamir alanı": "⏱ %s · 1 repair bay"
+ "⏱ %s · 1 tamir alanı": "⏱ %s · 1 repair bay",
+ "%s TAKILIYOR": "INSTALLING %s",
+ "BİTİR  %d": "FINISH  %d",
+ "HEMEN BİTİR": "FINISH NOW",
+ "ONAYLA  %d": "CONFIRM  %d",
+ "Parça hazır": "Part ready",
+ "Parça takılıyor": "Installing part"
 }

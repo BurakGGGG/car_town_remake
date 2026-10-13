@@ -10,6 +10,8 @@ extends Node
 ## Mantık yoktur: PerformanceModManager ve PerformanceMods okunur. Kodla kurulur (GarageScreen._ready).
 
 signal upgrade_requested(vehicle_id: StringName, category: StringName)
+## Elmas yetmedi: garaj elmas mağazasını açar.
+signal gem_store_requested
 
 const CARD_WIDTH: float = 118.0
 const CARD_HEIGHT: float = 124.0
@@ -42,6 +44,7 @@ var _time: Label
 var _price: Label
 var _buy: PlateButton
 var _active: bool = false
+var _gem_armed_until: int = 0   # ELMASLA BİTİR onayı (Time.get_ticks_msec)
 var _tick: float = 0.0
 
 
@@ -217,7 +220,7 @@ func _build_detail() -> PlatePanel:
 	_buy.icon_left = true
 	_buy.highlight = true
 	_buy.focus_mode = Control.FOCUS_NONE
-	_buy.pressed.connect(func() -> void: upgrade_requested.emit(vehicle_id, category))
+	_buy.pressed.connect(_on_buy_pressed)
 	for node: Control in [_category_label, _tier, _part, _icon, _lines, _time, _price, _buy]:
 		box.add_child(node)
 	return panel
@@ -287,11 +290,27 @@ func _refresh_detail() -> void:
 	_refresh_buy()
 
 
-## YÜKSELT plakası: fiyat ya da neden alınamadığı (süren takmada kalan süre).
+## YÜKSELT plakası: fiyat ya da neden alınamadığı. Bu kategorinin parçası takılıyorsa ELMASLA BİTİR
+## (iki dokunuş), süresi dolduysa TAK.
 func _refresh_buy() -> void:
 	var mods: PerformanceModManager = _mods()
 	var stage: int = PerformanceMods.stage_of(vehicle_id, category) + 1
 	if stage > PerformanceMods.STAGES:
+		return
+	_buy.kind = HudIcon.Kind.WRENCH
+	if mods and mods.has_job(vehicle_id) and mods.job_of(vehicle_id)["category"] == category:
+		_buy.disabled = false
+		if mods.is_ready(vehicle_id):
+			_buy.highlight = true
+			_buy.text = Loc.t("TAK")
+			_price.text = Loc.t("Parça hazır")
+			return
+		var cost: int = mods.gem_skip_cost(vehicle_id)
+		var armed: bool = Time.get_ticks_msec() < _gem_armed_until
+		_buy.kind = HudIcon.Kind.GEM
+		_buy.highlight = armed
+		_buy.text = Loc.t("ONAYLA") if armed else Loc.t("HEMEN BİTİR")
+		_price.text = Loc.t("%d GEM") % cost
 		return
 	var status: int = mods.status(vehicle_id, category) if mods else PerformanceModManager.Status.NOT_OWNED
 	_buy.disabled = status != PerformanceModManager.Status.BUYABLE
@@ -308,6 +327,28 @@ func _refresh_buy() -> void:
 		_:
 			_buy.text = Loc.t("YÜKSELT")
 	_price.text = "%s ₺" % Hud.format_thousands(PerformanceMods.price(vehicle_id, category, stage))
+
+
+func _on_buy_pressed() -> void:
+	var mods: PerformanceModManager = _mods()
+	if mods == null or not (mods.has_job(vehicle_id) and mods.job_of(vehicle_id)["category"] == category):
+		upgrade_requested.emit(vehicle_id, category)
+		return
+	if mods.is_ready(vehicle_id):
+		mods.collect(vehicle_id)
+		return
+	if Time.get_ticks_msec() >= _gem_armed_until:
+		_gem_armed_until = Time.get_ticks_msec() + int(GemSkip.CONFIRM_TIME * 1000.0)   # ilk dokunuş: onay
+		_refresh_buy()
+		return
+	_gem_armed_until = 0
+	var cost: int = mods.gem_skip_cost(vehicle_id)
+	var player: PlayerProgress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
+	if player == null or not player.can_afford_gems(cost):
+		_refresh_buy()
+		gem_store_requested.emit()
+		return
+	mods.finish_with_gems(vehicle_id)
 
 
 ## Süren takma: sol plakadaki durum satırı + YÜKSELT plakası.

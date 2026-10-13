@@ -221,7 +221,26 @@ func collect(vehicle_id: StringName) -> bool:
 	return true
 
 
-## Kalan süreyi bitirir (test / hata ayıklama; ileride gem ile hızlandırma buradan geçer).
+## Süren takmayı elmasla bitirmenin fiyatı (kalan süre; HAZIR / takma yoksa 0).
+func gem_skip_cost(vehicle_id: StringName) -> int:
+	return GemSkip.cost(remaining(vehicle_id)) if has_job(vehicle_id) else 0
+
+
+## ELMASLA BİTİR: elmas düşer, parça hemen takılır (HAZIR beklenmez; araç alandan çıkar).
+## Elmas yetmezse hiçbir şey değişmez (false).
+func finish_with_gems(vehicle_id: StringName) -> bool:
+	var cost: int = gem_skip_cost(vehicle_id)
+	if cost <= 0:
+		return false
+	var progress_node: PlayerProgress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress \
+		if is_inside_tree() else null
+	if progress_node == null or not progress_node.spend_gems(cost):
+		return false
+	finish_now(vehicle_id)
+	return collect(vehicle_id)
+
+
+## Kalan süreyi bitirir (test / hata ayıklama; elmasla bitirme de buradan geçer).
 func finish_now(vehicle_id: StringName) -> void:
 	var i: int = _job_index(vehicle_id)
 	if i < 0:

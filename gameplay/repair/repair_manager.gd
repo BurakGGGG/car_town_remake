@@ -405,6 +405,29 @@ func boost_repair(car: Node3D) -> bool:
 	return true
 
 
+## Uzun iş (GemSkip.MIN_JOB_SECONDS+) sürerken kalan süreyi elmasla bitirmenin fiyatı; sunulmuyorsa 0.
+func gem_skip_cost(car: Node3D) -> int:
+	var state: RepairState = get_state(car)
+	if state == null or not state.is_repairing or state.repair_duration < GemSkip.MIN_JOB_SECONDS:
+		return 0
+	return GemSkip.cost(state.remaining)
+
+
+## ELMASLA BİTİR: elmas düşer, iş anında biter (PARA TOPLA bekler). Elmas yetmezse hiçbir şey değişmez.
+func finish_with_gems(car: Node3D) -> bool:
+	var cost: int = gem_skip_cost(car)
+	var state: RepairState = get_state(car)
+	if cost <= 0 or state == null:
+		return false
+	var progress_node: PlayerProgress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
+	if progress_node == null or not progress_node.spend_gems(cost):
+		return false
+	if state.advance(state.remaining + 0.001):
+		repair_progress.emit(state.car, state.repair_progress)
+		_finish_state(state)
+	return true
+
+
 ## İş açılır: araç state.bay_index'teki CarSpot'a ışınlanır, lift kalkar.
 func _occupy_bay(vehicle: TrafficVehicle, state: RepairState) -> void:
 	_active.append(state)

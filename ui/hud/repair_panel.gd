@@ -19,6 +19,8 @@ signal repair_pressed(type: RepairType)
 signal collect_pressed
 ## "REKLAM İZLE" (süre kısaltma) basıldı — açık onay; reklamı HUD yönetir.
 signal boost_pressed
+## ELMASLA BİTİR onaylandı (ikinci dokunuş): harcama HUD'da (tamir ya da parça takma).
+signal gem_finish_pressed
 
 enum Mode { DAMAGED, BUSY, REPAIRING, READY, REPAIRED, NORMAL }
 
@@ -44,6 +46,11 @@ var _ready_box: HBoxContainer
 var _repairing_box: VBoxContainer
 var _lane: XpLane
 var _time_label: Label
+var _repairing_title: Label
+## ELMASLA BİTİR (uzun işler): ilk dokunuş "ONAYLA" yapar, GemSkip.CONFIRM_TIME içinde ikinci dokunuş harcar.
+var _gem_button: PlateButton
+var _gem_cost: int = 0
+var _gem_armed_until: int = 0   # Time.get_ticks_msec
 var _done_box: VBoxContainer
 var _done_value: Label
 # Sağ: aksiyon
@@ -119,7 +126,8 @@ func _init() -> void:
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head.add_theme_constant_override(&"separation", 4)
 	head.add_child(InkIcon.new(HudIcon.Kind.WRENCH))
-	head.add_child(_make_label(Loc.t("TAMİR EDİLİYOR"), &"HudInkValue"))
+	_repairing_title = _make_label(Loc.t("TAMİR EDİLİYOR"), &"HudInkValue")
+	head.add_child(_repairing_title)
 	_repairing_box.add_child(head)
 	var lane_row: HBoxContainer = HBoxContainer.new()
 	lane_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -168,6 +176,18 @@ func _init() -> void:
 	_reward_label = _make_label(Loc.t("Ödül: 750 ₺"), &"HudInkCaption")
 	_reward_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_action_box.add_child(_reward_label)
+	_gem_button = PlateButton.new()
+	_gem_button.name = "GemFinishButton"
+	_gem_button.theme_type_variation = &"HudPlateSmall"
+	_gem_button.kind = HudIcon.Kind.GEM
+	_gem_button.icon_left = true
+	_gem_button.icon_size = 14.0
+	_gem_button.bolts = false
+	_gem_button.focus_mode = Control.FOCUS_NONE
+	_gem_button.custom_minimum_size = Vector2(BUTTON_WIDTH, 0.0)
+	_gem_button.visible = false
+	_gem_button.pressed.connect(_on_gem_pressed)
+	_action_box.add_child(_gem_button)
 	add_child(_action_box)
 
 
@@ -274,9 +294,13 @@ func show_ready() -> void:
 
 
 ## boost_available: ödüllü reklamla kalan süre yarıya indirilebilir → buton "REKLAM İZLE" olur.
-func show_repairing(progress: float, remaining: float, boost_available: bool = false) -> void:
+## gem_cost > 0: uzun iş, kalan süre elmasla bitirilebilir (ELMASLA BİTİR plakası).
+func show_repairing(progress: float, remaining: float, boost_available: bool = false, gem_cost: int = 0) -> void:
 	if _mode != Mode.REPAIRING:
 		_set_mode(Mode.REPAIRING)
+	_repairing_title.text = Loc.t("TAMİR EDİLİYOR")
+	_button.visible = true
+	_set_gem_cost(gem_cost)
 	if boost_available:
 		_button.disabled = false
 		_button.text = Loc.t("REKLAM İZLE")
@@ -289,6 +313,19 @@ func show_repairing(progress: float, remaining: float, boost_available: bool = f
 		_reward_label.text = Loc.t("Ödül: %s ₺") % Hud.format_thousands(_reward)
 	_lane.ratio = progress
 	_time_label.text = "%.1f sn" % remaining
+
+
+## Tamir alanında performans parçası takılan oyuncu aracı: başlık (ör. "TURBO TAKILIYOR"), şerit, kalan süre
+## ("4:05") ve ELMASLA BİTİR. TAMİRE AL plakası yok (müşteri işi değil).
+func show_mod(title: String, progress: float, remaining: float, gem_cost: int) -> void:
+	if _mode != Mode.REPAIRING:
+		_set_mode(Mode.REPAIRING)
+	_repairing_title.text = title
+	_button.visible = false
+	_reward_label.text = Loc.t("Parça takılıyor")
+	_lane.ratio = progress
+	_time_label.text = PerformanceBayDisplay.countdown(remaining) if remaining > 0.0 else Loc.t("HAZIR")
+	_set_gem_cost(gem_cost)
 
 
 ## Tamamlanmış araç; celebrate = az önce bitti (kısa geri bildirim animasyonu).
@@ -314,6 +351,9 @@ func show_normal() -> void:
 
 func _set_mode(mode: Mode) -> void:
 	_mode = mode
+	_button.visible = true
+	if mode != Mode.REPAIRING:
+		_set_gem_cost(0)
 	_damaged_box.visible = mode == Mode.DAMAGED or mode == Mode.BUSY or mode == Mode.NORMAL
 	_ready_box.visible = mode == Mode.READY
 	_repairing_box.visible = mode == Mode.REPAIRING
@@ -329,6 +369,34 @@ func _on_button_pressed() -> void:
 		boost_pressed.emit()
 	else:
 		repair_pressed.emit(_issue_type)
+
+
+## ELMASLA BİTİR plakası: fiyat değişince (dakika düştükçe) yazı güncellenir; onay bekleniyorsa "ONAYLA".
+func _set_gem_cost(cost: int) -> void:
+	_gem_cost = cost
+	_gem_button.visible = cost > 0
+	if cost <= 0:
+		_gem_armed_until = 0
+		return
+	var armed: bool = Time.get_ticks_msec() < _gem_armed_until
+	_gem_button.highlight = armed
+	_gem_button.text = Loc.t("ONAYLA  %d") % cost if armed else Loc.t("BİTİR  %d") % cost
+
+
+func _on_gem_pressed() -> void:
+	if _gem_cost <= 0:
+		return
+	if Time.get_ticks_msec() < _gem_armed_until:
+		_gem_armed_until = 0
+		_set_gem_cost(_gem_cost)
+		gem_finish_pressed.emit()
+		return
+	_gem_armed_until = Time.get_ticks_msec() + int(GemSkip.CONFIRM_TIME * 1000.0)
+	_set_gem_cost(_gem_cost)
+	# Süre dolunca onay kendiliğinden kapanır (plaka o arada tazelenmese de)
+	get_tree().create_timer(GemSkip.CONFIRM_TIME).timeout.connect(func() -> void:
+		if is_instance_valid(_gem_button) and Time.get_ticks_msec() >= _gem_armed_until:
+			_set_gem_cost(_gem_cost))
 
 
 ## Arızaya göre satır metni ve TAMİRE AL butonu (alan dolu / kilit / bakiye).

@@ -300,7 +300,60 @@ func _run() -> void:
 	router.close_all()
 	await frames(20)
 
-	print("== 10) BOZUK KAYIT + YENİ OYUN ==")
+	print("== 10) ELMASLA BİTİR ==")
+	check(GemSkip.cost(60.0) == 2 and GemSkip.cost(61.0) == 4 and GemSkip.cost(1.0) == 2 and GemSkip.cost(0.0) == 0,
+		"fiyat: kalan dakika (yukarı yuvarlı) × 2 elmas")
+	check(mods.has_job(passat), "Passat'a ŞANZIMAN takılıyor")
+	var mod_cost: int = mods.gem_skip_cost(passat)
+	check(mod_cost == GemSkip.cost(mods.remaining(passat)) and mod_cost >= 2, "takmanın elmas fiyatı %d" % mod_cost)
+	pp.gems = mod_cost - 1
+	check(not mods.finish_with_gems(passat) and mods.has_job(passat) and pp.gems == mod_cost - 1,
+		"elmas yetmezse hiçbir şey değişmez")
+	pp.gems = 50
+	var gear_before: int = mods.stage_of(passat, &"gear")
+	check(mods.finish_with_gems(passat), "elmasla bitirildi")
+	check(not mods.has_job(passat) and mods.stage_of(passat, &"gear") == gear_before + 1 and pp.gems == 50 - mod_cost,
+		"parça hemen takıldı, %d elmas düştü" % mod_cost)
+	check(mods.gem_skip_cost(passat) == 0, "takma yokken fiyat 0")
+	await create_timer(1.6).timeout   # araç alandan çıksın
+	# Uzun tamir (BOYA İŞİ, 90 sn)
+	var rm2: RepairManager = g(&"repair_manager")
+	var traffic: TrafficManager = g(&"traffic")
+	for i: int in 600:
+		if not traffic.vehicles.is_empty():
+			break
+		await process_frame
+	var long_car: TrafficVehicle = traffic.vehicles[0] if not traffic.vehicles.is_empty() else null
+	if long_car:
+		long_car.request_repair(rm2.repair_wait_spots[0], RepairType.by_id(&"paint_job"))
+	check(long_car != null and rm2.start_repair(long_car), "uzun tamir (BOYA İŞİ) başladı")
+	await frames(3)
+	var repair_cost: int = rm2.gem_skip_cost(long_car)
+	var long_state: RepairState = rm2.get_state(long_car)
+	check(repair_cost == GemSkip.cost(long_state.remaining) and repair_cost >= 2, "uzun tamirin elmas fiyatı %d" % repair_cost)
+	var gems_before: int = pp.gems
+	check(rm2.finish_with_gems(long_car), "uzun tamir elmasla bitti")
+	check(long_state.phase == RepairState.Phase.REWARD_WAITING and pp.gems == gems_before - repair_cost,
+		"PARA TOPLA bekliyor, %d elmas düştü" % repair_cost)
+	var short_type: RepairType = RepairType.by_id(&"engine")
+	check(short_type.duration < GemSkip.MIN_JOB_SECONDS, "kısa tamirlerde (%d sn) elmasla bitirme sunulmaz" % int(short_type.duration))
+	# Plaka: iki dokunuşlu onay
+	var panel: RepairPanel = RepairPanel.new()
+	root.add_child(panel)
+	var fired: Array = []
+	panel.gem_finish_pressed.connect(func() -> void: fired.append(true))
+	panel.show_repairing(0.4, 125.0, false, GemSkip.cost(125.0))
+	var gem_button: PlateButton = panel.find_child("GemFinishButton", true, false)
+	check(gem_button.visible and gem_button.text == "BİTİR  6", "plakada ELMASLA BİTİR (2:05 → 6 elmas)")
+	gem_button.pressed.emit()
+	check(fired.is_empty() and gem_button.text == "ONAYLA  6", "ilk dokunuş yalnızca onay ister")
+	gem_button.pressed.emit()
+	check(fired.size() == 1, "ikinci dokunuş harcar")
+	panel.show_repairing(0.4, 10.0, false, 0)
+	check(not gem_button.visible, "kısa işte buton yok")
+	panel.queue_free()
+
+	print("== 11) BOZUK KAYIT + YENİ OYUN ==")
 	mods.load_state({"builds": {"yok_boyle_arac": {"motor": 3}, "tofas_sahin": {"motor": 9, "uydurma": 2, "turbo": "x"}},
 		"floors": {"tofas_sahin": 5.0}, "jobs": [{"car": "tofas_sahin", "category": "motor", "stage": 2, "bay": 0,
 		"start": 0.0, "end": 1.0e12}, {"car": "tofas_sahin", "category": "turbo", "stage": 1, "bay": 1}, "çöp"]})

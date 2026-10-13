@@ -1158,7 +1158,6 @@
  "%d sa %d dk": "%d h %d min",
  "%s GARAJA YOLA ÇIKTI\nTamir alanında parçalarını bekliyor": "%s VA DE CAMINO AL GARAJE\nEspera sus piezas en la zona de reparación",
  "%s HAZIR\nTamir alanındaki araca dokun": "%s LISTO\nToca el coche en la zona de reparación",
- "%s TAKILIYOR\n%s KALDI": "INSTALANDO %s\nFALTAN %s",
  "%s → %s SINIFI!": "¡CLASE %s → %s!",
  "0-100  %s → %s sn": "0-100  %s → %s s",
  "300 m  %s → %s sn": "300 m  %s → %s s",
@@ -1258,5 +1257,11 @@
  "İÇ DUVAR": "PARED INTERIOR",
  "İŞ ALINDI": "TRABAJO ACEPTADO",
  "ŞANZIMAN": "CAJA DE CAMBIOS",
- "⏱ %s · 1 tamir alanı": "⏱ %s · 1 zona de reparación"
+ "⏱ %s · 1 tamir alanı": "⏱ %s · 1 zona de reparación",
+ "%s TAKILIYOR": "INSTALANDO %s",
+ "BİTİR  %d": "TERMINAR  %d",
+ "HEMEN BİTİR": "TERMINAR YA",
+ "ONAYLA  %d": "CONFIRMAR  %d",
+ "Parça hazır": "Pieza lista",
+ "Parça takılıyor": "Instalando pieza"
 }

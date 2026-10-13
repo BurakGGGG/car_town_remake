@@ -255,6 +255,7 @@ func _ready() -> void:
 	_workshop.build(bottom_group, left_group, right_group)
 	_workshop.upgrade_requested.connect(func(id: StringName, category: StringName) -> void:
 		mod_upgrade_requested.emit(id, category))
+	_workshop.gem_store_requested.connect(func() -> void: screen_requested.emit(&"gem_store"))
 	_apply_responsive_layout()
 	get_viewport().size_changed.connect(_apply_responsive_layout)
 

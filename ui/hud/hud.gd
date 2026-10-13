@@ -211,6 +211,7 @@ func _ready() -> void:
 	_repair_panel.repair_pressed.connect(_on_repair_pressed)
 	_repair_panel.collect_pressed.connect(_on_collect_pressed)
 	_repair_panel.boost_pressed.connect(_on_repair_boost_pressed)
+	_repair_panel.gem_finish_pressed.connect(_on_gem_finish_pressed)
 	car_stats_container.add_child(_repair_panel)
 	_build_notice_plate()
 	_build_bay_plate()
@@ -387,6 +388,8 @@ var _race_bonus_amount: int = 0
 var _ads_bound: AdService = null
 ## Süre kısaltma reklamı izlenirken kısaltılacak araç.
 var _boost_car: Node3D = null
+## Seçili parça takılan oyuncu aracı (araç plakası onu gösteriyor); yoksa &"".
+var _mod_target: StringName = &""
 
 
 ## TEST DERLEMESİ KISAYOLU (yalnızca debug derlemede): sol üstteki paraya TEST_MONEY_HOLD saniye
@@ -491,12 +494,29 @@ func _connect_gameplay() -> void:
 			_show_notice(text, HudPalette.COIN_DARK, 2.6))
 	var mod_bays: PerformanceBays = get_tree().get_first_node_in_group("performance_bays") as PerformanceBays
 	if mod_bays and mods:
+		# Parça takılan araca dokunuldu: araç plakasında kalan süre + ELMASLA BİTİR
 		mod_bays.job_selected.connect(func(id: StringName) -> void:
-			var job: Dictionary = mods.job_of(id)
-			if job.is_empty():
+			if router.top() != &"" or mods.job_of(id).is_empty():
 				return
-			_show_notice(Loc.t("%s TAKILIYOR\n%s KALDI") % [PerformanceMods.part_name(id, job["category"], int(job["stage"])),
-				PerformanceBayDisplay.countdown(mods.remaining(id))], HudPalette.INK, 2.0))
+			hide_bay_plate()
+			_mod_target = id
+			show_car_info(_car_name(id))
+			_refresh_mod_plate())
+		mod_bays.job_deselected.connect(func(id: StringName) -> void:
+			if _mod_target == id:
+				_mod_target = &""
+				if _repair_target == null:
+					hide_car_info())
+		mods.jobs_changed.connect(func() -> void:
+			if _mod_target != &"" and not mods.has_job(_mod_target):
+				_mod_target = &""   # parça takıldı / araç satıldı
+				if _repair_target == null:
+					hide_car_info())
+		var mod_tick: Timer = Timer.new()
+		mod_tick.wait_time = 0.25
+		mod_tick.autostart = true
+		mod_tick.timeout.connect(_refresh_mod_plate)
+		add_child(mod_tick)
 	# EŞYAYA BASILI TUT → TAŞI: düzenleyici o eşya parmağın altında tutulmuş açılır
 	if get_tree().get_first_node_in_group("garage_editor"):
 		decor_hold = DecorHoldGesture.new()
@@ -568,6 +588,8 @@ func _on_xp_changed(new_level: int, current_xp: int, xp_to_next: int) -> void:
 func _on_repair_target_changed(car: Node3D) -> void:
 	_repair_target = car
 	if car != null:
+		_mod_target = &""   # plaka müşteri aracına geçti
+	if car != null:
 		hide_bay_plate()
 	if car == null:
 		hide_car_info()
@@ -586,7 +608,8 @@ func _refresh_repair_panel(celebrate: bool) -> void:
 	if state:
 		_repair_panel.set_info(state.repair_type, state.repair_reward)   # ödül işin kendi çarpanıyla
 		if state.phase == RepairState.Phase.REPAIRING:
-			_repair_panel.show_repairing(state.repair_progress, state.remaining, _boost_offer(vehicle))
+			_repair_panel.show_repairing(state.repair_progress, state.remaining, _boost_offer(vehicle),
+				_repair_manager.gem_skip_cost(vehicle))
 		else:
 			_repair_panel.show_ready()
 	elif vehicle.repair_status == TrafficVehicle.RepairStatus.REPAIRED:
@@ -808,6 +831,51 @@ func _on_mod_upgrade(vehicle_id: StringName, category: StringName) -> void:
 		mod_bays.present(vehicle_id)
 
 
+## Tamir alanında parça takılan araç plakası (seçiliyken her 0,25 sn): başlık, şerit, kalan süre, ELMASLA BİTİR.
+func _refresh_mod_plate() -> void:
+	if _mod_target == &"":
+		return
+	var mods: PerformanceModManager = get_tree().get_first_node_in_group("performance_mods") as PerformanceModManager
+	if mods == null or not mods.has_job(_mod_target):
+		return
+	var job: Dictionary = mods.job_of(_mod_target)
+	var title: String = Loc.t("%s TAKILIYOR") % PerformanceMods.part_name(_mod_target, job["category"], int(job["stage"]))
+	_repair_panel.show_mod(title, mods.progress(_mod_target), mods.remaining(_mod_target),
+		mods.gem_skip_cost(_mod_target))
+
+
+## ELMASLA BİTİR onaylandı: seçili araç parça takılan oyuncu aracıysa takma, değilse uzun tamir biter.
+## Elmas yetmiyorsa mağaza açılır.
+func _on_gem_finish_pressed() -> void:
+	var player: PlayerProgress = _player_progress
+	if _mod_target != &"":
+		var mods: PerformanceModManager = get_tree().get_first_node_in_group("performance_mods") as PerformanceModManager
+		if mods == null:
+			return
+		var id: StringName = _mod_target
+		var cost: int = mods.gem_skip_cost(id)
+		if player == null or not player.can_afford_gems(cost):
+			_gem_shortage(cost)
+			return
+		if mods.finish_with_gems(id):
+			(load("res://car_hitbox.gd") as GDScript).set(&"selected_car", null)   # plaka kapanır (job_deselected)
+		return
+	if _repair_manager == null or _repair_target == null:
+		return
+	var repair_cost: int = _repair_manager.gem_skip_cost(_repair_target)
+	if player == null or not player.can_afford_gems(repair_cost):
+		_gem_shortage(repair_cost)
+		return
+	_repair_manager.finish_with_gems(_repair_target)
+	_refresh_repair_panel(false)
+
+
+func _gem_shortage(cost: int) -> void:
+	_show_notice(Loc.t("GEM YETMİYOR\n%d GEM gerekiyor, %d GEM'in var.") % [cost,
+		_player_progress.gems if _player_progress else 0], HudPalette.INK, 2.4)
+	router.open(&"gem_store")
+
+
 func _car_name(vehicle_id: StringName) -> String:
 	return String(CarCatalog.get_entry(vehicle_id).get("display_name", vehicle_id)).to_upper()
 
@@ -1008,7 +1076,8 @@ func _on_repair_started(car: Node3D) -> void:
 func _on_repair_progress(car: Node3D, progress: float) -> void:
 	if car == _repair_target:
 		var state: RepairState = _repair_manager.get_state(car)
-		_repair_panel.show_repairing(progress, state.remaining if state else 0.0, _boost_offer(car))
+		_repair_panel.show_repairing(progress, state.remaining if state else 0.0, _boost_offer(car),
+			_repair_manager.gem_skip_cost(car))
 
 
 ## Araç alandan çıktı: seçili başka bir arızalı aracın plakası TAMİR'i açar.

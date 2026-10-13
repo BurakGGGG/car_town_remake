@@ -291,6 +291,18 @@ soğutma), `tools/parts/part_icons.py` ile Blender'da prosedürel modellenip oyu
 `blender -b --factory-startup --python tools/parts/part_icons.py -- ui/hud/art/parts` (ya da bpy modülüyle).
 
 
+### Elmasla bitirme (2026-10-13)
+
+Uzun süren işler elmasla anında biter: **kalan süre dakikaya yukarı yuvarlanır, dakika başına 2 elmas**
+(`GemSkip`: 1:00 → 2, 1:01 → 4, 1,5 saatlik EFSANE baştan 180 elmas). Kazara harcama olmasın diye iki dokunuş:
+ilk dokunuş "ONAYLA", 3 sn içinde ikinci dokunuş harcar. Elmas yetmezse elmas mağazası açılır.
+
+- **Parça takma:** tamir alanındaki araca dokununca araç plakası (kalan süre şeridi + BİTİR) ya da
+  ARAÇLAR → MODİFİYE'de o parçanın plakasında HEMEN BİTİR. Elmasla bitince parça hemen takılır, araç alandan çıkar.
+  Süresi dolmuş parça MODİFİYE'den de "TAK" ile takılabilir.
+- **Uzun tamirler** (1 dk ve üstü: BOYA İŞİ, DÖŞEME, FREN REVİZYONU): tamir plakasında reklam butonunun altında
+  BİTİR; iş anında biter, PARA TOPLA bekler. Kısa tamirlerde (6–12 sn) sunulmaz.
+
 ## 9. Bütün araçlar — fabrika ve FULL
 
 300 m sırasıyla. 0-100 / son hız / güç gösterilen değerlerdir (§4); 300 m ve GENEL oyunun gerçek yarış
@@ -458,7 +470,9 @@ sonucudur. "Yeni sınıf" §5'teki kurala göre. Fiyat §6'daki formülle 30 par
 | `ui/hud/mod_workshop.gd` | ARAÇLAR → MODİFİYE: parça şeridi, parça plakası, değerler |
 | `gameplay/race/drag_race_sim.gd` | `shift_time_scale` (şanzıman), tavansız GENEL, `performance_ratio_of` |
 | `gameplay/race/race_manager.gd` · `ui/hud/drag_race_screen.gd` · `race/drag_track.gd` | Oyuncu modifiyeli künyeyle koşar (rakip fabrika), rakip havuzu modifiyeli süreyle, alev / ses / pist |
-| `gameplay/repair/repair_manager.gd` | Takma kaplayan alanlara müşteri gönderilmez |
+| `gameplay/repair/repair_manager.gd` | Takma kaplayan alanlara müşteri gönderilmez; uzun tamiri elmasla bitirme |
+| `gameplay/gem_skip.gd` | Elmasla bitirme kuralı (kalan dakika × 2) |
+| `ui/hud/repair_panel.gd` | Araç plakasında BİTİR (iki dokunuş); parça takılan aracın plakası |
 | `gameplay/save_manager.gd` | "performance" bölümü |
 | `tools/parts/part_icons.py` | Blender: parça ikonları |
 | `tests/performance_mod_test.gd` | 55 araç × 30 kademe (300 m uzamaz, gösterge kötüleşmez, her kademe görünür iyileştirir, sınıf ≤ 1 basamak), yarış, yönetici, kayıt, satış, ARAÇLAR → MODİFİYE → YÜKSELT |

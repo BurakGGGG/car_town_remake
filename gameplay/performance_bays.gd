@@ -5,8 +5,10 @@ extends Node
 ## Araca dokununca: süre dolduysa parça takılır (collect) ve araç alandan çıkar; dolmadıysa job_selected
 ## (HUD kalan süreyi söyler). Kodla kurulur (GarageSystem), "performance_bays" grubundan bulunur.
 
-## Süren takmaya dokunuldu (henüz HAZIR değil).
+## Süren takmaya dokunuldu (henüz HAZIR değil): HUD araç plakasında kalan süre + ELMASLA BİTİR.
 signal job_selected(vehicle_id: StringName)
+## Seçim o araçtan ayrıldı (başka yere dokunuldu): HUD plakayı kapatır.
+signal job_deselected(vehicle_id: StringName)
 
 const CarHitboxScript: GDScript = preload("res://car_hitbox.gd")
 ## Balon sayacı bu aralıkla güncellenir (sn).
@@ -79,6 +81,8 @@ func busy_bays() -> Array[int]:
 func _process(delta: float) -> void:
 	var selected: Node = CarHitboxScript.get(&"selected_car")
 	if selected != _selected:
+		if _selected is PerformanceBayDisplay and is_instance_valid(_selected):
+			job_deselected.emit((_selected as PerformanceBayDisplay).vehicle_id)
 		_selected = selected
 		if selected is PerformanceBayDisplay and not (selected as PerformanceBayDisplay).is_leaving():
 			_on_tapped((selected as PerformanceBayDisplay).vehicle_id)
@@ -95,8 +99,7 @@ func _on_tapped(vehicle_id: StringName) -> void:
 	if mods.is_ready(vehicle_id):
 		mods.collect(vehicle_id)   # install_completed → _leave
 	else:
-		job_selected.emit(vehicle_id)
-		_clear_selection()
+		job_selected.emit(vehicle_id)   # seçim kalır (halka): başka yere dokununca job_deselected
 
 
 func _refresh_bubbles() -> void:
