@@ -21,6 +21,9 @@ const TRAVEL_TIME: float = 1.6
 const ROUTE_COLOR: Color = Color("F5BE4C")
 const ROUTE_EDGE: Color = Color("8A5420")
 const TRAVELLER_VIEW_SIZE: Vector2i = Vector2i(192, 192)
+## Harita render kamerasının dikeyden eğimi (tools/world/map_render.py camera_light, "tilt"). Yolculuk
+## aracı aynı açıdan görülür: yatay yolda yandan, dikey yolda önden / arkadan; harita gibi diorama durur.
+const MAP_TILT_DEG: float = 50.0
 
 var current: StringName = &"city"
 var _board: Control
@@ -37,6 +40,8 @@ var _traveller_texture: TextureRect
 var _traveller_viewport: SubViewport
 var _traveller_stage: Node3D
 var _traveller_car: Node3D
+var _traveller_pivot: Node3D     # araç bunun altında, kasa ortası pivotta: dönünce kadrajdan kaymaz
+var _traveller_yaw: float = INF  # son render edilen açı (INF: henüz render yok)
 var _traveller_vehicle_id: StringName = &""
 
 
@@ -258,6 +263,7 @@ func _build_traveller() -> void:
 	_traveller_marker.visible = false
 	_board.add_child(_traveller_marker)
 	_route_layer.traveller = _traveller_marker
+	_route_layer.heading_changed.connect(_turn_traveller)
 
 	_traveller_texture = TextureRect.new()
 	_traveller_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -277,10 +283,14 @@ func _build_traveller() -> void:
 
 	_traveller_stage = Node3D.new()
 	_traveller_viewport.add_child(_traveller_stage)
+	_traveller_pivot = Node3D.new()
+	_traveller_stage.add_child(_traveller_pivot)
+	# Harita kamerasının eşi: ortografik, kuzeye (-Z) bakar, yataydan (90 - eğim)° aşağı. Araç bu sabit
+	# kameranın önünde DÖNER; resmi döndürmek arkadan çekilmiş aracı yan yatırıyordu.
 	var camera: Camera3D = Camera3D.new()
 	camera.name = "TravelCamera"
-	camera.projection = Camera3D.PROJECTION_PERSPECTIVE
-	camera.fov = 24.0
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.rotation = Vector3(-deg_to_rad(90.0 - MAP_TILT_DEG), 0.0, 0.0)
 	var environment: Environment = Environment.new()
 	environment.background_mode = Environment.BG_CLEAR_COLOR
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -288,8 +298,9 @@ func _build_traveller() -> void:
 	environment.ambient_light_energy = 0.85
 	camera.environment = environment
 	_traveller_stage.add_child(camera)
+	# Haritadaki güneşin yönü (map_render.py MapSun: X 48°, Z -35°, Blender → Godot eksenleri)
 	var light: DirectionalLight3D = DirectionalLight3D.new()
-	light.basis = Basis.looking_at(Vector3(-0.35, -1.0, -0.45).normalized(), Vector3.UP)
+	light.basis = Basis.looking_at(Vector3(0.426, -0.669, -0.609).normalized(), Vector3.UP)
 	light.light_color = Color("FFF5DB")
 	light.light_energy = 1.15
 	_traveller_stage.add_child(light)
@@ -313,21 +324,38 @@ func _prepare_traveller() -> void:
 		push_warning("MapScreen: yolculuk araci yuklenemedi (%s)" % vehicle_id)
 		return
 	_traveller_car = scene.instantiate() as Node3D
-	_traveller_stage.add_child(_traveller_car)
+	_traveller_pivot.rotation = Vector3.ZERO
+	_traveller_pivot.add_child(_traveller_car)
 	var rig: CarRig = CarRig.new(_traveller_car)
 	rig.apply(CarAppearance.get_for(path))
 	rig.set_lod_bias(CarRig.LOD_BIAS_WORLD)
 	for mesh: GeometryInstance3D in _traveller_car.find_children("*", "GeometryInstance3D", true, false):
 		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var bounds: AABB = _model_bounds(_traveller_car)
+	var center: Vector3 = bounds.get_center()
+	_traveller_car.position = Vector3(-center.x, 0.0, -center.z)
 	var camera: Camera3D = _traveller_stage.get_node_or_null("TravelCamera") as Camera3D
 	if camera:
-		var target: Vector3 = bounds.get_center()
-		var footprint: float = maxf(maxf(bounds.size.x, bounds.size.z), 0.2)
-		# Perspektif kamera: kaput, tavan ve yan yüzeyler ayrı seçilsin; model bir simge gibi düz görünmesin.
-		camera.position = target + Vector3(0.0, footprint * 2.45, -footprint * 2.9)
-		camera.look_at(target, Vector3.UP)
-		camera.force_update_transform()
+		# Kadraj her açıda sığsın: ölçü taban köşegeni (araç hangi yöne dönerse dönsün en uzun boyu)
+		var diagonal: float = maxf(Vector2(bounds.size.x, bounds.size.z).length(), 0.2)
+		camera.size = diagonal * 1.08
+		camera.position = Vector3(0.0, center.y, 0.0) + camera.basis.z * (diagonal * 4.0)
+		camera.far = diagonal * 8.0
+	_traveller_yaw = INF   # yeni araç: ilk yönde mutlaka render edilsin
+
+
+## Rota ucunun ekrandaki yönünü aracın 3B açısına çevirir. Harita eğik bakıldığı için ekrandaki dikey
+## mesafe yerde 1 / cos(eğim) kat uzundur. Model önü +Z; kamera -Z'ye baktığından ekran aşağısı +Z.
+## Viewport yalnızca açı değişince bir kez çizilir (yolculuk boyunca ~birkaç düzine kare, 192 px).
+func _turn_traveller(direction: Vector2) -> void:
+	if not is_instance_valid(_traveller_car):
+		return
+	var ground: Vector2 = Vector2(direction.x, direction.y / cos(deg_to_rad(MAP_TILT_DEG)))
+	var yaw: float = atan2(ground.x, ground.y)
+	if is_finite(_traveller_yaw) and absf(angle_difference(_traveller_yaw, yaw)) < deg_to_rad(1.0):
+		return
+	_traveller_yaw = yaw
+	_traveller_pivot.rotation.y = yaw
 	_traveller_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
@@ -407,7 +435,8 @@ static func dashes(path: PackedVector2Array, progress: float, dash: float) -> Di
 
 
 ## Rota ucunun konumu ve aracın baktığı yön. Kesik çizgiden ayrı tutulur ki araç,
-## çizgilerin boşluklarında da kesintisiz ve doğru açıyla ilerlesin.
+## çizgilerin boşluklarında da kesintisiz ve doğru açıyla ilerlesin. Yön, ucun biraz gerisi ile biraz
+## ilerisi arasından ölçülür: rota kırık çizgi olduğundan parça yönü köşelerde araç birden dönüyordu.
 static func route_pose(path: PackedVector2Array, progress: float) -> Dictionary:
 	if path.is_empty():
 		return {"head": Vector2.ZERO, "direction": Vector2.UP}
@@ -417,24 +446,32 @@ static func route_pose(path: PackedVector2Array, progress: float) -> Dictionary:
 	for i: int in path.size() - 1:
 		total += path[i].distance_to(path[i + 1])
 	var limit: float = total * clampf(progress, 0.0, 1.0)
+	var window: float = total * 0.03
+	var head: Vector2 = _route_point(path, limit)
+	var direction: Vector2 = _route_point(path, minf(limit + window, total)) \
+		- _route_point(path, maxf(limit - window, 0.0))
+	if direction.length() <= 0.0:
+		direction = path[path.size() - 1] - path[0]
+	return {"head": head, "direction": direction.normalized() if direction.length() > 0.0 else Vector2.UP}
+
+
+## Rota başından `distance` uzunluk ilerideki nokta (uçlarda kırpılır).
+static func _route_point(path: PackedVector2Array, distance: float) -> Vector2:
 	var walked: float = 0.0
-	var direction: Vector2 = Vector2.UP
 	for i: int in path.size() - 1:
-		var a: Vector2 = path[i]
-		var b: Vector2 = path[i + 1]
-		var segment: float = a.distance_to(b)
-		if segment <= 0.0:
-			continue
-		direction = (b - a) / segment
-		if walked + segment >= limit:
-			return {"head": a.lerp(b, (limit - walked) / segment), "direction": direction}
+		var segment: float = path[i].distance_to(path[i + 1])
+		if segment > 0.0 and walked + segment >= distance:
+			return path[i].lerp(path[i + 1], clampf((distance - walked) / segment, 0.0, 1.0))
 		walked += segment
-	return {"head": path[path.size() - 1], "direction": direction}
+	return path[path.size() - 1]
 
 
 ## Rota: kesik çizgili sarı yol + üstünde ilerleyen araç işareti. Noktalar haritaya oranlı (0..1).
 class RouteLayer:
 	extends Control
+
+	## Araç işaretinin ekrandaki gidiş yönü (birim vektör); MapScreen 3B aracı buna göre döndürür.
+	signal heading_changed(direction: Vector2)
 
 	var points: PackedVector2Array = PackedVector2Array()
 	var reverse: bool = false
@@ -463,10 +500,8 @@ class RouteLayer:
 		var pose: Dictionary = MapScreen.route_pose(path, progress)
 		var marker_size: float = clampf(size.x * 0.075, 54.0, 88.0)
 		traveller.size = Vector2.ONE * marker_size
-		traveller.pivot_offset = traveller.size * 0.5
-		traveller.position = (pose["head"] as Vector2) - traveller.pivot_offset
-		# Model yukarıyı gösterir; Control açısı ise sağı sıfır kabul eder.
-		traveller.rotation = (pose["direction"] as Vector2).angle() + PI * 0.5
+		traveller.position = (pose["head"] as Vector2) - traveller.size * 0.5
+		heading_changed.emit(pose["direction"] as Vector2)
 
 	func _draw() -> void:
 		if points.size() < 2 or progress <= 0.0:

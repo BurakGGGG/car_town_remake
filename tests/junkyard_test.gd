@@ -317,6 +317,10 @@ func _run() -> void:
 		var traveller: Control = map.get("_traveller_marker") as Control
 		check(is_instance_valid(map.get("_traveller_car")) and traveller.visible,
 			"harita yolculuğunda seçili yarış aracı üstten görünüm olarak hazırlanıyor")
+		# Şehirden hurdalığa rota batıya (ekranda sola) gider: 3B aracın önü (+Z) -X'e dönmüş olmalı
+		var car: Node3D = map.get("_traveller_car") as Node3D
+		check(is_instance_valid(car) and car.global_basis.z.x < -0.7,
+			"yolculuk aracı 3B olarak gidiş yönüne dönüyor (ön: %s)" % (car.global_basis.z if is_instance_valid(car) else Vector3.ZERO))
 		map.close()
 	else:
 		check(false, "harita ekranı HUD'a bağlandı")
