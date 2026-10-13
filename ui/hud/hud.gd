@@ -1541,5 +1541,3 @@ func _on_zoom_in_pressed() -> void:
 
 func _on_zoom_out_pressed() -> void:
 	camera_zoom_requested.emit(-1)
-
-

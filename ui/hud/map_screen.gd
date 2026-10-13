@@ -20,6 +20,7 @@ const MAP_DATA: String = "res://assets/ui/map/world_map.json"
 const TRAVEL_TIME: float = 1.6
 const ROUTE_COLOR: Color = Color("F5BE4C")
 const ROUTE_EDGE: Color = Color("8A5420")
+const TRAVELLER_VIEW_SIZE: Vector2i = Vector2i(192, 192)
 
 var current: StringName = &"city"
 var _board: Control
@@ -31,6 +32,12 @@ var _route: PackedVector2Array = PackedVector2Array()
 var _card: PlatePanel
 var _card_label: Label
 var _travelling: bool = false
+var _traveller_marker: Control
+var _traveller_texture: TextureRect
+var _traveller_viewport: SubViewport
+var _traveller_stage: Node3D
+var _traveller_car: Node3D
+var _traveller_vehicle_id: StringName = &""
 
 
 func _ready() -> void:
@@ -48,6 +55,7 @@ func open() -> void:
 	_card.hide()
 	_route_layer.progress = 0.0
 	_route_layer.reverse = false
+	_prepare_traveller()
 	_refresh()
 	show()
 
@@ -100,6 +108,7 @@ func _build() -> void:
 	_route_layer.points = _route
 	_route_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_board.add_child(_route_layer)
+	_build_traveller()
 	_add_pin(&"city", Loc.t("ŞEHİR"), HudIcon.Kind.GARAGE)
 	_add_pin(&"junkyard", Loc.t("HURDALIK"), HudIcon.Kind.WRENCH)
 
@@ -240,6 +249,104 @@ func _yard_open() -> bool:
 	return jy != null and jy.is_open()
 
 
+## Rota ucundaki arac, oyuncunun garajda sectigi yaris aracinin gercek modelidir.
+## Ayri viewport, harita dunyasinin 3B kamera ve isiklariyla paylasim yapmaz.
+func _build_traveller() -> void:
+	_traveller_marker = Control.new()
+	_traveller_marker.name = "TravelCar"
+	_traveller_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_traveller_marker.visible = false
+	_board.add_child(_traveller_marker)
+	_route_layer.traveller = _traveller_marker
+
+	_traveller_texture = TextureRect.new()
+	_traveller_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_traveller_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_traveller_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_traveller_texture.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_traveller_marker.add_child(_traveller_texture)
+
+	_traveller_viewport = SubViewport.new()
+	_traveller_viewport.size = TRAVELLER_VIEW_SIZE
+	_traveller_viewport.transparent_bg = true
+	_traveller_viewport.own_world_3d = true
+	_traveller_viewport.msaa_3d = GameSettings.subviewport_msaa(Viewport.MSAA_4X)
+	_traveller_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	add_child(_traveller_viewport)
+	_traveller_texture.texture = _traveller_viewport.get_texture()
+
+	_traveller_stage = Node3D.new()
+	_traveller_viewport.add_child(_traveller_stage)
+	var camera: Camera3D = Camera3D.new()
+	camera.name = "TravelCamera"
+	camera.projection = Camera3D.PROJECTION_PERSPECTIVE
+	camera.fov = 24.0
+	var environment: Environment = Environment.new()
+	environment.background_mode = Environment.BG_CLEAR_COLOR
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.ambient_light_color = Color("D7E1E7")
+	environment.ambient_light_energy = 0.85
+	camera.environment = environment
+	_traveller_stage.add_child(camera)
+	var light: DirectionalLight3D = DirectionalLight3D.new()
+	light.basis = Basis.looking_at(Vector3(-0.35, -1.0, -0.45).normalized(), Vector3.UP)
+	light.light_color = Color("FFF5DB")
+	light.light_energy = 1.15
+	_traveller_stage.add_child(light)
+
+
+func _prepare_traveller() -> void:
+	var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+	var vehicle_id: StringName = ownership.race_vehicle_id() if ownership else RaceManager.FALLBACK_VEHICLE
+	if vehicle_id == &"":
+		vehicle_id = RaceManager.FALLBACK_VEHICLE
+	if vehicle_id == _traveller_vehicle_id and is_instance_valid(_traveller_car):
+		return
+	_traveller_vehicle_id = vehicle_id
+	if is_instance_valid(_traveller_car):
+		_traveller_car.get_parent().remove_child(_traveller_car)
+		_traveller_car.queue_free()
+		_traveller_car = null
+	var path: String = CarCatalog.scene_path(vehicle_id)
+	var scene: PackedScene = load(path) as PackedScene if path != "" else null
+	if scene == null:
+		push_warning("MapScreen: yolculuk araci yuklenemedi (%s)" % vehicle_id)
+		return
+	_traveller_car = scene.instantiate() as Node3D
+	_traveller_stage.add_child(_traveller_car)
+	var rig: CarRig = CarRig.new(_traveller_car)
+	rig.apply(CarAppearance.get_for(path))
+	rig.set_lod_bias(CarRig.LOD_BIAS_WORLD)
+	for mesh: GeometryInstance3D in _traveller_car.find_children("*", "GeometryInstance3D", true, false):
+		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var bounds: AABB = _model_bounds(_traveller_car)
+	var camera: Camera3D = _traveller_stage.get_node_or_null("TravelCamera") as Camera3D
+	if camera:
+		var target: Vector3 = bounds.get_center()
+		var footprint: float = maxf(maxf(bounds.size.x, bounds.size.z), 0.2)
+		# Perspektif kamera: kaput, tavan ve yan yüzeyler ayrı seçilsin; model bir simge gibi düz görünmesin.
+		camera.position = target + Vector3(0.0, footprint * 2.45, -footprint * 2.9)
+		camera.look_at(target, Vector3.UP)
+		camera.force_update_transform()
+	_traveller_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
+func _model_bounds(car: Node3D) -> AABB:
+	var merged: AABB = AABB()
+	var first: bool = true
+	var stack: Array[Node] = [car]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		if node is MeshInstance3D:
+			var mesh: MeshInstance3D = node
+			var box: AABB = mesh.global_transform * mesh.get_aabb()
+			merged = box if first else merged.merge(box)
+			first = false
+		for child: Node in node.get_children():
+			stack.append(child)
+	return merged if not first else AABB(Vector3(-0.5, 0.0, -0.5), Vector3.ONE)
+
+
 # --- Yardımcılar ----------------------------------------------------------------------
 
 func _label(variation: StringName, text: String) -> Label:
@@ -299,19 +406,67 @@ static func dashes(path: PackedVector2Array, progress: float, dash: float) -> Di
 	return {"spans": spans, "head": head}
 
 
+## Rota ucunun konumu ve aracın baktığı yön. Kesik çizgiden ayrı tutulur ki araç,
+## çizgilerin boşluklarında da kesintisiz ve doğru açıyla ilerlesin.
+static func route_pose(path: PackedVector2Array, progress: float) -> Dictionary:
+	if path.is_empty():
+		return {"head": Vector2.ZERO, "direction": Vector2.UP}
+	if path.size() == 1:
+		return {"head": path[0], "direction": Vector2.UP}
+	var total: float = 0.0
+	for i: int in path.size() - 1:
+		total += path[i].distance_to(path[i + 1])
+	var limit: float = total * clampf(progress, 0.0, 1.0)
+	var walked: float = 0.0
+	var direction: Vector2 = Vector2.UP
+	for i: int in path.size() - 1:
+		var a: Vector2 = path[i]
+		var b: Vector2 = path[i + 1]
+		var segment: float = a.distance_to(b)
+		if segment <= 0.0:
+			continue
+		direction = (b - a) / segment
+		if walked + segment >= limit:
+			return {"head": a.lerp(b, (limit - walked) / segment), "direction": direction}
+		walked += segment
+	return {"head": path[path.size() - 1], "direction": direction}
+
+
 ## Rota: kesik çizgili sarı yol + üstünde ilerleyen araç işareti. Noktalar haritaya oranlı (0..1).
 class RouteLayer:
 	extends Control
 
 	var points: PackedVector2Array = PackedVector2Array()
 	var reverse: bool = false
+	var traveller: Control
 	var progress: float = 0.0:
 		set(value):
 			progress = value
+			_update_traveller()
 			queue_redraw()
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		resized.connect(_update_traveller)
+
+	func _update_traveller() -> void:
+		if traveller == null:
+			return
+		traveller.visible = progress > 0.0 and points.size() >= 2
+		if not traveller.visible or size.x <= 0.0 or size.y <= 0.0:
+			return
+		var path: PackedVector2Array = PackedVector2Array()
+		for point: Vector2 in points:
+			path.append(point * size)
+		if reverse:
+			path.reverse()
+		var pose: Dictionary = MapScreen.route_pose(path, progress)
+		var marker_size: float = clampf(size.x * 0.075, 54.0, 88.0)
+		traveller.size = Vector2.ONE * marker_size
+		traveller.pivot_offset = traveller.size * 0.5
+		traveller.position = (pose["head"] as Vector2) - traveller.pivot_offset
+		# Model yukarıyı gösterir; Control açısı ise sağı sıfır kabul eder.
+		traveller.rotation = (pose["direction"] as Vector2).angle() + PI * 0.5
 
 	func _draw() -> void:
 		if points.size() < 2 or progress <= 0.0:
@@ -327,6 +482,3 @@ class RouteLayer:
 		for k: int in range(0, spans.size(), 2):
 			draw_line(spans[k], spans[k + 1], Color("8A5420"), width + 3.0, true)
 			draw_line(spans[k], spans[k + 1], Color("F5BE4C"), width, true)
-		var head: Vector2 = route["head"]
-		draw_circle(head, width * 2.6, Color("2F3236"), true, -1.0, true)
-		draw_circle(head, width * 1.9, Color("F5BE4C"), true, -1.0, true)

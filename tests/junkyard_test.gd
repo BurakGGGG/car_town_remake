@@ -305,6 +305,21 @@ func _run() -> void:
 	var reversed_route: PackedVector2Array = route.duplicate()
 	reversed_route.reverse()
 	check((MapScreen.dashes(reversed_route, 1.0, 13.8)["head"] as Vector2).distance_to(route[0]) < 0.01, "ters yön (şehre dönüş) de sona varıyor")
+	var pose: Dictionary = MapScreen.route_pose(route, 0.5)
+	check((pose["head"] as Vector2).distance_to(route[0]) > 0.01 and (pose["direction"] as Vector2).length() > 0.99,
+		"rota aracı ara noktada konum ve yön alıyor")
+	var hud: Hud = main.find_child("HUD", true, false) as Hud
+	var map: MapScreen = hud.map_screen if hud else null
+	if map:
+		map.open()
+		await frames(2)
+		(map.get("_route_layer") as Control).set("progress", 0.5)
+		var traveller: Control = map.get("_traveller_marker") as Control
+		check(is_instance_valid(map.get("_traveller_car")) and traveller.visible,
+			"harita yolculuğunda seçili yarış aracı üstten görünüm olarak hazırlanıyor")
+		map.close()
+	else:
+		check(false, "harita ekranı HUD'a bağlandı")
 
 	print("== 13b) HURDALIK DÜNYASI: YIĞIN MERKEZLERİ ==")
 	var yard_world: JunkyardWorld = JunkyardWorld.new()
