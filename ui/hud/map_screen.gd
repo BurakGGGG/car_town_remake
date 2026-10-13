@@ -498,7 +498,7 @@ class RouteLayer:
 		if reverse:
 			path.reverse()
 		var pose: Dictionary = MapScreen.route_pose(path, progress)
-		var marker_size: float = clampf(size.x * 0.075, 54.0, 88.0)
+		var marker_size: float = clampf(size.x * 0.06, 44.0, 72.0)
 		traveller.size = Vector2.ONE * marker_size
 		traveller.position = (pose["head"] as Vector2) - traveller.size * 0.5
 		heading_changed.emit(pose["direction"] as Vector2)

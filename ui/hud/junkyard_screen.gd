@@ -89,6 +89,7 @@ func open() -> void:
 		jy.junkyard_changed.connect(_refresh_parts_button)
 	_refresh_yard()
 	_refresh_parts_button()
+	_world.show_player_car(_player_vehicle())
 	_tick()
 	_clock.start()
 	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
@@ -140,6 +141,13 @@ func _claim_render_target() -> void:
 
 func world() -> JunkyardWorld:
 	return _world
+
+
+## Kapının önüne park eden araç: haritada yolculuk yapan araçla aynı (MapScreen._prepare_traveller).
+func _player_vehicle() -> StringName:
+	var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+	var vehicle_id: StringName = ownership.race_vehicle_id() if ownership else &""
+	return vehicle_id if vehicle_id != &"" else RaceManager.FALLBACK_VEHICLE
 
 
 # --- Kurulum -----------------------------------------------------------------------

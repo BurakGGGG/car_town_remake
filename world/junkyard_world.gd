@@ -12,6 +12,8 @@ extends Node3D
 ##   Press_Ram           pres çenesi (iner / kalkar)
 ##   Necati, Cemo, Dog   figürler (hafif nefes / sallanma)
 ##   FireBarrel_N        ateş varilleri (alev materyali titrer)
+## Kodla eklenen: oyuncunun yarış aracı kapının dışında park eder (show_player_car) — haritada yolculuk
+## yapan araç buraya varmış gibi. Sahnede pişmiş ışığı olmayan tek IŞIKLI nesnedir (aşağıda).
 ## Zemin sahnede YOK: dokusu (gölge pişirilmiş) burada düz bir dörtgene giydirilir.
 ##
 ## IŞIK PİŞMİŞTİR: güneş, gök ışığı, gölgeler ve sekme ışığı Cycles'ta köşe rengine ve zemin dokusuna
@@ -51,6 +53,15 @@ const FIRE_KEY: String = "FF6A1A"
 const SIGN_INK: Color = Color("7A2A20")
 ## Yığın / araç seçimi: ekranda merkezden bu yarıçap (dünya metresi → piksel) içinde dokunuş sayılır.
 const PILE_PICK_RADIUS: float = 2.8
+## Oyuncunun aracı: kapının (doğu çiti, Blender X 64, Y 16–26) dışındaki yolda, zemindeki yağ lekesinin
+## (junkyard.py STAINS 72, 21.3) üstünde — leke aracın altında kalır; araçsız yerde boşta duruyordu.
+## Burnu kapıya, batıdan 25° güneye dönük: kapıya çapraz yanaşmış gibi. Kamera güneydoğudan baktığından
+## araç yandan + hafif arkadan görünür.
+const PLAYER_CAR_SPOT: Vector2 = Vector2(71.6, 21.6)   # Blender X, Y (araç tabanının ortası)
+const PLAYER_CAR_HEADING_DEG: float = -65.0            # Godot Y açısı; model önü +Z, -90 = tam batı (kapı)
+## Araç modelleri 1 birim boyunda normalize; model_scale 1.0 olan araç burada bu kadar metre (hurda
+## varyantları gerçek metre: Anadol A1 4,2 m).
+const PLAYER_CAR_LENGTH: float = 4.3
 const CAR_PICK_RADIUS: float = 2.6
 
 var camera: WorldCamera
@@ -66,6 +77,8 @@ var _ram_rest: float = 0.0
 var _figures: Array[Node3D] = []
 var _time: float = 0.0
 var _shakes: Dictionary = {}   # yığın indeksi → Tween
+var _player_car: Node3D        # tutucu (yalnız konum); içinde dönük araç modeli + gölge lekesi
+var _player_car_id: StringName = &""
 
 
 ## Sahne, zemin dokusu ve verilen hurda varyantlarını ARKA PLANDA yüklemeye başlar (harita yolculuğu
@@ -103,12 +116,23 @@ func _build_environment() -> void:
 	var environment: Environment = Environment.new()
 	environment.background_mode = Environment.BG_COLOR
 	environment.background_color = Color("C8B497")   # tozlu ufuk (kamera çoğunlukla zemini görür)
-	environment.ambient_light_source = Environment.AMBIENT_SOURCE_DISABLED
+	# Ortam ışığı ve güneş YALNIZCA oyuncunun aracına düşer: geri kalan her şey ışıksız (unshaded) çizilir.
+	# Araç gerçek zamanlı ışıklanır; ortam ışığı olmasa gölgede kalan yanı kapkara olurdu.
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.ambient_light_color = Color("D9C7AE")   # tozlu çöl göğü
+	environment.ambient_light_energy = 0.9
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 	environment.tonemap_mode = Environment.TONE_MAPPER_AGX
 	environment.tonemap_agx_contrast = AGX_CONTRAST
 	env.environment = environment
 	add_child(env)
+	var sun: DirectionalLight3D = DirectionalLight3D.new()
+	sun.name = "CarSun"
+	sun.basis = Basis.looking_at(SUN_DIRECTION.normalized(), Vector3.UP)   # pişmiş gölgelerle aynı yön
+	sun.light_color = Color("FFE2B8")   # alçak altın güneş
+	sun.light_energy = 1.1
+	sun.shadow_enabled = false          # aracın gölgesi: altındaki leke
+	add_child(sun)
 
 
 func _build_ground() -> void:
@@ -318,6 +342,37 @@ func show_daily(ids: Array[StringName]) -> void:
 		if wreck:
 			holder.add_child(wreck)
 			_add_blob(Vector3.ZERO, 1.7, holder)
+
+
+## Oyuncunun aracını kapının önüne koyar (aynı araçsa bir şey yapmaz; &"" → kaldırır).
+func show_player_car(id: StringName) -> void:
+	if id == _player_car_id and is_instance_valid(_player_car):
+		return
+	_player_car_id = id
+	if is_instance_valid(_player_car):
+		_player_car.queue_free()
+		_player_car = null
+	var path: String = CarCatalog.scene_path(id) if id != &"" else ""
+	var scene: PackedScene = load(path) as PackedScene if path != "" else null
+	if scene == null:
+		return
+	_player_car = Node3D.new()
+	_player_car.name = "PlayerCar"
+	_player_car.position = blender(PLAYER_CAR_SPOT.x, PLAYER_CAR_SPOT.y, 0.0)
+	add_child(_player_car)
+	var model: Node3D = scene.instantiate() as Node3D
+	model.rotation.y = deg_to_rad(PLAYER_CAR_HEADING_DEG)   # tutucu dönmez: gölge lekesi güneşe göre kayar
+	model.scale = Vector3.ONE * PLAYER_CAR_LENGTH * CarCatalog.model_scale(id)
+	_player_car.add_child(model)
+	var rig: CarRig = CarRig.new(model)
+	rig.apply(CarAppearance.get_for(path))
+	rig.set_lod_bias(CarRig.LOD_BIAS_WORLD)
+	rig.optimize(true)   # duran araç: parçalar (tekerler dahil) birkaç çizim çağrısına iner
+	_add_blob(Vector3.ZERO, 1.8, _player_car)
+
+
+func player_car() -> Node3D:
+	return _player_car
 
 
 ## Restorasyon aracının paslı, tekerleksiz hurda varyantı (ön +Z, gerçek metre). Yoksa null.

@@ -337,6 +337,15 @@ func _run() -> void:
 		near = near and Vector2(p.x, -p.z).distance_to(expected[i]) < 2.5
 	check(near, "her yığının seçim / sallanma merkezi kendi yerinde (eskiden hepsi sahne köşesindeydi)")
 	check(yard_world.spots.size() == JunkyardWorld.DAILY_COUNT, "günün araçları için 3 yer")
+	yard_world.show_player_car(RaceManager.FALLBACK_VEHICLE)
+	var parked: Node3D = yard_world.player_car()
+	var parked_model: Node3D = parked.get_child(0) as Node3D if parked and parked.get_child_count() > 0 else null
+	# Kapı: doğu çiti Blender X 64, Y 16–26 → araç çitin DIŞINDA (x > 64), kapı aralığının hizasında
+	check(parked != null and parked.global_position.x > 66.0 and absf(-parked.global_position.z - 21.0) < 5.0,
+		"oyuncunun aracı kapının önünde park etti")
+	# Önü (+Z) batıya (kapıya) bakar ama tam dik değil: çapraz
+	var nose: Vector3 = parked_model.global_basis.z.normalized() if parked_model else Vector3.ZERO
+	check(nose.x < -0.7 and absf(nose.z) > 0.25, "araç kapıya çapraz dönük (ön: %s)" % nose)
 	yard_world.free()
 
 	print("== 14) GARAJDA PROJE: 3 AŞAMA + PANO ==")
