@@ -477,6 +477,26 @@ func _connect_gameplay() -> void:
 		restoration_bays.finale_finished.connect(func(id: StringName) -> void:
 			if restoration_result.visible and restoration_result.vehicle_id == id:
 				restoration_result.hide_panel())   # tören atlandı (kayıt değişti)
+	# PERFORMANS MODİFİYESİ: takma bitti / parça takıldı / süren takmaya dokunuldu
+	var mods: PerformanceModManager = get_tree().get_first_node_in_group("performance_mods") as PerformanceModManager
+	if mods:
+		mods.install_ready.connect(func(id: StringName) -> void:
+			_show_notice(Loc.t("PARÇA HAZIR: %s\nTAMİR ALANINDAKİ ARACA DOKUN") % _car_name(id), HudPalette.COIN_DARK, 2.4))
+		mods.install_completed.connect(func(id: StringName, category: StringName, stage: int, old_class: String,
+				new_class: String) -> void:
+			var text: String = Loc.t("TAKILDI: %s · %s") % [PerformanceMods.category_name(id, category),
+				PerformanceMods.part_name(id, category, stage)]
+			if new_class != old_class:
+				text += "\n" + Loc.t("%s → %s SINIFI!") % [old_class, new_class]
+			_show_notice(text, HudPalette.COIN_DARK, 2.6))
+	var mod_bays: PerformanceBays = get_tree().get_first_node_in_group("performance_bays") as PerformanceBays
+	if mod_bays and mods:
+		mod_bays.job_selected.connect(func(id: StringName) -> void:
+			var job: Dictionary = mods.job_of(id)
+			if job.is_empty():
+				return
+			_show_notice(Loc.t("%s TAKILIYOR\n%s KALDI") % [PerformanceMods.part_name(id, job["category"], int(job["stage"])),
+				PerformanceBayDisplay.countdown(mods.remaining(id))], HudPalette.INK, 2.0))
 	# EŞYAYA BASILI TUT → TAŞI: düzenleyici o eşya parmağın altında tutulmuş açılır
 	if get_tree().get_first_node_in_group("garage_editor"):
 		decor_hold = DecorHoldGesture.new()
@@ -770,6 +790,26 @@ func _on_bay_purchase_failed(index: int, price: int) -> void:
 	_show_notice(Loc.t("%s ₺ GEREKLİ") % format_thousands(price), HudPalette.INK)
 	if _bay_plate.visible:
 		show_bay_plate(index)   # plaka güncel durumu göstersin
+
+
+## ARAÇLAR → MODİFİYE → YÜKSELT: parça alınır, garaj kapanır, oyun ana dünyaya döner ve araç tamir
+## alanına girip liftle kalkar (PerformanceBays.present: kamera alana gider, sonra eski yerine döner).
+## Alınamazsa (para / alan / seviye) garaj açık kalır, plaka nedeni zaten gösteriyor.
+func _on_mod_upgrade(vehicle_id: StringName, category: StringName) -> void:
+	var mods: PerformanceModManager = get_tree().get_first_node_in_group("performance_mods") as PerformanceModManager
+	var mod_bays: PerformanceBays = get_tree().get_first_node_in_group("performance_bays") as PerformanceBays
+	if mods == null or not mods.purchase(vehicle_id, category):
+		return
+	router.close_all()
+	await get_tree().create_timer(0.3).timeout   # garajın kapanış geçişi
+	hide_bay_plate()
+	hide_car_info()
+	if mod_bays:
+		mod_bays.present(vehicle_id)
+
+
+func _car_name(vehicle_id: StringName) -> String:
+	return String(CarCatalog.get_entry(vehicle_id).get("display_name", vehicle_id)).to_upper()
 
 
 ## Bildirim plakası SIRAYLA gösterir: ödül toplamak seviye atlatabilir, seviye ustalık kademesi
@@ -1072,6 +1112,7 @@ func _build_progress_screens() -> void:
 	host.add_child(gem_store_screen)
 	profile_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
 	garage_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
+	garage_screen.mod_upgrade_requested.connect(_on_mod_upgrade)
 
 
 ## YARIŞ: davet panosu (MODAL) → pist (PLACE) → sonuç panosu (MODAL). Ekranlar kendi navigasyonunu

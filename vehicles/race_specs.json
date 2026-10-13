@@ -33,19 +33,19 @@
     },
     "audi_rs6": {
       "base_time": 8.3583,
-      "key": "97fccfe9e281db04441bcdcf2a9c683c",
+      "key": "f5ddfeb128173a27ff8dcf60c080179d",
       "race_top_kmh": 222.426,
       "torque": 856.315
     },
     "bmw_e46": {
       "base_time": 10.3417,
-      "key": "e5efe9482ecd31a2cb0c32203315b034",
+      "key": "bbdd3ac84cc4fe9784c574b70872a6c6",
       "race_top_kmh": 175.114,
       "torque": 386.359
     },
     "bmw_e60": {
       "base_time": 10.375,
-      "key": "829cbbbfbdbc10ed0b3c6607628d5bbd",
+      "key": "f200bd61d08fde0f5f725468ec02d55b",
       "race_top_kmh": 172.44,
       "torque": 414.707
     },
@@ -63,7 +63,7 @@
     },
     "chevrolet_camaro": {
       "base_time": 8.3667,
-      "key": "5e20b9fdf6924c30dcb9fbe0e6a471d1",
+      "key": "c61686f98975f6bcd98a1e0a860ab2ea",
       "race_top_kmh": 230.731,
       "torque": 878.957
     },
@@ -81,7 +81,7 @@
     },
     "ferrari_488_pista": {
       "base_time": 7.4417,
-      "key": "c4da3c8726b521fc99c1ad91be65a3cb",
+      "key": "e5868de83a7168d0bcaa302e9e87fd64",
       "race_top_kmh": 251.369,
       "torque": 1080.527
     },
@@ -147,7 +147,7 @@
     },
     "lambo_huracan": {
       "base_time": 7.275,
-      "key": "559bdc108313a89387b95619bd370394",
+      "key": "4db9a0074923a31d2e37d372b11f915a",
       "race_top_kmh": 272.292,
       "torque": 1151.72
     },
@@ -183,13 +183,13 @@
     },
     "mercedes_cls": {
       "base_time": 10.575,
-      "key": "f1b59fa7c52900e426bee2258f43f5fd",
+      "key": "461beb2f2ef86d437d61c08b4c346865",
       "race_top_kmh": 171.307,
       "torque": 405.728
     },
     "mercedes_s400": {
       "base_time": 9.5,
-      "key": "0340c4294843a89360c0c18172ea7089",
+      "key": "c16327eb3f9602e5ac0e39746d6ca9aa",
       "race_top_kmh": 197.356,
       "torque": 648.88
     },
@@ -231,7 +231,7 @@
     },
     "porsche_gt3": {
       "base_time": 7.8417,
-      "key": "c0a86b6f37a0a9da398d75475102922b",
+      "key": "6f625ba7f994445730f384cd9656367a",
       "race_top_kmh": 250.492,
       "torque": 934.085
     },
@@ -243,7 +243,7 @@
     },
     "renault_toros": {
       "base_time": 13.8333,
-      "key": "151942c8528fd47afda913943b120819",
+      "key": "2993a37f5dcd056be5eb91dd636aa1fd",
       "race_top_kmh": 128.309,
       "torque": 184.533
     },
@@ -261,7 +261,7 @@
     },
     "tesla_model_y": {
       "base_time": 9.4333,
-      "key": "1aad99eb1273d906454e8ee989b3ae38",
+      "key": "8df51d10ab2e7b6070e4bf496aa53a52",
       "race_top_kmh": 189.105,
       "torque": 561.641
     },
@@ -279,7 +279,7 @@
     },
     "tofas_sahin": {
       "base_time": 13.4,
-      "key": "755b8733b2bbdfae57e78de8fae9d45d",
+      "key": "471213b72cb5f5a303d9c4319d8e5298",
       "race_top_kmh": 132.563,
       "torque": 194.747
     },

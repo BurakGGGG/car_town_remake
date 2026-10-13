@@ -72,7 +72,7 @@ func _ready() -> void:
 ## Oyuncu aracının görsel ölçeği (1,0 … SCALE_MAX): hızlanma statından. Ekonomi araçları 1,0'da
 ## kalır (gerçek ölçek), süper sporlar dünyayı 1,6 kat hızlı akıtır.
 static func scale_for(vehicle_id: StringName) -> float:
-	return lerpf(SCALE_MIN, SCALE_MAX, DragRaceSim.performance_ratio(vehicle_id))
+	return lerpf(SCALE_MIN, SCALE_MAX, PerformanceMods.performance_ratio(vehicle_id))
 
 
 ## Pisti bu ölçekte yeniden kurar (ölçek değişmediyse bir şey yapmaz).

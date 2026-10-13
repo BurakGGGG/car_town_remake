@@ -134,21 +134,33 @@ func _refresh() -> void:
 		return
 	var player_id: StringName = race.player_vehicle_id()
 	var rival: StringName = race.rival_id()
-	_fill(_player_labels, player_id)
-	_fill(_rival_labels, rival)
+	_fill(_player_labels, player_id, true)
+	_fill(_rival_labels, rival, false)
 	var reward: Dictionary = race.reward_for(rival, true)
 	var loss: Dictionary = race.reward_for(rival, false)
 	_reward_label.text = Loc.t("KAZANIRSAN  +%s ₺  ·  +%d XP\nKAYBEDERSEN  +%d XP") % [
 		Hud.format_thousands(int(reward["money"])), int(reward["xp"]), int(loss["xp"])]
 
 
-func _fill(labels: Dictionary, vehicle_id: StringName) -> void:
+## player: oyuncunun aracı modifiyeli değerlerle (sınıf, GENEL, 0-100); rakip her zaman fabrika.
+func _fill(labels: Dictionary, vehicle_id: StringName, player: bool) -> void:
 	var entry: Dictionary = CarCatalog.get_entry(vehicle_id)
+	var modified: bool = player and PerformanceMods.is_modified(vehicle_id)
 	(labels["name"] as Label).text = String(entry.get("display_name", vehicle_id)).to_upper()
-	(labels["class"] as Label).text = Loc.t("%s SINIFI") % String(entry.get("class", "?"))
-	(labels["overall"] as Label).text = Loc.t("GENEL  %d") % DragRaceSim.overall_of(vehicle_id)
-	(labels["perf"] as Label).text = GarageScreen.perf_line(entry)
+	(labels["class"] as Label).text = Loc.t("%s SINIFI") % (PerformanceMods.class_of(vehicle_id) if modified
+		else String(entry.get("class", "?")))
+	(labels["overall"] as Label).text = Loc.t("GENEL  %d") % (PerformanceMods.overall(vehicle_id) if modified
+		else DragRaceSim.overall_of(vehicle_id))
+	(labels["perf"] as Label).text = GarageScreen.perf_line(entry) if player else _stock_perf_line(entry)
 	(labels["perf"] as Label).visible = (labels["perf"] as Label).text != ""
+
+
+## Rakibin fabrika değerleri (oyuncu aynı modeli modifiyelemiş olsa da rakip fabrikadır).
+static func _stock_perf_line(entry: Dictionary) -> String:
+	var perf: Dictionary = entry.get("performance", {})
+	if perf.is_empty():
+		return ""
+	return Loc.t("0-100 %s sn · %d km/sa") % [Loc.decimal(float(perf.get("zero_100", 0.0))), int(perf.get("top_speed", 0))]
 
 
 func _label(variation: StringName, text: String) -> Label:

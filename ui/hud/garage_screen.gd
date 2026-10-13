@@ -31,6 +31,8 @@ extends Control
 signal action_selected(action: StringName, car: StringName)
 ## Bir pano isteniyor (&"garage_value" / &"mastery"): ekranı UiRouter açar, garaj altta açık kalır.
 signal screen_requested(id: StringName)
+## MODİFİYE kipinde YÜKSELT: satın alma ve ana dünyadaki sinematik HUD'dadır.
+signal mod_upgrade_requested(vehicle_id: StringName, category: StringName)
 signal closed
 
 const SLIDE: float = 16.0
@@ -199,6 +201,8 @@ var _detail_specs: Label   # gerçek fabrika verisi (performance bloğu): motor 
 const DETAIL_ROWS: Array = [
 	["top_speed", "HIZ"], ["acceleration", "HIZLANMA"], ["reaction", "TEPKİ"], ["grip", "TUTUŞ"]]
 var _detail_lanes: Dictionary = {}
+## ARAÇLAR → MODİFİYE kipi (alt parça şeridi, sağda parça plakası, solda değerler).
+var _workshop: ModWorkshop
 var _detail_values: Dictionary = {}
 
 
@@ -209,7 +213,7 @@ func _ready() -> void:
 	for button: PlateButton in actions:
 		button.button_group = _actions
 		button.toggled.connect(_on_action_toggled.bind(actions[button]))
-	exit_button.pressed.connect(close)
+	exit_button.pressed.connect(_on_exit_pressed)
 	# Bu ekran ARAÇLAR sekmesidir; garajın kendisi (seviye, düzenleme, detay) ana görünümün alt
 	# panelindedir (GaragePanel). Sahne dosyasındaki "GARAJ" yazıları burada değiştirilir.
 	exit_button.text = Loc.t("GERİ")
@@ -241,10 +245,16 @@ func _ready() -> void:
 	info_column.add_theme_constant_override(&"separation", 4)
 	_build_paint()
 	_build_race_pick()
+	_build_performance_button()
 	_build_collection_button()
 	_build_sell()
 	_build_detail()
 	_wrap_info_column()
+	_workshop = ModWorkshop.new()
+	add_child(_workshop)
+	_workshop.build(bottom_group, left_group, right_group)
+	_workshop.upgrade_requested.connect(func(id: StringName, category: StringName) -> void:
+		mod_upgrade_requested.emit(id, category))
 	_apply_responsive_layout()
 	get_viewport().size_changed.connect(_apply_responsive_layout)
 
@@ -317,6 +327,9 @@ func _exit_reserve() -> float:
 ## uzadıkça altı araç şeridinin üstüne biniyordu; üstten hizalanınca aynı yerde başlar ama
 ## şeridin üstünde biter.
 func _place_left_column() -> void:
+	if is_modding():
+		_fit_mod_column()
+		return
 	var height: float = _info_scroll.custom_minimum_size.y
 	if height <= 0.0:
 		return
@@ -394,6 +407,7 @@ func _claim_render_target() -> void:
 
 
 func _finish_close() -> void:
+	_close_mods()
 	_sell_panel.hide()
 	_detail_panel.hide()
 	action_column.show()
@@ -879,7 +893,7 @@ func _refresh_detail() -> void:
 	var entry: Dictionary = CarCatalog.get_entry(_shown_vehicle)
 	var stats: Dictionary = DragRaceSim.stats_of(_shown_vehicle)
 	_detail_name.text = String(entry.get("display_name", _shown_vehicle)).to_upper()
-	_detail_overall.text = "%d / %d" % [DragRaceSim.overall_of(_shown_vehicle), DragRaceSim.OVERALL_MAX]
+	_detail_overall.text = "%d / %d" % [PerformanceMods.overall(_shown_vehicle), DragRaceSim.OVERALL_MAX]
 	_detail_specs.text = spec_text(entry)
 	_detail_specs.visible = _detail_specs.text != ""
 	for row: Array in DETAIL_ROWS:
@@ -902,8 +916,10 @@ static func spec_text(entry: Dictionary) -> String:
 	var engine: String = String(perf.get("engine", ""))
 	if engine.to_lower() == "elektrik":
 		engine = Loc.t("ELEKTRİK")
+	var id: StringName = StringName(String(entry.get("id", "")))
 	if int(perf.get("hp", 0)) > 0:
-		engine += Loc.t(" · %d HP") % int(perf["hp"])
+		var hp: int = roundi(float(PerformanceMods.stats(id)["hp"])) if PerformanceMods.is_modified(id) else int(perf["hp"])
+		engine += Loc.t(" · %d HP") % hp
 	var parts: PackedStringArray = PackedStringArray()
 	for part: String in [engine, drive]:
 		if part != "":
@@ -911,11 +927,17 @@ static func spec_text(entry: Dictionary) -> String:
 	return " · ".join(parts) + "\n" + perf_line(entry)
 
 
-## Tek satır: "0-100 6,5 sn · 250 km/sa" (yarış davet ekranı da kullanır). Veri yoksa boş.
+## Tek satır: "0-100 6,5 sn · 250 km/sa" (yarış davet ekranı da kullanır). Veri yoksa boş. Oyuncunun
+## modifiyeli aracında ölçülmüş değerler, iki ondalıkla ("0-100 9,72 sn · 210 km/sa").
 static func perf_line(entry: Dictionary) -> String:
 	var perf: Dictionary = entry.get("performance", {})
 	if perf.is_empty():
 		return ""
+	var id: StringName = StringName(String(entry.get("id", "")))
+	if PerformanceMods.is_modified(id):
+		var stats: Dictionary = PerformanceMods.stats(id)
+		return Loc.t("0-100 %s sn · %d km/sa") % [ModWorkshop.dec2(float(stats["zero_100"])),
+			roundi(float(stats["top_speed"]))]
 	return Loc.t("0-100 %s sn · %d km/sa") % [Loc.decimal(float(perf.get("zero_100", 0.0))), int(perf.get("top_speed", 0))]
 
 
@@ -985,6 +1007,87 @@ func _refresh_race_pick() -> void:
 	var is_racer: bool = ownership != null and ownership.race_vehicle_id() == _shown_vehicle
 	_race_button.text = Loc.t("YARIŞ ARACI ✔") if is_racer else Loc.t("YARIŞ ARACI YAP")
 	_race_button.disabled = is_racer or ownership == null
+
+
+## Sağ sütuna MODİFİYE plakası: lifteki aracın performans modifiyesi (ModWorkshop) — alttaki araç şeridinin
+## yerine parça kartları gelir, sağda seçilen parçanın plakası ve YÜKSELT. GERİ araç listesine döner.
+func _build_performance_button() -> void:
+	var button: PlateButton = PlateButton.new()
+	button.name = "ModifyButton"
+	button.theme_type_variation = &"HudPlate"
+	button.kind = HudIcon.Kind.WRENCH
+	button.text = Loc.t("MODİFİYE")
+	button.custom_minimum_size = Vector2(86.0, 0.0)
+	button.focus_mode = Control.FOCUS_NONE
+	button.pressed.connect(open_mods)
+	action_column.add_child(button)
+
+
+## MODİFİYE kipine geçer (lifteki araç sahip olunan bir araçsa).
+func open_mods() -> void:
+	if _shown_vehicle == &"" or not _is_owned(_shown_vehicle) or _workshop.is_active():
+		return
+	_kill_tweens()   # giriş animasyonu sürerken eski hedef konum genişleyen sağ plakayı ekrandan iterdi
+	_actions_clear()
+	_paint_panel.close()
+	_sell_panel.hide()
+	_detail_panel.hide()
+	action_column.hide()
+	_info_scroll.hide()
+	var list_scroll: Control = bottom_group.get_node_or_null("CarListScroll") as Control
+	if list_scroll:
+		list_scroll.hide()
+	_set_title(Loc.t("MODİFİYE"))
+	_workshop.open(_shown_vehicle)
+	_fit_mod_column.call_deferred()
+	_place_car_list.call_deferred()
+
+
+## Araç listesine döner.
+func _close_mods() -> void:
+	if _workshop == null or not _workshop.is_active():
+		return
+	_kill_tweens()
+	_workshop.close()
+	action_column.show()
+	_info_scroll.show()
+	var list_scroll: Control = bottom_group.get_node_or_null("CarListScroll") as Control
+	if list_scroll:
+		list_scroll.show()
+	_set_title(Loc.t("ARAÇLAR"))
+	_apply_responsive_layout()
+	_place_car_list.call_deferred()
+
+
+func is_modding() -> bool:
+	return _workshop != null and _workshop.is_active()
+
+
+## GERİ: modifiye kipindeyse araç listesine, değilse garajdan çık.
+func _on_exit_pressed() -> void:
+	if is_modding():
+		_close_mods()
+	else:
+		close()
+
+
+## Sol sütun modifiye kipinde değer plakasının boyunda.
+func _fit_mod_column() -> void:
+	if not is_modding():
+		return
+	left_group.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
+	left_group.offset_left = 0.0
+	left_group.offset_top = COLUMN_TOP
+	left_group.offset_right = left_group.get_combined_minimum_size().x
+	left_group.offset_bottom = COLUMN_TOP + _workshop.stats.get_combined_minimum_size().y
+	if _group_targets.has(left_group):
+		_group_targets[left_group] = left_group.position
+
+
+func _set_title(text: String) -> void:
+	var title: Label = find_child("TitleLabel", true, false) as Label
+	if title:
+		title.text = text
 
 
 ## Sağ sütuna KOLEKSİYON plakası (koleksiyon panosu UiRouter'dadır).

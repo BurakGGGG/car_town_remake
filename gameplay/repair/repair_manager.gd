@@ -255,7 +255,7 @@ func is_bay_free(i: int) -> bool:
 
 
 ## Restorasyon projelerinin kapladığı alanlar (hurdalık yoksa boş) + teslim töreni sürenler (proje
-## kayıtta bitti ama araç henüz liftte kutlanıyor).
+## kayıtta bitti ama araç henüz liftte kutlanıyor) + performans parçası takılan araçlar.
 func _project_bays() -> Array[int]:
 	if not is_inside_tree():
 		return []
@@ -264,6 +264,16 @@ func _project_bays() -> Array[int]:
 	var restoration: RestorationBays = get_tree().get_first_node_in_group("restoration_bays") as RestorationBays
 	if restoration:
 		for bay: int in restoration.celebrating_bays():
+			if not out.has(bay):
+				out.append(bay)
+	var mods: PerformanceModManager = get_tree().get_first_node_in_group("performance_mods") as PerformanceModManager
+	if mods:
+		for bay: int in mods.occupied_bays():
+			if not out.has(bay):
+				out.append(bay)
+	var mod_bays: PerformanceBays = get_tree().get_first_node_in_group("performance_bays") as PerformanceBays
+	if mod_bays:
+		for bay: int in mod_bays.busy_bays():   # parçası takılıp alandan çıkan araç (animasyon)
 			if not out.has(bay):
 				out.append(bay)
 	return out

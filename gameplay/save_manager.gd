@@ -70,6 +70,7 @@ var _ads: AdService
 var _race: RaceManager
 var _tutorial: TutorialManager
 var _junkyard: JunkyardManager
+var _mods: PerformanceModManager
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -102,6 +103,7 @@ func _setup() -> void:
 	_race = get_tree().get_first_node_in_group("race") as RaceManager
 	_tutorial = get_tree().get_first_node_in_group("tutorial") as TutorialManager
 	_junkyard = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
+	_mods = get_tree().get_first_node_in_group("performance_mods") as PerformanceModManager
 	if visit_mode:
 		_loading = true
 		_apply(GarageVisit.garage())
@@ -214,6 +216,8 @@ func new_game() -> void:
 		_tutorial.reset()
 	if _junkyard:
 		_junkyard.reset()
+	if _mods:
+		_mods.reset()
 	_loading = false
 	save_game()
 
@@ -327,6 +331,9 @@ func _collect() -> Dictionary:
 		# HURDALIK: parça envanteri, süren restorasyon projeleri (tamir alanıyla), tamamlananlar.
 		# Eski kayıtta yoktur: boş envanter, proje yok.
 		"junkyard": _junkyard.state() if _junkyard else {},
+		# PERFORMANS MODİFİYESİ: araç başına takılı kademeler, gösterge tabanı, tamir alanında süren takmalar
+		# (bitiş anı unix saniyesi: oyun kapalıyken de dolar). Eski kayıtta yoktur: fabrika araçlar.
+		"performance": _mods.state() if _mods else {},
 	}
 
 
@@ -452,6 +459,9 @@ func _apply(data: Dictionary) -> void:
 	if _junkyard:
 		var junkyard_data: Variant = data.get("junkyard", {})
 		_junkyard.load_state(junkyard_data if junkyard_data is Dictionary else {})
+	if _mods:
+		var mods_data: Variant = data.get("performance", {})
+		_mods.load_state(mods_data if mods_data is Dictionary else {})
 	if legacy:
 		if _missions:
 			_missions.mark_legacy_repairs_passed()   # geçilmiş tamir yıldızları ödenmiş sayılır
@@ -472,6 +482,9 @@ func _connect_auto_save() -> void:
 		_race.records_changed.connect(request_save)
 	if _junkyard:
 		_junkyard.junkyard_changed.connect(request_save)
+	if _mods:
+		_mods.jobs_changed.connect(request_save)
+		_mods.mods_changed.connect(func(_id: StringName) -> void: request_save())
 	if _ownership:
 		_ownership.ownership_changed.connect(request_save)
 	if _progress:

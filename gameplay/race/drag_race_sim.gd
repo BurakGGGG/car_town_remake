@@ -109,6 +109,8 @@ class EngineSpec:
 	var race_top_kmh: float = 0.0
 	## Her vites için OPTİMUM vites devri (son vitese ait değer yoktur).
 	var shift_rpm: PackedFloat32Array = PackedFloat32Array()
+	## Vites geçiş süresi çarpanı (performans modifiyesi: ŞANZIMAN kademeleri; fabrika 1).
+	var shift_time_scale: float = 1.0
 
 	func gear_count() -> int:
 		return gear_ratios.size()
@@ -518,7 +520,7 @@ class Runner:
 		gear += 1
 		shifting = true
 		limiter = false
-		_shift_left = float(DragRaceSim.SHIFT_TIME[quality])
+		_shift_left = float(DragRaceSim.SHIFT_TIME[quality]) * spec.shift_time_scale
 		return quality
 
 	## Bir fizik adımı. `race_time` yarış saatidir (bitiş anını kaydetmek için).
@@ -716,8 +718,13 @@ static func performance_ratio(vehicle_id: StringName) -> float:
 	var perf: Dictionary = CarCatalog.get_entry(vehicle_id).get("performance", {})
 	var t: float = float(perf.get("zero_100", 0.0))
 	if t > 0.0:
-		return clampf((PERF_SLOWEST_0_100 - t) / (PERF_SLOWEST_0_100 - PERF_FASTEST_0_100), 0.0, 1.0)
+		return performance_ratio_of(t)
 	return clampf(float(stats_of(vehicle_id).get("acceleration", 50)) / 100.0, 0.0, 1.0)
+
+
+## 0-100 süresinden performans oranı (modifiyeli oyuncu aracı: PerformanceMods.performance_ratio).
+static func performance_ratio_of(zero_100: float) -> float:
+	return clampf((PERF_SLOWEST_0_100 - zero_100) / (PERF_SLOWEST_0_100 - PERF_FASTEST_0_100), 0.0, 1.0)
 
 
 ## Elektrikli araç mı (performance.engine "Elektrik"): egzoz alevi / patlaması yok, motor sesi uğultu.
@@ -747,8 +754,14 @@ static func stat_ratio(stat: String, value: float) -> float:
 
 
 static func overall_of(vehicle_id: StringName) -> int:
-	var t: float = base_time(vehicle_id)
-	var ratio: float = clampf((OVERALL_SLOW_TIME - t) / (OVERALL_SLOW_TIME - OVERALL_FAST_TIME), 0.0, 1.0)
+	return overall_from_time(base_time(vehicle_id))
+
+
+## Kusursuz 300 m süresinden GENEL puan. ÜST SINIR YOK: performans modifiyesiyle OVERALL_FAST_TIME'ı geçen araç
+## 1000'in üstüne çıkar (full Huracán ~1060); tavan olsaydı S araçların son kademeleri GENEL'de hiç görünmezdi.
+## Fabrika araçların hepsi tavanın altında kalır (en hızlısı Huracán 7,28 sn ≈ 992).
+static func overall_from_time(t: float) -> int:
+	var ratio: float = maxf((OVERALL_SLOW_TIME - t) / (OVERALL_SLOW_TIME - OVERALL_FAST_TIME), 0.0)
 	return roundi((OVERALL_FLOOR + (1.0 - OVERALL_FLOOR) * ratio) * OVERALL_MAX)
 
 
@@ -770,6 +783,7 @@ static func clear_cache() -> void:
 	_base_times.clear()
 	_baked.clear()
 	_baked_loaded = false
+	PerformanceMods.clear_cache()
 
 
 ## Rakibin koşusu (başsız): ekrandaki rakiple AYNI kural — sınıf becerisi + o günün formu.

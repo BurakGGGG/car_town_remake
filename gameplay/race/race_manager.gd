@@ -167,7 +167,7 @@ func rival_id_for(player_id: StringName) -> StringName:
 
 ## Oyuncunun aracına verilebilecek rakipler (oyuncunun kendi modeli dahil: aynalı yarış).
 static func rival_pool(player_id: StringName) -> Array[StringName]:
-	var mine: float = DragRaceSim.base_time(player_id)
+	var mine: float = PerformanceMods.time_300(player_id)   # modifiyeli süre: yükseltme üst sınıf rakip getirir
 	var widen: float = 1.0
 	var pool: Array[StringName] = []
 	while widen <= 4.0:

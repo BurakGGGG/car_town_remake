@@ -38,7 +38,7 @@
       "performance": {
         "variant": "BMW E46 330i",
         "engine": "3.0",
-        "hp": 0,
+        "hp": 231,
         "zero_100": 6.5,
         "top_speed": 250,
         "drivetrain": "RWD"
@@ -289,7 +289,7 @@
       "performance": {
         "variant": "Tofaş Şahin",
         "engine": "1.6",
-        "hp": 0,
+        "hp": 80,
         "zero_100": 13.2,
         "top_speed": 165,
         "drivetrain": "RWD"
@@ -340,7 +340,7 @@
       "performance": {
         "variant": "Renault Toros",
         "engine": "1.4",
-        "hp": 0,
+        "hp": 72,
         "zero_100": 14.5,
         "top_speed": 150,
         "drivetrain": "FWD"
@@ -790,7 +790,7 @@
       "performance": {
         "variant": "BMW E60 530i",
         "engine": "3.0",
-        "hp": 0,
+        "hp": 272,
         "zero_100": 6.5,
         "top_speed": 250,
         "drivetrain": "RWD"
@@ -890,7 +890,7 @@
       "performance": {
         "variant": "Mercedes CLS 350",
         "engine": "3.5 V6",
-        "hp": 0,
+        "hp": 306,
         "zero_100": 6.7,
         "top_speed": 250,
         "drivetrain": "RWD"
@@ -940,7 +940,7 @@
       "performance": {
         "variant": "Audi RS6",
         "engine": "4.0 TFSI",
-        "hp": 0,
+        "hp": 600,
         "zero_100": 3.9,
         "top_speed": 305,
         "drivetrain": "AWD"
@@ -990,7 +990,7 @@
       "performance": {
         "variant": "Porsche 911 GT3",
         "engine": "4.0",
-        "hp": 0,
+        "hp": 500,
         "zero_100": 3.4,
         "top_speed": 311,
         "drivetrain": "RWD"
@@ -1040,7 +1040,7 @@
       "performance": {
         "variant": "Lamborghini Huracán",
         "engine": "5.2 V10",
-        "hp": 0,
+        "hp": 610,
         "zero_100": 2.9,
         "top_speed": 325,
         "drivetrain": "AWD"
@@ -1090,7 +1090,7 @@
       "performance": {
         "variant": "Ferrari 488 Pista",
         "engine": "3.9 V8",
-        "hp": 0,
+        "hp": 720,
         "zero_100": 2.9,
         "top_speed": 340,
         "drivetrain": "RWD"
@@ -1190,7 +1190,7 @@
       "performance": {
         "variant": "Tesla Model Y Long Range AWD",
         "engine": "Elektrik",
-        "hp": 0,
+        "hp": 351,
         "zero_100": 5.0,
         "top_speed": 217,
         "drivetrain": "AWD"
@@ -1240,7 +1240,7 @@
       "performance": {
         "variant": "Chevrolet Camaro SS",
         "engine": "6.2 V8",
-        "hp": 0,
+        "hp": 432,
         "zero_100": 4.0,
         "top_speed": 250,
         "drivetrain": "RWD"
@@ -1290,7 +1290,7 @@
       "performance": {
         "variant": "Mercedes S400",
         "engine": "3.0 V6 Biturbo",
-        "hp": 0,
+        "hp": 333,
         "zero_100": 5.3,
         "top_speed": 250,
         "drivetrain": "RWD"

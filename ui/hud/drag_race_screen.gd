@@ -248,7 +248,7 @@ func open() -> void:
 	_player_distance = DragTrack.START_Z
 	_rival_distance = DragTrack.START_Z
 	_player = DragRaceSim.Runner.new()
-	_player.setup(_player_id, _rng)
+	_player.setup_spec(PerformanceMods.spec_for(_player_id), _rng)   # modifiyeli künye (rakip fabrika)
 	_rival = DragRaceSim.Runner.new()
 	_rival.setup(_rival_id, _rng)
 	# Rakibin becerisi SINIFINDAN gelir (D çok hata yapar, S neredeyse kusursuz) ve her yarışta bir GÜN
@@ -264,7 +264,7 @@ func open() -> void:
 	_rival_target = _rival_plan[0] if not _rival_plan.is_empty() else INF
 	# Hızlı araçla yarışırken dünya daha hızlı akar (aynı 300 m, daha uzun çizilmiş pist)
 	_track.set_scale_factor(DragTrack.scale_for(_player_id))
-	_player_perf = _performance(_player_id)
+	_player_perf = PerformanceMods.performance_ratio(_player_id)
 	_rival_perf = _performance(_rival_id)
 	_player_electric = DragRaceSim.is_electric(_player_id)
 	_rival_electric = DragRaceSim.is_electric(_rival_id)

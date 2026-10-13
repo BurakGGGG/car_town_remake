@@ -100,6 +100,16 @@ func _ensure_crate_system() -> void:
 		var junkyard: JunkyardManager = JunkyardManager.new()
 		junkyard.name = "JunkyardManager"
 		add_child(junkyard)
+	# PERFORMANS MODİFİYESİ: araç başına kademeler + tamir alanında takma (kayıt SaveManager'da, ondan ÖNCE hazır)
+	if get_tree().get_first_node_in_group("performance_mods") == null:
+		var mods: PerformanceModManager = PerformanceModManager.new()
+		mods.name = "PerformanceModManager"
+		add_child(mods)
+	# Takılan parçanın garajdaki görünümü (lifteki araç + kalan süre balonu)
+	if get_tree().get_first_node_in_group("performance_bays") == null:
+		var mod_bays: PerformanceBays = PerformanceBays.new()
+		mod_bays.name = "PerformanceBays"
+		add_child(mod_bays)
 	# Restorasyon projelerinin garajdaki görünümü (tamir alanının liftinde şasi / paslı / temiz araç)
 	if get_tree().get_first_node_in_group("restoration_bays") == null:
 		var restoration_bays: RestorationBays = RestorationBays.new()
