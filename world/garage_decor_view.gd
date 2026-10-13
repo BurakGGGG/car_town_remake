@@ -48,6 +48,8 @@ var _floor_mat: ShaderMaterial
 var _tile_image: Image
 var _tile_texture: ImageTexture
 var _pattern_ids: Array[StringName] = []
+## Zemin shader'ındaki desen başına dizilerin boyu (vfx/floor_tiles.gdshader: roughness_of / metallic_of).
+const MAX_PATTERNS: int = 64
 
 
 func _ready() -> void:
@@ -569,9 +571,9 @@ func _setup_floor() -> void:
 	_floor_mat.set_shader_parameter(&"patterns", DecorTextures.pattern_array(_pattern_ids))
 	var rough: PackedFloat32Array = PackedFloat32Array()
 	var metal: PackedFloat32Array = PackedFloat32Array()
-	rough.resize(32)
-	metal.resize(32)
-	for k: int in mini(_pattern_ids.size(), 32):
+	rough.resize(MAX_PATTERNS)
+	metal.resize(MAX_PATTERNS)
+	for k: int in mini(_pattern_ids.size(), MAX_PATTERNS):
 		var sm: Vector2 = DecorTextures.pattern_surface(_pattern_ids[k])
 		rough[k] = sm.x
 		metal[k] = sm.y

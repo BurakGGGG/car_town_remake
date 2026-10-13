@@ -7,7 +7,7 @@ Tüm fonksiyonlar `bpy` üzerinden çalışır ve nesneleri "Dekor" koleksiyonun
 import bpy, math, random, os
 import mathutils
 
-OUT_DIR = "/home/burak/Projects/car-town-remake/assets/decor"
+OUT_DIR = os.environ.get("CT_DECOR_OUT", "/home/burak/Projects/car-town-remake/assets/decor")
 _MATS = {}
 
 
@@ -98,6 +98,38 @@ def torus(major, minor, loc, material, rot=(0, 0, 0), seg=12, mseg=6):
                                      major_segments=seg, minor_segments=mseg,
                                      location=loc, rotation=rot)
     return _place(bpy.context.object, material)
+
+
+def prism(pts, depth, plane, material, offset=0.0):
+    """2B dış hattı (u, v) kalınlık `depth` kadar ekstrüde eder (kavisli gövdeler: piyano, atari yanı).
+    plane: 'xy' → (u, v) zeminde, z yönünde; 'xz' → önden profil, y yönünde; 'yz' → yandan profil,
+    x yönünde. `offset` ekstrüzyon ekseninde ortanın konumu."""
+    import bmesh
+    w0, w1 = offset - depth / 2.0, offset + depth / 2.0
+
+    def at(u, v, w):
+        if plane == 'xy':
+            return (u, v, w)
+        if plane == 'xz':
+            return (u, w, v)
+        return (w, u, v)
+
+    bm = bmesh.new()
+    a = [bm.verts.new(at(u, v, w0)) for (u, v) in pts]
+    b = [bm.verts.new(at(u, v, w1)) for (u, v) in pts]
+    bm.faces.new(list(reversed(a)))
+    bm.faces.new(b)
+    n = len(pts)
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((a[i], a[j], b[j], b[i]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new("prism")
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new("prism", me)
+    col().objects.link(o)
+    return _place(o, material)
 
 
 def finish(name, export=True):

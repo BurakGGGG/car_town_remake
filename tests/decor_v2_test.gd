@@ -47,6 +47,7 @@ func _initialize() -> void:
 	await _fading()
 	await _editor_tools()
 	await _hold_to_move()
+	_catalog_v3()
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
 
@@ -381,6 +382,49 @@ func _hold_to_move() -> void:
 	router.close_all()
 	await frames(4)
 	check(not editor.active, "BİTİR: oyuna dönüldü")
+
+
+## Dekorasyon v3: katalog ~1,5 kat; her yeni desen / kaplama gerçekten çiziliyor, her eşyanın modeli var,
+## desen sayısı zemin shader'ının dizilerine sığıyor, palet rütbe → fiyat sırasında.
+func _catalog_v3() -> void:
+	print("== 10) DEKORASYON v3 KATALOĞU ==")
+	var active: int = GarageDecor.all().size()   # emekli kayıtlar all()'da yok
+	check(active >= 216, "katalog v2'nin 1,5 katı (%d eşya, v2: 144)" % active)
+	var patterns: Array[Dictionary] = GarageDecor.items_in(GarageDecor.Kind.FLOOR_PATTERN)
+	check(patterns.size() <= GarageDecorView.MAX_PATTERNS,
+		"desenler zemin shader'ına sığıyor (%d / %d)" % [patterns.size(), GarageDecorView.MAX_PATTERNS])
+	var plain: Array[StringName] = []
+	for item: Dictionary in patterns:
+		var img: Image = DecorTextures.pattern_image(item["id"])
+		if img.get_pixel(5, 5) == Color("777777") and img.get_pixel(70, 40) == Color("777777"):
+			plain.append(item["id"])
+	check(plain.is_empty(), "her zemin deseninin kendi dokusu var %s" % [plain])
+	var grey: Array[StringName] = []
+	for item: Dictionary in GarageDecor.items_in(GarageDecor.Kind.WALL_SURFACE):
+		if DecorTextures.wall_color(item["id"]).is_equal_approx(Color(0.6, 0.6, 0.6)):
+			grey.append(item["id"])
+	check(grey.is_empty(), "her duvar kaplamasının kendi rengi var %s" % [grey])
+	var no_model: Array[StringName] = []
+	for item: Dictionary in GarageDecor.all():
+		if not GarageDecor.is_placeable(item["id"]) or DecorBuilder.has_model(item["id"]):
+			continue
+		var body: Node3D = DecorBuilder.build(item["id"])   # model yoksa kodla üretilen gövde
+		if body == null or body.get_child_count() == 0:
+			no_model.append(item["id"])
+		if body:
+			body.free()
+	check(no_model.is_empty(), "her eşyanın gövdesi var %s" % [no_model])
+	var unsorted: Array[int] = []
+	for kind: int in GarageDecor.categories():
+		var order: Array[Dictionary] = GarageDecor.shop_order(kind)
+		for k: int in range(1, order.size()):
+			var a: Dictionary = order[k - 1]
+			var b: Dictionary = order[k]
+			if int(a["min_rank"]) > int(b["min_rank"]) \
+					or (int(a["min_rank"]) == int(b["min_rank"]) and int(a["price"]) > int(b["price"])):
+				unsorted.append(kind)
+				break
+	check(unsorted.is_empty(), "palet kartları rütbe → fiyat sırasında %s" % [unsorted])
 
 
 func _mouse(at: Vector2, pressed: bool) -> void:

@@ -29,7 +29,11 @@ static func pattern_surface(id: StringName) -> Vector2:
 		&"tile_white", &"tile_grey": return Vector2(0.45, 0.0)
 		&"checker_bw", &"checker_bw_big", &"checker_blue", &"checker_red": return Vector2(0.4, 0.0)
 		&"checker_pink", &"checker_mint", &"tile_pastel": return Vector2(0.45, 0.0)
-		&"wood_light", &"wood_dark", &"wood_white": return Vector2(0.6, 0.0)
+		&"wood_light", &"wood_dark", &"wood_white", &"parquet_basket": return Vector2(0.6, 0.0)
+		&"marble", &"terrazzo": return Vector2(0.25, 0.0)
+		&"hex_tile", &"terracotta", &"checker_yellow": return Vector2(0.45, 0.0)
+		&"steel_grate": return Vector2(0.45, 0.6)
+		&"turf": return Vector2(0.95, 0.0)
 		_: return Vector2(0.85, 0.0)
 
 
@@ -63,6 +67,17 @@ static func pattern_image(id: StringName) -> Image:
 		&"checker_mint": _checker(img, 2, Color("B4E2D0"), Color("FFF4E6"))
 		&"tile_pastel": _pastel_tiles(img)
 		&"wood_white": _planks(img, Color("E8DDCC"), 19)
+		# Dekorasyon v3
+		&"brick_paver": _bricks(img, Color("9A4F35"), Color("C8B48E"), 41)
+		&"turf": _turf(img)
+		&"cobblestone": _stones(img, 8, 8, Color("8A8780"), Color("4A4842"), 42)
+		&"terracotta": _tiles(img, 2, Color("B8643E"), Color("E6D6BC"), 4)
+		&"hex_tile": _hexagons(img, Color("EEEDE8"), Color("8D9096"))
+		&"checker_yellow": _checker(img, 2, Color("E8B530"), Color("15171B"))
+		&"terrazzo": _terrazzo(img)
+		&"steel_grate": _grate(img)
+		&"parquet_basket": _basket(img, Color("B9874F"), 43)
+		&"marble": _marble(img)
 		_: img.fill(Color("777777"))
 	img.generate_mipmaps()
 	_pattern_images[id] = img
@@ -127,6 +142,14 @@ static func wall_color(id: StringName) -> Color:
 		&"wall_mint": return Color("AADDC9")
 		&"wall_lilac": return Color("CBBAE6")
 		&"wall_candy": return Color("F4BFD0")
+		# Dekorasyon v3
+		&"wall_green": return Color("1F5A3C")
+		&"wall_orange": return Color("E07B2C")
+		&"wall_brick_white": return Color("E9E5DC")
+		&"wall_concrete": return Color("9C9A94")
+		&"wall_stone": return Color("8D8273")
+		&"wall_race_stripe": return Color("24262A")
+		&"wall_diamond": return Color("A9AEB4")
 		_: return Color(0.6, 0.6, 0.6)
 
 
@@ -146,6 +169,11 @@ static func wall_image(id: StringName) -> Image:
 		&"wall_tile": _tiles(img, 4, Color("EEEDE8"), Color("BEBDB8"), 2)
 		&"wall_checker": _checker(img, 4, Color("EFEEE9"), Color("1E1F22"))
 		&"wall_candy": _candy_stripes(img, Color("F4BFD0"), Color("FFF4E6"))
+		&"wall_brick_white": _bricks(img, Color("E9E5DC"), Color("B7B2A8"), 24)
+		&"wall_concrete": _formed_concrete(img, Color("9C9A94"))
+		&"wall_stone": _stones(img, 4, 8, Color("8D8273"), Color("C9C0AE"), 25)
+		&"wall_race_stripe": _wall_stripe(img)
+		&"wall_diamond": _diamond(img, Color("A9AEB4"))
 		_: return null
 	img.generate_mipmaps()
 	_pattern_images[key] = img
@@ -163,6 +191,9 @@ static func wall_material(id: StringName) -> StandardMaterial3D:
 		&"wall_metal": mat.metallic = 0.45
 		&"wall_panel", &"wall_tile": mat.roughness = 0.45
 		&"wall_black": mat.roughness = 0.6
+		&"wall_diamond":
+			mat.metallic = 0.6
+			mat.roughness = 0.4
 	var img: Image = wall_image(id)
 	if img:
 		mat.albedo_texture = ImageTexture.create_from_image(img)
@@ -338,3 +369,175 @@ static func _corrugated(img: Image, base: Color) -> void:
 	for y: int in SIZE:
 		for x: int in SIZE:
 			img.set_pixel(x, y, _shade(base, 0.85 + 0.25 * (0.5 + 0.5 * sin(float(x) / float(SIZE) * TAU * 8.0))))
+
+
+# --- Dekorasyon v3 desenleri ----------------------------------------------------------
+# Hepsi döşenebilir (128 piksellik karo kenardan kenara ek yeri vermez): frekanslar karo boyunun katları,
+# Voronoi hücreleri sarmal (toroidal) mesafeyle hesaplanır.
+
+## Suni çim: iki şerit (biçilmiş çim görünümü) + ince lif gürültüsü.
+static func _turf(img: Image) -> void:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 51
+	var light: Color = Color("4E9A3E")
+	var dark: Color = Color("3E8432")
+	for y: int in SIZE:
+		for x: int in SIZE:
+			var base: Color = light if y < SIZE / 2 else dark
+			img.set_pixel(x, y, _shade(base, 1.0 + rng.randf_range(-0.09, 0.09)))
+
+
+## Taş döşeme (Arnavut kaldırımı / taş duvar): sarmal Voronoi, her taş kendi tonunda, aralar harç.
+## cols × rows hücreli kafeste birer tohum noktası; hücre en-boy oranı taşın biçimini verir.
+static func _stones(img: Image, cols: int, rows: int, stone: Color, mortar: Color, seed_value: int) -> void:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var cw: float = float(SIZE) / float(cols)
+	var ch: float = float(SIZE) / float(rows)
+	var seeds: Array[Vector2] = []
+	var tones: Array[float] = []
+	for r: int in rows:
+		for c: int in cols:
+			seeds.append(Vector2((float(c) + rng.randf_range(0.25, 0.75)) * cw, (float(r) + rng.randf_range(0.25, 0.75)) * ch))
+			tones.append(rng.randf_range(0.82, 1.15))
+	for y: int in SIZE:
+		for x: int in SIZE:
+			var p: Vector2 = Vector2(x, y)
+			var cx: int = int(float(x) / cw)
+			var cy: int = int(float(y) / ch)
+			var d1: float = INF
+			var d2: float = INF
+			var best: int = 0
+			for oy: int in range(-1, 2):
+				for ox: int in range(-1, 2):
+					var gx: int = cx + ox
+					var gy: int = cy + oy
+					var k: int = posmod(gy, rows) * cols + posmod(gx, cols)
+					var q: Vector2 = seeds[k] + Vector2(float(floori(float(gx) / cols) * SIZE), float(floori(float(gy) / rows) * SIZE))
+					var d: float = p.distance_to(q)
+					if d < d1:
+						d2 = d1
+						d1 = d
+						best = k
+					elif d < d2:
+						d2 = d
+			var edge: float = d2 - d1
+			if edge < 2.2:
+				img.set_pixel(x, y, mortar)
+			else:
+				var bevel: float = 0.92 if edge < 4.0 else 1.0
+				img.set_pixel(x, y, _shade(stone, tones[best] * bevel))
+
+
+## Altıgen karo: 4 × 4 altıgen kafes (satırlar yarım kaydırılmış), en yakın iki merkez eşitse derz.
+static func _hexagons(img: Image, face: Color, grout: Color) -> void:
+	var n: int = 4
+	var step: float = float(SIZE) / float(n)
+	for y: int in SIZE:
+		for x: int in SIZE:
+			var d1: float = INF
+			var d2: float = INF
+			var row: int = int(float(y) / step)
+			var column: int = int(float(x) / step)
+			for r: int in range(row - 1, row + 2):
+				for c: int in range(column - 1, column + 2):
+					var cx: float = (float(c) + (0.5 if posmod(r, 2) == 1 else 0.0)) * step
+					var cy: float = (float(r) + 0.5) * step
+					var d: float = Vector2(x, y).distance_to(Vector2(cx, cy))
+					if d < d1:
+						d2 = d1
+						d1 = d
+					elif d < d2:
+						d2 = d
+			img.set_pixel(x, y, grout if d2 - d1 < 2.0 else _shade(face, 1.0 - 0.06 * d1 / step))
+
+
+## Terazzo: krem zemin + rengârenk mermer kırıntıları.
+static func _terrazzo(img: Image) -> void:
+	_speckle(img, Color("E6DFD2"), 0.03, 52)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 53
+	var chips: Array[Color] = [Color("C0533A"), Color("3F6E8C"), Color("D9A441"), Color("2E2F33"), Color("8FB39A"),
+		Color("B8B2A6")]
+	for i: int in 260:
+		var w: int = rng.randi_range(2, 5)
+		var h: int = rng.randi_range(2, 4)
+		var x0: int = rng.randi_range(0, SIZE - 1)
+		var y0: int = rng.randi_range(0, SIZE - 1)
+		var c: Color = chips[i % chips.size()]
+		for y: int in h:
+			for x: int in w:
+				img.set_pixel((x0 + x) % SIZE, (y0 + y) % SIZE, c)
+
+
+## Çelik ızgara: koyu boşluk üstünde taşıyıcı lamalar ve çapraz çubuklar.
+static func _grate(img: Image) -> void:
+	img.fill(Color("1A1C1F"))
+	var bar: Color = Color("8C939B")
+	for x: int in range(0, SIZE, 8):
+		_rect(img, Rect2i(x, 0, 3, SIZE), bar)
+		_rect(img, Rect2i(x + 2, 0, 1, SIZE), _shade(bar, 0.7))
+	for y: int in range(0, SIZE, 32):
+		_rect(img, Rect2i(0, y, SIZE, 2), _shade(bar, 1.15))
+
+
+## Örgü parke: 2 × 2 blok, her blokta dört lata; bloklar sırayla yatay / düşey.
+static func _basket(img: Image, base: Color, seed_value: int) -> void:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var block: int = SIZE / 4
+	var lath: int = block / 4
+	for by: int in 4:
+		for bx: int in 4:
+			var vertical: bool = (bx + by) % 2 == 1
+			for k: int in 4:
+				var tone: float = rng.randf_range(0.86, 1.12)
+				var r: Rect2i = Rect2i(bx * block + k * lath, by * block, lath, block) if vertical \
+					else Rect2i(bx * block, by * block + k * lath, block, lath)
+				for y: int in range(r.position.y, r.end.y):
+					for x: int in range(r.position.x, r.end.x):
+						var along: int = y if vertical else x
+						img.set_pixel(x, y, _shade(base, tone + 0.035 * sin(float(along) * 0.7 + float(k) * 2.0)))
+				var edge: Rect2i = Rect2i(r.position.x, r.position.y, 1, r.size.y) if vertical \
+					else Rect2i(r.position.x, r.position.y, r.size.x, 1)
+				_rect(img, edge, _shade(base, 0.6))
+
+
+## Mermer: beyaz levhalar, gri damarlar (karo boyunun katı frekanslar: kenarlar birleşir), 2 × 2 ince derz.
+static func _marble(img: Image) -> void:
+	var w: float = TAU / float(SIZE)
+	for y: int in SIZE:
+		for x: int in SIZE:
+			var fx: float = float(x) * w
+			var fy: float = float(y) * w
+			var warp: float = 0.9 * sin(fy * 2.0 + 1.3) + 0.5 * sin(fx * 3.0 + fy)
+			var vein: float = absf(sin(fx + fy * 2.0 + warp))
+			var c: Color = Color("F1EFEA").lerp(Color("8E9298"), clampf(1.0 - vein * 9.0, 0.0, 1.0) * 0.8)
+			img.set_pixel(x, y, _shade(c, 1.0 - 0.04 * sin(fx * 2.0 - fy)))
+	for p: int in [0, SIZE / 2]:
+		_rect(img, Rect2i(p, 0, 1, SIZE), Color("D4D1CA"))
+		_rect(img, Rect2i(0, p, SIZE, 1), Color("D4D1CA"))
+
+
+## Brüt beton: kalıp tahtası izleri (yatay) + panel derzleri + kalıp bağlantı delikleri.
+static func _formed_concrete(img: Image, base: Color) -> void:
+	_speckle(img, base, 0.05, 54)
+	for y: int in range(0, SIZE, 16):
+		_rect(img, Rect2i(0, y, SIZE, 1), _shade(base, 0.9))
+	_rect(img, Rect2i(0, 0, 2, SIZE), _shade(base, 0.72))
+	_rect(img, Rect2i(0, SIZE / 2, SIZE, 2), _shade(base, 0.72))
+	for cy: int in [SIZE / 4, SIZE * 3 / 4]:
+		for cx: int in [SIZE / 4, SIZE * 3 / 4]:
+			for y: int in range(-3, 4):
+				for x: int in range(-3, 4):
+					if x * x + y * y <= 8:
+						img.set_pixel(cx + x, cy + y, _shade(base, 0.55))
+
+
+## Yarış şeritli duvar: koyu boya, ortada kırmızı-beyaz-kırmızı yatay bant (triplanar: bant duvarı sarar).
+static func _wall_stripe(img: Image) -> void:
+	img.fill(Color("24262A"))
+	var mid: int = SIZE / 2
+	_rect(img, Rect2i(0, mid - 14, SIZE, 10), Color("C8322B"))
+	_rect(img, Rect2i(0, mid - 3, SIZE, 6), Color("EFEFEA"))
+	_rect(img, Rect2i(0, mid + 4, SIZE, 10), Color("C8322B"))

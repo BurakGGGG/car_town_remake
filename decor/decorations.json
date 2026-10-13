@@ -1489,6 +1489,796 @@
       "value": 3400,
       "min_rank": 2,
       "desc": "Perdeli küçük pencere."
+    },
+    {
+      "id": "gumball",
+      "title": "SAKIZ MAKİNESİ",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 3000,
+      "value": 1200,
+      "min_rank": 1,
+      "desc": "Cam fanuslu jetonlu sakız makinesi."
+    },
+    {
+      "id": "water_cooler",
+      "title": "SU SEBİLİ",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 4000,
+      "value": 1600,
+      "min_rank": 1,
+      "desc": "Damacanalı su sebili ve bardaklar."
+    },
+    {
+      "id": "round_table",
+      "title": "YUVARLAK MASA",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 7000,
+      "value": 2800,
+      "min_rank": 1,
+      "desc": "Ahşap yuvarlak masa, iki sandalye."
+    },
+    {
+      "id": "bar_stools",
+      "title": "BAR TABURELERİ",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 9000,
+      "value": 3600,
+      "min_rank": 2,
+      "desc": "Kırmızı minderli üç krom tabure."
+    },
+    {
+      "id": "diner_booth",
+      "title": "DİNER KOLTUĞU",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 18000,
+      "value": 7200,
+      "min_rank": 3,
+      "desc": "Karşılıklı kırmızı koltuklar ve krom masa."
+    },
+    {
+      "id": "ping_pong",
+      "title": "MASA TENİSİ",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 20000,
+      "value": 8000,
+      "min_rank": 3,
+      "desc": "Fileli masa ve iki raket."
+    },
+    {
+      "id": "soda_machine",
+      "title": "GAZOZ MAKİNESİ",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 22000,
+      "value": 8800,
+      "min_rank": 3,
+      "desc": "Oval tepeli retro gazoz dolabı."
+    },
+    {
+      "id": "leather_sofa",
+      "title": "DERİ KANEPE",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 24000,
+      "value": 9600,
+      "min_rank": 4,
+      "desc": "Kapitone kahverengi deri kanepe."
+    },
+    {
+      "id": "drum_kit",
+      "title": "DAVUL SETİ",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 28000,
+      "value": 11200,
+      "min_rank": 4,
+      "desc": "Bas davul, tomlar, ziller ve tabure."
+    },
+    {
+      "id": "arcade_cabinet",
+      "title": "ATARİ MAKİNESİ",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 32000,
+      "value": 12800,
+      "min_rank": 4,
+      "desc": "Işıklı başlıklı jetonlu atari."
+    },
+    {
+      "id": "air_hockey",
+      "title": "AIR HOCKEY",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 38000,
+      "value": 15200,
+      "min_rank": 4,
+      "desc": "Skor panolu hava hokeyi masası."
+    },
+    {
+      "id": "pinball",
+      "title": "PİNBOL",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 42000,
+      "value": 16800,
+      "min_rank": 5,
+      "desc": "Işıklı arka panolu pinbol makinesi."
+    },
+    {
+      "id": "dj_booth",
+      "title": "DJ MASASI",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 55000,
+      "value": 22000,
+      "min_rank": 6,
+      "desc": "İki pikap, mikser ve hoparlörler."
+    },
+    {
+      "id": "pool_table",
+      "title": "BİLARDO MASASI",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 60000,
+      "value": 24000,
+      "min_rank": 6,
+      "desc": "Yeşil çuha, dizilmiş toplar ve isteka."
+    },
+    {
+      "id": "grand_piano",
+      "title": "KUYRUKLU PİYANO",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 90000,
+      "value": 36000,
+      "min_rank": 7,
+      "desc": "Kapağı açık siyah kuyruklu piyano."
+    },
+    {
+      "id": "manager_desk",
+      "title": "MÜDÜR MASASI",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 100000,
+      "value": 40000,
+      "min_rank": 8,
+      "desc": "Ceviz masa ve deri kaptan koltuğu."
+    },
+    {
+      "id": "wheel_chocks",
+      "title": "TEKER TAKOZLARI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 1800,
+      "value": 720,
+      "min_rank": 1,
+      "desc": "Kırmızı ve sarı lastik takozlar."
+    },
+    {
+      "id": "creeper",
+      "title": "SÜRÜNGEÇ",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 2200,
+      "value": 880,
+      "min_rank": 1,
+      "desc": "Araç altına kayan tekerlekli yatak."
+    },
+    {
+      "id": "oil_drain",
+      "title": "YAĞ BOŞALTMA KABI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 2800,
+      "value": 1120,
+      "min_rank": 1,
+      "desc": "Hunili, tekerlekli atık yağ kabı."
+    },
+    {
+      "id": "utility_sink",
+      "title": "ATÖLYE LAVABOSU",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 6500,
+      "value": 2600,
+      "min_rank": 1,
+      "desc": "Paslanmaz tekne, musluk ve kova."
+    },
+    {
+      "id": "rim_stack",
+      "title": "JANT YIĞINI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 7000,
+      "value": 2800,
+      "min_rank": 2,
+      "desc": "Üst üste jantlar ve iki sergi jantı."
+    },
+    {
+      "id": "battery_charger",
+      "title": "AKÜ ŞARJ ARABASI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 8000,
+      "value": 3200,
+      "min_rank": 2,
+      "desc": "Göstergeli, maşalı akü şarj cihazı."
+    },
+    {
+      "id": "drill_press",
+      "title": "SÜTUNLU MATKAP",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 15000,
+      "value": 6000,
+      "min_rank": 3,
+      "desc": "Yeşil gövdeli sütunlu matkap."
+    },
+    {
+      "id": "tire_changer",
+      "title": "LASTİK SÖKME MAKİNESİ",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 19000,
+      "value": 7600,
+      "min_rank": 3,
+      "desc": "Döner tablalı lastik sökme makinesi."
+    },
+    {
+      "id": "wheel_balancer",
+      "title": "BALANS MAKİNESİ",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 21000,
+      "value": 8400,
+      "min_rank": 3,
+      "desc": "Ekranlı teker balans makinesi."
+    },
+    {
+      "id": "engine_hoist",
+      "title": "MOTOR VİNCİ",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 27000,
+      "value": 10800,
+      "min_rank": 4,
+      "desc": "Hidrolik motor vinci, asılı motorla."
+    },
+    {
+      "id": "diagnostic_cart",
+      "title": "ARIZA TESPİT CİHAZI",
+      "kind": "workshop",
+      "placement": "floor",
+      "price": 36000,
+      "value": 14400,
+      "min_rank": 5,
+      "desc": "Ekranlı, çekmeceli arıza tespit arabası."
+    },
+    {
+      "id": "mailbox",
+      "title": "POSTA KUTUSU",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 2500,
+      "value": 1000,
+      "min_rank": 1,
+      "desc": "Bayraklı mavi posta kutusu."
+    },
+    {
+      "id": "fire_hydrant",
+      "title": "YANGIN MUSLUĞU",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 3000,
+      "value": 1200,
+      "min_rank": 1,
+      "desc": "Kırmızı döküm yangın musluğu."
+    },
+    {
+      "id": "a_barrier",
+      "title": "A TİPİ BARİYER",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 3500,
+      "value": 1400,
+      "min_rank": 1,
+      "desc": "Şeritli, uyarı lambalı bariyer."
+    },
+    {
+      "id": "stop_sign",
+      "title": "DUR LEVHASI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 3500,
+      "value": 1400,
+      "min_rank": 1,
+      "desc": "Sekizgen STOP levhası."
+    },
+    {
+      "id": "traffic_drums",
+      "title": "TRAFİK VARİLLERİ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 4200,
+      "value": 1680,
+      "min_rank": 1,
+      "desc": "Turuncu-beyaz şeritli üç varil."
+    },
+    {
+      "id": "concrete_barrier",
+      "title": "BETON BARİYER",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 6500,
+      "value": 2600,
+      "min_rank": 2,
+      "desc": "Kırmızı-beyaz şeritli beton blok."
+    },
+    {
+      "id": "tyre_wall",
+      "title": "LASTİK BARİYER",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 9500,
+      "value": 3800,
+      "min_rank": 2,
+      "desc": "Pist kenarı lastik duvarı."
+    },
+    {
+      "id": "phone_booth",
+      "title": "TELEFON KULÜBESİ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 24000,
+      "value": 9600,
+      "min_rank": 4,
+      "desc": "Camlı kırmızı telefon kulübesi."
+    },
+    {
+      "id": "ice_cream_cart",
+      "title": "DONDURMA ARABASI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 26000,
+      "value": 10400,
+      "min_rank": 4,
+      "desc": "Şemsiyeli dondurma arabası."
+    },
+    {
+      "id": "traffic_light",
+      "title": "TRAFİK LAMBASI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 30000,
+      "value": 12000,
+      "min_rank": 4,
+      "desc": "Üç ışıklı ayaklı trafik lambası."
+    },
+    {
+      "id": "kiddie_car",
+      "title": "ÇOCUK ARABASI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 34000,
+      "value": 13600,
+      "min_rank": 5,
+      "desc": "Jetonlu çocuk bineği: kırmızı araba."
+    },
+    {
+      "id": "kiddie_rocket",
+      "title": "UZAY GEMİSİ BİNEĞİ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 48000,
+      "value": 19200,
+      "min_rank": 6,
+      "desc": "Jetonlu çocuk bineği: roket."
+    },
+    {
+      "id": "start_lights",
+      "title": "START IŞIKLARI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 70000,
+      "value": 28000,
+      "min_rank": 6,
+      "desc": "Drag yarışı başlangıç ışık ağacı."
+    },
+    {
+      "id": "podium",
+      "title": "YARIŞ KÜRSÜSÜ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 95000,
+      "value": 38000,
+      "min_rank": 7,
+      "desc": "Altın, gümüş, bronz basamaklar ve kupalar."
+    },
+    {
+      "id": "cactus",
+      "title": "KAKTÜS",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 4000,
+      "value": 1600,
+      "min_rank": 1,
+      "desc": "Saksıda çiçekli kaktüs."
+    },
+    {
+      "id": "fern_pot",
+      "title": "EĞRELTİ SAKSISI",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 4500,
+      "value": 1800,
+      "min_rank": 1,
+      "desc": "Beyaz saksıda sarkan eğrelti."
+    },
+    {
+      "id": "pumpkins",
+      "title": "BALKABAKLARI",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 5000,
+      "value": 2000,
+      "min_rank": 2,
+      "desc": "Saman balyası üstünde balkabakları."
+    },
+    {
+      "id": "sunflowers",
+      "title": "AYÇİÇEKLERİ",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 6000,
+      "value": 2400,
+      "min_rank": 2,
+      "desc": "Ahşap kasada beş ayçiçeği."
+    },
+    {
+      "id": "topiary",
+      "title": "TOP ŞİMŞİR",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 8000,
+      "value": 3200,
+      "min_rank": 2,
+      "desc": "Taş saksıda iki toplu şimşir."
+    },
+    {
+      "id": "bamboo",
+      "title": "BAMBU",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 14000,
+      "value": 5600,
+      "min_rank": 3,
+      "desc": "Taş saksıda boğumlu bambular."
+    },
+    {
+      "id": "tree_blossom",
+      "title": "SAKURA",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 32000,
+      "value": 12800,
+      "min_rank": 5,
+      "desc": "Pembe çiçekli kiraz ağacı."
+    },
+    {
+      "id": "xmas_tree",
+      "title": "YILBAŞI AĞACI",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 40000,
+      "value": 16000,
+      "min_rank": 5,
+      "desc": "Süslü çam ve hediye kutuları."
+    },
+    {
+      "id": "wall_calendar",
+      "title": "TAKVİM",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 2500,
+      "value": 1000,
+      "min_rank": 1,
+      "desc": "Araba fotoğraflı duvar takvimi."
+    },
+    {
+      "id": "dartboard",
+      "title": "DART TAHTASI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 4500,
+      "value": 1800,
+      "min_rank": 1,
+      "desc": "Kapaklı dolapta dart tahtası."
+    },
+    {
+      "id": "wall_fan",
+      "title": "DUVAR VANTİLATÖRÜ",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 5500,
+      "value": 2200,
+      "min_rank": 1,
+      "desc": "Kafesli duvar vantilatörü."
+    },
+    {
+      "id": "poster_race",
+      "title": "YARIŞ POSTERİ",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 7500,
+      "value": 3000,
+      "min_rank": 1,
+      "desc": "Damalı bayraklı Grand Prix posteri."
+    },
+    {
+      "id": "sign_tires",
+      "title": "LASTİK TABELASI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 8000,
+      "value": 3200,
+      "min_rank": 2,
+      "desc": "Lastik çerçeveli tabela."
+    },
+    {
+      "id": "license_plates",
+      "title": "PLAKA KOLAJI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 9500,
+      "value": 3800,
+      "min_rank": 2,
+      "desc": "Ahşap panoda altı plaka."
+    },
+    {
+      "id": "exhaust_rack",
+      "title": "EGZOZ ASKISI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 14000,
+      "value": 5600,
+      "min_rank": 3,
+      "desc": "Duvarda sergilenen susturucular."
+    },
+    {
+      "id": "steering_rack",
+      "title": "DİREKSİYON ASKISI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 16000,
+      "value": 6400,
+      "min_rank": 3,
+      "desc": "Askıda üç yarış direksiyonu."
+    },
+    {
+      "id": "helmet_shelf",
+      "title": "KASK RAFI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 22000,
+      "value": 8800,
+      "min_rank": 4,
+      "desc": "İki katlı rafta altı kask."
+    },
+    {
+      "id": "neon_wrench",
+      "title": "NEON ANAHTAR",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 30000,
+      "value": 12000,
+      "min_rank": 4,
+      "desc": "Çapraz anahtarlar, pembe halka."
+    },
+    {
+      "id": "race_suit",
+      "title": "YARIŞ TULUMU",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 30000,
+      "value": 12000,
+      "min_rank": 5,
+      "desc": "Camlı çerçevede yarış tulumu."
+    },
+    {
+      "id": "neon_flame",
+      "title": "NEON ALEV",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 40000,
+      "value": 16000,
+      "min_rank": 5,
+      "desc": "Hot rod alevi."
+    },
+    {
+      "id": "neon_speed",
+      "title": "NEON HIZ GÖSTERGESİ",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 50000,
+      "value": 20000,
+      "min_rank": 6,
+      "desc": "Neon kadranlı hız göstergesi."
+    },
+    {
+      "id": "turf",
+      "title": "SUNİ ÇİM",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 90,
+      "value": 36,
+      "min_rank": 1,
+      "desc": "Biçilmiş şeritli suni çim."
+    },
+    {
+      "id": "brick_paver",
+      "title": "TUĞLA PARKE",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 110,
+      "value": 44,
+      "min_rank": 1,
+      "desc": "Kırmızı tuğla döşeme."
+    },
+    {
+      "id": "cobblestone",
+      "title": "ARNAVUT KALDIRIMI",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 120,
+      "value": 48,
+      "min_rank": 2,
+      "desc": "Gri taş döşeme."
+    },
+    {
+      "id": "terracotta",
+      "title": "TERAKOTA KARO",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 140,
+      "value": 56,
+      "min_rank": 2,
+      "desc": "Kiremit rengi iri karo."
+    },
+    {
+      "id": "hex_tile",
+      "title": "ALTIGEN KARO",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 180,
+      "value": 72,
+      "min_rank": 2,
+      "desc": "Beyaz altıgen karo."
+    },
+    {
+      "id": "checker_yellow",
+      "title": "SARI DAMA",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 180,
+      "value": 72,
+      "min_rank": 2,
+      "desc": "Sarı-siyah dama."
+    },
+    {
+      "id": "terrazzo",
+      "title": "TERAZZO",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 230,
+      "value": 92,
+      "min_rank": 3,
+      "desc": "Renkli kırıntılı terazzo."
+    },
+    {
+      "id": "steel_grate",
+      "title": "ÇELİK IZGARA",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 240,
+      "value": 96,
+      "min_rank": 3,
+      "desc": "Endüstriyel çelik ızgara."
+    },
+    {
+      "id": "parquet_basket",
+      "title": "ÖRGÜ PARKE",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 260,
+      "value": 104,
+      "min_rank": 4,
+      "desc": "Sepet örgü ahşap parke."
+    },
+    {
+      "id": "marble",
+      "title": "MERMER",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 300,
+      "value": 120,
+      "min_rank": 4,
+      "desc": "Damarlı beyaz mermer."
+    },
+    {
+      "id": "wall_green",
+      "title": "YARIŞ YEŞİLİ",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 8000,
+      "value": 3200,
+      "min_rank": 1,
+      "desc": "Koyu yarış yeşili boya."
+    },
+    {
+      "id": "wall_orange",
+      "title": "TURUNCU BOYA",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 8000,
+      "value": 3200,
+      "min_rank": 1,
+      "desc": "Canlı turuncu boya."
+    },
+    {
+      "id": "wall_concrete",
+      "title": "BRÜT BETON",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 10000,
+      "value": 4000,
+      "min_rank": 2,
+      "desc": "Kalıp izli brüt beton."
+    },
+    {
+      "id": "wall_brick_white",
+      "title": "BEYAZ TUĞLA",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 11000,
+      "value": 4400,
+      "min_rank": 2,
+      "desc": "Beyaza boyanmış tuğla."
+    },
+    {
+      "id": "wall_stone",
+      "title": "TAŞ DUVAR",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 20000,
+      "value": 8000,
+      "min_rank": 4,
+      "desc": "Harçlı doğal taş."
+    },
+    {
+      "id": "wall_race_stripe",
+      "title": "ŞERİTLİ DUVAR",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 24000,
+      "value": 9600,
+      "min_rank": 4,
+      "desc": "Koyu duvarda kırmızı-beyaz yarış şeridi."
+    },
+    {
+      "id": "wall_diamond",
+      "title": "ELMAS SAC DUVAR",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 26000,
+      "value": 10400,
+      "min_rank": 5,
+      "desc": "Gümüş kabartmalı sac kaplama."
     }
   ]
 }

@@ -573,7 +573,7 @@ func _select_tab(kind: int) -> void:
 			for vehicle: StringName in ownership.owned_vehicle_ids():
 				_add_card(GarageDecor.vehicle_item_id(vehicle))
 	else:
-		for item: Dictionary in GarageDecor.items_in(kind):
+		for item: Dictionary in GarageDecor.shop_order(kind):
 			_add_card(item["id"])
 	_scroll.scroll_horizontal = 0
 	_refresh_cards()

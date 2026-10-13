@@ -376,6 +376,9 @@
  "5 tamir tamamla": [
   "gameplay/quest_catalog.gd:28"
  ],
+ "A TİPİ BARİYER": [
+  "decor/decorations.json:a_barrier.title"
+ ],
  "ABCDEFGHJKLMNPQRSTUVWXYZ23456789": [
   "gameplay/social/social_names.gd:8"
  ],
@@ -388,6 +391,12 @@
  "AHŞAP SAKSI": [
   "decor/decorations.json:planter_box.title"
  ],
+ "AIR HOCKEY": [
+  "decor/decorations.json:air_hockey.title"
+ ],
+ "AKÜ ŞARJ ARABASI": [
+  "decor/decorations.json:battery_charger.title"
+ ],
  "ALAN": [
   "ui/hud/garage_edit_screen.gd:383"
  ],
@@ -399,6 +408,9 @@
  ],
  "ALINDI": [
   "ui/hud/mission_screen.gd:419"
+ ],
+ "ALTIGEN KARO": [
+  "decor/decorations.json:hex_tile.title"
  ],
  "AMERİKAN": [
   "vehicles/crates.json:set.amerikan"
@@ -446,6 +458,9 @@
  "ARIZA": [
   "ui/hud/repair_panel.gd:94"
  ],
+ "ARIZA TESPİT CİHAZI": [
+  "decor/decorations.json:diagnostic_cart.title"
+ ],
  "ARKADAN İTİŞ": [
   "ui/hud/garage_screen.gd:921"
  ],
@@ -470,14 +485,23 @@
   "ui/hud/friends_screen.gd:240",
   "ui/hud/friends_screen.gd:251"
  ],
+ "ARNAVUT KALDIRIMI": [
+  "decor/decorations.json:cobblestone.title"
+ ],
  "ASFALT": [
   "decor/decorations.json:asphalt.title"
  ],
  "ASFALT AVLU": [
   "decor/decorations.json:floor_epoxy.title"
  ],
+ "ATARİ MAKİNESİ": [
+  "decor/decorations.json:arcade_cabinet.title"
+ ],
  "ATÖLYE": [
-  "gameplay/garage_decor.gd:173"
+  "gameplay/garage_decor.gd:189"
+ ],
+ "ATÖLYE LAVABOSU": [
+  "decor/decorations.json:utility_sink.title"
  ],
  "AUTO YARD  ·  SÜRÜM %s\nautoyardwebsite.vercel.app": [
   "ui/hud/settings_screen.gd:368"
@@ -492,10 +516,10 @@
   "ui/hud/showroom_screen.gd:434"
  ],
  "AVLU DÜZENİ": [
-  "gameplay/garage_decor.gd:175"
+  "gameplay/garage_decor.gd:191"
  ],
  "AVLU ZEMİNİ": [
-  "gameplay/garage_decor.gd:170"
+  "gameplay/garage_decor.gd:186"
  ],
  "AY": [
   "gameplay/social/social_names.gd:39"
@@ -509,6 +533,12 @@
  "AYDINLATMA DİREĞİ": [
   "decor/decorations.json:lamp_post.title"
  ],
+ "AYÇİÇEKLERİ": [
+  "decor/decorations.json:sunflowers.title"
+ ],
+ "Ahşap kasada beş ayçiçeği.": [
+  "decor/decorations.json:sunflowers.desc"
+ ],
  "Ahşap kasada üç yeşillik.": [
   "decor/decorations.json:planter_box.desc"
  ],
@@ -518,8 +548,14 @@
  "Ahşap makarada kalın kablo.": [
   "decor/decorations.json:cable_reel.desc"
  ],
+ "Ahşap panoda altı plaka.": [
+  "decor/decorations.json:license_plates.desc"
+ ],
  "Ahşap sehpa, üstünde dergiler.": [
   "decor/decorations.json:coffee_table.desc"
+ ],
+ "Ahşap yuvarlak masa, iki sandalye.": [
+  "decor/decorations.json:round_table.desc"
  ],
  "Alet panolu ahşap tezgâh.": [
   "decor/decorations.json:workbench.desc"
@@ -530,11 +566,20 @@
  "Alttan bir kategori ve eşya seç. Depondaki eşyalar bedava; yeni eşyayı almak için kartına iki kez dokun.": [
   "ui/tutorial/tutorial_director.gd:794"
  ],
+ "Altın, gümüş, bronz basamaklar ve kupalar.": [
+  "decor/decorations.json:podium.desc"
+ ],
  "Anahtarlı servis levhası.": [
   "decor/decorations.json:sign_service.desc"
  ],
+ "Araba fotoğraflı duvar takvimi.": [
+  "decor/decorations.json:wall_calendar.desc"
+ ],
  "Aracı sen sürmezsin: işin ZAMANLAMA. Yarış iki dokunuşla kazanılır: doğru anda kalkış, doğru anda vites.": [
   "ui/tutorial/tutorial_director.gd:678"
+ ],
+ "Araç altına kayan tekerlekli yatak.": [
+  "decor/decorations.json:creeper.desc"
  ],
  "Araç artık senin! Aynı araç bir daha çıkarsa yıldız ve gem kazanırsın. Devam etmek için plakadaki düğmeye bas.": [
   "ui/tutorial/tutorial_director.gd:751"
@@ -574,6 +619,9 @@
  ],
  "Arıza yok": [
   "ui/hud/repair_panel.gd:107"
+ ],
+ "Askıda üç yarış direksiyonu.": [
+  "decor/decorations.json:steering_rack.desc"
  ],
  "Asılı aletli delikli pano.": [
   "decor/decorations.json:pegboard.desc"
@@ -641,8 +689,20 @@
  "BAKIR": [
   "vehicles/paint_catalog.gd:27"
  ],
+ "BALANS MAKİNESİ": [
+  "decor/decorations.json:wheel_balancer.title"
+ ],
+ "BALKABAKLARI": [
+  "decor/decorations.json:pumpkins.title"
+ ],
+ "BAMBU": [
+  "decor/decorations.json:bamboo.title"
+ ],
  "BANK": [
   "decor/decorations.json:bench.title"
+ ],
+ "BAR TABURELERİ": [
+  "decor/decorations.json:bar_stools.title"
  ],
  "BARİYER": [
   "decor/decorations.json:barrier.title"
@@ -694,6 +754,9 @@
  "BENZİN BİDONLARI": [
   "decor/decorations.json:jerry_cans.title"
  ],
+ "BETON BARİYER": [
+  "decor/decorations.json:concrete_barrier.title"
+ ],
  "BETON BLOK": [
   "decor/decorations.json:wall_block.title"
  ],
@@ -714,6 +777,9 @@
  ],
  "BEYAZ SIVA": [
   "decor/decorations.json:wall_plaster.title"
+ ],
+ "BEYAZ TUĞLA": [
+  "decor/decorations.json:wall_brick_white.title"
  ],
  "BIRAK": [
   "ui/hud/restoration_panel.gd:360"
@@ -739,6 +805,9 @@
  ],
  "BOŞ TAMİR ALANI YOK — önce bir tamir işini bitir.": [
   "ui/hud/junkyard_screen.gd:534"
+ ],
+ "BRÜT BETON": [
+  "decor/decorations.json:wall_concrete.title"
  ],
  "BU CİHAZDAKİ KAYIT": [
   "ui/hud/login_screen.gd:128"
@@ -771,8 +840,14 @@
  "BUZLUK": [
   "decor/decorations.json:cooler.title"
  ],
+ "Bas davul, tomlar, ziller ve tabure.": [
+  "decor/decorations.json:drum_kit.desc"
+ ],
  "Batarya Ön Isıtma": [
   "gameplay/race/performance_mods.gd:90"
+ ],
+ "Bayraklı mavi posta kutusu.": [
+  "decor/decorations.json:mailbox.desc"
  ],
  "Bağlanıyor…": [
   "ui/hud/login_screen.gd:309"
@@ -786,6 +861,9 @@
  "Ben Rıza Usta. Bu garaj artık senin: arızalı araçları tamir et, para kazan, garajını büyüt. Hadi ilk müşterini karşılayalım!": [
   "ui/tutorial/tutorial_director.gd:518"
  ],
+ "Beyaz altıgen karo.": [
+  "decor/decorations.json:hex_tile.desc"
+ ],
  "Beyaz fayans kaplama.": [
   "decor/decorations.json:wall_tile.desc"
  ],
@@ -795,8 +873,14 @@
  "Beyaz panel kaplama. Temiz ve modern.": [
   "decor/decorations.json:wall_panel.desc"
  ],
+ "Beyaz saksıda sarkan eğrelti.": [
+  "decor/decorations.json:fern_pot.desc"
+ ],
  "Beyaza boyanmış ahşap parke.": [
   "decor/decorations.json:wood_white.desc"
+ ],
+ "Beyaza boyanmış tuğla.": [
+  "decor/decorations.json:wall_brick_white.desc"
  ],
  "Bez şezlong.": [
   "decor/decorations.json:deck_chair.desc"
@@ -815,6 +899,9 @@
  ],
  "Bir takma ad seç. Arkadaşların bu adı ve garajını görecek; gerçek adın paylaşılmaz.": [
   "ui/hud/friends_screen.gd:217"
+ ],
+ "Biçilmiş şeritli suni çim.": [
+  "decor/decorations.json:turf.desc"
  ],
  "Boyalı lastiğin içinde çiçek.": [
   "decor/decorations.json:tyre_planter.desc"
@@ -904,6 +991,9 @@
   "gameplay/race/performance_mods.gd:93",
   "gameplay/race/performance_mods.gd:94"
  ],
+ "BİLARDO MASASI": [
+  "decor/decorations.json:pool_table.title"
+ ],
  "BİR ARACI BOYA": [
   "gameplay/missions/mission_catalog.gd:58"
  ],
@@ -929,7 +1019,7 @@
   "ui/hud/hud.gd:1542"
  ],
  "BİTKİ": [
-  "gameplay/garage_decor.gd:176"
+  "gameplay/garage_decor.gd:192"
  ],
  "BİTİR": [
   "ui/hud/restoration_panel.gd:149",
@@ -958,8 +1048,23 @@
  "CIVATA": [
   "vehicles/restorations.json:parts.bolt"
  ],
+ "Cam fanuslu jetonlu sakız makinesi.": [
+  "decor/decorations.json:gumball.desc"
+ ],
+ "Camlı kırmızı telefon kulübesi.": [
+  "decor/decorations.json:phone_booth.desc"
+ ],
+ "Camlı çerçevede yarış tulumu.": [
+  "decor/decorations.json:race_suit.desc"
+ ],
  "Canlı sarı boya.": [
   "decor/decorations.json:wall_yellow.desc"
+ ],
+ "Canlı turuncu boya.": [
+  "decor/decorations.json:wall_orange.desc"
+ ],
+ "Ceviz masa ve deri kaptan koltuğu.": [
+  "decor/decorations.json:manager_desk.desc"
  ],
  "CloudSaveManager: bulut kaydı silinemedi: %s": [
   "gameplay/cloud_save_manager.gd:406"
@@ -976,8 +1081,14 @@
  "DAMLALIK · KAROYA DOKUN: DESENİNİ AL": [
   "ui/hud/garage_edit_screen.gd:900"
  ],
+ "DART TAHTASI": [
+  "decor/decorations.json:dartboard.title"
+ ],
  "DAVETİ KABUL ET": [
   "ui/tutorial/tutorial_director.gd:670"
+ ],
+ "DAVUL SETİ": [
+  "decor/decorations.json:drum_kit.title"
  ],
  "DEBRİYAJ ": [
   "ui/hud/drag_race_screen.gd:1108"
@@ -1007,6 +1118,9 @@
  ],
  "DERSİ GEÇ": [
   "ui/tutorial/coach_card.gd:82"
+ ],
+ "DERİ KANEPE": [
+  "decor/decorations.json:leather_sofa.title"
  ],
  "DESEN": [
   "ui/hud/garage_edit_screen.gd:506"
@@ -1055,9 +1169,15 @@
  "DIŞ DUVARLARA UYGULANDI": [
   "world/garage_editor.gd:1109"
  ],
+ "DJ MASASI": [
+  "decor/decorations.json:dj_booth.title"
+ ],
  "DOKUN": [
   "ui/hud/drag_race_screen.gd:314",
   "ui/hud/drag_race_screen.gd:526"
+ ],
+ "DONDURMA ARABASI": [
+  "decor/decorations.json:ice_cream_cart.title"
  ],
  "DRAG NASIL OYNANIR?": [
   "ui/tutorial/tutorial_director.gd:677"
@@ -1068,6 +1188,9 @@
  "DUBA SIRASI": [
   "decor/decorations.json:bollards.title"
  ],
+ "DUR LEVHASI": [
+  "decor/decorations.json:stop_sign.title"
+ ],
  "DURUM": [
   "ui/hud/garage_screen.tscn:1215"
  ],
@@ -1075,13 +1198,13 @@
   "ui/hud/garage_edit_screen.gd:488"
  ],
  "DUVAR EŞYASI": [
-  "gameplay/garage_decor.gd:172"
+  "gameplay/garage_decor.gd:188"
  ],
  "DUVAR EŞYASI DUVARA GÖRE DURUR": [
   "world/garage_editor.gd:417"
  ],
  "DUVAR KAPLAMASI": [
-  "gameplay/garage_decor.gd:171"
+  "gameplay/garage_decor.gd:187"
  ],
  "DUVAR RAFI": [
   "decor/decorations.json:wall_shelf.title"
@@ -1092,14 +1215,26 @@
  "DUVAR TV": [
   "decor/decorations.json:wall_tv.title"
  ],
+ "DUVAR VANTİLATÖRÜ": [
+  "decor/decorations.json:wall_fan.title"
+ ],
  "DUVAR ÖR": [
-  "gameplay/garage_decor.gd:169"
+  "gameplay/garage_decor.gd:185"
  ],
  "DUVARA DOKUN YA DA SÜRÜKLE: SÖK": [
   "ui/hud/garage_edit_screen.gd:908"
  ],
+ "Damacanalı su sebili ve bardaklar.": [
+  "decor/decorations.json:water_cooler.desc"
+ ],
  "Damalı bayrak neonu.": [
   "decor/decorations.json:neon_flag.desc"
+ ],
+ "Damalı bayraklı Grand Prix posteri.": [
+  "decor/decorations.json:poster_race.desc"
+ ],
+ "Damarlı beyaz mermer.": [
+  "decor/decorations.json:marble.desc"
  ],
  "Dekorasyon GARAJ DEĞERİ'ni artırır; rütben yükseldikçe yeni eşyalar açılır. Zemini boyayabilir, iç duvar örebilirsin. Arkadaşların da garajını ziyaret edebilir!": [
   "ui/tutorial/tutorial_director.gd:807"
@@ -1122,6 +1257,9 @@
  "Dokun, içine gir": [
   "ui/hud/mod_workshop.gd:114"
  ],
+ "Drag yarışı başlangıç ışık ağacı.": [
+  "decor/decorations.json:start_lights.desc"
+ ],
  "Duvar askılı yangın tüpü.": [
   "decor/decorations.json:extinguisher_wall.desc"
  ],
@@ -1139,6 +1277,9 @@
  ],
  "Duvarda sergilenen iki jant.": [
   "decor/decorations.json:rim_display.desc"
+ ],
+ "Duvarda sergilenen susturucular.": [
+  "decor/decorations.json:exhaust_rack.desc"
  ],
  "DÖNÜNCE SIĞMIYOR": [
   "world/garage_editor.gd:411",
@@ -1160,6 +1301,9 @@
  ],
  "DÜŞÜK": [
   "gameplay/game_settings.gd:34"
+ ],
+ "Döner tablalı lastik sökme makinesi.": [
+  "decor/decorations.json:tire_changer.desc"
  ],
  "Dört ahşap nakliye kasası.": [
   "decor/decorations.json:wooden_crates.desc"
@@ -1183,6 +1327,12 @@
  "DİNAMOMETRE · %s": [
   "ui/hud/mod_workshop.gd:503"
  ],
+ "DİNER KOLTUĞU": [
+  "decor/decorations.json:diner_booth.title"
+ ],
+ "DİREKSİYON ASKISI": [
+  "decor/decorations.json:steering_rack.title"
+ ],
  "DİŞLİ": [
   "vehicles/restorations.json:parts.gear"
  ],
@@ -1198,6 +1348,9 @@
  "EFSANE GARAJ SAHİBİ": [
   "gameplay/missions/mission_catalog.gd:114"
  ],
+ "EGZOZ ASKISI": [
+  "decor/decorations.json:exhaust_rack.title"
+ ],
  "EKLE": [
   "ui/hud/friends_screen.gd:140"
  ],
@@ -1209,6 +1362,9 @@
  ],
  "ELMAS SAC": [
   "decor/decorations.json:diamond_silver.title"
+ ],
+ "ELMAS SAC DUVAR": [
+  "decor/decorations.json:wall_diamond.title"
  ],
  "EMİN MİSİN?": [
   "ui/hud/friends_screen.gd:268"
@@ -1240,17 +1396,29 @@
  "EVET, KALICI OLARAK SİL": [
   "ui/hud/login_screen.gd:293"
  ],
+ "Ekranlı teker balans makinesi.": [
+  "decor/decorations.json:wheel_balancer.desc"
+ ],
+ "Ekranlı, çekmeceli arıza tespit arabası.": [
+  "decor/decorations.json:diagnostic_cart.desc"
+ ],
  "Elektronik Ateşleme": [
   "gameplay/race/performance_mods.gd:82"
  ],
  "Emaye motor yağı tabelası.": [
   "decor/decorations.json:sign_oil.desc"
  ],
+ "Endüstriyel çelik ızgara.": [
+  "decor/decorations.json:steel_grate.desc"
+ ],
  "Enjeksiyon Dönüşümü": [
   "gameplay/race/performance_mods.gd:84"
  ],
  "Envanterdeki parçalar takılır, kalan eksikler için %d GEM ödenir. Onaylıyor musun?": [
   "ui/hud/restoration_panel.gd:335"
+ ],
+ "EĞRELTİ SAKSISI": [
+  "decor/decorations.json:fern_pot.title"
  ],
  "EĞİTİMİ ATLA": [
   "ui/tutorial/tutorial_director.gd:519"
@@ -1281,6 +1449,9 @@
  ],
  "FREN REVİZYONU": [
   "gameplay/repair/repair_type.gd:66"
+ ],
+ "Fileli masa ve iki raket.": [
+  "decor/decorations.json:ping_pong.desc"
  ],
  "FÜME": [
   "vehicles/paint_catalog.gd:16"
@@ -1366,6 +1537,9 @@
  ],
  "GARAJINI SÜSLE": [
   "ui/tutorial/tutorial_director.gd:505"
+ ],
+ "GAZOZ MAKİNESİ": [
+  "decor/decorations.json:soda_machine.title"
  ],
  "GELEN İSTEKLER (%d)": [
   "ui/hud/friends_screen.gd:244"
@@ -1563,6 +1737,9 @@
  "Gri endüstriyel tuğla.": [
   "decor/decorations.json:wall_brick_grey.desc"
  ],
+ "Gri taş döşeme.": [
+  "decor/decorations.json:cobblestone.desc"
+ ],
  "GÖNDER": [
   "ui/hud/friends_screen.gd:261"
  ],
@@ -1628,6 +1805,12 @@
  ],
  "GÜÇ EĞRİSİ": [
   "ui/hud/mod_dyno.gd:124"
+ ],
+ "Göstergeli, maşalı akü şarj cihazı.": [
+  "decor/decorations.json:battery_charger.desc"
+ ],
+ "Gümüş kabartmalı sac kaplama.": [
+  "decor/decorations.json:wall_diamond.desc"
  ],
  "Gümüş kabartmalı sac.": [
   "decor/decorations.json:diamond_silver.desc"
@@ -1823,6 +2006,9 @@
  "Harf harf neon garaj tabelası.": [
   "decor/decorations.json:neon_garage.desc"
  ],
+ "Harçlı doğal taş.": [
+  "decor/decorations.json:wall_stone.desc"
+ ],
  "Hava kompresörü ve hortum makarası.": [
   "decor/decorations.json:compressor.desc"
  ],
@@ -1865,8 +2051,17 @@
   "gameplay/race/performance_mods.gd:93",
   "gameplay/race/performance_mods.gd:94"
  ],
+ "Hidrolik motor vinci, asılı motorla.": [
+  "decor/decorations.json:engine_hoist.desc"
+ ],
+ "Hot rod alevi.": [
+  "decor/decorations.json:neon_flame.desc"
+ ],
  "Hoş geldin evlat! Ben Necati, bu hurdalık benim. Çırağım Cemo sana sahayı gösterecek.": [
   "ui/tutorial/tutorial_director.gd:534"
+ ],
+ "Hunili, tekerlekli atık yağ kabı.": [
+  "decor/decorations.json:oil_drain.desc"
  ],
  "Hurda deme, bunun içinde bir klasik uyuyor.": [
   "ui/hud/junkyard_screen.gd:38"
@@ -1889,11 +2084,17 @@
  "IŞKA  ·  DEVİR ÇOK DÜŞTÜ": [
   "ui/hud/drag_race_screen.gd:1192"
  ],
+ "Işıklı arka panolu pinbol makinesi.": [
+  "decor/decorations.json:pinball.desc"
+ ],
  "Işıklı atıştırmalık otomatı.": [
   "decor/decorations.json:vending.desc"
  ],
  "Işıklı avlu direği.": [
   "decor/decorations.json:lamp_post.desc"
+ ],
+ "Işıklı başlıklı jetonlu atari.": [
+  "decor/decorations.json:arcade_cabinet.desc"
  ],
  "Işıklı camlı dokuz kupalı vitrin.": [
   "decor/decorations.json:trophy_case.desc"
@@ -1901,17 +2102,29 @@
  "JANT VİTRİNİ": [
   "decor/decorations.json:rim_display.title"
  ],
+ "JANT YIĞINI": [
+  "decor/decorations.json:rim_stack.title"
+ ],
  "JUKEBOX": [
   "decor/decorations.json:jukebox.title"
  ],
  "JYS_": [
   "world/junkyard_world.gd:223"
  ],
+ "Jetonlu çocuk bineği: kırmızı araba.": [
+  "decor/decorations.json:kiddie_car.desc"
+ ],
+ "Jetonlu çocuk bineği: roket.": [
+  "decor/decorations.json:kiddie_rocket.desc"
+ ],
  "KABLO MAKARASI": [
   "decor/decorations.json:cable_reel.title"
  ],
  "KABUL": [
   "ui/hud/friends_screen.gd:248"
+ ],
+ "KAKTÜS": [
+  "decor/decorations.json:cactus.title"
  ],
  "KALFA": [
   "gameplay/quest_catalog.gd:43"
@@ -1997,6 +2210,9 @@
  ],
  "KASAYI AÇ": [
   "ui/tutorial/tutorial_director.gd:744"
+ ],
+ "KASK RAFI": [
+  "decor/decorations.json:helmet_shelf.title"
  ],
  "KASİS": [
   "decor/decorations.json:speed_bump.title"
@@ -2125,6 +2341,9 @@
  "KUSURSUZ!  %d / %d": [
   "ui/hud/drag_race_screen.gd:1184"
  ],
+ "KUYRUKLU PİYANO": [
+  "decor/decorations.json:grand_piano.title"
+ ],
  "Kabartmalı kauçuk zemin.": [
   "decor/decorations.json:rubber.desc"
  ],
@@ -2134,11 +2353,26 @@
  "Kafesli duvar lambası.": [
   "decor/decorations.json:wall_lamp.desc"
  ],
+ "Kafesli duvar vantilatörü.": [
+  "decor/decorations.json:wall_fan.desc"
+ ],
  "Kalkınca ibre yükselir. İbre YEŞİL bölgeye girince tekrar dokun: vites atarsın. Kırmızıya kaçarsa motor boğulur, hız kaybedersin. Ekranın her yeri dokunma alanıdır!": [
   "ui/tutorial/tutorial_director.gd:687"
  ],
+ "Kalıp izli brüt beton.": [
+  "decor/decorations.json:wall_concrete.desc"
+ ],
+ "Kapaklı dolapta dart tahtası.": [
+  "decor/decorations.json:dartboard.desc"
+ ],
  "Kapaklı yuvarlak mangal.": [
   "decor/decorations.json:bbq.desc"
+ ],
+ "Kapağı açık siyah kuyruklu piyano.": [
+  "decor/decorations.json:grand_piano.desc"
+ ],
+ "Kapitone kahverengi deri kanepe.": [
+  "decor/decorations.json:leather_sofa.desc"
  ],
  "Karbon Jant & Pro Drag Slik": [
   "gameplay/race/performance_mods.gd:77"
@@ -2158,6 +2392,9 @@
  "Kare hızı 30'a düşer: pil daha uzun gider, telefon daha az ısınır.": [
   "ui/hud/settings_screen.gd:313"
  ],
+ "Karşılıklı kırmızı koltuklar ve krom masa.": [
+  "decor/decorations.json:diner_booth.desc"
+ ],
  "Kasalardan hangi aracın hangi oranla çıktığını kasa plakasında görebilirsin.": [
   "ui/loading/loading_screen.gd:41"
  ],
@@ -2176,6 +2413,9 @@
  ],
  "Kazanınca para ve XP alırsın, kaybetsen de biraz XP kazanırsın. Her araçla kişisel rekorunu kır: üstteki çubukta eski rekorun hayalet olarak koşar.": [
   "ui/tutorial/tutorial_director.gd:697"
+ ],
+ "Kiremit rengi iri karo.": [
+  "decor/decorations.json:terracotta.desc"
  ],
  "Kişiselleştirilmiş reklam onayını değiştir.": [
   "ui/hud/settings_screen.gd:338"
@@ -2210,8 +2450,14 @@
  "Koyu ceviz parke.": [
   "decor/decorations.json:wood_dark.desc"
  ],
+ "Koyu duvarda kırmızı-beyaz yarış şeridi.": [
+  "decor/decorations.json:wall_race_stripe.desc"
+ ],
  "Koyu mavi boya.": [
   "decor/decorations.json:wall_blue.desc"
+ ],
+ "Koyu yarış yeşili boya.": [
+  "decor/decorations.json:wall_green.desc"
  ],
  "Koyu zeminde çift beyaz şerit.": [
   "decor/decorations.json:race_stripe.desc"
@@ -2234,8 +2480,20 @@
  "Kırk yıldır bu sahadayım. Her hurdanın bir hikâyesi var; doğru parçalarla hepsi yeniden yola çıkar. Cemo, göster bakalım!": [
   "ui/tutorial/tutorial_director.gd:564"
  ],
+ "Kırmızı döküm yangın musluğu.": [
+  "decor/decorations.json:fire_hydrant.desc"
+ ],
+ "Kırmızı minderli üç krom tabure.": [
+  "decor/decorations.json:bar_stools.desc"
+ ],
+ "Kırmızı tuğla döşeme.": [
+  "decor/decorations.json:brick_paver.desc"
+ ],
  "Kırmızı tuğla. Klasik tamirhane havası.": [
   "decor/decorations.json:wall_brick.desc"
+ ],
+ "Kırmızı ve sarı lastik takozlar.": [
+  "decor/decorations.json:wheel_chocks.desc"
  ],
  "Kırmızı yakıt pompası, ekranlı.": [
   "decor/decorations.json:fuel_pump.desc"
@@ -2260,6 +2518,9 @@
  ],
  "Kırmızı-beyaz yol bariyeri.": [
   "decor/decorations.json:barrier.desc"
+ ],
+ "Kırmızı-beyaz şeritli beton blok.": [
+  "decor/decorations.json:concrete_barrier.desc"
  ],
  "Kırmızı-mavi neon açık tabelası.": [
   "decor/decorations.json:neon_open.desc"
@@ -2288,17 +2549,29 @@
  "LASTİK ASKISI": [
   "decor/decorations.json:tyre_hanger.title"
  ],
+ "LASTİK BARİYER": [
+  "decor/decorations.json:tyre_wall.title"
+ ],
  "LASTİK RAFI": [
   "decor/decorations.json:tyre_rack.title"
  ],
  "LASTİK SAKSI": [
   "decor/decorations.json:tyre_planter.title"
  ],
+ "LASTİK SÖKME MAKİNESİ": [
+  "decor/decorations.json:tire_changer.title"
+ ],
+ "LASTİK TABELASI": [
+  "decor/decorations.json:sign_tires.title"
+ ],
  "LASTİK YIĞINI": [
   "decor/decorations.json:tyre_pile.title"
  ],
  "Lastik hava ve basınç ünitesi.": [
   "decor/decorations.json:air_station.desc"
+ ],
+ "Lastik çerçeveli tabela.": [
+  "decor/decorations.json:sign_tires.desc"
  ],
  "LİLA BOYA": [
   "decor/decorations.json:wall_lilac.title"
@@ -2308,6 +2581,9 @@
  ],
  "MANGAL": [
   "decor/decorations.json:bbq.title"
+ ],
+ "MASA TENİSİ": [
+  "decor/decorations.json:ping_pong.title"
  ],
  "MAVİ": [
   "vehicles/paint_catalog.gd:18"
@@ -2334,6 +2610,9 @@
  "MAĞAZAYA ŞU AN ULAŞILAMIYOR\nİNTERNET BAĞLANTINI VE GOOGLE PLAY'İ KONTROL ET": [
   "ui/hud/gem_store_screen.gd:124"
  ],
+ "MERMER": [
+  "decor/decorations.json:marble.title"
+ ],
  "MEVCUT RENK": [
   "ui/hud/paint_panel.gd:155"
  ],
@@ -2356,6 +2635,9 @@
  ],
  "MOTOR BLOĞU": [
   "decor/decorations.json:engine_block.title"
+ ],
+ "MOTOR VİNCİ": [
+  "decor/decorations.json:engine_hoist.title"
  ],
  "MOTOR YAĞI": [
   "vehicles/restorations.json:parts.motor_oil"
@@ -2389,6 +2671,9 @@
  ],
  "Misafir olarak oynuyorsun. İlerlemen bu cihazda kayıtlı.\nGoogle ile giriş yaparsan ilerlemen buluta yedeklenir.": [
   "ui/hud/login_screen.gd:304"
+ ],
+ "MÜDÜR MASASI": [
+  "decor/decorations.json:manager_desk.title"
  ],
  "MÜKEMMEL GÜN": [
   "gameplay/missions/mission_catalog.gd:111"
@@ -2441,11 +2726,20 @@
  "NEON 'OPEN'": [
   "decor/decorations.json:neon_open.title"
  ],
+ "NEON ALEV": [
+  "decor/decorations.json:neon_flame.title"
+ ],
+ "NEON ANAHTAR": [
+  "decor/decorations.json:neon_wrench.title"
+ ],
  "NEON ARABA": [
   "decor/decorations.json:neon_car.title"
  ],
  "NEON BAYRAK": [
   "decor/decorations.json:neon_flag.title"
+ ],
+ "NEON HIZ GÖSTERGESİ": [
+  "decor/decorations.json:neon_speed.title"
  ],
  "NEON PİSTON": [
   "decor/decorations.json:neon_piston.title"
@@ -2458,6 +2752,9 @@
  ],
  "Ne yapacağını bilmiyorsan GÖREVLER'e bak. Görevler sana yol gösterir ve her biri ödül verir; günlük ve haftalık görevler her gün yenilenir.": [
   "ui/tutorial/tutorial_director.gd:638"
+ ],
+ "Neon kadranlı hız göstergesi.": [
+  "decor/decorations.json:neon_speed.desc"
  ],
  "Nervürlü saç depo konteyneri.": [
   "decor/decorations.json:container.desc"
@@ -2488,6 +2785,9 @@
  "Oturaklı ahşap piknik masası.": [
   "decor/decorations.json:picnic_table.desc"
  ],
+ "Oval tepeli retro gazoz dolabı.": [
+  "decor/decorations.json:soda_machine.desc"
+ ],
  "PALET YIĞINI": [
   "decor/decorations.json:pallet_stack.title"
  ],
@@ -2495,7 +2795,7 @@
   "decor/decorations.json:tree_palm.title"
  ],
  "PANO": [
-  "gameplay/garage_decor.gd:177"
+  "gameplay/garage_decor.gd:193"
  ],
  "PARA TOPLA": [
   "ui/hud/repair_panel.gd:290"
@@ -2561,10 +2861,16 @@
  "PERMISSION": [
   "gameplay/social/social_manager.gd:836"
  ],
+ "PLAKA KOLAJI": [
+  "decor/decorations.json:license_plates.title"
+ ],
  "PLAYER": [
   "ui/hud/hud.tscn:73",
   "ui/hud/login_screen.gd:95",
   "ui/hud/login_screen.gd:274"
+ ],
+ "POSTA KUTUSU": [
+  "decor/decorations.json:mailbox.title"
  ],
  "POSTER": [
   "decor/decorations.json:wall_poster.title"
@@ -2623,6 +2929,9 @@
  "Paslanmaz Manifold": [
   "gameplay/race/performance_mods.gd:74"
  ],
+ "Paslanmaz tekne, musluk ve kova.": [
+  "decor/decorations.json:utility_sink.desc"
+ ],
  "Paslı, camı kırık, tek tekeri eksik.": [
   "decor/decorations.json:wreck.desc"
  ],
@@ -2647,6 +2956,9 @@
  "Patinaj yok: lastik yalnız hafif jantla kazandırır": [
   "ui/hud/mod_workshop.gd:568"
  ],
+ "Pembe çiçekli kiraz ağacı.": [
+  "decor/decorations.json:tree_blossom.desc"
+ ],
  "Pembe, nane, mavi ve sarı karolar.": [
   "decor/decorations.json:tile_pastel.desc"
  ],
@@ -2661,6 +2973,9 @@
  ],
  "Performans Yazılımı": [
   "gameplay/race/performance_mods.gd:87"
+ ],
+ "Pist kenarı lastik duvarı.": [
+  "decor/decorations.json:tyre_wall.desc"
  ],
  "Plakada arızayı, süresini ve kazancını görürsün. TAMİRE AL'a bas, araç tamir alanına geçsin.": [
   "ui/tutorial/tutorial_director.gd:615"
@@ -2682,6 +2997,9 @@
  ],
  "PİL TASARRUFU": [
   "ui/hud/settings_screen.gd:313"
+ ],
+ "PİNBOL": [
+  "decor/decorations.json:pinball.title"
  ],
  "PİSTON": [
   "vehicles/restorations.json:parts.piston"
@@ -2733,6 +3051,9 @@
  "RIZA USTA": [
   "ui/tutorial/coach_card.gd:256"
  ],
+ "Renkli kırıntılı terazzo.": [
+  "decor/decorations.json:terrazzo.desc"
+ ],
  "Roots Kompresör": [
   "gameplay/race/performance_mods.gd:83"
  ],
@@ -2753,14 +3074,23 @@
   "ui/hud/showroom_screen.gd:1010",
   "ui/hud/garage_edit_screen.gd:784"
  ],
+ "SAKIZ MAKİNESİ": [
+  "decor/decorations.json:gumball.title"
+ ],
  "SAKSI BİTKİ": [
   "decor/decorations.json:potted_plant.title"
+ ],
+ "SAKURA": [
+  "decor/decorations.json:tree_blossom.title"
  ],
  "SARI": [
   "vehicles/paint_catalog.gd:21"
  ],
  "SARI BOYA": [
   "decor/decorations.json:wall_yellow.title"
+ ],
+ "SARI DAMA": [
+  "decor/decorations.json:checker_yellow.title"
  ],
  "SARI HALKALI YIĞIN": [
   "ui/tutorial/tutorial_director.gd:566"
@@ -2936,17 +3266,35 @@
  "SPOR KASASI SHOWROOM'DA": [
   "gameplay/player_progress.gd:36"
  ],
+ "START IŞIKLARI": [
+  "decor/decorations.json:start_lights.title"
+ ],
  "SU DEPOSU": [
   "decor/decorations.json:water_tower.title"
  ],
+ "SU SEBİLİ": [
+  "decor/decorations.json:water_cooler.title"
+ ],
+ "SUNİ ÇİM": [
+  "decor/decorations.json:turf.title"
+ ],
  "Sahadaki arabalar bugünün malı. Birine dokun, neye ihtiyacı var bak.": [
   "ui/tutorial/tutorial_director.gd:577"
+ ],
+ "Saksıda çiçekli kaktüs.": [
+  "decor/decorations.json:cactus.desc"
+ ],
+ "Saman balyası üstünde balkabakları.": [
+  "decor/decorations.json:pumpkins.desc"
  ],
  "Sarı neon şimşek.": [
   "decor/decorations.json:neon_bolt.desc"
  ],
  "Sarı çift servis rampası.": [
   "decor/decorations.json:car_ramps.desc"
+ ],
+ "Sarı-siyah dama.": [
+  "decor/decorations.json:checker_yellow.desc"
  ],
  "Sarı-siyah hız kesici.": [
   "decor/decorations.json:speed_bump.desc"
@@ -2960,8 +3308,14 @@
  "Sekiz çubuklu langırt.": [
   "decor/decorations.json:foosball.desc"
  ],
+ "Sekizgen STOP levhası.": [
+  "decor/decorations.json:stop_sign.desc"
+ ],
  "Selam usta! Sarı halkalı yığınlar aranabilir. Şuna dokun, beraber bakalım!": [
   "ui/tutorial/tutorial_director.gd:567"
+ ],
+ "Sepet örgü ahşap parke.": [
+  "decor/decorations.json:parquet_basket.desc"
  ],
  "Seviye 2 oldun ve İLK KASA görevi bitti. Ödülünü almak için GÖREVLER'e dokun.": [
   "ui/tutorial/tutorial_director.gd:722"
@@ -2977,6 +3331,9 @@
  ],
  "Siyah-beyaz dama kaplama.": [
   "decor/decorations.json:wall_checker.desc"
+ ],
+ "Skor panolu hava hokeyi masası.": [
+  "decor/decorations.json:air_hockey.desc"
  ],
  "Son değişiklikler buluta yazılamadığı için çıkış yapılmadı. İnternet bağlantını kontrol edip tekrar dene.": [
   "gameplay/cloud_save_manager.gd:641"
@@ -3032,11 +3389,20 @@
  "SÜPER ÇIKIŞ!": [
   "ui/hud/drag_race_screen.gd:860"
  ],
+ "SÜRÜNGEÇ": [
+  "decor/decorations.json:creeper.title"
+ ],
+ "SÜTUNLU MATKAP": [
+  "decor/decorations.json:drill_press.title"
+ ],
  "Süperkapasitör Destek": [
   "gameplay/race/performance_mods.gd:88"
  ],
  "Süre yarıya iner": [
   "ui/hud/repair_panel.gd:308"
+ ],
+ "Süslü çam ve hediye kutuları.": [
+  "decor/decorations.json:xmas_tree.desc"
  ],
  "SİLGİ": [
   "ui/hud/garage_edit_screen.gd:385"
@@ -3089,6 +3455,9 @@
  ],
  "TAKSİ SARISI": [
   "vehicles/paint_catalog.gd:28"
+ ],
+ "TAKVİM": [
+  "decor/decorations.json:wall_calendar.title"
  ],
  "TAMAM": [
   "ui/hud/restoration_panel.gd:278",
@@ -3180,6 +3549,9 @@
   "ui/hud/repair_panel.gd:345",
   "ui/tutorial/tutorial_director.gd:614"
  ],
+ "TAŞ DUVAR": [
+  "decor/decorations.json:wall_stone.title"
+ ],
  "TEHLİKE ŞERİDİ": [
   "decor/decorations.json:hazard.title"
  ],
@@ -3189,17 +3561,32 @@
  "TEK SEFERLİK TEKLİF": [
   "ui/hud/gem_store_screen.gd:173"
  ],
+ "TEKER TAKOZLARI": [
+  "decor/decorations.json:wheel_chocks.title"
+ ],
  "TEKRAR DENE": [
   "ui/hud/friends_screen.gd:215"
  ],
+ "TELEFON KULÜBESİ": [
+  "decor/decorations.json:phone_booth.title"
+ ],
  "TEPKİ": [
   "ui/hud/garage_screen.gd:202"
+ ],
+ "TERAKOTA KARO": [
+  "decor/decorations.json:terracotta.title"
+ ],
+ "TERAZZO": [
+  "decor/decorations.json:terrazzo.title"
  ],
  "TEST: +%s ₺": [
   "ui/hud/hud.gd:419"
  ],
  "TEŞEKKÜRLER! GEMLER HESABINA EKLENDİ": [
   "ui/hud/gem_store_screen.gd:203"
+ ],
+ "TOP ŞİMŞİR": [
+  "decor/decorations.json:topiary.title"
  ],
  "TOPLAM %d BAŞARIM YILDIZI": [
   "ui/hud/mission_screen.gd:493"
@@ -3213,17 +3600,29 @@
  "TRAFİK KONİLERİ": [
   "decor/decorations.json:traffic_cones.title"
  ],
+ "TRAFİK LAMBASI": [
+  "decor/decorations.json:traffic_light.title"
+ ],
+ "TRAFİK VARİLLERİ": [
+  "decor/decorations.json:traffic_drums.title"
+ ],
  "TURBO": [
   "gameplay/race/performance_mods.gd:64"
  ],
  "TURUNCU": [
   "vehicles/paint_catalog.gd:22"
  ],
+ "TURUNCU BOYA": [
+  "decor/decorations.json:wall_orange.title"
+ ],
  "TUTUŞ": [
   "ui/hud/garage_screen.gd:202"
  ],
  "TUTUŞ  +%%%d → +%%%d": [
   "ui/hud/mod_workshop.gd:571"
+ ],
+ "TUĞLA PARKE": [
+  "decor/decorations.json:brick_paver.title"
  ],
  "Takma ad": [
   "ui/hud/friends_screen.gd:125"
@@ -3266,6 +3665,12 @@
  ],
  "Taş bordürlü çiçek tarhı.": [
   "decor/decorations.json:flower_bed.desc"
+ ],
+ "Taş saksıda boğumlu bambular.": [
+  "decor/decorations.json:bamboo.desc"
+ ],
+ "Taş saksıda iki toplu şimşir.": [
+  "decor/decorations.json:topiary.desc"
  ],
  "Tekerlekli alet arabası.": [
   "decor/decorations.json:tool_trolley.desc"
@@ -3316,6 +3721,9 @@
  ],
  "Turbo Yükseltme": [
   "gameplay/race/performance_mods.gd:73"
+ ],
+ "Turuncu-beyaz şeritli üç varil.": [
+  "decor/decorations.json:traffic_drums.desc"
  ],
  "Tutuş +%%%s": [
   "gameplay/race/performance_mods.gd:488"
@@ -3370,6 +3778,9 @@
  "UYGULA": [
   "ui/hud/garage_edit_screen.gd:805"
  ],
+ "UZAY GEMİSİ BİNEĞİ": [
+  "decor/decorations.json:kiddie_rocket.title"
+ ],
  "Uzun mavi LED şeridi.": [
   "decor/decorations.json:led_strip.desc"
  ],
@@ -3423,6 +3834,9 @@
  "YAKIT POMPASI": [
   "decor/decorations.json:fuel_pump.title"
  ],
+ "YANGIN MUSLUĞU": [
+  "decor/decorations.json:fire_hydrant.title"
+ ],
  "YANGIN TÜPÜ": [
   "decor/decorations.json:extinguisher_stand.title",
   "decor/decorations.json:extinguisher_wall.title"
@@ -3459,6 +3873,18 @@
  "YARIŞ KAZANILDI": [
   "ui/hud/hud.gd:925"
  ],
+ "YARIŞ KÜRSÜSÜ": [
+  "decor/decorations.json:podium.title"
+ ],
+ "YARIŞ POSTERİ": [
+  "decor/decorations.json:poster_race.title"
+ ],
+ "YARIŞ TULUMU": [
+  "decor/decorations.json:race_suit.title"
+ ],
+ "YARIŞ YEŞİLİ": [
+  "decor/decorations.json:wall_green.title"
+ ],
  "YARIŞ ŞERİDİ": [
   "decor/decorations.json:race_stripe.title"
  ],
@@ -3468,6 +3894,9 @@
  "YARIŞÇI": [
   "gameplay/missions/mission_catalog.gd:96"
  ],
+ "YAĞ BOŞALTMA KABI": [
+  "decor/decorations.json:oil_drain.title"
+ ],
  "YAĞ TABELASI": [
   "decor/decorations.json:sign_oil.title"
  ],
@@ -3475,7 +3904,7 @@
   "decor/decorations.json:oil_drums.title"
  ],
  "YAŞAM ALANI": [
-  "gameplay/garage_decor.gd:174"
+  "gameplay/garage_decor.gd:190"
  ],
  "YEDEK KAPILAR": [
   "decor/decorations.json:spare_doors.title"
@@ -3550,6 +3979,9 @@
  "YEŞİLDE VİTES AT": [
   "ui/tutorial/tutorial_director.gd:686"
  ],
+ "YILBAŞI AĞACI": [
+  "decor/decorations.json:xmas_tree.title"
+ ],
  "YILDIZ TOPLAYICI": [
   "gameplay/missions/mission_catalog.gd:113"
  ],
@@ -3564,6 +3996,9 @@
  ],
  "YUVARLAK AĞAÇ": [
   "decor/decorations.json:tree_round.title"
+ ],
+ "YUVARLAK MASA": [
+  "decor/decorations.json:round_table.title"
  ],
  "Yakın Oranlı Kutu": [
   "gameplay/race/performance_mods.gd:75"
@@ -3614,6 +4049,12 @@
  "Yeniden istemek için %s bekle.": [
   "gameplay/social/social_manager.gd:488"
  ],
+ "Yeşil gövdeli sütunlu matkap.": [
+  "decor/decorations.json:drill_press.desc"
+ ],
+ "Yeşil çuha, dizilmiş toplar ve isteka.": [
+  "decor/decorations.json:pool_table.desc"
+ ],
  "YÖN OKLARI": [
   "decor/decorations.json:sign_arrows.title"
  ],
@@ -3643,7 +4084,7 @@
   "ui/hud/garage_edit_screen.gd:718"
  ],
  "ZEMİN": [
-  "gameplay/garage_decor.gd:168",
+  "gameplay/garage_decor.gd:184",
   "ui/hud/garage_edit_screen.gd:487"
  ],
  "ZOR": [
@@ -3745,6 +4186,9 @@
  "ÇAPRAZ BAYRAKLAR": [
   "decor/decorations.json:checkered_flags.title"
  ],
+ "ÇELİK IZGARA": [
+  "decor/decorations.json:steel_grate.title"
+ ],
  "ÇERÇEVELİ PLAKA": [
   "decor/decorations.json:plate_frame.title"
  ],
@@ -3768,6 +4212,12 @@
  ],
  "ÇIRAK CEMO": [
   "ui/tutorial/coach_card.gd:217"
+ ],
+ "ÇOCUK ARABASI": [
+  "decor/decorations.json:kiddie_car.title"
+ ],
+ "Çapraz anahtarlar, pembe halka.": [
+  "decor/decorations.json:neon_wrench.desc"
  ],
  "Çapraz piston neonu.": [
   "decor/decorations.json:neon_piston.desc"
@@ -3854,6 +4304,9 @@
  "ÖR": [
   "ui/hud/garage_edit_screen.gd:385"
  ],
+ "ÖRGÜ PARKE": [
+  "decor/decorations.json:parquet_basket.title"
+ ],
  "Ödül: %s ₺": [
   "ui/hud/repair_panel.gd:211",
   "ui/hud/repair_panel.gd:313"
@@ -3878,6 +4331,9 @@
  ],
  "Üst üste atılmış hurda lastikler.": [
   "decor/decorations.json:tyre_pile.desc"
+ ],
+ "Üst üste jantlar ve iki sergi jantı.": [
+  "decor/decorations.json:rim_stack.desc"
  ],
  "Üstü kapalı, altı açık geçit.": [
   "decor/decorations.json:wall_arch.desc"
@@ -3914,6 +4370,9 @@
  ],
  "Üç yedek yakıt bidonu.": [
   "decor/decorations.json:jerry_cans.desc"
+ ],
+ "Üç ışıklı ayaklı trafik lambası.": [
+  "decor/decorations.json:traffic_light.desc"
  ],
  "Üçe üç beyaz fayans.": [
   "decor/decorations.json:tile_white.desc"
@@ -3995,8 +4454,14 @@
  "İki direk arası asma ampuller.": [
   "decor/decorations.json:string_lights.desc"
  ],
+ "İki katlı rafta altı kask.": [
+  "decor/decorations.json:helmet_shelf.desc"
+ ],
  "İki katlı, altı varilli raf.": [
   "decor/decorations.json:barrel_rack.desc"
+ ],
+ "İki pikap, mikser ve hoparlörler.": [
+  "decor/decorations.json:dj_booth.desc"
  ],
  "İki sütunlu hidrolik lift.": [
   "decor/decorations.json:car_lift.desc"
@@ -4083,6 +4548,9 @@
  "ŞERİT LED": [
   "decor/decorations.json:led_strip.title"
  ],
+ "ŞERİTLİ DUVAR": [
+  "decor/decorations.json:wall_race_stripe.title"
+ ],
  "ŞEZLONG": [
   "decor/decorations.json:deck_chair.title"
  ],
@@ -4091,6 +4559,12 @@
  ],
  "Şehirde arızalanan araçlar garajının önüne yanaşır. Biraz bekle, ilk müşterin geliyor...": [
   "ui/tutorial/tutorial_director.gd:602"
+ ],
+ "Şemsiyeli dondurma arabası.": [
+  "decor/decorations.json:ice_cream_cart.desc"
+ ],
+ "Şeritli, uyarı lambalı bariyer.": [
+  "decor/decorations.json:a_barrier.desc"
  ],
  "ŞİMDİ DOKUN": [
   "ui/hud/drag_race_screen.gd:819"

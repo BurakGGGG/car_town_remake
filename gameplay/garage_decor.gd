@@ -162,6 +162,22 @@ static func items_in(kind: int) -> Array[Dictionary]:
 	return out
 
 
+## Mağaza sırası: rütbe kilidi, sonra fiyat (eşit olanlar katalog sırasında kalır). Palet kartları bu sırayla
+## dizilir; desen katmanları ise items_in sırasında kalır (kayıt desen id'si tuttuğu için sıra serbesttir).
+static func shop_order(kind: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = items_in(kind)
+	var index: Dictionary = {}
+	for k: int in out.size():
+		index[out[k]["id"]] = k
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if int(a["min_rank"]) != int(b["min_rank"]):
+			return int(a["min_rank"]) < int(b["min_rank"])
+		if int(a["price"]) != int(b["price"]):
+			return int(a["price"]) < int(b["price"])
+		return int(index[a["id"]]) < int(index[b["id"]]))
+	return out
+
+
 ## Kategori başlığı (arayüz).
 static func kind_title(kind: int) -> String:
 	match kind:

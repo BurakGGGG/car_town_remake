@@ -11,8 +11,8 @@ uniform float cell = 0.175;
 uniform vec2 grid_size = vec2(32.0, 21.0);
 uniform vec4 base_color : source_color = vec4(0.467, 0.467, 0.467, 1.0);
 uniform float base_roughness = 0.85;
-uniform float roughness_of[32];
-uniform float metallic_of[32];
+uniform float roughness_of[64];   // GarageDecorView.MAX_PATTERNS ile aynı
+uniform float metallic_of[64];
 // Düzenleme önizlemesi: bu dikdörtgendeki gözler (min.xy, max.xy, göz indeksi, dahil) vurgulanır.
 uniform vec4 preview_rect = vec4(-1.0, -1.0, -2.0, -2.0);
 uniform vec4 preview_color : source_color = vec4(0.98, 0.71, 0.18, 0.35);
