@@ -9,7 +9,9 @@ extends Control
 ##   * Sarı halkalı yığına dokunur → yığın sallanır, toz kalkar (~1 sn) → bulunan parçalar PARÇALAR
 ##     plakasına uçar ya da "Bir şey çıkmadı". Halkası olmayan yığın boş: dolmasına kalan süre söylenir.
 ##   * Günün araçlarından birine dokunur → bilgi plakası (ad, yıl, sınıf, parça reçetesi) + RESTORE ET:
-##     araç garajda bir tamir alanına yerleşir (JunkyardManager.start) ve sahadan kalkar.
+##     proje hemen kaydedilir (JunkyardManager.start), plakaya "İŞ ALINDI" mührü vurulur, sonra çekme
+##     sahnesi oynar (JunkyardTow): kapıdaki araç gelip hurdayı halatla çekerek götürür. Sahne boyunca
+##     sinema şeritleri iner, alt plakalar gizlenir; ekrana dokunmak sahneyi atlar.
 ##   * Alt plakalar: PARÇALAR (envanter), HARİTA (şehre dönüş), KOLEKSİYON, yenilenme sayacı.
 ##
 ## Dünya AÇILIŞTA kurulur, KAPANIŞTA silinir: sahne + zemin dokusu kapalı ekranda bellekte durmasın
@@ -27,6 +29,14 @@ const PANEL_WIDTH: float = 460.0
 const ICON_SIZE: float = 40.0
 const FLY_TIME: float = 0.6
 const NOTICE_HOLD: float = 1.8
+const LETTERBOX: float = 0.09      # sinema şeridi, ekran yüksekliğinin oranı
+const REPEAT_SPEED: float = 1.35   # ilk restorasyondan sonra çekme sahnesi bu kadar hızlı oynar
+## Hurda halatı yiyince Necati'nin sözü (biri rastgele).
+const NECATI_LINES: Array[String] = [
+	"Ayağa kaldırırsan adın duyulur evlat!",
+	"Bu iş sabır ister. Sende o göz var.",
+	"Hurda deme, bunun içinde bir klasik uyuyor.",
+]
 
 var _container: SubViewportContainer
 var _viewport: SubViewport
@@ -44,6 +54,14 @@ var _car_info: Label
 var _car_recipe: HBoxContainer
 var _car_hint: Label
 var _car_start: PlateButton
+var _car_center: Control
+var _car_plate: PlatePanel
+var _title_bar: Control
+var _bottom_bar: Control
+var _map_button: PlateButton
+var _bars: Array[ColorRect] = []
+var _tow: JunkyardTow
+var _departing: bool = false   # mühürden sahnenin sonuna kadar: girdi kameraya değil sahneye gider
 var _parts_layer: Control
 var _parts_grid: GridContainer
 var _clock: Timer
@@ -119,6 +137,7 @@ func close() -> void:
 		jy.junkyard_changed.disconnect(_refresh_parts_button)
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_release_render_target()
+	_end_departure()   # sahne yarıda kaldıysa (dünya siliniyor) arayüz eski haline döner
 	if _world:
 		_world.queue_free()   # sahne + doku bellekte kalmasın
 		_world = null
@@ -173,6 +192,7 @@ func _build() -> void:
 	add_child(_overlay)
 	_build_title()
 	_build_bottom()
+	_build_letterbox()
 	_build_notice()
 	_build_car_panel()
 	_build_parts_panel()
@@ -187,6 +207,7 @@ func _build_title() -> void:
 	var margin: MarginContainer = _margin(14, 12, 14, 0)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	_overlay.add_child(margin)
+	_title_bar = margin
 	var sign: PlatePanel = PlatePanel.new()
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -204,6 +225,7 @@ func _build_bottom() -> void:
 	margin.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	margin.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_overlay.add_child(margin)
+	_bottom_bar = margin
 	var row: HBoxContainer = HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -211,7 +233,8 @@ func _build_bottom() -> void:
 	margin.add_child(row)
 	_parts_button = _plate_button(Loc.t("PARÇALAR"), _toggle_parts)
 	row.add_child(_parts_button)
-	row.add_child(_plate_button(Loc.t("HARİTA"), func() -> void: map_requested.emit()))
+	_map_button = _plate_button(Loc.t("HARİTA"), func() -> void: map_requested.emit())
+	row.add_child(_map_button)
 	row.add_child(_plate_button(Loc.t("KOLEKSİYON"), func() -> void: collection_requested.emit()))
 	var timer_plate: PlatePanel = PlatePanel.new()
 	timer_plate.theme_type_variation = &"HudCarPlate"
@@ -225,6 +248,31 @@ func _build_bottom() -> void:
 	timer_box.add_child(_pile_label)
 	timer_plate.add_child(timer_box)
 	row.add_child(timer_plate)
+
+
+## Sinema şeritleri (üst / alt siyah bant): çekme sahnesi "ara sahne" gibi okunsun. Yükseklik açılışta
+## ekrana göre verilir (anchor oranı), kapalıyken sıfır.
+func _build_letterbox() -> void:
+	for top: bool in [true, false]:
+		var bar: ColorRect = ColorRect.new()
+		bar.color = Color(0.0, 0.0, 0.0, 0.92)
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE if top else Control.PRESET_BOTTOM_WIDE)
+		bar.anchor_top = 0.0 if top else 1.0
+		bar.anchor_bottom = 0.0 if top else 1.0
+		_overlay.add_child(bar)
+		_bars.append(bar)
+	_set_letterbox(0.0)
+
+
+func _set_letterbox(amount: float) -> void:
+	for i: int in _bars.size():
+		var bar: ColorRect = _bars[i]
+		if i == 0:
+			bar.anchor_bottom = LETTERBOX * amount
+		else:
+			bar.anchor_top = 1.0 - LETTERBOX * amount
+		bar.visible = amount > 0.0
 
 
 func _build_notice() -> void:
@@ -251,6 +299,7 @@ func _build_car_panel() -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_car_layer.add_child(center)
+	_car_center = center
 	var column: VBoxContainer = VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_theme_constant_override(&"separation", 6)
@@ -259,6 +308,7 @@ func _build_car_panel() -> void:
 	plate.theme_type_variation = &"HudCarPlate"
 	plate.custom_minimum_size = Vector2(PANEL_WIDTH, 0.0)
 	plate.mouse_filter = Control.MOUSE_FILTER_STOP
+	_car_plate = plate
 	var box: VBoxContainer = VBoxContainer.new()
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_theme_constant_override(&"separation", 4)
@@ -333,7 +383,7 @@ func _modal_layer() -> Control:
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.gui_input.connect(func(event: InputEvent) -> void:
-		if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+		if event is InputEventMouseButton and (event as InputEventMouseButton).pressed and not _departing:
 			layer.hide())
 	layer.add_child(dim)
 	_overlay.add_child(layer)
@@ -346,6 +396,12 @@ func _modal_layer() -> Control:
 ## WorldCamera). Burada yalnız DOKUNUŞ ayıklanır: basıp kaydırmadan bırakmak → yığın / araç seçimi.
 func _gui_input(event: InputEvent) -> void:
 	if _world == null:
+		return
+	if _departing:
+		# Ara sahne: kamera oyuncunun değil; dokunuş sahneyi atlar
+		if is_instance_valid(_tow) and event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+			_tow.skip()
+		accept_event()
 		return
 	_viewport.push_input(event, true)
 	if event is InputEventScreenTouch:
@@ -489,9 +545,108 @@ func _start_selected() -> void:
 		_car_layer.hide()
 		return
 	var id: StringName = cars[_selected_car]
-	if jy.start(id):
+	if _departing or _world == null or not jy.can_start(id):
+		return
+	# Hurda sahneye devredilir ÖNCE: start() sahayı yeniler (yer &""), hurda silinmesin
+	var index: int = _selected_car
+	var wreck: Node3D = _world.take_daily(index)
+	if not jy.start(id):   # kayıt burada: sahne yalnızca sunum
+		if wreck:
+			wreck.queue_free()
+		_world.show_daily(jy.yard_cars())
+		return
+	_departing = true
+	_stamp(func() -> void: _depart(index, wreck))
+
+
+## "İŞ ALINDI" mührü plakaya vurulur, plaka sarsılır; sonra plaka kalkar ve `then` çağrılır.
+func _stamp(then: Callable) -> void:
+	_car_start.disabled = true
+	var stamp: PanelContainer = PanelContainer.new()
+	stamp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var frame: StyleBoxFlat = StyleBoxFlat.new()
+	frame.bg_color = Color(HudPalette.PLATE, 0.0)
+	frame.border_color = HudPalette.DANGER
+	frame.set_border_width_all(5)
+	frame.set_corner_radius_all(8)
+	frame.set_content_margin_all(10.0)
+	frame.content_margin_left = 22.0
+	frame.content_margin_right = 22.0
+	stamp.add_theme_stylebox_override(&"panel", frame)
+	var label: Label = _label(&"HudSignTitle", Loc.t("İŞ ALINDI"))
+	label.add_theme_color_override(&"font_color", HudPalette.DANGER)
+	label.add_theme_constant_override(&"outline_size", 0)
+	stamp.add_child(label)
+	_car_layer.add_child(stamp)
+	stamp.reset_size()
+	var plate_rect: Rect2 = _car_plate.get_global_rect()
+	stamp.position = plate_rect.get_center() - stamp.size * 0.5 - _car_layer.get_global_rect().position \
+		+ Vector2(plate_rect.size.x * 0.18, 0.0)
+	stamp.pivot_offset = stamp.size * 0.5
+	stamp.rotation = deg_to_rad(-12.0)
+	stamp.scale = Vector2(2.6, 2.6)
+	stamp.modulate.a = 0.0
+	var tween: Tween = create_tween()
+	tween.tween_property(stamp, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(stamp, "modulate:a", 1.0, 0.1)
+	tween.tween_callback(func() -> void: _shake(_car_center))
+	tween.tween_interval(0.85)
+	tween.tween_property(_car_layer, "modulate:a", 0.0, 0.25)
+	tween.tween_callback(func() -> void:
+		stamp.queue_free()
 		_car_layer.hide()
-		_notice(Loc.t("%s GARAJA YOLA ÇIKTI") % _car_title.text, HudPalette.COIN_DARK, 2.2)
+		_car_layer.modulate.a = 1.0
+		_car_start.disabled = false
+		then.call())
+
+
+## Kısa sarsıntı (mührün darbesi). Konteyner çocuğu: yerleşim bir sonraki düzende kendini düzeltir.
+func _shake(control: Control) -> void:
+	var origin: Vector2 = control.position
+	var tween: Tween = control.create_tween()
+	for k: int in 4:
+		var push: float = 9.0 * (1.0 - k / 4.0) * (1.0 if k % 2 == 0 else -1.0)
+		tween.tween_property(control, "position", origin + Vector2(push, push * 0.4), 0.04)
+	tween.tween_property(control, "position", origin, 0.05)
+
+
+## Çekme sahnesi: sinema şeritleri iner, plakalar kalkar; hurda halatı yiyince Necati konuşur.
+func _depart(index: int, wreck: Node3D) -> void:
+	if _world == null:
+		_end_departure()
+		return
+	var name_text: String = _car_title.text
+	if wreck == null or _world.player_car() == null:
+		_end_departure()
+		_notice(Loc.t("%s GARAJA YOLA ÇIKTI") % name_text, HudPalette.COIN_DARK, 2.2)
+		return
+	_title_bar.hide()
+	_bottom_bar.hide()
+	var tween: Tween = create_tween()
+	tween.tween_method(_set_letterbox, 0.0, 1.0, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_tow = JunkyardTow.new()
+	# İlk restorasyon tam hızda; sonrakiler daha kısa (yine de dokununca atlanır)
+	var jy: JunkyardManager = _jy()
+	var first: bool = jy == null or jy.completed_ids().size() + jy.project_count() <= 1
+	_tow.setup(_world, wreck, _world.spot_blender(index), 1.0 if first else REPEAT_SPEED)
+	_tow.hitched.connect(func() -> void:
+		_notice(Loc.t("NECATİ") + ": \u201C%s\u201D" % Loc.t(NECATI_LINES[randi() % NECATI_LINES.size()]),
+			HudPalette.INK, 2.4))
+	_tow.finished.connect(func() -> void:
+		_end_departure()
+		_notice(Loc.t("%s GARAJA YOLA ÇIKTI\nTamir alanında parçalarını bekliyor") % name_text, HudPalette.COIN_DARK, 2.8)
+		_pulse(_map_button))
+	_world.add_child(_tow)   # dünyayla birlikte silinir (ekran sahne ortasında kapanırsa)
+	_tow.play()
+
+
+func _end_departure() -> void:
+	_departing = false
+	_tow = null
+	_set_letterbox(0.0)
+	if _title_bar:
+		_title_bar.show()
+		_bottom_bar.show()
 
 
 # --- Güncelleme ----------------------------------------------------------------------

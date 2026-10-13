@@ -78,6 +78,7 @@ var _figures: Array[Node3D] = []
 var _time: float = 0.0
 var _shakes: Dictionary = {}   # yığın indeksi → Tween
 var _player_car: Node3D        # tutucu (yalnız konum); içinde dönük araç modeli + gölge lekesi
+var _player_model: Node3D
 var _player_car_id: StringName = &""
 
 
@@ -358,12 +359,12 @@ func show_player_car(id: StringName) -> void:
 		return
 	_player_car = Node3D.new()
 	_player_car.name = "PlayerCar"
-	_player_car.position = blender(PLAYER_CAR_SPOT.x, PLAYER_CAR_SPOT.y, 0.0)
 	add_child(_player_car)
 	var model: Node3D = scene.instantiate() as Node3D
-	model.rotation.y = deg_to_rad(PLAYER_CAR_HEADING_DEG)   # tutucu dönmez: gölge lekesi güneşe göre kayar
 	model.scale = Vector3.ONE * PLAYER_CAR_LENGTH * CarCatalog.model_scale(id)
 	_player_car.add_child(model)
+	_player_model = model
+	park_player_car()
 	var rig: CarRig = CarRig.new(model)
 	rig.apply(CarAppearance.get_for(path))
 	rig.set_lod_bias(CarRig.LOD_BIAS_WORLD)
@@ -371,8 +372,49 @@ func show_player_car(id: StringName) -> void:
 	_add_blob(Vector3.ZERO, 1.8, _player_car)
 
 
+## Aracı kapının önündeki yerine koyar (çekme sahnesi bitince de buraya döner).
+func park_player_car() -> void:
+	if not is_instance_valid(_player_car):
+		return
+	_player_car.position = blender(PLAYER_CAR_SPOT.x, PLAYER_CAR_SPOT.y, 0.0)
+	_player_model.rotation.y = deg_to_rad(PLAYER_CAR_HEADING_DEG)   # tutucu dönmez: gölge lekesi güneşe göre kayar
+
+
+## Tutucu: konumu taşınır. Model: Y açısı (önü +Z) çevrilir. İkisi ayrı ki gölge lekesi dönmesin.
 func player_car() -> Node3D:
 	return _player_car
+
+
+func player_car_model() -> Node3D:
+	return _player_model if is_instance_valid(_player_model) else null
+
+
+## Aracın boyu (metre): çekme noktası arka tampon.
+func player_car_length() -> float:
+	return PLAYER_CAR_LENGTH * CarCatalog.model_scale(_player_car_id)
+
+
+## Günün aracını sahadan ÇEKME SAHNESİNE devreder: tutucusu (hurda + gölge lekesi) artık sahanın değil
+## çağıranındır, yerine boş bir tutucu konur. Proje başlayınca gelen yenileme (show_daily, yer &"")
+## değişiklik görmez; böylece hurda, yeniden kurulan saha tarafından silinmeden sahnede kullanılır.
+func take_daily(index: int) -> Node3D:
+	if index < 0 or index >= _daily_nodes.size() or _daily_nodes[index].get_child_count() == 0:
+		return null
+	var holder: Node3D = _daily_nodes[index]
+	var empty: Node3D = Node3D.new()
+	empty.name = "DailyCar_%d" % index
+	empty.position = holder.position
+	holder.name = "TowedCar"
+	add_child(empty)
+	_daily_nodes[index] = empty
+	_daily[index] = &""
+	return holder
+
+
+## Günün aracının yeri (Blender X, Y): çekme sahnesinin yolu buna göre kurulur.
+func spot_blender(index: int) -> Vector2:
+	var p: Vector3 = spots[index].global_position - global_position if index >= 0 and index < spots.size() else Vector3.ZERO
+	return Vector2(p.x, -p.z)
 
 
 ## Restorasyon aracının paslı, tekerleksiz hurda varyantı (ön +Z, gerçek metre). Yoksa null.
@@ -416,10 +458,11 @@ func shake_pile(index: int, done: Callable = Callable()) -> void:
 		_shakes.erase(index)
 		if done.is_valid():
 			done.call())
-	_dust(pile.global_position)
+	dust(pile.global_position)
 
 
-func _dust(at: Vector3) -> void:
+## Toz bulutu (yığın araması, çekilen hurda). Kendini siler.
+func dust(at: Vector3, radius: float = 1.6, amount: int = 18) -> void:
 	var dust: CPUParticles3D = CPUParticles3D.new()
 	var quad: QuadMesh = QuadMesh.new()
 	quad.size = Vector2(0.9, 0.9)
@@ -432,11 +475,11 @@ func _dust(at: Vector3) -> void:
 	quad.material = material
 	dust.mesh = quad
 	dust.one_shot = true
-	dust.amount = 18
+	dust.amount = amount
 	dust.lifetime = 1.1
 	dust.explosiveness = 0.85
 	dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	dust.emission_sphere_radius = 1.6
+	dust.emission_sphere_radius = radius
 	dust.direction = Vector3.UP
 	dust.spread = 70.0
 	dust.initial_velocity_min = 1.0

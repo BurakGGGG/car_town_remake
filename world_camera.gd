@@ -153,6 +153,21 @@ func frame_box(box: AABB, top: float = 0.14, bottom: float = 0.64, side: float =
 	return before
 
 
+## Şu anki görünüm (restore_view ile geri dönülür).
+func view_state() -> Dictionary:
+	return {"focus": _focus, "size": _target_size}
+
+
+## Sinematik takip: odak anında, zoom yumuşak (_process) ayarlanır; dünya sınırları geçerli.
+## Çağıran odağı kendisi yumuşatır (her kare çağrılır). Süren kayma (frame_box / restore_view) kesilir.
+func follow(focus: Vector3, zoom: float) -> void:
+	if _glide:
+		_glide.kill()
+	_target_size = clampf(zoom, 1.0, _max_zoom_fit())
+	_focus = Vector3(focus.x, 0.0, focus.z)
+	_apply_focus()
+
+
 ## Dünya plakaları (LAYER_WORLD_UI) görünsün mü?
 func set_world_ui_visible(on: bool) -> void:
 	cull_mask = (cull_mask | LAYER_WORLD_UI) if on else (cull_mask & ~LAYER_WORLD_UI)

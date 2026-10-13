@@ -346,6 +346,62 @@ func _run() -> void:
 	# Önü (+Z) batıya (kapıya) bakar ama tam dik değil: çapraz
 	var nose: Vector3 = parked_model.global_basis.z.normalized() if parked_model else Vector3.ZERO
 	check(nose.x < -0.7 and absf(nose.z) > 0.25, "araç kapıya çapraz dönük (ön: %s)" % nose)
+
+	print("== 13c) RESTORASYON ÇEKME SAHNESİ ==")
+	# Yol, her hurda yeri için: engellere (lamba, varil, lastik, Cemo...) ve hurdalara çarpmaz.
+	# Araç yarı genişliği 1 m + pay; hurdalar 2,2 × 4,2 m, burnu güneye.
+	var hits: PackedStringArray = PackedStringArray()
+	var spots_xy: Array[Vector2] = []
+	for i: int in yard_world.spots.size():
+		spots_xy.append(yard_world.spot_blender(i))
+	for i: int in spots_xy.size():
+		var routes: Dictionary = {"giriş": JunkyardTow.entry_route(JunkyardWorld.PLAYER_CAR_SPOT, spots_xy[i]),
+			"çıkış": JunkyardTow.exit_route(spots_xy[i])}
+		for route_name: String in routes:
+			for p: Vector2 in JunkyardTow.sample_points(routes[route_name]):
+				for o: Vector3 in JunkyardTow.OBSTACLES:
+					if p.distance_to(Vector2(o.x, o.y)) < o.z + 1.2:
+						hits.append("yer %d %s: %s engel %s" % [i, route_name, p, o])
+				for k: int in spots_xy.size():
+					if route_name == "çıkış" and k == i:
+						continue   # çekilen hurda yerinde değil
+					if absf(p.x - spots_xy[k].x) < 1.1 + 1.1 and absf(p.y - spots_xy[k].y) < 2.1 + 1.1:
+						hits.append("yer %d %s: %s hurda %d" % [i, route_name, p, k])
+	check(hits.is_empty(), "çekme yolu engellere ve hurdalara çarpmıyor %s" % (hits.slice(0, 3) if not hits.is_empty() else ""))
+	# Sahne oynar: araç hurdaya gider, halat, çekip çıkar; sonunda hurda kalkar, araç kapıya döner
+	yard_world.show_daily([&"anadol_a1", &"anadol_a1", &"anadol_a1"] as Array[StringName])
+	var towed: Node3D = yard_world.take_daily(1)
+	check(towed != null and yard_world.daily_ids()[1] == &"", "hurda sahneye devredildi, saha yeri boş")
+	var tow: JunkyardTow = JunkyardTow.new()
+	tow.setup(yard_world, towed, yard_world.spot_blender(1), 6.0)
+	var tow_state: Dictionary = {"hitched": false, "done": false}
+	tow.hitched.connect(func() -> void: tow_state["hitched"] = true)
+	tow.finished.connect(func() -> void: tow_state["done"] = true)
+	yard_world.add_child(tow)
+	tow.play()
+	for k: int in 600:
+		if tow_state["done"]:
+			break
+		await process_frame
+	await frames(2)
+	check(tow_state["hitched"] and tow_state["done"], "çekme sahnesi halatla bağlandı ve bitti")
+	check(not is_instance_valid(towed), "çekilen hurda sahneden kalktı")
+	check(parked.global_position.distance_to(JunkyardWorld.blender(JunkyardWorld.PLAYER_CAR_SPOT.x,
+		JunkyardWorld.PLAYER_CAR_SPOT.y, 0.0)) < 0.01, "oyuncunun aracı kapıdaki yerine döndü")
+	# Dokununca atlanır: aynı bitiş (hurda kalkar, araç yerinde)
+	var skipped: Node3D = yard_world.take_daily(2)
+	var tow_skip: JunkyardTow = JunkyardTow.new()
+	tow_skip.setup(yard_world, skipped, yard_world.spot_blender(2))
+	var skip_state: Dictionary = {"done": false}
+	tow_skip.finished.connect(func() -> void: skip_state["done"] = true)
+	yard_world.add_child(tow_skip)
+	tow_skip.play()
+	await frames(20)
+	tow_skip.skip()
+	await frames(2)
+	check(skip_state["done"] and not is_instance_valid(skipped) and parked.global_position.distance_to(
+		JunkyardWorld.blender(JunkyardWorld.PLAYER_CAR_SPOT.x, JunkyardWorld.PLAYER_CAR_SPOT.y, 0.0)) < 0.01,
+		"sahne atlanınca da hurda kalkar, araç yerine döner")
 	yard_world.free()
 
 	print("== 14) GARAJDA PROJE: 3 AŞAMA + PANO ==")
