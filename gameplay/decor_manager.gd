@@ -46,6 +46,10 @@ var _instances: Array[Dictionary] = []
 var _surfaces: Dictionary = {}
 ## Zemin karoları: Vector2i göz → desen id (boyanmamış göz kayıtta yoktur).
 var _tiles: Dictionary = {}
+## value() önbelleği (-1 = eskidi). Eşya / karo değişen her yerde sıfırlanır. Düzenleyici paletinde her kartın
+## kilidi garaj rütbesine bakıyor ve rütbe her seferinde bütün dekor değerini (sahip olunan her eşya + boyalı
+## her karo) baştan topluyordu: açılışta 228 kez (qa/script_profile.gd open:garage_edit).
+var _value_cache: int = -1
 ## İç duvarlar: kenar anahtarı ("x:a:b" / "z:a:b") → {"piece": StringName, "finish": StringName}.
 var _walls: Dictionary = {}
 
@@ -170,10 +174,12 @@ func price_of(id: StringName) -> int:
 
 ## Garaj değerine katkı: sahip olunan her kopya (garajda olsun olmasın, Car Town "Item Storage").
 func value() -> int:
-	var total: int = 0
-	for id: StringName in _owned:
-		total += int(GarageDecor.get_item(id).get("value", 0)) * int(_owned[id])
-	return total + tile_value()
+	if _value_cache < 0:
+		var total: int = 0
+		for id: StringName in _owned:
+			total += int(GarageDecor.get_item(id).get("value", 0)) * int(_owned[id])
+		_value_cache = total + tile_value()
+	return _value_cache
 
 
 ## Bir kopya satın alır: para düşer, kopya DEPOYA girer (yerleştirmek düzenleyicinin işi).
@@ -186,6 +192,7 @@ func purchase(id: StringName) -> bool:
 		purchase_failed.emit(id, price_of(id))
 		return false
 	_owned[id] = owned_of(id) + 1
+	_value_cache = -1
 	purchased.emit(id)
 	placement_changed.emit()
 	return true
@@ -350,6 +357,7 @@ func revert_tiles(changes: Array, refund: int) -> void:
 
 
 func _set_tile(cell: Vector2i, pattern: StringName) -> void:
+	_value_cache = -1
 	if pattern == &"":
 		_tiles.erase(cell)
 	else:
@@ -357,6 +365,7 @@ func _set_tile(cell: Vector2i, pattern: StringName) -> void:
 
 
 func _fill_all(pattern: StringName) -> void:
+	_value_cache = -1
 	for j: int in DecorGrid.MAX_ROWS:
 		for i: int in DecorGrid.MAX_COLS:
 			_tiles[Vector2i(i, j)] = pattern
@@ -386,6 +395,7 @@ func _tiles_out() -> Dictionary:
 
 
 func _tiles_in(raw: Variant) -> void:
+	_value_cache = -1
 	if not (raw is Dictionary):
 		return
 	var palette: Variant = (raw as Dictionary).get("palette", [])
@@ -426,6 +436,7 @@ func wall_count() -> int:
 ## örülmez). Aynı parça olan kenar atlanır; başka parça olan kenarın parçası depoya döner, kaplaması korunur.
 ## Dönüş: {"changes": [[anahtar, eski kayıt ya da {}, yeni kayıt]], "bought": int, "spent": int}; olmadıysa {}.
 func build_walls(keys: Array[String], piece: StringName) -> Dictionary:
+	_value_cache = -1
 	if not GarageDecor.is_wall_piece(piece) or not is_unlocked(piece):
 		return {}
 	var todo: Array[String] = []
@@ -448,6 +459,7 @@ func build_walls(keys: Array[String], piece: StringName) -> Dictionary:
 			purchase_failed.emit(piece, spent)
 			return {}
 		_owned[piece] = owned_of(piece) + need
+		_value_cache = -1   # yukarıda is_unlocked değeri eski hâliyle önbelleğe almış olabilir
 	var changes: Array = []
 	for key: String in todo:
 		var from: Dictionary = wall_at(key)
@@ -492,6 +504,7 @@ func set_wall_finish(keys: Array[String], finish: StringName) -> Array:
 ## Duvar değişikliğini geri alır: kayıtlar eski haline döner; o işlemde satın alınan kopyalar geri
 ## verilir ve ödenen iade edilir.
 func revert_walls(changes: Array, piece: StringName = &"", bought: int = 0, spent: int = 0) -> void:
+	_value_cache = -1
 	for i: int in range(changes.size() - 1, -1, -1):
 		var change: Array = changes[i]
 		var from: Dictionary = change[1]
@@ -505,6 +518,7 @@ func revert_walls(changes: Array, piece: StringName = &"", bought: int = 0, spen
 			_owned[piece] = left
 		else:
 			_owned.erase(piece)
+		_value_cache = -1
 		var economy: EconomyManager = _economy()
 		if economy and spent > 0:
 			economy.add_money(spent)
@@ -596,6 +610,7 @@ func state() -> Dictionary:
 
 ## v9 ya da v8 kaydını yükler. Bozuk parçalar atlanır, oyun bozulmaz.
 func load_state(data: Dictionary) -> void:
+	_value_cache = -1
 	_owned.clear()
 	_instances.clear()
 	_surfaces.clear()
@@ -643,6 +658,7 @@ func load_state(data: Dictionary) -> void:
 
 
 func reset() -> void:
+	_value_cache = -1
 	_owned.clear()
 	_instances.clear()
 	_surfaces.clear()

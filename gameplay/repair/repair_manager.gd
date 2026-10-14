@@ -66,6 +66,10 @@ const SPOT_AHEAD_MAX: float = 3.2   # aracın noktayı "görebildiği" pencere (
 const SPOT_SIDE_MAX: float = 0.6    # noktanın şeride yanal uzaklığı en çok (kaldırım kenarı ~0.36)
 const SPOT_CLEAR: float = 0.9       # nokta çevresinde bu yarıçapta bekleyen araç varsa dolu sayılır
 const PATH_SIDE: float = 0.55       # yanaşma yolunun bu kadar yanında duran araç varsa o nokta seçilmez
+## Uygun araç / nokta yoksa tarama bu aralıkla yinelenir. Eskiden her karede: oturmuş oyunda sayaç hep dolu
+## olduğundan trafik × nokta taraması kare başı betiğin en büyük kalemiydi. Araç noktayı 0,5–3,2 birimlik
+## pencerede görür (saniyelerce): 0,1 sn gecikme seçimi değiştirmez.
+const CANDIDATE_RETRY: float = 0.1
 
 ## Arıza kataloğu; boşsa RepairType.defaults() (MOTOR / FREN / LASTİK / KAPORTA).
 @export var repair_types: Array[RepairType] = []
@@ -627,10 +631,12 @@ func _tick_customers(delta: float) -> void:
 		return
 	var options: Array[Dictionary] = _candidates()
 	if options.is_empty():
-		return  # uygun araç/nokta yok: sonraki karede yeniden dene
+		_customer_timer = CANDIDATE_RETRY   # uygun araç/nokta yok: biraz sonra yeniden dene
+		return
 	var pick: Dictionary = options[_rng.randi() % options.size()]
 	var job: RepairType = _pick_fault(unlocked_types(_player_level()))
 	if job == null:
+		_customer_timer = CANDIDATE_RETRY
 		return
 	var vehicle: TrafficVehicle = pick["vehicle"]
 	vehicle.request_repair(pick["spot"], job, _rng.randf_range(job.severity_min, job.severity_max))

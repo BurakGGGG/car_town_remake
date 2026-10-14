@@ -31,6 +31,9 @@ const BACKDROP: Dictionary = {
 	Kind.CHEST: Color("43306E"),
 	Kind.VAULT: Color("16243F"),
 }
+## Mağaza kartları saniyede en çok bu kadar yeniden çizilir: hareketler yavaş (1,8–3 rad/sn), 30 Hz akıcı; kart
+## çizimi ağır (yığın, ışın, gem) ve mağaza açıkken beş kart her karede baştan çiziliyordu (masaüstü ~3,8 ms/kare).
+const CARD_REDRAW_HZ: float = 30.0
 
 @export var kind: Kind = Kind.HANDFUL:
 	set(value):
@@ -41,18 +44,37 @@ var badge_text: String = ""
 
 var _t: float = 0.0
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## GEM AL düğmesi (Kind.BUTTON): zıplayan gem ve parıltı ayrı alt öğelerde bir kez çizilir, sonra yalnızca
+## konum / ölçek / saydamlıkla oynar. HUD'da hep görünen düğme her karede baştan çiziliyordu: oturmuş dünyada
+## kare başı betik süresinin ~%60'ı (qa/script_profile.gd world). Görüntü aynı (qa/gem_button_shots.gd).
+var _button_gem: _Piece
+var _button_spark: _Piece
+var _since_redraw: float = 0.0
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = kind != Kind.BUTTON   # hüzmeler vitrin zemininin dışına taşmasın
 	_t = randf() * 10.0   # yan yana kartlar aynı anda parlamasın
+	if kind == Kind.BUTTON:
+		_button_gem = _Piece.new(_Piece.GEM)
+		_button_spark = _Piece.new(_Piece.SPARK)
+		add_child(_button_gem)
+		add_child(_button_spark)
+		resized.connect(_layout_button)
+		_layout_button()
 
 
 func _process(delta: float) -> void:
 	if is_visible_in_tree():
 		_t += delta
-		queue_redraw()
+		if _button_gem:
+			_animate_button()
+		else:
+			_since_redraw += delta
+			if _since_redraw >= 1.0 / CARD_REDRAW_HZ:
+				_since_redraw = 0.0
+				queue_redraw()
 
 
 func _draw() -> void:
@@ -229,13 +251,32 @@ func _draw_starter(c: Vector2, s: float) -> void:
 	_twinkles(c, s, [Vector2(-0.36, -0.36), Vector2(0.36, -0.38), Vector2(-0.42, 0.06), Vector2(0.42, 0.04), Vector2(0.0, -0.47)])
 
 
+## Düğmenin durağan kısmı; zıplayan gem ve parıltı _Piece alt öğeleri (_animate_button).
 func _draw_button(c: Vector2, s: float) -> void:
 	_glow(c, s * 0.5, Color.WHITE, 0.35)
-	var bob: float = sin(_t * 3.0) * s * 0.03
-	_gem(c + Vector2(0.0, bob), s * 0.78, GEM_BLUE, 0.0)
+
+
+## Düğme parçalarının boyu kutuya bağlı: yalnızca boyut değişince yeniden çizilirler.
+func _layout_button() -> void:
+	var s: float = minf(size.x, size.y)
+	_button_gem.extent = s * 0.78
+	_button_spark.extent = s * 0.22
+	_button_gem.queue_redraw()
+	_button_spark.queue_redraw()
+	_animate_button()
+
+
+## Eski çizimin hareketli kısmı, dönüşümle: gem sin(3t) ile zıplar; parıltı sin(2,6t) ile büyüyüp söner
+## (yarıçap × a = ölçek a, beyaz × a = saydamlık a; yarıçap 0,75'in altında çizilmezdi).
+func _animate_button() -> void:
+	var s: float = minf(size.x, size.y)
+	var c: Vector2 = size * 0.5
+	_button_gem.position = c + Vector2(0.0, sin(_t * 3.0) * s * 0.03)
 	var a: float = clampf(sin(_t * 2.6), 0.0, 1.0)
-	if a > 0.0:
-		_sparkle(c + Vector2(s * 0.28, -s * 0.22), s * 0.22 * a, a)
+	_button_spark.visible = s * 0.22 * a >= 0.75
+	_button_spark.position = c + Vector2(s * 0.28, -s * 0.22)
+	_button_spark.scale = Vector2(a, a)
+	_button_spark.modulate.a = a
 
 
 # --- Yapı taşları -----------------------------------------------------------------------------
@@ -251,8 +292,13 @@ func _backdrop(color: Color) -> void:
 	draw_style_box(sb, Rect2(Vector2.ZERO, size))
 	_glow(Vector2(size.x * 0.5, size.y * 0.42), minf(size.x, size.y) * 0.62, color.lightened(0.45), 0.55)
 
-## Yüzeyli gem (yandan pırlanta): üstte tabla + taç yüzeyleri, altta köşk; ışık sol üstten.
 func _gem(p: Vector2, sz: float, base: Color, rot: float) -> void:
+	draw_gem(self, p, sz, base, rot)
+
+
+## Yüzeyli gem (yandan pırlanta): üstte tabla + taç yüzeyleri, altta köşk; ışık sol üstten. `ci` üzerine
+## çizer (yalnızca onun çizim bildirimi içinde çağrılır) — GEM AL düğmesinin _Piece'i de kullanır.
+static func draw_gem(ci: CanvasItem, p: Vector2, sz: float, base: Color, rot: float) -> void:
 	var tr: Transform2D = Transform2D(rot, p)
 	var pts: Array[Vector2] = [
 		Vector2(-0.30, -0.34), Vector2(0.30, -0.34),   # 0,1 tabla
@@ -267,17 +313,17 @@ func _gem(p: Vector2, sz: float, base: Color, rot: float) -> void:
 	var mid: Color = base
 	var dark: Color = base.darkened(0.3)
 	var deep: Color = base.darkened(0.5)
-	draw_colored_polygon(PackedVector2Array([w[3], w[0], w[4]]), base.lightened(0.25))
-	draw_colored_polygon(PackedVector2Array([w[0], w[1], w[5], w[4]]), light)
-	draw_colored_polygon(PackedVector2Array([w[1], w[2], w[5]]), mid)
-	draw_colored_polygon(PackedVector2Array([w[3], w[4], w[6]]), mid)
-	draw_colored_polygon(PackedVector2Array([w[4], w[5], w[6]]), base.lightened(0.12))
-	draw_colored_polygon(PackedVector2Array([w[5], w[2], w[6]]), dark)
+	ci.draw_colored_polygon(PackedVector2Array([w[3], w[0], w[4]]), base.lightened(0.25))
+	ci.draw_colored_polygon(PackedVector2Array([w[0], w[1], w[5], w[4]]), light)
+	ci.draw_colored_polygon(PackedVector2Array([w[1], w[2], w[5]]), mid)
+	ci.draw_colored_polygon(PackedVector2Array([w[3], w[4], w[6]]), mid)
+	ci.draw_colored_polygon(PackedVector2Array([w[4], w[5], w[6]]), base.lightened(0.12))
+	ci.draw_colored_polygon(PackedVector2Array([w[5], w[2], w[6]]), dark)
 	var outline: PackedVector2Array = PackedVector2Array([w[0], w[1], w[2], w[6], w[3], w[0]])
-	draw_polyline(outline, deep, maxf(sz * 0.045, 1.0), true)
-	draw_line(w[3], w[2], Color(deep, 0.5), maxf(sz * 0.025, 1.0), true)
+	ci.draw_polyline(outline, deep, maxf(sz * 0.045, 1.0), true)
+	ci.draw_line(w[3], w[2], Color(deep, 0.5), maxf(sz * 0.025, 1.0), true)
 	# Tabla parıltısı
-	draw_colored_polygon(PackedVector2Array([
+	ci.draw_colored_polygon(PackedVector2Array([
 		tr * (Vector2(-0.22, -0.3) * sz), tr * (Vector2(-0.08, -0.3) * sz),
 		tr * (Vector2(-0.16, -0.14) * sz), tr * (Vector2(-0.3, -0.14) * sz)]), Color(1.0, 1.0, 1.0, 0.75))
 
@@ -325,8 +371,12 @@ func _ellipse(c: Vector2, rx: float, ry: float, color: Color) -> void:
 	draw_colored_polygon(pts, color)
 
 
-## Dört köşeli parıltı yıldızı.
 func _sparkle(p: Vector2, r: float, alpha: float) -> void:
+	draw_sparkle(self, p, r, alpha)
+
+
+## Dört köşeli parıltı yıldızı (`ci` üzerine).
+static func draw_sparkle(ci: CanvasItem, p: Vector2, r: float, alpha: float) -> void:
 	# Sönerken yarıçap ~0'a iner: noktalar çakışır ve çokgen üçgenlenemez ("triangulation failed").
 	if r < 0.75:
 		return
@@ -335,7 +385,7 @@ func _sparkle(p: Vector2, r: float, alpha: float) -> void:
 		var a: float = TAU * float(i) / 8.0 - PI * 0.5
 		var rr: float = r if i % 2 == 0 else r * 0.22
 		pts.append(p + Vector2(cos(a), sin(a)) * rr)
-	draw_colored_polygon(pts, Color(1.0, 1.0, 1.0, alpha))
+	ci.draw_colored_polygon(pts, Color(1.0, 1.0, 1.0, alpha))
 
 
 ## Göreli konumlarda (kutunun kısa kenarına oranla) sırayla yanıp sönen parıltılar.
@@ -362,3 +412,24 @@ func _draw_badge(p: Vector2, r: float) -> void:
 	var at: Vector2 = p + Vector2(-width * 0.5, font_size * 0.35)
 	draw_string_outline(font, at, badge_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, maxi(int(font_size * 0.25), 2), BADGE.darkened(0.45))
 	draw_string(font, at, badge_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color.WHITE)
+
+
+## GEM AL düğmesinin hareketli parçası (gem ya da parıltı): bir kez çizilir, sonra yalnızca taşınır.
+class _Piece:
+	extends Node2D
+	const GEM: int = 0
+	const SPARK: int = 1
+	var what: int
+	## Çizim boyu: gemde genişlik (sz), parıltıda yarıçap (tam açık hâli; büyüklük ölçekle verilir).
+	var extent: float = 0.0
+
+	func _init(what_value: int) -> void:
+		what = what_value
+
+	func _draw() -> void:
+		if extent <= 0.0:
+			return
+		if what == GEM:
+			GemPackArt.draw_gem(self, Vector2.ZERO, extent, GemPackArt.GEM_BLUE, 0.0)
+		else:
+			GemPackArt.draw_sparkle(self, Vector2.ZERO, extent, 1.0)

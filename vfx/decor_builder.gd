@@ -167,7 +167,9 @@ static func _vehicle(id: StringName) -> Node3D:
 	var rig: CarRig = CarRig.new(car)
 	rig.apply(CarAppearance.get_for(path))
 	rig.set_steer(0.0)
-	rig.set_lod_bias(CarRig.LOD_BIAS_GARAGE)
+	# Dünya katsayısı (1 piksel hata eşiği): sergi aracı şehrin uzak kamerasından görünür. GARAGE (4,0)
+	# altı araçta açılış zoom'unda +103k üçgen çiziyordu, görüntü farkı yoktu (qa/display_lod_check.gd).
+	rig.set_lod_bias(CarRig.LOD_BIAS_WORLD)
 	# Sergi aracı durur: parçalar (tekerler dahil) materyal başına birleşir (~70 → ~8 çizim). Rig
 	# düğümün meta'sında yaşar: birleştirme arka planda biter, yerel değişken o ana kadar ölürdü.
 	car.set_meta(CarRig.META_KEY, rig)

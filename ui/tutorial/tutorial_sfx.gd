@@ -16,6 +16,13 @@ var _last_type: int = 0
 
 func _ready() -> void:
 	name = "TutorialSfx"
+
+
+## Sesler İLK ÇALIŞTA üretilir: eğitimi bitirmiş oyuncu bunları hiç duymaz; açılışta sentez ~16 ms
+## (masaüstü, telefonda 5-8 kat) boşa gidiyordu (qa/script_profile.gd startup).
+func _ensure_players() -> void:
+	if not _players.is_empty():
+		return
 	_ensure_streams()
 	for entry: Array in [[&"whoosh", -8.0, 1], [&"pop", -9.0, 2], [&"type", -20.0, 2], [&"chime", -8.0, 2],
 			[&"stamp", -3.0, 1]]:
@@ -29,6 +36,7 @@ func _ready() -> void:
 
 
 func play(id: StringName, pitch: float = 1.0) -> void:
+	_ensure_players()
 	var player: AudioStreamPlayer = _players.get(id) as AudioStreamPlayer
 	if player == null:
 		return

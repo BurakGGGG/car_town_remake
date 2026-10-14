@@ -37,6 +37,12 @@ const THUMB_SIZE: Vector2i = Vector2i(176, 110)  # render çözünürlüğü (pl
 const LIFT: float = 3.0  # HudGalleryPlate basılı stilindeki expand_margin_top ile aynı
 const THUMBS_PER_FRAME: int = 2   # kuyruktan bir seferde render edilen araç sayısı
 const PREWARM_THUMBNAILS: int = 8  # açılışta önden üretilen ilk N araç (galeri açılınca hazır olsun)
+## ÖNCEDEN ÇİZİLMİŞ küçük resimler (tools/make_car_thumbs.gd, aynı _render_thumbnails koduyla): fabrika
+## görünümündeki araç dosyadan gelir. Koleksiyonun ilk açılışında 55 araç sahnesi yüklenip tek tek çiziliyor
+## ve GPU'dan geri okunuyordu (masaüstü ~440 ms, telefonda saniyeler; qa/script_profile.gd open:collection).
+## Boyalı ya da dosyası olmayan araç eskisi gibi o an çizilir. Araç modeli değişince araç yeniden çalıştırılır
+## (vehicle_asset_test eskiyi yakalar).
+const BAKED_DIR: String = "res://assets/cars/thumbs/"
 
 ## Araç id → küçük render (tüm galeri örnekleri paylaşır, bir kez üretilir).
 static var _thumbnails: Dictionary = {}
@@ -58,6 +64,7 @@ var _tweens: Array[Tween] = []
 var _ownership: VehicleOwnership
 var _economy: EconomyManager
 var _built: bool = false
+var _baked_notice: bool = false   # önceden çizilmiş resim girdi, kare sonu bildirimi bekliyor
 
 
 func _ready() -> void:
@@ -301,8 +308,9 @@ func _prewarm_thumbnails() -> void:
 
 
 ## Aracı render kuyruğuna alır (zaten varsa / kuyruktaysa hiçbir şey yapmaz) ve kuyruğu çalıştırır.
+## Önceden çizilmiş resmi varsa (fabrika görünümü) render yerine o önbelleğe girer.
 func _request_thumbnail(id: StringName) -> void:
-	if _thumbnails.has(id) or _queued.has(id) or DisplayServer.get_name() == "headless":
+	if _thumbnails.has(id) or _queued.has(id) or _use_baked(id) or DisplayServer.get_name() == "headless":
 		return
 	_queued[id] = true
 	_queue.append(id)
@@ -372,9 +380,7 @@ func _render_thumbnails(ids: Array[StringName]) -> void:
 		# Thumbnail de aynı görünüm verisini kullanır; değişince bu araç yeniden render edilir
 		var appearance: CarAppearance = CarAppearance.get_for(scene_path)
 		CarRig.new(car).apply(appearance)
-		if not _appearance_hooked.has(scene_path):
-			_appearance_hooked[scene_path] = true
-			appearance.changed.connect(_on_appearance_changed.bind(id))
+		_hook_appearance(scene_path, id)
 		# Her araç kendi boyutuna göre kadrajlanır (küçük modeller de plakayı doldurur)
 		var bounds: AABB = _model_bounds(car)
 		var target: Vector3 = bounds.get_center()
@@ -401,6 +407,43 @@ func _render_thumbnails(ids: Array[StringName]) -> void:
 		for plate: PlateButton in _plates:
 			plate.queue_redraw()
 	thumbnails_rendered.emit()
+
+
+## Önceden çizilmiş resim (fabrika görünümü + dosya varsa) önbelleğe alınır; true → render gerekmez.
+func _use_baked(id: StringName) -> bool:
+	var entry: Dictionary = CarCatalog.get_entry(id)
+	if entry.is_empty():
+		return false
+	var scene_path: String = entry["scene_path"]
+	var path: String = BAKED_DIR + String(id) + ".png"
+	if not CarAppearance.get_for(scene_path).is_factory(scene_path) or not ResourceLoader.exists(path):
+		return false
+	var texture: Texture2D = load(path) as Texture2D
+	if texture == null:
+		return false
+	_thumbnails[id] = texture
+	_hook_appearance(scene_path, id)
+	if not _baked_notice:
+		_baked_notice = true
+		_announce_baked.call_deferred()
+	return true
+
+
+## Pişmiş resimler eşzamanlı girer; plakalar ve koleksiyon kare sonunda bir kez haberdar edilir.
+func _announce_baked() -> void:
+	_baked_notice = false
+	if is_inside_tree():
+		for plate: PlateButton in _plates:
+			plate.queue_redraw()
+	thumbnails_rendered.emit()
+
+
+## Görünüm değişince (boya) aracın resmi yeniden üretilir.
+func _hook_appearance(scene_path: String, id: StringName) -> void:
+	if _appearance_hooked.has(scene_path):
+		return
+	_appearance_hooked[scene_path] = true
+	CarAppearance.get_for(scene_path).changed.connect(_on_appearance_changed.bind(id))
 
 
 func _on_appearance_changed(id: StringName) -> void:
@@ -449,6 +492,8 @@ func _draw_preview(plate: PlateButton, entry: Dictionary) -> void:
 
 	var id: StringName = entry["id"]
 	var thumbnail: Texture2D = _thumbnails.get(id)
+	if thumbnail == null and _use_baked(id):
+		thumbnail = _thumbnails.get(id)   # önceden çizilmiş resim: bu karede çizilir
 	if thumbnail:
 		plate.draw_texture_rect(thumbnail, area, false)
 	else:

@@ -51,6 +51,13 @@ static func get_for(scene_path: String) -> CarAppearance:
 	return _by_scene[scene_path]
 
 
+## Fabrika görünümünde mi? (Önceden çizilmiş küçük resimler bu görünümle çizilir: CarGallery.)
+func is_factory(scene_path: String) -> bool:
+	return body_color.is_equal_approx(CarCatalog.default_color_for(scene_path)) \
+		and wheel_color.is_equal_approx(DEFAULT_RIM) and glass_color.is_equal_approx(DEFAULT_GLASS) \
+		and not headlights_enabled and not taillights_enabled
+
+
 ## Fabrika görünümüne döndürür.
 func reset(scene_path: String = "") -> void:
 	body_color = CarCatalog.default_color_for(scene_path)

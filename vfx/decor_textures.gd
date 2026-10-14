@@ -9,6 +9,18 @@ class_name DecorTextures
 const SIZE: int = 128
 ## Duvar dokusunun dünyadaki tekrar boyu (birim): 0,2 birim ≈ 1,5 m'lik bir tuğla / lambri bloğu.
 const WALL_REPEAT: float = 0.2
+## ÖNCEDEN PİŞİRİLMİŞ desenler (tools/bake_floor_patterns.gd yazar): üretim GDScript piksel döngüsü, açılışta
+## bütün katalog zemin desenleri ~130 ms sürüyordu (masaüstü; telefonda 5-8 kat; qa/script_profile.gd startup).
+## Pişmiş görüntü kodla üretilenle bit bit aynıdır (decor_v2_test denetler). Pişmişte olmayan desen ya da
+## sürümü tutmayan dosya eskisi gibi kodla üretilir. Çizim kodu değişince GENERATOR_VERSION artırılır ve araç
+## yeniden çalıştırılır; kataloğa desen / dokulu kaplama eklenince yalnızca araç çalıştırılır.
+const BAKE_PATH: String = "res://vfx/decor_patterns.res"
+const GENERATOR_VERSION: int = 1
+## false: pişmiş dosya yok sayılır (araç ve test kodla üretileni ister).
+static var use_bake: bool = true
+static var _bake_strip: Image
+static var _bake_index: Dictionary = {}   # anahtar ("<desen>" / "wall:<kaplama>") → şeritteki sıra
+static var _bake_tried: bool = false
 
 static var _pattern_images: Dictionary = {}
 static var _pattern_array: Texture2DArray
@@ -41,6 +53,16 @@ static func pattern_surface(id: StringName) -> Vector2:
 static func pattern_image(id: StringName) -> Image:
 	if _pattern_images.has(id):
 		return _pattern_images[id]
+	var img: Image = _baked(String(id))
+	if img == null:
+		img = generate_pattern(id)
+	img.generate_mipmaps()
+	_pattern_images[id] = img
+	return img
+
+
+## Deseni KODLA üretir (önbelleksiz, mipmap'siz taban görüntü).
+static func generate_pattern(id: StringName) -> Image:
 	var img: Image = Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
 	match id:
 		&"tile_grey": _tiles(img, 2, Color("C9CCD2"), Color("9EA2A8"), 3)
@@ -79,9 +101,28 @@ static func pattern_image(id: StringName) -> Image:
 		&"parquet_basket": _basket(img, Color("B9874F"), 43)
 		&"marble": _marble(img)
 		_: img.fill(Color("777777"))
-	img.generate_mipmaps()
-	_pattern_images[id] = img
 	return img
+
+
+## Pişmiş şeritten görüntü (yoksa / pişmiş eskiyse null → kodla üretilir).
+static func _baked(key: String) -> Image:
+	if not use_bake:
+		return null
+	if not _bake_tried:
+		_bake_tried = true
+		if ResourceLoader.exists(BAKE_PATH):
+			var strip: Image = load(BAKE_PATH) as Image
+			if strip and int(strip.get_meta(&"version", 0)) == GENERATOR_VERSION and int(strip.get_meta(&"size", 0)) == SIZE:
+				_bake_strip = strip
+				var keys: PackedStringArray = strip.get_meta(&"keys", PackedStringArray())
+				for i: int in keys.size():
+					_bake_index[keys[i]] = i
+			else:
+				push_warning("DecorTextures: %s eski (sürüm %s, beklenen %d) — desenler kodla üretiliyor; tools/bake_floor_patterns.gd çalıştırılmalı"
+					% [BAKE_PATH, strip.get_meta(&"version", "?") if strip else "?", GENERATOR_VERSION])
+	if _bake_strip == null or not _bake_index.has(key):
+		return null
+	return _bake_strip.get_region(Rect2i(0, int(_bake_index[key]) * SIZE, SIZE, SIZE))
 
 
 ## Bütün katalog desenleri tek dizide; katman sırası `ids` sırası (shader'a indeks + 1 olarak gider).
@@ -158,6 +199,18 @@ static func wall_image(id: StringName) -> Image:
 	var key: StringName = StringName("wall:" + String(id))
 	if _pattern_images.has(key):
 		return _pattern_images[key]
+	var img: Image = _baked(String(key))
+	if img == null:
+		img = generate_wall(id)
+	if img == null:
+		return null
+	img.generate_mipmaps()
+	_pattern_images[key] = img
+	return img
+
+
+## Kaplamanın dokusunu KODLA üretir (önbelleksiz, mipmap'siz; düz boyalar için null).
+static func generate_wall(id: StringName) -> Image:
 	var img: Image = Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
 	match id:
 		&"wall_brick": _bricks(img, Color("8C4A3A"), Color("C9BBA6"), 21)
@@ -175,8 +228,6 @@ static func wall_image(id: StringName) -> Image:
 		&"wall_race_stripe": _wall_stripe(img)
 		&"wall_diamond": _diamond(img, Color("A9AEB4"))
 		_: return null
-	img.generate_mipmaps()
-	_pattern_images[key] = img
 	return img
 
 

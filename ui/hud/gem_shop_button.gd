@@ -13,7 +13,7 @@ const SHINE_EVERY: float = 3.2
 var show_badge: bool = false:
 	set(value):
 		show_badge = value
-		_overlay.queue_redraw()
+		_overlay.animate()
 
 var _art: GemPackArt
 var _row: HBoxContainer
@@ -82,7 +82,7 @@ func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
 	_t += delta
-	_overlay.queue_redraw()
+	_overlay.animate()
 	if _t >= _next_pulse:
 		_next_pulse = _t + PULSE_EVERY
 		var tween: Tween = create_tween()
@@ -108,37 +108,98 @@ static func _style(bg: Color, border: Color) -> StyleBoxFlat:
 	return sb
 
 
-## Üst katman: cam parlaklığı, süpürme ışığı, rozet. Yazının ÜSTÜNDE çizilir.
+## Üst katman: cam parlaklığı, süpürme ışığı, rozet. Yazının ÜSTÜNDE çizilir. Parlaklık yalnızca boyut
+## değişince çizilir; süpürme ve rozet nabzı alt öğelerin konum / ölçek / saydamlığıyla oynar (eskiden her
+## karede yeni StyleBoxFlat + çokgen üretiliyordu; görüntü aynı — qa/gem_button_shots.gd).
 class _Overlay:
 	extends Control
 	var owner_button: GemShopButton
+	var _gloss: StyleBoxFlat
+	var _shine: _Shape
+	var _disc: _Shape
+	var _mark: _Shape
+
+	func _ready() -> void:
+		_gloss = StyleBoxFlat.new()
+		_gloss.bg_color = Color(1.0, 1.0, 1.0, 0.16)
+		_gloss.anti_aliasing = true
+		_shine = _Shape.new(_Shape.SHINE)
+		_disc = _Shape.new(_Shape.DISC)
+		_mark = _Shape.new(_Shape.MARK)
+		_mark.font = get_theme_default_font()
+		for shape: _Shape in [_shine, _disc, _mark]:
+			add_child(shape)
+		resized.connect(_layout)
+		_layout()
+
+	func _layout() -> void:
+		var r: float = size.y * 0.5
+		_gloss.set_corner_radius_all(int(r))
+		_gloss.corner_radius_bottom_left = 0
+		_gloss.corner_radius_bottom_right = 0
+		_shine.extent = size.y
+		_shine.queue_redraw()
+		_disc.position = Vector2(size.x - 4.0, 3.0)
+		_mark.position = _disc.position
+		queue_redraw()
+		animate()
 
 	func _draw() -> void:
-		var r: float = size.y * 0.5
 		# Üst yarıda cam parlaklığı
-		var gloss: StyleBoxFlat = StyleBoxFlat.new()
-		gloss.bg_color = Color(1.0, 1.0, 1.0, 0.16)
-		gloss.set_corner_radius_all(int(r))
-		gloss.corner_radius_bottom_left = 0
-		gloss.corner_radius_bottom_right = 0
-		gloss.anti_aliasing = true
-		draw_style_box(gloss, Rect2(Vector2(4.0, 3.0), Vector2(size.x - 8.0, size.y * 0.42)))
-		# Süpürme: eğik beyaz şerit soldan sağa geçer (hap şeklinin içinde kalsın diye kenarlarda söner)
-		var phase: float = fmod(owner_button._t, SHINE_EVERY) / 0.7
+		draw_style_box(_gloss, Rect2(Vector2(4.0, 3.0), Vector2(size.x - 8.0, size.y * 0.42)))
+
+	## Süpürme: eğik beyaz şerit soldan sağa geçer (hap şeklinin içinde kalsın diye kenarlarda söner).
+	## Rozet dairesi nabız atar, "!" sabit boyda kalır.
+	func animate() -> void:
+		if _shine == null:
+			return
+		var t: float = owner_button._t
+		var r: float = size.y * 0.5
+		var phase: float = fmod(t, SHINE_EVERY) / 0.7
+		var fade: float = 0.0
+		var x: float = 0.0
 		if phase < 1.0:
-			var x: float = lerpf(-size.y, size.x + size.y, phase)
-			var fade: float = clampf(minf(x - r * 0.5, size.x - r * 0.5 - x) / r, 0.0, 1.0)
-			if fade > 0.0:
-				var w: float = size.y * 0.35
+			x = lerpf(-size.y, size.x + size.y, phase)
+			fade = clampf(minf(x - r * 0.5, size.x - r * 0.5 - x) / r, 0.0, 1.0)
+		_shine.visible = fade > 0.0
+		_shine.position = Vector2(x, 0.0)
+		_shine.modulate.a = fade
+		var badge: bool = owner_button.show_badge
+		_disc.visible = badge
+		_mark.visible = badge
+		if badge:
+			var pulse: float = 1.0 + 0.12 * maxf(sin(t * 5.0), 0.0)
+			_disc.scale = Vector2(pulse, pulse)
+
+
+## Üst katmanın bir kez çizilen parçası.
+class _Shape:
+	extends Node2D
+	const SHINE: int = 0
+	const DISC: int = 1
+	const MARK: int = 2
+	var what: int
+	var extent: float = 0.0   # SHINE: düğme yüksekliği
+	var font: Font
+
+	func _init(what_value: int) -> void:
+		what = what_value
+
+	func _draw() -> void:
+		match what:
+			SHINE:
+				if extent <= 0.0:
+					return
+				var w: float = extent * 0.35
 				draw_colored_polygon(PackedVector2Array([
-					Vector2(x, 4.0), Vector2(x + w, 4.0),
-					Vector2(x + w - size.y * 0.4, size.y - 5.0), Vector2(x - size.y * 0.4, size.y - 5.0)]),
-					Color(1.0, 1.0, 1.0, 0.35 * fade))
-		if owner_button.show_badge:
-			var p: Vector2 = Vector2(size.x - 4.0, 3.0)
-			var pulse: float = 1.0 + 0.12 * maxf(sin(owner_button._t * 5.0), 0.0)
-			draw_circle(p, 10.0 * pulse, Color("A42E35"), true, -1.0, true)
-			draw_circle(p, 8.5 * pulse, Color("E2474F"), true, -1.0, true)
-			var font: Font = get_theme_default_font()
-			var w2: float = font.get_string_size("!", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14).x
-			draw_string(font, p + Vector2(-w2 * 0.5, 5.0), "!", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14, Color.WHITE)
+					Vector2(0.0, 4.0), Vector2(w, 4.0),
+					Vector2(w - extent * 0.4, extent - 5.0), Vector2(-extent * 0.4, extent - 5.0)]),
+					Color(1.0, 1.0, 1.0, 0.35))
+			DISC:
+				draw_circle(Vector2.ZERO, 10.0, Color("A42E35"), true, -1.0, true)
+				draw_circle(Vector2.ZERO, 8.5, Color("E2474F"), true, -1.0, true)
+			MARK:
+				if font == null:
+					return
+				var w2: float = font.get_string_size("!", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14).x
+				draw_string(font, Vector2(-w2 * 0.5, 5.0), "!", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14, Color.WHITE)

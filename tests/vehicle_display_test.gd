@@ -11,6 +11,23 @@ func check(cond: bool, what: String) -> void:
 		fails += 1
 
 
+## Gövdedeki herhangi bir parçada (gizli parçalar dahil: birleşik mesh arka planda yenilenir) boya
+## shader'ı bu tonda mı?
+func _tinted(body: Node3D, color: Color) -> bool:
+	if body == null:
+		return false
+	for node: Node in body.find_children("*", "MeshInstance3D", true, false):
+		var mesh: MeshInstance3D = node
+		if mesh.mesh == null:
+			continue
+		for s: int in mesh.mesh.get_surface_count():
+			var mat: ShaderMaterial = mesh.get_surface_override_material(s) as ShaderMaterial
+			if mat and mat.get_shader_parameter(&"tint") is Color \
+					and (mat.get_shader_parameter(&"tint") as Color).is_equal_approx(color):
+				return true
+	return false
+
+
 func frames(n: int) -> void:
 	for i: int in n:
 		await process_frame
@@ -74,11 +91,20 @@ func _run() -> void:
 	check(is_equal_approx(float((decor.instances()[0]["rot"] as Vector3).y), 30.0), "yön korundu")
 
 	print("== boya ==")
+	# VehicleOwnership._apply_paint gibi: renk paylaşılan görünüme yazılır, sonra sinyal
 	var before: Node3D = view.body_of(decor.instances()[0]["iid"])
+	var appearance: CarAppearance = CarAppearance.get_for(CarCatalog.scene_path(first))
+	var factory: Color = appearance.body_color
+	appearance.body_color = Color.RED
 	own.paint_changed.emit(first, Color.RED)
 	await frames(3)
 	var after: Node3D = view.body_of(decor.instances()[0]["iid"])
-	check(after != null and after != before, "boya değişince sergi gövdesi yenilendi")
+	check(after != null and after == before, "boya değişince sergi gövdesi baştan kurulmadı (görünüm yerinde)")
+	check(_tinted(after, Color.RED), "sergi aracı yeni renkte")
+	appearance.body_color = factory
+	own.paint_changed.emit(first, factory)
+	await frames(3)
+	check(not _tinted(view.body_of(decor.instances()[0]["iid"]), Color.RED), "fabrika rengine döndü")
 
 	print("== satış ==")
 	var second: StringName = &"hyundai_getz"

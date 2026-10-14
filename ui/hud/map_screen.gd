@@ -27,6 +27,9 @@ const MAP_TILT_DEG: float = 50.0
 
 var current: StringName = &"city"
 var _board: Control
+## Harita resmi İLK AÇILIŞTA yüklenir: 1920×1080 kayıpsız, 8 MB VRAM ve açılışta ~40 ms (masaüstü). Haritayı
+## yalnızca hurdalık görevine gelen oyuncu görür; eskiden her açılışta kuruluyordu.
+var _map_image: TextureRect
 var _route_layer: RouteLayer
 var _pins: Dictionary = {}       # place → PlateButton
 var _hints: Dictionary = {}      # place → Label (kilit / "BURADASIN")
@@ -56,6 +59,8 @@ func _ready() -> void:
 
 
 func open() -> void:
+	if _map_image.texture == null:
+		_map_image.texture = load(MAP_TEXTURE) as Texture2D
 	_travelling = false
 	_card.hide()
 	_route_layer.progress = 0.0
@@ -103,7 +108,7 @@ func _build() -> void:
 	_board.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	aspect.add_child(_board)
 	var image: TextureRect = TextureRect.new()
-	image.texture = load(MAP_TEXTURE) as Texture2D
+	_map_image = image
 	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	image.stretch_mode = TextureRect.STRETCH_SCALE
 	image.mouse_filter = Control.MOUSE_FILTER_IGNORE

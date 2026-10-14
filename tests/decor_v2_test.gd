@@ -399,6 +399,21 @@ func _catalog_v3() -> void:
 		if img.get_pixel(5, 5) == Color("777777") and img.get_pixel(70, 40) == Color("777777"):
 			plain.append(item["id"])
 	check(plain.is_empty(), "her zemin deseninin kendi dokusu var %s" % [plain])
+	# Oyun desenleri pişmiş dosyadan okur (DecorTextures.BAKE_PATH): kodla üretilenle bit bit aynı olmalı.
+	# Çizim kodu / katalog değişip araç çalıştırılmadıysa oyun eski görüntüyü gösterirdi.
+	var stale: Array[String] = []
+	for item: Dictionary in patterns:
+		var baked: Image = DecorTextures._baked(String(item["id"]))
+		if baked == null or baked.get_data() != DecorTextures.generate_pattern(item["id"]).get_data():
+			stale.append(String(item["id"]))
+	for item: Dictionary in GarageDecor.items_in(GarageDecor.Kind.WALL_SURFACE):
+		var made: Image = DecorTextures.generate_wall(item["id"])
+		if made == null:
+			continue
+		var baked_wall: Image = DecorTextures._baked("wall:" + String(item["id"]))
+		if baked_wall == null or baked_wall.get_data() != made.get_data():
+			stale.append("wall:" + String(item["id"]))
+	check(stale.is_empty(), "pişmiş desenler kodla aynı (eskiyse: tools/bake_floor_patterns.gd) %s" % [stale])
 	var grey: Array[StringName] = []
 	for item: Dictionary in GarageDecor.items_in(GarageDecor.Kind.WALL_SURFACE):
 		if DecorTextures.wall_color(item["id"]).is_equal_approx(Color(0.6, 0.6, 0.6)):

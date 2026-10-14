@@ -165,8 +165,11 @@ func _apply_styles() -> void:
 	var side_icon: bool = icon_left and shape == Shape.PLATE and kind != HudIcon.Kind.NONE
 	var center: bool = not Engine.is_editor_hint() and shape == Shape.PLATE \
 		and theme_type_variation == &"HudPlate" and (side_icon or kind == HudIcon.Kind.NONE) and avatar == null
+	# Toplu: her ekleme / silme ayrı tema bildirimi ve boyut hesabı tetikliyordu (açılışta 167 düğme, ~25 ms)
+	begin_bulk_theme_override()
 	for state: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed", &"disabled"]:
-		remove_theme_stylebox_override(state)
+		if has_theme_stylebox_override(state):
+			remove_theme_stylebox_override(state)
 		var base: StyleBoxFlat = get_theme_stylebox(state) as StyleBoxFlat
 		if base == null:
 			continue
@@ -185,6 +188,7 @@ func _apply_styles() -> void:
 			box.content_margin_top = even
 			box.content_margin_bottom = even
 		add_theme_stylebox_override(state, box)
+	end_bulk_theme_override()
 	queue_redraw()
 
 

@@ -22,6 +22,12 @@ var _last_tick: int = 0
 
 func _ready() -> void:
 	name = "RewardSfx"
+
+
+## Sesler ilk çalışta üretilir (açılışta her ödül penceresi için sentez boşa gidiyordu).
+func _ensure_players() -> void:
+	if _fanfare:
+		return
 	_ensure_streams()
 	_fanfare = _player(_fanfare_stream, -4.0, 1)
 	_tick = _player(_tick_stream, -14.0, 2)
@@ -30,6 +36,7 @@ func _ready() -> void:
 
 
 func fanfare() -> void:
+	_ensure_players()
 	_fanfare.play()
 
 
@@ -39,17 +46,20 @@ func tick(progress: float) -> void:
 	if now - _last_tick < TICK_GAP_MSEC:
 		return
 	_last_tick = now
+	_ensure_players()
 	_tick.pitch_scale = lerpf(1.0, 1.6, clampf(progress, 0.0, 1.0))
 	_tick.play()
 
 
 ## index: kaçıncı para (sıradakiler biraz daha ince çalar).
 func coin(index: int) -> void:
+	_ensure_players()
 	_coin.pitch_scale = 1.0 + minf(float(index) * 0.03, 0.4) + randf_range(-0.02, 0.02)
 	_coin.play()
 
 
 func gem(index: int) -> void:
+	_ensure_players()
 	_gem.pitch_scale = 1.0 + minf(float(index) * 0.04, 0.4) + randf_range(-0.02, 0.02)
 	_gem.play()
 

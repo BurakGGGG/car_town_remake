@@ -162,16 +162,38 @@ func _rebuild_area() -> void:
 
 # --- Eşitleme -------------------------------------------------------------------------
 
-## Sergilenen aracın boyası değişti: gövdesi yeniden kurulur (refresh yeni boyayla üretir).
-func _on_paint_changed(_vehicle: StringName, _color: Color) -> void:
+## Sergilenen aracın boyası değişti: yalnızca O aracın gövdesine güncel görünüm yerinde uygulanır (rig
+## birleşik mesh'ini kendisi tazeler). Eskiden kayıttaki HER boyalı araç için bütün sergi araçları silinip
+## baştan kuruluyordu: açılışta altı araç iki kez kuruldu (~80 ms masaüstü, qa/script_profile.gd startup).
+func _on_paint_changed(vehicle: StringName, _color: Color) -> void:
+	if _decor == null:
+		return
+	var rebuilt: bool = false
 	for iid: String in _bodies.keys():
-		var inst: Dictionary = _decor.instance(iid) if _decor else {}
-		if not inst.is_empty() and GarageDecor.is_vehicle(inst["item"]):
-			var body: Node3D = _bodies[iid]
-			if is_instance_valid(body):
-				body.queue_free()
-			_bodies.erase(iid)
-	refresh()
+		var inst: Dictionary = _decor.instance(iid)
+		if inst.is_empty() or not GarageDecor.is_vehicle(inst["item"]) or GarageDecor.vehicle_of(inst["item"]) != vehicle:
+			continue
+		var body: Node3D = _bodies[iid]
+		var rig: CarRig = _vehicle_rig(body)
+		if rig:
+			rig.apply(CarAppearance.get_for(rig.scene_path))
+			continue
+		if is_instance_valid(body):
+			body.queue_free()
+		_bodies.erase(iid)
+		rebuilt = true
+	if rebuilt:
+		refresh()
+
+
+## Sergi gövdesindeki aracın rig'i (DecorBuilder düğüm meta'sına koyar).
+static func _vehicle_rig(body: Node3D) -> CarRig:
+	if body == null or not is_instance_valid(body):
+		return null
+	for node: Node in body.find_children("*", "Node3D", true, false):
+		if node.has_meta(CarRig.META_KEY):
+			return node.get_meta(CarRig.META_KEY) as CarRig
+	return null
 
 
 ## Gövdeleri DecorManager ile eşitler: yeni örnek kurulur, silinen kaldırılır, hepsinin dönüşümü
@@ -181,7 +203,6 @@ func refresh() -> void:
 		return
 	_rebuild_area()
 	_apply_surfaces()
-	_rebuild_walls()
 	var alive: Dictionary = {}
 	for inst: Dictionary in _decor.instances():
 		var iid: String = inst["iid"]
@@ -202,6 +223,10 @@ func refresh() -> void:
 			if is_instance_valid(body):
 				body.queue_free()
 			_bodies.erase(iid)
+	# Duvarlar gövdelerden SONRA: önündeki duvarı saydamlaştırmak için sergi aracının izi ölçülür
+	# (DecorBuilder.local_size). Önce kurulunca ölçü önbelleği boştu ve her araç yalnızca ölçülmek için bir
+	# kez daha kurulup atılıyordu (açılışta 6 sergi aracı = 6 fazla araç kurulumu, ~40 ms masaüstü).
+	_rebuild_walls()
 	_content_top = _area.wall_top
 	for iid: String in _bodies:
 		var placed: Node3D = body_of(iid)
