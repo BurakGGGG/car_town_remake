@@ -863,10 +863,12 @@ func _mods() -> PerformanceModManager:
 func _scroll(scroll_name: String) -> ScrollContainer:
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.name = scroll_name
-	# Kaydırma yok: tuval yüksekliği 648'de sabit, en dar ekran 1152 birim — 6 kart da 5 kademe de sığar; böylece
-	# raf içeriği kadar olur ve ortalanır (kaydırılabilir kap yatayda içeriğe göre boyut almaz)
+	# Yatay kaydırılır ama genişliği fit_trays verir: içerik sığıyorsa raf içeriği kadardır ve ortalanır
+	# (kaydırılabilir kap yatayda içeriğe göre boyut almaz), dar tuvalde (853 birim: 16:9 telefon, tablet;
+	# 6 kart 778 birim) kalan yere sığar ve kartlar parmakla kaydırılır. Eskiden kaydırma kapalıydı ("en dar
+	# ekran 1152") ve raf ekranın sağından 74-121 birim taşıyordu.
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
 	var row: HBoxContainer = HBoxContainer.new()
 	row.name = "Row"
@@ -874,7 +876,24 @@ func _scroll(scroll_name: String) -> ScrollContainer:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override(&"separation", 10)
 	scroll.add_child(row)
+	TouchScroll.attach(scroll)
 	return scroll
+
+
+## Rafları verilen genişliğe (garajın alt bandı; yan sütunlar düşülmüş) sığdırır: sığan raf içeriği kadar,
+## sığmayanın kartları kaydırılır.
+func fit_trays(available: float) -> void:
+	for tray: PanelContainer in [strip, stage_strip]:
+		if tray == null:
+			continue
+		var scroll: ScrollContainer = tray.find_child("Mod*Scroll", true, false) as ScrollContainer
+		var row: Control = scroll.get_node("Row") as Control if scroll else null
+		if row == null:
+			continue
+		var padding: float = tray.get_theme_stylebox(&"panel").get_minimum_size().x
+		var width: float = floorf(minf(row.get_combined_minimum_size().x, maxf(available - padding, CARD_WIDTH)))
+		if not is_equal_approx(scroll.custom_minimum_size.x, width):
+			scroll.custom_minimum_size.x = width
 
 
 func _plate_card(card_name: String, card_size: Vector2) -> PlateButton:

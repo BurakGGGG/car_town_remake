@@ -17,6 +17,9 @@ signal project_finished(vehicle_id: StringName)
 
 const PANEL_WIDTH: float = 540.0
 const ICON_SIZE: float = 36.0
+## Parça listesi kısa ekranda bundan kısa olmaz (iki satır); pano kadrajın üst / altında bu payı bırakır.
+const ROWS_MIN_HEIGHT: float = 84.0
+const FIT_MARGIN: float = 10.0
 
 var vehicle_id: StringName = &""
 var _column: VBoxContainer
@@ -25,6 +28,9 @@ var _stage_label: Label
 var _notice_label: Label
 var _bar: ProgressStrip
 var _rows: VBoxContainer
+## Parça satırlarının kabı: kısa tuvalde (telefon, 480 birim) 6 satır + başlık + düğmeler ekrana sığmıyor,
+## HEPSİNİ TAK / KAPAT ekranın altında kalıyordu. Satırlar kalan yüksekliğe sığar, gerisi parmakla kaydırılır.
+var _rows_scroll: ScrollContainer
 var _gem_label: Label
 var _install_all: PlateButton
 var _buy_all: PlateButton
@@ -133,10 +139,20 @@ func _build() -> void:
 	_gem_label = _label(&"HudInkCaption", "")
 	caption_row.add_child(_gem_label)
 	body_box.add_child(caption_row)
+	_rows_scroll = ScrollContainer.new()
+	_rows_scroll.name = "PartScroll"
+	_rows_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_rows_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	_rows_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	body_box.add_child(_rows_scroll)
 	_rows = VBoxContainer.new()
 	_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_rows.add_theme_constant_override(&"separation", 4)
-	body_box.add_child(_rows)
+	_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_rows.minimum_size_changed.connect(_fit_rows, CONNECT_DEFERRED)
+	_rows_scroll.add_child(_rows)
+	TouchScroll.attach(_rows_scroll)
+	get_viewport().size_changed.connect(_fit_rows, CONNECT_DEFERRED)
 	body.add_child(body_box)
 	_column.add_child(body)
 
@@ -248,6 +264,16 @@ func _refresh() -> void:
 	_finish.visible = value >= 1.0
 	_install_all.visible = value < 1.0
 	_quit.visible = value < 1.0
+
+
+## Parça listesinin boyu: içerik kadar; pano ekrandan uzun olacaksa kalan yükseklik kadar (en az iki satır).
+func _fit_rows() -> void:
+	var rows: float = _rows.get_combined_minimum_size().y
+	var others: float = _column.get_combined_minimum_size().y - _rows_scroll.custom_minimum_size.y
+	var room: float = get_viewport_rect().size.y - FIT_MARGIN * 2.0 - others
+	var height: float = floorf(clampf(room, minf(rows, ROWS_MIN_HEIGHT), rows))
+	if not is_equal_approx(_rows_scroll.custom_minimum_size.y, height):
+		_rows_scroll.custom_minimum_size.y = height
 
 
 ## Envanterdekiler takıldıktan sonra kalan eksiklerin gem bedeli (EKSİKLERİ AL önce envanteri kullanır).

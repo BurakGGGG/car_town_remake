@@ -219,6 +219,7 @@ func _ready() -> void:
 	_build_tutorial()
 	_apply_safe_area()
 	get_viewport().size_changed.connect(_apply_safe_area)
+	top_left.resized.connect(_sync_modal_hud, CONNECT_DEFERRED)   # pano payı blokla birlikte değişsin
 	_connect_gameplay.call_deferred()  # sahnedeki yöneticiler hazır olsun
 
 
@@ -338,6 +339,7 @@ func show_car_info(car_name: String) -> void:
 	car_name_label.text = car_name
 	if not car_info_enabled:
 		return
+	_fit_car_info.call_deferred()   # içerik (arıza satırı) bu karede yazılıyor
 	if _car_tween:
 		_car_tween.kill()
 	car_info_panel.modulate.a = 0.0
@@ -357,6 +359,25 @@ func hide_car_info() -> void:
 	car_info_panel.hide()
 
 
+## Araç plakası ekrana sığmazsa (dar tuval, 853 birim: arıza satırı "FREN REVİZYONU · 180 sn · +2.070 ₺
+## (690 ₺/dk) · +140 XP · USTALIK 0/5" tek satırda plakayı 850 birime çıkarıyordu) sıkışık kipe geçer:
+## araç adı ve arıza satırı ikişer satır. Sığdığı sürece eski tek satırlık görünüm kalır.
+func _fit_car_info() -> void:
+	if not car_info_panel.visible:
+		return
+	var room: float = get_viewport().get_visible_rect().size.x - 24.0
+	_set_car_info_compact(false)
+	if car_info_panel.get_combined_minimum_size().x > room:
+		_set_car_info_compact(true)
+
+
+func _set_car_info_compact(on: bool) -> void:
+	car_name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if on else TextServer.AUTOWRAP_OFF
+	car_name_label.custom_minimum_size.x = CAR_NAME_COMPACT_WIDTH if on else 0.0
+	if _repair_panel:
+		_repair_panel.compact = on
+
+
 ## 12500 -> "12.500"
 static func format_thousands(value: int) -> String:
 	var digits: String = str(absi(value))
@@ -373,6 +394,8 @@ static func format_thousands(value: int) -> String:
 
 # --- Tamir döngüsü bağlantısı ----------------------------------------------------
 
+## Sıkışık araç plakasında araç adının genişliği (iki satıra kırılır).
+const CAR_NAME_COMPACT_WIDTH: float = 130.0
 ## Aynı anda en fazla bu kadar bildirim beklet (fazlası oyuncuyu geride bırakır).
 const NOTICE_QUEUE_MAX: int = 4
 
@@ -621,6 +644,7 @@ func _refresh_repair_panel(celebrate: bool) -> void:
 		_repair_panel.show_damaged(_repair_manager.is_busy())
 	else:
 		_repair_panel.show_normal()
+	_fit_car_info.call_deferred()
 
 
 func _on_repair_pressed(_type: RepairType) -> void:
@@ -1312,6 +1336,7 @@ func _register_screens() -> void:
 ## (görevler, ustalık, rütbe, profil, hesap) HUD'un üstünde durur.
 func _on_ui_stack_changed(top: StringName, place_open: bool) -> void:
 	_set_gameplay_hud_visible(not place_open)
+	_sync_modal_hud()
 	_sync_world_rendering()
 	if place_open:
 		_garage_panel_open = false
@@ -1659,6 +1684,20 @@ func _set_gameplay_hud_visible(shown: bool) -> void:
 	top_left.visible = shown
 	top_right.visible = shown
 	bottom.visible = shown
+
+
+## PANO AÇIKKEN HUD: dünyanın üstünde bir pano (görevler, profil, gem mağazası...) açıkken sağ üst sütun ve alt
+## sekmeler panonun karartmasının altında zaten basılamaz; dar tuvalde (853 birim) panonun iki yanından taşıp
+## üstüne biniyormuş gibi görünüyorlardı. Gizlenirler. Sol üst (seviye, para — ödüllerin uçtuğu sayaçlar)
+## kalır; panolar ona binmesin diye bloğun yeri FitScroll'a payı olarak verilir.
+func _sync_modal_hud() -> void:
+	if router == null:
+		return
+	var place_open: bool = router.place_open()
+	var modal: bool = router.top() != &"" and not place_open
+	top_right.visible = not place_open and not modal
+	garage_button.get_parent().visible = not modal   # alt sekmeler (NavRow)
+	FitScroll.set_reserve(get_tree(), top_left.get_global_rect() if modal and top_left.visible else Rect2())
 
 
 func _on_name_plate_pressed() -> void:

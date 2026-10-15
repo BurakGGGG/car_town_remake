@@ -7,7 +7,9 @@ extends Control
 ##
 ## Akış: mekâna dokun → rota animasyonu + "YOL TARİFİ HESAPLANIYOR" kartı (orijinaldeki "Calculating
 ## Route!") → travel_requested. Kart, hedef mekânın yüklenme takılmasını da örter.
-## Harita 16:9'dur; başka oranlı ekranda kenarlardan kırpılır (simgeler ortaya yakın, kırpılmaz).
+## Harita 16:9'dur; başka oranlı ekranda kenarlardan kırpılır (ekranı kaplar). Kırpma mekân simgelerini
+## ekran dışına itecekse (4:3 tablet, katlanabilir iç ekran: HURDALIK simgesi sol kenarın dışındaydı) harita
+## simgeler sığana kadar küçülür; altta açılan bandı deniz rengi doldurur (bkz. _layout_board).
 
 signal closed
 ## Yolculuk başladı: hedef mekânın varlıkları arka planda yüklenmeye başlasın (varışta takılma olmasın).
@@ -24,8 +26,13 @@ const TRAVELLER_VIEW_SIZE: Vector2i = Vector2i(192, 192)
 ## Harita render kamerasının dikeyden eğimi (tools/world/map_render.py camera_light, "tilt"). Yolculuk
 ## aracı aynı açıdan görülür: yatay yolda yandan, dikey yolda önden / arkadan; harita gibi diorama durur.
 const MAP_TILT_DEG: float = 50.0
+## Harita görselinin en/boy oranı (world_map.png 1920×1080).
+const MAP_ASPECT: float = 16.0 / 9.0
+## Mekân simgesinin ekran kenarına bıraktığı en az pay.
+const PIN_EDGE: float = 10.0
 
 var current: StringName = &"city"
+## Haritanın kendisi (16:9). Kaplama ölçeğiyle ortalanır; simgeler sığmıyorsa küçülür (_layout_board).
 var _board: Control
 ## Harita resmi İLK AÇILIŞTA yüklenir: 1920×1080 kayıpsız, 8 MB VRAM ve açılışta ~40 ms (masaüstü). Haritayı
 ## yalnızca hurdalık görevine gelen oyuncu görür; eskiden her açılışta kuruluyordu.
@@ -68,6 +75,7 @@ func open() -> void:
 	_prepare_traveller()
 	_refresh()
 	show()
+	_layout_board.call_deferred()   # durum satırları (ölçü) yeni yazıldı
 
 
 func close() -> void:
@@ -93,20 +101,16 @@ func _load_data() -> void:
 
 
 func _build() -> void:
-	var sea: ColorRect = ColorRect.new()   # kırpılan kenarların arkası (haritanın deniz / gök rengi)
-	sea.color = Color("BFE3F2")
+	var sea: ColorRect = ColorRect.new()   # küçülen haritanın altında açılan bant: görselin alt kenarındaki deniz
+	sea.color = Color("71ADC8")
 	sea.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	sea.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(sea)
-	var aspect: AspectRatioContainer = AspectRatioContainer.new()
-	aspect.ratio = 16.0 / 9.0
-	aspect.stretch_mode = AspectRatioContainer.STRETCH_COVER
-	aspect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	aspect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(aspect)
 	_board = Control.new()
+	_board.name = "Board"
 	_board.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	aspect.add_child(_board)
+	add_child(_board)
+	resized.connect(_layout_board)
 	var image: TextureRect = TextureRect.new()
 	_map_image = image
 	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -200,6 +204,30 @@ func _add_pin(place: StringName, title: String, icon: HudIcon.Kind) -> void:
 	_board.add_child(pin)
 	_pins[place] = button
 	_hints[place] = hint
+
+
+## Harita ekranı KAPLAR (kenarlardan kırpılır); kırpma bir mekân simgesini (plaka + durum satırı) ekran
+## dışına itecekse harita, simgelerin hepsi kenar payıyla sığana kadar küçülür (en çok ekrana sığacak kadar).
+func _layout_board() -> void:
+	var view: Vector2 = size
+	if view.x <= 0.0 or view.y <= 0.0:
+		return
+	var cover: float = maxf(view.x / MAP_ASPECT, view.y)   # harita yüksekliği
+	var contain: float = minf(view.x / MAP_ASPECT, view.y)
+	var height: float = cover
+	for place: StringName in _pins:
+		var at: Vector2 = _places[place]
+		var half: float = (_pins[place] as Control).get_parent().get_combined_minimum_size().x * 0.5 + PIN_EDGE
+		var offset: float = absf(at.x - 0.5)   # merkezden uzaklık (harita genişliği oranı)
+		if offset > 0.001:
+			# simge merkezi kadraj ortasından offset·genişlik uzakta: kenar payıyla sığmalı
+			height = minf(height, (view.x * 0.5 - half) / (offset * MAP_ASPECT))
+	height = clampf(height, contain, cover)
+	var board: Vector2 = Vector2(height * MAP_ASPECT, height)
+	# Yatayda ortalı; küçülünce ÜSTE yaslanır: açılan bant altta kalır ve görselin alt kenarındaki denizle
+	# (düz renk 71ADC8) birleşir — ortalanınca üstte kumun üstünde gök mavisi bir şerit kalıyordu.
+	_board.position = Vector2((view.x - board.x) * 0.5, minf((view.y - board.y) * 0.5, 0.0)).round()
+	_board.size = board.round()
 
 
 func _refresh() -> void:

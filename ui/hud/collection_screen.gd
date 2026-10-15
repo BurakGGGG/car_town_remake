@@ -12,12 +12,20 @@ signal closed
 
 const CARD_SIZE: Vector2 = Vector2(150.0, 124.0)
 const THUMB_SIZE: Vector2 = Vector2(112.0, 62.0)
-const COLUMNS: int = 5
+## Geniş tuvalde 5 sütun; dar tuvalde (853 birim: 16:9 telefon, tablet) sığdığı kadar (en az 2) — eskiden
+## sabit 5 sütun / 820 birimlik plaka ekranın sağından 44 birim taşıyordu.
+const MAX_COLUMNS: int = 5
+const MIN_COLUMNS: int = 2
+const CARD_GAP: float = 6.0
 const PLATE_WIDTH: float = 820.0
+## Ekran kenarı payı (sütunun MarginContainer'ı ile aynı).
+const EDGE: float = 16.0
 ## Restorasyon (hurdalık) kartlarının çerçevesi: pas / bakır tonu (kasa nadirlik renklerinden ayrışsın).
 const RESTORATION_COLOR: Color = Color("B5652A")
 
 var _title: Label
+var _body: PlatePanel
+var _grids: Array[GridContainer] = []
 var _grid_box: VBoxContainer
 var _sets_box: VBoxContainer
 var _column: VBoxContainer
@@ -40,6 +48,7 @@ func _ready() -> void:
 	_thumb_host.visible = false
 	add_child(_thumb_host)
 	_thumb_host.thumbnails_rendered.connect(_apply_thumbnails)
+	get_viewport().size_changed.connect(_fit_width)
 
 
 func open() -> void:
@@ -71,7 +80,7 @@ func _build() -> void:
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side: StringName in [&"margin_left", &"margin_right", &"margin_top", &"margin_bottom"]:
-		margin.add_theme_constant_override(side, 16)
+		margin.add_theme_constant_override(side, int(EDGE))
 	add_child(margin)
 
 	_column = VBoxContainer.new()
@@ -89,6 +98,7 @@ func _build() -> void:
 	_column.add_child(sign)
 
 	var body: PlatePanel = PlatePanel.new()
+	_body = body
 	body.theme_type_variation = &"HudCarPlate"
 	body.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -124,6 +134,7 @@ func _build() -> void:
 func _rebuild() -> void:
 	_stop_pulses()
 	_thumbs.clear()
+	_grids.clear()
 	for child: Node in _grid_box.get_children():
 		child.queue_free()
 	for child: Node in _sets_box.get_children():
@@ -161,12 +172,12 @@ func _rebuild() -> void:
 		var header: Label = _label(&"HudPlateTitle", "%s   %d / %d" % [group["title"], have, cars.size()])
 		_grid_box.add_child(header)
 		var grid: GridContainer = GridContainer.new()
-		grid.columns = COLUMNS
-		grid.add_theme_constant_override(&"h_separation", 6)
-		grid.add_theme_constant_override(&"v_separation", 6)
+		grid.add_theme_constant_override(&"h_separation", int(CARD_GAP))
+		grid.add_theme_constant_override(&"v_separation", int(CARD_GAP))
 		for id: StringName in cars:
 			grid.add_child(_card(id, own, id == last_missing))
 		_grid_box.add_child(grid)
+		_grids.append(grid)
 
 	_sets_box.add_child(_label(&"HudPlateTitle", Loc.t("KOLEKSİYON SETLERİ")))
 	for set_entry: Dictionary in CrateCatalog.sets():
@@ -183,8 +194,26 @@ func _rebuild() -> void:
 			"✔" if done else "•", Loc.t(String(set_entry["name"])), have, cars.size(), "  ".join(names)])
 		if done:
 			line.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
+		# Uzun set satırı plakayı genişletmesin: dar tuvalde alt satıra kayar
+		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_sets_box.add_child(line)
+	_fit_width()
 	_apply_thumbnails()
+
+
+## Plaka ve sütun sayısı kadraja göre: geniş tuvalde 820 birim / 5 sütun, dar tuvalde sığdığı kadar.
+func _fit_width() -> void:
+	if _body == null:
+		return
+	var style: StyleBox = _body.get_theme_stylebox(&"panel")
+	var padding: float = style.get_minimum_size().x if style else 0.0
+	var room: float = get_viewport_rect().size.x - EDGE * 2.0
+	var inner: float = minf(PLATE_WIDTH, room) - padding
+	var columns: int = clampi(int((inner + CARD_GAP) / (CARD_SIZE.x + CARD_GAP)), MIN_COLUMNS, MAX_COLUMNS)
+	for grid: GridContainer in _grids:
+		if is_instance_valid(grid):
+			grid.columns = columns
+	_body.custom_minimum_size.x = minf(PLATE_WIDTH, room)
 
 
 ## Koleksiyonda eksik tek araç kaldıysa o (son parça kartı öne çıkar).
@@ -235,6 +264,7 @@ func _card(id: StringName, own: VehicleOwnership, last_piece: bool) -> Control:
 	var rarity_label: Label = _label(&"HudInkCaption", Loc.t("RESTORASYON  ·  %s SINIFI") % String(entry.get("class", "?"))
 		if restoration else Loc.t("%s  ·  %s SINIFI") % [CrateCatalog.rarity_label(rarity), String(entry.get("class", "?"))])
 	rarity_label.add_theme_color_override(&"font_color", color.darkened(0.15))
+	_wrap(rarity_label)
 	box.add_child(rarity_label)
 
 	var thumb: TextureRect = TextureRect.new()
@@ -250,7 +280,7 @@ func _card(id: StringName, own: VehicleOwnership, last_piece: bool) -> Control:
 		_thumb_host.request_thumbnail(id)
 
 	var name_text: String = String(entry.get("display_name", id)).to_upper() if known else "???"
-	box.add_child(_label(&"HudInkValue", name_text))
+	box.add_child(_wrap(_label(&"HudInkValue", name_text)))
 
 	var info: String
 	if owned:
@@ -265,7 +295,7 @@ func _card(id: StringName, own: VehicleOwnership, last_piece: bool) -> Control:
 		info = "%s  ·  %s" % [Loc.t(String(CrateCatalog.get_entry(crate).get("short_name", ""))), Loc.percent(_percent(_chance(crate, id)))] if crate != &"" else Loc.t("BAŞLANGIÇ ARACI")
 	if last_piece:
 		info = Loc.t("SON PARÇA  ·  ") + info
-	box.add_child(_label(&"HudInkCaption", info))
+	box.add_child(_wrap(_label(&"HudInkCaption", info)))
 
 	if (rarity == &"legendary" and not restoration) or last_piece:
 		var pulse: Tween = create_tween().set_loops()
@@ -299,6 +329,12 @@ func _stop_pulses() -> void:
 		if tween and tween.is_valid():
 			tween.kill()
 	_pulses.clear()
+
+
+## Kart yazısı kartı genişletmesin (ızgarada bütün sütun genişliyor, plaka taşıyordu): sarar.
+func _wrap(label: Label) -> Label:
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return label
 
 
 func _label(variation: StringName, text: String) -> Label:

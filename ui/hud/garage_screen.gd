@@ -47,6 +47,8 @@ const EXIT_GAP: float = 8.0
 ## Sol sütunun kadraj üstünden payı.
 const COLUMN_TOP: float = 16.0
 const INFO_WIDTH: float = 196.0
+## Yan sütunlar ile alt şerit arasında bırakılan dikey boşluk.
+const SIDE_GAP: float = 6.0
 
 ## Alt araç şeridi: çok araçta satır kadrajı aştığı için kaydırma kabına alınır.
 ## %BottomCenter sahnede bottom-center'a tutturulmuş ama büyüme yönü uygulanmadığından
@@ -77,6 +79,8 @@ func _fix_car_list_layout() -> void:
 	# Sol sütunun genişliği kaydırma çubuğu göründükçe 8 px oynuyor: şerit onu takip etmeli.
 	left_group.resized.connect(_place_car_list, CONNECT_DEFERRED)
 	exit_group.minimum_size_changed.connect(_place_car_list, CONNECT_DEFERRED)
+	# Sağ sütun (aksiyonlar / DETAY / SAT / BOYA panoları) boy değiştirince şeride binmesin diye yeniden yerleşir.
+	right_group.minimum_size_changed.connect(_place_car_list, CONNECT_DEFERRED)
 	_place_car_list.call_deferred()
 
 
@@ -94,16 +98,25 @@ func _place_car_list() -> void:
 	# Solda bilgi sütunu ve GARAJDAN ÇIK plakası duruyor: şerit ikisinin de sağından başlar.
 	# Böylece sütun kadrajın altına kadar inebilir (değer plakası kırpılmaz) ve şerit hiçbir
 	# şeyin üstüne binmez; sığmayan araçlar zaten yatay kaydırma ile geliyor.
+	var strip_top: float = area.y - height
 	var left_inset: float = 0.0
 	for group: Control in [exit_group, left_group]:
+		if group == left_group and is_modding() and COLUMN_TOP + _workshop.left_panel() \
+				.get_combined_minimum_size().y <= strip_top - SIDE_GAP:
+			continue   # modifiye: değer plakası rafın üstünde bitiyor, raf sola kadar uzayabilir
 		if group and group.is_visible_in_tree():
 			left_inset = maxf(left_inset, maxf(group.size.x, group.get_combined_minimum_size().x))
 	if left_inset > 0.0:
 		left_inset += 8.0
+	# Sağ sütun şeridin üstüne sığmıyorsa (telefon tuvali, 480 birim) şerit onun SOLUNDA biter.
+	var right_inset: float = _place_right_column(area, strip_top)
 	bottom_group.offset_left = left_inset
-	bottom_group.offset_top = area.y - height
-	bottom_group.offset_right = area.x
+	bottom_group.offset_top = strip_top
+	bottom_group.offset_right = area.x - right_inset
 	bottom_group.offset_bottom = area.y
+	# Modifiye rafları içerikleri kadar geniştir; dar tuvalde (853 birim) kalan yere sığar, kartlar kaydırılır.
+	if _workshop:
+		_workshop.fit_trays(area.x - left_inset - right_inset - (16.0 if right_inset <= 0.0 else 8.0))
 	# Kaydırma kabı kendi minimum genişliği yüzünden 8 px taşabiliyor: kırpılır, böylece
 	# hiçbir plaka kadrajın dışına çizilmez.
 	bottom_group.clip_contents = true
@@ -112,6 +125,33 @@ func _place_car_list() -> void:
 	if _group_targets.has(bottom_group):
 		_group_targets[bottom_group] = bottom_group.position
 	_apply_responsive_layout()   # sol sütun şeridin üstünde bitsin
+
+
+## Sağ sütun dikey ORTADA durur (masaüstü, tablet); altı araç şeridine biniyorsa yukarı kayar, yine
+## sığmıyorsa üste yaslanır ve şerit onun SOLUNDA biter (telefon tuvali: 6 aksiyon plakası 364 birim,
+## şeritle birlikte 480'e sığmıyor — KOLEKSİYON plakası şeridin arkasında kalıyordu). Dönen değer şeridin
+## sağdan bırakması gereken pay. Modifiye kipinde sütun _fit_mod_column'da üste sabit; burada yalnızca pay
+## hesaplanır. Rect doğrudan yazılır (bkz. _place_car_list: anchor + büyüme yönü geri ortalamıyor).
+func _place_right_column(area: Vector2, strip_top: float) -> float:
+	if not right_group.visible:
+		return 0.0
+	var size: Vector2 = right_group.get_combined_minimum_size()
+	var top: float = COLUMN_TOP
+	if not is_modding():
+		top = (area.y - size.y) * 0.5
+		var lowest: float = strip_top - SIDE_GAP - size.y   # şeridin üstünde biten en alçak yer
+		if top > lowest:
+			top = maxf(lowest, COLUMN_TOP)
+		right_group.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
+		right_group.offset_left = area.x - size.x
+		right_group.offset_top = top
+		right_group.offset_right = area.x
+		right_group.offset_bottom = top + size.y
+		if _group_targets.has(right_group):
+			_group_targets[right_group] = right_group.position
+	if top + size.y > strip_top - SIDE_GAP * 0.5:
+		return size.x + 8.0
+	return 0.0
 
 
 ## Garaj zemininde SADECE liftteki araç durur. Sahip olunan diğer araçların zemine park
@@ -467,6 +507,10 @@ func _enter_animation() -> void:
 		tween.tween_property(group, "position", target, 0.22) \
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(i * 0.03)
 		tween.tween_property(group, "modulate:a", 1.0, 0.14).set_delay(i * 0.03)
+		# Oturan grubun hedefi unutulur: _kill_tweens yalnızca YARIDA kalanı geri koyar. Eskiden hedef
+		# kapanışa kadar tutuluyordu; arada DETAY / SAT panosu sütunun boyunu değiştirince kapanış sütunu
+		# eski konuma yazıyor, bir sonraki açılışta sağ sütun 49 birim ekran dışında kalıyordu.
+		tween.finished.connect(func() -> void: _group_targets.erase(group))
 		_tweens.append(tween)
 
 

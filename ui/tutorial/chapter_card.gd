@@ -15,6 +15,11 @@ enum Icon { WRENCH, FLAG, CAR, BRUSH }
 const TITLE_SIZE: int = 50
 const COMPLETE_HOLD: float = 2.2
 const LOGO_PATH: String = "res://assets/branding/autoyard_logo.png"
+## Bu yüksekliğin altındaki tuvalde (telefon: 480 birim) logo gösterilmez: sütun ekrana sığmıyor, alttaki
+## ikaz şeridi BAŞLAYALIM / EĞİTİMİ ATLA düğmelerinin üstünden geçiyordu.
+const LOGO_MIN_HEIGHT: float = 560.0
+## İkaz şeridi ile sütun arasındaki boşluk (şerit hafif eğik: sütun kenarında ±13 birim oynar).
+const TAPE_GAP: float = 14.0
 
 var sfx: TutorialSfx
 
@@ -56,7 +61,8 @@ func show_intro(info: Dictionary) -> void:
 	_subtitle.visible = _subtitle.text != ""
 	_sign.icon = int(info.get("icon", Icon.WRENCH))
 	_sign.visible = true
-	_logo.visible = bool(info.get("logo", false)) and _logo.texture != null
+	_logo.visible = bool(info.get("logo", false)) and _logo.texture != null \
+		and get_viewport_rect().size.y >= LOGO_MIN_HEIGHT
 	_primary.text = String(info.get("primary", Loc.t("BAŞLA")))
 	_secondary.text = String(info.get("secondary", ""))
 	_secondary.visible = _secondary.text != ""
@@ -154,6 +160,7 @@ func _open() -> void:
 	await get_tree().process_frame   # boyutlar kesinleşsin (pivot ortada olsun)
 	if not visible:
 		return
+	_place_tapes()
 	if _sign.visible:
 		_sign.pivot_offset = _sign.size * 0.5
 		_sign.scale = Vector2.ONE * 0.2
@@ -281,6 +288,23 @@ func _build() -> void:
 	_confetti = _Confetti.new()
 	_confetti.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_confetti)
+
+
+## Şeritler sütunun hemen üstüne ve altına oturur (ekran oranından bağımsız; eskiden %13 / %87 sabitti ve kısa
+## ekranda şerit sütunun içinden geçiyordu). Sütun ekranı dolduruyorsa ekran kenarında kalırlar.
+func _place_tapes() -> void:
+	var column: Rect2 = _column.get_global_rect()
+	var origin: Vector2 = global_position
+	var half: float = _Tape.HEIGHT * 0.5
+	var view_h: float = size.y
+	var top: float = clampf(column.position.y - origin.y - TAPE_GAP - half, half, view_h * 0.5)
+	var bottom: float = clampf(column.end.y - origin.y + TAPE_GAP + half, view_h * 0.5, view_h - half)
+	for pair: Array in [[_tape_top, top], [_tape_bottom, bottom]]:
+		var tape: _Tape = pair[0]
+		tape.anchor_top = 0.0
+		tape.anchor_bottom = 0.0
+		tape.offset_top = float(pair[1]) - half
+		tape.offset_bottom = float(pair[1]) + half
 
 
 ## İkaz şeridi: ekran genişliğinin 1,2 katı, hafif eğik; yükseklik oranı `anchor_y`.

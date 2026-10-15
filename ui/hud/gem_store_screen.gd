@@ -18,6 +18,9 @@ var hud: Hud
 
 var _purchases: PurchaseManager
 var _list: HBoxContainer
+## Kart sırasının kabı: 5 kart 982 birim; dar tuvalde (853 birim, sol üstte HUD payı) kalan yere sığar,
+## kartlar parmakla kaydırılır (eskiden sıra ekranın sağından taşıyordu).
+var _list_scroll: ScrollContainer
 var _status: Label
 var _column: VBoxContainer
 var _reward_popup: RewardPopup
@@ -32,6 +35,8 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build()
 	_bind.call_deferred()
+	get_viewport().size_changed.connect(_fit_list, CONNECT_DEFERRED)
+	visibility_changed.connect(_fit_list, CONNECT_DEFERRED)
 
 
 func open() -> void:
@@ -97,11 +102,21 @@ func _build() -> void:
 	head.add_child(_status)
 	column.add_child(head)
 
+	_list_scroll = ScrollContainer.new()
+	_list_scroll.name = "CardScroll"
+	_list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	_list_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_list_scroll.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_list_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	column.add_child(_list_scroll)
 	_list = HBoxContainer.new()
 	_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_list.alignment = BoxContainer.ALIGNMENT_CENTER
 	_list.add_theme_constant_override(&"separation", 8)
-	column.add_child(_list)
+	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_list.minimum_size_changed.connect(_fit_list, CONNECT_DEFERRED)
+	_list_scroll.add_child(_list)
+	TouchScroll.attach(_list_scroll)
 
 	var close_button: PlateButton = PlateButton.new()
 	close_button.theme_type_variation = &"HudPlateSmall"
@@ -189,6 +204,20 @@ func _card(entry: Dictionary) -> PlatePanel:
 		_purchases.buy(id))
 	box.add_child(price)
 	return card
+
+
+## FitScroll: HUD payı değişti (pano açıldı / kadraj döndü).
+func fit_reserve_changed() -> void:
+	_fit_list()
+
+
+## Kart sırası kadar geniş; sığmıyorsa kullanılabilir genişlik kadar (FitScroll: HUD payı düşülmüş).
+func _fit_list() -> void:
+	if _list_scroll == null:
+		return
+	var width: float = floorf(minf(_list.get_combined_minimum_size().x, FitScroll.available_width(self, _list_scroll)))
+	if not is_equal_approx(_list_scroll.custom_minimum_size.x, width):
+		_list_scroll.custom_minimum_size.x = width
 
 
 func _on_purchase_finished(_id: StringName, status: StringName) -> void:

@@ -46,6 +46,9 @@ var _thumbs: DecorThumbs
 
 var _top: VBoxContainer
 var _bottom: VBoxContainer
+var _title_plate: PlatePanel
+var _money_plate: PlatePanel
+var _corner: HBoxContainer
 var _title: Label
 var _info: Label
 var _notice: Label
@@ -90,6 +93,11 @@ func _ready() -> void:
 	add_child(_thumbs)
 	_thumbs.ready_for.connect(_on_thumb_ready)
 	_build()
+	_top.minimum_size_changed.connect(_fit_top, CONNECT_DEFERRED)
+	_corner.minimum_size_changed.connect(_fit_top, CONNECT_DEFERRED)
+	_money_plate.minimum_size_changed.connect(_fit_top, CONNECT_DEFERRED)
+	get_viewport().size_changed.connect(_fit_top, CONNECT_DEFERRED)
+	_fit_top.call_deferred()
 
 
 # --- Aç / kapa ---------------------------------------------------------------------------
@@ -206,6 +214,7 @@ func _build() -> void:
 	title_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_plate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	top.add_child(title_plate)
+	_title_plate = title_plate
 	var title_box: VBoxContainer = VBoxContainer.new()
 	title_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_box.add_theme_constant_override(&"separation", 0)
@@ -215,6 +224,7 @@ func _build() -> void:
 	title_box.add_child(_title)
 	_info = _label(&"HudInkValue", "")
 	_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # genişliği _fit_top verir (dar tuvalde iki satır)
 	_info.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
 	title_box.add_child(_info)
 	# Uyarı hapı ("BURAYA SIĞMIYOR" ...): ayrı, kiremit renkli, pıt diye gelir
@@ -237,6 +247,7 @@ func _build() -> void:
 	money_plate.offset_left = MARGIN
 	money_plate.offset_top = MARGIN
 	add_child(money_plate)
+	_money_plate = money_plate
 	var money_row: HBoxContainer = HBoxContainer.new()
 	money_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	money_row.add_theme_constant_override(&"separation", 8)
@@ -258,6 +269,7 @@ func _build() -> void:
 	corner.offset_right = -MARGIN
 	corner.add_theme_constant_override(&"separation", 8)
 	add_child(corner)
+	_corner = corner
 	_snap_button = _icon_plate(corner, Loc.t("IZGARA"), HudIcon.Kind.GRID, &"HudPlateSmall")
 	_snap_button.toggle_mode = true
 	_snap_button.button_pressed = true
@@ -921,6 +933,37 @@ func _on_tool_mode(mode: StringName) -> void:
 		_editor.set_paint_mode(mode)
 	else:
 		_editor.set_wall_mode(mode)
+
+
+## Başlık plakası üst ortada durur; dar tuvalde (853 birim: 16:9 telefon, tablet) uzun ipucu ("EŞYAYA DOKUN:
+## SEÇ · AŞAĞIDAN EŞYA SEÇ: EKLE") sağ üstteki IZGARA · GERİ AL · BİTİR plakalarının altına giriyordu. Plaka
+## artık bakiye ile köşe düğmeleri ARASINDAKİ boşluğa sığar: ipucu gerekirse iki satıra kırılır, plaka
+## boşluğun içinde sığdığı kadar ortada durur. Rect doğrudan yazılır (merkez-üst anchor geri ortalamıyor).
+func _fit_top() -> void:
+	if _title_plate == null:
+		return
+	var view_w: float = get_viewport_rect().size.x
+	var left: float = MARGIN + _money_plate.get_combined_minimum_size().x + 8.0
+	var right: float = view_w - MARGIN - _corner.get_combined_minimum_size().x - 8.0
+	var style: StyleBox = _title_plate.get_theme_stylebox(&"panel")
+	var padding: float = style.get_minimum_size().x if style else 0.0
+	var font: Font = _info.get_theme_font(&"font")
+	var font_size: int = _info.get_theme_font_size(&"font_size")
+	var text_width: float = 0.0
+	for line: String in _info.text.split("\n"):
+		text_width = maxf(text_width, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+	var room: float = maxf(right - left - padding, 140.0)
+	var wanted: float = ceilf(minf(text_width + 1.0, room))
+	if not is_equal_approx(_info.custom_minimum_size.x, wanted):
+		_info.custom_minimum_size.x = wanted
+	var plate_width: float = _title_plate.get_combined_minimum_size().x
+	var center: float = clampf(view_w * 0.5, left + plate_width * 0.5, maxf(right - plate_width * 0.5, left + plate_width * 0.5))
+	var width: float = _top.get_combined_minimum_size().x
+	_top.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
+	_top.offset_left = center - width * 0.5
+	_top.offset_right = center + width * 0.5
+	_top.offset_top = MARGIN
+	_top.offset_bottom = MARGIN + _top.get_combined_minimum_size().y
 
 
 ## Ekranın arayüzsüz dikey bandı (0..1): üstte başlık grubunun, altta sekmeler + şerit + denetim

@@ -28,6 +28,14 @@ const BUTTON_WIDTH: float = 86.0
 const JOB_PLATE_WIDTH: float = 66.0
 
 var _mode: Mode = Mode.DAMAGED
+## Sıkışık kip (dar tuval): arıza satırı başlık + ayrıntı olarak İKİ satır. HUD plaka ekrana sığmayınca açar.
+var compact: bool = false:
+	set(value):
+		if compact == value:
+			return
+		compact = value
+		if _issue_type and (_mode == Mode.DAMAGED or _mode == Mode.BUSY):
+			_apply_selection_state()
 var _reward: int = 0
 var _xp: int = 0
 var _cost: int = 0
@@ -415,7 +423,7 @@ func _apply_selection_state() -> void:
 	parts.append(Loc.t("+%s ₺ (%s ₺/dk)") % [
 		Hud.format_thousands(effective_reward(t)), Hud.format_thousands(rate_per_minute(t))])
 	parts.append(Loc.t("+%d XP") % effective_xp(t))
-	var line: String = "%s   ·   %s" % [t.title, "  ·  ".join(parts)]
+	var line: String = ("%s\n%s" if compact else "%s   ·   %s") % [t.title, "  ·  ".join(parts)]
 	line += _mastery_text(t)
 	var busy: bool = _mode == Mode.BUSY
 	var unlocked: bool = t.min_level <= _player_level

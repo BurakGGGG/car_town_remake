@@ -4,6 +4,7 @@
 # run_tests.sh ile aynı override.cfg yöntemi; ikisi AYNI ANDA çalıştırılmamalı.
 # Kullanım: tools/qa_isolated.sh <res://qa/betik.gd> [godot argümanları ...] [-- betik argümanları]
 # QA_SAVE=<savegame.json> verilirse temiz kayıt yerine o kaydın KOPYASIYLA başlar (asıl dosyaya dokunulmaz).
+# QA_LANG=en|es oyunu o dilde açar (varsayılan tr).
 set -u
 PROJ="$(cd "$(dirname "$0")/.." && pwd)"
 GODOT="${GODOT:-godot-4}"
@@ -16,6 +17,6 @@ for d in "$HOME/snap/godot-4"/*/.local/share/ct_qa "${XDG_DATA_HOME:-$HOME/.loca
 	mkdir -p "$d"
 	rm -f "$d/savegame.json" "$d/cloud_sync.json"
 	[ -n "${QA_SAVE:-}" ] && cp "$QA_SAVE" "$d/savegame.json"
-	printf '[general]\nlanguage="tr"\n' > "$d/settings.cfg"
+	printf '[general]\nlanguage="%s"\n' "${QA_LANG:-tr}" > "$d/settings.cfg"
 done
 stdbuf -oL "$GODOT" --path . --script "$SCRIPT" "$@"

@@ -30,6 +30,10 @@ const MIN_TOUCH: float = 72.0
 const GROUP: StringName = &"plate_buttons"
 ## icon_left: ikon ile yazı arası.
 const ICON_LEFT_GAP: float = 7.0
+## Cıvatalar yazının hizasında (üstte ikon yok) çizilen plakada yazının kenardan en az payı: cıvata x = 7
+## (yarıçap 1,7). "HudPlate" teması 6 birim veriyor; plaka yazıya göre en dar boyundayken (HEPSİNİ TAK,
+## EKSİKLERİ AL, İspanyolca uzun yazılar) cıvata ilk / son harfin üstüne biniyordu.
+const BOLT_CLEAR: float = 13.0
 
 @export var shape: Shape = Shape.PLATE:
 	set(value):
@@ -64,6 +68,8 @@ const ICON_LEFT_GAP: float = 7.0
 @export var bolts: bool = true:
 	set(value):
 		bolts = value
+		if is_inside_tree():
+			_apply_styles()
 		queue_redraw()
 
 ## Seçili/basılı plaka bu kadar piksel yukarı kalkar (temadaki expand_margin_top ile aynı olmalı).
@@ -165,6 +171,9 @@ func _apply_styles() -> void:
 	var side_icon: bool = icon_left and shape == Shape.PLATE and kind != HudIcon.Kind.NONE
 	var center: bool = not Engine.is_editor_hint() and shape == Shape.PLATE \
 		and theme_type_variation == &"HudPlate" and (side_icon or kind == HudIcon.Kind.NONE) and avatar == null
+	# Cıvatalar yazı hizasında mı (üstte ikon yok): yazı onlardan BOLT_CLEAR kadar içeride başlar
+	var mid_bolts: bool = not Engine.is_editor_hint() and bolts and shape == Shape.PLATE \
+		and (side_icon or (kind == HudIcon.Kind.NONE and avatar == null))
 	# Toplu: her ekleme / silme ayrı tema bildirimi ve boyut hesabı tetikliyordu (açılışta 167 düğme, ~25 ms)
 	begin_bulk_theme_override()
 	for state: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed", &"disabled"]:
@@ -175,9 +184,14 @@ func _apply_styles() -> void:
 			continue
 		var amber: bool = highlight and state != &"disabled"
 		var lopsided: bool = center and base.content_margin_top - base.content_margin_bottom > 6.0
-		if not amber and not lopsided and not side_icon:
+		var tight: bool = mid_bolts and (base.content_margin_right < BOLT_CLEAR \
+			or base.content_margin_left < BOLT_CLEAR)
+		if not amber and not lopsided and not side_icon and not tight:
 			continue
 		var box: StyleBoxFlat = base.duplicate() as StyleBoxFlat
+		if tight:   # yandaki ikon da cıvatanın içinden başlar (aşağıda ikon payı bunun üstüne eklenir)
+			box.content_margin_right = maxf(box.content_margin_right, BOLT_CLEAR)
+			box.content_margin_left = maxf(box.content_margin_left, BOLT_CLEAR)
 		if side_icon:
 			box.content_margin_left += icon_size + ICON_LEFT_GAP
 		if amber:
