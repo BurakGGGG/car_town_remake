@@ -26,6 +26,8 @@ extends Control
 ## düzenine döndürür.
 
 signal closed
+## Başka bir pano isteniyor (LÜKS eşyaya elmas yetmedi → &"gem_store"): ekranı HUD / UiRouter açar.
+signal screen_requested(id: StringName)
 
 const MARGIN: float = 14.0
 ## Garajdaki araç şeridinin plakasıyla aynı genişlik (104 birimde KOMPRESÖR kelime ortasından kırılıyordu).
@@ -34,6 +36,9 @@ const THUMB_TOP: float = 8.0
 const THUMB_AREA: Vector2 = Vector2(108.0, 60.0)
 ## Yatay ikonlu plakalarda ikonun boyu.
 const PLATE_ICON: float = 20.0
+## LÜKS kart renkleri: koyu vitrin zemini ve altın çerçeve.
+const LUXURY_BACK: Color = Color("1E1B2B")
+const LUXURY_GOLD: Color = Color("E8B53A")
 ## Alt menünün modları: mod → [başlık, ikon]. Kategoriler modlara MODE_OF ile dağılır.
 const MODES: Array[StringName] = [&"items", &"floor", &"wall", &"vehicles"]
 ## Denetim / araç çubuğu için kamera bandında ayrılan yükseklik (plaka satırı + aralık).
@@ -72,6 +77,11 @@ var _scroll: ScrollContainer
 var _cards: Dictionary = {}         # id → PlateButton
 var _kind: int = -1
 var _money_label: Label
+## Para + elmas satırları (BoxContainer: yan yana ya da dar tuvalde alt alta).
+var _money_box: BoxContainer
+## Bakiye plakasındaki elmas sayacı (LÜKS eşyalar elmasla satılır).
+var _gem_label: Label
+var _player: PlayerProgress
 var _confirm_buy: StringName = &""  # iki dokunuşlu satın alma: ilk dokunuş fiyatı sorar
 
 var _bar: HBoxContainer
@@ -137,6 +147,8 @@ func grab_on_open(iid: String, at: Vector2) -> void:
 func _refresh_money() -> void:
 	if _economy and _money_label:
 		_money_label.text = Hud.format_thousands(_economy.money)
+	if _player and _gem_label:
+		_gem_label.text = Hud.format_thousands(_player.gems)
 
 
 func close() -> void:
@@ -168,11 +180,18 @@ func _bind() -> void:
 		_decor = get_tree().get_first_node_in_group("decor") as DecorManager
 		if _decor:
 			_decor.placement_changed.connect(_refresh_cards)
-			_decor.purchase_failed.connect(func(_id: StringName, _p: int) -> void: _show_notice("PARA YETERSİZ"))
+			_decor.purchase_failed.connect(func(id: StringName, _p: int) -> void:
+				_show_notice(Loc.t("GEM YETERSİZ") if GarageDecor.is_gem_item(id) else Loc.t("PARA YETERSİZ")))
 	if _economy == null:
 		_economy = get_tree().get_first_node_in_group("economy") as EconomyManager
 		if _economy:
 			_economy.money_changed.connect(func(_m: int) -> void:
+				_refresh_money()
+				_refresh_cards())
+	if _player == null:
+		_player = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
+		if _player:
+			_player.gems_changed.connect(func(_g: int) -> void:   # GEM MAĞAZASI'ndan dönünce kartlar açılsın
 				_refresh_money()
 				_refresh_cards())
 
@@ -248,17 +267,35 @@ func _build() -> void:
 	money_plate.offset_top = MARGIN
 	add_child(money_plate)
 	_money_plate = money_plate
-	var money_row: HBoxContainer = HBoxContainer.new()
-	money_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	money_row.add_theme_constant_override(&"separation", 8)
-	money_plate.add_child(money_row)
+	# Para ve elmas yan yana; dar tuvalde başlığa yer kalsın diye alt alta (_fit_top karar verir)
+	_money_box = BoxContainer.new()
+	_money_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_money_box.add_theme_constant_override(&"separation", 8)
+	money_plate.add_child(_money_box)
+	var coin_row: HBoxContainer = HBoxContainer.new()
+	coin_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	coin_row.add_theme_constant_override(&"separation", 8)
+	_money_box.add_child(coin_row)
 	var coin_icon: HudIcon = HudIcon.new()
 	coin_icon.kind = HudIcon.Kind.COIN
 	coin_icon.icon_size = 28.0
 	coin_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	money_row.add_child(coin_icon)
+	coin_row.add_child(coin_icon)
 	_money_label = _label(&"HudPlateTitle", "0")
-	money_row.add_child(_money_label)
+	coin_row.add_child(_money_label)
+	var gem_row: HBoxContainer = HBoxContainer.new()
+	gem_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gem_row.add_theme_constant_override(&"separation", 8)
+	_money_box.add_child(gem_row)
+	var gem_icon: HudIcon = HudIcon.new()
+	gem_icon.kind = HudIcon.Kind.GEM
+	gem_icon.icon_size = 24.0
+	gem_icon.custom_minimum_size.x = 28.0   # alt alta dizilince sayılar para satırıyla hizalı
+	gem_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	gem_row.add_child(gem_icon)
+	_gem_label = _label(&"HudPlateTitle", "0")
+	_gem_label.add_theme_color_override(&"font_color", HudPalette.GEM_DARK)
+	gem_row.add_child(_gem_label)
 
 	# Sağ üst: ızgara · geri al · bitir
 	var corner: HBoxContainer = HBoxContainer.new()
@@ -362,6 +399,11 @@ func _build() -> void:
 	kinds.append(GarageDecor.Kind.VEHICLE)   # SERGİ: sahip olunan araçlar (katalogda değil, VehicleOwnership'ten)
 	for kind: int in kinds:
 		var tab: PlateButton = _plate(_chip_title(kind), &"HudPlateSmall")
+		if kind == GarageDecor.Kind.LUXURY:   # elmasla satılan sekme: yazının solunda elmas
+			tab.icon_size = 16.0
+			tab.icon_left = true
+			tab.kind = HudIcon.Kind.GEM
+			tab.add_theme_color_override(&"font_color", HudPalette.GEM_DARK)
 		tab.toggle_mode = true
 		tab.button_group = _tab_group
 		tab.pressed.connect(_on_tab_pressed.bind(kind))
@@ -459,7 +501,7 @@ func _first_useful_kind() -> int:
 				if GarageDecor.is_placeable(item["id"]) and _decor.available_of(item["id"]) > 0:
 					return kind
 	for kind: int in GarageDecor.categories():
-		if not _is_tool_kind(kind):
+		if not _is_tool_kind(kind) and kind != GarageDecor.Kind.LUXURY:   # elmas vitrini kendiliğinden açılmaz
 			return kind
 	return GarageDecor.categories()[0]
 
@@ -573,7 +615,7 @@ func _select_tab(kind: int) -> void:
 		(_tab_buttons[k] as PlateButton).set_pressed_no_signal(k == kind)
 	_refresh_nav()
 	if _tab_scroll and _tab_buttons.has(kind) and is_inside_tree():
-		_tab_scroll.ensure_control_visible.call_deferred(_tab_buttons[kind])
+		_reveal_tab(kind)
 	for child: Node in _strip.get_children():
 		child.queue_free()
 	_cards.clear()
@@ -589,6 +631,19 @@ func _select_tab(kind: int) -> void:
 			_add_card(item["id"])
 	_scroll.scroll_horizontal = 0
 	_refresh_cards()
+
+
+## Seçili sekme şeritte görünsün; sığıyorsa şerit başta kalır (en baştaki LÜKS sekmesi yarım kesilmesin —
+## ensure_control_visible görünen sekmede de birkaç birim kaydırıyordu).
+func _reveal_tab(kind: int) -> void:
+	await get_tree().process_frame   # sekmelerin yerleşimi otursun
+	var tab: Control = _tab_buttons.get(kind) as Control
+	if tab == null or not tab.is_visible_in_tree() or _kind != kind:
+		return
+	if tab.position.x + tab.size.x <= _tab_scroll.size.x:
+		_tab_scroll.scroll_horizontal = 0
+	else:
+		_tab_scroll.ensure_control_visible(tab)
 
 
 ## Menü satırı: açık mod vurgulu; yalnız onun alt kategorileri görünür, tek kategorili modda hiçbiri.
@@ -625,8 +680,27 @@ func _add_card(id: StringName) -> void:
 
 func _draw_card(card: PlateButton, id: StringName) -> void:
 	var area: Rect2 = Rect2(Vector2((card.size.x - THUMB_AREA.x) * 0.5, THUMB_TOP), THUMB_AREA)
+	if GarageDecor.is_gem_item(id):
+		_draw_luxury_frame(card, area)
 	_draw_thumb(card, id, area)
 	_draw_badges(card, id, area)
+
+
+## LÜKS kart: koyu vitrin zemini, altın çerçeve ve köşede elmas (elmasla satıldığı ilk bakışta okunsun).
+func _draw_luxury_frame(card: PlateButton, area: Rect2) -> void:
+	var back: StyleBoxFlat = StyleBoxFlat.new()
+	back.bg_color = LUXURY_BACK
+	back.set_corner_radius_all(8)
+	back.anti_aliasing = true
+	card.draw_style_box(back, area.grow(3.0))
+	var rim: StyleBoxFlat = StyleBoxFlat.new()
+	rim.draw_center = false
+	rim.border_color = LUXURY_GOLD
+	rim.set_border_width_all(3)
+	rim.set_corner_radius_all(9)
+	rim.anti_aliasing = true
+	card.draw_style_box(rim, Rect2(Vector2(3.0, 3.0), card.size - Vector2(6.0, 6.0)))
+	HudIcon.draw_icon(card, HudIcon.Kind.GEM, area.position + Vector2(12.0, 12.0), 18.0, HudPalette.GEM, LUXURY_BACK)
 
 
 ## Kart rozetleri: kilitliyse küçük resmin ortasında kilit; depoda kopya varsa sağ üstte yeşil "×N"
@@ -745,12 +819,20 @@ func _buy(id: StringName) -> bool:
 			_show_notice(Loc.t("%d. RÜTBEDE AÇILIR") % int(GarageDecor.get_item(id).get("min_rank", 1)))
 		elif GarageDecor.is_surface(id) and _decor.is_owned(id):
 			pass
+		elif GarageDecor.is_gem_item(id):
+			# Elmas yetmiyor: kaç elmas gerektiği söylenir, GEM MAĞAZASI açılır (düzenleme altta açık kalır)
+			_show_notice(Loc.t("GEM YETERSİZ · %d GEM GEREKİYOR") % _decor.gem_price_of(id))
+			screen_requested.emit(&"gem_store")
 		else:
 			_show_notice(Loc.t("PARA YETERSİZ"))
 		return false
 	if _confirm_buy != id:
 		_confirm_buy = id
-		_show_notice(Loc.t("SATIN ALMAK İÇİN TEKRAR DOKUN"))
+		if GarageDecor.is_gem_item(id):
+			_show_notice(Loc.t("TEKRAR DOKUN: %d GEM · GARAJ DEĞERİ +%s ₺") % [_decor.gem_price_of(id),
+				Hud.format_thousands(int(GarageDecor.get_item(id).get("value", 0)))])
+		else:
+			_show_notice(Loc.t("SATIN ALMAK İÇİN TEKRAR DOKUN"))
 		return false
 	_confirm_buy = &""
 	return _decor.purchase(id)
@@ -797,7 +879,7 @@ func _refresh_cards() -> void:
 			else:
 				status = _price_status(id)
 			if _confirm_buy == id:
-				status = Loc.t("SATIN AL? %s ₺") % Hud.format_thousands(_decor.price_of(id))
+				status = _confirm_status(id)
 			card.text = "%s\n%s" % [title, status]
 			_fit_card(card)
 			card.disabled = not _decor.is_unlocked(id)
@@ -822,7 +904,7 @@ func _refresh_cards() -> void:
 		else:
 			status = _price_status(id)
 		if _confirm_buy == id:
-			status = Loc.t("SATIN AL? %s ₺") % Hud.format_thousands(_decor.price_of(id))
+			status = _confirm_status(id)
 		card.text = "%s\n%s" % [title, status]
 		_fit_card(card)
 		card.disabled = not _decor.is_unlocked(id)
@@ -846,7 +928,16 @@ func _fit_card(card: PlateButton) -> void:
 func _price_status(id: StringName) -> String:
 	if not _decor.is_unlocked(id):
 		return Loc.t("%d. RÜTBE") % int(GarageDecor.get_item(id).get("min_rank", 1))
+	if GarageDecor.is_gem_item(id):
+		return Loc.t("%d GEM") % _decor.gem_price_of(id)
 	return "%s ₺" % Hud.format_thousands(_decor.price_of(id))
+
+
+## İkinci dokunuşu bekleyen kartın yazısı ("SATIN AL? 120 GEM").
+func _confirm_status(id: StringName) -> String:
+	if GarageDecor.is_gem_item(id):
+		return Loc.t("SATIN AL? %d GEM") % _decor.gem_price_of(id)
+	return Loc.t("SATIN AL? %s ₺") % Hud.format_thousands(_decor.price_of(id))
 
 
 # --- Durum ---------------------------------------------------------------------------------
@@ -943,7 +1034,6 @@ func _fit_top() -> void:
 	if _title_plate == null:
 		return
 	var view_w: float = get_viewport_rect().size.x
-	var left: float = MARGIN + _money_plate.get_combined_minimum_size().x + 8.0
 	var right: float = view_w - MARGIN - _corner.get_combined_minimum_size().x - 8.0
 	var style: StyleBox = _title_plate.get_theme_stylebox(&"panel")
 	var padding: float = style.get_minimum_size().x if style else 0.0
@@ -952,6 +1042,17 @@ func _fit_top() -> void:
 	var text_width: float = 0.0
 	for line: String in _info.text.split("\n"):
 		text_width = maxf(text_width, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+	# Bakiye plakası: yan yana dizilişte ipucu tek satıra sığmıyorsa para ve elmas alt alta geçer
+	var rows: Array[Node] = _money_box.get_children()
+	var row_a: Vector2 = (rows[0] as Control).get_combined_minimum_size()
+	var row_b: Vector2 = (rows[1] as Control).get_combined_minimum_size()
+	var plate_pad: float = _money_plate.get_combined_minimum_size().x - _money_box.get_combined_minimum_size().x
+	var wide: float = row_a.x + row_b.x + float(_money_box.get_theme_constant(&"separation")) + plate_pad
+	var stacked: bool = right - (MARGIN + wide + 8.0) - padding < text_width
+	if _money_box.vertical != stacked:
+		_money_box.vertical = stacked
+	var money_w: float = (maxf(row_a.x, row_b.x) + plate_pad) if stacked else wide
+	var left: float = MARGIN + money_w + 8.0
 	var room: float = maxf(right - left - padding, 140.0)
 	var wanted: float = ceilf(minf(text_width + 1.0, room))
 	if not is_equal_approx(_info.custom_minimum_size.x, wanted):

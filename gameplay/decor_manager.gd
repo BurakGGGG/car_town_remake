@@ -91,6 +91,10 @@ func _economy() -> EconomyManager:
 	return get_tree().get_first_node_in_group("economy") as EconomyManager
 
 
+func _player() -> PlayerProgress:
+	return get_tree().get_first_node_in_group("player_progress") as PlayerProgress
+
+
 # --- Depo ------------------------------------------------------------------------------
 
 func is_owned(id: StringName) -> bool:
@@ -164,12 +168,20 @@ func can_purchase(id: StringName) -> bool:
 		return false
 	if owned_of(id) >= MAX_COPIES:
 		return false
+	if GarageDecor.is_gem_item(id):   # LÜKS: elmasla
+		var player: PlayerProgress = _player()
+		return player == null or player.can_afford_gems(GarageDecor.gem_price(id))
 	var economy: EconomyManager = _economy()
 	return economy == null or economy.can_afford(price_of(id))
 
 
 func price_of(id: StringName) -> int:
 	return int(GarageDecor.get_item(id).get("price", 0))
+
+
+## Elmas fiyatı (LÜKS eşya; değilse 0).
+func gem_price_of(id: StringName) -> int:
+	return GarageDecor.gem_price(id)
 
 
 ## Garaj değerine katkı: sahip olunan her kopya (garajda olsun olmasın, Car Town "Item Storage").
@@ -182,15 +194,23 @@ func value() -> int:
 	return _value_cache
 
 
-## Bir kopya satın alır: para düşer, kopya DEPOYA girer (yerleştirmek düzenleyicinin işi).
+## Bir kopya satın alır: para (LÜKS eşyada elmas) düşer, kopya DEPOYA girer (yerleştirmek düzenleyicinin işi).
+## purchase_failed'in fiyatı eşyanın kendi biriminde: elmas eşyada elmas.
 func purchase(id: StringName) -> bool:
+	var cost: int = gem_price_of(id) if GarageDecor.is_gem_item(id) else price_of(id)
 	if not can_purchase(id):
-		purchase_failed.emit(id, price_of(id))
+		purchase_failed.emit(id, cost)
 		return false
-	var economy: EconomyManager = _economy()
-	if economy and not economy.spend_money(price_of(id)):
-		purchase_failed.emit(id, price_of(id))
-		return false
+	if GarageDecor.is_gem_item(id):
+		var player: PlayerProgress = _player()
+		if player and not player.spend_gems(cost):
+			purchase_failed.emit(id, cost)
+			return false
+	else:
+		var economy: EconomyManager = _economy()
+		if economy and not economy.spend_money(cost):
+			purchase_failed.emit(id, cost)
+			return false
 	_owned[id] = owned_of(id) + 1
 	_value_cache = -1
 	purchased.emit(id)

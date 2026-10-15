@@ -3,14 +3,15 @@
   "_readme": [
     "GARAJ DEKORASYONU KATALOĞU — tek kaynak (gameplay/garage_decor.gd okur).",
     "Yeni eşya = buraya bir kayıt + assets/decor/<id>.glb (ya da scene_path). Başka kod gerekmez.",
-    "kind: floor_pattern | wall_piece | floor_surface | wall_surface | workshop | lounge | wall_item | yard | plant (palet kategorileri)",
+    "kind: floor_pattern | wall_piece | floor_surface | wall_surface | luxury | workshop | lounge | wall_item | yard | plant (palet kategorileri)",
     "placement: floor (zemine) | wall (duvara) | surface (kaplama, uygulanır) | tile (zemin karosu, göze boyanır) | edge (iç duvar, ızgara kenarına örülür)",
     "value: garaj değerine katkı (adet başına, fiyatın ~%40'ı). min_rank: garaj rütbesi kilidi.",
     "İsteğe bağlı: scene_path (varsayılan assets/decor/<id>.glb), rotation_step (derece),",
     "functional + gameplay_scene (işlevli eşya: gövdeyle aynı dönüşümü paylaşan oyun düğümü).",
     "Boyut YAZILMAZ: yerleşim izi modelin gerçek sınırlarından ölçülür (elle yazılan boyut kayar).",
     "floor_pattern: price/value GÖZ BAŞINA (her boyanan karo ücretlidir, silmek ücretsiz). wall_piece: adet başına, depoya döner.",
-    "retired: true → mağazada / paletten kalkar, eski kayıttaki kopya yüklenir (floor_surface → karolara taşındı)."
+    "retired: true → mağazada / paletten kalkar, eski kayıttaki kopya yüklenir (floor_surface → karolara taşındı).",
+    "price_gems: ELMAS fiyatı (LÜKS eşyalar; price 0). value yine ₺ (garaj değeri, elmas başına 300 ₺). luxury kayıtlarında placement açıkça yazılır (floor / wall)."
   ],
   "defaults": {
     "rotation_step": 45,
@@ -2279,6 +2280,270 @@
       "value": 10400,
       "min_rank": 5,
       "desc": "Gümüş kabartmalı sac kaplama."
+    },
+    {
+      "id": "lux_vip_rope",
+      "title": "VIP KADİFE KORDON",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 40,
+      "value": 12000,
+      "min_rank": 1,
+      "desc": "Altın direkler, kadife kordon ve kırmızı halı. Garajın VIP girişi."
+    },
+    {
+      "id": "lux_crystal_sconces",
+      "title": "KRİSTAL APLİKLER",
+      "kind": "luxury",
+      "placement": "wall",
+      "price": 0,
+      "price_gems": 45,
+      "value": 13500,
+      "min_rank": 1,
+      "desc": "Altın kollu, kristal sarkıtlı iki aplik."
+    },
+    {
+      "id": "lux_gold_palm",
+      "title": "ALTIN SAKSIDA PALMİYE",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 55,
+      "value": 16500,
+      "min_rank": 1,
+      "desc": "Altın saksıda iri bir palmiye. Tamirhaneye tatil havası."
+    },
+    {
+      "id": "lux_gold_painting",
+      "title": "ALTIN ÇERÇEVELİ TABLO",
+      "kind": "luxury",
+      "placement": "wall",
+      "price": 0,
+      "price_gems": 60,
+      "value": 18000,
+      "min_rank": 1,
+      "desc": "Gün batımında klasik araba; altın çerçeve ve tablo lambası."
+    },
+    {
+      "id": "lux_bonsai",
+      "title": "ASIRLIK BONSAİ",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 70,
+      "value": 21000,
+      "min_rank": 1,
+      "desc": "Lake sehpada asırlık bonsai. Sabrın ödülü."
+    },
+    {
+      "id": "lux_crystal_lamp",
+      "title": "KRİSTAL AYAKLI LAMBA",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 75,
+      "value": 22500,
+      "min_rank": 1,
+      "desc": "Dört kat kristal sarkıtlı, ışıl ışıl ayaklı avize."
+    },
+    {
+      "id": "lux_gold_wheel",
+      "title": "ALTIN DİREKSİYON PANOSU",
+      "kind": "luxury",
+      "placement": "wall",
+      "price": 0,
+      "price_gems": 80,
+      "value": 24000,
+      "min_rank": 1,
+      "desc": "Kadife pano üstünde altın direksiyon."
+    },
+    {
+      "id": "lux_gold_gas_pump",
+      "title": "ALTIN BENZİN POMPASI",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 90,
+      "value": 27000,
+      "min_rank": 1,
+      "desc": "Işıklı küresiyle altın kaplama nostaljik pompa."
+    },
+    {
+      "id": "lux_neon_crown",
+      "title": "NEON TAÇ",
+      "kind": "luxury",
+      "placement": "wall",
+      "price": 0,
+      "price_gems": 100,
+      "value": 30000,
+      "min_rank": 1,
+      "desc": "Altın çerçevede neon taç ve VIP yazısı."
+    },
+    {
+      "id": "lux_trophy_wall",
+      "title": "KUPA DUVARI",
+      "kind": "luxury",
+      "placement": "wall",
+      "price": 0,
+      "price_gems": 110,
+      "value": 33000,
+      "min_rank": 1,
+      "desc": "Arkadan aydınlatılmış raflarda kupalar ve madalyalar."
+    },
+    {
+      "id": "lux_gold_rim_tower",
+      "title": "ALTIN JANT KULESİ",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 120,
+      "value": 36000,
+      "min_rank": 1,
+      "desc": "Işıklı kaide üstünde üç altın jant."
+    },
+    {
+      "id": "lux_cinema_wall",
+      "title": "SİNEMA EKRANI",
+      "kind": "luxury",
+      "placement": "wall",
+      "price": 0,
+      "price_gems": 140,
+      "value": 42000,
+      "min_rank": 1,
+      "desc": "Dev ekran, ses çubuğu ve arkadan mor ışık."
+    },
+    {
+      "id": "lux_marble_fireplace",
+      "title": "MERMER ŞÖMİNE",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 150,
+      "value": 45000,
+      "min_rank": 1,
+      "desc": "Yanan ateş, altın saat, şamdanlar ve altın çerçeveli ayna."
+    },
+    {
+      "id": "lux_velvet_lounge",
+      "title": "VIP KADİFE KÖŞE",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 160,
+      "value": 48000,
+      "min_rank": 1,
+      "desc": "Zümrüt kadife köşe koltuk, altın sehpa ve şampanya."
+    },
+    {
+      "id": "lux_champagne_bar",
+      "title": "ŞAMPANYA BARI",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 180,
+      "value": 54000,
+      "min_rank": 1,
+      "desc": "Kara mermer bar, kadeh kulesi, buzda şampanya ve kadife tabureler."
+    },
+    {
+      "id": "lux_racing_sim",
+      "title": "YARIŞ SİMÜLATÖRÜ",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 200,
+      "value": 60000,
+      "min_rank": 1,
+      "desc": "Üç ekranlı karbon yarış kokpiti."
+    },
+    {
+      "id": "lux_aquarium",
+      "title": "DEV AKVARYUM",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 220,
+      "value": 66000,
+      "min_rank": 1,
+      "desc": "Mercanlar ve renkli balıklarla dolu ışıklı akvaryum."
+    },
+    {
+      "id": "lux_gold_engine",
+      "title": "ALTIN V12 MOTOR",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 260,
+      "value": 78000,
+      "min_rank": 1,
+      "desc": "Kaide üstünde altın kaplama V12 motor."
+    },
+    {
+      "id": "lux_hot_tub",
+      "title": "JAKUZİ",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 300,
+      "value": 90000,
+      "min_rank": 1,
+      "desc": "Işıklı jakuzi, tik güverte ve altın tırabzan."
+    },
+    {
+      "id": "lux_champion_trophy",
+      "title": "ŞAMPİYONLUK KUPASI",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 350,
+      "value": 105000,
+      "min_rank": 1,
+      "desc": "Mücevherli dev altın kupa. Bir numara sensin."
+    },
+    {
+      "id": "lux_diamond_statue",
+      "title": "DEV ELMAS HEYKELİ",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 400,
+      "value": 120000,
+      "min_rank": 1,
+      "desc": "Işık halkası üstünde süzülen dev pırlanta."
+    },
+    {
+      "id": "lux_marble_fountain",
+      "title": "MERMER ÇEŞME",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 450,
+      "value": 135000,
+      "min_rank": 1,
+      "desc": "Üç katlı mermer çeşme, altın kenarlar ve ışıklı havuz."
+    },
+    {
+      "id": "lux_gold_car_statue",
+      "title": "ALTIN SPOR ARABA HEYKELİ",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 550,
+      "value": 165000,
+      "min_rank": 1,
+      "desc": "Işıklı kaidede som altın spor araba."
+    },
+    {
+      "id": "lux_helicopter",
+      "title": "ÖZEL HELİKOPTER",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 900,
+      "value": 270000,
+      "min_rank": 1,
+      "desc": "Işıklı pistiyle altın şeritli özel helikopter. Garajın taçı."
     }
   ]
 }

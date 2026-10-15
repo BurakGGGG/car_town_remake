@@ -135,8 +135,10 @@ func _catalog() -> void:
 		var id: StringName = item["id"]
 		kinds[int(item["kind"])] = true
 		var placement: StringName = GarageDecor.placement(id)
-		if String(item.get("title", "")) == "" or int(item["price"]) <= 0 or int(item["value"]) <= 0 \
-				or int(item["value"]) >= int(item["price"]) or int(item["min_rank"]) < 1 \
+		# ₺ eşya: fiyat > değer > 0. LÜKS eşya elmasla satılır: ₺ fiyatı 0, elmas fiyatı ve değeri > 0.
+		var priced: bool = (int(item["price"]) > 0 and int(item["value"]) < int(item["price"])) \
+			if not GarageDecor.is_gem_item(id) else int(item["price"]) == 0
+		if String(item.get("title", "")) == "" or not priced or int(item["value"]) <= 0 or int(item["min_rank"]) < 1 \
 				or not [GarageDecor.PLACE_FLOOR, GarageDecor.PLACE_WALL, GarageDecor.PLACE_SURFACE,
 					GarageDecor.PLACE_TILE, GarageDecor.PLACE_EDGE].has(placement):
 			bad.append(String(id))
@@ -519,8 +521,8 @@ func _wall() -> void:
 	for item: Dictionary in GarageDecor.all():
 		if GarageDecor.placement(item["id"]) == GarageDecor.PLACE_WALL:
 			wall_items.append(item["id"])
-			if int(item["kind"]) != GarageDecor.Kind.WALL_ITEM:
-				check(14, false, "%s duvar yerleşimli ama kategori PANO değil" % item["id"])
+			if int(item["kind"]) != GarageDecor.Kind.WALL_ITEM and int(item["kind"]) != GarageDecor.Kind.LUXURY:
+				check(14, false, "%s duvar yerleşimli ama kategori PANO (ya da LÜKS) değil" % item["id"])
 	check(14, wall_items.size() >= 1 and GarageDecor.placement(CLOCK) == GarageDecor.PLACE_WALL,
 		"duvar eşyaları veride işaretli (%s)" % [wall_items])
 	decor.load_state({"owned": {CLOCK: 2, &"neon_sign": 1}})

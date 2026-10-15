@@ -1205,6 +1205,7 @@ func _build_progress_screens() -> void:
 	host.add_child(gem_store_screen)
 	profile_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
 	garage_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
+	garage_edit_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))   # LÜKS: elmas yetmedi
 	garage_screen.mod_upgrade_requested.connect(_on_mod_upgrade)
 
 

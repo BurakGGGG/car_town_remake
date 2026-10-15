@@ -50,6 +50,8 @@ var _tile_texture: ImageTexture
 var _pattern_ids: Array[StringName] = []
 ## Zemin shader'ındaki desen başına dizilerin boyu (vfx/floor_tiles.gdshader: roughness_of / metallic_of).
 const MAX_PATTERNS: int = 64
+## LÜKS (elmasla alınmış) eşyaların üstündeki ışıltılar: tek MultiMesh, düzenlerken gizli.
+var _sparkles: LuxurySparkles
 
 
 func _ready() -> void:
@@ -60,6 +62,8 @@ func _ready() -> void:
 	add_child(_root)
 	_walls = InteriorWalls.new()
 	add_child(_walls)
+	_sparkles = LuxurySparkles.new()
+	add_child(_sparkles)
 	_connect.call_deferred()
 
 
@@ -236,7 +240,23 @@ func refresh() -> void:
 		_draw_blocked()
 	if _floor_focus:
 		_apply_floor_focus()   # yeni kurulan gövdeler de soluk başlasın
+	_place_sparkles()
 	area_changed.emit()
+
+
+## Işıltılar elmasla alınmış eşyaların güncel kutularına dağılır. Düzenlerken gizli: eşya sürüklenirken
+## yerinde kalan yıldızlar yanlış yeri gösterirdi.
+func _place_sparkles() -> void:
+	if _sparkles == null:
+		return
+	var boxes: Array[AABB] = []
+	if not _editing:
+		for inst: Dictionary in _decor.instances():
+			if GarageDecor.is_gem_item(StringName(inst["item"])):
+				var body: Node3D = body_of(String(inst["iid"]))
+				if body:
+					boxes.append(_tree_box(body))
+	_sparkles.place(boxes)
 
 
 ## Garajdaki en yüksek şeyin üst kotu: duvar tepesi ya da en uzun eşya (hayalet dahil). Düzenleme
@@ -470,6 +490,8 @@ func ground_point(camera: Camera3D, screen: Vector2) -> Vector2:
 func set_editing(value: bool) -> void:
 	_editing = value
 	_rebuild_walls()   # düzenlemede bütün duvarlar opak, oyunda aracın önündekiler yarı saydam
+	if _decor:
+		_place_sparkles()
 	if _garage == null:
 		return
 	for path: String in ["BuildGrid/BuildGrid", "BuildGrid/BuildGrid/GridPreview"]:

@@ -16,6 +16,7 @@ enum Kind {
 	WALL_PIECE,      # iç duvar parçası: ızgara kenarına örülür (düz, kapı, pencere, cam, yarım, kemer)
 	FLOOR_SURFACE,   # ESKİ tüm-zemin kaplaması (v1; artık mağazada yok, kayıttaki karolara taşınır)
 	WALL_SURFACE,    # duvar kaplaması (yerleştirilmez, uygulanır)
+	LUXURY,          # LÜKS: ELMASLA satılan eşyalar (zemine ya da duvara; yerleşim kayıttan)
 	WORKSHOP,        # atölye eşyası
 	LOUNGE,          # yaşam alanı eşyası
 	WALL_ITEM,       # duvara asılan
@@ -34,7 +35,7 @@ const PLACE_EDGE: StringName = &"edge"        # iç duvar parçası: ızgara ken
 const DATA_PATH: String = "res://decor/decorations.json"
 const KIND_KEYS: Dictionary = {
 	"floor_pattern": Kind.FLOOR_PATTERN, "wall_piece": Kind.WALL_PIECE,
-	"floor_surface": Kind.FLOOR_SURFACE, "wall_surface": Kind.WALL_SURFACE,
+	"floor_surface": Kind.FLOOR_SURFACE, "wall_surface": Kind.WALL_SURFACE, "luxury": Kind.LUXURY,
 	"workshop": Kind.WORKSHOP, "lounge": Kind.LOUNGE, "wall_item": Kind.WALL_ITEM,
 	"yard": Kind.YARD, "plant": Kind.PLANT,
 }
@@ -137,6 +138,16 @@ static func scene_path(id: StringName) -> String:
 
 ## İşlevli eşya mı (ileride: ATM, parça rafı...)? Gövdeyle aynı dönüşümü paylaşan oyun düğümü
 ## `gameplay_scene` alanında verilir. Şu an katalogda işlevli eşya yok.
+## ELMAS fiyatı (LÜKS eşyalar). 0 = ₺ ile satılır (`price`).
+static func gem_price(id: StringName) -> int:
+	return int(get_item(id).get("price_gems", 0))
+
+
+## Elmasla mı satılıyor?
+static func is_gem_item(id: StringName) -> bool:
+	return gem_price(id) > 0
+
+
 static func is_functional(id: StringName) -> bool:
 	return bool(get_item(id).get("functional", _defaults.get("functional", false)))
 
@@ -164,6 +175,7 @@ static func items_in(kind: int) -> Array[Dictionary]:
 
 ## Mağaza sırası: rütbe kilidi, sonra fiyat (eşit olanlar katalog sırasında kalır). Palet kartları bu sırayla
 ## dizilir; desen katmanları ise items_in sırasında kalır (kayıt desen id'si tuttuğu için sıra serbesttir).
+## LÜKS eşyaların ₺ fiyatı 0'dır: aralarında elmas fiyatına göre dizilirler.
 static func shop_order(kind: int) -> Array[Dictionary]:
 	var out: Array[Dictionary] = items_in(kind)
 	var index: Dictionary = {}
@@ -174,6 +186,8 @@ static func shop_order(kind: int) -> Array[Dictionary]:
 			return int(a["min_rank"]) < int(b["min_rank"])
 		if int(a["price"]) != int(b["price"]):
 			return int(a["price"]) < int(b["price"])
+		if int(a.get("price_gems", 0)) != int(b.get("price_gems", 0)):
+			return int(a.get("price_gems", 0)) < int(b.get("price_gems", 0))
 		return int(index[a["id"]]) < int(index[b["id"]]))
 	return out
 
@@ -186,6 +200,7 @@ static func kind_title(kind: int) -> String:
 		Kind.FLOOR_SURFACE: return Loc.t("AVLU ZEMİNİ")
 		Kind.WALL_SURFACE: return Loc.t("DUVAR KAPLAMASI")
 		Kind.WALL_ITEM: return Loc.t("DUVAR EŞYASI")
+		Kind.LUXURY: return Loc.t("LÜKS")
 		Kind.WORKSHOP: return Loc.t("ATÖLYE")
 		Kind.LOUNGE: return Loc.t("YAŞAM ALANI")
 		Kind.YARD: return Loc.t("AVLU DÜZENİ")
@@ -220,6 +235,7 @@ static func load_from(path: String = DATA_PATH) -> bool:
 		entry["id"] = StringName(String(entry["id"]))
 		entry["kind"] = int(KIND_KEYS[kind_key])
 		entry["price"] = int(entry.get("price", 0))
+		entry["price_gems"] = maxi(int(entry.get("price_gems", 0)), 0)
 		entry["value"] = int(entry.get("value", 0))
 		entry["min_rank"] = int(entry.get("min_rank", 1))
 		if not entry.has("placement"):
