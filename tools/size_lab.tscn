@@ -1,92 +1,96 @@
 [gd_scene format=3 uid="uid://bbmqfxq6ush77"]
 
-[ext_resource type="PackedScene" path="res://assets/cars/bmw_e_46.tscn" id="1_b3yst"]
-[ext_resource type="PackedScene" path="res://assets/cars/hyundai_getz.tscn" id="2_ns2hw"]
-[ext_resource type="PackedScene" path="res://assets/cars/renault_fluence.tscn" id="3_5nmrl"]
-[ext_resource type="PackedScene" path="res://assets/cars/volswagen_passat_b_5_5.tscn" id="4_7kvvf"]
-[ext_resource type="PackedScene" path="res://assets/cars/hyundai_era.tscn" id="5_libip"]
-[ext_resource type="PackedScene" path="res://assets/cars/tofas_sahin.tscn" id="6_wek3g"]
-[ext_resource type="PackedScene" path="res://assets/cars/renault_toros.tscn" id="7_sc14l"]
-[ext_resource type="PackedScene" path="res://assets/cars/hyundai_accent_blue.tscn" id="8_haqhs"]
-[ext_resource type="PackedScene" path="res://assets/cars/ford_focus.tscn" id="9_4ly0r"]
-[ext_resource type="PackedScene" path="res://assets/cars/skoda_kamiq.tscn" id="10_mxvtq"]
-[ext_resource type="PackedScene" path="res://assets/cars/vw_golf_7.tscn" id="11_ekvpm"]
-[ext_resource type="PackedScene" path="res://assets/cars/seat_leon.tscn" id="12_fvg6e"]
-[ext_resource type="PackedScene" path="res://assets/cars/honda_civic.tscn" id="13_mklqs"]
-[ext_resource type="PackedScene" path="res://assets/cars/audi_a3.tscn" id="14_qqn5r"]
-[ext_resource type="PackedScene" path="res://assets/cars/volvo_s60.tscn" id="15_k687w"]
-[ext_resource type="PackedScene" path="res://assets/cars/bmw_e60.tscn" id="16_mqbpo"]
-[ext_resource type="PackedScene" path="res://assets/cars/alfa_romeo_159.tscn" id="17_c64fj"]
-[ext_resource type="PackedScene" path="res://assets/cars/mercedes_cls.tscn" id="18_r3lws"]
-[ext_resource type="PackedScene" path="res://assets/cars/audi_rs6.tscn" id="19_dwh6n"]
-[ext_resource type="PackedScene" path="res://assets/cars/porsche_gt3.tscn" id="20_w8cle"]
-[ext_resource type="PackedScene" path="res://assets/cars/lambo_huracan.tscn" id="21_egq1o"]
-[ext_resource type="PackedScene" path="res://assets/cars/ferrari_488_pista.tscn" id="22_37heo"]
-[ext_resource type="PackedScene" path="res://assets/cars/opel_corsa.tscn" id="23_74nn0"]
-[ext_resource type="PackedScene" path="res://assets/cars/tesla_model_y.tscn" id="24_e1wx8"]
-[ext_resource type="PackedScene" path="res://assets/cars/chevrolet_camaro.tscn" id="25_urc7a"]
-[ext_resource type="PackedScene" path="res://assets/cars/mercedes_s400.tscn" id="26_iad2h"]
-[ext_resource type="PackedScene" path="res://assets/cars/vw_beetle.tscn" id="27_bfbfv"]
-[ext_resource type="PackedScene" path="res://assets/cars/tofas_murat_124.tscn" id="28_pjymf"]
-[ext_resource type="PackedScene" path="res://assets/cars/anadol_a1.tscn" id="29_thx36"]
-[ext_resource type="PackedScene" path="res://assets/cars/vw_beetle_1967.tscn" id="30_s3lsm"]
-[ext_resource type="PackedScene" path="res://assets/cars/fiat_500_1965.tscn" id="31_8t7om"]
-[ext_resource type="PackedScene" path="res://assets/cars/tofas_murat_131.tscn" id="32_gseh3"]
-[ext_resource type="PackedScene" path="res://assets/cars/mini_cooper_1965.tscn" id="33_8bxcb"]
-[ext_resource type="PackedScene" path="res://assets/cars/willys_jeep_mb.tscn" id="34_jll03"]
-[ext_resource type="PackedScene" path="res://assets/cars/peugeot_404.tscn" id="35_wb84j"]
-[ext_resource type="PackedScene" path="res://assets/cars/mercedes_w123.tscn" id="36_t4417"]
-[ext_resource type="PackedScene" path="res://assets/cars/vw_t1_bus.tscn" id="37_icr83"]
-[ext_resource type="PackedScene" path="res://assets/cars/land_rover_series3.tscn" id="38_vm2nk"]
-[ext_resource type="PackedScene" path="res://assets/cars/chevrolet_bel_air_1956.tscn" id="39_wi4pt"]
-[ext_resource type="PackedScene" path="res://assets/cars/ford_mustang_1967.tscn" id="40_18ntw"]
-[ext_resource type="PackedScene" path="res://assets/cars/chevrolet_corvette_c2.tscn" id="41_kyhf2"]
-[ext_resource type="PackedScene" path="res://assets/cars/jaguar_e_type.tscn" id="42_brx8p"]
-[ext_resource type="PackedScene" path="res://assets/cars/aston_martin_db5.tscn" id="43_0drj0"]
-[ext_resource type="PackedScene" path="res://assets/cars/dodge_charger_1970.tscn" id="44_lqyuk"]
-[ext_resource type="PackedScene" path="res://assets/cars/porsche_911_1973.tscn" id="45_16101"]
-[ext_resource type="PackedScene" path="res://assets/cars/mercedes_300sl.tscn" id="46_qjoog"]
-[ext_resource type="PackedScene" path="res://assets/cars/lamborghini_miura.tscn" id="47_5xokx"]
-[ext_resource type="PackedScene" path="res://assets/cars/ford_escort_rs1600.tscn" id="48_lmvh5"]
-[ext_resource type="PackedScene" path="res://assets/cars/lancia_stratos.tscn" id="49_ynu41"]
-[ext_resource type="PackedScene" path="res://assets/cars/bmw_m3_e30.tscn" id="50_330ox"]
-[ext_resource type="PackedScene" path="res://assets/cars/toyota_celica_gt4.tscn" id="51_kvqk0"]
-[ext_resource type="PackedScene" path="res://assets/cars/lancia_delta_integrale.tscn" id="52_xof8p"]
-[ext_resource type="PackedScene" path="res://assets/cars/audi_quattro_s1.tscn" id="53_8gp8w"]
-[ext_resource type="PackedScene" path="res://assets/cars/ford_rs200.tscn" id="54_7yyof"]
-[ext_resource type="PackedScene" path="res://assets/cars/mitsubishi_evo6.tscn" id="55_v3lxg"]
+[ext_resource type="PackedScene" path="res://assets/cars/bmw_e_46.tscn" id="1_libip"]
+[ext_resource type="PackedScene" path="res://assets/cars/hyundai_getz.tscn" id="2_wek3g"]
+[ext_resource type="PackedScene" path="res://assets/cars/renault_fluence.tscn" id="3_sc14l"]
+[ext_resource type="PackedScene" path="res://assets/cars/volswagen_passat_b_5_5.tscn" id="4_haqhs"]
+[ext_resource type="PackedScene" path="res://assets/cars/hyundai_era.tscn" id="5_4ly0r"]
+[ext_resource type="PackedScene" path="res://assets/cars/tofas_sahin.tscn" id="6_mxvtq"]
+[ext_resource type="PackedScene" path="res://assets/cars/renault_toros.tscn" id="7_ekvpm"]
+[ext_resource type="PackedScene" path="res://assets/cars/hyundai_accent_blue.tscn" id="8_fvg6e"]
+[ext_resource type="PackedScene" path="res://assets/cars/ford_focus.tscn" id="9_mklqs"]
+[ext_resource type="PackedScene" path="res://assets/cars/skoda_kamiq.tscn" id="10_qqn5r"]
+[ext_resource type="PackedScene" path="res://assets/cars/vw_golf_7.tscn" id="11_k687w"]
+[ext_resource type="PackedScene" path="res://assets/cars/seat_leon.tscn" id="12_mqbpo"]
+[ext_resource type="PackedScene" path="res://assets/cars/honda_civic.tscn" id="13_c64fj"]
+[ext_resource type="PackedScene" path="res://assets/cars/audi_a3.tscn" id="14_r3lws"]
+[ext_resource type="PackedScene" path="res://assets/cars/volvo_s60.tscn" id="15_dwh6n"]
+[ext_resource type="PackedScene" path="res://assets/cars/bmw_e60.tscn" id="16_w8cle"]
+[ext_resource type="PackedScene" path="res://assets/cars/alfa_romeo_159.tscn" id="17_egq1o"]
+[ext_resource type="PackedScene" path="res://assets/cars/mercedes_cls.tscn" id="18_37heo"]
+[ext_resource type="PackedScene" path="res://assets/cars/audi_rs6.tscn" id="19_74nn0"]
+[ext_resource type="PackedScene" path="res://assets/cars/porsche_gt3.tscn" id="20_e1wx8"]
+[ext_resource type="PackedScene" path="res://assets/cars/lambo_huracan.tscn" id="21_urc7a"]
+[ext_resource type="PackedScene" path="res://assets/cars/ferrari_488_pista.tscn" id="22_iad2h"]
+[ext_resource type="PackedScene" path="res://assets/cars/opel_corsa.tscn" id="23_bfbfv"]
+[ext_resource type="PackedScene" path="res://assets/cars/tesla_model_y.tscn" id="24_pjymf"]
+[ext_resource type="PackedScene" path="res://assets/cars/chevrolet_camaro.tscn" id="25_thx36"]
+[ext_resource type="PackedScene" path="res://assets/cars/mercedes_s400.tscn" id="26_s3lsm"]
+[ext_resource type="PackedScene" path="res://assets/cars/vw_beetle.tscn" id="27_8t7om"]
+[ext_resource type="PackedScene" path="res://assets/cars/togg_t10x.tscn" id="28_gseh3"]
+[ext_resource type="PackedScene" path="res://assets/cars/togg_t10f.tscn" id="29_8bxcb"]
+[ext_resource type="PackedScene" path="res://assets/cars/police_vito.tscn" id="30_jll03"]
+[ext_resource type="PackedScene" path="res://assets/cars/police_bentley.tscn" id="31_wb84j"]
+[ext_resource type="PackedScene" path="res://assets/cars/tofas_murat_124.tscn" id="32_t4417"]
+[ext_resource type="PackedScene" path="res://assets/cars/anadol_a1.tscn" id="33_icr83"]
+[ext_resource type="PackedScene" path="res://assets/cars/vw_beetle_1967.tscn" id="34_vm2nk"]
+[ext_resource type="PackedScene" path="res://assets/cars/fiat_500_1965.tscn" id="35_wi4pt"]
+[ext_resource type="PackedScene" path="res://assets/cars/tofas_murat_131.tscn" id="36_18ntw"]
+[ext_resource type="PackedScene" path="res://assets/cars/mini_cooper_1965.tscn" id="37_kyhf2"]
+[ext_resource type="PackedScene" path="res://assets/cars/willys_jeep_mb.tscn" id="38_brx8p"]
+[ext_resource type="PackedScene" path="res://assets/cars/peugeot_404.tscn" id="39_0drj0"]
+[ext_resource type="PackedScene" path="res://assets/cars/mercedes_w123.tscn" id="40_lqyuk"]
+[ext_resource type="PackedScene" path="res://assets/cars/vw_t1_bus.tscn" id="41_16101"]
+[ext_resource type="PackedScene" path="res://assets/cars/land_rover_series3.tscn" id="42_qjoog"]
+[ext_resource type="PackedScene" path="res://assets/cars/chevrolet_bel_air_1956.tscn" id="43_5xokx"]
+[ext_resource type="PackedScene" path="res://assets/cars/ford_mustang_1967.tscn" id="44_lmvh5"]
+[ext_resource type="PackedScene" path="res://assets/cars/chevrolet_corvette_c2.tscn" id="45_ynu41"]
+[ext_resource type="PackedScene" path="res://assets/cars/jaguar_e_type.tscn" id="46_330ox"]
+[ext_resource type="PackedScene" path="res://assets/cars/aston_martin_db5.tscn" id="47_kvqk0"]
+[ext_resource type="PackedScene" path="res://assets/cars/dodge_charger_1970.tscn" id="48_xof8p"]
+[ext_resource type="PackedScene" path="res://assets/cars/porsche_911_1973.tscn" id="49_8gp8w"]
+[ext_resource type="PackedScene" path="res://assets/cars/mercedes_300sl.tscn" id="50_7yyof"]
+[ext_resource type="PackedScene" path="res://assets/cars/lamborghini_miura.tscn" id="51_v3lxg"]
+[ext_resource type="PackedScene" path="res://assets/cars/ford_escort_rs1600.tscn" id="52_333ri"]
+[ext_resource type="PackedScene" path="res://assets/cars/lancia_stratos.tscn" id="53_gjv88"]
+[ext_resource type="PackedScene" path="res://assets/cars/bmw_m3_e30.tscn" id="54_d2fqw"]
+[ext_resource type="PackedScene" path="res://assets/cars/toyota_celica_gt4.tscn" id="55_mt5y2"]
+[ext_resource type="PackedScene" path="res://assets/cars/lancia_delta_integrale.tscn" id="56_2mdr7"]
+[ext_resource type="PackedScene" path="res://assets/cars/audi_quattro_s1.tscn" id="57_56wnj"]
+[ext_resource type="PackedScene" path="res://assets/cars/ford_rs200.tscn" id="58_6mm78"]
+[ext_resource type="PackedScene" path="res://assets/cars/mitsubishi_evo6.tscn" id="59_2vaos"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_333ri"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0fuxv"]
 albedo_color = Color(0.55, 0.57, 0.6, 1)
 
-[sub_resource type="PlaneMesh" id="PlaneMesh_gjv88"]
-size = Vector2(9.2, 32.8)
+[sub_resource type="PlaneMesh" id="PlaneMesh_a0owi"]
+size = Vector2(9.2, 35)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d2fqw"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wq25m"]
 albedo_color = Color(0.2, 0.75, 0.3, 1)
 
-[sub_resource type="BoxMesh" id="BoxMesh_mt5y2"]
+[sub_resource type="BoxMesh" id="BoxMesh_4xhju"]
 size = Vector3(1, 0.02, 0.05)
 
-[node name="SizeLab" type="Node3D" unique_id=938855245]
+[node name="SizeLab" type="Node3D" unique_id=228455966]
 
-[node name="Floor" type="MeshInstance3D" parent="." unique_id=1365905960]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.7, -0.001, 14.3)
-material_override = SubResource("StandardMaterial3D_333ri")
-mesh = SubResource("PlaneMesh_gjv88")
+[node name="Floor" type="MeshInstance3D" parent="." unique_id=1339549133]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.7, -0.001, 15.4)
+material_override = SubResource("StandardMaterial3D_0fuxv")
+mesh = SubResource("PlaneMesh_a0owi")
 
-[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1062122138]
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1198805022]
 transform = Transform3D(0.81915206, -0.46984634, 0.32898995, 0, 0.57357645, 0.81915206, -0.57357645, -0.6710101, 0.46984634, 0, 0, 0)
 
-[node name="Ruler_1_birim" type="MeshInstance3D" parent="." unique_id=710418663]
+[node name="Ruler_1_birim" type="MeshInstance3D" parent="." unique_id=969612789]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0.01, -1)
-material_override = SubResource("StandardMaterial3D_d2fqw")
-mesh = SubResource("BoxMesh_mt5y2")
+material_override = SubResource("StandardMaterial3D_wq25m")
+mesh = SubResource("BoxMesh_4xhju")
 
-[node name="bmw_e46" type="Node3D" parent="." unique_id=1702285548 instance=ExtResource("1_b3yst")]
+[node name="bmw_e46" type="Node3D" parent="." unique_id=1702285548 instance=ExtResource("1_libip")]
 transform = Transform3D(1.05, 0, 0, 0, 1.05, 0, 0, 0, 1.05, 0, 0, 0)
 
-[node name="Label_bmw_e46" type="Label3D" parent="." unique_id=573299619]
+[node name="Label_bmw_e46" type="Label3D" parent="." unique_id=1619021944]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0.85)
 pixel_size = 0.0025
 billboard = 1
@@ -94,10 +98,10 @@ text = "BMW E46
 1.0500"
 font_size = 48
 
-[node name="hyundai_getz" type="Node3D" parent="." unique_id=462952007 instance=ExtResource("2_ns2hw")]
+[node name="hyundai_getz" type="Node3D" parent="." unique_id=1026572392 instance=ExtResource("2_wek3g")]
 transform = Transform3D(0.85, 0, 0, 0, 0.85, 0, 0, 0, 0.85, 1.8, 0, 0)
 
-[node name="Label_hyundai_getz" type="Label3D" parent="." unique_id=2063014301]
+[node name="Label_hyundai_getz" type="Label3D" parent="." unique_id=901279729]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 0.85)
 pixel_size = 0.0025
 billboard = 1
@@ -105,10 +109,10 @@ text = "HYUNDAI GETZ
 0.8500"
 font_size = 48
 
-[node name="renault_fluence" type="Node3D" parent="." unique_id=1075581627 instance=ExtResource("3_5nmrl")]
+[node name="renault_fluence" type="Node3D" parent="." unique_id=1075581627 instance=ExtResource("3_sc14l")]
 transform = Transform3D(1.05, 0, 0, 0, 1.05, 0, 0, 0, 1.05, 3.6, 0, 0)
 
-[node name="Label_renault_fluence" type="Label3D" parent="." unique_id=363409184]
+[node name="Label_renault_fluence" type="Label3D" parent="." unique_id=40819053]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 0.85)
 pixel_size = 0.0025
 billboard = 1
@@ -116,10 +120,10 @@ text = "RENAULT FLUENCE
 1.0500"
 font_size = 48
 
-[node name="vw_passat_b55" type="Node3D" parent="." unique_id=1412565957 instance=ExtResource("4_7kvvf")]
+[node name="vw_passat_b55" type="Node3D" parent="." unique_id=1412565957 instance=ExtResource("4_haqhs")]
 transform = Transform3D(1.12, 0, 0, 0, 1.12, 0, 0, 0, 1.12, 5.4, 0, 0)
 
-[node name="Label_vw_passat_b55" type="Label3D" parent="." unique_id=1930651407]
+[node name="Label_vw_passat_b55" type="Label3D" parent="." unique_id=1626213083]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 0.85)
 pixel_size = 0.0025
 billboard = 1
@@ -127,10 +131,10 @@ text = "VOLKSWAGEN PASSAT B5.5
 1.1200"
 font_size = 48
 
-[node name="hyundai_era" type="Node3D" parent="." unique_id=1705771246 instance=ExtResource("5_libip")]
+[node name="hyundai_era" type="Node3D" parent="." unique_id=1705771246 instance=ExtResource("5_4ly0r")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.2)
 
-[node name="Label_hyundai_era" type="Label3D" parent="." unique_id=587022751]
+[node name="Label_hyundai_era" type="Label3D" parent="." unique_id=1941100856]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 3.05)
 pixel_size = 0.0025
 billboard = 1
@@ -138,10 +142,10 @@ text = "HYUNDAI ERA
 1.0000"
 font_size = 48
 
-[node name="tofas_sahin" type="Node3D" parent="." unique_id=1566509931 instance=ExtResource("6_wek3g")]
+[node name="tofas_sahin" type="Node3D" parent="." unique_id=1566509931 instance=ExtResource("6_mxvtq")]
 transform = Transform3D(0.97, 0, 0, 0, 0.97, 0, 0, 0, 0.97, 1.8, 0, 2.2)
 
-[node name="Label_tofas_sahin" type="Label3D" parent="." unique_id=239842186]
+[node name="Label_tofas_sahin" type="Label3D" parent="." unique_id=1888778729]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 3.05)
 pixel_size = 0.0025
 billboard = 1
@@ -149,10 +153,10 @@ text = "TOFAŞ ŞAHİN
 0.9700"
 font_size = 48
 
-[node name="renault_toros" type="Node3D" parent="." unique_id=53100447 instance=ExtResource("7_sc14l")]
+[node name="renault_toros" type="Node3D" parent="." unique_id=1365748927 instance=ExtResource("7_ekvpm")]
 transform = Transform3D(0.94, 0, 0, 0, 0.94, 0, 0, 0, 0.94, 3.6, 0, 2.2)
 
-[node name="Label_renault_toros" type="Label3D" parent="." unique_id=1558290662]
+[node name="Label_renault_toros" type="Label3D" parent="." unique_id=1539828191]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 3.05)
 pixel_size = 0.0025
 billboard = 1
@@ -160,10 +164,10 @@ text = "RENAULT TOROS
 0.9400"
 font_size = 48
 
-[node name="hyundai_accent_blue" type="Node3D" parent="." unique_id=1439423071 instance=ExtResource("8_haqhs")]
+[node name="hyundai_accent_blue" type="Node3D" parent="." unique_id=2102046766 instance=ExtResource("8_fvg6e")]
 transform = Transform3D(0.9954, 0, 0, 0, 0.9954, 0, 0, 0, 0.9954, 5.4, 0, 2.2)
 
-[node name="Label_hyundai_accent_blue" type="Label3D" parent="." unique_id=817656108]
+[node name="Label_hyundai_accent_blue" type="Label3D" parent="." unique_id=677386680]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 3.05)
 pixel_size = 0.0025
 billboard = 1
@@ -171,10 +175,10 @@ text = "HYUNDAI ACCENT BLUE
 0.9954"
 font_size = 48
 
-[node name="ford_focus" type="Node3D" parent="." unique_id=144529676 instance=ExtResource("9_4ly0r")]
+[node name="ford_focus" type="Node3D" parent="." unique_id=1138377911 instance=ExtResource("9_mklqs")]
 transform = Transform3D(1.04, 0, 0, 0, 1.04, 0, 0, 0, 1.04, 0, 0, 4.4)
 
-[node name="Label_ford_focus" type="Label3D" parent="." unique_id=209439109]
+[node name="Label_ford_focus" type="Label3D" parent="." unique_id=675963911]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 5.25)
 pixel_size = 0.0025
 billboard = 1
@@ -182,10 +186,10 @@ text = "FORD FOCUS
 1.0400"
 font_size = 48
 
-[node name="skoda_kamiq" type="Node3D" parent="." unique_id=233268070 instance=ExtResource("10_mxvtq")]
+[node name="skoda_kamiq" type="Node3D" parent="." unique_id=341195682 instance=ExtResource("10_qqn5r")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0, 4.4)
 
-[node name="Label_skoda_kamiq" type="Label3D" parent="." unique_id=1891678544]
+[node name="Label_skoda_kamiq" type="Label3D" parent="." unique_id=29543861]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 5.25)
 pixel_size = 0.0025
 billboard = 1
@@ -193,10 +197,10 @@ text = "SKODA KAMIQ
 1.0000"
 font_size = 48
 
-[node name="vw_golf_7" type="Node3D" parent="." unique_id=1555284988 instance=ExtResource("11_ekvpm")]
+[node name="vw_golf_7" type="Node3D" parent="." unique_id=863263318 instance=ExtResource("11_k687w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0, 4.4)
 
-[node name="Label_vw_golf_7" type="Label3D" parent="." unique_id=1896605721]
+[node name="Label_vw_golf_7" type="Label3D" parent="." unique_id=653581003]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 5.25)
 pixel_size = 0.0025
 billboard = 1
@@ -204,10 +208,10 @@ text = "VW GOLF 7
 1.0000"
 font_size = 48
 
-[node name="seat_leon" type="Node3D" parent="." unique_id=946091755 instance=ExtResource("12_fvg6e")]
+[node name="seat_leon" type="Node3D" parent="." unique_id=490181147 instance=ExtResource("12_mqbpo")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0, 4.4)
 
-[node name="Label_seat_leon" type="Label3D" parent="." unique_id=739585573]
+[node name="Label_seat_leon" type="Label3D" parent="." unique_id=1409364776]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 5.25)
 pixel_size = 0.0025
 billboard = 1
@@ -215,10 +219,10 @@ text = "SEAT LEON
 1.0000"
 font_size = 48
 
-[node name="honda_civic" type="Node3D" parent="." unique_id=997243351 instance=ExtResource("13_mklqs")]
+[node name="honda_civic" type="Node3D" parent="." unique_id=358354463 instance=ExtResource("13_c64fj")]
 transform = Transform3D(1.05, 0, 0, 0, 1.05, 0, 0, 0, 1.05, 0, 0, 6.6)
 
-[node name="Label_honda_civic" type="Label3D" parent="." unique_id=714874045]
+[node name="Label_honda_civic" type="Label3D" parent="." unique_id=695739398]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 7.45)
 pixel_size = 0.0025
 billboard = 1
@@ -226,10 +230,10 @@ text = "HONDA CIVIC VTEC
 1.0500"
 font_size = 48
 
-[node name="audi_a3" type="Node3D" parent="." unique_id=1558642955 instance=ExtResource("14_qqn5r")]
+[node name="audi_a3" type="Node3D" parent="." unique_id=1847610931 instance=ExtResource("14_r3lws")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0, 6.6)
 
-[node name="Label_audi_a3" type="Label3D" parent="." unique_id=150631903]
+[node name="Label_audi_a3" type="Label3D" parent="." unique_id=1314525145]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 7.45)
 pixel_size = 0.0025
 billboard = 1
@@ -237,10 +241,10 @@ text = "AUDI A3
 1.0000"
 font_size = 48
 
-[node name="volvo_s60" type="Node3D" parent="." unique_id=215723045 instance=ExtResource("15_k687w")]
+[node name="volvo_s60" type="Node3D" parent="." unique_id=1022304636 instance=ExtResource("15_dwh6n")]
 transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, 3.6, 0, 6.6)
 
-[node name="Label_volvo_s60" type="Label3D" parent="." unique_id=1210348175]
+[node name="Label_volvo_s60" type="Label3D" parent="." unique_id=1636380903]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 7.45)
 pixel_size = 0.0025
 billboard = 1
@@ -248,10 +252,10 @@ text = "VOLVO S60
 1.1000"
 font_size = 48
 
-[node name="bmw_e60" type="Node3D" parent="." unique_id=2045829479 instance=ExtResource("16_mqbpo")]
+[node name="bmw_e60" type="Node3D" parent="." unique_id=1737461319 instance=ExtResource("16_w8cle")]
 transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 5.4, 0, 6.6)
 
-[node name="Label_bmw_e60" type="Label3D" parent="." unique_id=949489532]
+[node name="Label_bmw_e60" type="Label3D" parent="." unique_id=2022182713]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 7.45)
 pixel_size = 0.0025
 billboard = 1
@@ -259,10 +263,10 @@ text = "BMW E60
 1.1500"
 font_size = 48
 
-[node name="alfa_romeo_159" type="Node3D" parent="." unique_id=776672964 instance=ExtResource("17_c64fj")]
+[node name="alfa_romeo_159" type="Node3D" parent="." unique_id=1877206008 instance=ExtResource("17_egq1o")]
 transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, 0, 0, 8.8)
 
-[node name="Label_alfa_romeo_159" type="Label3D" parent="." unique_id=1154283031]
+[node name="Label_alfa_romeo_159" type="Label3D" parent="." unique_id=1496723230]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 9.650001)
 pixel_size = 0.0025
 billboard = 1
@@ -270,10 +274,10 @@ text = "ALFA ROMEO 159
 1.1000"
 font_size = 48
 
-[node name="mercedes_cls" type="Node3D" parent="." unique_id=2034013490 instance=ExtResource("18_r3lws")]
+[node name="mercedes_cls" type="Node3D" parent="." unique_id=1343675399 instance=ExtResource("18_37heo")]
 transform = Transform3D(1.17, 0, 0, 0, 1.17, 0, 0, 0, 1.17, 1.8, 0, 8.8)
 
-[node name="Label_mercedes_cls" type="Label3D" parent="." unique_id=2033046414]
+[node name="Label_mercedes_cls" type="Label3D" parent="." unique_id=588920790]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 9.650001)
 pixel_size = 0.0025
 billboard = 1
@@ -281,10 +285,10 @@ text = "MERCEDES CLS
 1.1700"
 font_size = 48
 
-[node name="audi_rs6" type="Node3D" parent="." unique_id=1514285770 instance=ExtResource("19_dwh6n")]
+[node name="audi_rs6" type="Node3D" parent="." unique_id=1627122957 instance=ExtResource("19_74nn0")]
 transform = Transform3D(1.23, 0, 0, 0, 1.23, 0, 0, 0, 1.23, 3.6, 0, 8.8)
 
-[node name="Label_audi_rs6" type="Label3D" parent="." unique_id=1480223946]
+[node name="Label_audi_rs6" type="Label3D" parent="." unique_id=467446500]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 9.650001)
 pixel_size = 0.0025
 billboard = 1
@@ -292,10 +296,10 @@ text = "AUDI RS6
 1.2300"
 font_size = 48
 
-[node name="porsche_gt3" type="Node3D" parent="." unique_id=1947739803 instance=ExtResource("20_w8cle")]
+[node name="porsche_gt3" type="Node3D" parent="." unique_id=1585963483 instance=ExtResource("20_e1wx8")]
 transform = Transform3D(1.12, 0, 0, 0, 1.12, 0, 0, 0, 1.12, 5.4, 0, 8.8)
 
-[node name="Label_porsche_gt3" type="Label3D" parent="." unique_id=2051295927]
+[node name="Label_porsche_gt3" type="Label3D" parent="." unique_id=2120461129]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 9.650001)
 pixel_size = 0.0025
 billboard = 1
@@ -303,10 +307,10 @@ text = "PORSCHE 911 GT3
 1.1200"
 font_size = 48
 
-[node name="lambo_huracan" type="Node3D" parent="." unique_id=196431620 instance=ExtResource("21_egq1o")]
+[node name="lambo_huracan" type="Node3D" parent="." unique_id=178901726 instance=ExtResource("21_urc7a")]
 transform = Transform3D(1.12, 0, 0, 0, 1.12, 0, 0, 0, 1.12, 0, 0, 11)
 
-[node name="Label_lambo_huracan" type="Label3D" parent="." unique_id=1170390932]
+[node name="Label_lambo_huracan" type="Label3D" parent="." unique_id=154273730]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 11.85)
 pixel_size = 0.0025
 billboard = 1
@@ -314,10 +318,10 @@ text = "LAMBORGHINI HURACÁN
 1.1200"
 font_size = 48
 
-[node name="ferrari_488_pista" type="Node3D" parent="." unique_id=358373290 instance=ExtResource("22_37heo")]
+[node name="ferrari_488_pista" type="Node3D" parent="." unique_id=1185431463 instance=ExtResource("22_iad2h")]
 transform = Transform3D(1.12, 0, 0, 0, 1.12, 0, 0, 0, 1.12, 1.8, 0, 11)
 
-[node name="Label_ferrari_488_pista" type="Label3D" parent="." unique_id=1374548787]
+[node name="Label_ferrari_488_pista" type="Label3D" parent="." unique_id=825753448]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 11.85)
 pixel_size = 0.0025
 billboard = 1
@@ -325,10 +329,10 @@ text = "FERRARI 488 PISTA
 1.1200"
 font_size = 48
 
-[node name="opel_corsa" type="Node3D" parent="." unique_id=1292661568 instance=ExtResource("23_74nn0")]
+[node name="opel_corsa" type="Node3D" parent="." unique_id=1260024682 instance=ExtResource("23_bfbfv")]
 transform = Transform3D(0.82, 0, 0, 0, 0.82, 0, 0, 0, 0.82, 3.6, 0, 11)
 
-[node name="Label_opel_corsa" type="Label3D" parent="." unique_id=213312292]
+[node name="Label_opel_corsa" type="Label3D" parent="." unique_id=1991263358]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 11.85)
 pixel_size = 0.0025
 billboard = 1
@@ -336,10 +340,10 @@ text = "OPEL CORSA
 0.8200"
 font_size = 48
 
-[node name="tesla_model_y" type="Node3D" parent="." unique_id=2091221878 instance=ExtResource("24_e1wx8")]
+[node name="tesla_model_y" type="Node3D" parent="." unique_id=923411873 instance=ExtResource("24_pjymf")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0, 11)
 
-[node name="Label_tesla_model_y" type="Label3D" parent="." unique_id=1178779007]
+[node name="Label_tesla_model_y" type="Label3D" parent="." unique_id=66023319]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 11.85)
 pixel_size = 0.0025
 billboard = 1
@@ -347,10 +351,10 @@ text = "TESLA MODEL Y
 1.0000"
 font_size = 48
 
-[node name="chevrolet_camaro" type="Node3D" parent="." unique_id=1089205857 instance=ExtResource("25_urc7a")]
+[node name="chevrolet_camaro" type="Node3D" parent="." unique_id=584336593 instance=ExtResource("25_thx36")]
 transform = Transform3D(1.02, 0, 0, 0, 1.02, 0, 0, 0, 1.02, 0, 0, 13.2)
 
-[node name="Label_chevrolet_camaro" type="Label3D" parent="." unique_id=1461902346]
+[node name="Label_chevrolet_camaro" type="Label3D" parent="." unique_id=1859964152]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 14.05)
 pixel_size = 0.0025
 billboard = 1
@@ -358,10 +362,10 @@ text = "CHEVROLET CAMARO
 1.0200"
 font_size = 48
 
-[node name="mercedes_s400" type="Node3D" parent="." unique_id=331866502 instance=ExtResource("26_iad2h")]
+[node name="mercedes_s400" type="Node3D" parent="." unique_id=1073183099 instance=ExtResource("26_s3lsm")]
 transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, 1.8, 0, 13.2)
 
-[node name="Label_mercedes_s400" type="Label3D" parent="." unique_id=839533369]
+[node name="Label_mercedes_s400" type="Label3D" parent="." unique_id=708644011]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 14.05)
 pixel_size = 0.0025
 billboard = 1
@@ -369,10 +373,10 @@ text = "MERCEDES S400
 1.2000"
 font_size = 48
 
-[node name="vw_beetle" type="Node3D" parent="." unique_id=817425880 instance=ExtResource("27_bfbfv")]
+[node name="vw_beetle" type="Node3D" parent="." unique_id=1457849318 instance=ExtResource("27_8t7om")]
 transform = Transform3D(0.97, 0, 0, 0, 0.97, 0, 0, 0, 0.97, 3.6, 0, 13.2)
 
-[node name="Label_vw_beetle" type="Label3D" parent="." unique_id=2008113296]
+[node name="Label_vw_beetle" type="Label3D" parent="." unique_id=1549391441]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 14.05)
 pixel_size = 0.0025
 billboard = 1
@@ -380,308 +384,352 @@ text = "VW BEETLE
 0.9700"
 font_size = 48
 
-[node name="tofas_murat_124" type="Node3D" parent="." unique_id=176314327 instance=ExtResource("28_pjymf")]
-transform = Transform3D(0.92, 0, 0, 0, 0.92, 0, 0, 0, 0.92, 5.4, 0, 13.2)
+[node name="togg_t10x" type="Node3D" parent="." unique_id=263409091 instance=ExtResource("28_gseh3")]
+transform = Transform3D(1.05, 0, 0, 0, 1.05, 0, 0, 0, 1.05, 5.4, 0, 13.2)
 
-[node name="Label_tofas_murat_124" type="Label3D" parent="." unique_id=534379226]
+[node name="Label_togg_t10x" type="Label3D" parent="." unique_id=1069449768]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 14.05)
+pixel_size = 0.0025
+billboard = 1
+text = "TOGG T10X
+1.0500"
+font_size = 48
+
+[node name="togg_t10f" type="Node3D" parent="." unique_id=319537661 instance=ExtResource("29_8bxcb")]
+transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, 0, 0, 15.4)
+
+[node name="Label_togg_t10f" type="Label3D" parent="." unique_id=1382003724]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 16.25)
+pixel_size = 0.0025
+billboard = 1
+text = "TOGG T10F
+1.1000"
+font_size = 48
+
+[node name="police_vito" type="Node3D" parent="." unique_id=2059298684 instance=ExtResource("30_jll03")]
+transform = Transform3D(1.17, 0, 0, 0, 1.17, 0, 0, 0, 1.17, 1.8, 0, 15.4)
+
+[node name="Label_police_vito" type="Label3D" parent="." unique_id=454854891]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 16.25)
+pixel_size = 0.0025
+billboard = 1
+text = "VITO POLIZEI
+1.1700"
+font_size = 48
+
+[node name="police_bentley" type="Node3D" parent="." unique_id=1340277801 instance=ExtResource("31_wb84j")]
+transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, 3.6, 0, 15.4)
+
+[node name="Label_police_bentley" type="Label3D" parent="." unique_id=1853126202]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 16.25)
+pixel_size = 0.0025
+billboard = 1
+text = "BENTLEY POLİS
+1.1000"
+font_size = 48
+
+[node name="tofas_murat_124" type="Node3D" parent="." unique_id=302047425 instance=ExtResource("32_t4417")]
+transform = Transform3D(0.92, 0, 0, 0, 0.92, 0, 0, 0, 0.92, 5.4, 0, 15.4)
+
+[node name="Label_tofas_murat_124" type="Label3D" parent="." unique_id=163204053]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 16.25)
 pixel_size = 0.0025
 billboard = 1
 text = "TOFAŞ MURAT 124
 0.9200"
 font_size = 48
 
-[node name="anadol_a1" type="Node3D" parent="." unique_id=1503823119 instance=ExtResource("29_thx36")]
-transform = Transform3D(0.96, 0, 0, 0, 0.96, 0, 0, 0, 0.96, 0, 0, 15.4)
+[node name="anadol_a1" type="Node3D" parent="." unique_id=680037430 instance=ExtResource("33_icr83")]
+transform = Transform3D(0.96, 0, 0, 0, 0.96, 0, 0, 0, 0.96, 0, 0, 17.6)
 
-[node name="Label_anadol_a1" type="Label3D" parent="." unique_id=738889779]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 16.25)
+[node name="Label_anadol_a1" type="Label3D" parent="." unique_id=953335928]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 18.45)
 pixel_size = 0.0025
 billboard = 1
 text = "ANADOL A1
 0.9600"
 font_size = 48
 
-[node name="vw_beetle_1967" type="Node3D" parent="." unique_id=1584671495 instance=ExtResource("30_s3lsm")]
-transform = Transform3D(0.86, 0, 0, 0, 0.86, 0, 0, 0, 0.86, 1.8, 0, 15.4)
+[node name="vw_beetle_1967" type="Node3D" parent="." unique_id=2073876476 instance=ExtResource("34_vm2nk")]
+transform = Transform3D(0.86, 0, 0, 0, 0.86, 0, 0, 0, 0.86, 1.8, 0, 17.6)
 
-[node name="Label_vw_beetle_1967" type="Label3D" parent="." unique_id=1167168694]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 16.25)
+[node name="Label_vw_beetle_1967" type="Label3D" parent="." unique_id=1663450211]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 18.45)
 pixel_size = 0.0025
 billboard = 1
 text = "VOLKSWAGEN BEETLE
 0.8600"
 font_size = 48
 
-[node name="fiat_500_1965" type="Node3D" parent="." unique_id=1239704944 instance=ExtResource("31_8t7om")]
-transform = Transform3D(0.74, 0, 0, 0, 0.74, 0, 0, 0, 0.74, 3.6, 0, 15.4)
+[node name="fiat_500_1965" type="Node3D" parent="." unique_id=1085068071 instance=ExtResource("35_wi4pt")]
+transform = Transform3D(0.74, 0, 0, 0, 0.74, 0, 0, 0, 0.74, 3.6, 0, 17.6)
 
-[node name="Label_fiat_500_1965" type="Label3D" parent="." unique_id=456488559]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 16.25)
+[node name="Label_fiat_500_1965" type="Label3D" parent="." unique_id=785264348]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 18.45)
 pixel_size = 0.0025
 billboard = 1
 text = "FIAT 500
 0.7400"
 font_size = 48
 
-[node name="tofas_murat_131" type="Node3D" parent="." unique_id=197947408 instance=ExtResource("32_gseh3")]
-transform = Transform3D(0.96, 0, 0, 0, 0.96, 0, 0, 0, 0.96, 5.4, 0, 15.4)
+[node name="tofas_murat_131" type="Node3D" parent="." unique_id=902356954 instance=ExtResource("36_18ntw")]
+transform = Transform3D(0.96, 0, 0, 0, 0.96, 0, 0, 0, 0.96, 5.4, 0, 17.6)
 
-[node name="Label_tofas_murat_131" type="Label3D" parent="." unique_id=2105519429]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 16.25)
+[node name="Label_tofas_murat_131" type="Label3D" parent="." unique_id=776064932]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 18.45)
 pixel_size = 0.0025
 billboard = 1
 text = "TOFAŞ MURAT 131
 0.9600"
 font_size = 48
 
-[node name="mini_cooper_1965" type="Node3D" parent="." unique_id=553827509 instance=ExtResource("33_8bxcb")]
-transform = Transform3D(0.73, 0, 0, 0, 0.73, 0, 0, 0, 0.73, 0, 0, 17.6)
+[node name="mini_cooper_1965" type="Node3D" parent="." unique_id=833481046 instance=ExtResource("37_kyhf2")]
+transform = Transform3D(0.73, 0, 0, 0, 0.73, 0, 0, 0, 0.73, 0, 0, 19.8)
 
-[node name="Label_mini_cooper_1965" type="Label3D" parent="." unique_id=125717472]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 18.45)
+[node name="Label_mini_cooper_1965" type="Label3D" parent="." unique_id=817800332]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 20.65)
 pixel_size = 0.0025
 billboard = 1
 text = "MINI COOPER
 0.7300"
 font_size = 48
 
-[node name="willys_jeep_mb" type="Node3D" parent="." unique_id=392429778 instance=ExtResource("34_jll03")]
-transform = Transform3D(0.77, 0, 0, 0, 0.77, 0, 0, 0, 0.77, 1.8, 0, 17.6)
+[node name="willys_jeep_mb" type="Node3D" parent="." unique_id=12664375 instance=ExtResource("38_brx8p")]
+transform = Transform3D(0.77, 0, 0, 0, 0.77, 0, 0, 0, 0.77, 1.8, 0, 19.8)
 
-[node name="Label_willys_jeep_mb" type="Label3D" parent="." unique_id=755322243]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 18.45)
+[node name="Label_willys_jeep_mb" type="Label3D" parent="." unique_id=1483461189]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 20.65)
 pixel_size = 0.0025
 billboard = 1
 text = "WILLYS JEEP MB
 0.7700"
 font_size = 48
 
-[node name="peugeot_404" type="Node3D" parent="." unique_id=1401817355 instance=ExtResource("35_wb84j")]
-transform = Transform3D(1.01, 0, 0, 0, 1.01, 0, 0, 0, 1.01, 3.6, 0, 17.6)
+[node name="peugeot_404" type="Node3D" parent="." unique_id=1835521172 instance=ExtResource("39_0drj0")]
+transform = Transform3D(1.01, 0, 0, 0, 1.01, 0, 0, 0, 1.01, 3.6, 0, 19.8)
 
-[node name="Label_peugeot_404" type="Label3D" parent="." unique_id=776821843]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 18.45)
+[node name="Label_peugeot_404" type="Label3D" parent="." unique_id=784982927]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 20.65)
 pixel_size = 0.0025
 billboard = 1
 text = "PEUGEOT 404
 1.0100"
 font_size = 48
 
-[node name="mercedes_w123" type="Node3D" parent="." unique_id=731488545 instance=ExtResource("36_t4417")]
-transform = Transform3D(1.12, 0, 0, 0, 1.12, 0, 0, 0, 1.12, 5.4, 0, 17.6)
+[node name="mercedes_w123" type="Node3D" parent="." unique_id=1876206269 instance=ExtResource("40_lqyuk")]
+transform = Transform3D(1.12, 0, 0, 0, 1.12, 0, 0, 0, 1.12, 5.4, 0, 19.8)
 
-[node name="Label_mercedes_w123" type="Label3D" parent="." unique_id=1415394725]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 18.45)
+[node name="Label_mercedes_w123" type="Label3D" parent="." unique_id=725939187]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 20.65)
 pixel_size = 0.0025
 billboard = 1
 text = "MERCEDES-BENZ W123
 1.1200"
 font_size = 48
 
-[node name="vw_t1_bus" type="Node3D" parent="." unique_id=1117101891 instance=ExtResource("37_icr83")]
-transform = Transform3D(0.97, 0, 0, 0, 0.97, 0, 0, 0, 0.97, 0, 0, 19.8)
+[node name="vw_t1_bus" type="Node3D" parent="." unique_id=1442255366 instance=ExtResource("41_16101")]
+transform = Transform3D(0.97, 0, 0, 0, 0.97, 0, 0, 0, 0.97, 0, 0, 22)
 
-[node name="Label_vw_t1_bus" type="Label3D" parent="." unique_id=1046742868]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 20.65)
+[node name="Label_vw_t1_bus" type="Label3D" parent="." unique_id=185470134]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 22.85)
 pixel_size = 0.0025
 billboard = 1
 text = "VOLKSWAGEN T1
 0.9700"
 font_size = 48
 
-[node name="land_rover_series3" type="Node3D" parent="." unique_id=1164092388 instance=ExtResource("38_vm2nk")]
-transform = Transform3D(0.82, 0, 0, 0, 0.82, 0, 0, 0, 0.82, 1.8, 0, 19.8)
+[node name="land_rover_series3" type="Node3D" parent="." unique_id=906131091 instance=ExtResource("42_qjoog")]
+transform = Transform3D(0.82, 0, 0, 0, 0.82, 0, 0, 0, 0.82, 1.8, 0, 22)
 
-[node name="Label_land_rover_series3" type="Label3D" parent="." unique_id=649125407]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 20.65)
+[node name="Label_land_rover_series3" type="Label3D" parent="." unique_id=770099523]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 22.85)
 pixel_size = 0.0025
 billboard = 1
 text = "LAND ROVER SERIES III
 0.8200"
 font_size = 48
 
-[node name="chevrolet_bel_air_1956" type="Node3D" parent="." unique_id=1736211529 instance=ExtResource("39_wi4pt")]
-transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 3.6, 0, 19.8)
+[node name="chevrolet_bel_air_1956" type="Node3D" parent="." unique_id=1154939462 instance=ExtResource("43_5xokx")]
+transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 3.6, 0, 22)
 
-[node name="Label_chevrolet_bel_air_1956" type="Label3D" parent="." unique_id=1153700145]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 20.65)
+[node name="Label_chevrolet_bel_air_1956" type="Label3D" parent="." unique_id=345168116]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 22.85)
 pixel_size = 0.0025
 billboard = 1
 text = "CHEVROLET BEL AIR
 1.1500"
 font_size = 48
 
-[node name="ford_mustang_1967" type="Node3D" parent="." unique_id=1131457641 instance=ExtResource("40_18ntw")]
-transform = Transform3D(1.05, 0, 0, 0, 1.05, 0, 0, 0, 1.05, 5.4, 0, 19.8)
+[node name="ford_mustang_1967" type="Node3D" parent="." unique_id=1426507956 instance=ExtResource("44_lmvh5")]
+transform = Transform3D(1.05, 0, 0, 0, 1.05, 0, 0, 0, 1.05, 5.4, 0, 22)
 
-[node name="Label_ford_mustang_1967" type="Label3D" parent="." unique_id=906566085]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 20.65)
+[node name="Label_ford_mustang_1967" type="Label3D" parent="." unique_id=110273104]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 22.85)
 pixel_size = 0.0025
 billboard = 1
 text = "FORD MUSTANG
 1.0500"
 font_size = 48
 
-[node name="chevrolet_corvette_c2" type="Node3D" parent="." unique_id=741135821 instance=ExtResource("41_kyhf2")]
-transform = Transform3D(1.04, 0, 0, 0, 1.04, 0, 0, 0, 1.04, 0, 0, 22)
+[node name="chevrolet_corvette_c2" type="Node3D" parent="." unique_id=887425929 instance=ExtResource("45_ynu41")]
+transform = Transform3D(1.04, 0, 0, 0, 1.04, 0, 0, 0, 1.04, 0, 0, 24.2)
 
-[node name="Label_chevrolet_corvette_c2" type="Label3D" parent="." unique_id=872580178]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 22.85)
+[node name="Label_chevrolet_corvette_c2" type="Label3D" parent="." unique_id=1512883287]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 25.050001)
 pixel_size = 0.0025
 billboard = 1
 text = "CHEVROLET CORVETTE C2
 1.0400"
 font_size = 48
 
-[node name="jaguar_e_type" type="Node3D" parent="." unique_id=443965889 instance=ExtResource("42_brx8p")]
-transform = Transform3D(1.01, 0, 0, 0, 1.01, 0, 0, 0, 1.01, 1.8, 0, 22)
+[node name="jaguar_e_type" type="Node3D" parent="." unique_id=1943733173 instance=ExtResource("46_330ox")]
+transform = Transform3D(1.01, 0, 0, 0, 1.01, 0, 0, 0, 1.01, 1.8, 0, 24.2)
 
-[node name="Label_jaguar_e_type" type="Label3D" parent="." unique_id=325786681]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 22.85)
+[node name="Label_jaguar_e_type" type="Label3D" parent="." unique_id=1128564221]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 25.050001)
 pixel_size = 0.0025
 billboard = 1
 text = "JAGUAR E-TYPE
 1.0100"
 font_size = 48
 
-[node name="aston_martin_db5" type="Node3D" parent="." unique_id=1331689197 instance=ExtResource("43_0drj0")]
-transform = Transform3D(1.04, 0, 0, 0, 1.04, 0, 0, 0, 1.04, 3.6, 0, 22)
+[node name="aston_martin_db5" type="Node3D" parent="." unique_id=954151401 instance=ExtResource("47_kvqk0")]
+transform = Transform3D(1.04, 0, 0, 0, 1.04, 0, 0, 0, 1.04, 3.6, 0, 24.2)
 
-[node name="Label_aston_martin_db5" type="Label3D" parent="." unique_id=1295902740]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 22.85)
+[node name="Label_aston_martin_db5" type="Label3D" parent="." unique_id=1535696690]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 25.050001)
 pixel_size = 0.0025
 billboard = 1
 text = "ASTON MARTIN DB5
 1.0400"
 font_size = 48
 
-[node name="dodge_charger_1970" type="Node3D" parent="." unique_id=1189767683 instance=ExtResource("44_lqyuk")]
-transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 5.4, 0, 22)
+[node name="dodge_charger_1970" type="Node3D" parent="." unique_id=1134951357 instance=ExtResource("48_xof8p")]
+transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 5.4, 0, 24.2)
 
-[node name="Label_dodge_charger_1970" type="Label3D" parent="." unique_id=590415092]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 22.85)
+[node name="Label_dodge_charger_1970" type="Label3D" parent="." unique_id=983520989]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 25.050001)
 pixel_size = 0.0025
 billboard = 1
 text = "DODGE CHARGER
 1.1500"
 font_size = 48
 
-[node name="porsche_911_1973" type="Node3D" parent="." unique_id=935202759 instance=ExtResource("45_16101")]
-transform = Transform3D(0.95, 0, 0, 0, 0.95, 0, 0, 0, 0.95, 0, 0, 24.2)
+[node name="porsche_911_1973" type="Node3D" parent="." unique_id=1938473955 instance=ExtResource("49_8gp8w")]
+transform = Transform3D(0.95, 0, 0, 0, 0.95, 0, 0, 0, 0.95, 0, 0, 26.4)
 
-[node name="Label_porsche_911_1973" type="Label3D" parent="." unique_id=545850706]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 25.050001)
+[node name="Label_porsche_911_1973" type="Label3D" parent="." unique_id=1804259750]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 27.25)
 pixel_size = 0.0025
 billboard = 1
 text = "PORSCHE 911 CARRERA RS
 0.9500"
 font_size = 48
 
-[node name="mercedes_300sl" type="Node3D" parent="." unique_id=2068074517 instance=ExtResource("46_qjoog")]
-transform = Transform3D(1.03, 0, 0, 0, 1.03, 0, 0, 0, 1.03, 1.8, 0, 24.2)
+[node name="mercedes_300sl" type="Node3D" parent="." unique_id=2099891343 instance=ExtResource("50_7yyof")]
+transform = Transform3D(1.03, 0, 0, 0, 1.03, 0, 0, 0, 1.03, 1.8, 0, 26.4)
 
-[node name="Label_mercedes_300sl" type="Label3D" parent="." unique_id=31114833]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 25.050001)
+[node name="Label_mercedes_300sl" type="Label3D" parent="." unique_id=1750100246]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 27.25)
 pixel_size = 0.0025
 billboard = 1
 text = "MERCEDES-BENZ 300 SL
 1.0300"
 font_size = 48
 
-[node name="lamborghini_miura" type="Node3D" parent="." unique_id=311735737 instance=ExtResource("47_5xokx")]
-transform = Transform3D(0.99, 0, 0, 0, 0.99, 0, 0, 0, 0.99, 3.6, 0, 24.2)
+[node name="lamborghini_miura" type="Node3D" parent="." unique_id=229634997 instance=ExtResource("51_v3lxg")]
+transform = Transform3D(0.99, 0, 0, 0, 0.99, 0, 0, 0, 0.99, 3.6, 0, 26.4)
 
-[node name="Label_lamborghini_miura" type="Label3D" parent="." unique_id=927523138]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 25.050001)
+[node name="Label_lamborghini_miura" type="Label3D" parent="." unique_id=789281405]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 27.25)
 pixel_size = 0.0025
 billboard = 1
 text = "LAMBORGHINI MIURA
 0.9900"
 font_size = 48
 
-[node name="ford_escort_rs1600" type="Node3D" parent="." unique_id=49130749 instance=ExtResource("48_lmvh5")]
-transform = Transform3D(0.91, 0, 0, 0, 0.91, 0, 0, 0, 0.91, 5.4, 0, 24.2)
+[node name="ford_escort_rs1600" type="Node3D" parent="." unique_id=880744464 instance=ExtResource("52_333ri")]
+transform = Transform3D(0.91, 0, 0, 0, 0.91, 0, 0, 0, 0.91, 5.4, 0, 26.4)
 
-[node name="Label_ford_escort_rs1600" type="Label3D" parent="." unique_id=1706868394]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 25.050001)
+[node name="Label_ford_escort_rs1600" type="Label3D" parent="." unique_id=1046245241]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 27.25)
 pixel_size = 0.0025
 billboard = 1
 text = "FORD ESCORT RS1600
 0.9100"
 font_size = 48
 
-[node name="lancia_stratos" type="Node3D" parent="." unique_id=27424072 instance=ExtResource("49_ynu41")]
-transform = Transform3D(0.85, 0, 0, 0, 0.85, 0, 0, 0, 0.85, 0, 0, 26.4)
+[node name="lancia_stratos" type="Node3D" parent="." unique_id=1182043780 instance=ExtResource("53_gjv88")]
+transform = Transform3D(0.85, 0, 0, 0, 0.85, 0, 0, 0, 0.85, 0, 0, 28.6)
 
-[node name="Label_lancia_stratos" type="Label3D" parent="." unique_id=1470002307]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 27.25)
+[node name="Label_lancia_stratos" type="Label3D" parent="." unique_id=158254484]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 29.45)
 pixel_size = 0.0025
 billboard = 1
 text = "LANCIA STRATOS HF
 0.8500"
 font_size = 48
 
-[node name="bmw_m3_e30" type="Node3D" parent="." unique_id=672032133 instance=ExtResource("50_330ox")]
-transform = Transform3D(0.99, 0, 0, 0, 0.99, 0, 0, 0, 0.99, 1.8, 0, 26.4)
+[node name="bmw_m3_e30" type="Node3D" parent="." unique_id=1408157663 instance=ExtResource("54_d2fqw")]
+transform = Transform3D(0.99, 0, 0, 0, 0.99, 0, 0, 0, 0.99, 1.8, 0, 28.6)
 
-[node name="Label_bmw_m3_e30" type="Label3D" parent="." unique_id=1822820529]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 27.25)
+[node name="Label_bmw_m3_e30" type="Label3D" parent="." unique_id=1154530594]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 29.45)
 pixel_size = 0.0025
 billboard = 1
 text = "BMW M3 E30
 0.9900"
 font_size = 48
 
-[node name="toyota_celica_gt4" type="Node3D" parent="." unique_id=1221993186 instance=ExtResource("51_kvqk0")]
-transform = Transform3D(1.01, 0, 0, 0, 1.01, 0, 0, 0, 1.01, 3.6, 0, 26.4)
+[node name="toyota_celica_gt4" type="Node3D" parent="." unique_id=1626677965 instance=ExtResource("55_mt5y2")]
+transform = Transform3D(1.01, 0, 0, 0, 1.01, 0, 0, 0, 1.01, 3.6, 0, 28.6)
 
-[node name="Label_toyota_celica_gt4" type="Label3D" parent="." unique_id=541390022]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 27.25)
+[node name="Label_toyota_celica_gt4" type="Label3D" parent="." unique_id=40808077]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 29.45)
 pixel_size = 0.0025
 billboard = 1
 text = "TOYOTA CELICA GT-FOUR
 1.0100"
 font_size = 48
 
-[node name="lancia_delta_integrale" type="Node3D" parent="." unique_id=1424981427 instance=ExtResource("52_xof8p")]
-transform = Transform3D(0.89, 0, 0, 0, 0.89, 0, 0, 0, 0.89, 5.4, 0, 26.4)
+[node name="lancia_delta_integrale" type="Node3D" parent="." unique_id=1932770315 instance=ExtResource("56_2mdr7")]
+transform = Transform3D(0.89, 0, 0, 0, 0.89, 0, 0, 0, 0.89, 5.4, 0, 28.6)
 
-[node name="Label_lancia_delta_integrale" type="Label3D" parent="." unique_id=189023865]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 27.25)
+[node name="Label_lancia_delta_integrale" type="Label3D" parent="." unique_id=2003369124]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 29.45)
 pixel_size = 0.0025
 billboard = 1
 text = "LANCIA DELTA INTEGRALE
 0.8900"
 font_size = 48
 
-[node name="audi_quattro_s1" type="Node3D" parent="." unique_id=723228087 instance=ExtResource("53_8gp8w")]
-transform = Transform3D(0.95, 0, 0, 0, 0.95, 0, 0, 0, 0.95, 0, 0, 28.6)
+[node name="audi_quattro_s1" type="Node3D" parent="." unique_id=126605784 instance=ExtResource("57_56wnj")]
+transform = Transform3D(0.95, 0, 0, 0, 0.95, 0, 0, 0, 0.95, 0, 0, 30.8)
 
-[node name="Label_audi_quattro_s1" type="Label3D" parent="." unique_id=1843416721]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 29.45)
+[node name="Label_audi_quattro_s1" type="Label3D" parent="." unique_id=1307515171]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 31.65)
 pixel_size = 0.0025
 billboard = 1
 text = "AUDI SPORT QUATTRO S1
 0.9500"
 font_size = 48
 
-[node name="ford_rs200" type="Node3D" parent="." unique_id=1250698173 instance=ExtResource("54_7yyof")]
-transform = Transform3D(0.91, 0, 0, 0, 0.91, 0, 0, 0, 0.91, 1.8, 0, 28.6)
+[node name="ford_rs200" type="Node3D" parent="." unique_id=599765364 instance=ExtResource("58_6mm78")]
+transform = Transform3D(0.91, 0, 0, 0, 0.91, 0, 0, 0, 0.91, 1.8, 0, 30.8)
 
-[node name="Label_ford_rs200" type="Label3D" parent="." unique_id=429586857]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 29.45)
+[node name="Label_ford_rs200" type="Label3D" parent="." unique_id=201073031]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 31.65)
 pixel_size = 0.0025
 billboard = 1
 text = "FORD RS200
 0.9100"
 font_size = 48
 
-[node name="mitsubishi_evo6" type="Node3D" parent="." unique_id=1112443260 instance=ExtResource("55_v3lxg")]
-transform = Transform3D(0.99, 0, 0, 0, 0.99, 0, 0, 0, 0.99, 3.6, 0, 28.6)
+[node name="mitsubishi_evo6" type="Node3D" parent="." unique_id=1195238300 instance=ExtResource("59_2vaos")]
+transform = Transform3D(0.99, 0, 0, 0, 0.99, 0, 0, 0, 0.99, 3.6, 0, 30.8)
 
-[node name="Label_mitsubishi_evo6" type="Label3D" parent="." unique_id=1034512477]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 29.45)
+[node name="Label_mitsubishi_evo6" type="Label3D" parent="." unique_id=208644547]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 31.65)
 pixel_size = 0.0025
 billboard = 1
 text = "MITSUBISHI LANCER EVO VI

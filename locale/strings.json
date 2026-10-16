@@ -39,7 +39,7 @@
  "%d GEM": [
   "ui/hud/restoration_panel.gd:321",
   "ui/hud/mod_workshop.gd:619",
-  "ui/hud/garage_edit_screen.gd:907",
+  "ui/hud/garage_edit_screen.gd:932",
   "ui/hud/showroom_screen.gd:965",
   "ui/hud/showroom_screen.gd:985",
   "ui/hud/gem_store_screen.gd:180",
@@ -71,15 +71,15 @@
   "gameplay/progression_effects.gd:134"
  ],
  "%d. RÜTBE": [
-  "ui/hud/garage_edit_screen.gd:905"
+  "ui/hud/garage_edit_screen.gd:930"
  ],
  "%d. RÜTBE — %s": [
   "ui/hud/garage_value_screen.gd:129"
  ],
  "%d. RÜTBEDE AÇILIR": [
-  "ui/hud/garage_edit_screen.gd:745",
-  "ui/hud/garage_edit_screen.gd:752",
-  "ui/hud/garage_edit_screen.gd:794"
+  "ui/hud/garage_edit_screen.gd:770",
+  "ui/hud/garage_edit_screen.gd:777",
+  "ui/hud/garage_edit_screen.gd:819"
  ],
  "%d. TAMİR ALANI ALINABİLİR (%s ₺)": [
   "gameplay/progression_effects.gd:37"
@@ -226,25 +226,25 @@
   "gameplay/missions/mission_catalog.gd:97"
  ],
  "%s · DOKUN: ODAYI DOLDUR": [
-  "ui/hud/garage_edit_screen.gd:980"
+  "ui/hud/garage_edit_screen.gd:1005"
  ],
  "%s · DUVARA DOKUN: KAPLA": [
-  "ui/hud/garage_edit_screen.gd:990"
+  "ui/hud/garage_edit_screen.gd:1015"
  ],
  "%s · SÜRÜKLE, BIRAKINCA YERLEŞİR": [
-  "ui/hud/garage_edit_screen.gd:937"
+  "ui/hud/garage_edit_screen.gd:962"
  ],
  "%s · SÜRÜKLE: ALANI DOLDUR": [
-  "ui/hud/garage_edit_screen.gd:979"
+  "ui/hud/garage_edit_screen.gd:1004"
  ],
  "%s · SÜRÜKLE: BOYA (%s ₺ / KARO)": [
-  "ui/hud/garage_edit_screen.gd:981"
+  "ui/hud/garage_edit_screen.gd:1006"
  ],
  "%s · SÜRÜKLE: TAŞI": [
-  "ui/hud/garage_edit_screen.gd:945"
+  "ui/hud/garage_edit_screen.gd:970"
  ],
  "%s · ÇİZGİ BOYUNCA SÜRÜKLE: ÖR": [
-  "ui/hud/garage_edit_screen.gd:985"
+  "ui/hud/garage_edit_screen.gd:1010"
  ],
  "%s ₺\nPARA YETERSİZ": [
   "ui/hud/showroom_screen.gd:1013",
@@ -257,7 +257,7 @@
   "ui/hud/login_screen.gd:252"
  ],
  "%s ₺ / KARO": [
-  "ui/hud/garage_edit_screen.gd:833"
+  "ui/hud/garage_edit_screen.gd:858"
  ],
  "%s ₺ DAHA GEREKLİ": [
   "gameplay/progression_effects.gd:83"
@@ -399,7 +399,7 @@
   "decor/decorations.json:battery_charger.title"
  ],
  "ALAN": [
-  "ui/hud/garage_edit_screen.gd:425"
+  "ui/hud/garage_edit_screen.gd:437"
  ],
  "ALAN SAHİBİ": [
   "gameplay/missions/mission_catalog.gd:104"
@@ -464,8 +464,8 @@
  ],
  "ARAÇLAR": [
   "ui/hud/hud.tscn:295",
-  "ui/hud/garage_edit_screen.gd:531",
-  "ui/hud/garage_edit_screen.gd:549",
+  "ui/hud/garage_edit_screen.gd:543",
+  "ui/hud/garage_edit_screen.gd:561",
   "ui/hud/garage_screen.gd:264",
   "ui/hud/garage_screen.gd:267",
   "ui/hud/garage_screen.gd:1115",
@@ -1063,7 +1063,7 @@
  ],
  "BİTİR": [
   "ui/hud/restoration_panel.gd:165",
-  "ui/hud/garage_edit_screen.gd:308",
+  "ui/hud/garage_edit_screen.gd:320",
   "ui/tutorial/tutorial_director.gd:811"
  ],
  "BİTİR  %d": [
@@ -1116,10 +1116,10 @@
   "decor/decorations.json:wall_checker.title"
  ],
  "DAMLALIK": [
-  "ui/hud/garage_edit_screen.gd:426"
+  "ui/hud/garage_edit_screen.gd:438"
  ],
  "DAMLALIK · KAROYA DOKUN: DESENİNİ AL": [
-  "ui/hud/garage_edit_screen.gd:978"
+  "ui/hud/garage_edit_screen.gd:1003"
  ],
  "DART TAHTASI": [
   "decor/decorations.json:dartboard.title"
@@ -1140,11 +1140,11 @@
   "decor/decorations.json:container.title"
  ],
  "DEPODA %d": [
-  "ui/hud/garage_edit_screen.gd:842",
-  "ui/hud/garage_edit_screen.gd:878"
+  "ui/hud/garage_edit_screen.gd:867",
+  "ui/hud/garage_edit_screen.gd:903"
  ],
  "DEPOYA KALDIR": [
-  "ui/hud/garage_edit_screen.gd:420"
+  "ui/hud/garage_edit_screen.gd:432"
  ],
  "DEPOYA KALDIRILDI": [
   "world/garage_editor.gd:485",
@@ -1163,7 +1163,7 @@
   "decor/decorations.json:leather_sofa.title"
  ],
  "DESEN": [
-  "ui/hud/garage_edit_screen.gd:548"
+  "ui/hud/garage_edit_screen.gd:560"
  ],
  "DESTEK / İLETİŞİM": [
   "ui/hud/settings_screen.gd:355"
@@ -1210,7 +1210,7 @@
   "ui/hud/friends_screen.gd:111"
  ],
  "DIŞ DUVARDA": [
-  "ui/hud/garage_edit_screen.gd:853"
+  "ui/hud/garage_edit_screen.gd:878"
  ],
  "DIŞ DUVARLARA UYGULANDI": [
   "world/garage_editor.gd:1109"
@@ -1241,7 +1241,7 @@
   "ui/hud/garage_screen.tscn:1215"
  ],
  "DUVAR": [
-  "ui/hud/garage_edit_screen.gd:530"
+  "ui/hud/garage_edit_screen.gd:542"
  ],
  "DUVAR EŞYASI": [
   "gameplay/garage_decor.gd:202"
@@ -1268,7 +1268,7 @@
   "gameplay/garage_decor.gd:199"
  ],
  "DUVARA DOKUN YA DA SÜRÜKLE: SÖK": [
-  "ui/hud/garage_edit_screen.gd:986"
+  "ui/hud/garage_edit_screen.gd:1011"
  ],
  "Damacanalı su sebili ve bardaklar.": [
   "decor/decorations.json:water_cooler.desc"
@@ -1476,10 +1476,10 @@
   "ui/tutorial/tutorial_director.gd:519"
  ],
  "EŞYALAR": [
-  "ui/hud/garage_edit_screen.gd:532"
+  "ui/hud/garage_edit_screen.gd:544"
  ],
  "EŞYAYA DOKUN: SEÇ  ·  AŞAĞIDAN EŞYA SEÇ: EKLE": [
-  "ui/hud/garage_edit_screen.gd:947"
+  "ui/hud/garage_edit_screen.gd:972"
  ],
  "Eşyayı parmağınla sürükleyip istediğin yere götür. Oklarla döndür, YERLEŞTİR ile onayla.": [
   "ui/tutorial/tutorial_director.gd:799"
@@ -1488,7 +1488,7 @@
   "ui/hud/paint_panel.gd:151"
  ],
  "FIRÇA": [
-  "ui/hud/garage_edit_screen.gd:425"
+  "ui/hud/garage_edit_screen.gd:437"
  ],
  "FOTO FİNİŞ!": [
   "ui/hud/drag_race_screen.gd:947"
@@ -1567,7 +1567,7 @@
   "ui/hud/garage_screen.tscn:1364"
  ],
  "GARAJI DÜZENLE": [
-  "ui/hud/garage_edit_screen.gd:239"
+  "ui/hud/garage_edit_screen.gd:241"
  ],
  "GARAJI GENİŞLET": [
   "ui/hud/hud.gd:802"
@@ -1619,14 +1619,14 @@
   "gameplay/purchases/gem_products.gd:19"
  ],
  "GEM YETERSİZ": [
-  "ui/hud/garage_edit_screen.gd:182",
+  "ui/hud/garage_edit_screen.gd:184",
   "ui/hud/paint_panel.gd:161"
  ],
  "GEM YETERSİZ\nGEM AL": [
   "ui/hud/showroom_screen.gd:979"
  ],
  "GEM YETERSİZ · %d GEM GEREKİYOR": [
-  "ui/hud/garage_edit_screen.gd:799"
+  "ui/hud/garage_edit_screen.gd:824"
  ],
  "GEM YETMİYOR\n%d GEM gerekiyor, %d GEM'in var.": [
   "ui/hud/restoration_panel.gd:371",
@@ -1659,7 +1659,7 @@
   "ui/hud/paint_panel.gd:104"
  ],
  "GERİ AL": [
-  "ui/hud/garage_edit_screen.gd:304",
+  "ui/hud/garage_edit_screen.gd:316",
   "ui/hud/showroom_screen.gd:878",
   "ui/hud/friends_screen.gd:280"
  ],
@@ -2132,7 +2132,7 @@
   "gameplay/race/performance_mods.gd:88"
  ],
  "IZGARA": [
-  "ui/hud/garage_edit_screen.gd:298"
+  "ui/hud/garage_edit_screen.gd:310"
  ],
  "IŞIK DİZİSİ": [
   "decor/decorations.json:string_lights.title"
@@ -2242,7 +2242,7 @@
   "decor/decorations.json:wall_door.title"
  ],
  "KAPLAMA": [
-  "ui/hud/garage_edit_screen.gd:547"
+  "ui/hud/garage_edit_screen.gd:559"
  ],
  "KAPORTA": [
   "gameplay/repair/repair_type.gd:62"
@@ -2386,7 +2386,7 @@
   "vehicles/crates.json:set.kore_hatti"
  ],
  "KOVA": [
-  "ui/hud/garage_edit_screen.gd:426"
+  "ui/hud/garage_edit_screen.gd:438"
  ],
  "KOYU BETON": [
   "decor/decorations.json:concrete_dark.title"
@@ -2404,7 +2404,7 @@
   "decor/decorations.json:lux_crystal_lamp.title"
  ],
  "KULLANILIYOR": [
-  "ui/hud/garage_edit_screen.gd:874"
+  "ui/hud/garage_edit_screen.gd:899"
  ],
  "KULLANIM ŞARTLARI": [
   "ui/hud/settings_screen.gd:345"
@@ -2920,8 +2920,8 @@
   "ui/hud/repair_panel.gd:298"
  ],
  "PARA YETERSİZ": [
-  "ui/hud/garage_edit_screen.gd:182",
-  "ui/hud/garage_edit_screen.gd:802",
+  "ui/hud/garage_edit_screen.gd:184",
+  "ui/hud/garage_edit_screen.gd:827",
   "ui/hud/paint_panel.gd:161",
   "world/garage_editor.gd:1002",
   "world/garage_editor.gd:1079"
@@ -3190,7 +3190,7 @@
   "decor/decorations.json:wall_window_deco.title"
  ],
  "SAHİPSİN": [
-  "ui/hud/garage_edit_screen.gd:853",
+  "ui/hud/garage_edit_screen.gd:878",
   "ui/hud/showroom_screen.gd:1010",
   "ui/hud/car_gallery.gd:274"
  ],
@@ -3233,10 +3233,10 @@
   "ui/hud/showroom_screen.gd:972"
  ],
  "SATIN AL? %d GEM": [
-  "ui/hud/garage_edit_screen.gd:914"
+  "ui/hud/garage_edit_screen.gd:939"
  ],
  "SATIN AL? %s ₺": [
-  "ui/hud/garage_edit_screen.gd:915"
+  "ui/hud/garage_edit_screen.gd:940"
  ],
  "SATIN ALMA TAMAMLANAMADI, TEKRAR DENE": [
   "ui/hud/gem_store_screen.gd:228"
@@ -3251,13 +3251,13 @@
   "ui/hud/gem_store_screen.gd:226"
  ],
  "SATIN ALMAK İÇİN TEKRAR DOKUN": [
-  "ui/hud/garage_edit_screen.gd:810"
+  "ui/hud/garage_edit_screen.gd:835"
  ],
  "SAYGIN GARAJ": [
   "gameplay/garage_value.gd:40"
  ],
  "SAĞA DÖNDÜR (R)": [
-  "ui/hud/garage_edit_screen.gd:471"
+  "ui/hud/garage_edit_screen.gd:483"
  ],
  "SEHPA": [
   "decor/decorations.json:coffee_table.title"
@@ -3275,10 +3275,10 @@
   "gameplay/missions/mission_catalog.gd:102"
  ],
  "SERGİLE": [
-  "ui/hud/garage_edit_screen.gd:866"
+  "ui/hud/garage_edit_screen.gd:891"
  ],
  "SERGİLENİYOR": [
-  "ui/hud/garage_edit_screen.gd:866"
+  "ui/hud/garage_edit_screen.gd:891"
  ],
  "SERVİS RÖMORKU": [
   "decor/decorations.json:trailer.title"
@@ -3351,7 +3351,7 @@
   "decor/decorations.json:sign_street.title"
  ],
  "SOLA DÖNDÜR (Shift+R)": [
-  "ui/hud/garage_edit_screen.gd:471"
+  "ui/hud/garage_edit_screen.gd:483"
  ],
  "SOMUN": [
   "vehicles/restorations.json:parts.nut"
@@ -3497,7 +3497,7 @@
   "ui/hud/friends_screen.gd:214"
  ],
  "SÖK": [
-  "ui/hud/garage_edit_screen.gd:427"
+  "ui/hud/garage_edit_screen.gd:439"
  ],
  "SÜPER": [
   "vehicles/crates.json:super_crate.short_name"
@@ -3527,10 +3527,10 @@
   "decor/decorations.json:xmas_tree.desc"
  ],
  "SİLGİ": [
-  "ui/hud/garage_edit_screen.gd:427"
+  "ui/hud/garage_edit_screen.gd:439"
  ],
  "SİLGİ · SÜRÜKLE: KAROYU SİL (ÜCRETSİZ)": [
-  "ui/hud/garage_edit_screen.gd:977"
+  "ui/hud/garage_edit_screen.gd:1002"
  ],
  "SİLİNİYOR": [
   "ui/hud/login_screen.gd:332"
@@ -3617,7 +3617,7 @@
   "ui/hud/hud.gd:833"
  ],
  "TAMİR ALANI %d · SÜRÜKLE: TAŞI, ↻: DÖNDÜR": [
-  "ui/hud/garage_edit_screen.gd:940"
+  "ui/hud/garage_edit_screen.gd:965"
  ],
  "TAMİR ALANI DOLU": [
   "ui/hud/mod_workshop.gd:635",
@@ -3693,7 +3693,7 @@
   "ui/hud/friends_screen.gd:215"
  ],
  "TEKRAR DOKUN: %d GEM · GARAJ DEĞERİ +%s ₺": [
-  "ui/hud/garage_edit_screen.gd:807"
+  "ui/hud/garage_edit_screen.gd:832"
  ],
  "TELEFON KULÜBESİ": [
   "decor/decorations.json:phone_booth.title"
@@ -3712,6 +3712,9 @@
  ],
  "TEŞEKKÜRLER! GEMLER HESABINA EKLENDİ": [
   "ui/hud/gem_store_screen.gd:232"
+ ],
+ "TOGG": [
+  "vehicles/crates.json:set.togg"
  ],
  "TOP ŞİMŞİR": [
   "decor/decorations.json:topiary.title"
@@ -3904,7 +3907,7 @@
   "decor/decorations.json:warning_sign.title"
  ],
  "UYGULA": [
-  "ui/hud/garage_edit_screen.gd:874"
+  "ui/hud/garage_edit_screen.gd:899"
  ],
  "UZAY GEMİSİ BİNEĞİ": [
   "decor/decorations.json:kiddie_rocket.title"
@@ -3916,8 +3919,8 @@
   "decor/decorations.json:tree_slim.desc"
  ],
  "VARSAYILAN": [
-  "ui/hud/garage_edit_screen.gd:824",
-  "ui/hud/garage_edit_screen.gd:989"
+  "ui/hud/garage_edit_screen.gd:849",
+  "ui/hud/garage_edit_screen.gd:1014"
  ],
  "VARİL RAFI": [
   "decor/decorations.json:barrel_rack.title"
@@ -3928,7 +3931,7 @@
  "VAZGEÇ": [
   "ui/hud/race_challenge_screen.gd:101",
   "ui/hud/restoration_panel.gd:220",
-  "ui/hud/garage_edit_screen.gd:416",
+  "ui/hud/garage_edit_screen.gd:428",
   "ui/hud/garage_screen.gd:831",
   "ui/hud/hud.gd:738",
   "ui/hud/login_screen.gd:295",
@@ -4093,7 +4096,7 @@
   "world/garage_editor.gd:356"
  ],
  "YERLEŞTİR": [
-  "ui/hud/garage_edit_screen.gd:411",
+  "ui/hud/garage_edit_screen.gd:423",
   "ui/tutorial/tutorial_director.gd:798"
  ],
  "YERLİ KLASİKLER": [
@@ -4221,11 +4224,11 @@
   "ui/hud/junkyard_screen.gd:367"
  ],
  "ZATEN SERGİLENİYOR — GARAJDAN SEÇİP TAŞI": [
-  "ui/hud/garage_edit_screen.gd:779"
+  "ui/hud/garage_edit_screen.gd:804"
  ],
  "ZEMİN": [
   "gameplay/garage_decor.gd:198",
-  "ui/hud/garage_edit_screen.gd:529"
+  "ui/hud/garage_edit_screen.gd:541"
  ],
  "ZOR": [
   "ui/hud/mission_screen.gd:16"
@@ -4427,7 +4430,7 @@
   "ui/hud/mod_workshop.gd:624"
  ],
  "ÖNCE BİR DESEN SEÇ": [
-  "ui/hud/garage_edit_screen.gd:998"
+  "ui/hud/garage_edit_screen.gd:1023"
  ],
  "ÖNCE DUVARDAKİ EŞYAYI KALDIR": [
   "world/garage_editor.gd:1093"
@@ -4445,7 +4448,7 @@
   "ui/hud/garage_screen.gd:964"
  ],
  "ÖR": [
-  "ui/hud/garage_edit_screen.gd:427"
+  "ui/hud/garage_edit_screen.gd:439"
  ],
  "ÖRGÜ PARKE": [
   "decor/decorations.json:parquet_basket.title"
@@ -4652,7 +4655,7 @@
   "decor/decorations.json:tyre_rack.desc"
  ],
  "İÇ DUVAR": [
-  "ui/hud/garage_edit_screen.gd:546"
+  "ui/hud/garage_edit_screen.gd:558"
  ],
  "İÇİNDE BİR ARAÇ VAR": [
   "ui/hud/crate_panel.gd:75"

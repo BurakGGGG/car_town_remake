@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://dnylxkg5xljm1"]
+
+[ext_resource type="PackedScene" uid="uid://dxj8it76o84w1" path="res://assets/cars/optimized/police_vito.glb" id="1_polic"]
+
+[node name="police_vito" instance=ExtResource("1_polic")]

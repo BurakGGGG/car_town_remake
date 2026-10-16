@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://bwbw731t5r22w"]
+
+[ext_resource type="PackedScene" uid="uid://c5ytioxc4ieti" path="res://assets/cars/optimized/togg_t10x.glb" id="1_togg_"]
+
+[node name="togg_t10x" instance=ExtResource("1_togg_")]

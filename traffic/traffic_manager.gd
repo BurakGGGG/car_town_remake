@@ -15,6 +15,9 @@ extends Node3D
 ## CarAppearance kopyası + CarRig.
 ## Yarış rakibi için istenen trafiğe KAPALI modeller (S sınıfı) ayrı tutulur (_race_models): rakip o modelle
 ## gelir, ama şehirde rastgele doğan araçlar yalnızca şehir havuzundan (traffic=true) seçilir.
+## Polis kovalamacası: PoliceChase (çocuk düğüm, kodla kurulur) açılıştan 15 sn sonra, sonra 2 dakikada bir şüpheli + polis gönderir;
+## bu araçlar `vehicles` listesinde DEĞİLDİR (sayılmaz, müşteri / rakip olmaz). Trafik onlara yol verir
+## (chase_pressure) ve kovalamaca sürerken kavşakta karşı eksen bekler.
 
 ## Aynı anda sahnedeki NPC üst sınırı (Car Town tarzı sakin trafik: 3–4). Yol kenarında tamir bekleyen
 ## ve CarSpot'taki araçlar da bu sayıya dahildir (4 = 3 trafik + 1 bekleyen); yolda hiçbir zaman 4'ten
@@ -78,12 +81,15 @@ var _race_models: Array[Dictionary] = []
 var _pending: Dictionary = {}              # id → scene_path (arka planda yükleniyor)
 var _rotate_timer: float = 0.0
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var chase: PoliceChase
 
 
 func _ready() -> void:
 	add_to_group("traffic")   # GameSettings düşük kalitede max_vehicles'ı azaltır
 	_rng.randomize()
 	_collect_spawn_points(self)
+	chase = PoliceChase.new()
+	add_child(chase)
 	for entry: Dictionary in CarCatalog.all():
 		if entry["traffic"]:
 			_candidates.append(entry["id"])
@@ -234,6 +240,22 @@ func _spawn_at(point: TrafficWaypoint, entry: Dictionary = {}, start: Vector3 = 
 	return vehicle
 
 
+## Kovalamaca aracı: aynı kurulum (model, CarRig, görünüm), ama trafik listesine GİRMEZ ve vehicle_spawned
+## yayılmaz (RepairManager onu müşteri yapmasın). Yaşamını PoliceChase yönetir.
+func spawn_chase_vehicle(point: TrafficWaypoint, entry: Dictionary, appearance: CarAppearance) -> TrafficVehicle:
+	var vehicle: TrafficVehicle = TrafficVehicle.new()
+	vehicle.name = "Chase_%d" % (_rng.randi() % 100000)
+	add_child(vehicle)
+	vehicle.vehicle_id = entry["id"]
+	vehicle.setup(self, entry["scene"], appearance, point, model_scale)
+	return vehicle
+
+
+## Rastgele bir şehir modeli (yüklenmiş havuzdan; boşsa {}).
+func random_city_model() -> Dictionary:
+	return _pool.pick_random() if not _pool.is_empty() else {}
+
+
 func _on_vehicle_despawn(vehicle: TrafficVehicle) -> void:
 	vehicles.erase(vehicle)
 	finish_crossing(vehicle)
@@ -320,10 +342,16 @@ func city_model_ids() -> Array[StringName]:
 	return out
 
 
+## NPC görünümü (kovalamaca araçları da bununla kurulur; polis kaplamalı olduğu için fabrika renginde kalır).
+func npc_appearance(id: StringName) -> CarAppearance:
+	return _random_appearance(id)
+
+
 func _random_appearance(id: StringName = &"") -> CarAppearance:
 	var appearance: CarAppearance = CarAppearance.new()  # NPC'ye özel; oyuncu araçlarının kaydına girmez
-	if not GameFeatures.PAINT:
-		# Boya kapalıyken hiçbir araç rastgele renge boyanmaz: NPC de FABRİKA rengiyle çıkar.
+	if not GameFeatures.PAINT or not VehicleOwnership.is_paintable(id):
+		# Boya kapalıyken hiçbir araç rastgele renge boyanmaz: NPC de FABRİKA rengiyle çıkar. Kaplamalı (polis)
+		# araç da her zaman fabrika renginde.
 		appearance.body_color = CarCatalog.default_color_for(CarCatalog.scene_path(id))
 		return appearance
 	appearance.body_color = paint_palette.pick_random() if not paint_palette.is_empty() else Color.WHITE
@@ -341,7 +369,40 @@ func _is_clear(position: Vector3) -> bool:
 	for vehicle: TrafficVehicle in vehicles:
 		if vehicle.global_position.distance_to(position) < spawn_clearance:
 			return false
+	if chase:
+		for vehicle: TrafficVehicle in chase.vehicles():
+			if vehicle.global_position.distance_to(position) < spawn_clearance:
+				return false
 	return true
+
+
+## Polise yol verme baskısı (0 = yok, 1 = hemen kenara): aynı yönde ARKADAN gelen ya da karşı şeritte
+## ÖNDEN yaklaşan kovalamaca aracı yakınsa. Kavşaktaki çapraz eksen araçları zaten kilitle bekler.
+func chase_pressure(vehicle: TrafficVehicle) -> float:
+	if chase == null or not chase.is_active():
+		return 0.0
+	var forward: Vector3 = vehicle.global_transform.basis.z
+	forward.y = 0.0
+	forward = forward.normalized()
+	var best: float = 0.0
+	for other: TrafficVehicle in chase.vehicles():
+		var other_forward: Vector3 = other.global_transform.basis.z
+		other_forward.y = 0.0
+		var alignment: float = other_forward.normalized().dot(forward)
+		if absf(alignment) < 0.7:
+			continue   # çapraz eksen
+		var delta: Vector3 = other.global_position - vehicle.global_position
+		delta.y = 0.0
+		var along: float = delta.dot(forward)
+		if absf(delta.cross(forward).y) > 1.0:
+			continue   # başka yol
+		var approaching: bool = (alignment > 0.0 and along < 0.0) or (alignment < 0.0 and along > 0.0)
+		var gap: float = absf(along)
+		if approaching and gap < PoliceChase.YIELD_DISTANCE:
+			best = maxf(best, clampf(1.5 - gap / PoliceChase.YIELD_DISTANCE * 1.5, 0.0, 1.0))
+		elif not approaching and gap < PoliceChase.YIELD_AFTER:
+			best = maxf(best, 1.0 - gap / PoliceChase.YIELD_AFTER)   # geçti: yavaşça şeride dön
+	return best
 
 
 # --- Takip mesafesi ----------------------------------------------------------
@@ -379,6 +440,8 @@ func request_crossing(vehicle: TrafficVehicle) -> bool:
 	_prune_crossing()
 	if _crossing.has(vehicle):
 		return true
+	if chase and chase.holds_crossing(vehicle.axis):
+		return false   # kovalamaca geçiyor: karşı eksen kavşağa girmez
 	var now: float = Time.get_ticks_msec() / 1000.0
 	if _crossing.is_empty():
 		_crossing_axis = vehicle.axis

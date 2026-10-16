@@ -57,6 +57,8 @@ static func run(tree: SceneTree) -> void:
 	coin.mesh = cylinder
 	coin.material_override = RepairFx.gold_material()
 	root.add_child(coin)
+	for node: Node3D in PoliceLights.prewarm_nodes():   # ilk polis aracı trafiğe girerken shader derlenmesin
+		root.add_child(node)
 	for i: int in FRAMES:
 		await tree.process_frame
 	if is_instance_valid(root):

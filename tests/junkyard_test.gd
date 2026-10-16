@@ -82,8 +82,10 @@ func _run() -> void:
 	check(jy.status(&"tofas_murat_124") == JunkyardManager.Status.AVAILABLE, "modeli gelen temel araç: AVAILABLE")
 	check(RestorationCatalog.cars().size() == 28, "28 restorasyon aracının hepsinin modeli hazır")
 	check(not VehicleOwnership.is_paintable(&"tofas_murat_124") and VehicleOwnership.is_paintable(&"tofas_sahin"), "restorasyon aracı boyanamaz, kasa aracı boyanır")
-	check(VehicleOwnership.collection_ids().size() == 27 and not VehicleOwnership.collection_ids().has(&"anadol_a1") \
-		and VehicleOwnership.collection_ids().has(&"vw_beetle"), "kasa koleksiyonu 27 araç (Beetle dahil), restorasyon hariç")
+	check(VehicleOwnership.collection_ids().size() == 29 and not VehicleOwnership.collection_ids().has(&"anadol_a1") \
+		and VehicleOwnership.collection_ids().has(&"vw_beetle") and VehicleOwnership.collection_ids().has(&"togg_t10f")
+		and not VehicleOwnership.collection_ids().has(&"police_bentley"),
+		"kasa koleksiyonu 29 araç (Beetle ve Togg'lar dahil), restorasyon ve polis hariç")
 	check(RaceManager.rival_pool(&"tofas_sahin").all(func(id: StringName) -> bool: return not RestorationCatalog.is_restoration(id)), "restorasyon aracı yarış rakibi olmaz")
 	save.save_game()
 	check(disk().has("junkyard"), "kayıtta junkyard bölümü var")

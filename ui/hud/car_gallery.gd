@@ -379,7 +379,9 @@ func _render_thumbnails(ids: Array[StringName]) -> void:
 		add_child(viewport)
 		# Thumbnail de aynı görünüm verisini kullanır; değişince bu araç yeniden render edilir
 		var appearance: CarAppearance = CarAppearance.get_for(scene_path)
-		CarRig.new(car).apply(appearance)
+		var rig: CarRig = CarRig.new(car)
+		rig.apply(appearance)
+		rig.set_police_lights(PoliceLights.Mode.LIT)   # tek kare: çakma anına denk gelmesin, iki yarı da yanık
 		_hook_appearance(scene_path, id)
 		# Her araç kendi boyutuna göre kadrajlanır (küçük modeller de plakayı doldurur)
 		var bounds: AABB = _model_bounds(car)

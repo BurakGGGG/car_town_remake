@@ -26,6 +26,7 @@ extends RefCounted
 ## Tek mesh tekerler → wheel_split.gdshader doku modu (jant rengi body_color'dan bağımsız).
 ## Farlar / stoplar → doku + emisyon (headlights_enabled / taillights_enabled). Diğer roller GLB
 ## materyalinde kalır. Aynı CarAppearance API'si; dokusuz eski modeller için eski yol değişmeden çalışır.
+## Polis tavan ışıkları ("police_lights" rolü) → PoliceLights: lens shader'ı + parlama haleleri, kendiliğinden çakar.
 
 const META_KEY: StringName = &"car_rig"
 const WHEEL_SHADER: Shader = preload("res://vehicles/wheel_split.gdshader")
@@ -100,6 +101,7 @@ var _albedo: Texture2D               # GLB'nin albedo dokusu (dokusuz modelde nu
 var _paint_mask: Texture2D           # UV paint mask (yoksa null → boyama kapalı)
 var _mask_probed: bool = false        # maske diskten bir kez arandı mı (tembel yükleme)
 var _default_paint: Color = Color.WHITE  # CarPartMap.default_paint (dokudaki fabrika boyası)
+var _police: PoliceLights            # "police_lights" rolü varsa (polis araçları), yoksa null
 
 ## --- Parça birleştirme (bkz. optimize / CarMeshMerger) ---
 var _optimize: bool = false
@@ -196,6 +198,8 @@ func apply(appearance: CarAppearance) -> void:
 
 	for mesh: MeshInstance3D in _parts.get(&"hidden", []):
 		mesh.visible = false
+	if _police:
+		_police.apply()
 	if _optimize:
 		_request_merge()
 
@@ -251,6 +255,8 @@ func _apply_textured(appearance: CarAppearance) -> void:
 	# tires, grille, black_trim, plate, fog_lights, exhaust, antenna: GLB'nin dokulu materyalinde kalır
 	for mesh: MeshInstance3D in _parts.get(&"hidden", []):
 		mesh.visible = false
+	if _police:
+		_police.apply()
 	if _optimize:
 		_request_merge()
 
@@ -403,6 +409,17 @@ func get_meshes(role: StringName) -> Array[MeshInstance3D]:
 	return out
 
 
+## Polis tavan ışıkları var mı (CarPartMap "police_lights")?
+func has_police_lights() -> bool:
+	return _police != null
+
+
+## Polis ışıklarının kipi (PoliceLights.Mode: FLASH çakar, LIT sürekli yanık, OFF sönük). Polis değilse etkisiz.
+func set_police_lights(mode: PoliceLights.Mode) -> void:
+	if _police:
+		_police.set_mode(mode)
+
+
 # --- Detay kademesi (LOD) -------------------------------------------------------
 
 ## Mesh'in tekerlek büyüklüğü: ebeveyn uzayında kutunun dikey/boyuna en büyük kenarı.
@@ -441,11 +458,14 @@ func is_merged() -> bool:
 func _request_merge() -> void:
 	if not is_instance_valid(root):
 		return
-	var wheel_meshes: Dictionary = {}
+	var apart: Dictionary = {}   # birleşmeyen parçalar: dönen tekerler, polis ışıkları (yan ayrımı yerel uzayda)
 	if not _merge_wheels:
 		for group: Dictionary in _wheel_groups:
 			for mesh: MeshInstance3D in group["meshes"]:
-				wheel_meshes[mesh] = true
+				apart[mesh] = true
+	if _police:
+		for mesh: MeshInstance3D in _police.meshes():
+			apart[mesh] = true
 	var sources: Array[MeshInstance3D] = []
 	var candidates: Array = _all_meshes if not _all_meshes.is_empty() \
 		else root.find_children("*", "MeshInstance3D", true, false)
@@ -453,7 +473,7 @@ func _request_merge() -> void:
 		var mesh: MeshInstance3D = node as MeshInstance3D
 		if mesh == null or not is_instance_valid(mesh) or mesh == _merged or mesh.mesh == null:
 			continue
-		if wheel_meshes.has(mesh):
+		if apart.has(mesh):
 			continue
 		# Görünür parçalar + bizim gizlediklerimiz ("hidden" rolü ve başka nedenle gizliler hariç)
 		if mesh.visible or _merge_hidden.has(mesh):
@@ -592,6 +612,8 @@ func _resolve_parts() -> void:
 		_parts[role] = list
 
 	_filter_lamps(&"headlights")
+	if has_role(&"police_lights"):
+		_police = PoliceLights.new(root, scene_path, get_meshes(&"police_lights"), _albedo, map.get("beacons", []))
 
 	# Lastik + jant tek mesh: her teker için kendi merkezini bilen shader materyali.
 	# Teker kaynakta ZATEN ayrılmışsa (birden çok yüzey ya da dokusuz kendi materyali) bu

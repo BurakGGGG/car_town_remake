@@ -223,6 +223,18 @@
       "race_top_kmh": 123.052,
       "torque": 172.682
     },
+    "police_bentley": {
+      "base_time": 8.2,
+      "key": "3be04df026296df374d3a74d62646120",
+      "race_top_kmh": 233.524,
+      "torque": 893.829
+    },
+    "police_vito": {
+      "base_time": 12.1667,
+      "key": "d6cb68721b4a0676883324430c79240f",
+      "race_top_kmh": 147.904,
+      "torque": 317.01
+    },
     "porsche_911_1973": {
       "base_time": 9.85,
       "key": "46d30d51c06f6f4c5f3ad1d6a06c8854",
@@ -282,6 +294,18 @@
       "key": "471213b72cb5f5a303d9c4319d8e5298",
       "race_top_kmh": 132.563,
       "torque": 194.747
+    },
+    "togg_t10f": {
+      "base_time": 10.9417,
+      "key": "d84a9c66567fd50fb3fa572cff1ca952",
+      "race_top_kmh": 163.804,
+      "torque": 358.768
+    },
+    "togg_t10x": {
+      "base_time": 11.1,
+      "key": "1586acedc7ed94eebda4537414b1b473",
+      "race_top_kmh": 160.77,
+      "torque": 357.929
     },
     "toyota_celica_gt4": {
       "base_time": 10.9583,

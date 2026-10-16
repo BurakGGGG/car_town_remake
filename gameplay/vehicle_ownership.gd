@@ -269,11 +269,11 @@ func discovered_count() -> int:
 	return n
 
 
-## Kasa koleksiyonundaki araçlar (katalog sırasıyla): restorasyon araçları hariç bütün katalog.
+## Kasa koleksiyonundaki araçlar (katalog sırasıyla): restorasyon ve edinilemeyen (polis) araçlar hariç bütün katalog.
 static func collection_ids() -> Array[StringName]:
 	var out: Array[StringName] = []
 	for entry: Dictionary in CarCatalog.all():
-		if not RestorationCatalog.is_restoration(entry["id"]):
+		if not RestorationCatalog.is_restoration(entry["id"]) and entry["obtainable"]:
 			out.append(entry["id"])
 	return out
 
@@ -381,8 +381,10 @@ func paint_color(vehicle_id: StringName) -> Color:
 
 ## Boya atölyesi bu araçta açık mı? Restorasyon (hurdalık) araçları fabrika renginde kalır: orijinal Car Town'da
 ## restorasyon aracının rengi seçilemiyordu (kullanıcı kararı 2026-10-11, docs/HURDALIK_ARASTIRMA.md).
+## Kaplamalı araçlar (polis; cars.json "paintable": false) da boyanmaz: boya kaplamanın bir rengini değiştirirdi.
 static func is_paintable(vehicle_id: StringName) -> bool:
-	return not RestorationCatalog.is_restoration(vehicle_id)
+	return not RestorationCatalog.is_restoration(vehicle_id) \
+		and bool(CarCatalog.get_entry(vehicle_id).get("paintable", true))
 
 
 ## Bu renk alınabilir mi: araç sahipte ve boyanabilir, renk katalogda, araç zaten bu renkte değil, bakiye yetiyor.

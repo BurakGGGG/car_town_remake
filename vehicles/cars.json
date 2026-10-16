@@ -1354,6 +1354,210 @@
       "model_scale": 0.97
     },
     {
+      "id": "togg_t10x",
+      "brand": "TOGG",
+      "model": "T10X",
+      "display_name": "TOGG T10X",
+      "year": 2023,
+      "price": 85000,
+      "condition": 0.85,
+      "category": "suv",
+      "scene_path": "res://assets/cars/togg_t10x.tscn",
+      "source_path": "res://assets/cars/source/togg_t10x.glb",
+      "optimized_path": "res://assets/cars/optimized/togg_t10x.glb",
+      "default_color": "#035060",
+      "available_colors": [
+        "#035060",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#9FD6C8",
+      "traffic": true,
+      "class": "B",
+      "rarity": "rare",
+      "min_level": 12,
+      "min_garage_rank": 3,
+      "race": {
+        "top_speed": 185,
+        "acceleration": 61,
+        "reaction": 74,
+        "grip": 76
+      },
+      "performance": {
+        "variant": "Togg T10X V2 RWD Uzun Menzil",
+        "engine": "Elektrik",
+        "hp": 218,
+        "zero_100": 7.8,
+        "top_speed": 185,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.599,
+        "width_m": 1.886,
+        "height_m": 1.676,
+        "wheelbase_m": 2.89
+      },
+      "model_scale": 1.05
+    },
+    {
+      "id": "togg_t10f",
+      "brand": "TOGG",
+      "model": "T10F",
+      "display_name": "TOGG T10F",
+      "year": 2025,
+      "price": 100000,
+      "condition": 0.85,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/togg_t10f.tscn",
+      "source_path": "res://assets/cars/source/togg_t10f.glb",
+      "optimized_path": "res://assets/cars/optimized/togg_t10f.glb",
+      "default_color": "#9D9FAE",
+      "available_colors": [
+        "#9D9FAE",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#9FD6C8",
+      "traffic": true,
+      "class": "A",
+      "rarity": "rare",
+      "min_level": 20,
+      "min_garage_rank": 5,
+      "race": {
+        "top_speed": 177,
+        "acceleration": 63,
+        "reaction": 76,
+        "grip": 78
+      },
+      "performance": {
+        "variant": "Togg T10F V2 RWD Uzun Menzil",
+        "engine": "Elektrik",
+        "hp": 218,
+        "zero_100": 7.5,
+        "top_speed": 177,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.83,
+        "width_m": 1.881,
+        "height_m": 1.56,
+        "wheelbase_m": 2.89
+      },
+      "model_scale": 1.1
+    },
+    {
+      "id": "police_vito",
+      "brand": "MERCEDES-BENZ",
+      "model": "VITO POLIZEI",
+      "display_name": "VITO POLIZEI",
+      "year": 2020,
+      "price": 45000,
+      "condition": 0.85,
+      "category": "van",
+      "scene_path": "res://assets/cars/police_vito.tscn",
+      "source_path": "res://assets/cars/source/police_vito.glb",
+      "optimized_path": "res://assets/cars/optimized/police_vito.glb",
+      "default_color": "#E3E72F",
+      "available_colors": [
+        "#E3E72F",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": false,
+      "class": "C",
+      "rarity": "epic",
+      "min_level": 6,
+      "min_garage_rank": 1,
+      "race": {
+        "top_speed": 199,
+        "acceleration": 44,
+        "reaction": 62,
+        "grip": 62
+      },
+      "performance": {
+        "variant": "Mercedes-Benz Vito 119 CDI 4MATIC",
+        "engine": "2.0 CDI",
+        "hp": 190,
+        "zero_100": 10.0,
+        "top_speed": 199,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 5.14,
+        "width_m": 1.928,
+        "height_m": 1.89,
+        "wheelbase_m": 3.2
+      },
+      "model_scale": 1.17,
+      "paintable": false,
+      "obtainable": false
+    },
+    {
+      "id": "police_bentley",
+      "brand": "BENTLEY",
+      "model": "CONTINENTAL GT POLİS",
+      "display_name": "BENTLEY POLİS",
+      "year": 2018,
+      "price": 380000,
+      "condition": 0.85,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/police_bentley.tscn",
+      "source_path": "res://assets/cars/source/police_bentley.glb",
+      "optimized_path": "res://assets/cars/optimized/police_bentley.glb",
+      "default_color": "#D7D9E7",
+      "available_colors": [
+        "#D7D9E7",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": false,
+      "class": "S",
+      "rarity": "epic",
+      "min_level": 31,
+      "min_garage_rank": 9,
+      "race": {
+        "top_speed": 333,
+        "acceleration": 91,
+        "reaction": 84,
+        "grip": 86
+      },
+      "performance": {
+        "variant": "Bentley Continental GT W12",
+        "engine": "6.0 W12 Biturbo",
+        "hp": 635,
+        "zero_100": 3.7,
+        "top_speed": 333,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.85,
+        "width_m": 1.954,
+        "height_m": 1.405,
+        "wheelbase_m": 2.851
+      },
+      "model_scale": 1.1,
+      "paintable": false,
+      "obtainable": false
+    },
+    {
       "id": "tofas_murat_124",
       "brand": "TOFAŞ",
       "model": "MURAT 124",

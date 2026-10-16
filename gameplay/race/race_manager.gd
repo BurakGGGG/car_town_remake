@@ -173,8 +173,8 @@ static func rival_pool(player_id: StringName) -> Array[StringName]:
 	while widen <= 4.0:
 		pool.clear()
 		for entry: Dictionary in CarCatalog.all():
-			if RestorationCatalog.is_restoration(entry["id"]):
-				continue   # hurdalık araçları trafikte yoktur: yoldan rakip olarak da gelmez
+			if RestorationCatalog.is_restoration(entry["id"]) or not entry["obtainable"]:
+				continue   # hurdalık araçları trafikte yoktur, polis yalnızca kovalamacada: yoldan rakip olarak da gelmez
 			var theirs: float = DragRaceSim.base_time(entry["id"])
 			if theirs >= mine * (1.0 - RIVAL_FASTER * widen) and theirs <= mine * (1.0 + RIVAL_SLOWER * widen):
 				pool.append(entry["id"])

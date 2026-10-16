@@ -16,6 +16,8 @@ class_name CarPartMap
 ##   headlights  → sabit beyaz lens + headlights_enabled emissive
 ##   taillights  → sabit kırmızı lens + taillights_enabled emissive
 ##   grille, black_trim, plate, fog_lights, exhaust, antenna → sabit gerçekçi materyaller
+##   police_lights → tavan ışık çubuğu / ızgara flaşörleri: PoliceLights çakar (doku rengi kırmızı/mavi olan
+##                 texel'ler, aracın sol ve sağ yarısı dönüşümlü); boya maskesinde kesin engel
 ##   hidden      → bozuk/çöp üçgenler, gizlenir
 ## wheel_groups: fl/fr/rl/rr — dönüş/direksiyon grupları (ilk eleman lastik).
 ## wheel_axes: fl/fr/rl/rr → [y, z, yarıçap] — lastiğin geometrisinden ÖLÇÜLMÜŞ dönme ekseni
@@ -27,11 +29,14 @@ class_name CarPartMap
 ## paint_whole: boya maskesinde texel anahtarı atlanıp TAMAMI boyanan gövde parçaları (dokuda parlama fırınlanmış,
 ##   rengi boyadan sapan tavan gibi; tools/make_paint_mask.gd).
 ## extract: kaynakta başka parçaya kaynamış teker; tools/optimize_car.gd silindir bölgesini yeni parçaya ayırır
-##   ({part, new_part, center, radius, half_width}); çalışma zamanında ek bir şey gerekmez.
+##   ({part, new_part, center, radius, half_width}); çalışma zamanında ek bir şey gerekmez. Silindir yerine
+##   {box_min, box_max} kutusu da verilebilir (tavan rayına kaynamış ışık çubuğu yarısı).
+## beacons: police_lights'ın parlama haleleri — [{pos: [x, y, z], color, side}] (araç uzayı; side -1 sol / +1 sağ,
+##   aynı yarının texel'leriyle aynı anda çakar). Konumlar ışık parçalarının ölçülmüş kutusundan.
 
 const ROLES: Array[StringName] = [
 	&"body", &"mirrors", &"wheels", &"tires", &"rims", &"glass", &"headlights", &"taillights",
-	&"grille", &"black_trim", &"plate", &"fog_lights", &"exhaust", &"antenna", &"hidden",
+	&"grille", &"black_trim", &"plate", &"fog_lights", &"exhaust", &"antenna", &"police_lights", &"hidden",
 ]
 
 const MAPS: Dictionary = {
@@ -861,6 +866,96 @@ const MAPS: Dictionary = {
 		"black_trim": [0, 22],
 		"wheel_groups": {"fl": [7, 13], "fr": [6, 12], "rl": [4, 11, 31], "rr": [2, 14]},
 		"wheel_axes": {"fl": [0.0801, 0.3000, 0.0781], "fr": [0.0801, 0.3004, 0.0793], "rl": [0.0796, -0.3049, 0.0784], "rr": [0.0798, -0.3055, 0.0783]},
+	},
+	# --- Yedinci parti (2026-10-16): Togg T10X / T10F ve iki polis aracı — sınıflandırıcı + tools/wheel_fit.gd ---
+	# Camların hepsi (4 ön, 20 arka, 30/32/40/41 yan, 71/79 üçgen; 46 üçgen cam "ayna" sanılmış) "gövde" sanılmıştı
+	# → glass; 5 koyu tavan, 45 marşpiyel, 53/54/56/62 direkler → black_trim; 16 çamurluk iç kaplaması "jant"
+	# sanılmış, teker eksenini kaydırıyordu → black_trim
+	"res://assets/cars/togg_t10x.tscn": {
+		"default_paint": Color(0.012, 0.314, 0.376),  # boya maskesi aracının ölçtüğü fabrika rengi #035060
+		"body": [0, 8, 10, 17, 18, 26, 27, 28, 42, 55, 60, 63, 65, 66, 68, 70, 75, 80, 81, 82],
+		"mirrors": [43, 44, 47, 67],
+		"wheels": [7, 13, 19],
+		"tires": [2, 3, 6, 9],
+		"rims": [11, 14, 23, 29, 31, 33, 34, 37, 61, 64, 69, 73],
+		"glass": [4, 20, 30, 32, 40, 41, 46, 71, 79],
+		"headlights": [59, 72, 78],
+		"taillights": [36, 38],
+		"grille": [12, 15, 22, 24, 25, 35, 39, 48, 51, 58, 74, 77],
+		"black_trim": [1, 5, 16, 21, 45, 49, 50, 52, 53, 54, 56, 57, 62, 76],
+		"wheel_groups": {"fl": [3, 14], "fr": [2, 11], "rl": [6, 19, 23, 31, 69], "rr": [9, 7, 13, 33, 61, 64, 73]},
+		"wheel_axes": {"fl": [0.0839, 0.3114, 0.0807], "fr": [0.0862, 0.3112, 0.0807], "rl": [0.0841, -0.3118, 0.0835], "rr": [0.0839, -0.3119, 0.0835]},
+	},
+	# 4 ön cam, 9 arka cam, 30/32/38 yan camlar "gövde" sanılmıştı → glass; 22 kaput ön paneli "far" sanılmıştı → body
+	"res://assets/cars/togg_t10f.tscn": {
+		"default_paint": Color(0.616, 0.624, 0.682),  # boya maskesi aracının ölçtüğü fabrika rengi #9D9FAE
+		"body": [1, 3, 5, 10, 12, 15, 17, 22, 28, 29, 31, 34, 35, 36, 40, 41, 42, 43, 44, 46, 47, 48, 50],
+		"mirrors": [24, 26],
+		"tires": [2, 6, 7, 8, 18, 19],
+		"rims": [11, 13, 16, 20, 49],
+		"glass": [4, 9, 30, 32, 38, 39],
+		"headlights": [51],
+		"taillights": [21],
+		"grille": [14, 25, 27],
+		"black_trim": [0, 23, 33, 37, 45],
+		"wheel_groups": {"fl": [8, 6, 13], "fr": [19, 7, 11], "rl": [2, 16], "rr": [18, 20, 49]},
+		"wheel_axes": {"fl": [0.0838, 0.3136, 0.0812], "fr": [0.0840, 0.3140, 0.0813], "rl": [0.0856, -0.2908, 0.0809], "rr": [0.0857, -0.2904, 0.0817]},
+	},
+	# Alman polisi (POLIZEI) Vito: iki mavi tavan çubuğu (ön 12 + 27 + 55, arka 9). Ön çubuğun sağ yarısı sağ
+	# tavan rayına (7) kaynamıştı → kutu extract ile 55. Izgaradaki iki mavi ön flaşör gövdede (0) → 56 / 57,
+	# sol flaşörün yarısı ızgara çıtasında (50) — o da ışık rolünde (yalnızca mavi texel'leri ışır).
+	"res://assets/cars/police_vito.tscn": {
+		"default_paint": Color(0.890, 0.906, 0.184),  # boya maskesi aracının ölçtüğü fabrika rengi #E3E72F
+		"body": [0, 2, 6, 7, 8, 16, 17, 18, 19, 21, 22, 23, 24, 25, 30, 33, 34, 39, 43, 44],
+		"mirrors": [14, 15, 40],
+		"wheels": [10, 13, 20],
+		"tires": [1, 3, 4, 5],
+		"rims": [26, 37, 38, 47, 49, 52, 54],
+		"glass": [29, 51],
+		"headlights": [35],
+		"grille": [36, 42, 45, 48, 53],
+		"black_trim": [28, 31, 32, 41, 46],
+		"police_lights": [9, 12, 27, 50, 55, 56, 57],
+		"wheel_groups": {"fl": [5, 13, 38], "fr": [4, 10], "rl": [1, 26, 37, 47, 49, 54], "rr": [3, 20, 52]},
+		"wheel_axes": {"fl": [0.0766, 0.3200, 0.0705], "fr": [0.0764, 0.3198, 0.0712], "rl": [0.0757, -0.3128, 0.0700], "rr": [0.0785, -0.3119, 0.0688]},
+		"extract": [
+			{"part": 7, "new_part": 55, "box_min": [0.045, 0.354, -0.06], "box_max": [0.146, 0.395, 0.045]},
+			{"part": 0, "new_part": 56, "box_min": [-0.10, 0.138, 0.46], "box_max": [-0.02, 0.170, 0.50]},
+			{"part": 0, "new_part": 57, "box_min": [0.02, 0.138, 0.46], "box_max": [0.10, 0.170, 0.50]},
+		],
+		"beacons": [
+			{"pos": [-0.095, 0.380, -0.003], "color": Color(0.16, 0.38, 1.0), "side": -1},
+			{"pos": [0.095, 0.380, -0.003], "color": Color(0.16, 0.38, 1.0), "side": 1},
+			{"pos": [-0.075, 0.376, -0.387], "color": Color(0.16, 0.38, 1.0), "side": -1},
+			{"pos": [0.075, 0.376, -0.387], "color": Color(0.16, 0.38, 1.0), "side": 1},
+		],
+	},
+	# Türk trafik polisi Bentley Continental GT: tavan çubuğu sol mavi (12), orta (13), sağ kırmızı (14, 27).
+	# Arka eksenler çember uydurmasıyla (wheel_fit +X arkayı 4 mm kaçık ölçtü; wheel_blur'da yalpalıyordu).
+	"res://assets/cars/police_bentley.tscn": {
+		"default_paint": Color(0.843, 0.851, 0.906),  # boya maskesi aracının ölçtüğü fabrika rengi #D7D9E7
+		"body": [0, 5, 6, 7, 8, 9, 10, 11, 15, 16, 17, 19, 20, 22, 24, 26, 28, 36, 40, 41, 43, 44, 48, 49, 50, 51, 54, 55, 56, 62],
+		"mirrors": [31, 34, 47],
+		"wheels": [1, 2, 3, 4],
+		"rims": [57, 61, 63, 64, 65, 66],
+		"headlights": [38, 42, 59],
+		"taillights": [29, 30],
+		"grille": [18, 21, 32, 33, 39, 45, 52, 53],
+		"black_trim": [23, 25, 35, 37, 46, 58, 60],
+		"police_lights": [12, 13, 14, 27],
+		# Kırmızı fren kaliperleri jantla tek parça → renk koşullu extract (63–66), dönmez
+		"extract": [
+			{"part": 3, "new_part": 63, "center": [0.1833, 0.0874, 0.3157], "radius": 0.072, "half_width": 0.045, "hue": 0.99, "hue_tol": 0.05, "min_sat": 0.45},
+			{"part": 4, "new_part": 64, "center": [-0.1852, 0.0878, 0.3155], "radius": 0.072, "half_width": 0.045, "hue": 0.99, "hue_tol": 0.05, "min_sat": 0.45},
+			{"part": 2, "new_part": 65, "center": [0.1809, 0.0893, -0.2759], "radius": 0.072, "half_width": 0.045, "hue": 0.99, "hue_tol": 0.05, "min_sat": 0.45},
+			{"part": 1, "new_part": 66, "center": [-0.18, 0.0889, -0.2770], "radius": 0.072, "half_width": 0.045, "hue": 0.99, "hue_tol": 0.05, "min_sat": 0.45},
+		],
+		"wheel_groups": {"fl": [3], "fr": [4], "rl": [2, 57, 61], "rr": [1]},
+		"wheel_axes": {"fl": [0.0889, 0.3171, 0.0836], "fr": [0.0899, 0.3160, 0.0834], "rl": [0.0893, -0.2759, 0.0873], "rr": [0.0889, -0.2770, 0.0887]},
+		"beacons": [
+			{"pos": [-0.072, 0.340, -0.056], "color": Color(0.16, 0.38, 1.0), "side": -1},
+			{"pos": [0.076, 0.340, -0.056], "color": Color(1.0, 0.12, 0.10), "side": 1},
+		],
 	},
 }
 

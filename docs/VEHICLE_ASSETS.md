@@ -376,3 +376,85 @@ Kullanıcı kararı: AİLE KASASI, epic, 80.000 ₺, seviye 10, rütbe 2; VW GRU
   dokusunun kenarı; maske camı bilerek boyamaz).
 - Yeni boya maskelerinin `.import`'u mipmap'siz geliyordu → mevcut maskelerin ayarları kopyalandı
   (`mipmaps/generate=true`). Maske `.import`'u yoksa CarRig boyamayı sessizce kapatır.
+
+---
+
+# Yedinci parti (2026-10-16), katalog 55 → 59 — Togg ve polis araçları, tavan ışık sistemi
+
+Kaynaklar `eksik_dosyalar/yeni/` (togg_t10x, togg_t10f, police_vito, bentley_police → id `police_bentley`); aynı
+Tripo yapısı (tek materyal, 4096² JPEG, 52–83 parça, ~480K üçgen). Komut sırası altıncı partiyle aynı.
+
+| Araç | GLB MB (tanjantsız) | Üçgen | Parça | Boya maskesi % | Fabrika rengi | 300 m | Sınıf |
+|---|---|---|---|---|---|---|---|
+| togg_t10x | 5,8 | 124.514 | 83 | 16,5 | #035060 | 11,10 sn | B |
+| togg_t10f | 4,9 | 115.498 | 52 | 28,0 | #9D9FAE | 10,94 sn | A |
+| police_vito | 5,6 | 123.773 | 57 | 7,4 | #E3E72F (sarı şerit) | 12,17 sn | C |
+| police_bentley | 5,5 | 118.987 | 67 | 23,2 | #D7D9E7 | 8,20 sn | S |
+
+Sınıflar 300 m kuralıyla (bantlar ayrık kalmalı): T10F 10,94 sn A'nın en yavaşı Celica'dan (10,96) hızlı → A.
+Performans verisi: Togg'lar resmi V2 RWD Uzun Menzil (218 PS; T10X 7,8 sn / 185 km/sa, T10F 7,5 sn / 177 km/sa),
+Bentley Continental GT W12 (635 PS, 3,7 sn, 333 km/sa), Vito 119 CDI 4MATIC (190 PS, son hız 199 km/sa ADAC; 0-100
+için resmi değer YOK → 10,0 sn TAHMİN: aynı motorlu, daha hafif arkadan itişli V 250 d ~9,1 sn). İlk tahmin 9,5 sn
+Vito'yu C'nin en hızlısı yapıyordu (11,95 sn) ve tam modifiyeyle B'yi atlayıp A'ya (10,925 < 10,958) çıkıyordu —
+performance_mod_test'in "hiçbir araç iki sınıf atlamaz" kuralı. 10,0 sn ile 12,17 sn → tam modifiye 11,13 sn (B). Togg'lar `engine: "Elektrik"` → drag'de EV sesi, BATARYA/SOĞUTMA.
+
+**Polis araçları boyanmaz** (`cars.json "paintable": false` → `VehicleOwnership.is_paintable`; trafik NPC'si de
+fabrika renginde): boya maskesi Vito'da sarı kaplama şeridini "fabrika boyası" buldu, boyamak kaplamayı bozardı.
+
+**Elle düzeltilenler:**
+- T10X: camların hepsi (4 ön, 20 arka, 30/32/40/41 yan, 71/79 üçgen; 46 "ayna") "gövde" sanılmıştı — boyanınca
+  tavan camında tırtıklı boya lekesi; 5 koyu tavan, 45 marşpiyel, 53/54/56/62 direkler → black_trim. 16 çamurluk
+  iç kaplaması "jant" sanılıp sol-arka grubun başına geçmişti → eksen 2,8 cm yukarı; black_trim.
+- T10F: 4 ön cam, 9 arka cam, 30/32/38 yan camlar "gövde" (ön camda boya lekeleri); 22 kaput ön paneli "far".
+- Bentley: tekerler jantla tek parça → `wheels`; kırmızı kaliperler renk koşullu extract ile 63–66 (dönmez);
+  +X arka eksen wheel_fit'te 4 mm kaçık (wheel_blur'da yalpa) → lastiğin dış çemberine en küçük kareler uydurması
+  (`~/Projects/ct_shots/yeni5/circle_fit.gd`). 35 ön çamurluk menfezi "jant" → black_trim.
+- Vito: ön ışık çubuğunun sağ yarısı sağ tavan rayına (7) kaynamış, ızgaradaki iki mavi flaşör gövdede (0) →
+  `optimize_car.gd extract` artık KUTU bölgesi de alıyor (`box_min` / `box_max`) → 55, 56, 57.
+
+## Polis tavan ışıkları
+
+Yeni rol `police_lights` (CarPartMap; boya maskesinde kesin engel, optimizer'da detay rolü) + harita anahtarı
+`beacons` (hale noktaları: araç uzayında konum, renk, yarı). `vehicles/police_lights.gd` (PoliceLights) CarRig
+kurulurken oluşur — trafik, garaj, showroom, kasa ve drag aynı rig'i kullandığı için ışıklar her yerde çakar.
+
+- **Lens** (`police_lights.gdshader`): görünüm aracın kendi dokusu; doygun ve parlak KIRMIZI / MAVİ texel ışır,
+  renk dokudan (sarı / yeşil kaplama, koyu taban, krom ışımaz). Işıma ton küpüyle doygun tutulur.
+- **Desen** (`police_beacon.gdshaderinc`): sol yarı iki kısa çakma, yarım döngü sonra sağ yarı (1,6 döngü/sn);
+  araç başına rastgele faz. Yarı = ARAÇ UZAYINDA x işareti; parça kendi yerel uzayında çizildiği için
+  `side_plane` parça dönüşümünün X satırıdır → lens parçaları parça birleştirmeye girmez.
+- **Hale** (`police_beacon_halo.gdshader`): bütün haleler tek mesh, kameraya dönük toplamalı parlama; sönükken
+  sıfır boy. Dinamik ışık (OmniLight) bilerek yok — GL Compatibility'de nesne başına ek geçiş.
+- Kare başı betik yok (GPU TIME). Küçük resimde `PoliceLights.Mode.LIT` (iki yarı yanık, hale yok).
+  Shader'lar WorldPrewarm'da ısıtılır. QA: `qa/police_lights_qa.gd` (oyun kamerasıyla kareler + çizim ölçümü).
+
+**Katalog (GEÇİCİ):** T10X AİLE KASASI rare 85.000 ₺ sv.12/r3 · T10F PRESTİJ rare 100.000 ₺ sv.20/r5. Yeni set
+TOGG; ikisi de trafikte. Kasa oranları: AİLE Passat %37,0 → %32,3; PRESTİJ E60 %1,87 → %1,57. `model_scale` ilk
+tahmin (uzunluk / 4,39) — boyut laboratuvarında ayarlanacak.
+
+**Polis araçları edinilemez (kullanıcı kararı 2026-10-16):** satılmaz, kasadan çıkmaz, koleksiyonda / sette / normal
+trafikte / yarış rakibi havuzunda yoktur — `cars.json "obtainable": false` (CarCatalog SCHEMA, `CarCatalog.is_obtainable`;
+`VehicleOwnership.collection_ids` ve `RaceManager.rival_pool` eler) + `traffic: false`. Yalnızca kovalamacada görünürler.
+
+## Polis kovalamacası
+
+Kullanıcı isteği: şehirde kovalamaca — ilki oyun açıldıktan 15 sn sonra, sonra 2 dakikada bir (önce 3–4 dk idi); şüpheli ve polis normal trafikten hızlı, polis şüpheliden
+hızlı, aradaki mesafe kapanır ("harita dışında yakalamış gibi"), polis geçtikçe siren.
+
+- `traffic/police_chase.gd` (PoliceChase, TrafficManager'ın kodla kurulan çocuğu): zamanlayıcı `first_delay` 15 sn, sonra `interval_min/max` 120 sn (bir önceki kovalamacanın bitişinden); bir ekran
+  açıkken başlamaz (12 sn sonra yeniden dener). Rastgele boş şeritten (yarış şeridi hariç) ekran dışından şüpheli
+  (şehir havuzundan rastgele NPC) girer, 1,9 birim/sn (trafik 0,55–0,9). Polis (Vito ya da Bentley) aynı noktadan
+  girer; konumu "şüphelinin ilerleme oranıyla 2,6'dan 0,72'ye küçülen mesafe" kadar geride → hep daha hızlı, asla
+  çarpmaz. İkisi de yolun ORTA çizgisinde gider (`TrafficVehicle.Mode.CHASE`, `start_chase / place_on_chase_path`),
+  şüpheli hafif zikzak çizer. Yol ucu dünyanın kenarına taşınmışsa görünmez olunca silinirler.
+- Kovalamaca araçları `vehicles` listesine girmez: şehir sayacına sayılmaz, müşteri / yarış rakibi olmaz, seçilemez
+  (tıklama kutusu kapalı); doğma alanı kontrolü (`_is_clear`) onları da sayar.
+- Yol verme: TRAFFIC kipindeki araç arkadan gelen / karşıdan yaklaşan kovalamaca aracını 3,2 birimden görünce sağa
+  0,08 kayar ve hızını %35'e indirir (`TrafficManager.chase_pressure`); geçince şeridine döner. Kayma kaldırımdaki
+  tamir müşterilerine değmesin diye küçük. Kovalamaca sürerken kavşağa karşı eksen girmez (`holds_crossing`).
+- Siren (`traffic/police_siren.gd`): kodla sentez, döngülü. Bentley Türk/Amerikan tipi uluma (620–1.380 Hz, 2,4 sn),
+  Vito Alman "Martinshorn" (440 / 587 Hz, 0,6 sn). Dinleyici kameranın baktığı zemin noktası: ses polis yaklaştıkça
+  yükselir, uzaklaştıkça söner; duyulma yarıçapı zumla büyür; hafif Doppler. Ekran açıkken susar. SFX bus. Sentez
+  telefonda takılma yapmasın diye polis modeliyle birlikte 20 sn önceden iş parçacığında hazırlanır.
+- Test `tests/police_chase_test.gd` (pencereli, 31 kontrol); görsel QA `qa/police_chase_qa.gd` (şerit başına
+  kontakt + polisin ekran ortasına en yakın tam kare).

@@ -48,6 +48,12 @@ static func find_by_scene(scene_path: String) -> Dictionary:
 	return _by_scene.get(scene_path, {})
 
 
+## Oyuncu bu araca sahip olabilir mi? Polis araçları yalnızca şehirdeki kovalamacada görünür (PoliceChase):
+## kasada, koleksiyonda, showroom'da ve yarış rakiplerinde yoktur.
+static func is_obtainable(id: StringName) -> bool:
+	return bool(get_entry(id).get("obtainable", false))
+
+
 ## ARACIN OYUN ÖLÇEĞİ — gerçek boyuttan türetilmiş çarpan (cars.json "model_scale").
 ## Aracı sahneye koyan HER yer (trafik, garaj, showroom, drag) kendi bağlam çarpanını bununla
 ## çarpar; böylece dört yerde de aynı fiziksel oran görünür. Koda araç adı gömülmez.
@@ -183,6 +189,8 @@ const SCHEMA: Array[Dictionary] = [
 	{"key": "world_node", "kind": Kind.NAME, "default": &""},
 	{"key": "plate_color", "kind": Kind.COLOR, "default": Color("F3E8CF")},
 	{"key": "traffic", "kind": Kind.BOOL, "default": true},
+	{"key": "paintable", "kind": Kind.BOOL, "default": true},   # false: kaplamalı araç (polis) — boyası değişmez
+	{"key": "obtainable", "kind": Kind.BOOL, "default": true},  # false: oyuncu edinemez (polis: yalnızca kovalamacada)
 	{"key": "race", "kind": Kind.STATS, "default": {}},   # drag yarışı statları (bkz. RACE_STATS)
 	{"key": "performance", "kind": Kind.PERFORMANCE, "default": {}},   # gerçek fabrika verisi (bkz. PERFORMANCE)
 	{"key": "real_dimensions", "kind": Kind.DIMENSIONS, "default": {}},  # gerçek dış ölçüler (m)

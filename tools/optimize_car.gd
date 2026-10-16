@@ -36,7 +36,7 @@ const NORMAL_MERGE_ANGLE: float = 25.0
 ## --map ile korunan (2x oran) detay rolleri: küçük ama göze çarpan parçalar.
 const DETAIL_ROLES: Array[StringName] = [
 	&"headlights", &"taillights", &"mirrors", &"grille", &"plate", &"rims",
-	&"fog_lights", &"exhaust", &"antenna",
+	&"fog_lights", &"exhaust", &"antenna", &"police_lights",
 ]
 
 func _init() -> void:
@@ -353,6 +353,8 @@ func _rename_parts(source: Node) -> void:
 ## tripo_part_<new_part> adlı yeni bir MeshInstance3D olarak kök altına eklenir.
 ## İsteğe bağlı RENK koşulu (janta kaynamış fren kaliperi): "hue" (0-1), "hue_tol", "min_sat" verilirse
 ## üçgen ayrıca en az iki köşesinin doku rengi bu tona / doygunluğa uyuyorsa alınır.
+## Silindir yerine KUTU: {"part", "new_part", "box_min": [x,y,z], "box_max": [x,y,z]} (araç uzayında) — tavan
+## rayına kaynamış polis ışık çubuğu yarısı gibi teker olmayan parçalar için.
 func _extract_part(source: Node, spec: Dictionary, albedo: Image = null) -> void:
 	var src_node: MeshInstance3D = source.find_child(String(CarPartMap.part_name(spec["part"])), true, false) as MeshInstance3D
 	if src_node == null or src_node.mesh == null:
@@ -361,13 +363,24 @@ func _extract_part(source: Node, spec: Dictionary, albedo: Image = null) -> void
 	var arrays: Array = src_node.mesh.surface_get_arrays(0)
 	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
-	var c: Array = spec["center"]
 	# Tanım araç (dünya) uzayında: zemin y=0, ön +Z. Parçanın yerel uzayına çevrilir (kök ölçeği dahil).
-	var inv: Transform3D = _global_of(src_node).affine_inverse()
-	var center: Vector3 = inv * Vector3(c[0], c[1], c[2])
-	var unit: float = inv.basis.get_scale().x
-	var radius: float = float(spec["radius"]) * unit
-	var half_width: float = float(spec["half_width"]) * unit
+	var global: Transform3D = _global_of(src_node)
+	var inv: Transform3D = global.affine_inverse()
+	var by_box: bool = spec.has("box_min")
+	var box: AABB = AABB()
+	var center: Vector3 = Vector3.ZERO
+	var radius: float = 0.0
+	var half_width: float = 0.0
+	if by_box:
+		var lo: Array = spec["box_min"]
+		var hi: Array = spec["box_max"]
+		box = AABB(Vector3(lo[0], lo[1], lo[2]), Vector3(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]))
+	else:
+		var c: Array = spec["center"]
+		center = inv * Vector3(c[0], c[1], c[2])
+		var unit: float = inv.basis.get_scale().x
+		radius = float(spec["radius"]) * unit
+		half_width = float(spec["half_width"]) * unit
 	var inside: PackedInt32Array = PackedInt32Array()
 	var outside: PackedInt32Array = PackedInt32Array()
 	var by_color: bool = spec.has("hue") and albedo != null
@@ -375,7 +388,13 @@ func _extract_part(source: Node, spec: Dictionary, albedo: Image = null) -> void
 	for t: int in indices.size() / 3:
 		var all_in: bool = true
 		for k: int in 3:
-			var d: Vector3 = verts[indices[t * 3 + k]] - center
+			var v: Vector3 = verts[indices[t * 3 + k]]
+			if by_box:
+				if not box.has_point(global * v):
+					all_in = false
+					break
+				continue
+			var d: Vector3 = v - center
 			if absf(d.x) > half_width or Vector2(d.y, d.z).length() > radius:
 				all_in = false
 				break

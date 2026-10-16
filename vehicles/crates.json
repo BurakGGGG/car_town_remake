@@ -29,7 +29,8 @@
     {"id": "premium", "name": "PREMIUM", "cars": ["bmw_e46", "audi_a3", "volvo_s60", "bmw_e60", "mercedes_cls", "mercedes_s400"]},
     {"id": "italyan", "name": "İTALYAN", "cars": ["alfa_romeo_159", "lambo_huracan", "ferrari_488_pista"]},
     {"id": "super_spor", "name": "SÜPER SPOR", "cars": ["audi_rs6", "porsche_gt3", "lambo_huracan", "ferrari_488_pista"]},
-    {"id": "amerikan", "name": "AMERİKAN", "cars": ["chevrolet_camaro", "tesla_model_y"]}
+    {"id": "amerikan", "name": "AMERİKAN", "cars": ["chevrolet_camaro", "tesla_model_y"]},
+    {"id": "togg", "name": "TOGG", "cars": ["togg_t10x", "togg_t10f"]}
   ],
   "crates": [
     {
@@ -51,7 +52,7 @@
       "short_name": "AİLE",
       "price_gems": 50,
       "min_level": 10,
-      "pool": ["vw_passat_b55", "renault_fluence", "skoda_kamiq", "vw_golf_7", "vw_beetle"],
+      "pool": ["vw_passat_b55", "renault_fluence", "skoda_kamiq", "vw_golf_7", "vw_beetle", "togg_t10x"],
       "color": "#5F8FB0",
       "scene_path": "res://assets/crates/family_crate.glb",
       "icon": "",
@@ -77,7 +78,7 @@
       "short_name": "PRESTİJ",
       "price_gems": 120,
       "min_level": 20,
-      "pool": ["audi_a3", "volvo_s60", "tesla_model_y", "mercedes_cls", "mercedes_s400", "bmw_e60"],
+      "pool": ["audi_a3", "volvo_s60", "tesla_model_y", "togg_t10f", "mercedes_cls", "mercedes_s400", "bmw_e60"],
       "color": "#2E3440",
       "scene_path": "res://assets/crates/prestige_crate.glb",
       "icon": "",
