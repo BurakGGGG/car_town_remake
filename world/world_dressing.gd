@@ -56,6 +56,9 @@ func _ready() -> void:
 		move_traffic_ends(_traffic)
 	_build_showroom()
 	add_child(CityScenery.new())
+	add_child(IntersectionMarkings.new())    # kavşağın yaya geçitleri, dur / orta çizgileri, okları (eskileri gizlenir)
+	add_child(TrafficLights.new(_traffic))   # showroom önündeki kavşak; trafik yeşilde geçer
+	add_child(CityBillboard.new())           # showroom meydanında, günde bir değişen araç afişi
 
 
 # --- Yollar ----------------------------------------------------------------------------------

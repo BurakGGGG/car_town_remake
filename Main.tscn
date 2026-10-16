@@ -145,7 +145,7 @@ size = Vector3(0.05, 0.4, 1.5)
 albedo_color = Color(0.6, 0.6, 0.6, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_v343h"]
-size = Vector2(2, 1.5)
+size = Vector2(2.1, 1.575)
 
 [sub_resource type="BoxMesh" id="BoxMesh_ttnf8"]
 size = Vector3(0.5, 0.005, 0.7)
@@ -613,33 +613,33 @@ level_prices = PackedInt32Array(10000, 25000, 50000, 100000)
 [node name="Floor" type="Node3D" parent="GarageSystem" unique_id=62228734]
 
 [node name="GarageFloor" type="CSGBox3D" parent="GarageSystem/Floor" unique_id=937195520]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0.005, -0.95)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.25, 0.005, -0.9875)
 material_override = SubResource("StandardMaterial3D_o84ym")
-size = Vector3(2, 0.01, 1.5)
+size = Vector3(2.1, 0.01, 1.575)
 material = SubResource("StandardMaterial3D_c2ibq")
 
 [node name="Walls" type="Node3D" parent="GarageSystem" unique_id=203476443]
 
 [node name="GarageBackWall" type="CSGMesh3D" parent="GarageSystem/Walls" unique_id=497666357]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0.205, -1.675)
+transform = Transform3D(1.05, 0, 0, 0, 1, 0, 0, 0, 1, -1.25, 0.205, -1.8)
 mesh = SubResource("BoxMesh_yke70")
 material = SubResource("StandardMaterial3D_c6i3y")
 
 [node name="GarageLeftWall" type="CSGMesh3D" parent="GarageSystem/Walls" unique_id=2017559657]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 0.205, -0.95)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.0833334, -2.325, 0.205, -1.0125)
 mesh = SubResource("BoxMesh_726x4")
 material = SubResource("StandardMaterial3D_20pc6")
 
 [node name="BuildGrid" type="Node3D" parent="GarageSystem" unique_id=1066431588]
 
 [node name="BuildGrid" type="Node3D" parent="GarageSystem/BuildGrid" unique_id=276238766]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0.005, -0.95)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.25, 0.005, -0.9875)
 script = ExtResource("1_glv2v")
-width = 11
+width = 12
 depth = 9
 cell_size = 0.175
 anchor_corner = true
-extent = Vector2(2, 1.5)
+extent = Vector2(2.1, 1.575)
 
 [node name="PlacedObjects" type="Node3D" parent="GarageSystem/BuildGrid/BuildGrid" unique_id=392656656]
 

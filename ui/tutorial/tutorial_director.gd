@@ -4,7 +4,8 @@ extends Node
 ## TutorialManager'da, görünüm TutorialOverlay'dedir; burada yalnızca akış vardır.
 ##
 ## Dersler oyunda KOŞULU OLUŞUNCA başlar (oyuncuya ders listesi dayatılmaz):
-##   İLK TAMİR        ilk açılışta (hoş geldin kartıyla) — müşteri → TAMİRE AL → bekle → PARA TOPLA
+##   İLK TAMİR        ilk açılışta (hoş geldin kartıyla) — HOŞ GELDİN KUTUSU (dokun → AÇ → ilk araç) → müşteri →
+##                    TAMİRE AL → bekle → PARA TOPLA. Kutu açılmışsa / yoksa hediye adımları atlanır.
 ##   ARAÇ KOLEKSİYONU İLK KASA görevi bitince ya da garaja kasa gelince — ödül → kasa → AÇ → ARAÇLAR → MAĞAZA
 ##   DRAG YARIŞI      ilk rakip 🏁 balonuyla yanaşınca — davet → YARIŞ → kurallar → canlı yarış → sonuç
 ##   GARAJINI SÜSLE   seviye 3'te — GARAJ → DÜZENLE → eşya seç → yerleştir → BİTİR
@@ -418,7 +419,7 @@ func _resolve(step: Dictionary) -> Rect2:
 		var control: Control = target
 		if not is_instance_valid(control) or not control.is_visible_in_tree() or control.size == Vector2.ZERO:
 			return Rect2()
-		var rect: Rect2 = control.get_global_rect()
+		var rect: Rect2 = Hud.screen_rect(control)   # HUD boyutu ölçeği dahil
 		rect.position -= overlay.get_global_rect().position
 		return rect.grow(float(step.get("pad", 6.0)))
 	if target is Node3D:
@@ -466,14 +467,24 @@ func _first_crate_claimable() -> bool:
 		and not _quests.is_claimed(&"first_crate")
 
 
-## Garajda açılmayı bekleyen ilk kasa (yoksa -1).
+## Garajda açılmayı bekleyen ilk kasa (yoksa -1). Hediye kasası (HOŞ GELDİN KUTUSU) sayılmaz: onu İLK TAMİR
+## dersi açtırır; ARAÇ KOLEKSİYONU dersi hediyeyle tetiklenip "kasalar MAĞAZA'da" anlatmasın.
 func _openable_crate() -> int:
 	if _crates == null:
 		return -1
 	for crate: Dictionary in _crates.crates():
 		var uid: int = int(crate["uid"])
-		if _crates.can_open(uid) and _delivery != null and _delivery.visual_of(uid) != null:
+		if _crates.can_open(uid) and _delivery != null and _delivery.visual_of(uid) != null \
+				and not CrateCatalog.is_gift(crate["crate"]):
 			return uid
+	return -1
+
+
+## Garajda açılmayı bekleyen HOŞ GELDİN KUTUSU (dünyada duruyorsa; yoksa -1).
+func _welcome_crate() -> int:
+	var uid: int = _crates.welcome_uid() if _crates else 0
+	if uid > 0 and _crates.can_open(uid) and _delivery != null and _delivery.visual_of(uid) != null:
+		return uid
 	return -1
 
 
@@ -513,9 +524,11 @@ func _intro_info(id: StringName) -> Dictionary:
 	var caption: String = Loc.t("USTALIK DERSİ %d / %d") % [number, TutorialManager.ALL.size()]
 	match id:
 		TutorialManager.BASICS:
+			var welcome: bool = _crates != null and _crates.welcome_uid() > 0
 			return {"logo": true, "caption": caption, "icon": ChapterCard.Icon.WRENCH,
 				"title": Loc.t("HOŞ GELDİN, USTA!"),
-				"subtitle": Loc.t("Ben Rıza Usta. Bu garaj artık senin: arızalı araçları tamir et, para kazan, garajını büyüt. Hadi ilk müşterini karşılayalım!"),
+				"subtitle": Loc.t("Ben Rıza Usta. Bu garaj artık senin: arızalı araçları tamir et, para kazan, garajını büyüt. Ama önce sana bir hoş geldin hediyem var!") if welcome
+					else Loc.t("Ben Rıza Usta. Bu garaj artık senin: arızalı araçları tamir et, para kazan, garajını büyüt. Hadi ilk müşterini karşılayalım!"),
 				"primary": Loc.t("BAŞLAYALIM"), "secondary": Loc.t("EĞİTİMİ ATLA"), "secondary_choice": &"skip_all"}
 		TutorialManager.RACE:
 			return {"caption": caption, "icon": ChapterCard.Icon.FLAG, "title": _chapter_title(id),
@@ -592,12 +605,42 @@ func _junkyard_steps() -> Array[Dictionary]:
 	]
 
 
-## İLK TAMİR: müşteri gelir → araca dokun → TAMİRE AL → süre → PARA TOPLA → kazanç → görevler → garaj.
+## İLK TAMİR: (HOŞ GELDİN KUTUSU → AÇ → ilk araç) → müşteri gelir → araca dokun → TAMİRE AL → süre → PARA TOPLA
+## → kazanç → görevler → garaj.
 func _basics_steps() -> Array[Dictionary]:
 	var car: Callable = func() -> TrafficVehicle:
 		var chosen: Variant = _ctx.get("car")
 		return chosen if chosen is TrafficVehicle and is_instance_valid(chosen) else null
+	var gift_node: Callable = func() -> Node3D:
+		var uid: int = _welcome_crate()
+		if uid < 0:
+			uid = int(_ctx.get("gift", -1))
+		else:
+			_ctx["gift"] = uid
+		return _delivery.visual_of(uid) if _delivery and uid >= 0 else null
+	var no_gift: Callable = func() -> bool: return _welcome_crate() < 0 and not _ctx.has("gift_flow")
 	return [
+		{"title": Loc.t("HOŞ GELDİN HEDİYESİ"),
+			"text": Loc.t("Garajına bir hediye kutusu bıraktım. İçinde ilk araban var! Kutuya dokun."),
+			"skip_if": func() -> bool: return _welcome_crate() < 0,
+			"enter": func() -> void:
+				_ctx["gift_flow"] = true
+				_frame(gift_node.call(), 2.2),
+			"target": gift_node, "radius": 0.6, "lift": 0.2,
+			"done": func() -> bool: return hud.crate_panel.visible and hud.crate_panel.mode() == &"prompt"},
+		{"title": Loc.t("KUTUYU AÇ"),
+			"text": Loc.t("AÇ'a bas, bakalım içinden ne çıkacak!"),
+			"skip_if": no_gift,
+			"target": func() -> Control: return hud.crate_panel.find_child("CrateAction", true, false) as Control,
+			"done": func() -> bool: return _flags.has(&"revealed") or hud.crate_panel.mode() == &"result",
+			"back": func() -> bool: return not hud.crate_panel.visible and not (_delivery and _delivery.is_revealing())},
+		{"title": Loc.t("AL, İLK ARACIN!"),
+			"text": Loc.t("Bu Tofaş Şahin artık senin! Drag yarışlarına bununla çıkacaksın; yeni araçlar ileride kasalardan çıkar. Plakadaki TAMAM'a bas."),
+			"skip_if": no_gift,
+			"target": func() -> Control:
+				return hud.crate_panel.find_child("CrateAction", true, false) as Control if hud.crate_panel.mode() == &"result" else null,
+			"dim": false, "block": false,
+			"done": func() -> bool: return _flags.has(&"reveal_finished") or (not hud.crate_panel.visible and not _delivery.is_revealing())},
 		{"title": Loc.t("MÜŞTERİ YOLDA"),
 			"text": Loc.t("Şehirde arızalanan araçlar garajının önüne yanaşır. Biraz bekle, ilk müşterin geliyor..."),
 			"skip_if": func() -> bool: return _customer() != null and _customer().is_waiting(),
@@ -622,11 +665,9 @@ func _basics_steps() -> Array[Dictionary]:
 			"done": func() -> bool: return car.call() != null and _repair.can_collect(car.call()),
 			"fail": func() -> bool: return car.call() == null},
 		{"title": Loc.t("PARANI TOPLA"),
-			"text": Loc.t("Tamir bitti! Araca dokun ve PARA TOPLA'ya bas."),
-			"target": func() -> Variant:
-				if _repair.get_target() == car.call() and _repair_button() != null:
-					return _repair_button()
-				return car.call(),
+			"text": Loc.t("Tamir bitti! Aracın üstündeki paraya dokun, kazancın hemen toplanır."),
+			# Para bekleyen araca dokunmak doğrudan toplar (plaka açılmaz): ışık aracı ve tavanındaki ₺ balonunu birlikte kapsar
+			"target": car, "lift": 0.3, "radius": 0.6,
 			"enter": func() -> void: _frame(car.call()),
 			"done": func() -> bool: return _flags.has(&"repair_collected"),
 			"fail": func() -> bool: return car.call() == null and not _flags.has(&"repair_collected")},

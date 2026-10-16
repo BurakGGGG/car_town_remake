@@ -278,9 +278,14 @@ func _play_reveal(uid: int, v: CrateVisual, result: Dictionary) -> void:
 	var scene_path: String = CarCatalog.scene_path(vehicle)
 	var rarity: StringName = StringName(result["rarity"])
 	var rank: int = CrateCatalog.rarity_rank(rarity)
+	var color: Color = CrateCatalog.rarity_color(rarity)
+	if bool(result.get("gift", false)):
+		# HOŞ GELDİN KUTUSU: içindeki araç sıradan olsa da hediye şenlikli açılır (altın ışık, uzun gerilim, konfeti)
+		rank = maxi(rank, CrateCatalog.rarity_rank(&"epic"))
+		color = CrateCatalog.rarity_color(&"legendary")
 	# Araç modeli (dokunulunca başlamadıysa) açılış animasyonu sırasında arka planda yüklenir
 	_prefetch_vehicle(uid)
-	var fx: CrateRevealFx = _effects(v, CrateCatalog.rarity_color(rarity), rank)
+	var fx: CrateRevealFx = _effects(v, color, rank)
 	_revealing[uid] = {"fx": fx}
 	fx.suspense(CrateVisual.suspense_time(rank))
 	v.burst_open.connect(fx.burst, CONNECT_ONE_SHOT)

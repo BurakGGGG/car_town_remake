@@ -7,6 +7,9 @@ static var _selected_before_click: Node3D = null
 # _unhandled_input her hitbox'ta ayrı çalışır; aynı tıklamayı yalnızca bir kez işlemek için.
 static var _last_click: InputEvent = null
 
+## Tamiri bitmiş araç (₺ balonu): araca ya da balona dokunmak seçim yapmaz, parayı DOĞRUDAN toplar
+## (RepairManager.collect); ayrı plaka / PARA TOPLA adımı yoktur.
+
 ## Zemin göstergesi (halka + köşe braketleri). SelectionRing açma/kapama anahtarı olarak kalır.
 const INDICATOR_SHADER: Shader = preload("res://vfx/selection_indicator.gdshader")
 const INDICATOR_HEIGHT: float = 0.05  # araç lokalinde zeminden yükseklik (z-fighting önlemi)
@@ -75,6 +78,12 @@ func _input_event(_camera: Camera3D, event: InputEvent, _event_position: Vector3
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			var car: Node3D = get_parent()
+			# Tamiri bitmiş, parası bekleyen araç (₺ balonu): dokununca para DOĞRUDAN toplanır, plaka açılmaz
+			var repair: RepairManager = get_tree().get_first_node_in_group("repair_manager") as RepairManager
+			if repair and repair.can_collect(car):
+				repair.collect(car)
+				get_viewport().set_input_as_handled()
+				return
 
 			# Not: Godot aynı tıklama için önce _unhandled_input'u çalıştırır (bütün halkalar
 			# orada kapatıldı), fizik picking sonra gelir. Burada sadece tıklanan araç ele alınır.

@@ -18,6 +18,8 @@ extends Node
 ## delikli çizim üretiyor (godotengine/godot#104351, açık). Bu GPU'da MSAA HİÇBİR görünümde açılmaz;
 ## SubViewport'lar MSAA'yı subviewport_msaa() üzerinden alır (drag pisti eskiden 2×'te sabitti).
 ## Pil tasarrufu: kare hızı 60 → 30.
+## HUD BOYUTU: oyun ekranındaki HUD'un (sol üst sayaçlar, sağ üst tabelalar, alt şerit ve dünya plakaları) beş
+## kademeli ölçeği; uygulayan Hud (settings_changed'i dinler). Panolar / tam ekranlar bundan etkilenmez.
 ## Ses: Müzik ve Efekt bus'ları kodla kurulur (Master'a bağlı); oyunda henüz ses varlığı yok, düzeyler
 ## hazır durur ve ses eklendiğinde AudioStreamPlayer'lar bu bus'lara verilir.
 
@@ -42,6 +44,10 @@ const AUDIO_VERSION: int = 2
 const FPS_SAVER: int = 30
 ## Düşük kalitede trafikteki en fazla araç (normalde TrafficManager.max_vehicles).
 const LOW_TRAFFIC: int = 2
+## HUD BOYUTU kademeleri (%80 … %120) ve varsayılan kademe (%100). Üst sınır en dar tuvalde (853x480) garaj
+## paneli / araç plakası ekrana sığacak şekilde seçildi.
+const HUD_SCALES: Array[float] = [0.8, 0.9, 1.0, 1.1, 1.2]
+const HUD_DEFAULT: int = 2
 ## Bu kadar RAM'in altı DÜŞÜK (bayt); bu kadar ve üstü + güçlü GPU YÜKSEK.
 const LOW_RAM: int = 3_500_000_000
 const HIGH_RAM: int = 7_500_000_000
@@ -65,6 +71,8 @@ var battery_saver: bool = false
 var music_volume: float = DEFAULT_MUSIC
 var sfx_volume: float = DEFAULT_SFX
 var muted: bool = false
+## HUD_SCALES içindeki kademe.
+var hud_size: int = HUD_DEFAULT
 ## Dil: "" = cihaz dili (destekleniyorsa), yoksa Loc.LANGUAGES'tan biri.
 var language: String = ""
 
@@ -129,6 +137,16 @@ func set_sfx_volume(value: float) -> void:
 func set_muted(value: bool) -> void:
 	muted = value
 	_changed()
+
+
+func set_hud_size(value: int) -> void:
+	hud_size = clampi(value, 0, HUD_SCALES.size() - 1)
+	_changed()
+
+
+## Seçili kademenin ölçeği (1.0 = tasarım boyu).
+func hud_scale() -> float:
+	return HUD_SCALES[hud_size]
 
 
 ## Ayarları oyuna uygular (çağrılması güvenli, tekrar edilebilir).
@@ -232,6 +250,7 @@ func save_settings() -> void:
 	cfg.set_value("audio", "muted", muted)
 	cfg.set_value("audio", "version", AUDIO_VERSION)
 	cfg.set_value("general", "language", language)
+	cfg.set_value("interface", "hud_size", hud_size)
 	cfg.save(PATH)
 
 
@@ -252,3 +271,4 @@ func load_settings() -> void:
 		sfx_volume = DEFAULT_SFX
 	muted = bool(cfg.get_value("audio", "muted", false))
 	language = String(cfg.get_value("general", "language", ""))
+	hud_size = clampi(int(cfg.get_value("interface", "hud_size", HUD_DEFAULT)), 0, HUD_SCALES.size() - 1)

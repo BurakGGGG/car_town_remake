@@ -137,21 +137,28 @@ func _has_point(point: Vector2) -> bool:
 		return true
 	if Engine.is_editor_hint() or not is_in_group(GROUP):
 		return false
-	var slop: Vector2 = ((Vector2(MIN_TOUCH, MIN_TOUCH) - size) * 0.5).max(Vector2.ZERO)
+	# Dokunma alanı EKRANDA MIN_TOUCH kalır: HUD boyutu küçükken (ata ölçeği < 1) yerel pay büyür
+	var touch: float = MIN_TOUCH / maxf(get_global_transform().get_scale().x, 0.01)
+	var slop: Vector2 = ((Vector2(touch, touch) - size) * 0.5).max(Vector2.ZERO)
 	if slop == Vector2.ZERO or not own.grow_individual(slop.x, slop.y, slop.x, slop.y).has_point(point):
 		return false
 	# Kenar payları çakışınca (yan yana tabelalar, alt alta menü plakaları) nokta, görünür
 	# dikdörtgeni EN YAKIN düğmenin olur; yoksa ağaçta sonra gelen hep kazanırdı ve plakalar
-	# arasındaki boşluğa dokunmak aşağıdakini açardı.
+	# arasındaki boşluğa dokunmak aşağıdakini açardı. Dikdörtgenler ekrandaki (ölçekli) hâliyle.
 	var at: Vector2 = get_global_transform() * point
-	var mine: float = _distance(get_global_rect(), at)
+	var mine: float = _distance(_on_screen(self), at)
 	for node: Node in get_tree().get_nodes_in_group(GROUP):
 		var other: Control = node as Control
 		if other == self or not other.is_visible_in_tree():
 			continue
-		if _distance(other.get_global_rect(), at) < mine:
+		if _distance(_on_screen(other), at) < mine:
 			return false
 	return true
+
+
+## get_global_rect ata ölçeğini (HUD boyutu) yok sayar; bu ölçekli dikdörtgeni verir.
+static func _on_screen(control: Control) -> Rect2:
+	return control.get_global_transform() * Rect2(Vector2.ZERO, control.size)
 
 
 static func _distance(rect: Rect2, point: Vector2) -> float:

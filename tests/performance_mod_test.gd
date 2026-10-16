@@ -177,6 +177,8 @@ func _run() -> void:
 	var save: SaveManager = g(&"save_manager")
 	check(mods != null and view != null, "PerformanceModManager + görünüm kodla kuruldu")
 	var sahin: StringName = &"tofas_sahin"
+	if not own.is_owned(sahin):
+		own.add_vehicle(sahin)   # yeni oyunda araç HOŞ GELDİN KUTUSU'ndan çıkar; test kutuyu açmadan ekler
 	check(own.is_owned(sahin), "başlangıç aracı Şahin")
 	pp.level = 1
 	check(mods.status(sahin, &"motor") == PerformanceModManager.Status.NEEDS_LEVEL, "seviye 1'de SOKAK kilitli (seviye 3)")

@@ -2,7 +2,9 @@ class_name Hud
 extends CanvasLayer
 ## Ana HUD — "yol mobilyası / plaka" dili.
 ## Sol üst: level tabelası + isim plakası + şerit XP + coin/gem.
-## Sağ üst: yuvarlak tabela butonları (kamera / ses / AYARLAR dişlisi), kamera açılınca mini şerit.
+## Sağ üst: yuvarlak tabela butonları (kamera / ses / AYARLAR dişlisi). Kamera tabelası altında küçük KAMERA
+## kutusunu açar (CameraMenu, yazısız yuvarlak tabelalar: fotoğraf · HUD'u gizle · sinema | uzaklaş · yakınlaş ·
+## ortala); modlar PhotoMode'dadır.
 ## Alt: dört plaka (GARAJ / ARAÇLAR / MAĞAZA / PROFİL) ve seçilince açılan araç plakası.
 ## Araç satın alma artık alt menüde DEĞİL: haritadaki "CAR PARTS & SHOWROOM" binasına tıklanınca
 ## açılan MAĞAZA ekranındadır (ShowroomScreen, HUD'un altına kodla eklenir ve "showroom" grubundan
@@ -15,11 +17,14 @@ extends CanvasLayer
 ## Sağ üstte tabelaların altında GÖREVLER plakası GÖREVLER tabelasını (MissionScreen: günlük / haftalık / başarım, kodla eklenir) açar;
 ## alınabilir ödül varken plaka amber olur ve sayıyı gösterir. Görev tamamlanınca / ödül alınınca kısa
 ## bildirim plakası çıkar (QuestManager, "quests" grubu).
+## HUD BOYUTU (AYARLAR, GameSettings.hud_scale): sol üst / sağ üst / alt şerit kümeleri kendi sabit köşelerinden
+## ölçeklenir (dünya plakaları alt şeritte olduğu için onlarla birlikte); panolar ve tam ekranlar değişmez.
 ## Sadece görsel katman: değerler setter'larla gelir, butonlar sinyal olarak dışarı verilir.
 ## Oyun mantığı burada değil: tamir döngüsü için sahnedeki RepairManager ("repair_manager" grubu),
 ## para için EconomyManager ("economy" grubu) ve XP/seviye için PlayerProgress ("player_progress"
 ## grubu) bulunur, sinyalleri araç plakasına / sayaçlara
-## yansıtılır; TAMİRE AL plakası RepairManager.start_repair'i, PARA TOPLA plakası collect'i çağırır.
+## yansıtılır; TAMİRE AL plakası RepairManager.start_repair'i çağırır. Tamiri biten aracın parası ₺ balonuna (ya da
+## araca) dokununca doğrudan toplanır (car_hitbox → RepairManager.collect); plaka açılmaz.
 ## Ödül geri bildirimi ("+150 ₺  +7 XP") araç plakasının üstünde beliren küçük bir plakayla verilir
 ## (aynı yerine oturma animasyonu, sonra söner). Bunlar yoksa (ör. önizleme sahnesi) HUD eskisi gibi
 ## bağımsız çalışır.
@@ -28,6 +33,8 @@ signal nav_selected(id: StringName)
 signal sound_toggled(enabled: bool)
 ## direction: +1 yakınlaş, -1 uzaklaş
 signal camera_zoom_requested(direction: int)
+## KAMERA MENÜSÜ → ORTALA: dünya kamerası açılıştaki görünüme döner.
+signal camera_recenter_requested
 
 ## Araç bilgi plakası: seçili trafik aracı için tamir içeriğini (RepairPanel) gösterir.
 ## false yapılırsa show_car_info() plakayı açmaz (eski davranış).
@@ -72,6 +79,9 @@ var login_screen: LoginScreen
 ## Kodla kurulan AYARLAR tabelası ve onu açan dişli tabela (sağ üst).
 var settings_screen: SettingsScreen
 var settings_button: PlateButton
+## Kamera tabelasının altında açılan menü ve onun açtığı FOTOĞRAF / HUD GİZLİ / SİNEMA katmanı.
+var camera_menu: CameraMenu
+var photo_mode: PhotoMode
 ## Kodla kurulan GÖREVLER tabelası ve onu açan plaka.
 var quest_screen: MissionScreen
 var quest_button: PlateButton
@@ -85,6 +95,9 @@ var _missions: MissionManager
 @onready var top_right: MarginContainer = %TopRight
 @onready var bottom: MarginContainer = %Bottom
 
+## Oyun HUD'unun ölçeği (AYARLAR → HUD BOYUTU); 1.0 = tasarım boyu.
+var hud_scale: float = 1.0
+var _settings: GameSettings
 var _nav_group: ButtonGroup = ButtonGroup.new()
 var _nav_ids: Dictionary = {}
 var _car_tween: Tween
@@ -144,9 +157,13 @@ var crate_panel: CratePanel
 var restoration_result: RestorationResult
 ## Garajdaki eşyaya basılı tutmak düzenleyiciyi o eşya tutulmuş açar.
 var decor_hold: DecorHoldGesture
+## RÖVANŞ: sonuç panosu pisti yeniden açmak için kapanıyor (closed → _on_race_exit çıkış yapmasın).
+var _rematch_pending: bool = false
 var _new_tiers: Array[StringName] = []   # teslim töreni sürerken açılan restorasyon sınıfları
 var _crates: CrateManager
 var _delivery: CrateDelivery
+var _welcome_timer: Timer
+var _welcome_nudges: int = 0
 var _blocked_notified: Dictionary = {}   # yer bulamayan kasa uid → uyarıldı mı
 ## Alt sekme → açtığı ekran.
 var _nav_screens: Dictionary = {}
@@ -184,6 +201,7 @@ func _ready() -> void:
 	_build_showroom()
 	_build_login_screen()
 	_build_settings()
+	_build_camera_menu()
 	_build_quests()
 	_build_friends()
 	_build_progress_screens()
@@ -229,15 +247,12 @@ func _ready() -> void:
 func _apply_safe_area() -> void:
 	if not OS.has_feature("mobile"):
 		return
-	var window: Vector2i = DisplayServer.window_get_size()
-	var safe: Rect2i = DisplayServer.get_display_safe_area()
-	if window.x <= 0 or window.y <= 0:
-		return
-	var scale: Vector2 = get_viewport().get_visible_rect().size / Vector2(window)
-	var inset_left: int = int(round(float(maxi(safe.position.x, 0)) * scale.x))
-	var inset_top: int = int(round(float(maxi(safe.position.y, 0)) * scale.y))
-	var inset_right: int = int(round(float(maxi(window.x - safe.end.x, 0)) * scale.x))
-	var inset_bottom: int = int(round(float(maxi(window.y - safe.end.y, 0)) * scale.y))
+	# Kümeler ölçeklendiği için pay yerel birime çevrilir: küçük HUD'da da düğmeler kesik alana girmesin
+	var insets: PackedInt32Array = safe_area_insets(get_viewport())
+	var inset_left: int = ceili(insets[0] / hud_scale)
+	var inset_top: int = ceili(insets[1] / hud_scale)
+	var inset_right: int = ceili(insets[2] / hud_scale)
+	var inset_bottom: int = ceili(insets[3] / hud_scale)
 	top_left.add_theme_constant_override(&"margin_left", 10 + inset_left)
 	top_left.add_theme_constant_override(&"margin_top", 10 + inset_top)
 	top_right.add_theme_constant_override(&"margin_right", 10 + inset_right)
@@ -245,7 +260,42 @@ func _apply_safe_area() -> void:
 	bottom.add_theme_constant_override(&"margin_bottom", 10 + inset_bottom)
 
 
+## Güvenli alanın kenar payları tuval biriminde [sol, üst, sağ, alt]; masaüstünde hepsi 0.
+## Tam ekran katmanlar da (fotoğraf modu) aynı payı kullanır.
+static func safe_area_insets(viewport: Viewport) -> PackedInt32Array:
+	var insets: PackedInt32Array = PackedInt32Array([0, 0, 0, 0])
+	if not OS.has_feature("mobile"):
+		return insets
+	var window: Vector2i = DisplayServer.window_get_size()
+	var safe: Rect2i = DisplayServer.get_display_safe_area()
+	if window.x <= 0 or window.y <= 0:
+		return insets
+	var scale: Vector2 = viewport.get_visible_rect().size / Vector2(window)
+	insets[0] = int(round(float(maxi(safe.position.x, 0)) * scale.x))
+	insets[1] = int(round(float(maxi(safe.position.y, 0)) * scale.y))
+	insets[2] = int(round(float(maxi(window.x - safe.end.x, 0)) * scale.x))
+	insets[3] = int(round(float(maxi(window.y - safe.end.y, 0)) * scale.y))
+	return insets
+
+
 # --- Dış API -----------------------------------------------------------------
+
+## HUD BOYUTU: üç küme kendi sabit noktasından büyür / küçülür (sol üst köşe, sağ üst köşe, alt orta).
+func set_hud_scale(value: float) -> void:
+	hud_scale = clampf(value, 0.5, 2.0)
+	top_right.pivot_offset_ratio = Vector2(1.0, 0.0)
+	bottom.pivot_offset_ratio = Vector2(0.5, 1.0)
+	for cluster: Control in [top_left, top_right, bottom]:
+		cluster.scale = Vector2(hud_scale, hud_scale)
+	_apply_safe_area()
+	_fit_car_info()
+	_sync_modal_hud()
+
+
+## Bir HUD öğesinin EKRANDAKİ dikdörtgeni (HUD boyutu ölçeği dahil; get_global_rect ölçeği yok sayar).
+static func screen_rect(control: Control) -> Rect2:
+	return control.get_global_transform() * Rect2(Vector2.ZERO, control.size)
+
 
 func set_player_name(value: String) -> void:
 	name_plate.text = value.to_upper()
@@ -365,7 +415,7 @@ func hide_car_info() -> void:
 func _fit_car_info() -> void:
 	if not car_info_panel.visible:
 		return
-	var room: float = get_viewport().get_visible_rect().size.x - 24.0
+	var room: float = get_viewport().get_visible_rect().size.x / hud_scale - 24.0   # plaka ölçekli çizilir
 	_set_car_info_compact(false)
 	if car_info_panel.get_combined_minimum_size().x > room:
 		_set_car_info_compact(true)
@@ -398,6 +448,10 @@ static func format_thousands(value: int) -> String:
 const CAR_NAME_COMPACT_WIDTH: float = 130.0
 ## Aynı anda en fazla bu kadar bildirim beklet (fazlası oyuncuyu geride bırakır).
 const NOTICE_QUEUE_MAX: int = 4
+## HOŞ GELDİN KUTUSU hatırlatması: ilk bakış (sn), sonraki bakışlar (sn), oturum başına en çok kaç kez.
+const WELCOME_NUDGE_FIRST: float = 6.0
+const WELCOME_NUDGE_REPEAT: float = 45.0
+const WELCOME_NUDGES: int = 3
 
 ## Ses sistemi (müzik/SFX varlıkları + bus) bağlı mı? Şimdilik yok: SES düğmesi gizli kalır.
 const AUDIO_AVAILABLE: bool = false
@@ -443,6 +497,10 @@ func _setup_test_money() -> void:
 
 
 func _connect_gameplay() -> void:
+	_settings = get_tree().get_first_node_in_group("settings") as GameSettings
+	if _settings:
+		_settings.settings_changed.connect(func() -> void: set_hud_scale(_settings.hud_scale()))
+		set_hud_scale(_settings.hud_scale())
 	_economy = get_tree().get_first_node_in_group("economy") as EconomyManager
 	if _economy:
 		_economy.money_changed.connect(set_coins)
@@ -473,11 +531,14 @@ func _connect_gameplay() -> void:
 		_repair_manager.repair_started.connect(_on_repair_started)
 		_repair_manager.repair_slot_freed.connect(_on_repair_slot_freed)
 		_repair_manager.repair_progress.connect(_on_repair_progress)
-		_repair_manager.repair_ready.connect(_on_repair_started)
+		_repair_manager.repair_ready.connect(_on_repair_ready)
 		_repair_manager.repair_collected.connect(_on_repair_collected)
 		_repair_manager.repair_cancelled.connect(_on_repair_cancelled)
 		_repair_manager.customer_marked.connect(_on_customer_changed)
 		_repair_manager.customer_stopped.connect(_on_customer_changed)
+		_repair_manager.customer_left.connect(func(car: Node3D) -> void:
+			_on_customer_changed(car)
+			_show_notice(Loc.t("MÜŞTERİ BEKLEMEKTEN SIKILIP GİTTİ"), HudPalette.INK, 2.0))
 	var mastery: JobMastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
 	if mastery:
 		mastery.mastery_up.connect(_on_mastery_up)
@@ -1008,10 +1069,12 @@ func _on_race_completed(won: bool, player_time: float, rival_time: float) -> voi
 	var reward: Dictionary = {"money": 0, "xp": 0}
 	var rival: StringName = _race.rival_id() if _race else &""
 	var player_id: StringName = _race.player_vehicle_id() if _race else &""
+	var rematch: int = _race.rematch_count() if _race else 0
 	if _race:
 		reward = _race.finish_race(won)
 	race_result_screen.show_result(won, player_time, rival_time,
-		int(reward["money"]), int(reward["xp"]), player_id if won else rival)
+		int(reward["money"]), int(reward["xp"]), player_id if won else rival, rematch)
+	race_result_screen.offer_rematch(not won and _race != null and _race.can_rematch())
 	var record: Dictionary = drag_race_screen.record_result()
 	race_result_screen.show_record(bool(record["finished"]), bool(record["new"]),
 		float(record["time"]), float(record["previous"]))
@@ -1071,10 +1134,31 @@ func _on_ad_finished(kind: StringName, rewarded: bool) -> void:
 			race_result_screen.hide_bonus()
 
 
-## GARAJA DÖN: sonuç ve pist kapanır, oyuncu dünyaya döner.
+## RÖVANŞ: aynı rakiple yeniden yarış. Sonuç panosu kapanır (kapanış animasyonu bitince closed → _on_race_exit
+## gelir; bayrak onu "yarıştan çık" yerine "pisti yeniden aç" yapar), pist sıfırdan kurulur.
+func _on_race_rematch() -> void:
+	if _race == null or not _race.start_rematch():
+		race_result_screen.offer_rematch(false)
+		return
+	_race_bonus_amount = 0
+	race_result_screen.hide_bonus()
+	_rematch_pending = true
+	if router.top() == &"race_result":
+		router.back()
+	else:
+		_on_race_exit()
+
+
+## GARAJA DÖN: sonuç ve pist kapanır, oyuncu dünyaya döner (rövanş bekleyen rakip yola döner).
 func _on_race_exit() -> void:
+	if _rematch_pending:   # sonuç panosu rövanş için kapandı: pist aynı rakiple baştan
+		_rematch_pending = false
+		if router.is_open(&"drag_race"):
+			drag_race_screen.open()
+			return
 	_race_bonus_amount = 0
 	if _race:
+		_race.end_race_session()
 		_race.set_racing(false)
 	if router.is_open(&"drag_race") or router.is_open(&"race_result"):
 		router.close_all()
@@ -1095,6 +1179,13 @@ func _on_customer_changed(car: Node3D) -> void:
 func _on_repair_started(car: Node3D) -> void:
 	if car == _repair_target:
 		_refresh_repair_panel(false)
+
+
+## Tamir bitti: para aracın üstündeki ₺ balonundan DOĞRUDAN toplanır (car_hitbox), plakada PARA TOPLA adımı
+## yok. Bu aracın plakası açıksa seçim kaldırılır, plaka kapanır; oyuncu balona dokunur.
+func _on_repair_ready(car: Node3D) -> void:
+	if car == _repair_target:
+		(load("res://car_hitbox.gd") as GDScript).call(&"clear_selection", get_tree())
 
 
 func _on_repair_progress(car: Node3D, progress: float) -> void:
@@ -1224,6 +1315,7 @@ func _build_race_screens() -> void:
 	race_result_screen.exit_requested.connect(_on_race_exit)
 	race_result_screen.closed.connect(_on_race_exit)
 	race_result_screen.bonus_requested.connect(_on_race_bonus_requested)
+	race_result_screen.rematch_requested.connect(_on_race_rematch)
 
 
 ## HARİTA + HURDALIK (docs/HURDALIK_TASARIM.md §1): ikisi de PLACE. Şehirden HARİTA plakası (alt
@@ -1325,6 +1417,7 @@ func _register_screens() -> void:
 	router.register(&"map", map_screen, UiRouter.Kind.PLACE)
 	router.register(&"junkyard", junkyard_screen, UiRouter.Kind.PLACE)
 	router.register(&"restoration", restoration_panel, UiRouter.Kind.MODAL)
+	router.register(&"photo", photo_mode, UiRouter.Kind.PLACE)   # HUD'suz dünya: fotoğraf / HUD gizli / sinema
 	# 3D ekranların shader'ları oyun yüklenirken derlensin (ilk açılış takılmasız)
 	drag_race_screen.prewarm.call_deferred()
 	showroom.prewarm.call_deferred()
@@ -1342,6 +1435,7 @@ func _on_ui_stack_changed(top: StringName, place_open: bool) -> void:
 	if place_open:
 		_garage_panel_open = false
 	if top != &"":
+		camera_button.button_pressed = false   # kamera menüsü bir ekranın altında açık kalmasın
 		hide_bay_plate()   # dünya plakası bir ekranın altında asılı kalmasın
 		hide_car_info()
 		if crate_panel and crate_panel.mode() == &"prompt":
@@ -1479,6 +1573,13 @@ func _connect_crates() -> void:
 		_delivery.crate_clicked.connect(_on_crate_clicked)
 		_delivery.reveal_ready.connect(_on_crate_revealed)
 		_delivery.delivery_blocked.connect(_on_crate_blocked)
+	if _crates and _delivery and not GarageVisit.is_visiting():
+		_welcome_timer = Timer.new()
+		_welcome_timer.name = "WelcomeNudge"
+		_welcome_timer.wait_time = WELCOME_NUDGE_FIRST
+		_welcome_timer.timeout.connect(_nudge_welcome)
+		add_child(_welcome_timer)
+		_welcome_timer.start()
 	var gem_rewards: GemRewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
 	if gem_rewards:
 		gem_rewards.reward_granted.connect(func(_amount: int, text: String) -> void:
@@ -1534,6 +1635,27 @@ func _on_crate_added(uid: int) -> void:
 	if _delivery:
 		_delivery.focus_on_arrival(uid)
 	_show_notice(Loc.t("İLK ARAÇ KASAN GARAJINA GELDİ\nKASAYA DOKUN VE AÇ"), HudPalette.COIN_DARK, 3.0)
+
+
+## HOŞ GELDİN KUTUSU hatırlatması: kutuyu eğitim göstermiyorsa (ders atlandı / kapalı / bitti) oyuncu boştayken
+## kamera kutuya gider ve ne yapacağı söylenir. Eğitim çalışırken, ekran açıkken ya da kutu açılırken beklenir;
+## oturum başına en çok WELCOME_NUDGES kez, kutu açılınca durur.
+func _nudge_welcome() -> void:
+	var uid: int = _crates.welcome_uid() if _crates else 0
+	if uid == 0:
+		_welcome_timer.stop()
+		return
+	if (tutorial and tutorial.is_running()) or router.top() != &"" or crate_panel.visible or _delivery.is_revealing() \
+			or _delivery.visual_of(uid) == null or not _crates.can_open(uid) \
+			or get_tree().root.get_node_or_null("LoadingScreen") != null:
+		return   # bir sonraki turda yeniden bakılır
+	_welcome_nudges += 1
+	_delivery.focus_on_arrival(uid)
+	_show_notice(Loc.t("HOŞ GELDİN HEDİYEN GARAJINDA\nKUTUYA DOKUN VE AÇ"), HudPalette.COIN_DARK, 3.0)
+	if _welcome_nudges >= WELCOME_NUDGES:
+		_welcome_timer.stop()
+	else:
+		_welcome_timer.start(WELCOME_NUDGE_REPEAT)
 
 
 ## Dünyadaki kasaya dokunuldu: içerik GİZLİ soru plakası.
@@ -1596,6 +1718,36 @@ func _build_settings() -> void:
 	settings_button.focus_mode = Control.FOCUS_NONE
 	settings_button.pressed.connect(func() -> void: router.open(&"settings"))
 	camera_button.get_parent().add_child(settings_button)
+
+
+## KAMERA KUTUSU: tabela sırasının hemen altına girer (GÖREVLER / ARKADAŞLAR açıkken bir sıra aşağı kayar).
+## Sahnedeki yakınlaştırma tabelaları (eski kamera şeridi) kutuya taşınır; boş kalan şerit gizli kalır.
+## Tabela sırası sağa yaslanır: kutu sütunu genişletince kamera / dişli yerinden kaymasın (sola yaslıyken kayıyordu).
+func _build_camera_menu() -> void:
+	camera_menu = CameraMenu.new()
+	camera_menu.anchor_button = camera_button
+	var sign_row: HBoxContainer = camera_button.get_parent() as HBoxContainer
+	sign_row.alignment = BoxContainer.ALIGNMENT_END
+	var column: Node = sign_row.get_parent()
+	column.add_child(camera_menu)
+	column.move_child(camera_menu, sign_row.get_index() + 1)
+	camera_menu.adopt_zoom_buttons(zoom_out_button, zoom_in_button)
+	camera_menu.dismissed.connect(func() -> void: camera_button.button_pressed = false)
+	camera_menu.photo_requested.connect(open_photo_mode.bind(PhotoMode.Mode.PHOTO))
+	camera_menu.hide_hud_requested.connect(open_photo_mode.bind(PhotoMode.Mode.CLEAN))
+	camera_menu.cinema_requested.connect(open_photo_mode.bind(PhotoMode.Mode.CINEMA))
+	camera_menu.recenter_requested.connect(camera_recenter_requested.emit)
+	photo_mode = PhotoMode.new()
+	garage_screen.get_parent().add_child(photo_mode)
+
+
+## FOTOĞRAF / HUD GİZLİ / SİNEMA katmanını açar (UiRouter "photo"; GERİ ya da katmanın düğmesi kapatır).
+func open_photo_mode(mode: PhotoMode.Mode) -> void:
+	camera_button.button_pressed = false
+	if router.is_open(&"photo"):
+		return
+	photo_mode.mode = mode
+	router.open(&"photo")
 
 
 func _build_login_screen() -> void:
@@ -1698,7 +1850,7 @@ func _sync_modal_hud() -> void:
 	var modal: bool = router.top() != &"" and not place_open
 	top_right.visible = not place_open and not modal
 	garage_button.get_parent().visible = not modal   # alt sekmeler (NavRow)
-	FitScroll.set_reserve(get_tree(), top_left.get_global_rect() if modal and top_left.visible else Rect2())
+	FitScroll.set_reserve(get_tree(), screen_rect(top_left) if modal and top_left.visible else Rect2())
 
 
 func _on_name_plate_pressed() -> void:
@@ -1707,7 +1859,10 @@ func _on_name_plate_pressed() -> void:
 
 
 func _on_camera_toggled(pressed: bool) -> void:
-	camera_controls.visible = pressed
+	if pressed:
+		camera_menu.open()
+	else:
+		camera_menu.close()
 
 
 func _on_sound_toggled(muted: bool) -> void:

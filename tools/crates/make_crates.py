@@ -3,6 +3,7 @@
 Kullanım (başsız):
     blender --background --python tools/crates/make_crates.py
     blender --background --python tools/crates/make_crates.py -- --preview /tmp/onizleme   (PNG önizleme)
+    blender --background --python tools/crates/make_crates.py -- --only welcome_crate      (yalnız bu kasa)
 
 Model sözleşmesi (vehicles/crates.json _readme): orijin zeminde ve kasanın ortasında, uzun kenar +X,
 dış ölçü world_size (0,72 × 0,38 × 0,46 DÜNYA BİRİMİ — 1 Blender birimi = 1 Godot birimi, ölçek
@@ -354,8 +355,61 @@ def superc():
     return root, panels, lid
 
 
+def welcome():
+    """HOŞ GELDİN KUTUSU: yeni oyuncuya ilk aracı (Tofaş Şahin) getiren hediye. Kırmızı ambalaj kâğıdı,
+    beyaz puantiye, dört yandan inen altın kurdele, kapakta büyük fiyonk ve küçük araba resimli etiket.
+    Fiyonk ve etiket kapağa bağlı: açılışta kapakla birlikte havaya fırlar, kurdeleler yan panellerle düşer."""
+    red = mat("#C8202E", 0.55)
+    red_d = mat("#9E1622", 0.6)
+    dot = mat("#F6EFE6", 0.6)
+    gold = mat("#F2B830", 0.35, 0.3, emit="#7A5200", strength=0.6)
+    gold_d = mat("#C98E12", 0.4, 0.3)
+    cream = mat("#F3E8CF", 0.7)
+    ink = mat("#2F3236", 0.6)
+    root, panels, lid, wh = skeleton("welcome_crate", red, red_d, red, red_d)
+    band = 0.07
+    for p in panels:
+        cols = max(int(p.w / 0.085), 3)
+        for i in range(cols):   # puantiye: iki sıra kaydırmalı, kurdelenin altında kalan atlanır
+            for j in range(3):
+                u = -p.w / 2 + (i + 0.5 + 0.5 * (j % 2)) * p.w / cols
+                v = wh * (0.2 + 0.3 * j)
+                if abs(u) < band * 0.9 or abs(u) > p.w / 2 - 0.02:
+                    continue
+                c = cyl("Dot", 0.014, 0.004, (0, 0, 0), dot, p.hinge, verts=10)
+                if p.axis == 'y':
+                    c.location = (u, p.sign * 0.002, v)
+                    c.rotation_euler = (math.radians(90), 0, 0)
+                else:
+                    c.location = (p.sign * 0.002, u, v)
+                    c.rotation_euler = (0, math.radians(90), 0)
+        p.add(0, wh / 2, band, wh + 0.004, 0.006, gold, 0.004, "Ribbon")         # yandan inen kurdele
+        p.add(0, wh / 2, band * 0.25, wh + 0.004, 0.007, gold_d, 0.005, "RibbonLine")
+    box("LidRibbonX", (SX + 0.036, band, 0.008), (0, 0, 0.034), gold, lid)          # kapakta çapraz kurdele
+    box("LidRibbonY", (band, SY + 0.036, 0.008), (0, 0, 0.034), gold, lid)
+    box("Knot", (0.07, 0.07, 0.05), (0, 0, 0.06), gold, lid, bevel=0.01)             # fiyonk: düğüm + iki ilmek
+    for s in (-1, 1):
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.05, minor_radius=0.016, major_segments=14, minor_segments=6)
+        o = bpy.context.object
+        o.name = "BowLoop"
+        o.data.materials.append(gold)
+        o.parent = lid
+        o.location = (s * 0.062, 0, 0.098)
+        o.rotation_euler = (math.radians(90), math.radians(s * 28), 0)   # ayakta, dışa yatık ilmek
+        o.scale = (1.25, 1.0, 1.0)
+        box("BowTail", (0.035, 0.012, 0.11), (s * 0.035, s * 0.05, 0.05), gold_d, lid,
+            rot=(math.radians(70), 0, math.radians(s * 35)))
+    box("GiftTag", (0.10, 0.065, 0.006), (0.17, -0.12, 0.042), cream, lid, rot=(0, 0, math.radians(-18)), bevel=0.003)
+    box("TagString", (0.12, 0.006, 0.004), (0.09, -0.07, 0.04), gold_d, lid, rot=(0, 0, math.radians(30)))
+    box("TagCar", (0.05, 0.018, 0.004), (0.172, -0.123, 0.046), red, lid, rot=(0, 0, math.radians(-18)))   # etikette araba
+    box("TagCab", (0.026, 0.012, 0.004), (0.170, -0.115, 0.047), red, lid, rot=(0, 0, math.radians(-18)))
+    for dx in (-0.016, 0.016):
+        cyl("TagWheel", 0.007, 0.005, (0.172 + dx * 0.95, -0.131 - dx * 0.31, 0.047), ink, lid, verts=8)
+    return root, panels, lid
+
+
 BUILDERS = [("city_crate", city), ("family_crate", family), ("sport_crate", sport),
-            ("prestige_crate", prestige), ("super_crate", superc)]
+            ("prestige_crate", prestige), ("super_crate", superc), ("welcome_crate", welcome)]
 
 
 def reset():
@@ -410,7 +464,10 @@ def preview(cid, frame, path):
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     prev = argv[argv.index("--preview") + 1] if "--preview" in argv else None
+    only = argv[argv.index("--only") + 1].split(",") if "--only" in argv else []   # yalnız bu kasalar
     for cid, fn in BUILDERS:
+        if only and cid not in only:
+            continue
         reset()
         root, panels, lid = fn()
         animate(root, panels, lid)

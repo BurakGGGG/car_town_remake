@@ -17,6 +17,15 @@ extends Node
 ##   - balon ve tıklama mevcut CarBubble + CarHitbox yoludur,
 ##   - ekranlar UiRouter'dan açılır (kendi ESC/navigation mantığı yok).
 ##
+## RÖVANŞ: kaybedilen yarıştan sonra oyuncu İSTERSE aynı rakiple (aynı model, yeni gün formu) yeniden yarışır —
+## sonuç panosunda RÖVANŞ plakası. Rakip panoda beklerken şeritte durur, GARAJA DÖN'de yola döner. Rakip başına
+## TEK rövanş (MAX_REMATCHES; kullanıcı kararı): rövanşı da kaybedersen plaka çıkmaz, rakip gider. Ücret yok;
+## teselli XP'si yalnızca İLK kayıpta, rövanşı kazanmak normal kazanma ödülünü verir.
+##
+## KAÇAN KAYBEDEN (nadir: kazanılan yarışların ~7'de 1'i, flee_chance): oyuncu kazanınca rakip, oyuncu dünyaya
+## dönene kadar şeritte bekler (yarış ekranı açıkken dünya çizilmez, kaçış görünmezdi); GARAJA DÖN'de kırmızıya
+## bakmadan, trafiği birbirine katarak kaçar (TrafficVehicle.flee). Diğerlerinde kaybeden normal trafiğe döner.
+##
 ## Sahnede World/Gameplay/RaceManager olarak durur, "race" grubundan bulunur (autoload yok).
 ## Kayıt: yalnızca KİŞİSEL REKORLAR saklanır (araç başına en iyi 300 m süresi + rekor koşunun
 ## mesafe izi, ilerleme çubuğundaki "hayalet" için). SaveManager "race" bölümü olarak okur/yazar;
@@ -32,6 +41,8 @@ signal race_finished(won: bool, money: int, xp: int)
 signal challenge_clicked(vehicle: Node3D)
 ## Kişisel rekor değişti (otomatik kayıt için).
 signal records_changed
+## Oyuncu kaybettiği yarışın rövanşını başlattı (aynı rakip yeniden pistte).
+signal rematch_started(count: int)
 
 ## Bir rakip gittikten sonra yenisi ne kadar sonra gelir (sn).
 @export var challenge_interval_min: float = 5.0
@@ -65,6 +76,12 @@ const RECORD_MIN: float = 3.0
 const RECORD_MAX: float = 60.0
 const TRACE_MAX: int = 240
 
+## Bir rakiple en çok kaç rövanş (kullanıcı: "rövanş 1 kere olur, 2.ye yenilirse rövanş çıkmayacak").
+const MAX_REMATCHES: int = 1
+
+## Kaybeden rakibin kaçma olasılığı (kullanıcı: "7 araçta 1, nadir bir görüntü olsun"). Testler 1,0 verir.
+@export_range(0.0, 1.0) var flee_chance: float = 1.0 / 7.0
+
 ## Kaybedince verilen XP oranı (para yok).
 const LOSS_XP_RATIO: float = 0.3
 
@@ -92,6 +109,12 @@ var _racing: bool = false
 var tutorial_hold: bool = false
 ## Aynı yarışın ödülü iki kez verilmesin diye: ödül verildiğinde işaretlenir.
 var _reward_paid: bool = false
+## Kaybedilen yarıştan sonra rakip rövanş için bekliyor mu; bu rakiple kaçıncı rövanş.
+var _awaiting_rematch: bool = false
+var _rematches: int = 0
+## Oyuncu kazandı: kaybeden rakip oyuncu dünyaya dönünce yola çıkar; `_loser_flees` ise kaçarak (zar yarış bitince atılır).
+var _loser_waiting: bool = false
+var _loser_flees: bool = false
 ## KİŞİSEL REKORLAR: araç id → {"time": sn, "trace": PackedFloat32Array (her TRACE_STEP'te metre)}.
 var _records: Dictionary = {}
 
@@ -152,17 +175,34 @@ func is_first_race() -> bool:
 	return _records.is_empty()
 
 
-func rival_id_for(player_id: StringName) -> StringName:
+## `busy`: şehirde şu an olan modeller (TrafficManager.models_in_use) — aynı modelden ikinci araç yola çıkmaz,
+## rakip boştakilerden seçilir. Havuzun hepsi meşgulse eski seçim (rakip, model boşalınca gelir).
+func rival_id_for(player_id: StringName, busy: Dictionary = {}) -> StringName:
 	var pool: Array[StringName] = rival_pool(player_id)
+	var free: Array[StringName] = []
+	for id: StringName in pool:
+		if not busy.has(id):
+			free.append(id)
 	# İLK YARIŞ (hiç rekor yok — eğitimin drag dersi de bu): havuzun EN YAVAŞ aracı. Performansa göre havuzda
 	# daha hızlı araç da var; QA'da yeni oyuncu ilk yarışını Şahin'le Corsa'ya karşı kaybediyordu (13,65 / 12,93 sn).
+	# En yavaşı şehirdeyse boştaki en yavaş — yalnızca oyuncunun aracından hâlâ yavaşsa (ilk yarış kazanılabilir kalsın).
 	if is_first_race():
-		var slowest: StringName = pool[0]
-		for id: StringName in pool:
-			if DragRaceSim.base_time(id) > DragRaceSim.base_time(slowest):
-				slowest = id
+		var slowest: StringName = _slowest(pool)
+		var slowest_free: StringName = _slowest(free)
+		if slowest_free != &"" and DragRaceSim.base_time(slowest_free) >= PerformanceMods.time_300(player_id):
+			return slowest_free
 		return slowest
-	return pool[_rng.randi_range(0, pool.size() - 1)]
+	if free.is_empty():
+		return pool[_rng.randi_range(0, pool.size() - 1)]
+	return free[_rng.randi_range(0, free.size() - 1)]
+
+
+static func _slowest(ids: Array[StringName]) -> StringName:
+	var slowest: StringName = &""
+	for id: StringName in ids:
+		if slowest == &"" or DragRaceSim.base_time(id) > DragRaceSim.base_time(slowest):
+			slowest = id
+	return slowest
 
 
 ## Oyuncunun aracına verilebilecek rakipler (oyuncunun kendi modeli dahil: aynalı yarış).
@@ -234,9 +274,12 @@ func reward_for(rival: StringName, won: bool) -> Dictionary:
 	return {"money": 0, "xp": int(round(float(base["xp"]) * LOSS_XP_RATIO))}
 
 
-## Yarış bitti: ödül BİR KEZ verilir (aynı yarış iki kez ödül vermez), rakip yola döner.
+## Yarış bitti: ödül BİR KEZ verilir (aynı yarış iki kez ödül vermez). Kazanınca rakip yola döner; kaybedince
+## rövanş için bekler (GARAJA DÖN → end_race_session). Rövanş kaybı ödülsüzdür (teselli XP'si yalnız ilk kayıpta).
 func finish_race(won: bool) -> Dictionary:
 	var reward: Dictionary = reward_for(_rival_id, won)
+	if not won and _rematches > 0:
+		reward = {"money": 0, "xp": 0}
 	if _reward_paid:
 		return {"money": 0, "xp": 0}
 	_reward_paid = true
@@ -247,18 +290,69 @@ func finish_race(won: bool) -> Dictionary:
 	if progress and int(reward["xp"]) > 0:
 		progress.add_xp(int(reward["xp"]))
 	race_finished.emit(won, int(reward["money"]), int(reward["xp"]))
-	release_challenger()
+	if won and is_instance_valid(_challenger):
+		_loser_waiting = true   # kaybeden rakip oyuncu dünyaya dönünce yola çıkar (end_race_session)
+		_loser_flees = _rng.randf() < flee_chance
+	elif won or not is_instance_valid(_challenger) or _rematches >= MAX_REMATCHES:
+		release_challenger()   # rövanş hakkı bitti: rakip yola döner
+	else:
+		_awaiting_rematch = true   # rakip şeritte bekler: oyuncu RÖVANŞ ya da GARAJA DÖN seçer
 	return reward
 
 
-## Rakibi normal trafiğe geri gönderir (yarış bitti ya da vazgeçildi).
-func release_challenger() -> void:
+## Kaybedilen yarışın rövanşı yapılabilir mi (rakip hâlâ şeritte bekliyor).
+func can_rematch() -> bool:
+	return _awaiting_rematch and _rematches < MAX_REMATCHES and is_instance_valid(_challenger) and _rival_id != &""
+
+
+## Bu rakiple kaçıncı rövanş (0 = ilk yarış).
+func rematch_count() -> int:
+	return _rematches
+
+
+## RÖVANŞ: aynı rakiple yeni yarış (ödül yeniden verilebilir hâle gelir). Pisti HUD yeniden açar.
+func start_rematch() -> bool:
+	if not can_rematch():
+		return false
+	_awaiting_rematch = false
+	_reward_paid = false
+	_rematches += 1
+	rematch_started.emit(_rematches)
+	return true
+
+
+## Yarış modundan çıkıldı (GARAJA DÖN / GERİ): rövanş bekleyen rakip yola döner.
+func end_race_session() -> void:
+	if _loser_waiting:
+		release_challenger(_loser_flees)   # ~7'de 1: kaçar gibi gider
+	elif _awaiting_rematch:
+		release_challenger()
+
+
+## Kaybeden rakip oyuncunun dönüşünü mü bekliyor (kazanılan yarıştan sonra)?
+func loser_waiting() -> bool:
+	return _loser_waiting and is_instance_valid(_challenger)
+
+
+## Bekleyen kaybeden dönüşte kaçacak mı (zar atıldı)?
+func loser_flees() -> bool:
+	return loser_waiting() and _loser_flees
+
+
+## Rakibi normal trafiğe geri gönderir (yarış bitti ya da vazgeçildi). `fled`: yarışı kaybetti, kaçarak gider.
+func release_challenger(fled: bool = false) -> void:
 	var vehicle: TrafficVehicle = _challenger
 	_challenger = null
 	_rival_id = &""
+	_awaiting_rematch = false
+	_loser_waiting = false
+	_loser_flees = false
+	_rematches = 0
 	_timer = maxf(cooldown, _rng.randf_range(challenge_interval_min, challenge_interval_max))
 	if is_instance_valid(vehicle):
 		vehicle.end_race_challenge()
+		if fled:
+			vehicle.flee()
 		challenger_left.emit(vehicle)
 
 
@@ -341,10 +435,15 @@ func _send_challenger() -> void:
 	if _stop == null:
 		_timer = 5.0
 		return
+	var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+	if ownership and ownership.owned_count() == 0:
+		_timer = 5.0   # henüz aracı yok (HOŞ GELDİN KUTUSU açılmadı): yarışacak araç olmadan rakip gelmez
+		return
 	# Rakip modeli ÖNCE seçilir (oyuncunun aracının performansına göre), araç o modelle yola çıkar: yoldan
 	# gelen araç ile yarışta karşına çıkan araç AYNI olur.
-	if _rival_id == &"":
-		_rival_id = rival_id_for(player_vehicle_id())
+	# Seçilen model bu arada şehre çıktıysa (aynı modelden tek araç) boştakilerden yeniden seçilir
+	if _rival_id == &"" or _traffic.is_model_in_use(_rival_id):
+		_rival_id = rival_id_for(player_vehicle_id(), _traffic.models_in_use())
 	var vehicle: TrafficVehicle = _traffic.spawn_challenger(_rival_id)
 	if vehicle == null:
 		_timer = 2.0   # model yükleniyor ya da şerit dolu: birazdan yine dener

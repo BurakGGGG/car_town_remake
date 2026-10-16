@@ -54,6 +54,30 @@ const RACE_REJOIN_TIME: float = 6.0     # yarıştan sonra tekrar müşteri olma
 const YIELD_SHIFT: float = 0.08
 const YIELD_SLOW: float = 0.35
 const YIELD_SHIFT_RATE: float = 0.3    # birim/sn (kayma hızı)
+## KAÇAN KAYBEDEN: yarışı oyuncuya kaybeden rakip (flee) şeritten kaçar gibi çıkar — normal trafiğin ~2 katı hız,
+## sert kalkış, yolun ORTA çizgisinde zikzak (önündeki yavaş aracın yanından geçer; trafik kovalamacadaki gibi yol
+## verir), kırmızı ışığa bakmaz (kavşakta karşı yönden araç varsa onun çıkmasını bekler, çarpışma yok).
+## Yan hareket DİREKSİYONLA olur (öteleme yok): durduğu yerden kalkıp ileri giderken burnunu orta çizgiye kırar, zikzağı
+## da burnunu sağa sola çevirerek çizer — eskiden yan kayma doğrudan konuma ekleniyordu, araç yolun ortasına ışınlanıyordu.
+const RUNNER_SPEED: float = 1.75
+const RUNNER_ACCEL: float = 1.7
+const RUNNER_BRAKING: float = 3.2
+const RUNNER_SHIFT: float = 0.29        # şerit ortasından yolun orta çizgisine (sola)
+const RUNNER_WEAVE: float = 0.15        # zikzak genliği (iki dalga: düzensiz)
+const RUNNER_WEAVE_RATE: float = 3.1
+const RUNNER_WEAVE2: float = 0.04
+const RUNNER_WEAVE_RATE2: float = 7.3
+const RUNNER_AIM: float = 0.6           # direksiyon hedefi: şeritte bu kadar ileri
+const RUNNER_TURN: float = 3.6          # rad/sn (hızla ölçeklenir: dururken yerinde dönmez)
+## SÜRÜŞ CANLILIĞI (kaçak, kovalamaca): sola hız → ön teker açısı, sola ivme → gövde dışa yatar, hızlanma → burun kalkar.
+const FLAIR_STEER: float = 30.0         # derece / (birim/sn)
+const FLAIR_STEER_MAX: float = 26.0
+const FLAIR_ROLL: float = 0.035         # rad / (birim/sn²)
+const FLAIR_ROLL_MAX: float = 0.1
+const FLAIR_PITCH: float = 0.02
+const FLAIR_PITCH_MAX: float = 0.05
+## Kovalamacada savrulurken arka kayar (hafif drift görüntüsü): yön, hareket yönünden yan hızla bu kadar sapar (rad).
+const CHASE_SLIP: float = 0.1
 
 @export var max_speed: float = 0.8        # birim/sn
 @export var acceleration: float = 0.6     # birim/sn²
@@ -63,6 +87,9 @@ const YIELD_SHIFT_RATE: float = 0.3    # birim/sn (kayma hızı)
 @export var follow_distance: float = 1.3  # öndeki araca bu mesafede yavaşla
 @export var stop_distance: float = 0.72   # bu mesafede dur (araç boyu ~0.6)
 @export var lock_check_distance: float = 0.9  # kavşak geçiş izni bu mesafeden itibaren sorgulanır
+## Işık yeşil değilse bu mesafeden (giriş noktasına, yol boyunca) yavaşlamaya başlar: bekleme yeri girişten 0,3–1,4
+## geride; izin sorgusu (0,9) ve giriş noktasının ancak 0,79 kala görülmesi yumuşak duruşa yetmiyordu.
+@export var light_lookahead: float = 2.2
 
 var manager: TrafficManager
 var target: TrafficWaypoint
@@ -78,6 +105,11 @@ var mode: Mode = Mode.TRAFFIC
 var race_lane: bool = false
 ## Bu aracın KATALOG kimliği — yarışta aynı model çıksın diye (yoldaki araç = rakip araç).
 var vehicle_id: StringName = &""
+## Burnun araç merkezine uzaklığı (CarHitbox kutusundan): dur çizgisine burun hizalanır.
+var _front: float = 0.3
+## Bu kavşak girişi için seçilen duruş: burnun dur çizgisini geçtiği mesafe (− = çizginin gerisinde).
+var _stop_entry: TrafficWaypoint
+var _stop_overshoot: float = 0.0
 ## Müşterinin arızası (request_repair ile atanır; trafiğe dönünce null olur). Müşteri değilken null.
 var fault: RepairType
 ## Arıza şiddeti (RepairType.severity_min..max arası); ilk sürümde yalnızca veri, süreyi etkilemez.
@@ -92,7 +124,20 @@ var _arrived: bool = false        # bekleme noktasına vardı, yerinde yerleşiy
 ## Yarıştan sonra araç bir süre müşteri olarak seçilmez: yol kenarından kalkıp akışa karışsın
 ## (yoksa RaceManager onu bıraktığı anda RepairManager aynı kaldırımda müşteri yapıyor).
 var _race_cooldown: float = 0.0
-var _yield_shift: float = 0.0     # polise yol verirken şeridin sağına kayma (TRAFFIC kipinde)
+var _yield_shift: float = 0.0     # polise yol verirken şeridin sağına kayma (TRAFFIC kipinde); kaçarken − (sola)
+## Yarışı kaybetti, kaçıyor (bkz. RUNNER_*); yol ucunda kaybolana dek sürer.
+var fleeing: bool = false
+var _flee_time: float = 0.0
+## Tamir müşterisinin kalan sabrı (sn; RepairManager sayar). Bitince vazgeçip gider (give_up).
+var patience: float = 0.0
+var _patience_shown: int = -1
+## Şu anki yol parçasının başı (son varılan nokta); kaçağın şerit çizgisi buradan hedefe uzanır. INF = bilinmiyor.
+var _segment_from: Vector3 = Vector3.INF
+var _flair_left_velocity: float = 0.0
+var _flair_roll: float = 0.0
+var _flair_pitch: float = 0.0
+var _flair_speed: float = 0.0
+var _last_weave: float = 0.0
 ## --- Kovalamaca (CHASE): yol çizgisi, üzerindeki konum ve orta çizgiye kayma ---
 var _chase_points: PackedVector3Array = PackedVector3Array()
 var _chase_lengths: PackedFloat32Array = PackedFloat32Array()   # her noktaya kadarki toplam uzunluk
@@ -138,18 +183,56 @@ func _physics_process(delta: float) -> void:
 		_arrive(target)   # yol ucu kenara taşındı ama araç görünmüyor: eski yerinde silinir
 		return
 	# Polise yol verme: sağa kay + yavaşla. Yön ve mesafe şeridin kendisinden (kaymasız konum) ölçülür,
-	# yoksa direksiyon aracı hemen şerit ortasına geri çeker.
-	var pressure: float = manager.chase_pressure(self) if manager else 0.0
-	var right: Vector3 = _forward().cross(Vector3.UP)
-	var shift: float = move_toward(_yield_shift, YIELD_SHIFT * pressure, YIELD_SHIFT_RATE * delta)
-	global_position += right * (shift - _yield_shift)
-	_yield_shift = shift
-	var lane_position: Vector3 = global_position - right * _yield_shift
+	# yoksa direksiyon aracı hemen şerit ortasına geri çeker. Kaçan araç ise orta çizgiye kayar, zikzak çizer.
+	var lane_position: Vector3
+	var runner_aim: Vector3 = Vector3.INF
+	var lateral_before: float = 0.0
+	var pressure: float = 0.0
+	if fleeing:
+		# Kaçak: şerit çizgisine göre gerçek yanal konum ölçülür, direksiyon orta çizgi + zikzak hedefine çevrilir
+		_flee_time += delta
+		var lane: Dictionary = _lane_frame()
+		lane_position = lane["point"]
+		_yield_shift = lane["lateral"]
+		lateral_before = _yield_shift
+		var pace: float = clampf(speed / max_speed, 0.0, 1.0)
+		var weave: float = RUNNER_WEAVE * sin(_flee_time * RUNNER_WEAVE_RATE) \
+			+ RUNNER_WEAVE2 * sin(_flee_time * RUNNER_WEAVE_RATE2 + 1.3)
+		var goal: float = (-RUNNER_SHIFT + weave * pace) * clampf(speed / 0.4, 0.0, 1.0)
+		runner_aim = lane_position + (lane["dir"] as Vector3) * RUNNER_AIM + (lane["right"] as Vector3) * goal
+	else:
+		pressure = manager.chase_pressure(self) if manager else 0.0
+		var right: Vector3 = _forward().cross(Vector3.UP)
+		var shift: float = move_toward(_yield_shift, YIELD_SHIFT * pressure, YIELD_SHIFT_RATE * delta)
+		global_position += right * (shift - _yield_shift)
+		_yield_shift = shift
+		lane_position = global_position - right * _yield_shift
 	var to_target: Vector3 = _flat(target.global_position - lane_position)
 	var distance: float = to_target.length()
 
-	# Kavşak girişi: geçiş izni alınmadan giriş noktası geçilmez
-	var blocked: bool = target.intersection_entry and distance < lock_check_distance and not manager.request_crossing(self)
+	# Kavşak girişi: geçiş izni alınmadan giriş noktası geçilmez. Giriş noktası bir sonraki nokta da olabilir
+	# (yaklaşma noktası → giriş): mesafe yol boyunca ölçülür. Işık yeşil değilse izin sorgusundan önce, uzaktan
+	# yavaşlar; bekleme yeri dur çizgisinin gerisi (yaya geçidi kavşakla çizgi arasında).
+	var entry: TrafficWaypoint = null
+	var to_entry: float = INF
+	if target.intersection_entry:
+		entry = target
+		to_entry = distance
+	elif distance < light_lookahead:
+		for next: TrafficWaypoint in target.get_next():
+			if next.intersection_entry:
+				entry = next
+				to_entry = distance + _flat(next.global_position - target.global_position).length()
+				break
+	var hold: bool = false
+	if entry and fleeing:
+		# Kırmızıya bakmaz; karşı eksen kavşağa yeni araç sokamaz (claim), kavşaktaki araç çıkınca dalar
+		hold = to_entry < light_lookahead and not manager.runner_crossing(self, to_entry)
+	elif entry and to_entry < lock_check_distance:
+		hold = not manager.request_crossing(self)
+	elif entry and to_entry < light_lookahead:
+		hold = not manager.light_allows(axis)
+	var blocked: bool = hold and target == entry   # giriş noktasını geçmek yalnızca hedef girişken kilitlenir
 
 	if distance < reach_distance and not blocked:
 		_arrive(target)
@@ -158,27 +241,30 @@ func _physics_process(delta: float) -> void:
 		to_target = _flat(target.global_position - lane_position)
 		distance = to_target.length()
 
-	# Küçük yön düzeltmesi (hatlar düz; ani dönüş yok)
+	# Küçük yön düzeltmesi (hatlar düz; ani dönüş yok). Kaçak: zikzak hedefine direksiyon (hızla ölçekli)
 	var forward: Vector3 = _forward()
-	if distance > 0.001:
-		var angle_error: float = forward.signed_angle_to(to_target.normalized(), Vector3.UP)
-		var turn: float = clampf(angle_error, -turn_speed * delta, turn_speed * delta)
+	var steer_to: Vector3 = to_target if runner_aim == Vector3.INF else _flat(runner_aim - global_position)
+	if steer_to.length() > 0.001:
+		var angle_error: float = forward.signed_angle_to(steer_to.normalized(), Vector3.UP)
+		var rate: float = turn_speed if runner_aim == Vector3.INF else RUNNER_TURN * clampf(speed / 0.35, 0.1, 1.0)
+		var turn: float = clampf(angle_error, -rate * delta, rate * delta)
 		if absf(turn) > 0.0001:
 			rotate_y(turn)
 			forward = _forward()
 
 	# Hedef hız: hız sınırı, öndeki araç, kavşak izni
 	var desired: float = max_speed
-	if target.speed_limit > 0.0:
+	if target.speed_limit > 0.0 and not fleeing:
 		desired = minf(desired, target.speed_limit)
 	var ahead: float = manager.distance_to_vehicle_ahead(self)
 	if ahead < stop_distance:
 		desired = 0.0
 	elif ahead < follow_distance:
 		desired = minf(desired, max_speed * (ahead - stop_distance) / (follow_distance - stop_distance))
-	if blocked:
-		desired = minf(desired, clampf((distance - reach_distance) * 1.2, 0.0, max_speed))
-		if distance < reach_distance + 0.02:
+	if hold:
+		var stop_at: float = reach_distance + 0.3 if fleeing else _stop_point(entry)   # kaçan: çizgiye kadar dalar
+		desired = minf(desired, clampf((to_entry - stop_at) * 1.2, 0.0, max_speed))
+		if to_entry < stop_at + 0.02:
 			desired = 0.0
 	desired *= 1.0 - (1.0 - YIELD_SLOW) * pressure
 	if desired > speed:
@@ -188,12 +274,79 @@ func _physics_process(delta: float) -> void:
 
 	global_position += forward * speed * delta
 
-	# Tekerlek dönüşü (CarRig pivot sistemi); direksiyon düz kalır
+	# Tekerlek dönüşü (CarRig pivot sistemi); direksiyon düz kalır — kaçakta direksiyon + gövde canlılığı
 	if rig and speed > 0.0:
 		rig.spin_wheels(rad_to_deg(speed * delta / (WHEEL_RADIUS * model.scale.x)))
+	if fleeing:
+		var lateral_now: float = float(_lane_frame()["lateral"]) if target else lateral_before
+		_drive_flair(-(lateral_now - lateral_before) / maxf(delta, 0.001), delta)
+
+
+## Bekleme yeri: aracın merkezinin giriş noktasına mesafesi. Dur çizgisi yoksa eski yer (giriş noktası). Her kavşak
+## girişi için bir kez seçilir — sürücüler aynı durmaz: çoğu çizgiye fazla yanaşmaz (biraz geride), bazısı daha da
+## geride, bazısı çizginin hemen gerisinde, azı yaya geçidinin üstünde (kavşağa hiç girmeden).
+func _stop_point(entry: TrafficWaypoint) -> float:
+	var gap: float = manager.stop_line_gap(entry) if manager else -1.0
+	if gap < 0.0:
+		return reach_distance
+	if _stop_entry != entry:
+		_stop_entry = entry
+		_stop_overshoot = stop_overshoot(randf(), randf())
+	return maxf(gap + _front - _stop_overshoot, reach_distance)
+
+
+## Burnun dur çizgisini geçme payı (birim; − = gerisinde; araç 0,6 birim). `pick` sürücü tipi, `spread` tip içi dağılım.
+static func stop_overshoot(pick: float, spread: float) -> float:
+	if pick < 0.40:
+		return lerpf(-0.26, -0.12, spread)   # çoğu: çizgiye yanaşmaz, rahat bir boşluk bırakır
+	if pick < 0.60:
+		return lerpf(-0.48, -0.30, spread)   # temkinli: daha da geride
+	if pick < 0.85:
+		return lerpf(-0.10, -0.03, spread)   # çizginin hemen gerisinde
+	if pick < 0.97:
+		return lerpf(0.04, 0.14, spread)     # yaya geçidinin üstüne taşan
+	return lerpf(0.18, 0.26, spread)         # geçidin çoğunu kapatan (kavşak kenarının gerisinde)
+
+
+## Kaçağın şerit çizgisi: hedef noktadan geçen, yol parçası yönünde doğru. Yön: son varılan noktadan hedefe; o
+## bilinmiyorsa hedefin bir sonraki noktasına (yollar düz hatlar); o da yoksa araçtan hedefe.
+func _lane_frame() -> Dictionary:
+	var anchor: Vector3 = _flat(target.global_position)
+	var dir: Vector3 = Vector3.ZERO
+	if _segment_from != Vector3.INF:
+		dir = anchor - _flat(_segment_from)
+	if dir.length() < 0.05:
+		var nexts: Array[TrafficWaypoint] = target.get_next()
+		if not nexts.is_empty():
+			dir = _flat(nexts[0].global_position) - anchor
+	if dir.length() < 0.05:
+		dir = anchor - _flat(global_position)
+	dir = dir.normalized() if dir.length() > 0.0001 else _forward()
+	var right: Vector3 = dir.cross(Vector3.UP)
+	var rel: Vector3 = _flat(global_position) - anchor
+	var point: Vector3 = anchor + dir * rel.dot(dir)
+	return {"point": Vector3(point.x, global_position.y, point.z), "dir": dir, "right": right, "lateral": rel.dot(right)}
+
+
+## Sürüş canlılığı: `left_velocity` (birim/sn, sola +) → ön teker açısı; değişimi (yanal ivme) → gövde dışa yatar;
+## hız değişimi → burun kalkar / iner. Model kökünün yerel dönüşü (araç düğümünün yönü değişmez).
+func _drive_flair(left_velocity: float, delta: float) -> void:
+	if model == null or delta <= 0.0:
+		return
+	var left_accel: float = (left_velocity - _flair_left_velocity) / delta
+	_flair_left_velocity = lerpf(_flair_left_velocity, left_velocity, 1.0 - exp(-14.0 * delta))
+	var forward_accel: float = (speed - _flair_speed) / delta
+	_flair_speed = speed
+	_flair_roll = lerpf(_flair_roll, clampf(left_accel * FLAIR_ROLL, -FLAIR_ROLL_MAX, FLAIR_ROLL_MAX), 1.0 - exp(-7.0 * delta))
+	_flair_pitch = lerpf(_flair_pitch, clampf(-forward_accel * FLAIR_PITCH, -FLAIR_PITCH_MAX, FLAIR_PITCH_MAX),
+		1.0 - exp(-5.0 * delta))
+	model.rotation = Vector3(_flair_pitch, 0.0, _flair_roll)
+	if rig:
+		rig.set_steer(clampf(_flair_left_velocity * FLAIR_STEER, -FLAIR_STEER_MAX, FLAIR_STEER_MAX))
 
 
 func _arrive(point: TrafficWaypoint) -> void:
+	_segment_from = point.global_position
 	if point.intersection_entry:
 		_in_intersection = true
 	if point.intersection_exit and _in_intersection:
@@ -261,6 +414,22 @@ func start_chase(points: PackedVector3Array, offset: float) -> void:
 	place_on_chase_path(0.0)
 
 
+## Kovalamaca yolunda `distance`'taki yerel çerçeve: orta çizgi noktası (chase_offset kaymalı), ileri ve sol yön.
+func chase_frame(distance: float) -> Dictionary:
+	if _chase_points.size() < 2:
+		return {}
+	var i: int = 1
+	while i < _chase_points.size() - 1 and _chase_lengths[i] < distance:
+		i += 1
+	var a: Vector3 = _chase_points[i - 1]
+	var b: Vector3 = _chase_points[i]
+	var segment: float = maxf(_chase_lengths[i] - _chase_lengths[i - 1], 0.0001)
+	var t: float = clampf((distance - _chase_lengths[i - 1]) / segment, 0.0, 1.0)
+	var along: Vector3 = _flat(b - a).normalized()
+	var left: Vector3 = Vector3.UP.cross(along)
+	return {"point": _flat(a.lerp(b, t)) + left * chase_offset, "along": along, "left": left}
+
+
 ## Kovalamaca yolunun toplam uzunluğu.
 func chase_length() -> float:
 	return _chase_lengths[_chase_lengths.size() - 1] if not _chase_lengths.is_empty() else 0.0
@@ -286,8 +455,14 @@ func place_on_chase_path(distance: float, weave: float = 0.0) -> void:
 	var at: Vector3 = a.lerp(b, t) + left * (chase_offset + weave)
 	global_position = Vector3(at.x, global_position.y, at.z)
 	var moved: Vector3 = _flat(global_position - previous)
-	_face(moved if moved.length() > 0.002 else along)
-	speed = absf(travelled) / maxf(get_physics_process_delta_time(), 0.001)
+	var delta: float = maxf(get_physics_process_delta_time(), 0.001)
+	var left_velocity: float = (weave - _last_weave) / delta
+	_last_weave = weave
+	# Savrulurken arka kayar: yön, hareket yönünden yan hızla biraz daha içe döner (drift görüntüsü)
+	var facing: Vector3 = moved if moved.length() > 0.002 else along
+	_face(facing.rotated(Vector3.UP, clampf(left_velocity * CHASE_SLIP, -0.12, 0.12)))
+	speed = absf(travelled) / delta
+	_drive_flair(left_velocity, delta)
 	if rig and travelled > 0.0:
 		rig.spin_wheels(rad_to_deg(travelled / (WHEEL_RADIUS * model.scale.x)))
 
@@ -337,6 +512,7 @@ func end_race_challenge() -> void:
 	mode = Mode.TRAFFIC
 	speed = 0.0
 	_race_cooldown = RACE_REJOIN_TIME
+	_segment_from = Vector3.INF   # yanaşılan yerden: şerit yönü hedefin sonraki noktasından
 	target = manager.nearest_waypoint_ahead(self) if manager else null
 
 
@@ -345,9 +521,22 @@ func is_challenger() -> bool:
 	return mode == Mode.RACE_CHALLENGE
 
 
-## Yarıştan yeni çıktı mı? (RepairManager bu araca müşteri rolü vermez.)
+## Yarıştan yeni çıktı mı ya da kaçıyor mu? (RepairManager bu araca müşteri rolü vermez.)
 func busy_after_race() -> bool:
-	return _race_cooldown > 0.0
+	return _race_cooldown > 0.0 or fleeing
+
+
+## YARIŞI KAYBETTİ: trafiğe kaçarak döner (RaceManager, oyuncu dünyaya dönünce çağırır). Bkz. RUNNER_*.
+func flee() -> void:
+	if mode != Mode.TRAFFIC:
+		return
+	fleeing = true
+	_flee_time = 0.0
+	max_speed = RUNNER_SPEED
+	acceleration = RUNNER_ACCEL
+	braking = RUNNER_BRAKING
+	if manager:
+		manager.runner_started(self)
 
 
 # --- Tamir döngüsü (RepairManager API) --------------------------------------------------
@@ -363,8 +552,41 @@ func request_repair(spot: Node3D, job: RepairType, severity: float = 1.0) -> voi
 	fault_severity = severity
 	repair_status = RepairStatus.DAMAGED
 	mode = Mode.REPAIR_REQUESTED
+	_patience_shown = -1
 	_bubble.show_wrench()   # araç üstünde yazı yok: arıza HUD plakasında (araca tıklayınca) görünür
 	_sync_bubble_shape()
+
+
+## Sabrı azalan müşteri: balonda geri sayım ("0:15"); `seconds` < 0 ise yalnızca anahtar (eski görünüm).
+func show_patience(seconds: int) -> void:
+	if seconds == _patience_shown or mode != Mode.REPAIR_WAITING:
+		return
+	_patience_shown = seconds
+	if seconds < 0:
+		_bubble.show_wrench()
+	else:
+		_bubble.show_text("%d:%02d" % [seconds / 60, seconds % 60], CarBubble.GLYPH_WRENCH)
+	_sync_bubble_shape()
+
+
+## BEKLEMEKTEN SIKILDI: balon kapanır, arıza sıfırlanır, kaldırımdan çıkıp trafiğe döner (bir süre yeniden
+## müşteri seçilmez — aynı kaldırımda hemen geri yanaşmasın).
+func give_up() -> void:
+	if not is_customer():
+		return
+	_bubble.hide_bubble()
+	_sync_bubble_shape()
+	_spot = null
+	_arrived = false
+	fault = null
+	fault_severity = 1.0
+	repair_status = RepairStatus.NORMAL
+	mode = Mode.TRAFFIC
+	speed = 0.0
+	_patience_shown = -1
+	_race_cooldown = RACE_REJOIN_TIME * 2.0
+	_segment_from = Vector3.INF
+	target = manager.nearest_waypoint_ahead(self) if manager else null
 
 
 ## "TAMİRE AL": anında CarSpot'a ışınlan (konum + yön), tamir başlar; "TAMİR" plakası.
@@ -474,6 +696,7 @@ func _settle(center: Vector3, goal_yaw: float, delta: float) -> bool:
 ## Verilen waypoint'e yerleş ve zincirin devamına yönel (spawn ve yola dönüş).
 func _place_at(point: TrafficWaypoint) -> void:
 	global_position = point.global_position
+	_segment_from = point.global_position
 	_in_intersection = false
 	target = point.pick_next()
 	if target:
@@ -510,6 +733,7 @@ func _add_hitbox() -> void:
 	hitbox.set_script(CarHitboxScript)
 	var shape: CollisionShape3D = CollisionShape3D.new()
 	shape.name = "CollisionShape3D"
+	_front = clampf(box.end.z, 0.12, 0.6)   # model önü +Z
 	var box_shape: BoxShape3D = BoxShape3D.new()
 	box_shape.size = box.size
 	shape.shape = box_shape

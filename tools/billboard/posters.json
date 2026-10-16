@@ -1,0 +1,15 @@
+{
+  "_doc": "Billboard afişleri (world/city_billboard.gd POSTERS ile aynı sıra). style: sunset | neon_grid | speed | studio | night_city | aurora. rim/rim2: araç çiziminde arka kenar ışıkları; bg_top/bg_bottom: zemin geçişi; accent: parıltı, yazı vurgusu. exposure: aracın çizim pozlaması (beyaz / gümüş gövdeler 0,82 — yoksa yanıp düzleşiyordu).",
+  "posters": [
+    {"id": "lambo_huracan", "style": "neon_grid", "bg_top": "#0B0620", "bg_bottom": "#3A0E5C", "accent": "#FF3CAC", "accent2": "#2BD2FF", "rim": "#FF3CAC", "rim2": "#2BD2FF", "az": 38, "elev": 8, "exposure": 0.82},
+    {"id": "ferrari_488_pista", "style": "sunset", "bg_top": "#2A0A3D", "bg_bottom": "#FF6A3D", "accent": "#FFB347", "accent2": "#FF4E50", "rim": "#FF8A3D", "rim2": "#FFD27A", "az": 36, "elev": 9},
+    {"id": "porsche_gt3", "style": "speed", "bg_top": "#04121F", "bg_bottom": "#0E3B5C", "accent": "#00E5FF", "accent2": "#FFFFFF", "rim": "#5CE1FF", "rim2": "#FFFFFF", "az": 40, "elev": 7},
+    {"id": "audi_rs6", "style": "night_city", "bg_top": "#05070D", "bg_bottom": "#1B2238", "accent": "#FF2D2D", "accent2": "#FFC857", "rim": "#FF5A4A", "rim2": "#9FC5FF", "az": 37, "elev": 8, "exposure": 0.82},
+    {"id": "chevrolet_camaro", "style": "sunset", "bg_top": "#1A0B2E", "bg_bottom": "#F05A28", "accent": "#FFD23F", "accent2": "#EE4266", "rim": "#FFB347", "rim2": "#FF6F59", "az": 35, "elev": 9},
+    {"id": "mercedes_cls", "style": "studio", "bg_top": "#0D0D10", "bg_bottom": "#2C2C34", "accent": "#E8D3A1", "accent2": "#FFFFFF", "rim": "#FFE7B3", "rim2": "#C9D6FF", "az": 39, "elev": 10, "exposure": 0.82},
+    {"id": "togg_t10x", "style": "aurora", "bg_top": "#031418", "bg_bottom": "#0B3D3A", "accent": "#3DFFC5", "accent2": "#4D9BFF", "rim": "#3DFFC5", "rim2": "#7DB8FF", "az": 38, "elev": 10},
+    {"id": "bmw_e46", "style": "neon_grid", "bg_top": "#030A1A", "bg_bottom": "#0D2B5E", "accent": "#00B7FF", "accent2": "#FF3B3B", "rim": "#3FB8FF", "rim2": "#FF4D4D", "az": 37, "elev": 8, "exposure": 0.82},
+    {"id": "bmw_e60", "style": "night_city", "bg_top": "#07060B", "bg_bottom": "#2A1A3A", "accent": "#C77DFF", "accent2": "#FFD166", "rim": "#C77DFF", "rim2": "#FFD8A8", "az": 38, "elev": 9},
+    {"id": "honda_civic", "style": "speed", "bg_top": "#1A0505", "bg_bottom": "#5C0F14", "accent": "#FF2E3B", "accent2": "#FFFFFF", "rim": "#FF4A4A", "rim2": "#FFFFFF", "az": 40, "elev": 7, "exposure": 0.82}
+  ]
+}

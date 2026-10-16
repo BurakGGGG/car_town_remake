@@ -6,9 +6,11 @@ extends Node
 ##    boş bir yol kenarı bekleme noktası (repair_wait_spots) varsa oraya yanaşıp durur ve balonunda
 ##    arıza adını gösterir (REPAIR_REQUESTED → REPAIR_WAITING). Arıza müşteri olurken seçilir, o
 ##    döngü boyunca değişmez; araç trafiğe dönünce sıfırlanır. Normal trafik aracında ne balon ne arıza
-##    vardır. Aynı anda en fazla waiting_limit() araç bekler (garaj seviyesine bağlı, bkz. SUPPLY);
+##    vardır. Aynı anda en fazla waiting_limit() araç bekler (garaj seviyesine bağlı, bkz. SUPPLY: 3–4);
 ##    sınır doluysa yeni müşteri oluşmaz.
-##    Bekleyen müşteri tamire alınana kadar gitmez (süresiz).
+##    SABIR: bekleyen müşteri CUSTOMER_PATIENCE sn içinde tamire alınmazsa vazgeçip gider (korna, trafiğe
+##    döner, customer_left). Son PATIENCE_WARN sn'de balonda geri sayım. Seçiliyken (plakası açık) ve eğitim
+##    sürerken sabır azalmaz.
 ## 2) TAMİRE AL: oyuncu bekleyen aracı seçip onaylayınca araç ANINDA boş bir CarSpot'a ışınlanır ve o
 ##    aracın ARIZASININ süresiyle sayaç başlar (REPAIR_BAY). Sürüş animasyonu yok. Kaç CarSpot'un aktif
 ##    olduğu GarageUpgradeManager'ın "repair_capacity" seviyesinden gelir (Lv1 = 1, Lv2 = 2, Lv3 = 3;
@@ -31,6 +33,7 @@ extends Node
 signal target_changed(car: Node3D)                 # seçili tamir edilebilir araç (null = yok)
 signal customer_marked(car: Node3D)                # NPC tamir istedi (yol kenarına yanaşıyor, balon açık)
 signal customer_stopped(car: Node3D)               # müşteri bekleme noktasına yerleşti
+signal customer_left(car: Node3D)                  # müşteri beklemekten sıkılıp gitti
 signal repair_started(car: Node3D)                 # TAMİRE AL: araç CarSpot'ta, sayaç başladı
 signal repair_progress(car: Node3D, progress: float)
 signal repair_ready(car: Node3D)                   # sayaç bitti; ödül PARA TOPLA'yı bekliyor (CarSpot dolu)
@@ -45,22 +48,28 @@ const CarHitbox: GDScript = preload("res://car_hitbox.gd")
 ## dakikada ~2,4'te sabit kalıyor, bu yüzden 2. ve 3. tamir alanı ekonomik olarak işe yaramıyordu
 ## (kuyruk hep boş, bay doluluğu %38). Garaj seviyesi artık arzı da büyütür:
 ##   interval → customer_interval_min/max çarpanı (küçük = sık müşteri)
-##   waiting  → aynı anda yol kenarında bekleyebilen müşteri. 2026-09-27: kullanıcı kararıyla
-##              HER SEVİYEDE 2 — garaj büyüdükçe 3-4 araç birikmesi kaldırımı tıkıyor ve dağınık
-##              görünüyordu. Garaj seviyesinin arz katkısı artık yalnızca sıklık ve değer üzerinden.
+##   waiting  → aynı anda yol kenarında bekleyebilen müşteri. 2026-10-16 kullanıcı kararı: 3–4 araç
+##              bekleyebilir (1–2. seviye 3, 3–4. seviye 4), çok bekleyen sabrı bitince gider (eskiden
+##              her seviyede 2'ydi ve bekleyen hiç gitmiyordu — birikip kaldırımı tıkıyordu).
 ##   spots    → kullanılan bekleme noktası sayısı; waiting ile aynı tutulur (fazlası kullanılmaz)
 ##   reward   → müşteri değeri çarpanı (daha iyi sınıf araçlar gelir)
-##   traffic  → TrafficManager.max_vehicles. 4. seviyede 8 yerine 10: ÖLÇÜLDÜ (20 dk, sv.15, 3 alan,
+##   traffic  → TrafficManager.max_vehicles (+ eski 2'nin üstündeki bekleyen müşteri kadar: bekleyenler bu
+##              sayıya dahil, yoksa 3 müşteri beklerken yolda tek araç kalırdı). 4. seviyede 8 yerine 10: ÖLÇÜLDÜ (20 dk, sv.15, 3 alan,
 ##              tamir hızı 5) — trafik 8'de garaj 4 yalnızca 2.206 ₺/dk veriyordu (garaj 3: 2.021),
 ##              yani 60.000 ₺'lik son genişleme 5,4 saatte kendini amorti ediyordu. Aday araç havuzu
 ##              büyümediği için kısalan müşteri aralığı karşılığını bulamıyor (bay'deki araçlar yoldan
 ##              çekiliyor). Trafik 10 ile aynı yapılandırma 2.798 ₺/dk (+%27, amorti 77 dk).
 const SUPPLY: Array[Dictionary] = [
-	{"interval": 1.00, "waiting": 2, "spots": 2, "reward": 1.00, "traffic": 4},
-	{"interval": 0.80, "waiting": 2, "spots": 2, "reward": 1.15, "traffic": 6},
-	{"interval": 0.62, "waiting": 2, "spots": 2, "reward": 1.30, "traffic": 8},
-	{"interval": 0.48, "waiting": 2, "spots": 2, "reward": 1.45, "traffic": 10},
+	{"interval": 1.00, "waiting": 3, "spots": 3, "reward": 1.00, "traffic": 4},
+	{"interval": 0.80, "waiting": 3, "spots": 3, "reward": 1.15, "traffic": 6},
+	{"interval": 0.62, "waiting": 4, "spots": 4, "reward": 1.30, "traffic": 8},
+	{"interval": 0.48, "waiting": 4, "spots": 4, "reward": 1.45, "traffic": 10},
 ]
+## Trafik ölçümünün yapıldığı bekleme sınırı: bunun üstündeki her bekleyen müşteri trafik sınırına eklenir.
+const BASE_WAITING: int = 2
+## Müşterinin sabrı (sn, bekleme noktasına yerleşince rastgele) ve balonda geri sayımın başladığı kalan süre.
+const CUSTOMER_PATIENCE: Vector2 = Vector2(75.0, 110.0)
+const PATIENCE_WARN: float = 20.0
 const SPOT_AHEAD_MIN: float = 0.5   # bekleme noktası aracın bu kadar önünde olmalı (yanaşma payı)
 const SPOT_AHEAD_MAX: float = 3.2   # aracın noktayı "görebildiği" pencere (1.8 iken adaylar çok seyrekti)
 const SPOT_SIDE_MAX: float = 0.6    # noktanın şeride yanal uzaklığı en çok (kaldırım kenarı ~0.36)
@@ -199,7 +208,12 @@ func active_wait_spots() -> Array[Node3D]:
 ## Garaj seviyesi değişince trafik yoğunluğu da güncellenir (daha büyük garaj = daha canlı şehir).
 func _apply_supply() -> void:
 	if _traffic:
-		_traffic.max_vehicles = int(_supply()["traffic"])
+		_traffic.max_vehicles = traffic_limit(_supply())
+
+
+## Bir arz satırının trafik sınırı: ölçülen trafik + BASE_WAITING'in üstündeki bekleyen müşteri sayısı.
+static func traffic_limit(supply: Dictionary) -> int:
+	return int(supply["traffic"]) + maxi(int(supply["waiting"]) - BASE_WAITING, 0)
 
 
 ## Şu an süren iş sayısı (tamir + ödül bekleyen).
@@ -626,6 +640,7 @@ func _connect_traffic() -> void:
 func _tick_customers(delta: float) -> void:
 	if _traffic == null or repair_wait_spots.is_empty():
 		return
+	_tick_patience(delta)
 	_customer_timer -= delta
 	if _customer_timer > 0.0 or waiting_count() >= waiting_limit():
 		return
@@ -714,7 +729,38 @@ func _pick_fault(options: Array[RepairType]) -> RepairType:
 
 
 func _on_customer_stopped(vehicle: TrafficVehicle) -> void:
+	vehicle.patience = _rng.randf_range(CUSTOMER_PATIENCE.x, CUSTOMER_PATIENCE.y)
 	customer_stopped.emit(vehicle)
+
+
+## SABIR: bekleyen müşterinin süresi azalır; son PATIENCE_WARN sn balonda geri sayım, bitince gider.
+## Seçili müşteri (oyuncu plakasına bakıyor) ve eğitim sürerken azalmaz.
+func _tick_patience(delta: float) -> void:
+	if _tutorial_running():
+		return
+	for vehicle: TrafficVehicle in _traffic.vehicles.duplicate():
+		if not vehicle.is_waiting() or vehicle == _target:
+			continue
+		vehicle.patience -= delta
+		if vehicle.patience <= 0.0:
+			_dismiss_customer(vehicle)
+		elif vehicle.patience <= PATIENCE_WARN:
+			vehicle.show_patience(ceili(vehicle.patience))
+
+
+## Müşteri beklemekten sıkıldı: kaldırımdan çıkıp trafiğe döner (ekrandaysa korna çalar).
+func _dismiss_customer(vehicle: TrafficVehicle) -> void:
+	vehicle.give_up()
+	if _traffic.sfx and not _traffic.is_hidden(vehicle.global_position):
+		_traffic.sfx.honk()
+	customer_left.emit(vehicle)
+
+
+func _tutorial_running() -> bool:
+	if not is_inside_tree():
+		return false
+	var director: Node = get_tree().get_first_node_in_group("tutorial_director")
+	return director != null and director.has_method(&"is_running") and bool(director.call(&"is_running"))
 
 
 func _find_traffic(node: Node) -> TrafficManager:

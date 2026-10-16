@@ -3,6 +3,7 @@ extends VBoxContainer
 ## Dünyadaki teslimat kasasının plakası (HUD'un alt sütununda, tamir alanı plakasıyla aynı yerde).
 ## İki kip: SORU — kasaya dokunulunca "ŞEHİR KASASI · içinde ne var? · AÇ / VAZGEÇ";
 ## SONUÇ — açılış sahnesinden sonra aracın adı, nadirliği ve ne olduğu (yeni / kopya ★ / geri geldi).
+## HOŞ GELDİN KUTUSU (hediye): soruda olasılık yerine "RIZA USTA'DAN HEDİYE", sonuçta "AL, İLK ARACIN!".
 ## Mantık yok: AÇ ve TAMAM sinyalleri HUD üzerinden CrateDelivery'ye gider. Kasanın içindeki araç
 ## soru kipinde ASLA gösterilmez.
 
@@ -67,12 +68,21 @@ func show_prompt(uid_value: int, crate_id: StringName) -> void:
 	_mode = &"prompt"
 	_stop_glow()
 	var entry: Dictionary = CrateCatalog.get_entry(crate_id)
+	var title: String = Loc.t(String(entry.get("display_name", Loc.t("KASA"))))
+	if CrateCatalog.is_gift(crate_id):
+		_plate.set_content(title, Loc.t("RIZA USTA'DAN HEDİYE"), "???", PackedStringArray([Loc.t("İÇİNDE İLK ARACIN VAR")]))
+		_action.text = Loc.t("AÇ")
+		_action.disabled = false
+		_cancel.visible = true
+		show()
+		_start_glow(CrateCatalog.rarity_color(&"legendary"), true)
+		return
 	var odds: Dictionary = CrateCatalog.rarity_odds(crate_id)
 	var lines: PackedStringArray = PackedStringArray()
 	for rarity: StringName in CrateCatalog.RARITY_ORDER:
 		if odds.has(rarity):
 			lines.append("%s  %s" % [CrateCatalog.rarity_label(rarity), Loc.percent(Loc.decimal(float(odds[rarity]) * 100.0))])
-	_plate.set_content(Loc.t(String(entry.get("display_name", Loc.t("KASA")))), Loc.t("İÇİNDE BİR ARAÇ VAR"), "???", lines)
+	_plate.set_content(title, Loc.t("İÇİNDE BİR ARAÇ VAR"), "???", lines)
 	_action.text = Loc.t("AÇ")
 	_action.disabled = false
 	_cancel.visible = true
@@ -88,6 +98,16 @@ func show_result(uid_value: int, result: Dictionary) -> void:
 	var rarity: StringName = result["rarity"]
 	var lines: PackedStringArray = PackedStringArray()
 	var headline: String
+	if bool(result.get("gift", false)):
+		_plate.set_content(String(entry.get("display_name", vehicle)).to_upper(),
+			Loc.t("HOŞ GELDİN HEDİYESİ  ·  %s SINIFI") % String(entry.get("class", "?")),
+			Loc.t("AL, İLK ARACIN!"), PackedStringArray([Loc.t("İLK YARIŞLARINA BUNUNLA ÇIKARSIN")]))
+		_action.text = Loc.t("TAMAM")
+		_action.disabled = false
+		_cancel.visible = false
+		show()
+		_start_glow(CrateCatalog.rarity_color(&"legendary"), true)
+		return
 	if bool(result["duplicate"]):
 		var stars: int = int(result["stars"])
 		headline = Loc.t("KOPYA  %s") % ("★".repeat(stars) + "☆".repeat(5 - stars))

@@ -41,6 +41,7 @@ func _run() -> void:
 	economy = get_first_node_in_group("economy")
 	save.new_game()
 	await frames(4)
+	await _clear_welcome()
 	var router: UiRouter = (current_scene.find_child("HUD", true, false)).get("router")
 	router.open(&"garage_edit")
 	await frames(6)
@@ -137,3 +138,16 @@ func _run() -> void:
 		and GarageDecor.exists(&"car_lift"), "dekor lifti mağazadan kalktı ama eski kayıtta yüklenebilir")
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
+
+## Yeni oyunun HOŞ GELDİN KUTUSU garajın arka-sol köşesinde durur (dekor / tamir alanı yerleşimine engel): oyuncu
+## gibi açılıp kaldırılır, ilk araç (Şahin) garaja girer.
+func _clear_welcome() -> void:
+	var crates: CrateManager = get_first_node_in_group("crates")
+	var uid: int = crates.welcome_uid() if crates else 0
+	for i: int in 120:
+		if uid == 0 or crates.can_open(uid):
+			break
+		await process_frame
+	if uid > 0 and not crates.open(uid).is_empty():
+		crates.claim(uid)
+	await frames(2)

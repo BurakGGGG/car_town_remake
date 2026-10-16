@@ -96,7 +96,7 @@ def scan_json(out):
             if it.get(key):
                 out.setdefault(it[key], []).append(f"decor/decorations.json:{it['id']}.{key}")
     crates = json.load(open(os.path.join(ROOT, "vehicles/crates.json"), encoding="utf-8"))
-    for c in crates.get("crates", []):
+    for c in crates.get("crates", []) + crates.get("gift_crates", []):
         for key in ("display_name", "short_name", "description", "subtitle"):
             if c.get(key):
                 out.setdefault(c[key], []).append(f"vehicles/crates.json:{c['id']}.{key}")

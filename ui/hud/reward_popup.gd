@@ -288,7 +288,7 @@ func _fly(kind: HudIcon.Kind, from: Vector2, label: Label, count: int, on_landed
 		tween.tween_interval(float(i) * FLY_STAGGER)
 		tween.tween_method(func(t: float) -> void:
 			# hedef her karede okunur: ekran boyutu değişse de sayaca varır
-			var to: Vector2 = target_node.get_global_rect().get_center() if is_instance_valid(target_node) else spread
+			var to: Vector2 = Hud.screen_rect(target_node).get_center() if is_instance_valid(target_node) else spread
 			var control: Vector2 = Vector2(lerpf(spread.x, to.x, 0.25), minf(spread.y, to.y) - 80.0)
 			icon.global_position = spread.lerp(control, t).lerp(control.lerp(to, t), t) - half
 			icon.scale = Vector2.ONE * lerpf(1.15, 0.6, t), 0.0, 1.0, FLY_TIME) \

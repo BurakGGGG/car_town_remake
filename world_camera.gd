@@ -33,6 +33,7 @@ const LAYER_WORLD_UI: int = 1 << 1
 @export var drag_threshold_px: float = 6.0
 
 var _focus: Vector3            # kameranın baktığı zemin noktası
+var _home_focus: Vector3       # açılıştaki odak (KAMERAYI ORTALA buraya döner)
 var _offset: Vector3           # kamera konumu - odak (sabit)
 var _target_size: float
 var _press_pos: Vector2
@@ -47,6 +48,7 @@ func _ready() -> void:
 	var t: float = global_position.y / maxf(-dir.y, 0.001)
 	_focus = global_position + dir * t
 	_focus.y = 0.0
+	_home_focus = _focus
 	_offset = global_position - _focus
 	size = start_zoom
 	_target_size = start_zoom
@@ -55,6 +57,8 @@ func _ready() -> void:
 	var hud: Node = get_node_or_null("%HUD")
 	if hud and hud.has_signal("camera_zoom_requested"):
 		hud.camera_zoom_requested.connect(func(direction: int) -> void: zoom_by(-direction * zoom_speed * 2.0))
+	if hud and hud.has_signal("camera_recenter_requested"):
+		hud.camera_recenter_requested.connect(reset_view)
 
 
 func _process(delta: float) -> void:
@@ -66,6 +70,14 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if view_input(event):
+		get_viewport().set_input_as_handled()
+
+
+## Pan / zoom girdisini işler; olayı TÜKETTİYSE true döner. Dünyanın üstünde tıklamayı kendisi yutan
+## katmanlar (FOTOĞRAF modu: araç / bina seçilmesin) olayları buraya kendisi verir — kamera aynı
+## hissi verir, alttaki dünya hiçbir dokunuşu görmez.
+func view_input(event: InputEvent) -> bool:
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event
 		if mb.button_index == MOUSE_BUTTON_LEFT:
@@ -74,13 +86,13 @@ func _unhandled_input(event: InputEvent) -> void:
 				_dragging = false
 			else:
 				_dragging = false
-			return  # basış/bırakış tüketilmez: araç seçimi (car_hitbox) çalışmaya devam eder
+			return false  # basış/bırakış tüketilmez: araç seçimi (car_hitbox) çalışmaya devam eder
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_UP:
 			zoom_by(-zoom_speed)
-			get_viewport().set_input_as_handled()
+			return true
 		elif mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			zoom_by(zoom_speed)
-			get_viewport().set_input_as_handled()
+			return true
 	elif event is InputEventMouseMotion:
 		var mm: InputEventMouseMotion = event
 		if mm.button_mask & MOUSE_BUTTON_MASK_LEFT and _touches.size() < 2:
@@ -88,7 +100,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				_dragging = true
 			if _dragging:
 				pan_by_pixels(mm.relative)
-				get_viewport().set_input_as_handled()
+				return true
 	elif event is InputEventScreenTouch:
 		var st: InputEventScreenTouch = event
 		if st.pressed:
@@ -108,7 +120,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			# İki parmağın ortası kayınca görüntü de kayar: tek parmağın zemine boya / duvar çizdiği
 			# düzenleme araçlarında kamera iki parmakla gezdirilir (sürükleme bir parmağın yarısı kadar).
 			pan_by_pixels((_touch_midpoint() - before))
-			get_viewport().set_input_as_handled()
+			return true
+	return false
 
 
 ## Verilen kutuyu (ör. garajın zemini + duvar yüksekliği) ekranın dikey [top, bottom] oranları
@@ -171,6 +184,15 @@ func follow(focus: Vector3, zoom: float) -> void:
 ## Dünya plakaları (LAYER_WORLD_UI) görünsün mü?
 func set_world_ui_visible(on: bool) -> void:
 	cull_mask = (cull_mask | LAYER_WORLD_UI) if on else (cull_mask & ~LAYER_WORLD_UI)
+
+
+func world_ui_visible() -> bool:
+	return cull_mask & LAYER_WORLD_UI != 0
+
+
+## KAMERAYI ORTALA: açılıştaki odak ve zoom'a yumuşakça döner.
+func reset_view() -> void:
+	_glide_to(_home_focus, start_zoom)
 
 
 ## frame_box'tan önceki görünüme döner.

@@ -92,6 +92,7 @@ func _run() -> void:
 	router = hud.get("router") if hud else null
 	save.new_game()
 	await frames(4)
+	await _clear_welcome()
 	editor.notice.connect(func(text: String) -> void: _notices.append(text))
 
 	await _catalog()          # 01
@@ -809,3 +810,16 @@ static func _xz(v: Vector3) -> Vector2:
 
 static func _near(a: Vector3, b: Vector3, eps: float) -> bool:
 	return absf(a.x - b.x) <= eps and absf(a.y - b.y) <= eps and absf(a.z - b.z) <= eps
+
+## Yeni oyunun HOŞ GELDİN KUTUSU garajın arka-sol köşesinde durur (dekor / tamir alanı yerleşimine engel): oyuncu
+## gibi açılıp kaldırılır, ilk araç (Şahin) garaja girer.
+func _clear_welcome() -> void:
+	var crates: CrateManager = get_first_node_in_group("crates")
+	var uid: int = crates.welcome_uid() if crates else 0
+	for i: int in 120:
+		if uid == 0 or crates.can_open(uid):
+			break
+		await process_frame
+	if uid > 0 and not crates.open(uid).is_empty():
+		crates.claim(uid)
+	await frames(2)

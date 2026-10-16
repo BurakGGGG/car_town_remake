@@ -46,6 +46,7 @@ func _run() -> void:
 	var camera: WorldCamera = get_root().get_camera_3d() as WorldCamera
 	var editor: GarageEditor = get_first_node_in_group("garage_editor")
 	var race: Node = get_first_node_in_group("race")
+	(get_first_node_in_group("vehicle_ownership") as VehicleOwnership).add_vehicle(&"tofas_sahin")   # araçsız oyuncuya rakip gelmez
 	var repair: RepairManager = get_first_node_in_group("repair_manager")
 	var traffic: TrafficManager = _find_traffic(current_scene)
 

@@ -75,6 +75,9 @@ func _run() -> void:
 
 	print("== 4) Yarış dersi rakibi bekletir ==")
 	var race: RaceManager = get_first_node_in_group("race") as RaceManager
+	var ownership: VehicleOwnership = get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+	if ownership.owned_count() == 0:
+		ownership.add_vehicle(&"tofas_sahin")   # araçsız oyuncuya rakip gelmez (ilk araç HOŞ GELDİN KUTUSU'ndan)
 	var got: bool = false
 	var deadline: int = Time.get_ticks_msec() + 8000
 	while not got and Time.get_ticks_msec() < deadline:   # trafik başsızda birkaç saniyede dolar

@@ -168,9 +168,58 @@ func _run() -> void:
 	screen._close.pressed.emit()
 	await create_timer(0.4).timeout
 	check(router.top() == &"" and not screen.visible and hud.top_left.visible, "GERİ → oyun, HUD geri geldi")
+
+	print("== HUD BOYUTU ==")
+	check(GameSettings.HUD_SCALES.size() == 5 and is_equal_approx(GameSettings.HUD_SCALES[GameSettings.HUD_DEFAULT], 1.0),
+		"5 kademe, varsayılan %100")
+	check(settings.hud_size == GameSettings.HUD_DEFAULT and is_equal_approx(hud.hud_scale, 1.0)
+		and hud.top_left.scale.is_equal_approx(Vector2.ONE), "yeni kurulum: HUD %100")
+	var corner_tr: Vector2 = Hud.screen_rect(hud.top_right).end
+	var bottom_mid: float = Hud.screen_rect(hud.bottom).get_center().x
+	settings.set_hud_size(4)
+	await frames(3)
+	check(is_equal_approx(hud.hud_scale, 1.2), "%120 seçildi → HUD ölçeği 1.2")
+	for cluster: Control in [hud.top_left, hud.top_right, hud.bottom]:
+		check(cluster.scale.is_equal_approx(Vector2(1.2, 1.2)), "%s ölçeklendi" % cluster.name)
+	check(absf(Hud.screen_rect(hud.top_right).end.x - corner_tr.x) < 1.0 and absf(Hud.screen_rect(hud.bottom).get_center().x - bottom_mid) < 1.0,
+		"sağ üst köşe ve alt orta yerinde kaldı (kümeler kendi köşesinden büyür)")
+	var view: Rect2 = root.get_visible_rect().grow(1.0)   # kenara yaslı küme: kayan nokta payı
+	check(view.encloses(Hud.screen_rect(hud.top_right)) and view.encloses(Hud.screen_rect(hud.bottom)) and view.encloses(Hud.screen_rect(hud.top_left)),
+		"büyük HUD ekranın içinde")
+	var nav: PlateButton = hud.garage_button
+	check(Hud.screen_rect(nav).size.x > nav.size.x * 1.15, "ekran dikdörtgeni ölçeği hesaba katar (%.0f > %.0f)" % [Hud.screen_rect(nav).size.x, nav.size.x])
+	var reloaded: GameSettings = GameSettings.new()
+	reloaded.load_settings()
+	check(reloaded.hud_size == 4, "HUD boyutu settings.cfg'ye yazıldı")
+	reloaded.free()
+	settings.set_hud_size(99)
+	check(settings.hud_size == GameSettings.HUD_SCALES.size() - 1, "aralık dışı kademe kırpılır")
+	settings.set_hud_size(0)
+	await frames(3)
+	check(is_equal_approx(hud.top_left.scale.x, 0.8), "%80 → küçük HUD")
+	# Küçük HUD'da dokunma alanı ekranda yine PlateButton.MIN_TOUCH: görünür plakanın 30 birim altı tutar
+	var below: Vector2 = Vector2(nav.size.x * 0.5, nav.size.y + (PlateButton.MIN_TOUCH / 0.8 - nav.size.y) * 0.5 - 2.0)
+	check(nav.size.y < PlateButton.MIN_TOUCH / 0.8 and nav._has_point(below), "küçük HUD'da dokunma payı ölçeğe göre büyür")
+	router.open(&"settings")
+	await frames(4)
+	screen._show_page(SettingsScreen.Page.GRAPHICS)
+	await frames(2)
+	var hud_texts: Array = screen._hud_buttons.map(func(b: PlateButton) -> String: return b.text)
+	# Yukarıdaki ikinci GameSettings.load_settings() genel dili cihaz diline çevirebilir: beklenen yazı Loc'tan
+	check(hud_texts.size() == 5 and hud_texts[0] == Loc.percent("80") and hud_texts[4] == Loc.percent("120"),
+		"AYARLAR → GRAFİK: %%80 … %%120 düğmeleri (%s)" % [hud_texts])
+	check(screen._hud_buttons[0].highlight and not screen._hud_buttons[2].highlight, "seçili kademe amber")
+	screen._hud_buttons[2].pressed.emit()
+	await frames(2)
+	check(settings.hud_size == GameSettings.HUD_DEFAULT and is_equal_approx(hud.hud_scale, 1.0) and screen._hud_buttons[2].highlight,
+		"ekrandan %100 seçildi, HUD uygulandı")
+	router.back()
+	await create_timer(0.4).timeout
+
 	settings.set_quality(GameSettings.Quality.MEDIUM)
 	settings.set_muted(false)
 	settings.set_music_volume(GameSettings.DEFAULT_MUSIC)
 	settings.set_sfx_volume(GameSettings.DEFAULT_SFX)
+	settings.set_hud_size(GameSettings.HUD_DEFAULT)
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)

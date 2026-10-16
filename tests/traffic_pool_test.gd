@@ -1,5 +1,6 @@
 extends SceneTree
-## TRAFİK MODEL HAVUZU — trafiğe kapalı (traffic=false, S sınıfı) araçlar şehirde rastgele doğmaz.
+## TRAFİK MODEL HAVUZU — trafiğe kapalı (traffic=false, S sınıfı) araçlar şehirde rastgele doğmaz; şehirde
+## bir modelden aynı anda en fazla bir araç olur (yarış rakibi ve kovalamaca şüphelisi dahil).
 ## Eskiden yarış rakibi için yüklenen model şehir havuzuna giriyordu: oyuncu A sınıfıyla yarışırken
 ## sokakta doğan araçların dörtte biri GT3 / Huracán / 488 oluyordu. Rakip yine o modelle gelmeli.
 ## Çalıştırma: tools/run_tests.sh traffic_pool_test (pencereli: başsız sahte çizici arka planda
@@ -43,6 +44,15 @@ func _find_traffic(node: Node) -> TrafficManager:
 func _clear(traffic: TrafficManager) -> void:
 	for v: TrafficVehicle in traffic.vehicles.duplicate():
 		traffic._on_vehicle_despawn(v)
+
+
+func _unique(cars: Array[TrafficVehicle]) -> bool:
+	var seen: Dictionary = {}
+	for car: TrafficVehicle in cars:
+		if seen.has(car.vehicle_id):
+			return false
+		seen[car.vehicle_id] = true
+	return true
 
 
 func _initialize() -> void:
@@ -95,6 +105,49 @@ func _run() -> void:
 		traffic._on_vehicle_despawn(v)
 	await frames(2)
 	check(closed.is_empty(), "60 şehir aracında trafiğe kapalı model yok %s (görülen: %s)" % [closed, seen.keys()])
+
+	print("== aynı modelden tek araç ==")
+	_clear(traffic)
+	await frames(2)
+	var pool_ids: Array[StringName] = traffic.city_model_ids()
+	var spawned: Array[TrafficVehicle] = []
+	for i: int in pool_ids.size():
+		var car: TrafficVehicle = traffic._spawn_at(traffic.spawn_points[i % traffic.spawn_points.size()])
+		if car:
+			car.set_physics_process(false)   # beklerken yolun sonuna varıp silinmesin (model boşa çıkardı)
+			spawned.append(car)
+	check(spawned.size() == pool_ids.size() and _unique(traffic.vehicles), "havuzdaki %d model → %d farklı araç" % [pool_ids.size(), spawned.size()])
+	check(traffic._spawn_at(traffic.spawn_points[0]) == null, "havuzun her modeli şehirde: aynısından ikinci araç doğmaz")
+	check(traffic.random_city_model().is_empty(), "kovalamaca şüphelisi de şehirdeki modeli almaz")
+	check(traffic.spawn_challenger(spawned[0].vehicle_id) == null, "şehirdeki model yarış şeridine ikinci kez çıkmaz")
+	var fresh: Array[TrafficVehicle] = []
+	check(await wait_until(func() -> bool:
+		var car: TrafficVehicle = traffic._spawn_at(traffic.spawn_points[0])
+		if car:
+			fresh.append(car)
+		return not fresh.is_empty(), 20.0), "boştaki bir model yüklendi, yeni araç onunla doğdu")
+	check(not fresh.is_empty() and not pool_ids.has(fresh[0].vehicle_id), "yeni araç farklı bir model (%s)" % (fresh[0].vehicle_id if not fresh.is_empty() else &""))
+	check(_unique(traffic.vehicles), "şehirde aynı modelden iki araç yok")
+	check(traffic.city_model_ids().size() <= traffic.pool_size, "havuz sınırı aşılmadı (%d)" % traffic.city_model_ids().size())
+	var gone: StringName = spawned[0].vehicle_id
+	traffic._on_vehicle_despawn(spawned[0])
+	await frames(2)
+	check(not traffic.is_model_in_use(gone), "araç gidince model yeniden boşa çıkar")
+	var race: RaceManager = get_first_node_in_group("race") as RaceManager
+	if race:
+		var player: StringName = race.player_vehicle_id()
+		var rivals: Array[StringName] = RaceManager.rival_pool(player)
+		var busy: Dictionary = {}
+		for id: StringName in rivals.slice(1):
+			busy[id] = true
+		race._records = {&"x": 1.0}   # ilk yarış değil (ilk yarışta en yavaş rakip kuralı ayrı)
+		check(race.rival_id_for(player, busy) == rivals[0], "rakip şehirde OLMAYAN modelden seçilir")
+		for id: StringName in rivals:
+			busy[id] = true
+		check(rivals.has(race.rival_id_for(player, busy)), "havuzun hepsi şehirdeyse yine havuzdan (model boşalınca gelir)")
+		race._records = {}
+	_clear(traffic)
+	await frames(2)
 
 	print("== rakip yine istenen modelle gelir ==")
 	var rival: TrafficVehicle = null

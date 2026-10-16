@@ -138,9 +138,10 @@ func make_world() -> void:
 	var prog: PlayerProgress = PlayerProgress.new()
 	var upg: GarageUpgradeManager = GarageUpgradeManager.new()
 	var own: VehicleOwnership = VehicleOwnership.new()
+	var crates: CrateManager = CrateManager.new()   # yeni oyunda HOŞ GELDİN KUTUSU (ilk araç ondan çıkar)
 	var save: SaveManager = SaveManager.new()
 	var cloud: CloudSaveManager = CloudSaveManager.new()
-	for n: Node in [eco, prog, upg, own, save, cloud]:
+	for n: Node in [eco, prog, upg, own, crates, save, cloud]:
 		root_node.add_child(n)
 	root.add_child(root_node)
 	# Plugin PC'de yok: _ready bağlantı kurmadı, sahte Firebase'i gerçek bağlantı adlarıyla bağla
@@ -154,7 +155,7 @@ func make_world() -> void:
 	fb.firestore_delete_task_completed.connect(cloud._on_delete_completed)
 	cloud.account_deleted.connect(func(ok: bool) -> void: deleted_results.append(ok))
 	cloud.notice.connect(func(t: String) -> void: notices.append(t))
-	w = {"root": root_node, "eco": eco, "prog": prog, "own": own, "save": save, "cloud": cloud}
+	w = {"root": root_node, "eco": eco, "prog": prog, "own": own, "crates": crates, "save": save, "cloud": cloud}
 	await frames(6)
 
 
@@ -244,7 +245,8 @@ func _run() -> void:
 	await frames(8)
 	check(not cloud().is_authenticated() and fb.user.is_empty(), "oturum kapandı")
 	check(cloud().get_state() == CloudSaveManager.State.SIGNED_OUT, "SIGNED_OUT")
-	check(eco().money == 5000 and vehicles() == ["tofas_sahin"], "cihaz yeni misafir oyunu (5000, yalnızca Şahin)")
+	check(eco().money == 5000 and vehicles().is_empty() and (w["crates"] as CrateManager).welcome_uid() > 0,
+		"cihaz yeni misafir oyunu (5000, araç yok, HOŞ GELDİN KUTUSU bekliyor)")
 	check(int(get_json("savegame.json").get("economy", {}).get("money", -1)) == 5000, "local kayıt dosyası da sıfırlandı")
 	check(int(get_json("savegame.before_signout.json").get("economy", {}).get("money", -1)) == 20000, "çıkıştan önceki kayıt yedeklendi (20000)")
 	check(fb.docs.has(dana), "Dana'nın bulut kaydı duruyor")
@@ -256,7 +258,8 @@ func _run() -> void:
 	await sign_in_as("erik")
 	var erik: String = cloud().get_uid()
 	check(erik != dana and cloud().get_state() == CloudSaveManager.State.SYNCED, "Erik SYNCED")
-	check(eco().money == 5000 and vehicles() == ["tofas_sahin"], "Erik temiz oyunla başladı (5000, Şahin)")
+	check(eco().money == 5000 and vehicles().is_empty() and (w["crates"] as CrateManager).welcome_uid() > 0,
+		"Erik temiz oyunla başladı (5000, HOŞ GELDİN KUTUSU)")
 	check(fb.docs.has(erik) and conflicts.is_empty(), "Erik'in kaydı oluştu, çakışma yok")
 	eco().set_money(1234)
 	await seconds(2.2)

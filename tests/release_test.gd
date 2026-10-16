@@ -80,8 +80,9 @@ func _run() -> void:
 			_set_path(snap, p, h)
 			save.apply_snapshot(snap)
 			applied += 1
+			# Araçsız kalan oyuncuya HOŞ GELDİN KUTUSU gelir (ilk araç kutudan çıkar): garaj hiç boş kalmaz
 			var ok: bool = eco.money >= 0 and pp.gems >= 0 and pp.level >= 1 and pp.level <= 99 \
-				and pp.xp >= 0 and own.owned_count() >= 1
+				and pp.xp >= 0 and (own.owned_count() >= 1 or _crates().welcome_uid() > 0)
 			if not ok:
 				bad += 1
 				if bad <= 12:
@@ -95,7 +96,8 @@ func _run() -> void:
 	print("== 4) ESKİ SÜRÜMLER (v1..v9) ==")
 	for v: int in range(1, 10):
 		var old: Dictionary = {"version": v, "economy": {"money": 1234}, "progress": {"xp": 5, "level": 3, "gems": 7}}
-		check(save.apply_snapshot(old) and eco.money == 1234 and pp.level == 3 and own.owned_count() >= 1, "v%d minimal kayıt yüklenir" % v)
+		check(save.apply_snapshot(old) and eco.money == 1234 and pp.level == 3
+			and (own.owned_count() >= 1 or _crates().welcome_uid() > 0), "v%d minimal kayıt yüklenir (araç ya da hoş geldin kutusu)" % v)
 
 	print("== 5) KASA SONUCU KAYITTAN SONRA DEĞİŞMEZ ==")
 	if crates:
@@ -178,3 +180,7 @@ func _run() -> void:
 
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
+
+
+func _crates() -> CrateManager:
+	return get_first_node_in_group("crates") as CrateManager

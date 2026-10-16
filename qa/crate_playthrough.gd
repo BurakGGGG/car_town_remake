@@ -160,6 +160,11 @@ func _play() -> void:
 	_t0 = Time.get_ticks_msec()
 
 	print("== 1) BAŞLANGIÇ ==")
+	var welcome: int = crates.welcome_uid()
+	check(own.owned_count() == 0 and welcome > 0, "yeni oyun: araç yok, HOŞ GELDİN KUTUSU bekliyor")
+	await create_timer(1.0).timeout
+	if welcome > 0 and not crates.open(welcome).is_empty():   # hediye: ilk araç kutudan çıkar (sahne oynatılmaz)
+		crates.claim(welcome)
 	check(own.owned_vehicle_ids() == [&"tofas_sahin"], "ilk araç Tofaş Şahin")
 	check(race.player_vehicle_id() == &"tofas_sahin", "ilk yarış aracı Şahin")
 	note("başlangıç: %d ₺, %d gem, sv %d" % [eco.money, pp.gems, pp.level])

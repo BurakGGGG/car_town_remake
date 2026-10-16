@@ -6,15 +6,24 @@ extends Node3D
 ## her hat düz bir başlangıç → bitiş rotasıdır; dönüş yok.
 ## Kavşak: doğu-batı ve kuzey-güney hatları kesiştiği için araçlar iç içe geçmesin diye
 ## eksen bazlı geçiş sırası vardır — aynı eksenin araçları birlikte geçer, karşı eksen bekler,
-## uzun süre bekleyen eksen sıra alır.
+## uzun süre bekleyen eksen sıra alır. TRAFİK LAMBASI varsa (TrafficLights, WorldDressing kurar) araç
+## kavşağa yalnızca kendi ekseni YEŞİLKEN girer; eksen kilidi yine geçerlidir (kavşaktaki araç boşaltır).
 ## Araç modelleri: CarCatalog'dan (traffic=true kayıtlar). Aynı anda en fazla pool_size model
 ## bellekte tutulur (havuz); gerisi katalogda yalnızca metadata olarak durur. Havuz
 ## pool_rotate_interval'da bir başka bir katalog modeliyle tazelenir: yeni model arka planda
 ## (ResourceLoader threaded) yüklenir, havuzdan çıkan modelin sahnesi bırakılır ve son NPC'si
 ## despawn olunca (queue_free) mesh belleği kendiliğinden serbest kalır. Görünüm: NPC'ye özel
 ## CarAppearance kopyası + CarRig.
+## AYNI MODELDEN TEK ARAÇ: şehirde (yol, kenarda bekleyen müşteri, liftteki araç, yarış rakibi, kovalamaca
+## şüphelisi / polisi) bir modelden aynı anda EN FAZLA BİR araç bulunur — trafik çeşitli görünsün. Rastgele doğan
+## araç ve şüpheli havuzun KULLANILMAYAN modellerinden seçilir; hepsi kullanımdaysa kullanılmayan bir katalog
+## modeli yüklenir ve araç o hazır olunca doğar. Havuz dolunca önce kullanımdaki (zaten sahnede olan) model
+## çıkarılır, boştaki modeller doğmaya hazır kalır. Yarış rakibinin modelini RaceManager yine boştakilerden seçer.
 ## Yarış rakibi için istenen trafiğe KAPALI modeller (S sınıfı) ayrı tutulur (_race_models): rakip o modelle
 ## gelir, ama şehirde rastgele doğan araçlar yalnızca şehir havuzundan (traffic=true) seçilir.
+## KAÇAN KAYBEDEN: yarışı oyuncuya kaybeden rakip (TrafficVehicle.flee) kırmızıya bakmadan kaçar; yaklaşırken kavşağı
+## talep eder (runner_crossing) — karşı eksen yeşilde bile yeni araç sokamaz, bekletilen araç korna çalar; trafik ona
+## kovalamacadaki gibi yol verir (chase_pressure). Kalkışta lastik sesi (TrafficSfx).
 ## Polis kovalamacası: PoliceChase (çocuk düğüm, kodla kurulur) açılıştan 15 sn sonra, sonra 2 dakikada bir şüpheli + polis gönderir;
 ## bu araçlar `vehicles` listesinde DEĞİLDİR (sayılmaz, müşteri / rakip olmaz). Trafik onlara yol verir
 ## (chase_pressure) ve kovalamaca sürerken kavşakta karşı eksen bekler.
@@ -82,6 +91,16 @@ var _pending: Dictionary = {}              # id → scene_path (arka planda yük
 var _rotate_timer: float = 0.0
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var chase: PoliceChase
+## Kavşağın trafik lambası (TrafficLights kendini bağlar; yoksa yalnızca eksen sırası).
+var lights: TrafficLights
+## Yarışı kaybedip kaçan araçlar ve kavşağı talep eden kaçak (karşı eksen beklesin), talep zamanı, korna çalanlar.
+var _runners: Array[TrafficVehicle] = []
+var _runner_claim: TrafficVehicle
+var _claim_since: float = 0.0
+var _honked: Dictionary = {}   # araç → korna çaldığı kaçak
+var sfx: TrafficSfx
+## Kaçak kavşakta takılırsa (beklenmedik engel) talep bu kadar sonra düşer: karşı eksen sonsuza dek beklemesin.
+const RUNNER_CLAIM_MAX: float = 8.0
 
 
 func _ready() -> void:
@@ -90,6 +109,8 @@ func _ready() -> void:
 	_collect_spawn_points(self)
 	chase = PoliceChase.new()
 	add_child(chase)
+	sfx = TrafficSfx.new()
+	add_child(sfx)
 	for entry: Dictionary in CarCatalog.all():
 		if entry["traffic"]:
 			_candidates.append(entry["id"])
@@ -115,12 +136,15 @@ func _physics_process(delta: float) -> void:
 func _try_spawn() -> bool:
 	if spawn_points.is_empty() or _pool.is_empty():
 		return false
+	var model: Dictionary = _free_model()
+	if model.is_empty():
+		return false   # havuzdaki her model şehirde: boştaki bir model yükleniyor, sonra doğar
 	var candidates: Array[TrafficWaypoint] = spawn_points.duplicate()
 	candidates.shuffle()
 	for point: TrafficWaypoint in candidates:
 		var start: Vector3 = hidden_start(point)
 		if _is_clear(start):
-			_spawn_at(point, {}, start)
+			_spawn_at(point, model, start)
 			return true
 	return false
 
@@ -185,9 +209,15 @@ func spawn_challenger(wanted: StringName = &"") -> TrafficVehicle:
 		return null   # şeritte hâlâ bekleyen biri var: sonra denenir
 	var entry: Dictionary = {}
 	if wanted != &"":
+		if is_model_in_use(wanted):
+			return null   # bu model şehirde: aynısından ikinci araç çıkmaz (RaceManager başka rakip seçer)
 		entry = _pool_entry(wanted)
 		if entry.is_empty():
 			request_model(wanted)
+			return null
+	else:
+		entry = _free_model()
+		if entry.is_empty():
 			return null
 	var vehicle: TrafficVehicle = _spawn_at(race_spawn_point, entry, start)
 	vehicle.race_lane = true
@@ -222,14 +252,18 @@ func spawn_model(id: StringName, appearance: CarAppearance) -> TrafficVehicle:
 
 ## `start`: doğma yeri (hidden_start); verilmezse noktanın kendisi. Araç noktadan bir sonrakine giden
 ## doğru üzerinde kalır, yönü ve hedefi değişmez. `appearance` verilmezse rastgele NPC görünümü.
+## `entry` verilmezse boştaki bir model seçilir; boşta model yoksa araç doğmaz (null).
 func _spawn_at(point: TrafficWaypoint, entry: Dictionary = {}, start: Vector3 = Vector3.INF,
 		appearance: CarAppearance = null) -> TrafficVehicle:
+	var model: Dictionary = entry if not entry.is_empty() else _free_model()
+	if model.is_empty():
+		return null
 	var vehicle: TrafficVehicle = TrafficVehicle.new()
 	vehicle.name = "Npc_%d" % (_rng.randi() % 100000)
 	vehicle.max_speed = _rng.randf_range(min_speed, max_speed)
 	vehicle.acceleration = _rng.randf_range(0.5, 0.8)
+	vehicle.stop_distance = _rng.randf_range(0.76, 0.95)   # kuyrukta öndekine fazla yanaşmaz, aralar aynı olmaz
 	add_child(vehicle)
-	var model: Dictionary = entry if not entry.is_empty() else _pool.pick_random()
 	vehicle.vehicle_id = model["id"]
 	vehicle.setup(self, model["scene"], appearance if appearance else _random_appearance(model["id"]), point, model_scale)
 	if start != Vector3.INF:
@@ -251,13 +285,54 @@ func spawn_chase_vehicle(point: TrafficWaypoint, entry: Dictionary, appearance: 
 	return vehicle
 
 
-## Rastgele bir şehir modeli (yüklenmiş havuzdan; boşsa {}).
+## Rastgele bir şehir modeli — şehirde henüz OLMAYAN (kovalamaca şüphelisi); boşta model yoksa {}.
 func random_city_model() -> Dictionary:
-	return _pool.pick_random() if not _pool.is_empty() else {}
+	return _free_model()
+
+
+## Şu an şehirde olan modeller (id → true): trafik listesi (yol, bekleyen müşteri, lift, yarış şeridi) +
+## kovalamaca araçları.
+func models_in_use() -> Dictionary:
+	var used: Dictionary = {}
+	for vehicle: TrafficVehicle in vehicles:
+		if is_instance_valid(vehicle):
+			used[vehicle.vehicle_id] = true
+	if chase:
+		for vehicle: TrafficVehicle in chase.vehicles():
+			used[vehicle.vehicle_id] = true
+	return used
+
+
+func is_model_in_use(id: StringName) -> bool:
+	return models_in_use().has(id)
+
+
+## Havuzdan şehirde olmayan rastgele bir model. Hepsi kullanımdaysa boştaki bir katalog modelini yüklemeye
+## başlar ve {} döner (çağıran sonra yeniden dener).
+func _free_model() -> Dictionary:
+	var used: Dictionary = models_in_use()
+	var free: Array[Dictionary] = []
+	for entry: Dictionary in _pool:
+		if not used.has(entry["id"]):
+			free.append(entry)
+	if not free.is_empty():
+		return free[_rng.randi() % free.size()]
+	for id: StringName in _pending:
+		if _candidates.has(id) and not used.has(id):
+			return {}   # boştaki bir şehir modeli zaten yolda
+	var options: Array[StringName] = []
+	for id: StringName in _candidates:
+		if not used.has(id) and not _pool_has(id):
+			options.append(id)
+	if not options.is_empty():
+		_request_model(options[_rng.randi() % options.size()])
+	return {}
 
 
 func _on_vehicle_despawn(vehicle: TrafficVehicle) -> void:
 	vehicles.erase(vehicle)
+	_runners.erase(vehicle)
+	_honked.erase(vehicle)
 	finish_crossing(vehicle)
 	vehicle.queue_free()
 
@@ -299,11 +374,21 @@ func _poll_pending() -> void:
 					_race_models.append({"id": id, "scene": scene})
 					continue
 				while _pool.size() >= pool_size:
-					_pool.pop_front()
+					_pool.remove_at(_eviction_index())
 				_pool.append({"id": id, "scene": scene})
 			_:
 				push_warning("TrafficManager: '%s' yüklenemedi" % path)
 				_pending.erase(id)
+
+
+## Havuzdan çıkarılacak model: şehirde kullanılan EN ESKİ model (sahnedeki örneği yaşamaya devam eder,
+## aynı modelden ikinci araç zaten doğamaz); hiçbiri kullanımda değilse en eski model.
+func _eviction_index() -> int:
+	var used: Dictionary = models_in_use()
+	for i: int in _pool.size():
+		if used.has(_pool[i]["id"]):
+			return i
+	return 0
 
 
 ## Havuzu katalogdan başka bir modelle tazeler (katalog havuzdan büyükse).
@@ -314,9 +399,10 @@ func _rotate_pool(delta: float) -> void:
 	if _rotate_timer > 0.0:
 		return
 	_rotate_timer = pool_rotate_interval
+	var used: Dictionary = models_in_use()
 	var options: Array[StringName] = []
 	for id: StringName in _candidates:
-		if not _pool_has(id) and not _pending.has(id):
+		if not _pool_has(id) and not _pending.has(id) and not used.has(id):
 			options.append(id)
 	if not options.is_empty():
 		_request_model(options[_rng.randi() % options.size()])
@@ -379,13 +465,19 @@ func _is_clear(position: Vector3) -> bool:
 ## Polise yol verme baskısı (0 = yok, 1 = hemen kenara): aynı yönde ARKADAN gelen ya da karşı şeritte
 ## ÖNDEN yaklaşan kovalamaca aracı yakınsa. Kavşaktaki çapraz eksen araçları zaten kilitle bekler.
 func chase_pressure(vehicle: TrafficVehicle) -> float:
-	if chase == null or not chase.is_active():
+	var pushers: Array[TrafficVehicle] = []
+	if chase and chase.is_active():
+		pushers = chase.vehicles()
+	for runner: TrafficVehicle in _runners:
+		if is_instance_valid(runner) and runner != vehicle:
+			pushers.append(runner)
+	if pushers.is_empty():
 		return 0.0
 	var forward: Vector3 = vehicle.global_transform.basis.z
 	forward.y = 0.0
 	forward = forward.normalized()
 	var best: float = 0.0
-	for other: TrafficVehicle in chase.vehicles():
+	for other: TrafficVehicle in pushers:
 		var other_forward: Vector3 = other.global_transform.basis.z
 		other_forward.y = 0.0
 		var alignment: float = other_forward.normalized().dot(forward)
@@ -413,6 +505,8 @@ func distance_to_vehicle_ahead(vehicle: TrafficVehicle) -> float:
 	forward.y = 0.0
 	forward = forward.normalized()
 	var best: float = INF
+	# Kaçan araç orta çizgide gider: kendi şeridindeki (0,3 yanındaki) yavaş aracı engel saymaz, yanından geçer
+	var lane_half: float = 0.18 if vehicle.fleeing else 0.35
 	for other: TrafficVehicle in vehicles:
 		if other == vehicle or not other.blocks_traffic():
 			continue  # yol kenarında bekleyen / CarSpot'taki araç trafiği durdurmaz
@@ -422,7 +516,7 @@ func distance_to_vehicle_ahead(vehicle: TrafficVehicle) -> float:
 		if along <= 0.0:
 			continue
 		var lateral: float = absf(delta.cross(forward).y)
-		if lateral > 0.35:
+		if lateral > lane_half:
 			continue
 		var other_forward: Vector3 = other.global_transform.basis.z
 		other_forward.y = 0.0
@@ -442,6 +536,11 @@ func request_crossing(vehicle: TrafficVehicle) -> bool:
 		return true
 	if chase and chase.holds_crossing(vehicle.axis):
 		return false   # kovalamaca geçiyor: karşı eksen kavşağa girmez
+	if _runner_holds(vehicle.axis):
+		_honk(vehicle)
+		return false   # karşıdan kaçak geliyor: yeşil olsa da bekler (korna)
+	if lights and not lights.allows(vehicle.axis):
+		return false   # kırmızı / sarı: giriş çizgisinde bekler
 	var now: float = Time.get_ticks_msec() / 1000.0
 	if _crossing.is_empty():
 		_crossing_axis = vehicle.axis
@@ -456,7 +555,69 @@ func request_crossing(vehicle: TrafficVehicle) -> bool:
 	return true
 
 
+## KAÇAN ARAÇ kavşağa yaklaşıyor: kavşağı talep eder (karşı eksen yeni araç sokamaz), ışığa bakmaz. Kavşakta karşı
+## eksenden araç varsa onun çıkmasını bekler (false = bekle); giriş noktasına yakınsa geçiş listesine girer.
+func runner_crossing(runner: TrafficVehicle, to_entry: float) -> bool:
+	_prune_crossing()
+	var now: float = Time.get_ticks_msec() / 1000.0
+	if _runner_claim != runner:
+		_runner_claim = runner
+		_claim_since = now
+	if _crossing.has(runner):
+		return true
+	for other: TrafficVehicle in _crossing:
+		if other.axis != runner.axis:
+			return false
+	if to_entry < runner.lock_check_distance:
+		if _crossing.is_empty():
+			_crossing_axis = runner.axis
+			_crossing_since = now
+			_waiting_axis = -1
+		_crossing.append(runner)
+	return true
+
+
+## Yarışı kaybeden araç kaçmaya başladı (lastik sesi; yol verme listesi).
+func runner_started(runner: TrafficVehicle) -> void:
+	if not _runners.has(runner):
+		_runners.append(runner)
+	if sfx and not is_hidden(runner.global_position):
+		sfx.screech()
+
+
+## Kaçak karşı eksenden kavşağı talep etti mi (bu eksen yeni araç sokamaz)?
+func _runner_holds(axis: int) -> bool:
+	if _runner_claim == null:
+		return false
+	if not is_instance_valid(_runner_claim) or not _runner_claim.fleeing \
+			or Time.get_ticks_msec() / 1000.0 - _claim_since > RUNNER_CLAIM_MAX:
+		_runner_claim = null
+		return false
+	return _runner_claim.axis != axis
+
+
+## Kaçak yüzünden duran araç bir kez korna çalar (ekranda görünüyorsa).
+func _honk(vehicle: TrafficVehicle) -> void:
+	if _honked.get(vehicle) == _runner_claim:
+		return
+	_honked[vehicle] = _runner_claim
+	if sfx and not is_hidden(vehicle.global_position):
+		sfx.honk()
+
+
+## Işık bu eksene yeni geçiş veriyor mu (lamba yoksa her zaman).
+func light_allows(axis: int) -> bool:
+	return lights == null or lights.allows(axis)
+
+
+## Kavşak girişinden dur çizgisine mesafe (lamba / çizgi yoksa -1: araç eskisi gibi giriş noktasında durur).
+func stop_line_gap(entry: Node3D) -> float:
+	return lights.stop_gap(entry) if lights else -1.0
+
+
 func finish_crossing(vehicle: TrafficVehicle) -> void:
+	if vehicle == _runner_claim:
+		_runner_claim = null
 	_crossing.erase(vehicle)
 	if _crossing.is_empty():
 		_crossing_axis = -1

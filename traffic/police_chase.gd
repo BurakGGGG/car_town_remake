@@ -12,24 +12,53 @@ extends Node
 ## hızlıdır ama asla çarpmaz / geçmez. Normal trafik arkadan gelen ya da karşıdan yaklaşan kovalamacaya sağa
 ## çekilip yavaşlayarak yol verir (TrafficManager.chase_pressure); kovalamaca sürerken kavşakta karşı eksen bekler.
 ## Bir ekran (garaj, mağaza, pano) açıkken kovalamaca başlamaz, siren susar.
+##
+## ŞÜPHELİNİN SÜRÜŞÜ: tekdüze sinüs değil — düzensiz iki dalgalı zikzak, arada sert ani kırışlar, önüne çıkan trafik
+## aracını boş taraftan atlatma (kırarken lastik cıyaklar, atlatılan araç korna çalar), gaz patlamaları. Yanal konum
+## yaylı direksiyonla izlenir (keskin ama yumuşak S'ler); araçta ön teker açısı, gövde yatışı ve hafif drift
+## (TrafficVehicle._drive_flair). POLİS şüphelinin çizdiği çizgiyi gecikmeli izler: aynı boşluklardan geçer.
 
 signal chase_started(police_id: StringName, suspect_id: StringName)
 signal chase_finished
 
 const POLICE_IDS: Array[StringName] = [&"police_vito", &"police_bentley"]
-## Şüphelinin hızı (birim/sn). Normal trafik 0,55–0,9: kovalamaca ~2,2 kat hızlı.
-const SUSPECT_SPEED: float = 1.9
+## Şüphelinin hızı (birim/sn). Normal trafik 0,55–0,9: kovalamaca ~2,7 kat hızlı (kullanıcı: "biraz daha hızlı";
+## eskiden 1,9). Gaz patlamaları ve atlatma sonrası ek hız bunun üstüne gelir.
+const SUSPECT_SPEED: float = 2.35
+const SURGE: float = 0.08          # hız dalgası (oran) ve sıklığı (rad/sn)
+const SURGE_RATE: float = 1.1
+const DODGE_BOOST: float = 0.45    # atlatınca ek hız (birim/sn), saniyede bu kadar söner
+const BOOST_DECAY: float = 0.6
+## Zikzak: iki dalga (genlik, rad/sn) + ani kırışlar (genlik aralığı, aralık sn) + atlatma.
+const WEAVE_A: float = 0.12
+const WEAVE_A_RATE: float = 1.7
+const WEAVE_B: float = 0.05
+const WEAVE_B_RATE: float = 4.6
+const JINK: Vector2 = Vector2(0.16, 0.27)
+const JINK_EVERY: Vector2 = Vector2(1.2, 2.6)
+const JINK_TIME: float = 0.45
+## Atlatma: bu mesafe içinde (yol boyunca) ve bu yanal yakınlıkta trafik aracı varsa boş tarafa kırar.
+const DODGE_LOOK: Vector2 = Vector2(-0.45, 2.4)   # yanındaki (−) araca da kırmaz
+const DODGE_LANE: float = 0.3
+const DODGE_CLEAR: float = 0.37   # atlatırken araçla arası (≥ 0,3: araçlar sürtünmez)
+## Yanal konum sınırı (orta çizgiden) — yol 1,2 eninde, araç ~0,27: kaldırıma çıkmaz.
+const SWAY_LIMIT: float = 0.34
+## Yaylı direksiyon: sertlik ve sönüm (yanal konum hedefe keskin ama salınımsız yaklaşır), en büyük yan hız.
+const STEER_K: float = 55.0
+const STEER_DAMP: float = 11.0
+const STEER_MAX_SPEED: float = 1.05   # burun en çok ~25° savrulur (1,5 ile 36° oluyordu, yan yan gidiyor gibiydi)
+## Lastik cıyaklaması: yan hız bunu aşınca (en sık COOLDOWN sn'de bir; araç ekrandaysa).
+const SCREECH_SPEED: float = 0.95
+const SCREECH_COOLDOWN: float = 1.4
 ## Polis şüpheli ile aynı noktadan bu kadar geride girer; yolun sonunda aradaki mesafe GAP_END'e iner
 ## (araç boyu trafikte ~0,6: sondaki mesafe polisin tamponu şüphelinin tamponuna değecek kadar).
 const GAP_START: float = 2.6
 const GAP_END: float = 0.72
 ## Şerit ortasından yolun orta çizgisine kayma (iki yönlü şeritlerin arası 0,6).
 const CENTER_OFFSET: float = 0.3
-## Şüphelinin zikzakı (yan sapma genliği, birim) ve hızı (rad/sn).
-const WEAVE: float = 0.045
-const WEAVE_RATE: float = 4.2
-## Normal trafik bu mesafeden itibaren yol verir; kovalamaca geçtikten sonra bu mesafede şeridine döner.
-const YIELD_DISTANCE: float = 3.2
+## Normal trafik bu mesafeden itibaren yol verir; kovalamaca geçtikten sonra bu mesafede şeridine döner
+## (hız arttı: trafiğe biraz daha erken haber).
+const YIELD_DISTANCE: float = 3.8
 const YIELD_AFTER: float = 1.2
 ## Başlayamadıysa (ekran açık, model yükleniyor, giriş dolu) bu kadar sonra yeniden dener.
 const RETRY: float = 12.0
@@ -65,6 +94,17 @@ var _active: bool = false
 var _siren_task: int = -1
 var _siren_kind: PoliceSiren.Kind = PoliceSiren.Kind.WAIL
 var _siren_result: AudioStreamWAV
+## Şüphelinin yanal konumu (orta çizgiden, sola +), yan hızı, ani kırış hedefi / süresi, ek hız, cıyaklama zamanı.
+var _sway: float = 0.0
+var _sway_velocity: float = 0.0
+var _jink: float = 0.0
+var _jink_left: float = 0.0
+var _jink_timer: float = 0.0
+var _boost: float = 0.0
+var _last_screech: float = -100.0
+var _dodged: Dictionary = {}       # atlatılan araç → true (bir kez korna)
+## Şüphelinin izi: [yol mesafesi, yanal konum] — polis aynı çizgiyi izler.
+var _trail: Array[Vector2] = []
 
 
 func _ready() -> void:
@@ -168,6 +208,13 @@ func start(ignore_screens: bool = false, lane: TrafficWaypoint = null) -> bool:
 	_police = null
 	_distance = 0.0
 	_elapsed = 0.0
+	_sway = 0.0
+	_sway_velocity = 0.0
+	_jink_left = 0.0
+	_jink_timer = _rng.randf_range(JINK_EVERY.x, JINK_EVERY.y)
+	_boost = 0.0
+	_dodged.clear()
+	_trail.clear()
 	_active = true
 	chase_started.emit(_police_id, StringName(model["id"]))
 	return true
@@ -175,10 +222,13 @@ func start(ignore_screens: bool = false, lane: TrafficWaypoint = null) -> bool:
 
 func _drive(delta: float) -> void:
 	_elapsed += delta
-	_distance += SUSPECT_SPEED * delta
+	_boost = maxf(_boost - BOOST_DECAY * delta, 0.0)
+	_distance += (SUSPECT_SPEED * (1.0 + SURGE * sin(_elapsed * SURGE_RATE)) + _boost) * delta
 	var progress: float = clampf(_distance / maxf(_length, 0.001), 0.0, 1.0)
 	if is_instance_valid(_suspect):
-		_suspect.place_on_chase_path(minf(_distance, _length), WEAVE * sin(_elapsed * WEAVE_RATE))
+		_steer_suspect(delta)
+		_suspect.place_on_chase_path(minf(_distance, _length), _sway)
+		_trail.append(Vector2(_distance, _sway))
 		if _gone(_suspect, _distance):
 			_suspect.queue_free()
 			_suspect = null
@@ -190,13 +240,76 @@ func _drive(delta: float) -> void:
 		_collect_siren(true)   # normalde çoktan bitmiştir (PRELOAD_LEAD önce başladı)
 		_siren.follow(_police, PoliceSiren.kind_for(_police_id))
 	if is_instance_valid(_police):
-		_police.place_on_chase_path(clampf(behind, 0.0, _length))
+		_police.place_on_chase_path(clampf(behind, 0.0, _length), _trail_sway(behind))
 		if _gone(_police, behind):
 			_police.queue_free()
 			_police = null
 			_siren.stop()
 	if (_suspect == null and _police == null) or _elapsed > MAX_DURATION:
 		_finish()
+
+
+## Şüphelinin yanal hedefi: iki dalgalı zikzak + ani kırış; önünde trafik aracı varsa boş tarafa atlatma. Hedefe yaylı
+## direksiyonla gidilir (keskin S'ler), sert kırışta lastik cıyaklar.
+func _steer_suspect(delta: float) -> void:
+	var goal: float = WEAVE_A * sin(_elapsed * WEAVE_A_RATE) + WEAVE_B * sin(_elapsed * WEAVE_B_RATE + 0.7)
+	_jink_timer -= delta
+	if _jink_timer <= 0.0:
+		_jink_timer = _rng.randf_range(JINK_EVERY.x, JINK_EVERY.y)
+		_jink = _rng.randf_range(JINK.x, JINK.y) * (1.0 if _rng.randf() < 0.5 else -1.0)
+		_jink_left = JINK_TIME
+	if _jink_left > 0.0:
+		_jink_left -= delta
+		goal = _jink
+	var frame: Dictionary = _suspect.chase_frame(minf(_distance, _length))
+	if not frame.is_empty():
+		var obstacle: TrafficVehicle = null
+		var nearest: float = INF
+		var lateral: float = 0.0
+		for vehicle: TrafficVehicle in _manager.vehicles:
+			if not is_instance_valid(vehicle) or not vehicle.blocks_traffic():
+				continue
+			var offset: Vector3 = TrafficVehicle._flat(vehicle.global_position) - (frame["point"] as Vector3)
+			var ahead: float = offset.dot(frame["along"])
+			if ahead < DODGE_LOOK.x or ahead > DODGE_LOOK.y or ahead > nearest:
+				continue
+			var side: float = offset.dot(frame["left"])
+			if absf(side - goal) < DODGE_LANE or absf(side - _sway) < DODGE_LANE:
+				obstacle = vehicle
+				nearest = ahead
+				lateral = side
+		if obstacle:
+			# Boş tarafa kır: aracın hangi yanında yer varsa (yol sınırı içinde), oraya
+			var to_left: float = lateral + DODGE_CLEAR
+			var to_right: float = lateral - DODGE_CLEAR
+			goal = to_left if (to_left <= SWAY_LIMIT and (lateral < 0.0 or to_right < -SWAY_LIMIT)) else to_right
+			_jink_left = 0.0
+			if not _dodged.has(obstacle):
+				_dodged[obstacle] = true
+				_boost = DODGE_BOOST
+				if _manager.sfx and not _manager.is_hidden(obstacle.global_position):
+					_manager.sfx.honk()
+	goal = clampf(goal, -SWAY_LIMIT, SWAY_LIMIT)
+	_sway_velocity += (STEER_K * (goal - _sway) - STEER_DAMP * _sway_velocity) * delta
+	_sway_velocity = clampf(_sway_velocity, -STEER_MAX_SPEED, STEER_MAX_SPEED)
+	_sway = clampf(_sway + _sway_velocity * delta, -SWAY_LIMIT, SWAY_LIMIT)
+	if absf(_sway_velocity) > SCREECH_SPEED and _elapsed - _last_screech > SCREECH_COOLDOWN:
+		_last_screech = _elapsed
+		if _manager.sfx and not _manager.is_hidden(_suspect.global_position):
+			_manager.sfx.screech()
+
+
+## Polisin yanal konumu: şüphelinin aynı yol mesafesindeyken olduğu yer (iz) — polis aynı çizgiyi izler.
+func _trail_sway(distance: float) -> float:
+	while _trail.size() > 2 and _trail[1].x <= distance:
+		_trail.pop_front()   # polisin gerisinde kalan iz
+	if _trail.is_empty() or distance <= _trail[0].x:
+		return _trail[0].y if not _trail.is_empty() else 0.0
+	if _trail.size() == 1:
+		return _trail[0].y
+	var a: Vector2 = _trail[0]
+	var b: Vector2 = _trail[1]
+	return lerpf(a.y, b.y, clampf((distance - a.x) / maxf(b.x - a.x, 0.0001), 0.0, 1.0))
 
 
 ## Araç yolun sonuna vardı ya da kenara taşınmış yol ucunun eski yerini geçip görünmez oldu mu?

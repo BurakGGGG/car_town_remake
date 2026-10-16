@@ -13,6 +13,9 @@ const DATA_PATH: String = "res://vehicles/crates.json"
 ## Nadirlikler, düşükten yükseğe (sıra kopya hurdası ve yıldız görselleri için de kullanılır).
 const RARITY_ORDER: Array[StringName] = [&"common", &"rare", &"epic", &"legendary"]
 
+## HOŞ GELDİN KUTUSU: yeni oyuncunun ilk aracını (Tofaş Şahin) getiren hediye kasası (crates.json "gift_crates").
+const WELCOME: StringName = &"welcome_crate"
+
 ## Kasa dünyadaki boyutunun yedeği (JSON'da world_size yoksa).
 const DEFAULT_WORLD_SIZE: Vector3 = Vector3(0.72, 0.38, 0.46)
 
@@ -24,6 +27,7 @@ static var _sets: Array[Dictionary] = []   # koleksiyon setleri: {"id", "name", 
 static var _loaded_from: String = ""
 
 
+## MAĞAZA kasaları (hediye kasaları hariç: vitrin, görev ödülü, koleksiyon bölümleri ve ekonomi hesapları bunu okur).
 static func all() -> Array[Dictionary]:
 	_ensure_loaded()
 	return _crates
@@ -36,6 +40,11 @@ static func get_entry(crate_id: StringName) -> Dictionary:
 
 static func exists(crate_id: StringName) -> bool:
 	return not get_entry(crate_id).is_empty()
+
+
+## Hediye kasası mı (satılmaz, all()'da yok; ör. HOŞ GELDİN KUTUSU)?
+static func is_gift(crate_id: StringName) -> bool:
+	return bool(get_entry(crate_id).get("gift", false))
 
 
 static func price(crate_id: StringName) -> int:
@@ -180,6 +189,16 @@ static func load_from(path: String = DATA_PATH) -> bool:
 		entry.make_read_only()
 		_crates.append(entry)
 		_by_id[entry["id"]] = entry
+	# Hediye kasaları: kimlikle bulunur (kayıt, açılış, görsel) ama mağaza listesine girmez
+	for raw: Variant in (data as Dictionary).get("gift_crates", []):
+		if not (raw is Dictionary):
+			continue
+		var gift: Dictionary = _normalize(raw)
+		if gift.is_empty() or _by_id.has(gift["id"]):
+			continue
+		gift["gift"] = true
+		gift.make_read_only()
+		_by_id[gift["id"]] = gift
 	return true
 
 

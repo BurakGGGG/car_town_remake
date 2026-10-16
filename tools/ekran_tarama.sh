@@ -4,6 +4,7 @@
 #   profiller: p20x9 p16x9 t16x10 t4x3 fold p21x9 desk (boşsa hepsi)
 # Kayıt: QA_SAVE (varsayılan ~/Projects/ct_shots/bench_saves/dev.json); eğitim kapalı.
 # Dil: CT_LANG=en|es (etiketin sonuna eklenir: p16x9_es); boşsa Türkçe.
+# HUD boyutu: QA_HUD=0..4 (AYARLAR → HUD BOYUTU kademesi, etikete _hud<N> eklenir); boşsa varsayılan (%100).
 set -u
 PROJ="$(cd "$(dirname "$0")/.." && pwd)"
 declare -A RES=( [p20x9]=1440x648 [p16x9]=1152x648 [t16x10]=1152x720 [t4x3]=1152x864 [fold]=1152x960
@@ -23,7 +24,7 @@ mkdir -p "$HOME/Projects/ct_shots/ekran_tarama"
 for p in "${profiles[@]}"; do
 	mode=mobil
 	[ "$p" = "desk" ] && mode=masaustu
-	tag="$p${CT_LANG:+_$CT_LANG}"
+	tag="$p${CT_LANG:+_$CT_LANG}${QA_HUD:+_hud$QA_HUD}"
 	log="$HOME/Projects/ct_shots/ekran_tarama/$tag.log"
 	QA_LANG="${CT_LANG:-tr}" timeout 600 "$PROJ/tools/qa_isolated.sh" res://qa/ekran_tarama.gd --display-driver x11 --disable-vsync \
 		--position 0,0 --resolution "${RES[$p]}" -- "$tag" "$mode" "${states[@]}" > "$log" 2>&1

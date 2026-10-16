@@ -2,13 +2,16 @@ class_name RaceResultScreen
 extends Control
 ## YARIŞ SONUCU panosu — pistin üstüne açılır (UiRouter MODAL). Ödülü KENDİSİ vermez:
 ## parayı ve XP'yi RaceManager.finish_race() tek seferlik olarak yazar, bu ekran yalnızca gösterir.
-## GARAJA DÖN plakası (ya da ESC) hem sonucu hem pisti kapatır.
+## GARAJA DÖN plakası (ya da ESC) hem sonucu hem pisti kapatır. İlk yarış kaybedilince RÖVANŞ plakası: aynı rakiple
+## TEK yeniden yarış (RaceManager.start_rematch; pisti HUD yeniden açar). Rövanş kaybedilirse plaka çıkmaz.
 
 signal closed
 ## GARAJA DÖN: yarış modundan tamamen çıkılacak.
 signal exit_requested
 ## Oyuncu "REKLAM İZLE" plakasına bastı (açık onay). Reklamı ve ödülü HUD yönetir; bu ekran yalnızca gösterir.
 signal bonus_requested
+## Oyuncu RÖVANŞ'a bastı.
+signal rematch_requested
 
 const PLATE_WIDTH: float = 380.0
 
@@ -18,6 +21,8 @@ var _times: Label
 var _winner: Label
 var _record: Label
 var _bonus_button: PlateButton
+var _rematch_button: PlateButton
+var _head: Label
 var _bonus_amount: int = 0
 var _column: VBoxContainer
 var _closing: bool = false
@@ -31,9 +36,11 @@ func _ready() -> void:
 	_build()
 
 
-## Sonuç verileri dışarıdan gelir (yarış ekranı + RaceManager ödülü).
+## Sonuç verileri dışarıdan gelir (yarış ekranı + RaceManager ödülü). `rematch` > 0: bu yarış rövanştı.
 func show_result(won: bool, player_time: float, rival_time: float, money: int, xp: int,
-		winner_id: StringName) -> void:
+		winner_id: StringName, rematch: int = 0) -> void:
+	_head.text = Loc.t("YARIŞ BİTTİ") if rematch <= 0 else Loc.t("RÖVANŞ")
+	offer_rematch(false)
 	_title.text = Loc.t("KAZANDIN!") if won else Loc.t("KAYBETTİN")
 	var parts: PackedStringArray = PackedStringArray()
 	if money > 0:
@@ -84,6 +91,12 @@ func bonus_granted(amount: int) -> void:
 	_reward.text = Loc.t("%s   +%s ₺ BONUS") % [_reward.text, Hud.format_thousands(amount)]
 
 
+## RÖVANŞ plakası: kaybedilen yarışta rakip beklerken görünür.
+func offer_rematch(on: bool) -> void:
+	_rematch_button.visible = on
+	_rematch_button.disabled = not on
+
+
 func hide_bonus() -> void:
 	_bonus_amount = 0
 	_bonus_button.visible = false
@@ -125,9 +138,9 @@ func _build() -> void:
 	var sign: PlatePanel = PlatePanel.new()
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var head: Label = _label(&"HudSignTitle", Loc.t("YARIŞ BİTTİ"))
-	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sign.add_child(head)
+	_head = _label(&"HudSignTitle", Loc.t("YARIŞ BİTTİ"))
+	_head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sign.add_child(_head)
 	_column.add_child(sign)
 
 	var plate: PlatePanel = PlatePanel.new()
@@ -163,6 +176,22 @@ func _build() -> void:
 		_bonus_button.disabled = true   # çift dokunuş: reklam bitene kadar pasif
 		bonus_requested.emit())
 	_column.add_child(_bonus_button)
+
+	_rematch_button = PlateButton.new()
+	_rematch_button.name = "RematchButton"
+	_rematch_button.theme_type_variation = &"HudPlate"
+	_rematch_button.text = Loc.t("RÖVANŞ")
+	_rematch_button.kind = HudIcon.Kind.ROTATE
+	_rematch_button.icon_left = true
+	_rematch_button.icon_size = 20.0
+	_rematch_button.highlight = true   # amber: kaybettikten sonra öne çıkan seçenek
+	_rematch_button.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
+	_rematch_button.focus_mode = Control.FOCUS_NONE
+	_rematch_button.visible = false
+	_rematch_button.pressed.connect(func() -> void:
+		_rematch_button.disabled = true   # çift dokunuş: pist yeniden açılana kadar pasif
+		rematch_requested.emit())
+	_column.add_child(_rematch_button)
 
 	var exit_button: PlateButton = PlateButton.new()
 	exit_button.name = "ExitButton"

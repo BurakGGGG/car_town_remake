@@ -64,10 +64,11 @@ enum Status {
 ## Kopya → yıldız eşikleri (kümülatif kopya sayısı): 1 kopya ★1, 3 ★2, 6 ★3, 10 ★4, 15 ★5.
 const STAR_THRESHOLDS: Array[int] = [1, 3, 6, 10, 15]
 
-## Yeni oyunda ücretsiz verilen araç (tek ayar noktası).
+## Başlangıç aracı: HOŞ GELDİN KUTUSU'ndan çıkan ilk araç (crates.json welcome_crate havuzu) ve yarış aracının yedeği.
 @export var starting_vehicle_id: StringName = &"tofas_sahin"
-## Açılışta başlangıç aracını ücretsiz ver (kayıt yüklenirse kayıttaki liste geçerlidir).
-@export var grant_starting_vehicle: bool = true
+## true: başlangıç aracı doğrudan verilir (eski davranış: yeni oyunda ve boş kayıtta). false (varsayılan): araç
+## verilmez — yeni oyuncuya garajında HOŞ GELDİN KUTUSU gelir, araç kutudan çıkar (CrateManager.ensure_welcome).
+@export var grant_starting_vehicle: bool = false
 
 var _owned: Array[StringName] = []
 var _paint: Dictionary = {}   # araç id → Color (yalnızca fabrika dışı renkler)
@@ -220,7 +221,8 @@ func remove_vehicle(vehicle_id: StringName) -> bool:
 
 # --- Kayıt ----------------------------------------------------------------------
 
-## Kayıttan liste: katalogda olmayan id'ler atılır, liste boş kalırsa başlangıç aracı verilir.
+## Kayıttan liste: katalogda olmayan id'ler atılır. Liste boş kalırsa araç verilmez: SaveManager yüklemeden sonra
+## HOŞ GELDİN KUTUSU'nu getirir (CrateManager.ensure_welcome; grant_starting_vehicle açıksa araç doğrudan verilir).
 func load_state(ids: Array) -> void:
 	_owned.clear()
 	for raw: Variant in ids:
@@ -231,18 +233,19 @@ func load_state(ids: Array) -> void:
 			push_warning("VehicleOwnership: kayıttaki '%s' katalogda yok, atlandı" % id)
 			continue
 		_owned.append(id)
-	if _owned.is_empty():
+	if _owned.is_empty() and grant_starting_vehicle:
 		_grant_starting()
 	ownership_changed.emit()
 
 
-## Yeni oyun: yalnızca ücretsiz başlangıç aracı, fabrika renkleri.
+## Yeni oyun: araç yok (ilki HOŞ GELDİN KUTUSU'ndan çıkar; grant_starting_vehicle açıksa doğrudan verilir), fabrika renkleri.
 func reset() -> void:
 	_owned.clear()
 	_discovered.clear()
 	_dups.clear()
 	_race_vehicle = &""
-	_grant_starting()
+	if grant_starting_vehicle:
+		_grant_starting()
 	_paint.clear()
 	_apply_all_paint()
 	ownership_changed.emit()

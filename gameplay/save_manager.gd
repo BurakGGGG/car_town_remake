@@ -114,6 +114,10 @@ func _setup() -> void:
 		# Yeni kurulum: ilk günün giriş ödülü başlangıç değerine dahil olsun, yoksa bu cihaz
 		# "ilerleme var" sayılır ve Google girişinde bulut kaydı otomatik gelmez (çakışma sorulur).
 		_gem_rewards.check_day()
+	if _crates and not has_save():
+		# Yeni kurulum: HOŞ GELDİN KUTUSU başlangıç değerine dahil. Diske yazılmadan eklenir (aşağıda ilk
+		# kayıt oluşturulur); kayıt VARKEN burada verilseydi kasa kendi anlık yazımıyla oyuncunun kaydını ezerdi.
+		_crates.ensure_welcome(false)
 	_fresh_json = _progress_json()
 	if load_on_start:
 		if has_save():
@@ -162,8 +166,9 @@ func load_game() -> bool:
 	_loading = true
 	_apply(data)
 	_loading = false
-	if SaveSafe.i(data.get("version", SAVE_VERSION)) < SAVE_VERSION:
-		save_game()   # v1/v2/v3 → v4: dosya yeni formatta yeniden yazılır
+	var gifted: bool = _ensure_welcome()
+	if SaveSafe.i(data.get("version", SAVE_VERSION)) < SAVE_VERSION or gifted:
+		save_game()   # v1/v2/v3 → v4: dosya yeni formatta yeniden yazılır (ya da araçsız kayda kutu geldi)
 	game_loaded.emit(true)
 	return true
 
@@ -218,6 +223,8 @@ func new_game() -> void:
 		_junkyard.reset()
 	if _mods:
 		_mods.reset()
+	if _crates:
+		_crates.ensure_welcome(false)   # araçsız yeni oyun: ilk araç HOŞ GELDİN KUTUSU'ndan çıkar
 	_loading = false
 	save_game()
 
@@ -251,7 +258,30 @@ func _progress_json() -> String:
 	data.erase("missions")   # gün / hafta değişimiyle kendiliğinden değişir; ilerleme sayılmaz
 	data.erase("ads")   # reklam sayaçları da zamanla / izlemeyle değişir; ilerleme sayılmaz
 	data.erase("tutorial")   # ders atlamak / izlemek bulut kaydını "ilerlemiş" göstermesin
+	_ignore_welcome(data)
 	return JSON.stringify(data, "", true)
+
+
+## HOŞ GELDİN KUTUSU ilerleme sayılmaz: kutu bekliyor (teslim yeri ve durumu kendiliğinden değişir) ya da açılmış
+## ve garajda yalnızca kutudan çıkan araç var. İkisi de yeni oyunla aynı görünür; yoksa kutuyu açan yeni oyuncu
+## Google'a girince bulut kaydı kendiliğinden gelmez, çakışma sorulur.
+func _ignore_welcome(data: Dictionary) -> void:
+	var crates: Dictionary = data.get("crates", {})
+	crates.erase("next_uid")   # kutu uid'i harcar: kayıtlı açılışta kutusuz taban ile yeni oyun aynı görünsün
+	if crates.get("items") is Array:
+		crates["items"] = (crates["items"] as Array).filter(func(item: Variant) -> bool:
+			return not (item is Dictionary and String((item as Dictionary).get("crate", "")) == String(CrateCatalog.WELCOME)))
+	var vehicles: Dictionary = data.get("vehicles", {})
+	var only_starter: Array = [String(_ownership.starting_vehicle_id)] if _ownership else []
+	if vehicles.get("owned") == only_starter and vehicles.get("discovered") == only_starter \
+			and (vehicles.get("dups", {}) as Dictionary).is_empty() and (vehicles.get("paint", {}) as Dictionary).is_empty():
+		vehicles["owned"] = []
+		vehicles["discovered"] = []
+
+
+## Hiç aracı ve bekleyen hediyesi olmayan oyuncuya HOŞ GELDİN KUTUSU (araçsız eski / bozuk kayıt). Verildiyse true.
+func _ensure_welcome() -> bool:
+	return _crates != null and _crates.welcome_uid() == 0 and _crates.ensure_welcome(false) > 0
 
 
 ## Dışarıdan gelen (bulut) kaydı load_game ile aynı doğrulamadan geçirir, uygular ve diske yazar.
@@ -269,6 +299,7 @@ func apply_snapshot(raw: Variant) -> bool:
 	if _purchases:
 		_purchases.carry_over(previous_purchases)
 	_loading = false
+	_ensure_welcome()
 	save_game()
 	game_loaded.emit(true)
 	return true
@@ -396,7 +427,7 @@ func _apply(data: Dictionary) -> void:
 				SaveSafe.i(upgrade_data.get(SaveSafe.s(GarageUpgradeManager.CAPACITY_ID), 1)), unlocked_bays)
 		_upgrades.apply_levels(levels)
 	if _ownership:
-		# v1 kayıtta "vehicles" yoktur: liste boş gider, VehicleOwnership başlangıç aracını sahiplenir
+		# v1 kayıtta "vehicles" yoktur: liste boş gider, yüklemeden sonra HOŞ GELDİN KUTUSU gelir (_ensure_welcome)
 		var vehicle_data: Dictionary = data.get("vehicles", {}) if typeof(data.get("vehicles")) == TYPE_DICTIONARY else {}
 		var owned: Variant = vehicle_data.get("owned", [])
 		_ownership.load_state(owned if owned is Array else [])

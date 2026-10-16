@@ -112,6 +112,10 @@ func _run() -> void:
 	var last_suspect: float = 0.0
 	var last_police: float = -1.0
 	var frames_run: int = 0
+	var sway_low: float = 0.0
+	var sway_high: float = 0.0
+	var max_steer: float = 0.0
+	var max_roll: float = 0.0
 	while chase.is_active() and frames_run < 3000:
 		await physics_frame
 		frames_run += 1
@@ -126,6 +130,10 @@ func _run() -> void:
 			siren_ok = siren_ok or chase.get_node("PoliceSiren").is_playing()
 		if s:
 			last_suspect = s.chase_distance
+			sway_low = minf(sway_low, chase._sway)
+			sway_high = maxf(sway_high, chase._sway)
+			max_steer = maxf(max_steer, absf(s.rig.steer_deg) if s.rig else 0.0)
+			max_roll = maxf(max_roll, absf(s.model.rotation.z) if s.model else 0.0)
 		if is_instance_valid(car):
 			max_shift = maxf(max_shift, car.yield_shift())
 			for other: TrafficVehicle in chase.vehicles():
@@ -140,7 +148,10 @@ func _run() -> void:
 		gaps[0] if not gaps.is_empty() else -1.0, gaps[gaps.size() - 1] if not gaps.is_empty() else -1.0])
 	check(not gaps.is_empty() and gaps.min() >= PoliceChase.GAP_END - 0.01, "polis hiçbir an şüpheliye çarpmadı (en az %.2f)" % (gaps.min() if not gaps.is_empty() else -1.0))
 	check(police_speed > suspect_speed * 1.05, "polis şüpheliden hızlı")
-	check(PoliceChase.SUSPECT_SPEED > traffic.max_speed * 2.0, "şüpheli normal trafiğin iki katından hızlı")
+	check(PoliceChase.SUSPECT_SPEED > traffic.max_speed * 2.0 and PoliceChase.SUSPECT_SPEED >= 2.3,
+		"şüpheli normal trafiğin iki katından hızlı (%.2f)" % PoliceChase.SUSPECT_SPEED)
+	check(sway_high - sway_low > 0.15, "şüpheli savrularak kaçtı (yanal %+.2f … %+.2f)" % [sway_low, sway_high])
+	check(max_steer > 8.0 and max_roll > 0.03, "ön teker döndü (%.0f°), gövde yattı (%.3f)" % [max_steer, max_roll])
 	check(siren_ok, "polis yoldayken siren çaldı")
 	check(max_shift > 0.06, "şeritteki araç sağa çekildi (%.3f)" % max_shift)
 	check(min_car_speed < free_speed * 0.6, "yol verirken yavaşladı (%.2f)" % min_car_speed)

@@ -10,7 +10,9 @@
     "  İsteğe bağlı: AnimationPlayer içinde 'open' animasyonu (kilitler + kapaklar). Varsa açılışta o oynar,",
     "  yoksa yer tutucunun kod animasyonu oynar. İsteğe bağlı Marker3D 'VehicleAnchor': aracın çıkacağı nokta.",
     "icon: showroom listesinde kullanılacak Texture2D yolu (boşsa renkli plaka).",
-    "open_effect: açılışta kasanın üstünde oluşturulacak sahne yolu (boşsa ışık patlaması)."
+    "open_effect: açılışta kasanın üstünde oluşturulacak sahne yolu (boşsa ışık patlaması).",
+    "gift_crates: HEDİYE kasaları — mağazada SATILMAZ, CrateCatalog.all() listesine girmez (vitrin, görev ödülü, koleksiyon",
+    "  bölümleri, ekonomi hesapları yalnızca 'crates' listesini görür). welcome_crate: yeni oyuncunun ilk aracı (CrateManager.ensure_welcome)."
   ],
   "rarities": [
     {"id": "common", "label": "COMMON", "weight": 100, "color": "#8C9A86"},
@@ -94,6 +96,21 @@
       "pool": ["audi_rs6", "porsche_gt3", "lambo_huracan", "ferrari_488_pista"],
       "color": "#B8902F",
       "scene_path": "res://assets/crates/super_crate.glb",
+      "icon": "",
+      "open_effect": "",
+      "scale": 1.0
+    }
+  ],
+  "gift_crates": [
+    {
+      "id": "welcome_crate",
+      "display_name": "HOŞ GELDİN KUTUSU",
+      "short_name": "HEDİYE",
+      "price_gems": 0,
+      "min_level": 1,
+      "pool": ["tofas_sahin"],
+      "color": "#C8202E",
+      "scene_path": "res://assets/crates/welcome_crate.glb",
       "icon": "",
       "open_effect": "",
       "scale": 1.0

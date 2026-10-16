@@ -138,9 +138,10 @@ func make_world() -> void:
 	var prog: PlayerProgress = PlayerProgress.new()
 	var upg: GarageUpgradeManager = GarageUpgradeManager.new()
 	var own: VehicleOwnership = VehicleOwnership.new()
+	var crates: CrateManager = CrateManager.new()   # yeni oyunda HOŞ GELDİN KUTUSU (ilk araç ondan çıkar)
 	var save: SaveManager = SaveManager.new()
 	var cloud: CloudSaveManager = CloudSaveManager.new()
-	for n: Node in [eco, prog, upg, own, save, cloud]:
+	for n: Node in [eco, prog, upg, own, crates, save, cloud]:
 		root_node.add_child(n)
 	root.add_child(root_node)
 	# Plugin PC'de yok: _ready bağlantı kurmadı, sahte Firebase'i gerçek bağlantı adlarıyla bağla
@@ -154,7 +155,7 @@ func make_world() -> void:
 	fb.firestore_delete_task_completed.connect(cloud._on_delete_completed)
 	cloud.account_deleted.connect(func(ok: bool) -> void: deleted_results.append(ok))
 	cloud.notice.connect(func(t: String) -> void: notices.append(t))
-	w = {"root": root_node, "eco": eco, "prog": prog, "own": own, "save": save, "cloud": cloud}
+	w = {"root": root_node, "eco": eco, "prog": prog, "own": own, "crates": crates, "save": save, "cloud": cloud}
 	await frames(6)
 
 
@@ -273,7 +274,8 @@ func _run() -> void:
 	check(not cloud().is_authenticated() and cloud().get_profile().is_empty(), "Google oturumu yok")
 	check(fb.user.is_empty() and fb.anon_counter == 0, "Firebase oturumu yok (misafir oturumsuz), anonim hesap açılmadı")
 	check(cloud().get_state() == CloudSaveManager.State.SIGNED_OUT, "SIGNED_OUT")
-	check(eco().money == 5000 and (w["own"] as VehicleOwnership).owned_vehicle_ids() == [&"tofas_sahin"], "cihazdaki ilerleme sıfırlandı (5000, yalnızca Şahin)")
+	check(eco().money == 5000 and (w["own"] as VehicleOwnership).owned_count() == 0 and (w["crates"] as CrateManager).welcome_uid() > 0,
+		"cihazdaki ilerleme sıfırlandı (5000, araç yok, HOŞ GELDİN KUTUSU bekliyor)")
 	var local: Variant = JSON.parse_string(FileAccess.get_file_as_string("user://savegame.json"))
 	check(local is Dictionary and int(local["economy"]["money"]) == 5000, "local kayıt dosyası da yeni oyun")
 	check(not FileAccess.file_exists("user://cloud_backup.json") and not FileAccess.file_exists("user://savegame.before_cloud.json"), "yedek dosyaları silindi")

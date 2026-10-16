@@ -2544,6 +2544,166 @@
       "value": 270000,
       "min_rank": 1,
       "desc": "Işıklı pistiyle altın şeritli özel helikopter. Garajın taçı."
+    },
+    {
+      "id": "flip_chart",
+      "title": "SUNUM PANOSU",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 3500,
+      "value": 1400,
+      "min_rank": 1,
+      "desc": "Satış grafiği çizilmiş kâğıtlı sehpa."
+    },
+    {
+      "id": "filing_cabinet",
+      "title": "DOSYA DOLABI",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 4000,
+      "value": 1600,
+      "min_rank": 1,
+      "desc": "Dört çekmeceli çelik dolap; üst çekmece renkli dosyalarla açık."
+    },
+    {
+      "id": "floor_lamp",
+      "title": "AYAKLI LAMBA",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 4500,
+      "value": 1800,
+      "min_rank": 1,
+      "desc": "Mermer ayaklı, kavisli okuma lambası."
+    },
+    {
+      "id": "bookcase",
+      "title": "KİTAPLIK",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 7500,
+      "value": 3000,
+      "min_rank": 1,
+      "desc": "Klasörler, kitaplar, küçük kupa ve maket araba dolu raf."
+    },
+    {
+      "id": "office_desk",
+      "title": "ÇALIŞMA MASASI",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 9000,
+      "value": 3600,
+      "min_rank": 1,
+      "desc": "Çift monitörlü masa, ofis koltuğu ve masa telefonu."
+    },
+    {
+      "id": "visitor_chairs",
+      "title": "MİSAFİR KOLTUKLARI",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 11000,
+      "value": 4400,
+      "min_rank": 2,
+      "desc": "İki kumaş koltuk ve dergili yan sehpa."
+    },
+    {
+      "id": "coffee_station",
+      "title": "KAHVE KÖŞESİ",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 12000,
+      "value": 4800,
+      "min_rank": 2,
+      "desc": "Espresso makinesi, öğütücü, kettle ve kupalar."
+    },
+    {
+      "id": "copier",
+      "title": "FOTOKOPİ MAKİNESİ",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 14000,
+      "value": 5600,
+      "min_rank": 2,
+      "desc": "Kâğıt çekmeceli büyük ofis fotokopisi."
+    },
+    {
+      "id": "office_safe",
+      "title": "ÇELİK KASA",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 18000,
+      "value": 7200,
+      "min_rank": 3,
+      "desc": "Şifreli, çarklı eski usul kasa; üstünde deste deste para."
+    },
+    {
+      "id": "drafting_table",
+      "title": "ÇİZİM MASASI",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 20000,
+      "value": 8000,
+      "min_rank": 3,
+      "desc": "Eğik masada araba projesi, lamba ve tabure."
+    },
+    {
+      "id": "meeting_table",
+      "title": "TOPLANTI MASASI",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 26000,
+      "value": 10400,
+      "min_rank": 3,
+      "desc": "Altı koltuklu ceviz masa, dizüstü ve su şişeleri."
+    },
+    {
+      "id": "reception_desk",
+      "title": "KARŞILAMA BANKOSU",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 32000,
+      "value": 12800,
+      "min_rank": 4,
+      "desc": "Işıklı AUTO YARD bankosu, servis zili ve broşürler."
+    },
+    {
+      "id": "certificates",
+      "title": "BELGE ÇERÇEVELERİ",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 4500,
+      "value": 1800,
+      "min_rank": 1,
+      "desc": "Mühürlü ustalık belgeleri ve araba fotoğrafı."
+    },
+    {
+      "id": "office_whiteboard",
+      "title": "BEYAZ TAHTA",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 5500,
+      "value": 2200,
+      "min_rank": 1,
+      "desc": "Yükselen grafik, renkli yapışkan notlar ve kalemler."
+    },
+    {
+      "id": "wall_ac",
+      "title": "KLİMA",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 7000,
+      "value": 2800,
+      "min_rank": 2,
+      "desc": "Duvara asılan split klima, 22 derecede."
+    },
+    {
+      "id": "world_map",
+      "title": "DÜNYA HARİTASI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 9000,
+      "value": 3600,
+      "min_rank": 2,
+      "desc": "İğne ve iplerle işaretli araç ithalat rotaları."
     }
   ]
 }

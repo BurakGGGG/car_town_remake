@@ -794,13 +794,14 @@ const MAPS: Dictionary = {
 	# --- KLASİK / RESTORASYON: usta yarış dalının son 4 aracı (2026-10-12): sınıflandırıcı + tools/wheel_fit.gd ---
 	"res://assets/cars/lancia_delta_integrale.tscn": {
 		"default_paint": Color(0.216, 0.255, 0.302),  # boya maskesi aracının ölçtüğü fabrika rengi #37414D
-		"body": [0, 1, 8, 9, 10, 11, 12, 14, 16, 20, 24, 25, 28, 30, 34, 37, 38, 39, 40, 41],
+		# 2026-10-14: far = sol yuvarlak çift 37/38 (sağ çift gövde dokusunda, ayrı parça yok); 29 ızgara çerçevesi
+		"body": [0, 1, 8, 9, 10, 11, 12, 14, 16, 20, 24, 25, 28, 30, 34, 39, 40, 41],
 		"mirrors": [17, 19],
 		"wheels": [2, 3, 4, 5],
 		"tires": [6, 7],
-		"headlights": [29],
+		"headlights": [37, 38],
 		"taillights": [36],
-		"grille": [13, 15, 18, 22, 26, 27, 32, 33, 35],
+		"grille": [13, 15, 18, 22, 26, 27, 29, 32, 33, 35],
 		"black_trim": [21, 23],
 		"rims": [31],
 		"wheel_groups": {"fl": [2], "fr": [3], "rl": [6, 5], "rr": [7, 4, 31]},

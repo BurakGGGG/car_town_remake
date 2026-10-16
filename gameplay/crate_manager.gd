@@ -18,6 +18,11 @@ extends Node
 ##   * Ödül open() içinde BİR KEZ verilir ve durum REVEALED olarak hemen kaydedilir. Açılış sahnesi
 ##     sırasında uygulama kapanırsa yüklemede REVEALED kasa ödül verilmeden kapatılır (çift ödül yok).
 ##   * Olasılık kasanın kayıtlı ağırlıklarından bağımsız çekilir; sahiplik / keşif oranı değiştirmez.
+##
+## HOŞ GELDİN KUTUSU (CrateCatalog.WELCOME): yeni oyuncu ilk aracını (Tofaş Şahin) doğrudan almaz, garajına
+## hediye kutusu gelir; oyuncu açınca araç çıkar. ensure_welcome(): hiç aracı ve bekleyen hediyesi olmayan
+## oyuncuya kutuyu verir (yeni oyun, eski / bozuk kayıt). Hediye açılışı keşif elması / kilometre taşı ödemez
+## (eskiden Şahin başlangıçta ödülsüz keşfediliyordu; ekonomi aynı kalsın) ve görevlerin kasa sayacına girmez.
 
 signal crate_added(uid: int)
 signal crate_state_changed(uid: int, state: int)
@@ -129,7 +134,28 @@ func grant_free(crate_id: StringName, source: String) -> int:
 	return _add(crate_id, source)
 
 
-func _add(crate_id: StringName, source: String) -> int:
+## HOŞ GELDİN KUTUSU: oyuncunun hiç aracı yoksa ve kutu henüz bekleyen kasalar arasında değilse verir.
+## Dönen: bekleyen (yeni ya da zaten var olan) kutunun uid'i, gerekmiyorsa 0. `save_now` false: diske
+## yazılmaz — SaveManager kayıt YÜKLENMEDEN önce de çağırır, oyuncunun kaydının üstüne yazılmamalı.
+func ensure_welcome(save_now: bool = true) -> int:
+	var existing: int = welcome_uid()
+	if existing > 0:
+		return existing
+	var ownership: VehicleOwnership = _ownership()
+	if ownership == null or ownership.owned_count() > 0 or not CrateCatalog.exists(CrateCatalog.WELCOME):
+		return 0
+	return _add(CrateCatalog.WELCOME, "welcome", save_now)
+
+
+## Açılmamış HOŞ GELDİN KUTUSU'nun uid'i (yoksa 0).
+func welcome_uid() -> int:
+	for c: Dictionary in _crates:
+		if c["crate"] == CrateCatalog.WELCOME and int(c["state"]) < State.REVEALED:
+			return int(c["uid"])
+	return 0
+
+
+func _add(crate_id: StringName, source: String, save_now: bool = true) -> int:
 	var vehicle: StringName = CrateCatalog.roll(crate_id, _rng)
 	if vehicle == &"":
 		push_error("CrateManager: '%s' havuzu boş" % crate_id)
@@ -138,7 +164,8 @@ func _add(crate_id: StringName, source: String) -> int:
 	_next_uid += 1
 	_crates.append({"uid": uid, "crate": crate_id, "vehicle": vehicle, "state": State.PURCHASED,
 		"source": source, "pos": null, "yaw": 0.0, "result": {}})
-	_save_now()
+	if save_now:
+		_save_now()
 	crate_added.emit(uid)
 	crates_changed.emit()
 	return uid
@@ -175,8 +202,9 @@ func can_open(uid: int) -> bool:
 # --- Açılış ------------------------------------------------------------------------
 
 ## KASAYI AÇ: kayıtlı sonuç koleksiyona yazılır (bir kez) ve REVEALED hemen kaydedilir.
-## Dönen sözlük: {uid, crate, vehicle, rarity, duplicate, reacquired, discovered, stars,
+## Dönen sözlük: {uid, crate, vehicle, rarity, gift, duplicate, reacquired, discovered, stars,
 ## scrap_gems, discovery_gems, milestone_gems, gems}. Açılamıyorsa boş sözlük.
+## gift: hediye kasası (HOŞ GELDİN KUTUSU) — keşif elması ve kilometre taşı ödenmez.
 func open(uid: int) -> Dictionary:
 	var c: Dictionary = _find(uid)
 	if c.is_empty() or not can_open(uid):
@@ -185,7 +213,8 @@ func open(uid: int) -> Dictionary:
 	var vehicle: StringName = c["vehicle"]
 	var rarity: StringName = CrateCatalog.rarity_of(vehicle)
 	var ownership: VehicleOwnership = _ownership()
-	var result: Dictionary = {"uid": uid, "crate": c["crate"], "vehicle": vehicle, "rarity": rarity,
+	var gift: bool = CrateCatalog.is_gift(c["crate"])
+	var result: Dictionary = {"uid": uid, "crate": c["crate"], "vehicle": vehicle, "rarity": rarity, "gift": gift,
 		"duplicate": false, "reacquired": false, "discovered": false, "stars": 0,
 		"scrap_gems": 0, "discovery_gems": 0, "milestone_gems": 0, "gems": 0}
 	if ownership:
@@ -199,7 +228,7 @@ func open(uid: int) -> Dictionary:
 			result["reacquired"] = known
 			result["discovered"] = not known
 			result["stars"] = ownership.stars(vehicle)
-			if not known:
+			if not known and not gift:
 				result["discovery_gems"] = int(DISCOVERY_GEMS.get(rarity, 0))
 				result["milestone_gems"] = _pay_milestones(ownership.discovered_count())
 	result["gems"] = int(result["scrap_gems"]) + int(result["discovery_gems"]) + int(result["milestone_gems"])

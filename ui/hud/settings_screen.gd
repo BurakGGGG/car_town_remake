@@ -1,7 +1,8 @@
 class_name SettingsScreen
 extends Control
 ## AYARLAR — tam ekran: üstte başlık çubuğu (GERİ · AYARLAR · sürüm), solda kategori menüsü, sağda seçili
-## kategorinin içeriği. Kategoriler: DİL · GRAFİK VE PERFORMANS · SES · HESAP VE GİZLİLİK · DESTEK VE HAKKINDA.
+## kategorinin içeriği. Kategoriler: DİL · GRAFİK VE PERFORMANS (kalite, pil tasarrufu, HUD boyutu) · SES ·
+## HESAP VE GİZLİLİK · DESTEK VE HAKKINDA.
 ## Uzun tek sütun yerine kategori başına bir sayfa: telefonda (480 birim) hiçbir sayfa kaydırma gerektirmez,
 ## gerekirse içerik tut-çek kaydırılır (TouchScroll).
 ##
@@ -48,6 +49,8 @@ var _quality_buttons: Array[PlateButton] = []
 var _quality_group: ButtonGroup = ButtonGroup.new()
 var _quality_note: Label
 var _saver: PlateButton
+var _hud_buttons: Array[PlateButton] = []
+var _hud_group: ButtonGroup = ButtonGroup.new()
 var _music_label: Label
 var _sfx_label: Label
 var _mute: PlateButton
@@ -314,6 +317,21 @@ func _build_graphics() -> void:
 	_saver.pressed.connect(func() -> void:
 		if _settings:
 			_settings.set_battery_saver(_saver.button_pressed))
+	# HUD BOYUTU: beş kademe (%80 … %120); oyun ekranındaki düğme / sayaç / plakalar, panolar değil
+	box.add_child(_rule())
+	box.add_child(_label(&"HudPlateTitle", Loc.t("HUD BOYUTU")))
+	var sizes: HBoxContainer = _row(box)
+	for level: int in GameSettings.HUD_SCALES.size():
+		var button: PlateButton = _button(Loc.percent(str(roundi(GameSettings.HUD_SCALES[level] * 100.0))))
+		button.toggle_mode = true
+		button.button_group = _hud_group
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.pressed.connect(func() -> void:
+			if _settings:
+				_settings.set_hud_size(level))
+		sizes.add_child(button)
+		_hud_buttons.append(button)
+	box.add_child(_caption(Loc.t("Oyun ekranındaki düğmelerin, sayaçların ve plakaların boyutu.")))
 
 
 func _build_audio() -> void:
@@ -498,6 +516,9 @@ func _refresh() -> void:
 		_quality_note.text += "  " + Loc.t("Telefonuna göre otomatik seçildi.")
 	_saver.set_pressed_no_signal(_settings.battery_saver)
 	_paint_toggle(_saver, _settings.battery_saver)
+	for level: int in _hud_buttons.size():
+		_hud_buttons[level].set_pressed_no_signal(_settings.hud_size == level)
+		_hud_buttons[level].highlight = _settings.hud_size == level
 	_music_label.text = Loc.percent(str(roundi(_settings.music_volume * 100.0)))
 	_sfx_label.text = Loc.percent(str(roundi(_settings.sfx_volume * 100.0)))
 	_mute.set_pressed_no_signal(_settings.muted)

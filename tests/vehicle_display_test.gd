@@ -49,6 +49,7 @@ func _run() -> void:
 	var economy: EconomyManager = get_first_node_in_group("economy")
 	save.new_game()
 	await frames(4)
+	own.add_vehicle(&"tofas_sahin")   # yeni oyunda araç yok (HOŞ GELDİN KUTUSU bekliyor): sergi için ilk aracı ver
 	var first: StringName = own.owned_vehicle_ids()[0]
 	var item: StringName = GarageDecor.vehicle_item_id(first)
 

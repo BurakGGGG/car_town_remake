@@ -86,7 +86,9 @@ func _connect() -> void:
 				count(&"race_wins", 1))
 	var crates: CrateManager = get_tree().get_first_node_in_group("crates") as CrateManager
 	if crates:
-		crates.crate_opened.connect(func(_uid: int, _result: Dictionary) -> void: count(&"crates_opened", 1))
+		crates.crate_opened.connect(func(_uid: int, result: Dictionary) -> void:
+			if not bool(result.get("gift", false)):   # HOŞ GELDİN KUTUSU kasa sayacına girmez
+				count(&"crates_opened", 1))
 		crates.crate_added.connect(func(uid: int) -> void:
 			if String(crates.get_crate(uid).get("source", "")) == "gems":
 				count(&"crates_bought", 1))

@@ -39,6 +39,11 @@ enum Kind {
 	LOCK,      ## kilit (rütbede açılır)
 	CHAIR,     ## koltuk (eşyalar)
 	TILES,     ## dama karo (zemin)
+	# KAMERA MENÜSÜ ikonları — sona eklendi
+	EYE,       ## göz (HUD'u göster)
+	EYE_OFF,   ## üstü çizili göz (HUD'u gizle)
+	FILM,      ## klaket (sinema modu)
+	TARGET,    ## nişangâh (kamerayı ortala)
 }
 
 @export var kind: Kind = Kind.COIN:
@@ -145,6 +150,14 @@ static func draw_icon(ci: CanvasItem, kind: Kind, c: Vector2, s: float, ink: Col
 			_chair(ci, c, s, ink, cutout)
 		Kind.TILES:
 			_tiles(ci, c, s, ink, cutout)
+		Kind.EYE:
+			_eye(ci, c, s, ink, cutout, w, false)
+		Kind.EYE_OFF:
+			_eye(ci, c, s, ink, cutout, w, true)
+		Kind.FILM:
+			_film(ci, c, s, ink, cutout)
+		Kind.TARGET:
+			_target(ci, c, s, ink, w)
 		_:
 			pass
 
@@ -268,6 +281,44 @@ static func _camera(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Co
 	_rect(ci, c, s, Vector2(-0.22, -0.36), Vector2(0.32, 0.16), ink)   # üst çıkıntı
 	ci.draw_circle(c + Vector2(0.02, 0.08) * s, s * 0.18, cutout, true, -1.0, true)
 	ci.draw_circle(c + Vector2(0.02, 0.08) * s, s * 0.09, ink, true, -1.0, true)
+
+
+## Göz: iki yaydan badem, ortada iris ve bebek. `crossed`: sol üstten sağ alta, zemin renginde boşluklu çizgi.
+static func _eye(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float, crossed: bool) -> void:
+	var upper: PackedVector2Array = _dome(c + Vector2(0.0, 0.30) * s, s * 0.58, deg_to_rad(-145.0), deg_to_rad(-35.0), 16)
+	var lower: PackedVector2Array = _dome(c + Vector2(0.0, -0.30) * s, s * 0.58, deg_to_rad(35.0), deg_to_rad(145.0), 16)
+	upper.append_array(lower)
+	ci.draw_colored_polygon(upper, ink)
+	ci.draw_circle(c, s * 0.17, cutout, true, -1.0, true)
+	ci.draw_circle(c, s * 0.09, ink, true, -1.0, true)
+	if crossed:
+		ci.draw_line(c + Vector2(-0.40, -0.40) * s, c + Vector2(0.40, 0.40) * s, cutout, w * 2.4, true)
+		ci.draw_line(c + Vector2(-0.40, -0.40) * s, c + Vector2(0.40, 0.40) * s, ink, w * 1.1, true)
+
+
+## Klaket: gövde + üstte eğik açılmış çubuk; çubuklarda zemin renginde eğik şeritler.
+static func _film(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+	_round_rect(ci, c, s, Vector2(-0.44, -0.06), Vector2(0.88, 0.48), 0.06, ink)
+	_rect(ci, c, s, Vector2(-0.44, -0.06), Vector2(0.88, 0.12), ink)
+	for x: float in [-0.30, -0.06, 0.18]:   # alt çubuğun şeritleri
+		_poly(ci, c, s, PackedVector2Array([Vector2(x, -0.06), Vector2(x + 0.10, -0.06), Vector2(x + 0.02, 0.06), Vector2(x - 0.08, 0.06)]), cutout)
+	# Üst çubuk: sol uçtan menteşeli, ~14° açık
+	var pivot: Vector2 = c + Vector2(-0.44, -0.12) * s
+	var along: Vector2 = Vector2.from_angle(deg_to_rad(-14.0))
+	var up: Vector2 = Vector2(along.y, -along.x)
+	var bar: PackedVector2Array = PackedVector2Array([pivot, pivot + along * 0.88 * s, pivot + (along * 0.88 + up * 0.13) * s, pivot + up * 0.13 * s])
+	ci.draw_colored_polygon(bar, ink)
+	for k: float in [0.16, 0.40, 0.64]:
+		var a: Vector2 = pivot + along * k * s
+		ci.draw_colored_polygon(PackedVector2Array([a, a + along * 0.10 * s, a + (along * 0.18 + up * 0.13) * s, a + (along * 0.08 + up * 0.13) * s]), cutout)
+
+
+## Nişangâh: halka, ortada nokta ve dört yöne kısa çentik.
+static func _target(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) -> void:
+	ci.draw_arc(c, s * 0.30, 0.0, TAU, 32, ink, w * 1.2, true)
+	ci.draw_circle(c, s * 0.09, ink, true, -1.0, true)
+	for dir: Vector2 in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
+		ci.draw_line(c + dir * 0.20 * s, c + dir * 0.48 * s, ink, w * 1.2, true)
 
 
 static func _speaker(ci: CanvasItem, c: Vector2, s: float, ink: Color, muted: bool, w: float) -> void:

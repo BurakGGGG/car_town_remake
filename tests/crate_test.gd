@@ -67,7 +67,7 @@ func _run() -> void:
 	assert(not OS.get_user_data_dir().ends_with("/CarTownRemake"))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.SAVE_PATH))
 
-	print("== 1) İLK AÇILIŞ: ŞAHİN ==")
+	print("== 1) İLK AÇILIŞ: HOŞ GELDİN KUTUSU → ŞAHİN ==")
 	await reload()
 	var own: VehicleOwnership = g(&"vehicle_ownership")
 	var pp: PlayerProgress = g(&"player_progress")
@@ -76,17 +76,42 @@ func _run() -> void:
 	var delivery: CrateDelivery = g(&"crate_delivery")
 	var race: RaceManager = g(&"race")
 	check(crates != null and delivery != null and g(&"gem_rewards") != null, "kasa yöneticisi, teslimat alanı ve gem ödülleri kodla kuruldu")
-	check(own.owned_vehicle_ids() == [&"tofas_sahin"], "yeni oyunda yalnızca Tofaş Şahin")
-	check(own.is_discovered(&"tofas_sahin") and own.discovered_count() == 1, "Şahin koleksiyonun ilk parçası")
-	check(race.player_vehicle_id() == &"tofas_sahin", "ilk yarış aracı Şahin")
+	check(own.owned_count() == 0, "yeni oyunda araç yok: ilk araç HOŞ GELDİN KUTUSU'ndan çıkar (%s)" % [own.owned_vehicle_ids()])
+	var welcome: int = crates.welcome_uid()
+	var gift_crate: Dictionary = crates.get_crate(welcome)
+	check(welcome > 0 and gift_crate.get("crate") == CrateCatalog.WELCOME and gift_crate.get("vehicle") == &"tofas_sahin"
+		and String(gift_crate.get("source", "")) == "welcome", "garajda hediye kutusu, içinde Tofaş Şahin")
+	check(not disk_crate(welcome).is_empty(), "kutu ilk kayıtta")
+	check(CrateCatalog.is_gift(CrateCatalog.WELCOME) and not CrateCatalog.all().any(func(e: Dictionary) -> bool: return e["id"] == CrateCatalog.WELCOME),
+		"hediye kutusu mağaza listesinde yok")
+	check(CrateCatalog.crate_of(&"tofas_sahin") == &"", "Şahin hiçbir mağaza kasasından çıkmaz (koleksiyonda BAŞLANGIÇ)")
 	check(pp.gems == 50, "40 başlangıç + 10 ilk gün girişi = 50 gem (%d)" % pp.gems)
 	check(not save.has_progress(), "yeni kurulum 'ilerleme yok' sayılır (bulut kaydı otomatik gelsin)")
+	check(await wait_state(crates, welcome, CrateManager.State.WAITING_TO_OPEN, 3.0) and delivery.visual_of(welcome) != null,
+		"kutu garaja indi, açılmayı bekliyor")
+	check(crates.buy_block_reason(&"city_crate") == "", "bekleyen hediye kasa satın almayı engellemez")
+	var gift: Array[Dictionary] = []
+	delivery.reveal_ready.connect(func(_u: int, r: Dictionary) -> void: gift.append(r))
+	check(delivery.open_crate(welcome), "kutu açıldı")
+	var gift_wait: float = 0.0
+	while gift.is_empty() and gift_wait < 10.0:
+		await create_timer(0.1).timeout
+		gift_wait += 0.1
+	check(not gift.is_empty() and bool(gift[0].get("gift", false)) and gift[0]["vehicle"] == &"tofas_sahin", "içinden Tofaş Şahin çıktı")
+	check(not gift.is_empty() and int(gift[0]["gems"]) == 0 and pp.gems == 50, "hediye keşif elması vermez (%d)" % pp.gems)
+	delivery.finish_reveal(welcome)
+	await create_timer(0.8).timeout
+	check(crates.welcome_uid() == 0 and crates.pending_count() == 0 and delivery.visual_of(welcome) == null, "kutu kaldırıldı")
+	check(own.owned_vehicle_ids() == [&"tofas_sahin"], "garajda yalnızca Tofaş Şahin")
+	check(own.is_discovered(&"tofas_sahin") and own.discovered_count() == 1, "Şahin koleksiyonun ilk parçası")
+	check(race.player_vehicle_id() == &"tofas_sahin", "ilk yarış aracı Şahin")
+	check(not save.has_progress(), "kutuyu açmak da 'ilerleme' sayılmaz")
 	check(int(disk()["version"]) == SaveManager.SAVE_VERSION and SaveManager.SAVE_VERSION == 10, "kayıt v10")
 
-	print("== 2) ŞAHİN İKİNCİ KEZ VERİLMEZ ==")
+	print("== 2) KUTU / ŞAHİN İKİNCİ KEZ VERİLMEZ ==")
 	await reload()
-	own = g(&"vehicle_ownership"); pp = g(&"player_progress")
-	check(own.owned_count() == 1, "yeniden açılışta hâlâ 1 araç")
+	own = g(&"vehicle_ownership"); pp = g(&"player_progress"); crates = g(&"crates")
+	check(own.owned_count() == 1 and crates.welcome_uid() == 0, "yeniden açılışta hâlâ 1 araç, kutu yok")
 	check(pp.gems == 50, "aynı gün ikinci giriş gemi yok (%d)" % pp.gems)
 
 	print("== 3) İLK ÜCRETSİZ KASA (Sv 2 görevi) ==")

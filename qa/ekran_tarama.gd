@@ -24,6 +24,8 @@ var _hud: Hud
 var _router: UiRouter
 var _index: int = 0
 var _total_issues: int = 0
+## QA_HUD=0..4: HUD BOYUTU kademesi (boşsa ayardaki).
+var _hud_size: int = -1
 
 
 func _initialize() -> void:
@@ -34,6 +36,7 @@ func _initialize() -> void:
 		_only.append(args[i])
 	if mobile:
 		get_root().content_scale_factor = 1.35
+	_hud_size = int(OS.get_environment("QA_HUD")) if OS.get_environment("QA_HUD") != "" else -1
 	_out = OUT_ROOT + _tag + "/"
 	DirAccess.make_dir_recursive_absolute(_out)
 	for file: String in DirAccess.get_files_at(_out):
@@ -115,9 +118,9 @@ func _clip_of(c: Control) -> Dictionary:
 			var p: Control = node
 			if p is ScrollContainer:
 				in_scroll = true
-				clip = clip.intersection(p.get_global_rect())
+				clip = clip.intersection(Hud.screen_rect(p))
 			elif p.clip_contents:
-				clip = clip.intersection(p.get_global_rect())
+				clip = clip.intersection(Hud.screen_rect(p))
 		elif node is CanvasLayer:
 			break
 		node = node.get_parent()
@@ -176,7 +179,9 @@ func _transformed(c: Control) -> bool:
 	var node: Node = c
 	while node is Control:
 		var control: Control = node
-		if not control.scale.is_equal_approx(Vector2.ONE) or not is_zero_approx(control.rotation):
+		# HUD BOYUTU ölçeği yerleşimdir, süs değil: o kümelerin içi yine denetlenir (ekran dikdörtgeniyle)
+		var layout_scale: bool = _hud != null and control in [_hud.top_left, _hud.top_right, _hud.bottom]
+		if not layout_scale and (not control.scale.is_equal_approx(Vector2.ONE) or not is_zero_approx(control.rotation)):
 			return true
 		node = node.get_parent()
 	return false
@@ -193,7 +198,7 @@ func _analyze(state: String, scope: Node) -> PackedStringArray:
 	_collect(scope, controls)
 	var leaves: Array[Dictionary] = []
 	for c: Control in controls:
-		var r: Rect2 = c.get_global_rect()
+		var r: Rect2 = Hud.screen_rect(c)   # HUD boyutu ölçeği dahil
 		var info: Dictionary = _clip_of(c)
 		var clip: Rect2 = info["clip"]
 		var in_scroll: bool = info["scroll"]
@@ -211,7 +216,7 @@ func _analyze(state: String, scope: Node) -> PackedStringArray:
 		# 2) Kabından taşan (Container çocuğu; kaydırma kabı içeriği hariç)
 		var parent: Control = c.get_parent() as Control
 		if parent and parent is Container and not parent is ScrollContainer and not in_scroll and not decor:
-			var pr: Rect2 = parent.get_global_rect()
+			var pr: Rect2 = Hud.screen_rect(parent)
 			var over: float = maxf(maxf(pr.position.x - r.position.x, pr.position.y - r.position.y),
 				maxf(r.end.x - pr.end.x, r.end.y - pr.end.y))
 			if over > OVERFLOW_TOLERANCE:
@@ -340,6 +345,10 @@ func _run() -> void:
 		await process_frame
 	_hud = current_scene.find_child("HUD", true, false) as Hud
 	_router = _hud.router
+	if _hud_size >= 0:
+		var settings: GameSettings = get_first_node_in_group("settings") as GameSettings
+		settings.set_hud_size(_hud_size)
+		print("HUD boyutu: %%%d" % roundi(settings.hud_scale() * 100.0))
 	await wait(1.5)
 	print("tuval: %s  pencere: %s" % [get_root().get_visible_rect().size, DisplayServer.window_get_size()])
 
@@ -363,6 +372,19 @@ func _run() -> void:
 	await _world("dunya_kamera", func() -> void:
 		_hud.camera_button.button_pressed = true)
 	_hud.camera_button.button_pressed = false
+	await _world("dunya_foto_modu", func() -> void:
+		_hud.open_photo_mode(PhotoMode.Mode.PHOTO))
+	# Gerçek çekim: bildirim + köşedeki küçük resim; logolu JPEG etiket klasörüne kopyalanır (göz kontrolü)
+	await _world("dunya_foto_cekildi", func() -> void:
+		_hud.open_photo_mode(PhotoMode.Mode.PHOTO)
+		await wait(0.4)
+		GallerySaver.override_dir = _out + "foto"
+		_hud.photo_mode.capture()
+		await _hud.photo_mode.photo_saved
+		GallerySaver.override_dir = ""
+		await wait(0.2))
+	await _world("dunya_hud_gizli", func() -> void:
+		_hud.open_photo_mode(PhotoMode.Mode.CLEAN))
 	var types: Array[RepairType] = RepairType.defaults()
 	await _world("dunya_arac_ariza", func() -> void:
 		_hud.show_car_info("VOLKSWAGEN PASSAT B5.5")
@@ -398,7 +420,7 @@ func _run() -> void:
 		await wait(0.3)
 		overlay.activate()
 		overlay.set_mode(true, true, true, false)
-		overlay.set_target(_hud.quest_button.get_global_rect(), false)
+		overlay.set_target(Hud.screen_rect(_hud.quest_button), false)
 		overlay.show_card("DERS 1", Loc.t("GÖREVLER"), Loc.t("Ne yapacağını bilmiyorsan GÖREVLER'e bak. Görevler sana yol gösterir ve her biri ödül verir; günlük ve haftalık görevler her gün yenilenir."),
 			Loc.t("İLERİ"), 5, 6, &"bottom")
 		await wait(1.0)
@@ -490,7 +512,13 @@ func _run() -> void:
 		var result: RaceResultScreen = _router.screen(&"race_result") as RaceResultScreen
 		result.hide_bonus()
 		result.show_result(false, 12.08, 11.42, 0, 30, &"lambo_huracan")
-		result.show_record(true, false, 12.08, 11.9))
+		result.show_record(true, false, 12.08, 11.9)
+		result.offer_rematch(true))
+	await _screen(&"race_result", "yaris_sonuc_rovans", func() -> void:
+		var result: RaceResultScreen = _router.screen(&"race_result") as RaceResultScreen
+		result.hide_bonus()
+		result.show_result(false, 11.96, 11.42, 0, 0, &"lambo_huracan", 1)   # rövanş da kaybedildi: plaka yok
+		result.show_record(true, false, 11.96, 11.9))
 	await _screen(&"map", "harita")
 	await _screen(&"junkyard", "hurdalik", Callable(), 1.5)
 	await _screen(&"junkyard", "hurdalik_arac", func() -> void:
