@@ -14,6 +14,25 @@ const IDS: Array[String] = ["featured_emre", "featured_elif"]
 const PREFIX: String = "featured_"
 ## Öne çıkan garaj JSON'unun üst sınırı (açık garajlarınki PublicGarage.MAX_JSON).
 const FEATURED_MAX_JSON: int = 60000
+## PROFİL (2026-10-16): portre res://assets/ui/avatars/<kimlik>.png (tools/avatars/src/*.svg), çerçeve, bayrak,
+## garaj adı, vitrin aracı, yarış sayıları. Koleksiyon "hepsi": Emre ve Elif yarışta her araca sahiptir (kullanıcı
+## kararı; garajları değişmez). En iyi 300 m, en iyi aracının fabrika süresinden hesaplanır.
+const PROFILES: Dictionary = {
+	"featured_emre": {"frame": "neon", "flag": "TR", "title": "Gece Garajı", "car": "lambo_huracan",
+		"wins": 412, "races": 498, "best_car": "lambo_huracan"},
+	"featured_elif": {"frame": "rainbow", "flag": "TR", "title": "Pamuk Garaj", "car": "fiat_500_1965",
+		"wins": 287, "races": 401, "best_car": "vw_golf_7"},
+}
+
+## YARIŞ RAKİBİ (2026-10-16): Emre ve Elif yarışta HER araca sahiptir; hangisinin geleceği aracın karakterine
+## göre (kullanıcı kararı: havalı / spor / süper / premium → Emre, tatlı / şehir / aile → Elif). Listede olmayan
+## (yeni eklenen) araç sınıfına göre: S / A → Emre, diğerleri → Elif.
+const EMRE_CARS: Array[String] = ["bmw_e46", "bmw_e60", "mercedes_cls", "mercedes_s400", "audi_rs6", "audi_a3",
+	"porsche_gt3", "lambo_huracan", "ferrari_488_pista", "chevrolet_camaro", "alfa_romeo_159", "seat_leon",
+	"honda_civic", "vw_golf_7", "togg_t10f"]
+const ELIF_CARS: Array[String] = ["tofas_sahin", "renault_toros", "hyundai_era", "hyundai_getz", "hyundai_accent_blue",
+	"renault_fluence", "vw_passat_b55", "ford_focus", "opel_corsa", "skoda_kamiq", "vw_beetle", "togg_t10x",
+	"tesla_model_y", "volvo_s60"]
 
 static var _entries: Array[Dictionary] = []
 static var _loaded: bool = false
@@ -32,6 +51,26 @@ static func all() -> Array[Dictionary]:
 			if not entry.is_empty():
 				_entries.append(entry)
 	return _entries
+
+
+## Bu aracı yarışa Emre mi Elif mi getirir (kimlik).
+static func owner_for_car(vehicle_id: StringName) -> String:
+	var id: String = String(vehicle_id)
+	if EMRE_CARS.has(id):
+		return "featured_emre"
+	if ELIF_CARS.has(id):
+		return "featured_elif"
+	var car_class: String = String(CarCatalog.get_entry(vehicle_id).get("class", "D"))
+	return "featured_emre" if car_class in ["S", "A"] else "featured_elif"
+
+
+## Yarış rakibi sahibi sözlüğü (RaceManager.rival_owner biçimi): fabrika rengi, modifiyesiz.
+static func rival_owner(uid: String) -> Dictionary:
+	var entry: Dictionary = get_entry(uid)
+	if entry.is_empty():
+		return {}
+	return {"uid": uid, "name": entry["name"], "av": "", "frame": entry["frame"], "flag": entry["flag"],
+		"featured": true, "paint": "", "build": {}}
 
 
 static func get_entry(uid: String) -> Dictionary:
@@ -73,6 +112,8 @@ static func _load(id: String) -> Dictionary:
 	if garage.is_empty():
 		push_error("FeaturedFriends: %s garajı geçersiz" % path)
 		return {}
+	var profile: Dictionary = PROFILES.get(id, {})
+	var best_car: String = SaveSafe.s(profile.get("best_car", ""))
 	return {
 		"uid": id,
 		"name": SaveSafe.s(data.get("name", "")),
@@ -80,4 +121,16 @@ static func _load(id: String) -> Dictionary:
 		"value": SaveSafe.i(data.get("value", 0)),
 		"featured": true,
 		"garage": garage,
+		"av": "",
+		"frame": SaveSafe.s(profile.get("frame", ProfileCatalog.DEFAULT_FRAME)),
+		"flag": SaveSafe.s(profile.get("flag", "")),
+		"title": SaveSafe.s(profile.get("title", "")),
+		"car": SaveSafe.s(profile.get("car", "")),
+		"stats": {
+			"wins": SaveSafe.i(profile.get("wins", 0)),
+			"races": SaveSafe.i(profile.get("races", 0)),
+			"cars": VehicleOwnership.collection_ids().size(),
+			"best": int(round(DragRaceSim.base_time(StringName(best_car)) * 1000.0)) if not best_car.is_empty() else 0,
+			"best_car": best_car,
+		},
 	}

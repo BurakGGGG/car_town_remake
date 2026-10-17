@@ -201,7 +201,8 @@ func city_vehicle_count() -> int:
 ## `wanted` verilirse rakip TAM O MODELLE gelir — yoldan gelen araç ile yarışta çıkan araç aynı
 ## olsun diye (eskiden yoldan Getz geliyor, yarışta BMW başlıyordu). Model havuzda yoksa arka
 ## planda yüklenmeye başlar ve null döner; RaceManager birkaç saniye sonra yeniden dener.
-func spawn_challenger(wanted: StringName = &"") -> TrafficVehicle:
+## `appearance`: arkadaş rakibin boyası (RaceManager); null → rastgele NPC rengi.
+func spawn_challenger(wanted: StringName = &"", appearance: CarAppearance = null) -> TrafficVehicle:
 	if race_spawn_point == null or _pool.is_empty():
 		return null
 	var start: Vector3 = hidden_start(race_spawn_point)
@@ -219,7 +220,7 @@ func spawn_challenger(wanted: StringName = &"") -> TrafficVehicle:
 		entry = _free_model()
 		if entry.is_empty():
 			return null
-	var vehicle: TrafficVehicle = _spawn_at(race_spawn_point, entry, start)
+	var vehicle: TrafficVehicle = _spawn_at(race_spawn_point, entry, start, appearance)
 	vehicle.race_lane = true
 	return vehicle
 
@@ -653,6 +654,14 @@ func nearest_waypoint_ahead(vehicle: TrafficVehicle) -> TrafficWaypoint:
 		best = point
 		best_distance = distance
 	return best
+
+
+## Bu noktaya bağlanan önceki nokta (şeridin yönü için; kaldırımdan çıkan araç). Yoksa null.
+func previous_waypoint(point: TrafficWaypoint) -> TrafficWaypoint:
+	for other: TrafficWaypoint in waypoints:
+		if other != point and other.get_next().has(point):
+			return other
+	return null
 
 
 func _collect_spawn_points(node: Node) -> void:

@@ -44,6 +44,16 @@ const WHEEL_RADIUS: float = 0.1  # model uzayında (ölçek öncesi)
 const CarHitboxScript: GDScript = preload("res://car_hitbox.gd")
 const PULL_OVER_SPEED: float = 0.45   # yol kenarına yanaşma hızı
 const PULL_OVER_TURN: float = 3.0     # yanaşma dönüş hızı (rad/sn)
+## KALDIRIMDAN ÇIKIŞ (sıkılan müşteri): bekleme noktaları arası ~0,4 boşluk var, şerit ortası ~0,36 yanda. Araç
+## önce yerinde kırar, açısı yetince yavaşça şeride çıkar, ortaya oturunca düzelip normal sürer. Eskiden uzaktaki yol
+## noktasına neredeyse paralel gidiyor, öndeki bekleyenlerin İÇİNDEN geçiyordu (kullanıcı bildirdi; qa/musteri_cikis_qa).
+const MERGE_AIM: float = 0.28          # şerit çizgisinde ne kadar ileriyi hedefler (küçük = keskin çıkış)
+const MERGE_TURN: float = 2.8          # rad/sn
+const MERGE_SPEED: float = 0.3         # çıkış hızı sınırı
+## Şerit ortasına bu kadar yaklaşıp bu açıdan az sapınca çıkış biter (öndekinden kurtuldu); kalan küçük düzeltmeyi
+## normal sürüş yapar — yoksa son birkaç santim ~1 sn sürüyordu.
+const MERGE_DONE: float = 0.06
+const MERGE_DONE_ANGLE: float = 0.3
 const PULL_OVER_REACH: float = 0.06   # bekleme noktasına varış yarıçapı
 const PARK_TURN_SPEED: float = 2.5    # yerinde nokta yönüne dönüş (rad/sn)
 const BUBBLE_GAP: float = 0.12        # tavanın üstünde boşluk
@@ -116,6 +126,9 @@ var fault: RepairType
 var fault_severity: float = 1.0
 ## Görünüm (boya / jant); dil değişiminde tamirdeki araç aynı renkle yeniden kurulsun diye tutulur.
 var appearance: CarAppearance
+## Yarış daveti balonunda gösterilecek arkadaş fotoğrafı (RaceManager; null = yalnızca damalı bayrak).
+var race_avatar: Texture2D
+var race_avatar_illustrated: bool = true
 var _bubble: CarBubble
 var _bubble_shape: CollisionShape3D  # CarHitbox altında: balon görünürken balona tıklamak da aracı seçer
 var _in_intersection: bool = false
@@ -128,6 +141,7 @@ var _yield_shift: float = 0.0     # polise yol verirken şeridin sağına kayma 
 ## Yarışı kaybetti, kaçıyor (bkz. RUNNER_*); yol ucunda kaybolana dek sürer.
 var fleeing: bool = false
 var _flee_time: float = 0.0
+var _merging: bool = false     # kaldırımdan şeride çıkıyor (give_up)
 ## Tamir müşterisinin kalan sabrı (sn; RepairManager sayar). Bitince vazgeçip gider (give_up).
 var patience: float = 0.0
 var _patience_shown: int = -1
@@ -188,6 +202,15 @@ func _physics_process(delta: float) -> void:
 	var runner_aim: Vector3 = Vector3.INF
 	var lateral_before: float = 0.0
 	var pressure: float = 0.0
+	var merge_aim: Vector3 = Vector3.INF
+	if _merging and not fleeing:
+		# Kaldırımdan çıkış: şerit çizgisinde hemen ilerideki noktaya keskin dönüş
+		var lane_now: Dictionary = _lane_frame()
+		var aligned: bool = absf(_forward().signed_angle_to(lane_now["dir"], Vector3.UP)) < MERGE_DONE_ANGLE
+		if absf(float(lane_now["lateral"])) < MERGE_DONE and aligned:
+			_merging = false
+		else:
+			merge_aim = (lane_now["point"] as Vector3) + (lane_now["dir"] as Vector3) * MERGE_AIM
 	if fleeing:
 		# Kaçak: şerit çizgisine göre gerçek yanal konum ölçülür, direksiyon orta çizgi + zikzak hedefine çevrilir
 		_flee_time += delta
@@ -244,9 +267,15 @@ func _physics_process(delta: float) -> void:
 	# Küçük yön düzeltmesi (hatlar düz; ani dönüş yok). Kaçak: zikzak hedefine direksiyon (hızla ölçekli)
 	var forward: Vector3 = _forward()
 	var steer_to: Vector3 = to_target if runner_aim == Vector3.INF else _flat(runner_aim - global_position)
+	if merge_aim != Vector3.INF:
+		steer_to = _flat(merge_aim - global_position)
+	var merge_error: float = 0.0
 	if steer_to.length() > 0.001:
 		var angle_error: float = forward.signed_angle_to(steer_to.normalized(), Vector3.UP)
+		merge_error = angle_error
 		var rate: float = turn_speed if runner_aim == Vector3.INF else RUNNER_TURN * clampf(speed / 0.35, 0.1, 1.0)
+		if merge_aim != Vector3.INF:
+			rate = MERGE_TURN
 		var turn: float = clampf(angle_error, -rate * delta, rate * delta)
 		if absf(turn) > 0.0001:
 			rotate_y(turn)
@@ -267,6 +296,9 @@ func _physics_process(delta: float) -> void:
 		if to_entry < stop_at + 0.02:
 			desired = 0.0
 	desired *= 1.0 - (1.0 - YIELD_SLOW) * pressure
+	if merge_aim != Vector3.INF:
+		# Açı hedefe dönmeden ilerlemez (yerinde kırar), döndükçe yavaşça çıkar
+		desired = minf(desired, MERGE_SPEED * clampf(1.0 - absf(merge_error) / 0.6, 0.1, 1.0))
 	if desired > speed:
 		speed = minf(speed + acceleration * delta, desired)
 	else:
@@ -497,7 +529,10 @@ func request_race_challenge(spot: Node3D) -> void:
 		if manager:
 			manager.finish_crossing(self)
 	mode = Mode.RACE_CHALLENGE
-	_bubble.show_glyph(CarBubble.GLYPH_FLAG)   # yalnızca damalı bayrak, yazı yok
+	if race_avatar:
+		_bubble.show_avatar(race_avatar, race_avatar_illustrated)   # arkadaşın fotoğrafı + damalı bayrak
+	else:
+		_bubble.show_glyph(CarBubble.GLYPH_FLAG)   # isimsiz rakip: yalnızca damalı bayrak, yazı yok
 	_sync_bubble_shape()
 
 
@@ -587,6 +622,12 @@ func give_up() -> void:
 	_race_cooldown = RACE_REJOIN_TIME * 2.0
 	_segment_from = Vector3.INF
 	target = manager.nearest_waypoint_ahead(self) if manager else null
+	# Şerit çizgisi hedefin ÖNCEKİ noktasından: hedef yolun ucundaysa (sonrası yok) yön araçtan hedefe eğik çizilir,
+	# araç o çizginin üstünde sayılır ve çıkış ilk karede "bitti" sanılırdı (öndekilerin içinden geçiyordu)
+	var previous: TrafficWaypoint = manager.previous_waypoint(target) if manager and target else null
+	if previous:
+		_segment_from = previous.global_position
+	_merging = target != null   # önce şeride çıkar (öndeki bekleyenlerin içinden geçmesin)
 
 
 ## "TAMİRE AL": anında CarSpot'a ışınlan (konum + yön), tamir başlar; "TAMİR" plakası.

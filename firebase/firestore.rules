@@ -24,6 +24,51 @@ service cloud.firestore {
       allow delete: if signedIn() && garageId == 'g_' + request.auth.uid;
     }
 
+    // PROFİL FOTOĞRAFI: avatars/a_{uid} = {img: 192 px JPEG (base64), hash, at}. Kullanıcı kararı (2026-10-16):
+    // giriş yapmış HERKES görebilir; yalnızca sahibi yazar / siler. Açık garajdaki "av" = "img:<hash>" bu belgeyi
+    // gösterir, arkadaş hash değişmedikçe yeniden indirmez.
+    match /avatars/{avatarId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && avatarId == 'a_' + request.auth.uid
+        && request.resource.data.keys().hasOnly(['img', 'hash', 'at'])
+        && request.resource.data.img is string && request.resource.data.img.size() > 0
+        && request.resource.data.img.size() <= 40000
+        && request.resource.data.hash is string && request.resource.data.hash.matches('^[0-9a-f]{8}$')
+        && request.resource.data.at is int;
+      allow delete: if signedIn() && avatarId == 'a_' + request.auth.uid;
+    }
+
+    // ŞİKÂYET (Play kullanıcı içeriği politikası): reports/x_{şikâyetçi}_{hedef}. Yalnızca YAZILIR; okuma ve silme
+    // istemciye kapalı (Firebase konsolundan incelenir). Bir oyuncu aynı kişiyi bir belgeyle şikâyet eder (yeniden
+    // şikâyet aynı belgenin üzerine yazar: spam yok). "img": şikâyet anında görülen fotoğraf (sonra değişse de kalsın).
+    match /reports/{reportId} {
+      allow create, update: if signedIn()
+        && request.resource.data.keys().hasOnly(['target', 'reason', 'av', 'img', 'name', 'at'])
+        && request.resource.data.target is string && request.resource.data.target != request.auth.uid
+        && reportId == 'x_' + request.auth.uid + '_' + request.resource.data.target
+        && request.resource.data.reason in ['photo', 'name', 'garage']
+        && request.resource.data.av is string && isValidAv(request.resource.data.av)
+        && request.resource.data.name is string && request.resource.data.name.size() <= 16
+        && (!('img' in request.resource.data) || (request.resource.data.img is string
+          && request.resource.data.img.size() <= 40000))
+        && request.resource.data.at is int;
+      allow read, delete: if false;
+    }
+
+    // TELEFON BİLDİRİMİ JETONU: push/p_{uid} = {token, lang, at}. Oyuncu ARKADAŞLAR → YARIŞ BİLDİRİMLERİ: AÇ ile yazar;
+    // Cloud Function (functions/news.js, yönetici yetkisi) okur. Yalnızca sahibi yazar / okur / siler.
+    // push_log/l_{alıcı}_{gönderen} (6 saatlik bildirim sınırı) YALNIZCA sunucunundur: istemciye kapalı (aşağıdaki
+    // "başka her yol kapalı" kuralı; yönetici SDK'sı kurallardan bağımsızdır).
+    match /push/{pushId} {
+      allow read, delete: if signedIn() && pushId == 'p_' + request.auth.uid;
+      allow create, update: if signedIn() && pushId == 'p_' + request.auth.uid
+        && request.resource.data.keys().hasOnly(['token', 'lang', 'at'])
+        && request.resource.data.token is string && request.resource.data.token.size() > 20
+        && request.resource.data.token.size() <= 4096
+        && request.resource.data.lang in ['tr', 'en', 'es']
+        && request.resource.data.at is int;
+    }
+
     // ARKADAŞ KODU → UID. Kod bir kez alınır (üzerine yazılamaz), yalnızca sahibi siler.
     match /codes/{code} {
       allow read: if signedIn();
@@ -70,6 +115,19 @@ service cloud.firestore {
           && request.resource.data.part == get(/databases/$(database)/documents/garages/$('g_' + uid)).data.ask.part
           && isValidName(request.resource.data.name)
           && request.resource.data.at is int;
+      }
+
+      // YARIŞ HABERİ: users/{alıcı}/races/e_{gönderen}. Gönderen alıcının aracına karşı yarıştı (kazandı ya da kaybetti);
+      // alıcı haberi görür, gönderen kazandıysa İNTİKAM AL ile gönderenin o aracına (boya + modifiye) karşı yarışır.
+      // Gönderen başına TEK belge (en son yarış üzerine yazılır: spam yok). Yalnızca ARKADAŞ yazabilir. mw / ml:
+      // gönderenin kendi yönündeki toplam galibiyet / mağlubiyeti (skor tabelası; o yönü yalnızca gönderen sayar).
+      // Alıcı okur / siler; gönderen kendi haberini silebilir (hesap silme).
+      match /races/{eventId} {
+        allow read: if isOwner(uid);
+        allow delete: if isOwner(uid) || (signedIn() && eventId == 'e_' + request.auth.uid);
+        allow create, update: if signedIn() && uid != request.auth.uid && eventId == 'e_' + request.auth.uid
+          && exists(/databases/$(database)/documents/users/$(uid)/friends/$('f_' + request.auth.uid))
+          && isValidRaceEvent(request.resource.data);
       }
 
       // ARKADAŞLAR: users/{sahip}/friends/f_{diğer}. İlişki karşılıklıdır ve YALNIZCA ALICI kabul
@@ -143,9 +201,27 @@ service cloud.firestore {
       return a is map && a.keys().hasOnly(['part', 'at']) && isPart(a.part) && a.at is int;
     }
 
+    // PROFİL alanları (PlayerProfile.public_fields): avatar tanımı, çerçeve, bayrak, garaj adı, vitrin aracı, sayılar.
+    function isValidAv(a) {
+      return a is string && a.matches('^(p[0-9]{2}|img:[0-9a-f]{8})?$');
+    }
+
+    function isValidStats(s) {
+      return s is map && s.keys().hasOnly(['wins', 'races', 'cars', 'best', 'best_car'])
+        && s.wins is int && s.races is int && s.cars is int && s.best is int
+        && s.best_car is string && s.best_car.matches('^[a-z0-9_]{0,40}$');
+    }
+
     function isValidGarage(data) {
-      return data.keys().hasOnly(['name', 'code', 'level', 'value', 'garage_json', 'updated_at', 'ask'])
+      return data.keys().hasOnly(['name', 'code', 'level', 'value', 'garage_json', 'updated_at', 'ask',
+          'av', 'frame', 'flag', 'title', 'car', 'stats'])
         && (!('ask' in data) || isValidAsk(data.ask))
+        && (!('av' in data) || isValidAv(data.av))
+        && (!('frame' in data) || (data.frame is string && data.frame.matches('^[a-z_]{1,16}$')))
+        && (!('flag' in data) || (data.flag is string && data.flag.matches('^([A-Z]{2})?$')))
+        && (!('title' in data) || (data.title is string && data.title.matches('^[A-Za-z0-9ÇĞİÖŞÜçğıöşü ._-]{0,20}$')))
+        && (!('car' in data) || (data.car is string && data.car.matches('^[a-z0-9_]{0,40}$')))
+        && (!('stats' in data) || isValidStats(data.stats))
         && isValidName(data.name)
         && data.code is string && data.code.matches('^[A-HJ-NP-Z2-9]{6}$')
         && data.level is int
@@ -153,6 +229,24 @@ service cloud.firestore {
         && data.garage_json is string
         && data.garage_json.size() < 20000
         && data.updated_at is int;
+    }
+
+    function isStage(build, key) {
+      return !(key in build) || (build[key] is int && build[key] >= 0 && build[key] <= 5);
+    }
+
+    function isValidRaceEvent(d) {
+      return d.keys().hasOnly(['name', 'car', 'paint', 'build', 'their_car', 'won', 'revenge', 'mw', 'ml', 'at'])
+        && isValidName(d.name)
+        && d.car is string && d.car.matches('^[a-z0-9_]{1,40}$')
+        && d.their_car is string && d.their_car.matches('^[a-z0-9_]{1,40}$')
+        && d.paint is string && d.paint.matches('^([0-9a-fA-F]{6}([0-9a-fA-F]{2})?)?$')
+        && d.build is map && d.build.keys().hasOnly(['motor', 'turbo', 'air', 'gear', 'tire', 'body'])
+        && isStage(d.build, 'motor') && isStage(d.build, 'turbo') && isStage(d.build, 'air')
+        && isStage(d.build, 'gear') && isStage(d.build, 'tire') && isStage(d.build, 'body')
+        && d.won is bool && d.revenge is bool
+        && d.mw is int && d.mw >= 0 && d.ml is int && d.ml >= 0
+        && d.at is int;
     }
 
     function isValidRequest(data) {

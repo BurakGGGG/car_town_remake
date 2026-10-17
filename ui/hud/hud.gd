@@ -88,6 +88,20 @@ var quest_button: PlateButton
 ## Kodla kurulan ARKADAŞLAR tabelası ve onu açan plaka (GÖREVLER'in altında).
 var friends_screen: FriendsScreen
 var friends_button: PlateButton
+## PROFİL (2026-10-16): sol üstte kendi avatarın; arkadaş kartı, profil düzenleme, fotoğraf kırpma, kamera alt panoları.
+var avatar_button: AvatarButton
+const AVATAR_BUTTON_SIZE: float = 76.0
+## Seviye rozeti avatarın sağ altına, dışına doğru taşar (kullanıcı: "level avatarı kapatıyor, küçült, sağ alta al").
+const LEVEL_BADGE_SIZE: float = 26.0
+const LEVEL_BADGE_OVERHANG: float = 8.0
+const LEVEL_BADGE_FONT: int = 12
+## Bu alt panolar açıkken sol üst HUD gizlenir (geniş düzenleme panosu ona yer açarken sağdan taşıyordu).
+const HUD_FREE_SCREENS: Array[StringName] = [&"profile_edit", &"avatar_crop", &"avatar_camera"]
+var _top_left_hidden_for_edit: bool = false
+var friend_card_screen: FriendCardScreen
+var profile_edit_screen: ProfileEditScreen
+var avatar_cropper: AvatarCropper
+var camera_capture: CameraCapture
 var _social: SocialManager
 var _quests: QuestManager
 var _missions: MissionManager
@@ -205,6 +219,7 @@ func _ready() -> void:
 	_build_quests()
 	_build_friends()
 	_build_progress_screens()
+	_build_profile_screens()
 	_build_race_screens()
 	_build_junkyard_screens()
 	_register_screens()
@@ -1074,6 +1089,8 @@ func _on_race_completed(won: bool, player_time: float, rival_time: float) -> voi
 		reward = _race.finish_race(won)
 	race_result_screen.show_result(won, player_time, rival_time,
 		int(reward["money"]), int(reward["xp"]), player_id if won else rival, rematch)
+	if int(reward.get("friend_bonus", 0)) > 0:
+		race_result_screen.show_friend_bonus(int(reward["friend_bonus"]))
 	race_result_screen.offer_rematch(not won and _race != null and _race.can_rematch())
 	var record: Dictionary = drag_race_screen.record_result()
 	race_result_screen.show_record(bool(record["finished"]), bool(record["new"]),
@@ -1418,6 +1435,11 @@ func _register_screens() -> void:
 	router.register(&"junkyard", junkyard_screen, UiRouter.Kind.PLACE)
 	router.register(&"restoration", restoration_panel, UiRouter.Kind.MODAL)
 	router.register(&"photo", photo_mode, UiRouter.Kind.PLACE)   # HUD'suz dünya: fotoğraf / HUD gizli / sinema
+	# ALT PANOLAR: altlarındaki panoyu kapatmadan açılır (kart → liste, düzenleme → profil, kırpma → düzenleme)
+	router.register(&"friend_card", friend_card_screen, UiRouter.Kind.SUB)
+	router.register(&"profile_edit", profile_edit_screen, UiRouter.Kind.SUB)
+	router.register(&"avatar_crop", avatar_cropper, UiRouter.Kind.SUB)
+	router.register(&"avatar_camera", camera_capture, UiRouter.Kind.SUB)
 	# 3D ekranların shader'ları oyun yüklenirken derlensin (ilk açılış takılmasız)
 	drag_race_screen.prewarm.call_deferred()
 	showroom.prewarm.call_deferred()
@@ -1484,7 +1506,7 @@ func _sync_nav_tab(place: StringName) -> void:
 		&"garage":
 			target = cars_button
 		&"":
-			if router and (router.top() == &"profile" or router.top() == &"account"):
+			if router and router.top() in [&"profile", &"account", &"profile_edit", &"avatar_crop", &"avatar_camera"]:
 				target = profile_button
 			elif _garage_panel_open:
 				target = garage_button
@@ -1791,6 +1813,87 @@ func _build_friends() -> void:
 	friends_screen = FriendsScreen.new()
 	garage_screen.get_parent().add_child(friends_screen)
 	friends_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
+	friend_card_screen = FriendCardScreen.new()
+	garage_screen.get_parent().add_child(friend_card_screen)
+	friend_card_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
+	friends_screen.person_requested.connect(func(uid: String) -> void:
+		if friend_card_screen.show_for(uid):
+			router.open(&"friend_card"))
+	friends_screen.revenge_requested.connect(_start_revenge)
+
+
+## İNTİKAM AL (yarış haberi): arkadaşın senin aracını yendiği aracına karşı pist doğrudan açılır. Haber kullanılınca
+## silinir (bir kez). Yoldaki davet varsa kapanır (RaceManager.start_revenge).
+func _start_revenge(uid: String) -> void:
+	if _social == null or _race == null:
+		return
+	var event: Dictionary = _social.race_event(uid)
+	var owner: Dictionary = _social.revenge_owner(uid)
+	if event.is_empty() or not _race.start_revenge(owner, event["car"]):
+		return
+	_social.dismiss_event(uid)
+	router.close_all()
+	_race.set_racing(true)
+	router.open(&"drag_race")
+
+
+## PROFİL: sol üstteki avatar düğmesi (seviye rozetinin solunda; dokununca PROFİL), profil düzenleme ve
+## fotoğraf alt panoları. Avatar / çerçeve PlayerProfile değişince güncellenir.
+func _build_profile_screens() -> void:
+	var host: Node = garage_screen.get_parent()
+	avatar_cropper = AvatarCropper.new()
+	host.add_child(avatar_cropper)
+	camera_capture = CameraCapture.new()
+	host.add_child(camera_capture)
+	profile_edit_screen = ProfileEditScreen.new()
+	host.add_child(profile_edit_screen)
+	profile_edit_screen.cropper = avatar_cropper
+	profile_edit_screen.camera = camera_capture
+	profile_edit_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
+	# Kırpıcı ve kamera düzenleme ekranının ÜSTÜNDE çizilsin (aynı ebeveyn: sonra eklenen üstte)
+	host.move_child(avatar_cropper, -1)
+	host.move_child(camera_capture, -1)
+
+	# Avatar + seviye rozeti üst üste: ortak kap avatardan LEVEL_BADGE_OVERHANG büyük; avatar sol üste, seviye
+	# (sahnedeki LevelSign) sağ alt köşeye yaslanır → rozet avatarın kenarından dışarı taşar, yüzü kapatmaz. Rozet
+	# ayrı dursaydı sol üst blok genişler, dar tuvalde panolar ona yer açarken sağdan taşıyordu (2026-10-16 taraması).
+	var level_sign: Control = level_label.get_parent() as Control
+	var row: Node = level_sign.get_parent()   # TopLeft/PlayerRow
+	var slot: MarginContainer = MarginContainer.new()
+	slot.name = "AvatarSlot"
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for side: String in ["left", "top", "right", "bottom"]:
+		slot.add_theme_constant_override("margin_" + side, 0)
+	row.add_child(slot)
+	row.move_child(slot, level_sign.get_index())
+	slot.custom_minimum_size = Vector2.ONE * (AVATAR_BUTTON_SIZE + LEVEL_BADGE_OVERHANG)
+	avatar_button = AvatarButton.new()
+	avatar_button.name = "AvatarButton"
+	avatar_button.diameter = AVATAR_BUTTON_SIZE
+	avatar_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	avatar_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	avatar_button.pressed.connect(_on_name_plate_pressed)
+	slot.add_child(avatar_button)
+	level_sign.reparent(slot, false)
+	level_sign.custom_minimum_size = Vector2(LEVEL_BADGE_SIZE, LEVEL_BADGE_SIZE)
+	level_sign.size_flags_horizontal = Control.SIZE_SHRINK_END
+	level_sign.size_flags_vertical = Control.SIZE_SHRINK_END
+	level_label.add_theme_font_size_override(&"font_size", LEVEL_BADGE_FONT)
+	level_sign.set_meta(&"qa_badge", true)   # ekran taraması: avatarın köşesine bilerek biner
+	_connect_profile.call_deferred()
+
+
+func _connect_profile() -> void:
+	var profile: PlayerProfile = get_tree().get_first_node_in_group("player_profile") as PlayerProfile
+	if profile == null:
+		avatar_button.show_avatar(ProfileCatalog.default_texture(), true)
+		return
+	var update: Callable = func() -> void:
+		avatar_button.show_avatar(profile.my_texture(), profile.my_illustrated(), profile.frame_id, profile.flag)
+	profile.changed.connect(update)
+	profile.avatar_changed.connect(update)
+	update.call()
 
 
 func _connect_social() -> void:
@@ -1800,15 +1903,18 @@ func _connect_social() -> void:
 		# Hurdalık hediyesi / isteği gibi bildirimler ARKADAŞLAR ekranı dışında da görünsün (ekran açıkken
 		# kendi yazı satırında gösteriyor)
 		_social.notice.connect(func(text: String) -> void:
-			if not router.top() in [&"friends", &"junkyard", &"restoration"]:   # onlar kendisi gösterir
+			if not router.top() in [&"friends", &"friend_card", &"profile_edit", &"junkyard", &"restoration"]:   # onlar kendisi gösterir
 				_show_notice(text, HudPalette.COIN_DARK, 2.4))
+		# YARIŞ HABERİ: arkadaş senin aracına karşı yarıştı (ARKADAŞLAR ekranında İNTİKAM AL)
+		_social.race_news.connect(func(event: Dictionary) -> void:
+			_show_notice(FriendsScreen.event_notice(event), HudPalette.COIN_DARK, 3.2))
 	_refresh_friends_button()
 
 
 func _refresh_friends_button() -> void:
 	if friends_button == null:
 		return
-	var count: int = _social.incoming.size() if _social else 0
+	var count: int = (_social.incoming.size() + _social.race_events.size()) if _social else 0
 	friends_button.text = Loc.t("ARKADAŞLAR (%d)") % count if count > 0 else Loc.t("ARKADAŞLAR")
 	friends_button.highlight = count > 0
 
@@ -1850,6 +1956,13 @@ func _sync_modal_hud() -> void:
 	var modal: bool = router.top() != &"" and not place_open
 	top_right.visible = not place_open and not modal
 	garage_button.get_parent().visible = not modal   # alt sekmeler (NavRow)
+	var editing: bool = router.top() in HUD_FREE_SCREENS
+	if editing and top_left.visible:
+		top_left.hide()
+		_top_left_hidden_for_edit = true
+	elif not editing and _top_left_hidden_for_edit:
+		_top_left_hidden_for_edit = false
+		top_left.show()
 	FitScroll.set_reserve(get_tree(), screen_rect(top_left) if modal and top_left.visible else Rect2())
 
 

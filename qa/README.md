@@ -15,6 +15,7 @@ Bunlar test değil **ölçüm** araçlarıdır: sayı üretirler, PASS/FAIL verm
 | `i18n_tarama.gd` | Dil taraması: ekranlarda çevrilmeden kalan metinler + ekran görüntüleri (docs/DIL_DESTEGI.md). | `--resolution 1152x648 --script qa/i18n_tarama.gd -- en` |
 | `mesh_cost.gd` | Araç başına mesh/yüzey/vertex/üçgen ve örnek başına VRAM artışı. | `--script qa/mesh_cost.gd` |
 | `tex_quality.gd` | İçe aktarılmış (VRAM sıkıştırılmış) doku ile kaynak JPEG arasındaki PSNR. | `--headless --script qa/tex_quality.gd` |
+| `mip_probe.gd` | Telefon çözünürlüğünde (2400x1080, ölçek 1,35) şehir / showroom / garaj kadrajlarında araç dokusunun hangi mip'ten okunduğu + 2048 / 1536 / 1024 doku farkı (PSNR, yan yana görüntü). Doku çözünürlüğü kararı buna dayanır. | Xephyr 2400x1080 içinde, betiğin başındaki komut |
 | `proportion_check.gd` | Model kutusunun en/boy ve yükseklik/boy oranlarının gerçek ölçülerle farkı. | `--script qa/proportion_check.gd` |
 | `measure_models.gd` | Optimize modelin gerçek kutusu + dünya geometrisi (ölçek referansı). | `--script qa/measure_models.gd` |
 | `shot_world.gd` | Açılış kadrajı (hiçbir ekran açılmadan). | `--script qa/shot_world.gd` |

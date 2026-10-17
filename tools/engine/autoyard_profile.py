@@ -31,7 +31,7 @@ module_theora_enabled = "no"
 module_mp3_enabled = "no"
 module_interactive_music_enabled = "no"
 module_noise_enabled = "no"
-module_camera_enabled = "no"
+# module_camera: AÇIK — profil fotoğrafı kamerası (ui/hud/camera_capture.gd) CameraServer / CameraFeed kullanıyor
 module_gltf_enabled = "no"   # .glb'ler editörde .scn'e çevriliyor; çalışma anında GLTF yükleme yok
 module_fbx_enabled = "no"
 module_text_server_fb_enabled = "no"

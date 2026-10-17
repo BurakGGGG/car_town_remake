@@ -113,8 +113,12 @@ class FakeFB extends Object:
 		match p[0]:
 			"players":
 				return id == me
-			"garages", "codes":
+			"garages", "codes", "avatars":
 				return true
+			"reports":
+				return false   # yalnız konsoldan
+			"push":
+				return id == "p_" + me
 			"users":
 				if p[2] == "inbox":
 					return p[1] == me or id == "r_" + me
@@ -135,7 +139,16 @@ class FakeFB extends Object:
 				return id == me
 			"garages":
 				return id == "g_" + me and SocialNames.is_valid_name(SaveSafe.s(data.get("name", ""))) \
-					and not data.has("money")
+					and not data.has("money") and ProfileCatalog.is_valid_av(SaveSafe.s(data.get("av", "")))
+			"push":
+				return id == "p_" + me and SaveSafe.s(data.get("token", "")).length() > 20
+			"avatars":
+				return id == "a_" + me and SaveSafe.s(data.get("img", "")).length() <= 40000 \
+					and ProfileCatalog.is_hash(SaveSafe.s(data.get("hash", "")))
+			"reports":
+				var target: String = SaveSafe.s(data.get("target", ""))
+				return target != me and id == "x_%s_%s" % [me, target] \
+					and ["photo", "name", "garage"].has(SaveSafe.s(data.get("reason", "")))
 			"codes":
 				if deny_codes > 0:
 					deny_codes -= 1
@@ -153,6 +166,9 @@ class FakeFB extends Object:
 						var other: String = id.trim_prefix("f_")
 						return (me == owner and store.has("users/%s/inbox/r_%s" % [owner, other])) \
 							or (other == me and store.has("users/%s/inbox/r_%s" % [me, owner]))
+					"races":
+						# yarış haberi: yalnız arkadaş, kendi adına (e_{ben}), kendine değil
+						return owner != me and id == "e_" + me and store.has("users/%s/friends/f_%s" % [owner, me])
 					"gifts":
 						# yalnız arkadaş, günde bir (üzerine yazılamaz), yalnız istenen parça
 						var day: int = floori(Time.get_unix_time_from_system() / 86400.0)
@@ -172,6 +188,8 @@ class FakeFB extends Object:
 				return id == me
 			"garages":
 				return id == "g_" + me
+			"avatars", "push":
+				return id == ("a_" if p[0] == "avatars" else "p_") + me
 			"codes":
 				return not store.has(col + "/" + id) or SaveSafe.s(store[col + "/" + id].get("uid", "")) == me
 			"users":
@@ -186,6 +204,8 @@ class FakeFB extends Object:
 							or not store.has("garages/g_" + me))
 					"friends":
 						return p[1] == me or id == "f_" + me
+					"races":
+						return p[1] == me or id == "e_" + me
 		return false
 
 	## Yanıt rastgele gecikmeyle gelir (sırasız): gerçek eklentide de ağ sırası garanti değil.

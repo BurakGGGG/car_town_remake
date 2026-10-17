@@ -10,6 +10,8 @@ const CODE_LENGTH: int = 6
 const NAME_MIN: int = 3
 const NAME_MAX: int = 16
 const NAME_PATTERN: String = "^[A-Za-z0-9ÇĞİÖŞÜçğıöşü ._-]{3,16}$"
+## Garaj adı (profil): aynı karakter kümesi, boş olabilir (kural: isValidTitle).
+const TITLE_PATTERN: String = "^[A-Za-z0-9ÇĞİÖŞÜçğıöşü ._-]{0,20}$"
 
 ## Takma adda geçemeyecek kökler (küçük harfe ve Türkçe karakterleri sadeleştirilmiş biçime göre).
 ## Kısa ve masum kelimelerin içinde geçebilenler (ör. "sik" → "fisek" değil ama "basikal") yalnızca
@@ -66,6 +68,11 @@ static func clean_name(raw: String) -> String:
 static func is_valid_name(name: String) -> bool:
 	var regex: RegEx = RegEx.create_from_string(NAME_PATTERN)
 	return regex.search(name) != null and not is_blocked(name)
+
+
+static func is_valid_title(title: String) -> bool:
+	var regex: RegEx = RegEx.create_from_string(TITLE_PATTERN)
+	return regex.search(title) != null and not is_blocked(title)
 
 
 ## Uygunsuz ad mı? Türkçe harfler sadeleştirilir, ayraçlar atılır ("o.r.o.s.p.u" da yakalanır).

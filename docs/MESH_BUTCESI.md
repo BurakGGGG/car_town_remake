@@ -79,6 +79,11 @@ Oyundakinin iki katı ölçekte yan yana bakıldığında 1024 gözle seçiliyor
 lekeleniyor, stoplar bulanıklaşıyor (`ct_shots/kiyas/doku.png`). Oyun ölçeğinde fark çok
 küçülüyor ama sıfır değil. Ara basamak (1536²) denenmedi.
 
+> **2026-10-17 GÜNCELLEME — uygulandı.** Bu kıyas masaüstü penceresinde ve iki kat büyütmede yapılmıştı.
+> Telefonda garaj / showroom SubViewport'u yalnızca ~1067x480 çiziliyor; o çözünürlükte ölçülünce 2048'in
+> en ince mip'i neredeyse hiç okunmuyor ve 1024² ile fark gözle seçilmiyor. 1536² ise 1024'ten KÖTÜ
+> çıktı. Ayrıntı: "Paket boyutu 2".
+
 ### 3d. Agresif sadeleştirme — önerilmez
 Kaynaştırılmış kaynakta oran 0,06'ya inince 53.320 üçgen çıkıyor ve **kaporta bozuluyor**:
 arka kapı/çamurluk çöküyor, marşpiyel kırılıyor (`ct_shots/kiyas/kiyas.png`). Hasar küçük
@@ -143,6 +148,7 @@ atlıyor; bu sessizce her aracın rollerini bozabilecek bir hataydı.
 
 - **Doku 1024²:** ek ~32 MB getirir ama oyundakinin iki katı ölçekte gözle seçiliyor (arka cam
   ve kaporta lekeleniyor, `ct_shots/kiyas/doku.png`). 1536² ara yol denenmedi.
+  *(2026-10-17: telefon çözünürlüğünde yeniden ölçüldü ve uygulandı — "Paket boyutu 2".)*
 - **Sadeleştirme oranını düşürmek:** 0,06'da kaporta çöküyor (arka kapı/marşpiyel kırılıyor).
 - **Vertex sıkıştırma:** içe aktarılmış mesh'lerde `COMPRESS_ATTRIBUTES` kapalı; açılırsa normal
   ve UV küçülür, ölçülmedi.
@@ -232,3 +238,94 @@ Godot'nun başsız sahte çizicisine özgü (`RID_Owner<DummyMesh>` iş parçac�
    varsa çöker, bu yüzden ayrı ve telefonda denenecek iş.
 3. *Sıkıştırılmış native kütüphane* (`gradle_build/compress_native_libraries`): APK küçülür ama kurulu boyut
    büyür; mağaza indirmesi zaten sıkıştırılıyor. Önerilmez.
+
+
+---
+
+## Paket boyutu 2 (2026-10-17)
+
+Ölçüm: Play'e giden AAB (`--export-release`, ölçüm için debug anahtarıyla imzalı), MiB. "Sıkıştırılmış"
+≈ indirme, "açık" ≈ telefondaki kurulu boyut. 2026-10-14 AAB'sinde 55 araç vardı; aynı 59 araçlık
+içeriğin önceki hâli o AAB'den araç başına ölçülerle hesaplandı.
+
+| Kalem | Önce (59 araç) | Sonra | Not |
+|---|---|---|---|
+| Araç dokuları | ~107 / 157 | **29,6 / 39,4** | 2048² → 1024² (`process/size_limit=1024`) |
+| Mesh (.glb sahneleri) | 138,2 / 144,7 | 138,2 / 144,7 | dokunulmadı, aşağıdaki seçeneğe bakın |
+| Motor (.so) | 23,4 / 69,3 | 23,4 / 69,3 | Play AAB'si hâlâ resmi motorla; özel motor: 17,3 / 50,9 |
+| Java (dex) | 10,0 / 26,4 | 10,0 / 26,4 | R8 kapalı |
+| Diğer varlıklar | ~22,5 / ~28 | 20,4 / 25,9 | AdMob demo dosyaları pakette değil (~2 MiB) |
+| **Toplam** | **~303 / ~429** | **223,0 / 308,5** | özel motorla ~217 / ~290 |
+
+### Araç dokuları 1024² — neden kayıpsız sayıldı
+
+Garaj, showroom ve drag ekranları kendi SubViewport'larında çizilir; `SubViewportContainer.stretch`
+SubViewport'u kabın **tuval** boyutuna kurar (`get_size() / shrink`, Godot 4.7
+`scene/gui/subviewport_container.cpp`). Telefonda tuval mobil ölçekle (1,35) 1067x480 olduğu için bu
+ekranlar 2400x1080'lik telefonda bile ~1067x480 çiziliyor. Şehir tam çözünürlükte, ama araçlar trafik
+ölçeğinde küçük.
+
+`qa/mip_probe.gd` telefonu birebir taklit eder (Xephyr 2400x1080 + `content_scale_factor` 1,35), araç
+piksellerinin hangi mip'ten okunduğunu boyar ve aynı kareyi kaynak JPEG'den üretilmiş 2048 / 1536 / 1024
+ETC2 dokularla çizer. lod ≥ 1 olan piksel 2048'in en ince mip'ine hiç dokunmaz, yani 1024 ile aynıdır.
+
+| Kadraj | lod ≥ 1 | 1024 PSNR | 1536 PSNR |
+|---|---|---|---|
+| Şehir, oyuncunun en yakın zoom'u (2,2) | %95 | 42 dB | 32 dB |
+| Kasa açılışı yakın çekim (1,35) | %89 | 41 dB | 33 dB |
+| Garaj lifti | %98–100 | — (sahnede canlı öğe) | — |
+| Showroom açılış kadrajı | %65–97 | 38–47 dB | 32–35 dB |
+| Showroom en yakın pinch-zoom (0,62) | %25–75 | 33–42 dB | 33–37 dB |
+
+En kötü durum (Lamborghini ve W123, en yakın pinch-zoom, görüntü 2 kat büyütülmüş) yan yana bakınca
+güçlükle seçiliyor (`ct_shots/mip_probe/`). **1536² bir ara yol değil:** mip zinciri (1536, 768, …)
+2048'inkiyle (1024, 512, …) hizalanmadığı için neredeyse her kadrajda 1024'ten daha uzak çıktı.
+
+Yan etkiler: araç başına VRAM 2,67 → 0,67 MB (garajda 8 araç ~16 MB daha az). Geri almak için
+`assets/cars/optimized/*_albedo.jpg.import` içinde `process/size_limit=0` + `--import`.
+`tools/make_paint_mask.gd` içe aktarılmış dokuyu okur: boya açılıp maske yeniden üretilirse 1024'ten
+okur (1024² maskeler 1:1; 2048'lik Getz maskesi büyütülmüş dokudan okunur). Boya şu an kapalı.
+
+### AdMob demo dosyaları
+
+`export_presets.cfg` `exclude_filter`: eklentinin örnek sahnesi (`addons/admob/gdscript/sample/*`),
+örnek müzik (`music.ogg`, 1,8 MiB), Çince yazı tipi, örnek tema ve büyük ikonlar. Masaüstü sahte reklam
+sağlayıcısının (`internal/mock`) kullandığı ikonlar pakette kalır.
+
+### Özel motor: kamera modülü açıldı
+
+5 Ekim profili `module_camera_enabled = "no"` idi; o tarihten sonra gelen profil fotoğrafı kamerası
+(`ui/hud/camera_capture.gd`) `CameraServer` / `CameraFeed` kullanıyor, kapalı profille betik
+derlenmezdi. Profil güncellendi, motor yeniden derlendi (.so 49,6 MiB, kamera +30 KB). Release kipinde
+test APK'sı telefonda denendi ve onaylandı; **1.0.7'den itibaren Play AAB'si özel motorla**
+(`tools/engine/build_engine.sh --install`; indirme −5,7 MiB, kurulu −18 MiB). 1.0.7 doğrulama AAB'si:
+217,3 MiB sıkıştırılmış / 290,1 MiB açık. Sorun çıkarsa resmi motora dönüş: `--restore`.
+
+### Görünmeyen üçgenleri silme — denendi, değmez
+
+Fikir: materyal tek yüzlü, camlar opak, kameralar hep ufkun üstünde → taban sacı ve kabuk içindeki
+parçalar hiçbir karede görünmez. Üçgenler kimlik rengiyle 1585 açıdan çizildi (ortografik 0–90° ×
+360°, showroom'un en yakın uzaklığından da yakın perspektif; teker/jant/gizli rol örtücü sayılmadı).
+Şahin'de taranan üçgenlerin **%94'ü** en az bir açıdan görünüyor; alt sınır gerçekçi 7°'ye çekilince
+%88. Deliklere karşı bırakılması gereken 1 halkalık payla kazanç aracın ~%3–5'i (filoda ~5–7 MiB).
+Karmaşıklık ve risk (ileride alçak açıdan çekilecek tanıtım videoları) yüzünden bırakıldı.
+
+### Açık seçenek: taban mesh'i bir LOD kademesi sadeleştirmek (~−55 MiB)
+
+Showroom ve garaj lifti `LOD_BIAS_GARAGE = 4` ile LOD0'ı zorlar. Taban mesh yerine her parçanın LOD1'i
+kullanılsaydı araç mesh verisi 168,9 → ~102 MiB (−%40; pakette ~−55 MiB) olurdu. Telefon
+çözünürlüğünde showroom'da bias 4 / bias 1 karşılaştırması (`ct_shots/lod_bias_probe/`): kare başına
+32–2.162 piksel (>8 seviye) farklı, yan yana bakınca seçilmiyor; fark jantlarda ve panel
+gölgelenmesinde. Ancak en yakın zoom'da Godot bias 1'de de çoğu parçada LOD0'ı seçiyor (kendi "<1 px
+hata" ölçütü LOD1'i yetersiz buluyor) ve §3d'de agresif sadeleştirmede kaporta çökmüştü. Kayıpsız
+DEĞİL; kullanıcı 2026-10-17'de istemedi (mevcut hâli yeterli buldu). Uygulanırsa teker parçaları hariç tutulmalı (wheel_axes geometriden
+ölçülü), küçük resimler yeniden üretilmeli (`tools/make_car_thumbs.gd`).
+
+### Kalan küçük kalemler (yapılmadı)
+
+- *Java R8:* dex 26,4 MiB açık / 10 MiB sıkıştırılmış; en büyükleri Play Services, Tink (`com.google.crypto`,
+  2.287 sınıf), Guava, gRPC / protobuf (Firestore). Godot kütüphanesi ve Firebase / Billing eklentileri
+  ProGuard kuralı taşımıyor → elle `-keep` gerekir ve her akış (giriş, bulut kaydı, reklam, satın alma,
+  bildirim, arkadaşlar) telefonda denenmeli. Tahmini −4–6 MiB indirme.
+- *Müzik:* üç tema QOA (5,9 MiB). Vorbis'e çevirmek ~3 MiB kazandırır ama dikişsiz döngü yeniden
+  doğrulanmalı (bkz. oyun müziği notları); değmez.

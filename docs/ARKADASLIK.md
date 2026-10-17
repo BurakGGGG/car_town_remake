@@ -41,6 +41,104 @@ görüntü alır. Kod: `gameplay/social/featured_friends.gd`. Kimlikler `feature
 Ziyaret açılınca kamera garajın tamamını çerçeveler (`VisitBar._frame_garage`): 4. seviye garaj varsayılan
 yakınlıkta ekrana sığmıyordu.
 
+## Profil (2026-10-16)
+
+* **Avatar:** sol üstte seviye rozetinin üstüne binen yuvarlak avatar (dokun → PROFİL). PROFİL panosunun başında
+  profil kartı (fotoğraf + çerçeve + piksel bayrak, takma ad, garaj adı, seviye / garaj değeri, yarış / koleksiyon /
+  en iyi 300 m, vitrin aracı) ve DÜZENLE. Misafir DÜZENLE yerine GİRİŞ YAP görür (kullanıcı kararı).
+* **PROFİLİ DÜZENLE** (alt pano): FOTOĞRAF (GALERİ / KAMERA / GOOGLE + 12 hazır avatar + "Google fotoğrafı açık /
+  kapalı"), ÇERÇEVE (PLAKA; BRONZ 5, GÜMÜŞ 10, ALTIN 20, PLATİN 30. seviye; DAMA 100, KARBON 200, NEON 350, ALEV 450,
+  GÖKKUŞAĞI 600 GEM), BAYRAK (44 piksel bayrak, kodla çizilir), VİTRİN (sahip olunan araçlar), İSİM (takma ad + garaj
+  adı). Galeri / kamera görüntüsü kırpıcıdan geçer (kaydır, iki parmakla yakınlaştır, DÖNDÜR — JPEG'in EXIF yönü
+  okunmaz).
+* **Fotoğraf koymayan** Google fotoğrafını kullanır (192 px JPEG'e çevrilip yüklenir; ayardan kapatılabilir).
+  Fotoğrafı olmayan / misafir: kask (hazır avatar p10).
+* **Arkadaş kartı** (satırdaki avatara / ada dokun): GARAJA GİT · ŞİKAYET ET (FOTOĞRAF / TAKMA AD / GARAJ) · ENGELLE ·
+  ÇIKAR; gelen istekte KABUL · RET · ŞİKAYET ET · ENGELLE. Emre / Elif'te yalnız GARAJA GİT.
+* **Şikâyet:** `reports/x_{şikâyetçi}_{hedef}` (fotoğrafın o anki kopyasıyla); şikâyet edenin ekranında fotoğraf
+  hemen gizlenir. İnceleme Firebase konsolundan: uygunsuz fotoğraf için `avatars/a_{uid}` belgesi silinir (oyuncular
+  kask görür; sahibi yeni fotoğraf yükleyene kadar).
+* **Engelle:** arkadaşlıktan iki taraftan çıkarır, bekleyen istekleri siler, yeni isteklerini sessizce siler,
+  fotoğrafını gizler. Liste kayıtta (`profile.blocked`); engellenene kodla istek atılırsa engel kalkar.
+* Emre ve Elif'in portreleri / 12 hazır avatar: `tools/avatars/` (SVG kaynak, `make_presets.py` üretici,
+  `render_avatars.gd` Godot ile PNG'ye çevirir → `assets/ui/avatars/`, 256 px).
+
+| Yol | İçerik | Kim |
+|---|---|---|
+| `push/p_{uid}` | token, lang, at | sahibi yazar / okur / siler; Cloud Function okur |
+| `push_log/l_{alıcı}_{gönderen}` | at (son bildirim) | yalnız sunucu |
+| `users/{alıcı}/races/e_{gönderen}` | name, car, paint, build, their_car, won, revenge, mw, ml, at | arkadaş yazar; alıcı okur / siler |
+| `garages/g_{uid}` (+) | av (`""` / `pNN` / `img:<8 hex>`), frame, flag, title, car, stats {wins, races, cars, best, best_car} | sahibi yazar |
+| `avatars/a_{uid}` | img (base64 JPEG ≤ 40000), hash, at | giriş yapmış herkes okur, sahibi yazar / siler |
+| `reports/x_{şikâyetçi}_{hedef}` | target, reason, av, img, name, at | yalnız yazılır (konsoldan okunur) |
+
+Arkadaşın fotoğrafı `user://avatars/<uid>.jpg` önbelleğinde; hash değişmedikçe yeniden indirilmez. Kendi fotoğrafın
+`user://profile/photo.jpg`; yeni cihazda `avatars/a_{uid}` belgesinden geri yüklenir. Test: `tools/run_tests.sh
+profile_test` (56); görüntüler `qa/profile_shots.gd`; ekran taraması `profil_*`, `arkadas_karti` durumları.
+
+## Arkadaş rakip (yarış, 2026-10-17)
+
+Orijinal Car Town gibi: yarış şeridinden gelen rakiplerin **%70'i bir arkadaşın aracıyla** gelir
+(`RaceManager.friend_chance`), kalan %30 isimsiz NPC.
+
+* **Kim gelir:** önce gerçek arkadaşların, oyuncunun aracına performansça uyan araçları (`RaceManager.rival_window`:
+  rakip havuzunun süre penceresi, arkadaşın MODİFİYELİ süresiyle). Uyan yoksa havuzdan seçilen araç Emre ya da
+  Elif'le gelir; ikisi yarışta her araca sahiptir. Hangisinin geleceği aracın karakterine göre
+  (`FeaturedFriends.EMRE_CARS` / `ELIF_CARS`; listede olmayan araç S / A sınıfıysa Emre). İlk yarışta (eğitim)
+  gerçek arkadaş gelmez. Aynı modelden tek araç kuralı geçerli: arkadaşın aracı şehirdeyse o gelmez.
+* **Araç:** arkadaşın BOYASIYLA ve PERFORMANS MODİFİYELERİYLE (açık garaja `performance.builds` yayınlanır;
+  `PublicGarage.race_data`). Emre / Elif fabrika renginde ve modifiyesiz. Pistte rakip, yoldan gelen aracın
+  görünümüyle çıkar (eskiden paylaşılan görünüm = oyuncunun boyası kullanılıyordu).
+* **Görünüş:** balonda yuvarlak fotoğraf + damalı bayrak (`CarBubble.show_avatar`, shader glyph 3; isimsiz rakipte
+  yalnız bayrak). Davet panosu "ELİF USTA YARIŞMAK İSTİYOR!" + rakip plakasında fotoğraf / ad, modifiyeli araçta
+  sınıf / GENEL modifiyeli. Sonuç panosunda fotoğraf + "ELİF USTA'YI YENDİN!" / "ELİF USTA KAZANDI" (Türkçe ek:
+  `Loc.accusative`, sayıyla biten adlar dahil). Pistte fotoğraf yok (kullanıcı kararı). Ödüller değişmedi
+  (arkadaş bonusu, bildirim, İNTİKAM ve skor 3. aşamada).
+* Test: `tools/run_tests.sh friend_race_test` (50). Görüntüler: `qa/friend_race_shots.gd` (sahte Firebase'le Bob +
+  Elif turu); ekran taraması `yaris_arkadas_*`.
+
+## Yarış haberleri, İNTİKAM, skor, arkadaş bonusu (aşama 3, 2026-10-17)
+
+* **Haber:** gerçek arkadaşın aracıyla yarış bitince (kazansan da kaybetsen de) ona yazılır:
+  `users/{o}/races/e_{ben}` = {name, car (benim aracım), paint, build, their_car (onun aracı), won, revenge, mw, ml, at}.
+  Gönderen başına TEK belge (en son yarış üzerine yazılır). Yalnızca arkadaş yazabilir (kural). Emre / Elif'e yazılmaz.
+* **Görünüş:** HUD'da kısa bildirim ("BOB USTA, VW GOLF 7 ARACINI YENDİ! · İNTİKAM İÇİN: ARKADAŞLAR" ya da "VW GOLF 7
+  ARACIN BOB USTA'YI YENDİ!"), ARKADAŞLAR sayacına eklenir, ARKADAŞLAR'ın başında YARIŞ HABERLERİ bölümü (İNTİKAM AL /
+  TAMAM). Aynı haber bir kez bildirilir (`social.json` events_seen).
+* **İNTİKAM AL:** arkadaş senin aracını yendiyse; pist DOĞRUDAN açılır (`RaceManager.start_revenge`, yoldaki davet
+  kapanır), rakip onun o aracı (boya + modifiye), oyuncu güncel yarış aracıyla. Haber kullanılınca silinir. Sonuç
+  panosu başlığı İNTİKAM, rövanş yok; sonuç arkadaşa İNTİKAM haberi olarak gider (o da intikam alabilir).
+* **Skor (iki yönlü):** `RaceManager._rivals[uid]` = {mw, ml: ben onun aracına karşı; tw, tl: o benim aracıma karşı}.
+  Her yönü yalnızca yarışan sayar ve habere kendi yönünü (mw / ml) yazar; alıcı karşı yönü olduğu gibi alır → iki
+  tabela aynı (ör. "SKOR SEN 5 – 5 BOB USTA", arkadaş kartında ve satırında). Emre / Elif'e karşı kendi yönüm sayılır.
+* **Arkadaş bonusu:** gerçek arkadaşı yenmek +%20 para (`FRIEND_BONUS`), arkadaş başına UTC günde bir; davet panosunda
+  "ARKADAŞ BONUSU +%20 DAHİL", sonuçta "(+X ₺ ARKADAŞ BONUSU)". Skor ve bonus günü kayıtta ("race" bölümü).
+* **Hesap silme:** bana gelen haberler ve arkadaşlara yazdıklarım silinir. Engellenen / artık arkadaş olmayanın haberi
+  okunurken sessizce silinir.
+* Test: `tools/run_tests.sh race_news_test` (34); kurallar emülatörde (`races` bölümü). Görüntüler `qa/race_news_shots.gd`.
+
+## Telefon bildirimi (FCM, 2026-10-17)
+
+* **Ne zaman:** arkadaş senin aracını yenince (haberde `won: true`), oyun kapalıyken de telefona "Bob Usta yarışta aracını
+  yendi! İntikam almak için dokun 🏁" (İNTİKAM'da "intikamını aldı…"). Alıcının oyun diline göre TR / EN / ES.
+  Kaybeden gönderen bildirim doğurmaz (haber oyun içinde görünür).
+* **Sınır (kullanıcı kuralı):** aynı gönderen → aynı alıcı çiftine 6 saatte EN ÇOK BİR: A→B gider, A→B tekrar gitmez,
+  A→C gider, C→B gider. Sınır SUNUCUDA (`push_log/l_{alıcı}_{gönderen}`, istemciye kapalı).
+* **Sunucu:** `firebase/functions` — `raceNewsPush` (Cloud Functions 2. nesil, europe-west4; Firestore eur3).
+  Tetik `users/{uid}/races/{eventId}` yazması. Mantık `news.js` (birim testi `npm test`, uçtan uca `npm run e2e`:
+  Functions + Firestore emülatörü). Geçersiz jeton gelince `push/p_{uid}` silinir. Durum çubuğu ikonu
+  `mipmap/icon_monochrome` (export_presets adaptive_monochrome), renk amber.
+* **İstemci:** `gameplay/social/push_service.gd` — ARKADAŞLAR → "Arkadaşın seni yenince telefonuna haber gelsin mi? AÇ"
+  (rızasız jeton yazılmaz) → Android 13+ bildirim izni → FirebaseMessaging jetonu (JavaClassWrapper, Task yoklanır;
+  eklentide mesajlaşma modülü yok, kütüphane `export_plugin.gd` bağımlılığı) → `push/p_{uid}` = {token, lang, at}.
+  KAPAT siler; çıkış yapınca jeton geçersiz kılınır; hesap silmede belge silinir. Oyun açıkken telefon bildirimi
+  görünmez: `SocialManager` 2 dakikada bir haberleri yoklar (tek liste okuması) → HUD bildirimi.
+* **Gönderim:** proje Blaze planında (2026-10-17). `firebase/` klasöründen
+  `firebase deploy --only functions,firestore:rules --project car-town-remake` (Node 22, firebase-functions 7,
+  firebase-admin 13 — 14 Node 22 ister, yerel emülatör testleri Node 20'de koşuyor). İlk 2. nesil gönderimde Eventarc
+  servis hesabı izni yayılana kadar "Permission denied while using the Eventarc Service Agent" hatası olağan: birkaç
+  dakika sonra yeniden gönder. Artifact Registry temizlik politikası kurulmadı (eski kalıplar birikir; az ücret).
+
 ## Kod
 
 | Dosya | Görev |
@@ -51,6 +149,11 @@ yakınlıkta ekrana sığmıyordu.
 | `gameplay/social/garage_visit.gd` | Ziyaret: kendi sahneyi dondurur, Main.tscn'yi ziyaret kipinde açar |
 | `ui/hud/friends_screen.gd` | ARKADAŞLAR ekranı (kodla kurulur, UiRouter MODAL `friends`) |
 | `ui/hud/visit_bar.gd` | Ziyaretteki tek arayüz |
+| `gameplay/social/player_profile.gd` | Profil seçimleri, fotoğraf dosyası, Google fotoğrafı, engellenenler (kayıt: "profile") |
+| `gameplay/social/profile_catalog.gd` | Hazır avatarlar, çerçeveler, bayraklar, fotoğraf kodlama |
+| `ui/hud/profile_card.gd` · `avatar_view.gd` · `avatar_button.gd` · `flag_icon.gd` | Kart, yuvarlak avatar + çerçeve, piksel bayrak |
+| `ui/hud/profile_edit_screen.gd` · `avatar_cropper.gd` · `camera_capture.gd` · `photo_picker.gd` | Düzenleme, kırpma, kamera, galeri |
+| `ui/hud/friend_card_screen.gd` | Arkadaş kartı (şikâyet / engel) |
 
 `SocialManager`'ı `GarageSystem` kodla kurar ("social" grubu). Oturum `CloudSaveManager`'ındır: sosyal yalnızca
 bulut kaydı **SYNCED** iken başlar ve açık garaj yalnızca o zaman yayınlanır (kayıt seçimi sürerken cihazdaki kayıt

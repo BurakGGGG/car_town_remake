@@ -110,5 +110,79 @@ func _run() -> void:
 	var start: Vector3 = car.global_position
 	await create_timer(1.5).timeout
 	check(car.global_position.distance_to(start) > 0.3, "kaldırımdan çıkıp yola koyuldu")
+
+	print("== ÇIKIŞ: öndeki bekleyenlerin içinden geçmez ==")
+	# Kullanıcı bildirdi (2026-10-17): sıkılan müşteri uzaktaki yol noktasına paralel gidip öndekilerin içinden geçiyordu.
+	for i: int in 900:
+		if traffic.vehicles.size() >= 4:
+			break
+		await process_frame
+	var line: Array[TrafficVehicle] = []
+	for v: TrafficVehicle in traffic.vehicles:
+		if v != car and line.size() < 3 and v.mode == TrafficVehicle.Mode.TRAFFIC and not v.race_lane \
+				and v.repair_status == TrafficVehicle.RepairStatus.NORMAL:
+			line.append(v)
+			v.target = null   # yerinde kalsın; request_repair kendi noktasına götürür
+			if not v.customer_stopped.is_connected(rm._on_customer_stopped):
+				v.customer_stopped.connect(rm._on_customer_stopped)   # sabrı başlasın (yoksa 0'da kalıp hemen gider)
+	check(line.size() == 3, "kaldırım için 3 araç")
+	if line.size() == 3:
+		for i: int in 3:
+			var s: Node3D = rm.repair_wait_spots[i]
+			line[i].global_position = Vector3(s.global_position.x + 0.6, line[i].global_position.y, 0.3)
+			line[i].global_rotation.y = s.global_rotation.y
+			line[i].request_repair(s, RepairType.defaults()[i])
+		var all_waiting: Callable = func() -> bool:
+			return line.all(func(v: TrafficVehicle) -> bool: return is_instance_valid(v) and v.is_waiting())
+		for i: int in 900:
+			if all_waiting.call():
+				break
+			await physics_frame
+		check(all_waiting.call(), "3 müşteri kaldırımda bekliyor")
+		if not all_waiting.call():
+			for v: TrafficVehicle in line:
+				if is_instance_valid(v):
+					print("    %s kip %d konum (%.2f, %.2f) hız %.2f vardı %s önde %.2f" % [v.vehicle_id, v.mode,
+						v.global_position.x, v.global_position.z, v.speed, v._arrived, traffic.distance_to_vehicle_ahead(v)])
+				else:
+					print("    (silinmiş)")
+			print("RESULT fails=%d" % fails)
+			quit(1)
+			return
+		rm._dismiss_customer(line[0])   # en arkadaki gider: önünde iki bekleyen var
+		var worst: float = 0.0
+		for f: int in 240:
+			await physics_frame
+			if not is_instance_valid(line[0]):
+				break
+			for other: TrafficVehicle in [line[1], line[2]]:
+				worst = maxf(worst, _overlap(_footprint(line[0]), _footprint(other)))
+		check(worst == 0.0, "giden müşteri öndekilere binmedi (en derin %.3f)" % worst)
+		check(is_instance_valid(line[0]) and not line[0]._merging and line[0].global_position.z > 0.2,
+			"şeride çıktı ve şeritte sürüyor (z %.2f)" % (line[0].global_position.z if is_instance_valid(line[0]) else -1.0))
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
+
+
+## Araç taban dikdörtgeni (dünya XZ; CarHitbox kutusu).
+func _footprint(v: TrafficVehicle) -> Dictionary:
+	var shape: CollisionShape3D = v.get_node("CarHitbox/CollisionShape3D") as CollisionShape3D
+	var size: Vector3 = (shape.shape as BoxShape3D).size
+	var c: Vector3 = v.global_transform * shape.position
+	var bx: Vector3 = v.global_transform.basis.x
+	var bz: Vector3 = v.global_transform.basis.z
+	return {"c": Vector2(c.x, c.z), "ax": Vector2(bx.x, bx.z).normalized(), "az": Vector2(bz.x, bz.z).normalized(),
+		"hx": size.x * 0.5 * Vector2(bx.x, bx.z).length(), "hz": size.z * 0.5 * Vector2(bz.x, bz.z).length()}
+
+
+## İki dönük dikdörtgenin kesişme derinliği (ayırıcı eksen); kesişmiyorsa 0.
+func _overlap(a: Dictionary, b: Dictionary) -> float:
+	var depth: float = INF
+	for axis: Vector2 in [a["ax"], a["az"], b["ax"], b["az"]]:
+		var ra: float = absf((a["ax"] as Vector2).dot(axis)) * a["hx"] + absf((a["az"] as Vector2).dot(axis)) * a["hz"]
+		var rb: float = absf((b["ax"] as Vector2).dot(axis)) * b["hx"] + absf((b["az"] as Vector2).dot(axis)) * b["hz"]
+		var o: float = ra + rb - absf(((b["c"] as Vector2) - (a["c"] as Vector2)).dot(axis))
+		if o <= 0.0:
+			return 0.0
+		depth = minf(depth, o)
+	return depth

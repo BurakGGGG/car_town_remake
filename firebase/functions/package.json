@@ -1,0 +1,17 @@
+{
+  "name": "autoyard-functions",
+  "private": true,
+  "description": "AUTO YARD: yarış haberi telefon bildirimi (Cloud Functions 2. nesil)",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "test": "node --test test/news.test.js",
+    "e2e": "cd .. && firebase emulators:exec --only firestore,functions --project demo-cartown \"node functions/test/e2e.mjs\""
+  },
+  "dependencies": {
+    "firebase-admin": "^13.10.0",
+    "firebase-functions": "^7.4.0"
+  }
+}

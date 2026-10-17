@@ -12,7 +12,10 @@ const DEPENDENCIES := [
 	"com.google.android.gms:play-services-auth:21.3.0",
 	"com.google.firebase:firebase-firestore:25.1.4",
 	"com.google.firebase:firebase-database:21.0.0",
-	"com.google.firebase:firebase-storage:21.0.1"
+	"com.google.firebase:firebase-storage:21.0.1",
+	# CarTownRemake eki (2026-10-17): telefon bildirimi (FCM). Eklentide mesajlaşma modülü yok; jeton oyundan
+	# JavaClassWrapper ile alınır (gameplay/social/push_service.gd), bildirimi sunucu gönderir (firebase/functions).
+	"com.google.firebase:firebase-messaging:24.1.0"
 ]
 
 func _enter_tree():

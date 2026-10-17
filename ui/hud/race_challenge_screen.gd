@@ -4,6 +4,8 @@ extends Control
 ## İki araç yan yana: oyuncunun aracı ve rakip; statlar cars.json'daki "race" bloğundan
 ## (DragRaceSim.stats_of) gelir, ödül RaceManager'dan — UI'da hardcode sayı yoktur.
 ## Plaka dili: her araç bir PlatePanel, aksiyonlar plaka buton. UiRouter bunu MODAL olarak açar.
+## ARKADAŞ RAKİP (RaceManager.rival_owner): başlık "ELİF USTA YARIŞMAK İSTİYOR!", rakip plakasında arkadaşın fotoğrafı +
+## adı; arkadaşın aracı modifiyeliyse sınıf / GENEL / 0-100 modifiyeli değerlerle (rakip yarışa öyle çıkar).
 
 signal closed
 ## YARIŞ plakasına basıldı.
@@ -17,6 +19,7 @@ var _player_labels: Dictionary = {}
 var _rival_labels: Dictionary = {}
 var _reward_label: Label
 var _column: VBoxContainer
+var _title: Label
 var _closing: bool = false
 
 
@@ -63,9 +66,9 @@ func _build() -> void:
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	# Soru doğrudan panoda: oyuncu "ne istiyor bu araç?" diye düşünmesin
-	var title: Label = _label(&"HudSignTitle", Loc.t("YARIŞMAK İSTER MİSİN?"))
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sign.add_child(title)
+	_title = _label(&"HudSignTitle", Loc.t("YARIŞMAK İSTER MİSİN?"))
+	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sign.add_child(_title)
 	_column.add_child(sign)
 
 	var row: HBoxContainer = HBoxContainer.new()
@@ -115,6 +118,24 @@ func _car_plate(row: HBoxContainer, caption: String, labels: Dictionary) -> Plat
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_theme_constant_override(&"separation", 1)
 	labels["caption"] = _label(&"HudInkCaption", caption)
+	# Arkadaş rakipte: fotoğraf + ad satırı (isimsiz rakipte ve oyuncunun plakasında gizli)
+	var owner_row: HBoxContainer = HBoxContainer.new()
+	owner_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	owner_row.add_theme_constant_override(&"separation", 6)
+	owner_row.visible = false
+	var avatar: AvatarView = AvatarView.new()
+	avatar.custom_minimum_size = Vector2(42.0, 42.0)
+	owner_row.add_child(avatar)
+	var owner_name: Label = _label(&"HudInkValue", "")
+	owner_name.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	owner_name.clip_text = true
+	owner_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	owner_name.custom_minimum_size = Vector2(PLATE_WIDTH - 80.0, 0.0)
+	owner_row.add_child(owner_name)
+	box.add_child(owner_row)
+	labels["owner_row"] = owner_row
+	labels["avatar"] = avatar
+	labels["owner_name"] = owner_name
 	labels["name"] = _label(&"HudPlateTitle", "")
 	labels["class"] = _label(&"HudInkCaption", "")
 	labels["overall"] = _label(&"HudInkCaption", "")
@@ -135,16 +156,43 @@ func _refresh() -> void:
 	var player_id: StringName = race.player_vehicle_id()
 	var rival: StringName = race.rival_id()
 	_fill(_player_labels, player_id, true)
-	_fill(_rival_labels, rival, false)
+	_fill(_rival_labels, rival, false, race.rival_build())
+	var owner: Dictionary = race.rival_owner()
+	var row: HBoxContainer = _rival_labels["owner_row"]
+	row.visible = not owner.is_empty()
+	(_rival_labels["caption"] as Label).visible = owner.is_empty()
+	_title.text = Loc.t("YARIŞMAK İSTER MİSİN?")
+	if not owner.is_empty():
+		var art: Dictionary = ProfileCard.avatar_for(get_tree(), owner)
+		(_rival_labels["avatar"] as AvatarView).show_avatar(art.get("texture"), bool(art.get("illustrated", true)),
+			SaveSafe.s(owner.get("frame", "")), SaveSafe.s(owner.get("flag", "")))
+		var name: String = Loc.upper(SaveSafe.s(owner.get("name", "")))
+		(_rival_labels["owner_name"] as Label).text = name
+		_title.text = Loc.t("%s YARIŞMAK İSTİYOR!") % name
 	var reward: Dictionary = race.reward_for(rival, true)
 	var loss: Dictionary = race.reward_for(rival, false)
+	var money: int = int(reward["money"])
+	if race.friend_bonus_available():   # gerçek arkadaş: kazanınca +%20 (bugün bu arkadaştan alınmadıysa)
+		money += int(round(float(money) * RaceManager.FRIEND_BONUS))
 	_reward_label.text = Loc.t("KAZANIRSAN  +%s ₺  ·  +%d XP\nKAYBEDERSEN  +%d XP") % [
-		Hud.format_thousands(int(reward["money"])), int(reward["xp"]), int(loss["xp"])]
+		Hud.format_thousands(money), int(reward["xp"]), int(loss["xp"])]
+	if race.friend_bonus_available():
+		_reward_label.text += "\n" + Loc.t("ARKADAŞ BONUSU +%s DAHİL") % Loc.percent(str(roundi(RaceManager.FRIEND_BONUS * 100.0)))
 
 
-## player: oyuncunun aracı modifiyeli değerlerle (sınıf, GENEL, 0-100); rakip her zaman fabrika.
-func _fill(labels: Dictionary, vehicle_id: StringName, player: bool) -> void:
+## player: oyuncunun aracı modifiyeli değerlerle (sınıf, GENEL, 0-100); rakip fabrika — arkadaşın aracıysa onun
+## modifiyeleriyle (`build`).
+func _fill(labels: Dictionary, vehicle_id: StringName, player: bool, build: Dictionary = {}) -> void:
 	var entry: Dictionary = CarCatalog.get_entry(vehicle_id)
+	if not player and not build.is_empty():
+		var stats: Dictionary = PerformanceMods.stats_with(vehicle_id, build)
+		(labels["name"] as Label).text = String(entry.get("display_name", vehicle_id)).to_upper()
+		(labels["class"] as Label).text = Loc.t("%s SINIFI") % String(stats["class"]) + Loc.t("  ·  MODİFİYELİ")
+		(labels["overall"] as Label).text = Loc.t("GENEL  %d") % int(stats["overall"])
+		(labels["perf"] as Label).text = Loc.t("0-100 %s sn · %d km/sa") % [ModWorkshop.dec2(float(stats["zero_100"])),
+			roundi(float(stats["top_speed"]))]
+		(labels["perf"] as Label).visible = true
+		return
 	var modified: bool = player and PerformanceMods.is_modified(vehicle_id)
 	(labels["name"] as Label).text = String(entry.get("display_name", vehicle_id)).to_upper()
 	(labels["class"] as Label).text = Loc.t("%s SINIFI") % (PerformanceMods.class_of(vehicle_id) if modified

@@ -4,6 +4,8 @@ extends Control
 ## parayı ve XP'yi RaceManager.finish_race() tek seferlik olarak yazar, bu ekran yalnızca gösterir.
 ## GARAJA DÖN plakası (ya da ESC) hem sonucu hem pisti kapatır. İlk yarış kaybedilince RÖVANŞ plakası: aynı rakiple
 ## TEK yeniden yarış (RaceManager.start_rematch; pisti HUD yeniden açar). Rövanş kaybedilirse plaka çıkmaz.
+## ARKADAŞ RAKİP (RaceManager.rival_owner): sonucun altında arkadaşın fotoğrafı + "ELİF USTA'YI YENDİN!" / "ELİF USTA
+## KAZANDI" (Türkçe ek Loc.accusative ile).
 
 signal closed
 ## GARAJA DÖN: yarış modundan tamamen çıkılacak.
@@ -23,6 +25,9 @@ var _record: Label
 var _bonus_button: PlateButton
 var _rematch_button: PlateButton
 var _head: Label
+var _owner_row: HBoxContainer
+var _owner_avatar: AvatarView
+var _owner_text: Label
 var _bonus_amount: int = 0
 var _column: VBoxContainer
 var _closing: bool = false
@@ -40,6 +45,9 @@ func _ready() -> void:
 func show_result(won: bool, player_time: float, rival_time: float, money: int, xp: int,
 		winner_id: StringName, rematch: int = 0) -> void:
 	_head.text = Loc.t("YARIŞ BİTTİ") if rematch <= 0 else Loc.t("RÖVANŞ")
+	var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager if is_inside_tree() else null
+	if race and race.is_revenge():
+		_head.text = Loc.t("İNTİKAM")
 	offer_rematch(false)
 	_title.text = Loc.t("KAZANDIN!") if won else Loc.t("KAYBETTİN")
 	var parts: PackedStringArray = PackedStringArray()
@@ -51,6 +59,27 @@ func show_result(won: bool, player_time: float, rival_time: float, money: int, x
 	_times.text = Loc.t("SEN  %.2f sn        RAKİP  %.2f sn") % [player_time, rival_time]
 	hide_bonus()
 	_winner.text = Loc.t("KAZANAN: %s") % String(CarCatalog.get_entry(winner_id).get("display_name", winner_id)).to_upper()
+	_show_owner(won)
+
+
+## Gerçek arkadaşı yenince eklenen +%20 (ödül satırına not düşülür; para zaten RaceManager'da eklendi).
+func show_friend_bonus(amount: int) -> void:
+	_reward.text = Loc.t("%s   (+%s ₺ ARKADAŞ BONUSU)") % [_reward.text, Hud.format_thousands(amount)]
+
+
+## Arkadaş rakipse fotoğraf + sonuç cümlesi; isimsiz rakipte satır gizli.
+func _show_owner(won: bool) -> void:
+	var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager if is_inside_tree() else null
+	var owner: Dictionary = race.rival_owner() if race else {}
+	_owner_row.visible = not owner.is_empty()
+	if owner.is_empty():
+		return
+	var art: Dictionary = ProfileCard.avatar_for(get_tree(), owner)
+	_owner_avatar.show_avatar(art.get("texture"), bool(art.get("illustrated", true)), SaveSafe.s(owner.get("frame", "")),
+		SaveSafe.s(owner.get("flag", "")))
+	var name: String = SaveSafe.s(owner.get("name", ""))
+	_owner_text.text = Loc.t("%s YENDİN!") % Loc.upper(Loc.accusative(name)) if won \
+		else Loc.t("%s KAZANDI") % Loc.upper(name)
 
 
 ## KİŞİSEL REKOR satırı: yeni rekorsa farkıyla birlikte amber, değilse mevcut rekor. Oyuncu hiç
@@ -161,7 +190,19 @@ func _build() -> void:
 	_record = _label(&"HudInkValue", "")
 	_record.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_record.visible = false
-	for label: Label in [_title, _reward, _times, _record, _winner]:
+	_owner_row = HBoxContainer.new()
+	_owner_row.name = "OwnerRow"
+	_owner_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_owner_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_owner_row.add_theme_constant_override(&"separation", 8)
+	_owner_row.visible = false
+	_owner_avatar = AvatarView.new()
+	_owner_avatar.custom_minimum_size = Vector2(46.0, 46.0)
+	_owner_row.add_child(_owner_avatar)
+	_owner_text = _label(&"HudInkValue", "")
+	_owner_text.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_owner_row.add_child(_owner_text)
+	for label: Control in [_title, _owner_row, _reward, _times, _record, _winner]:
 		box.add_child(label)
 	plate.add_child(box)
 	_column.add_child(plate)

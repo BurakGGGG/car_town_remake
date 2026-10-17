@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- EMRE USTA — Gece Garajı: siyah deri ceket, kısa sakal, yana taranmış perçem, neon kenar ışığı
+       (sol pembe, sağ camgöbeği). Oyunda daireye kırpılır: önemli her şey r=256 dairenin içinde. -->
+  <defs>
+    <radialGradient id="bg" cx="256" cy="210" r="330" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3D2C72"/>
+      <stop offset="0.55" stop-color="#22184A"/>
+      <stop offset="1" stop-color="#0D0A1F"/>
+    </radialGradient>
+    <linearGradient id="neck" x1="0" y1="330" x2="0" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8E5C44"/>
+      <stop offset="1" stop-color="#C08566"/>
+    </linearGradient>
+    <linearGradient id="jacket" x1="0" y1="400" x2="0" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2A2B35"/>
+      <stop offset="1" stop-color="#15161C"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="200" y1="60" x2="330" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2B2F3F"/>
+      <stop offset="1" stop-color="#121218"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ARKA PLAN: gece, neon tabela çerçevesi (pembe) ve şimşek (camgöbeği) -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke="#FF4FB8">
+      <rect x="62" y="66" width="388" height="262" rx="46" stroke-width="34" opacity="0.10"/>
+      <rect x="62" y="66" width="388" height="262" rx="46" stroke-width="18" opacity="0.22"/>
+      <rect x="62" y="66" width="388" height="262" rx="46" stroke-width="7"/>
+    </g>
+    <rect x="62" y="66" width="388" height="262" rx="46" stroke="#FFD3EE" stroke-width="2.5"/>
+    <g stroke="#5CF2FF">
+      <path d="M 420 96 L 392 160 L 424 160 L 396 226" stroke-width="30" opacity="0.12"/>
+      <path d="M 420 96 L 392 160 L 424 160 L 396 226" stroke-width="16" opacity="0.25"/>
+      <path d="M 420 96 L 392 160 L 424 160 L 396 226" stroke-width="7"/>
+    </g>
+    <path d="M 420 96 L 392 160 L 424 160 L 396 226" stroke="#E2FDFF" stroke-width="2.5"/>
+  </g>
+  <g fill="#5CF2FF">
+    <circle cx="96" cy="380" r="3"/>
+    <circle cx="430" cy="300" r="2.5"/>
+    <circle cx="110" cy="130" r="2.5" fill="#FF8FD0"/>
+  </g>
+
+  <!-- GÖVDE: tişört, açık deri ceket, kolye -->
+  <g transform="translate(0,-14)">
+  <g stroke="#120E1A" stroke-width="6" stroke-linejoin="round">
+    <path d="M 184 404 Q 256 444 328 404 L 344 530 L 168 530 Z" fill="#30333F"/>
+    <path d="M 22 530 C 30 452, 96 420, 188 402 L 214 426 L 240 530 Z" fill="url(#jacket)"/>
+    <path d="M 490 530 C 482 452, 416 420, 324 402 L 298 426 L 272 530 Z" fill="url(#jacket)"/>
+    <!-- yakalar -->
+    <path d="M 190 402 L 146 444 L 192 458 L 232 530 L 214 426 Z" fill="#2F313C"/>
+    <path d="M 322 402 L 366 444 L 320 458 L 280 530 L 298 426 Z" fill="#2F313C"/>
+  </g>
+  <path d="M 216 412 Q 256 446 296 412" fill="none" stroke="#454A5E" stroke-width="7" stroke-linecap="round"/>
+  <path d="M 226 424 Q 256 462 286 424" fill="none" stroke="#C9CED8" stroke-width="3"/>
+  <rect x="249" y="450" width="14" height="20" rx="3" fill="#C9CED8" stroke="#120E1A" stroke-width="2.5"/>
+  <circle cx="152" cy="442" r="5" fill="#C9CED8"/>
+  <circle cx="360" cy="442" r="5" fill="#C9CED8"/>
+  <!-- deri parlaması + neon kenarlar -->
+  <path d="M 72 470 Q 110 434 172 418" fill="none" stroke="#4C5163" stroke-width="6" stroke-linecap="round"/>
+  <path d="M 440 470 Q 402 434 340 418" fill="none" stroke="#4C5163" stroke-width="6" stroke-linecap="round"/>
+  <path d="M 34 512 Q 50 452 140 424" fill="none" stroke="#FF4FB8" stroke-width="5" stroke-linecap="round"/>
+  <path d="M 478 512 Q 462 452 372 424" fill="none" stroke="#5CF2FF" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- BOYUN -->
+  <path d="M 216 320 L 216 424 Q 256 446 296 424 L 296 320 Z" fill="url(#neck)" stroke="#120E1A" stroke-width="6"/>
+  </g>
+
+  <!-- KULAKLAR -->
+  <g stroke="#120E1A" stroke-width="6">
+    <ellipse cx="172" cy="252" rx="21" ry="31" fill="#D69A74"/>
+    <ellipse cx="340" cy="252" rx="21" ry="31" fill="#C98C68"/>
+  </g>
+  <path d="M 168 236 Q 160 252 170 268" fill="none" stroke="#9E6A4E" stroke-width="4" stroke-linecap="round"/>
+  <path d="M 344 236 Q 352 252 342 268" fill="none" stroke="#9E6A4E" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="168" cy="276" r="4.5" fill="#E8EDF5" stroke="#120E1A" stroke-width="2"/>
+
+  <!-- YÜZ -->
+  <path d="M 170 205 C 168 258, 176 296, 196 326 C 214 352, 236 366, 256 366 C 276 366, 298 352, 316 326 C 336 296, 344 258, 342 205 C 338 134, 302 106, 256 106 C 210 106, 174 134, 170 205 Z"
+        fill="#E2A880" stroke="#120E1A" stroke-width="6"/>
+  <!-- gölge (sağ yanak, elmacık altı) -->
+  <path d="M 302 124 C 328 152, 340 198, 338 252 C 334 296, 318 330, 294 350 C 312 318, 322 284, 322 242 C 322 196, 316 158, 302 124 Z" fill="#C4876A" opacity="0.75"/>
+
+  <!-- SAKAL: çene hattı boyunca kısa kesim, ayrı bıyık -->
+  <path d="M 172 230 C 171 276, 180 304, 198 330 C 216 356, 238 374, 256 374 C 274 374, 296 356, 314 330 C 332 304, 341 276, 340 230 L 328 232 C 328 270, 322 294, 306 314 C 296 326, 288 334, 280 338 C 270 334, 262 333, 256 333 C 250 333, 242 334, 232 338 C 224 334, 216 326, 206 314 C 190 294, 184 270, 184 232 Z"
+        fill="#24222A" stroke="#120E1A" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M 228 303 C 236 293, 250 292, 256 297 C 262 292, 276 293, 284 303 C 280 309, 270 310, 256 305 C 242 310, 232 309, 228 303 Z"
+        fill="#24222A" stroke="#120E1A" stroke-width="4" stroke-linejoin="round"/>
+  <g fill="none" stroke="#3B3946" stroke-width="3" stroke-linecap="round">
+    <path d="M 196 312 q 6 12 14 20"/>
+    <path d="M 316 312 q -6 12 -14 20"/>
+    <path d="M 246 352 q 10 6 20 0"/>
+  </g>
+  <!-- ağız: yan gülüş -->
+  <path d="M 240 323 Q 258 329 280 317" fill="none" stroke="#120E1A" stroke-width="5" stroke-linecap="round"/>
+  <path d="M 280 316 q 5 -1 7 -6" fill="none" stroke="#120E1A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M 248 329 Q 260 334 272 328" fill="none" stroke="#B06A55" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- BURUN -->
+  <path d="M 262 232 C 266 254, 272 270, 278 282 C 270 292, 252 294, 240 286" fill="none" stroke="#99664B" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="250" cy="285" r="3" fill="#7E5038"/>
+  <circle cx="268" cy="285" r="3" fill="#7E5038"/>
+  <path d="M 252 236 q 2 20 6 32" fill="none" stroke="#F2C7A4" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- GÖZLER: yarı kapalı, kendinden emin -->
+  <g>
+    <path d="M 196 246 Q 218 230 242 244 Q 220 256 196 246 Z" fill="#FFFFFF"/>
+    <path d="M 270 244 Q 294 230 316 246 Q 292 256 270 244 Z" fill="#FFFFFF"/>
+    <circle cx="221" cy="245" r="9.5" fill="#4A2C1C"/>
+    <circle cx="293" cy="245" r="9.5" fill="#4A2C1C"/>
+    <circle cx="221" cy="245" r="4.5" fill="#110A07"/>
+    <circle cx="293" cy="245" r="4.5" fill="#110A07"/>
+    <circle cx="225" cy="241" r="3" fill="#FFFFFF"/>
+    <circle cx="297" cy="241" r="3" fill="#FFFFFF"/>
+    <!-- ağır üst kapak -->
+    <path d="M 194 246 Q 218 226 244 242 L 242 238 Q 218 224 196 240 Z" fill="#120E1A"/>
+    <path d="M 268 242 Q 294 226 318 246 L 316 240 Q 294 224 270 238 Z" fill="#120E1A"/>
+    <path d="M 194 246 Q 218 228 244 242" fill="none" stroke="#120E1A" stroke-width="6" stroke-linecap="round"/>
+    <path d="M 268 242 Q 294 228 318 246" fill="none" stroke="#120E1A" stroke-width="6" stroke-linecap="round"/>
+    <path d="M 204 254 Q 220 260 236 254" fill="none" stroke="#B57B5D" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 276 254 Q 292 260 308 254" fill="none" stroke="#B57B5D" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <!-- KAŞLAR: sağ kaş hafif kalkık -->
+  <path d="M 190 224 Q 214 204 244 214 L 243 224 Q 216 216 194 232 Z" fill="#17161D"/>
+  <path d="M 268 212 Q 296 194 324 212 L 322 222 Q 296 206 270 222 Z" fill="#17161D"/>
+
+  <!-- SAÇ: kenarlar kısa (fade), üstte yana taranmış perçem -->
+  <path d="M 174 226 C 170 184, 176 152, 194 130 L 210 148 C 194 168, 188 196, 188 228 Z" fill="#33323C"/>
+  <path d="M 338 226 C 342 184, 336 152, 318 130 L 302 148 C 318 168, 324 196, 324 228 Z" fill="#33323C"/>
+  <path d="M 178 170 C 170 112, 212 70, 266 64 C 322 58, 368 88, 370 132 C 372 150, 360 160, 348 158 C 344 174, 338 186, 332 196 C 328 172, 318 154, 302 144 C 272 156, 232 156, 202 148 C 192 156, 184 164, 178 170 Z"
+        fill="url(#hair)" stroke="#120E1A" stroke-width="6" stroke-linejoin="round"/>
+  <g fill="none" stroke="#4A5878" stroke-width="5" stroke-linecap="round">
+    <path d="M 206 104 Q 262 78 334 98"/>
+    <path d="M 216 126 Q 270 108 348 128"/>
+    <path d="M 232 142 Q 276 132 318 140"/>
+  </g>
+
+  <!-- NEON KENAR IŞIKLARI -->
+  <g fill="none" stroke-linecap="round" stroke-width="5">
+    <path d="M 173 208 C 172 252, 178 288, 194 316" stroke="#FF4FB8"/>
+    <path d="M 182 166 C 178 128, 206 86, 250 74" stroke="#FF4FB8"/>
+    <path d="M 339 208 C 340 252, 334 288, 318 316" stroke="#5CF2FF"/>
+    <path d="M 365 134 C 364 148, 356 154, 348 154" stroke="#5CF2FF"/>
+    <path d="M 357 246 C 360 258, 356 270, 350 278" stroke="#5CF2FF"/>
+  </g>
+</svg>

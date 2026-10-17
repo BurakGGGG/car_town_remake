@@ -141,7 +141,17 @@ func _ensure_settings() -> void:
 
 
 ## ARKADAŞLIK (SocialManager, "social"): oturumu CloudSaveManager'dan alır, kayıttan sonra açık garajı yayınlar.
+## PROFİL (PlayerProfile, "player_profile"): fotoğraf / çerçeve / bayrak; kaydı SaveManager'da, ondan ÖNCE hazır.
 func _ensure_social() -> void:
+	if get_tree().get_first_node_in_group("player_profile") == null:
+		var profile: PlayerProfile = PlayerProfile.new()
+		profile.name = "PlayerProfile"
+		add_child(profile)
+	# TELEFON BİLDİRİMİ (PushService, "push"): cihaz jetonu (oyuncu ARKADAŞLAR'dan açarsa)
+	if get_tree().get_first_node_in_group("push") == null:
+		var push: PushService = PushService.new()
+		push.name = "PushService"
+		add_child(push)
 	if get_tree().get_first_node_in_group("social") == null:
 		var social: SocialManager = SocialManager.new()
 		social.name = "SocialManager"

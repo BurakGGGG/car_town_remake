@@ -248,9 +248,14 @@ func open() -> void:
 	_player_distance = DragTrack.START_Z
 	_rival_distance = DragTrack.START_Z
 	_player = DragRaceSim.Runner.new()
-	_player.setup_spec(PerformanceMods.spec_for(_player_id), _rng)   # modifiyeli künye (rakip fabrika)
+	_player.setup_spec(PerformanceMods.spec_for(_player_id), _rng)   # modifiyeli künye
 	_rival = DragRaceSim.Runner.new()
-	_rival.setup(_rival_id, _rng)
+	# Rakip fabrika künyesiyle; ARKADAŞIN aracıysa onun modifiyeleriyle (RaceManager.rival_build)
+	var rival_build: Dictionary = race.rival_build() if race and race.rival_id() == _rival_id else {}
+	if rival_build.is_empty():
+		_rival.setup(_rival_id, _rng)
+	else:
+		_rival.setup_spec(PerformanceMods.spec_with(_rival_id, rival_build), _rng)
 	# Rakibin becerisi SINIFINDAN gelir (D çok hata yapar, S neredeyse kusursuz) ve her yarışta bir GÜN
 	# FORMU çekilir: güç, beceri, ara sıra kötü gün (kalkışı kaçırır, bir vitesi ıskalar) ya da iyi gün.
 	# Hile yok — aynı Runner, aynı fizik; başsız run_rival ile aynı plan (DragRaceSim.Form).
@@ -684,7 +689,10 @@ func _spawn_car(vehicle_id: StringName, lane_x: float, _rival: bool) -> Node3D:
 	# Görünüm (boya) paylaşılan CarAppearance'tan; pistte gölge yok (mobil maliyet)
 	var rig: CarRig = CarRig.for_node(car)
 	if rig:
-		rig.apply(CarAppearance.get_for(path))
+		# Rakip YOLDAN GELEN aracın görünümüyle (arkadaşın boyası / NPC'nin rengi); paylaşılan görünüm oyuncunun
+		# boyasıdır — oyuncu aynı modeli boyadıysa rakip de o renkte çıkıyordu.
+		var look: CarAppearance = _race.rival_appearance() if _rival and _race and _race.rival_id() == vehicle_id else null
+		rig.apply(look if look else CarAppearance.get_for(path))
 		rig.set_lod_bias(CarRig.LOD_BIAS_WORLD)
 		rig.optimize(false)   # gövde parçaları birleşir; tekerler yarışta döndüğü için ayrı
 	if _rival:

@@ -9,18 +9,24 @@ extends MeshInstance3D
 ## show_text("+150 ₺", GLYPH_COIN) (para hazır), show_glyph(GLYPH_FLAG) (yalnızca damalı bayrak —
 ## drag yarışı daveti), hide_bubble(). Plaka genişliği metne göre büyür.
 
-enum { GLYPH_WRENCH = 0, GLYPH_COIN = 1, GLYPH_FLAG = 2 }
+enum { GLYPH_WRENCH = 0, GLYPH_COIN = 1, GLYPH_FLAG = 2, GLYPH_AVATAR = 3 }
 
 const SHADER: Shader = preload("res://vfx/customer_bubble.gdshader")
 const HEIGHT: float = 0.17                     # plaka yüksekliği (dünya birimi)
 const WIDTH_ICON: float = 0.22                 # yalnızca işaret
 const WIDTH_TEXT: float = 0.38                 # işaret + kısa yazı ("TAMİR") için alt sınır
 const WIDTH_MAX: float = 0.88                  # uzun arıza adlarında üst sınır ("KAPORTA HASARI")
+const WIDTH_AVATAR: float = 0.33               # arkadaş rakip: fotoğraf + damalı bayrak
+## Balondaki fotoğrafın dokusu (kare piksel): uzaktan küçük görünür, 256 px'lik resim örneklenirken titrerdi.
+const AVATAR_PIXELS: int = 96
 const PAD: float = 0.05                        # yazının sağındaki boşluk
 const ICON_SLOT: float = 0.18                  # sol kenardaki işaret alanı
 const TEXT_PIXEL: float = 0.0013
 const CHAR_WIDTH: float = 0.045                # büyük harf ortalama genişliği (dünya birimi, TEXT_PIXEL'de)
 const INK: Color = Color("2F3236")             # HudPalette.INK
+
+## Fotoğraf dokusu önbelleği: kaynak doku RID + kırpım → küçültülmüş doku (aynı arkadaş tekrar gelince yeniden işlenmez).
+static var _avatar_cache: Dictionary = {}
 
 var _quad: QuadMesh
 var _material: ShaderMaterial
@@ -66,6 +72,49 @@ func show_glyph(glyph: int) -> void:
 ## İşaret + kısa yazı ("TAMİR", "+150 ₺").
 func show_text(text: String, glyph: int) -> void:
 	_apply(glyph, text)
+
+
+## Arkadaş rakip: yuvarlak fotoğraf + damalı bayrak (yazısız). `illustrated`: çizim (hazır avatar / Emre / Elif) →
+## yüze yakın kırpılır (AvatarView.TIGHT_REGION ile aynı).
+func show_avatar(texture: Texture2D, illustrated: bool) -> void:
+	var small: Texture2D = _avatar_texture(texture, illustrated)
+	if small == null:
+		show_glyph(GLYPH_FLAG)
+		return
+	_material.set_shader_parameter(&"avatar_tex", small)
+	_label.visible = false
+	_quad.size = Vector2(WIDTH_AVATAR, HEIGHT)
+	_material.set_shader_parameter(&"aspect", WIDTH_AVATAR / HEIGHT)
+	_material.set_shader_parameter(&"glyph", GLYPH_AVATAR)
+	_material.set_shader_parameter(&"glyph_offset", 0.0)
+	visible = true
+
+
+static func _avatar_texture(texture: Texture2D, illustrated: bool) -> Texture2D:
+	if texture == null:
+		return null
+	# Dosyadan gelen doku (hazır avatar / Emre / Elif) yoluyla anılır: kimse tutmazsa bellekten düşüp yeniden yüklenince
+	# kimliği değişir. İndirilen fotoğrafın yolu yoktur, onun dokusu SocialManager önbelleğinde yaşar.
+	var key: String = "%s|%s" % [texture.resource_path if not texture.resource_path.is_empty()
+		else str(texture.get_rid().get_id()), illustrated]
+	if _avatar_cache.has(key):
+		return _avatar_cache[key]
+	var image: Image = texture.get_image()
+	if image == null or image.is_empty():
+		return null
+	image = image.duplicate() as Image
+	if image.is_compressed():
+		image.decompress()
+	if illustrated:
+		var r: Rect2 = AvatarView.TIGHT_REGION
+		var size: Vector2 = Vector2(image.get_size())
+		image = image.get_region(Rect2i(Vector2i((r.position * size).round()), Vector2i((r.size * size).round())))
+	image.resize(AVATAR_PIXELS, AVATAR_PIXELS, Image.INTERPOLATE_LANCZOS)
+	if _avatar_cache.size() > 24:
+		_avatar_cache.clear()
+	var out: ImageTexture = ImageTexture.create_from_image(image)
+	_avatar_cache[key] = out
+	return out
 
 
 func hide_bubble() -> void:

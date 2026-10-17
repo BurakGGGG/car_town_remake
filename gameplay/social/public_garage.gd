@@ -6,6 +6,8 @@ extends RefCounted
 ## İçinde OLANLAR: sürüm, oyuncu seviyesi, garaj seviyeleri, tamir alanları (sayı + yerleşim), dekor
 ## (eşyalar, zemin karoları, duvarlar), araçlar (sahip olunanlar + boyalar; dekor araçları bunlara bakar).
 ## OLMAYANLAR: para, XP, gem, kasalar, görevler, reklam sayaçları, ustalık. Bunlar başkasına gösterilmez.
+## YARIŞ (2026-10-16): araç başına takılı performans kademeleri ("performance.builds") — arkadaşın aracı yarışa
+## onun modifiyeleriyle gelir (RaceManager). Takma işleri ve gösterge tabanı taşınmaz.
 ##
 ## Biçim kayıt sözlüğüyle aynıdır (SaveManager.validate / _apply olduğu gibi okur); ikinci bir model yok.
 
@@ -30,7 +32,44 @@ static func from_snapshot(snapshot: Dictionary) -> Dictionary:
 		if vehicles.has(key):
 			out_vehicles[key] = vehicles[key]
 	out["vehicles"] = out_vehicles
+	var performance: Dictionary = snapshot.get("performance", {}) if snapshot.get("performance") is Dictionary else {}
+	if performance.get("builds") is Dictionary and not (performance["builds"] as Dictionary).is_empty():
+		out["performance"] = {"builds": performance["builds"]}
 	return out
+
+
+## Arkadaşın garajından yarış verisi: {cars: Array[String] (tekil), paint: {id: hex}, builds: {id: {kategori: kademe}}}.
+## Biçimsiz değerler atlanır (sunucudan gelen veri).
+static func race_data(garage: Dictionary) -> Dictionary:
+	var vehicles: Dictionary = garage.get("vehicles", {}) if garage.get("vehicles") is Dictionary else {}
+	var cars: Array[String] = []
+	var owned: Variant = vehicles.get("owned", [])
+	if owned is Array:
+		for raw: Variant in owned:
+			var id: String = SaveSafe.s(raw)
+			if not id.is_empty() and not cars.has(id) and not CarCatalog.get_entry(StringName(id)).is_empty():
+				cars.append(id)
+	var paint: Dictionary = {}
+	var raw_paint: Variant = vehicles.get("paint", {})
+	if raw_paint is Dictionary:
+		for key: Variant in raw_paint:
+			var hex: String = SaveSafe.s((raw_paint as Dictionary)[key])
+			if cars.has(SaveSafe.s(key)) and Color.html_is_valid(hex):
+				paint[SaveSafe.s(key)] = hex
+	var builds: Dictionary = {}
+	var performance: Dictionary = garage.get("performance", {}) if garage.get("performance") is Dictionary else {}
+	var raw_builds: Variant = performance.get("builds", {})
+	if raw_builds is Dictionary:
+		for key: Variant in raw_builds:
+			var id: String = SaveSafe.s(key)
+			if cars.has(id) and (raw_builds as Dictionary)[key] is Dictionary:
+				var stages: Dictionary = PerformanceMods.normalized((raw_builds as Dictionary)[key])
+				var clean: Dictionary = {}
+				for category: StringName in stages:
+					clean[String(category)] = int(stages[category])
+				if not clean.is_empty():
+					builds[id] = clean
+	return {"cars": cars, "paint": paint, "builds": builds}
 
 
 ## Sıralı anahtarlı JSON (değişti mi karşılaştırması için tek biçim).

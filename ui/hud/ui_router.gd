@@ -11,7 +11,11 @@ extends Node
 ##           Aynı anda yalnızca bir PLACE açık olur; yenisi açılınca eskisi kapanır.
 ##   MODAL — bir yerin ÜSTÜNE açılan pano (görevler, ustalık, garaj değeri, profil, hesap).
 ##           Üstünde durduğu PLACE kapanmaz: kapatılınca oyuncu geldiği yere döner.
-## Yığın en fazla 2 derindir (PLACE + MODAL): "panel üstüne panel" çöplüğü oluşamaz.
+##   SUB   — bir panonun içinden açılan ALT PANO (arkadaş kartı, profil düzenleme, fotoğraf kırpma, kamera).
+##           Altındaki pano kapanmaz; GERİ / KAPAT yalnızca alt panoyu kapatır, oyuncu panoya döner. Yeni bir
+##           MODAL ya da PLACE açılınca alt panolar da kapanır. (2026-10-16: eskiden pano üstüne pano açılamadığı
+##           için ARKADAŞLAR → kart açılınca liste kapanıyordu.)
+## Yığın PLACE + MODAL + (zincirleme açılan) SUB'lardan oluşur; aynı türden iki MODAL / PLACE üst üste binmez.
 ##
 ## Ekran sözleşmesi: open() / close() metotları ve closed sinyali. Ekran kendi KAPAT plakasıyla
 ## kapandığında closed sinyali yığını temizler; ESC ise buradan yönetilir (ekranlar artık
@@ -20,7 +24,7 @@ extends Node
 ## Yığının tepesi değişti. top = &"" ise hiçbir ekran açık değildir.
 signal stack_changed(top: StringName, place_open: bool)
 
-enum Kind { PLACE, MODAL }
+enum Kind { PLACE, MODAL, SUB }
 
 ## Kök garajda GERİ'ye ikinci basışın geçerli olduğu süre (ms).
 const EXIT_CONFIRM_MS: int = 2000
@@ -51,7 +55,14 @@ func open(id: StringName) -> void:
 	var kind: Kind = _screens[id]["kind"]
 	if kind == Kind.PLACE:
 		_close_all_silent()
-	elif not _stack.is_empty() and _kind_of(_stack.back()) == Kind.MODAL:
+	elif kind == Kind.MODAL:
+		# Açık alt panolar ve MODAL kapanır (PLACE kalır)
+		while not _stack.is_empty() and _kind_of(_stack.back()) != Kind.PLACE:
+			_close_silent(_stack.pop_back())
+	elif _stack.has(id):
+		# Zaten yığında olan alt pano (ör. kart → kart): üstündekilerle birlikte kapanır, yeniden açılır
+		while not _stack.is_empty() and _stack.back() != id:
+			_close_silent(_stack.pop_back())
 		_close_silent(_stack.pop_back())
 	_stack.append(id)
 	(_screens[id]["node"] as Control).call(&"open")
@@ -140,6 +151,9 @@ func _unhandled_input(event: InputEvent) -> void:
 func _on_screen_closed(id: StringName) -> void:
 	if not _stack.has(id):
 		return
+	# Alt panoları olan pano kapandı: üstündeki alt panolar da kapanır (yığında asılı kalmasın)
+	while not _stack.is_empty() and _stack.back() != id:
+		_close_silent(_stack.pop_back())
 	_stack.erase(id)
 	_emit()
 

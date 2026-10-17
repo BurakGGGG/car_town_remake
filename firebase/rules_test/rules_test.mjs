@@ -125,6 +125,83 @@ await check("hesap silme: garaj silinince", assertSucceeds(deleteDoc(doc(alice, 
 await check("  ...bugünün hediyesi de silinir", assertSucceeds(deleteDoc(doc(alice, "users/alice/gifts/p_bob_" + day))));
 await check("garajı olmayana hediye gönderilemez (istek yok)", assertFails(setDoc(doc(bob, "users/alice/gifts/p_bob_" + day), gift())));
 
+console.log("== profil alanları (garages) ==");
+const prof = (over = {}) => garage({ av: "img:0a1b2c3d", frame: "neon", flag: "TR", title: "Gece Garajı", car: "lambo_huracan",
+  stats: { wins: 3, races: 5, cars: 12, best: 11234, best_car: "vw_golf_7" }, ...over });
+await check("profilli garaj yazılır", assertSucceeds(setDoc(doc(alice, "garages/g_alice"), prof())));
+await check("hazır avatar (p07) kabul", assertSucceeds(setDoc(doc(alice, "garages/g_alice"), prof({ av: "p07" }))));
+await check("boş avatar / bayrak / ad kabul", assertSucceeds(setDoc(doc(alice, "garages/g_alice"), prof({ av: "", flag: "", title: "" }))));
+await check("avatar URL'si reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), prof({ av: "https://x.y/z.jpg" }))));
+await check("büyük harfli hash reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), prof({ av: "img:0A1B2C3D" }))));
+await check("üç harfli bayrak reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), prof({ flag: "TUR" }))));
+await check("uzun garaj adı reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), prof({ title: "A".repeat(21) }))));
+await check("garaj adında < reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), prof({ title: "<b>" }))));
+await check("istatistiğe ek alan reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), prof({ stats: { wins: 1, races: 1, cars: 1, best: 1, best_car: "", gems: 9 } }))));
+await check("sayı yerine metin reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), prof({ stats: { wins: "1", races: 1, cars: 1, best: 1, best_car: "" } }))));
+
+console.log("== avatars ==");
+const av = (over = {}) => ({ img: "QUJD".repeat(100), hash: "0a1b2c3d", at: 1, ...over });
+await check("sahibi a_uid yazar", assertSucceeds(setDoc(doc(alice, "avatars/a_alice"), av())));
+await check("çıplak uid kimliği reddedilir", assertFails(setDoc(doc(alice, "avatars/alice"), av())));
+await check("başkasının avatarına yazılamaz", assertFails(setDoc(doc(eve, "avatars/a_alice"), av())));
+await check("giriş yapmış herkes okur", assertSucceeds(getDoc(doc(eve, "avatars/a_alice"))));
+await check("girişsiz okunamaz", assertFails(getDoc(doc(anon, "avatars/a_alice"))));
+await check("40000'den büyük resim reddedilir", assertFails(setDoc(doc(alice, "avatars/a_alice"), av({ img: "x".repeat(40001) }))));
+await check("boş resim reddedilir", assertFails(setDoc(doc(alice, "avatars/a_alice"), av({ img: "" }))));
+await check("ek alan (url) reddedilir", assertFails(setDoc(doc(alice, "avatars/a_alice"), av({ url: "http://x" }))));
+await check("başkası silemez", assertFails(deleteDoc(doc(eve, "avatars/a_alice"))));
+await check("sahibi siler (hesap silme)", assertSucceeds(deleteDoc(doc(alice, "avatars/a_alice"))));
+
+console.log("== reports ==");
+const rep = (over = {}) => ({ target: "alice", reason: "photo", av: "img:0a1b2c3d", name: "Usta Ali", at: 1, ...over });
+await check("eve alice'i şikâyet eder", assertSucceeds(setDoc(doc(eve, "reports/x_eve_alice"), rep())));
+await check("aynı şikâyet yeniden yazılır (tek belge)", assertSucceeds(setDoc(doc(eve, "reports/x_eve_alice"), rep({ img: "QUJD", at: 2 }))));
+await check("başkası adına şikâyet edilemez", assertFails(setDoc(doc(eve, "reports/x_bob_alice"), rep())));
+await check("kimlik hedefle uyuşmazsa reddedilir", assertFails(setDoc(doc(eve, "reports/x_eve_bob"), rep())));
+await check("kendini şikâyet edemez", assertFails(setDoc(doc(alice, "reports/x_alice_alice"), rep())));
+await check("bilinmeyen neden reddedilir", assertFails(setDoc(doc(eve, "reports/x_eve_alice"), rep({ reason: "spam" }))));
+await check("şikâyet okunamaz (yalnız konsol)", assertFails(getDoc(doc(eve, "reports/x_eve_alice"))));
+await check("hedef de okuyamaz", assertFails(getDoc(doc(alice, "reports/x_eve_alice"))));
+await check("şikâyet silinemez", assertFails(deleteDoc(doc(eve, "reports/x_eve_alice"))));
+await check("girişsiz şikâyet edilemez", assertFails(setDoc(doc(anon, "reports/x_anon_alice"), rep())));
+
+console.log("== yarış haberi (races) ==");
+// alice ↔ bob arkadaş (yukarıda yeniden kuruldu); eve arkadaş değil
+const ev = (over = {}) => ({ name: "Bob Usta", car: "seat_leon", paint: "1e90ff", build: { motor: 2, turbo: 1 },
+  their_car: "vw_golf_7", won: true, revenge: false, mw: 3, ml: 1, at: 1, ...over });
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), "users/alice/friends/f_bob"), { since: 3 });
+  await setDoc(doc(ctx.firestore(), "users/bob/friends/f_alice"), { since: 3 });
+});
+await check("arkadaş bob alice'e haber yazar", assertSucceeds(setDoc(doc(bob, "users/alice/races/e_bob"), ev())));
+await check("bob haberin üzerine yazar (tek belge)", assertSucceeds(setDoc(doc(bob, "users/alice/races/e_bob"), ev({ won: false, mw: 3, ml: 2, at: 2 }))));
+await check("arkadaş olmayan eve yazamaz", assertFails(setDoc(doc(eve, "users/alice/races/e_eve"), ev({ name: "Eve Usta" }))));
+await check("başkası adına yazılamaz", assertFails(setDoc(doc(bob, "users/alice/races/e_carol"), ev())));
+await check("kendine haber yazılamaz", assertFails(setDoc(doc(alice, "users/alice/races/e_alice"), ev({ name: "Usta Ali" }))));
+await check("kademe 6 reddedilir", assertFails(setDoc(doc(bob, "users/alice/races/e_bob"), ev({ build: { motor: 6 } }))));
+await check("bilinmeyen modifiye reddedilir", assertFails(setDoc(doc(bob, "users/alice/races/e_bob"), ev({ build: { nitro: 1 } }))));
+await check("eksi skor reddedilir", assertFails(setDoc(doc(bob, "users/alice/races/e_bob"), ev({ mw: -1 }))));
+await check("biçimsiz araç reddedilir", assertFails(setDoc(doc(bob, "users/alice/races/e_bob"), ev({ car: "../x" }))));
+await check("ek alan (money) reddedilir", assertFails(setDoc(doc(bob, "users/alice/races/e_bob"), ev({ money: 9 }))));
+await check("alice haberlerini listeler", assertSucceeds(getDocs(collection(alice, "users/alice/races"))));
+await check("bob alice'in haberlerini okuyamaz", assertFails(getDocs(collection(bob, "users/alice/races"))));
+await check("eve silemez", assertFails(deleteDoc(doc(eve, "users/alice/races/e_bob"))));
+await check("gönderen kendi haberini siler", assertSucceeds(deleteDoc(doc(bob, "users/alice/races/e_bob"))));
+await setDoc(doc(bob, "users/alice/races/e_bob"), ev());
+await check("alice haberi siler (İNTİKAM / tamam)", assertSucceeds(deleteDoc(doc(alice, "users/alice/races/e_bob"))));
+
+console.log("== bildirim jetonu (push) ==");
+const tok = (over = {}) => ({ token: "f".repeat(150), lang: "tr", at: 1, ...over });
+await check("sahibi jetonunu yazar", assertSucceeds(setDoc(doc(bob, "push/p_bob"), tok())));
+await check("başkasının jetonuna yazılamaz", assertFails(setDoc(doc(eve, "push/p_bob"), tok())));
+await check("başkasının jetonu okunamaz", assertFails(getDoc(doc(eve, "push/p_bob"))));
+await check("bilinmeyen dil reddedilir", assertFails(setDoc(doc(bob, "push/p_bob"), tok({ lang: "de" }))));
+await check("kısa jeton reddedilir", assertFails(setDoc(doc(bob, "push/p_bob"), tok({ token: "abc" }))));
+await check("ek alan reddedilir", assertFails(setDoc(doc(bob, "push/p_bob"), tok({ uid: "bob" }))));
+await check("sahibi siler", assertSucceeds(deleteDoc(doc(bob, "push/p_bob"))));
+await check("bildirim sınırı (push_log) istemciye kapalı: yazılamaz", assertFails(setDoc(doc(bob, "push_log/l_alice_bob"), { at: 0 })));
+await check("bildirim sınırı okunamaz", assertFails(getDoc(doc(alice, "push_log/l_alice_bob"))));
+
 console.log("== başka yollar ==");
 await check("bilinmeyen koleksiyon kapalı", assertFails(setDoc(doc(alice, "other/x"), { a: 1 })));
 await check("users/{uid} kök belgesi kapalı", assertFails(setDoc(doc(alice, "users/alice"), { a: 1 })));

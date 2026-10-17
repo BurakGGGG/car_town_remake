@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- HAZIR AVATAR 02: genç, ters şapka, kapüşonlu (tools/avatars/make_presets.py üretir, elle düzenleme) -->
+  <defs><radialGradient id="bg" cx="256" cy="220" r="330" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#CDEBFF"/><stop offset="1" stop-color="#7CC4F2"/></radialGradient><linearGradient id="suit" x1="0" y1="396" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9AA3B5"/><stop offset="1" stop-color="#7A8296"/></linearGradient><linearGradient id="neck" x1="0" y1="330" x2="0" y2="420" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#D49B78"/><stop offset="1" stop-color="#D49B78" stop-opacity="0.75"/></linearGradient><clipPath id="face"><path d="M 168 214 C 166 266, 176 302, 196 330 C 214 354, 236 366, 256 366 C 276 366, 298 354, 316 330 C 336 302, 346 266, 344 214 C 340 140, 302 112, 256 112 C 210 112, 172 140, 168 214 Z"/></clipPath><clipPath id="mouth"><path d="M 224 310 Q 256 352 288 310 Q 256 320 224 310 Z"/></clipPath></defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g fill="#FFFFFF" opacity="0.35">
+  <circle cx="0" cy="10" r="9" fill="#FFFFFF"/>
+  <circle cx="64" cy="10" r="9" fill="#FFFFFF"/>
+  <circle cx="128" cy="10" r="9" fill="#FFFFFF"/>
+  <circle cx="192" cy="10" r="9" fill="#FFFFFF"/>
+  <circle cx="256" cy="10" r="9" fill="#FFFFFF"/>
+  <circle cx="320" cy="10" r="9" fill="#FFFFFF"/>
+  <circle cx="384" cy="10" r="9" fill="#FFFFFF"/>
+  <circle cx="448" cy="10" r="9" fill="#FFFFFF"/>
+  <circle cx="512" cy="10" r="9" fill="#FFFFFF"/>
+  <circle cx="32" cy="70" r="9" fill="#FFFFFF"/>
+  <circle cx="96" cy="70" r="9" fill="#FFFFFF"/>
+  <circle cx="160" cy="70" r="9" fill="#FFFFFF"/>
+  <circle cx="224" cy="70" r="9" fill="#FFFFFF"/>
+  <circle cx="288" cy="70" r="9" fill="#FFFFFF"/>
+  <circle cx="352" cy="70" r="9" fill="#FFFFFF"/>
+  <circle cx="416" cy="70" r="9" fill="#FFFFFF"/>
+  <circle cx="480" cy="70" r="9" fill="#FFFFFF"/>
+  <circle cx="544" cy="70" r="9" fill="#FFFFFF"/>
+  <circle cx="0" cy="130" r="9" fill="#FFFFFF"/>
+  <circle cx="64" cy="130" r="9" fill="#FFFFFF"/>
+  <circle cx="128" cy="130" r="9" fill="#FFFFFF"/>
+  <circle cx="192" cy="130" r="9" fill="#FFFFFF"/>
+  <circle cx="256" cy="130" r="9" fill="#FFFFFF"/>
+  <circle cx="320" cy="130" r="9" fill="#FFFFFF"/>
+  <circle cx="384" cy="130" r="9" fill="#FFFFFF"/>
+  <circle cx="448" cy="130" r="9" fill="#FFFFFF"/>
+  <circle cx="512" cy="130" r="9" fill="#FFFFFF"/>
+  <circle cx="32" cy="190" r="9" fill="#FFFFFF"/>
+  <circle cx="96" cy="190" r="9" fill="#FFFFFF"/>
+  <circle cx="160" cy="190" r="9" fill="#FFFFFF"/>
+  <circle cx="224" cy="190" r="9" fill="#FFFFFF"/>
+  <circle cx="288" cy="190" r="9" fill="#FFFFFF"/>
+  <circle cx="352" cy="190" r="9" fill="#FFFFFF"/>
+  <circle cx="416" cy="190" r="9" fill="#FFFFFF"/>
+  <circle cx="480" cy="190" r="9" fill="#FFFFFF"/>
+  <circle cx="544" cy="190" r="9" fill="#FFFFFF"/>
+  <circle cx="0" cy="250" r="9" fill="#FFFFFF"/>
+  <circle cx="64" cy="250" r="9" fill="#FFFFFF"/>
+  <circle cx="128" cy="250" r="9" fill="#FFFFFF"/>
+  <circle cx="192" cy="250" r="9" fill="#FFFFFF"/>
+  <circle cx="256" cy="250" r="9" fill="#FFFFFF"/>
+  <circle cx="320" cy="250" r="9" fill="#FFFFFF"/>
+  <circle cx="384" cy="250" r="9" fill="#FFFFFF"/>
+  <circle cx="448" cy="250" r="9" fill="#FFFFFF"/>
+  <circle cx="512" cy="250" r="9" fill="#FFFFFF"/>
+  <circle cx="32" cy="310" r="9" fill="#FFFFFF"/>
+  <circle cx="96" cy="310" r="9" fill="#FFFFFF"/>
+  <circle cx="160" cy="310" r="9" fill="#FFFFFF"/>
+  <circle cx="224" cy="310" r="9" fill="#FFFFFF"/>
+  <circle cx="288" cy="310" r="9" fill="#FFFFFF"/>
+  <circle cx="352" cy="310" r="9" fill="#FFFFFF"/>
+  <circle cx="416" cy="310" r="9" fill="#FFFFFF"/>
+  <circle cx="480" cy="310" r="9" fill="#FFFFFF"/>
+  <circle cx="544" cy="310" r="9" fill="#FFFFFF"/>
+  <circle cx="0" cy="370" r="9" fill="#FFFFFF"/>
+  <circle cx="64" cy="370" r="9" fill="#FFFFFF"/>
+  <circle cx="128" cy="370" r="9" fill="#FFFFFF"/>
+  <circle cx="192" cy="370" r="9" fill="#FFFFFF"/>
+  <circle cx="256" cy="370" r="9" fill="#FFFFFF"/>
+  <circle cx="320" cy="370" r="9" fill="#FFFFFF"/>
+  <circle cx="384" cy="370" r="9" fill="#FFFFFF"/>
+  <circle cx="448" cy="370" r="9" fill="#FFFFFF"/>
+  <circle cx="512" cy="370" r="9" fill="#FFFFFF"/>
+  <circle cx="32" cy="430" r="9" fill="#FFFFFF"/>
+  <circle cx="96" cy="430" r="9" fill="#FFFFFF"/>
+  <circle cx="160" cy="430" r="9" fill="#FFFFFF"/>
+  <circle cx="224" cy="430" r="9" fill="#FFFFFF"/>
+  <circle cx="288" cy="430" r="9" fill="#FFFFFF"/>
+  <circle cx="352" cy="430" r="9" fill="#FFFFFF"/>
+  <circle cx="416" cy="430" r="9" fill="#FFFFFF"/>
+  <circle cx="480" cy="430" r="9" fill="#FFFFFF"/>
+  <circle cx="544" cy="430" r="9" fill="#FFFFFF"/>
+  <circle cx="0" cy="490" r="9" fill="#FFFFFF"/>
+  <circle cx="64" cy="490" r="9" fill="#FFFFFF"/>
+  <circle cx="128" cy="490" r="9" fill="#FFFFFF"/>
+  <circle cx="192" cy="490" r="9" fill="#FFFFFF"/>
+  <circle cx="256" cy="490" r="9" fill="#FFFFFF"/>
+  <circle cx="320" cy="490" r="9" fill="#FFFFFF"/>
+  <circle cx="384" cy="490" r="9" fill="#FFFFFF"/>
+  <circle cx="448" cy="490" r="9" fill="#FFFFFF"/>
+  <circle cx="512" cy="490" r="9" fill="#FFFFFF"/>
+  </g>
+  <path d="M 160 168 C 126 160, 100 172, 92 190 C 112 200, 140 196, 166 186 Z" fill="#C93A35" stroke="#33262F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(0,-12)">
+  <path d="M 36 530 C 44 446, 116 406, 212 394 L 300 394 C 396 406, 468 446, 476 530 Z" fill="url(#suit)" stroke="#33262F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 184 398 C 196 446, 316 446, 328 398 C 306 384, 206 384, 184 398 Z" fill="#7A8296" stroke="#33262F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 236 430 L 230 492" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 276 430 L 282 492" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="230" cy="494" r="5" fill="#FFFFFF"/>
+  <circle cx="282" cy="494" r="5" fill="#FFFFFF"/>
+  <path d="M 150 470 Q 256 500 362 470" fill="none" stroke="#7A8296" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 70 470 Q 104 432 168 414" fill="none" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="7" stroke-linecap="round"/>
+  <path d="M 220 320 L 220 410 Q 256 430 292 410 L 292 320 Z" fill="url(#neck)" stroke="#33262F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <ellipse cx="168" cy="266" rx="17" ry="23" fill="#EEBF9A" stroke="#33262F" stroke-width="5"/>
+  <ellipse cx="344" cy="266" rx="17" ry="23" fill="#D49B78" stroke="#33262F" stroke-width="5"/>
+  <path d="M 164 254 Q 158 266 166 278" fill="none" stroke="#D49B78" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 348 254 Q 354 266 346 278" fill="none" stroke="#33262F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+  <path d="M 168 214 C 166 266, 176 302, 196 330 C 214 354, 236 366, 256 366 C 276 366, 298 354, 316 330 C 336 302, 346 266, 344 214 C 340 140, 302 112, 256 112 C 210 112, 172 140, 168 214 Z" fill="#D49B78"/>
+  <g clip-path="url(#face)"><ellipse cx="236" cy="232" rx="110" ry="146" fill="#EEBF9A"/></g>
+  <path d="M 168 214 C 166 266, 176 302, 196 330 C 214 354, 236 366, 256 366 C 276 366, 298 354, 316 330 C 336 302, 346 266, 344 214 C 340 140, 302 112, 256 112 C 210 112, 172 140, 168 214 Z" fill="none" stroke="#33262F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 168 236 C 166 214, 170 200, 178 190 L 190 206 C 186 216, 184 228, 184 244 Z" fill="#3B2A20"/>
+  <path d="M 344 236 C 346 214 342 200 334 190 L 322 206 C 326 216 328 228 328 244 Z" fill="#3B2A20"/>
+  <ellipse cx="214" cy="252" rx="16" ry="13" fill="#FFFFFF"/>
+  <circle cx="216" cy="253" r="9.5" fill="#5A3A22"/>
+  <circle cx="216" cy="253" r="4.8" fill="#20120B"/>
+  <circle cx="220" cy="249" r="3" fill="#FFFFFF"/>
+  <path d="M 195 254 Q 214 226 233 254" fill="none" stroke="#33262F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="298" cy="252" rx="16" ry="13" fill="#FFFFFF"/>
+  <circle cx="300" cy="253" r="9.5" fill="#5A3A22"/>
+  <circle cx="300" cy="253" r="4.8" fill="#20120B"/>
+  <circle cx="304" cy="249" r="3" fill="#FFFFFF"/>
+  <path d="M 279 254 Q 298 226 317 254" fill="none" stroke="#33262F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 192 218 Q 214 206 236 214" fill="none" stroke="#4A2E1E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 276 210 Q 298 202 320 214" fill="none" stroke="#4A2E1E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 246 284 Q 256 294 266 284" fill="none" stroke="#D49B78" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 224 310 Q 256 352 288 310 Q 256 320 224 310 Z" fill="#8C2F3F"/>
+  <g clip-path="url(#mouth)"><ellipse cx="258" cy="336" rx="16" ry="9" fill="#FF7E95"/><path d="M 222 306 Q 256 318 290 306 L 290 316 Q 256 328 222 316 Z" fill="#FFFFFF"/></g>
+  <path d="M 224 310 Q 256 352 288 310 Q 256 320 224 310 Z" fill="none" stroke="#33262F" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 164 202 C 160 140, 204 104, 256 104 C 308 104, 352 140, 348 202 C 322 190, 292 186, 256 186 C 220 186, 190 190, 164 202 Z" fill="#E2483D" stroke="#33262F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 226 190 Q 256 160 286 190 Z" fill="#3B2A20" stroke="#33262F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 236 182 q 6 -10 14 -12" fill="none" stroke="#5A4232" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 200 132 Q 256 116 312 132" fill="none" stroke="#F07068" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="106" r="7" fill="#C93A35" stroke="#33262F" stroke-width="4"/>
+</svg>

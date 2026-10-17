@@ -8,15 +8,21 @@ extends Control
 ## Ziyarete gidilince kendi sahne dondurulur ve bu ekran AÇIK kalır: dönünce oyuncu listeye döner.
 ## ÖNE ÇIKAN ARKADAŞLAR (FeaturedFriends: oyunla gelen iki garaj) listenin başında HER durumda görünür:
 ## misafir, çevrimdışı ve PC sürümü dahil. Çıkarılamazlar.
-## ÇIKAR iki adımlıdır (ilk basış onay ister), yanlışlıkla arkadaş silinmez.
+## PROFİL (2026-10-16): her satırda kişinin avatarı (+ bayrak); avatara / ada dokununca ARKADAŞ KARTI açılır
+## (person_requested → HUD → FriendCardScreen). ÇIKAR, ŞİKAYET ET ve ENGELLE kartta; satırda GÖNDER / GARAJA GİT.
 
 signal opened
 signal closed
 ## Başka bir ekran istendi (giriş için &"account").
 signal screen_requested(id: StringName)
+## Bir kişinin kartı istendi (satırdaki avatar / ad).
+signal person_requested(uid: String)
+## YARIŞ HABERİ: İNTİKAM AL (gönderenin aracına karşı pist doğrudan açılır; HUD yürütür).
+signal revenge_requested(uid: String)
 
 const PANEL_WIDTH: float = 400.0
 const ROW_BUTTON_WIDTH: float = 112.0
+const AVATAR_SIZE: float = 46.0
 
 var _social: SocialManager
 var _body: Label
@@ -27,12 +33,16 @@ var _code_label: Label
 var _name_edit: LineEdit
 var _name_row: HBoxContainer
 var _add_row: HBoxContainer
+## YARIŞ BİLDİRİMLERİ (telefon bildirimi, PushService): açıklama + AÇ / KAPAT.
+var _push_row: HBoxContainer
+var _push_caption: Label
+var _push_button: PlateButton
+var _push: PushService
 var _code_edit: LineEdit
 var _lists: VBoxContainer
 var _primary: PlateButton
 var _notice_text: String = ""
 var _renaming: bool = false
-var _confirm_remove: String = ""
 
 
 func _ready() -> void:
@@ -48,7 +58,6 @@ func _ready() -> void:
 func open() -> void:
 	_notice_text = ""
 	_renaming = false
-	_confirm_remove = ""
 	if _social:
 		_social.retry()
 		_social.refresh()
@@ -142,6 +151,17 @@ func _build() -> void:
 	_add_row.add_child(add)
 	box.add_child(_add_row)
 
+	_push_row = _row()
+	_push_row.name = "PushRow"
+	_push_caption = _label(&"HudInkCaption", "")
+	_push_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_push_caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_push_row.add_child(_push_caption)
+	_push_button = _small_button(Loc.t("AÇ"), _on_push_pressed)
+	_push_button.name = "PushButton"
+	_push_row.add_child(_push_button)
+	box.add_child(_push_row)
+
 	_notice = _wrapped(&"HudInkCaption")
 	_notice.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
 	box.add_child(_notice)
@@ -173,9 +193,15 @@ func _build() -> void:
 
 func _connect_social() -> void:
 	_social = get_tree().get_first_node_in_group("social") as SocialManager
+	_push = get_tree().get_first_node_in_group("push") as PushService
+	if _push:
+		_push.changed.connect(_refresh)
 	if _social:
 		_social.changed.connect(_refresh)
 		_social.notice.connect(_on_notice)
+		_social.avatar_ready.connect(func(_uid: String) -> void:
+			if visible:
+				_refresh())
 	_refresh()
 
 
@@ -200,6 +226,15 @@ func _refresh() -> void:
 	_primary.disabled = busy
 	_notice.text = _notice_text
 	_notice.visible = not _notice_text.is_empty()
+	# Telefon bildirimi: yalnızca Android'de, profil hazırken (rızayla açılır)
+	_push_row.visible = ready and not _renaming and _push != null and _push.available()
+	if _push_row.visible:
+		var on: bool = _push.is_enabled()
+		_push_caption.text = Loc.t("YARIŞ BİLDİRİMLERİ AÇIK") if on \
+			else Loc.t("Arkadaşın seni yenince telefonuna haber gelsin mi?")
+		_push_button.text = Loc.t("KAPAT") if on else Loc.t("AÇ")
+		_push_button.highlight = not on
+		_push_button.disabled = busy or _push.is_busy()
 	match state:
 		SocialManager.State.UNAVAILABLE:
 			_body.text = Loc.t("Arkadaş eklemek yalnızca Android sürümünde. Auto Yard ustalarının garajlarını yine de gezebilirsin.")
@@ -240,11 +275,22 @@ func _build_lists(busy: bool, ready: bool) -> void:
 		_lists.add_child(_label(&"HudInkCaption", Loc.t("ARKADAŞLARIN (%d)") % featured.size()))
 		_add_featured_rows(featured, busy)
 		return
+	if not _social.race_events.is_empty():
+		_lists.add_child(_label(&"HudInkCaption", Loc.t("YARIŞ HABERLERİ (%d)") % _social.race_events.size()))
+		for event: Dictionary in _social.race_events:
+			var sender: String = event["uid"]
+			var row: HBoxContainer = _person_row(event, event_caption(event), true)
+			if bool(event["won"]):
+				var revenge: PlateButton = _small_button(Loc.t("İNTİKAM AL"), func() -> void: revenge_requested.emit(sender), busy, true)
+				revenge.name = "Revenge_" + sender
+				row.add_child(revenge)
+			row.add_child(_small_button(Loc.t("TAMAM"), func() -> void: _social.dismiss_event(sender), busy))
+			_lists.add_child(row)
 	if not _social.incoming.is_empty():
 		_lists.add_child(_label(&"HudInkCaption", Loc.t("GELEN İSTEKLER (%d)") % _social.incoming.size()))
 		for entry: Dictionary in _social.incoming:
 			var uid: String = entry["uid"]
-			var row: HBoxContainer = _person_row(entry["name"], SocialNames.display_code(entry["code"]))
+			var row: HBoxContainer = _person_row(entry, SocialNames.display_code(entry["code"]))
 			row.add_child(_small_button(Loc.t("KABUL"), func() -> void: _social.accept(uid), busy, true))
 			row.add_child(_small_button(Loc.t("RET"), func() -> void: _social.reject(uid), busy))
 			_lists.add_child(row)
@@ -253,10 +299,14 @@ func _build_lists(busy: bool, ready: bool) -> void:
 	for entry: Dictionary in _social.friends:
 		var uid: String = entry["uid"]
 		var caption: String = Loc.t("SEVİYE %d") % int(entry["level"])
+		var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager
+		var score: Vector2i = race.score_with(uid) if race else Vector2i.ZERO
+		if score.x + score.y > 0:
+			caption += Loc.t("  ·  SKOR %d–%d") % [score.x, score.y]
 		var asked: String = SaveSafe.s(entry.get("ask_part", ""))
 		if not asked.is_empty():
 			caption += Loc.t("  ·  %s İSTİYOR") % RestorationCatalog.part_name(StringName(asked))
-		var row: HBoxContainer = _person_row(entry["name"], caption)
+		var row: HBoxContainer = _person_row(entry, caption)
 		if _social.can_gift(uid):
 			var gift: PlateButton = _small_button(Loc.t("GÖNDER"), func() -> void: _social.send_gift(uid), busy, true)
 			gift.name = "Gift_" + uid
@@ -264,28 +314,43 @@ func _build_lists(busy: bool, ready: bool) -> void:
 		var go: PlateButton = _small_button(Loc.t("GARAJA GİT"), func() -> void: _on_visit_pressed(uid), busy, true)
 		go.name = "Visit_" + uid
 		row.add_child(go)
-		var confirm: bool = _confirm_remove == uid
-		var remove: PlateButton = _small_button(Loc.t("EMİN MİSİN?") if confirm else Loc.t("ÇIKAR"),
-			func() -> void: _on_remove_pressed(uid), busy)
-		if confirm:
-			for color_name: StringName in [&"font_color", &"font_hover_color", &"font_pressed_color"]:
-				remove.add_theme_color_override(color_name, HudPalette.DANGER)
-		row.add_child(remove)
 		_lists.add_child(row)
 	if not _social.outgoing.is_empty():
 		_lists.add_child(_label(&"HudInkCaption", Loc.t("GÖNDERDİĞİN İSTEKLER (%d)") % _social.outgoing.size()))
 		for entry: Dictionary in _social.outgoing:
 			var uid: String = entry["uid"]
-			var row: HBoxContainer = _person_row(entry["name"], Loc.t("YANIT BEKLENİYOR"))
+			var row: HBoxContainer = _person_row(entry, Loc.t("YANIT BEKLENİYOR"))
 			row.add_child(_small_button(Loc.t("GERİ AL"), func() -> void: _social.cancel(uid), busy))
 			_lists.add_child(row)
+
+
+## Haber satırının alt yazısı (ad satırın üstünde): gönderen kazandıysa "VW GOLF 7 ARACINI YENDİ!", kaybettiyse
+## "VW GOLF 7 ARACIN ONU YENDİ!"; İNTİKAM yarışıysa önünde "İNTİKAM:".
+static func event_caption(event: Dictionary) -> String:
+	var car: String = car_name(event["their_car"])
+	var text: String = Loc.t("%s ARACINI YENDİ!") % car if bool(event["won"]) else Loc.t("%s ARACIN ONU YENDİ!") % car
+	return Loc.t("İNTİKAM: %s") % text if bool(event.get("revenge", false)) else text
+
+
+## Aracın tek satırlık adı (CarCatalog.label iki satırdır: "MARKA\nMODEL").
+static func car_name(vehicle_id: StringName) -> String:
+	return String(CarCatalog.get_entry(vehicle_id).get("display_name", vehicle_id)).to_upper()
+
+
+## HUD bildirimi (adla, tam cümle).
+static func event_notice(event: Dictionary) -> String:
+	var name: String = SaveSafe.s(event.get("name", ""))
+	var car: String = car_name(event["their_car"])
+	if bool(event["won"]):
+		return Loc.t("%s, %s ARACINI YENDİ!\nİNTİKAM İÇİN: ARKADAŞLAR") % [Loc.upper(name), car]
+	return Loc.t("%s ARACIN %s YENDİ!") % [car, Loc.upper(Loc.accusative(name))]
 
 
 ## Öne çıkan arkadaşlar: yalnızca GARAJA GİT (çıkarılamaz), altında "AUTO YARD · SEVİYE n".
 func _add_featured_rows(featured: Array[Dictionary], busy: bool) -> void:
 	for entry: Dictionary in featured:
 		var uid: String = entry["uid"]
-		var row: HBoxContainer = _person_row(entry["name"], Loc.t("AUTO YARD USTASI · SEVİYE %d") % int(entry["level"]))
+		var row: HBoxContainer = _person_row(entry, Loc.t("AUTO YARD USTASI · SEVİYE %d") % int(entry["level"]))
 		var go: PlateButton = _small_button(Loc.t("GARAJA GİT"), func() -> void: _on_visit_pressed(uid), busy, true)
 		go.name = "Visit_" + uid
 		row.add_child(go)
@@ -314,6 +379,15 @@ func _on_primary_pressed() -> void:
 	_refresh()
 
 
+func _on_push_pressed() -> void:
+	_notice_text = ""
+	if _push.is_enabled():
+		await _push.disable()
+	else:
+		await _push.enable()
+	_refresh()
+
+
 func _on_rename_pressed() -> void:
 	_renaming = true
 	_notice_text = ""
@@ -338,7 +412,6 @@ func _on_add_pressed() -> void:
 
 
 func _on_visit_pressed(uid: String) -> void:
-	_confirm_remove = ""
 	_notice_text = ""
 	if FeaturedFriends.is_featured(uid):
 		if not FeaturedFriends.visit(get_tree(), uid):
@@ -347,29 +420,53 @@ func _on_visit_pressed(uid: String) -> void:
 	_social.visit(uid)
 
 
-func _on_remove_pressed(uid: String) -> void:
-	if _confirm_remove != uid:
-		_confirm_remove = uid
-		_refresh()
-		return
-	_confirm_remove = ""
-	_social.remove_friend(uid)
-
-
 # --- Parçalar ----------------------------------------------------------------
 
-func _person_row(title: String, caption: String) -> HBoxContainer:
+## Kişi satırı: [avatar + ad + alt yazı] (dokununca kart) ve sağda satırın düğmeleri (çağıran ekler).
+func _person_row(entry: Dictionary, caption: String, wrap_caption: bool = false) -> HBoxContainer:
 	var row: HBoxContainer = _row()
+	var uid: String = SaveSafe.s(entry.get("uid", ""))
+	var person: Button = Button.new()
+	person.name = "Person_" + uid
+	person.flat = true
+	person.focus_mode = Control.FOCUS_NONE
+	person.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for state: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed", &"focus", &"disabled"]:
+		person.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	person.pressed.connect(func() -> void: person_requested.emit(uid))
+	var inner: HBoxContainer = _row()
+	inner.add_theme_constant_override(&"separation", 8)
+	inner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	person.add_child(inner)
+	var avatar: AvatarView = AvatarView.new()
+	avatar.custom_minimum_size = Vector2(AVATAR_SIZE, AVATAR_SIZE)
+	avatar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var art: Dictionary = ProfileCard.avatar_for(get_tree(), entry)
+	avatar.show_avatar(art.get("texture"), bool(art.get("illustrated", true)), SaveSafe.s(entry.get("frame", "")),
+		SaveSafe.s(entry.get("flag", "")))
+	inner.add_child(avatar)
 	var names: VBoxContainer = VBoxContainer.new()
 	names.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	names.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	names.add_theme_constant_override(&"separation", 0)
-	var name_label: Label = _label(&"HudInkValue", title)
+	var name_label: Label = _label(&"HudInkValue", SaveSafe.s(entry.get("name", "")))
 	name_label.clip_text = true
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	names.add_child(name_label)
-	names.add_child(_label(&"HudInkCaption", caption))
-	row.add_child(names)
+	var caption_label: Label = _label(&"HudInkCaption", caption)
+	if wrap_caption:   # haber cümlesi: düğmeler yer kaplayınca iki satıra sarar (kesilmez)
+		caption_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	else:
+		caption_label.clip_text = true
+		caption_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	names.add_child(caption_label)
+	inner.add_child(names)
+	# Düğme içindeki kutu kendi boyunu bildirmez: düğmenin en küçük boyu kutununkine eşitlenir
+	var fit: Callable = func() -> void: person.custom_minimum_size = Vector2(0.0, inner.get_combined_minimum_size().y)
+	inner.minimum_size_changed.connect(fit)
+	fit.call()
+	row.add_child(person)
 	return row
 
 

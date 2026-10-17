@@ -61,6 +61,78 @@ static func tc(text: String, context: String) -> String:
 
 
 ## Yüzde: TR "%25" · EN "25%" · ES "25 %". `value` biçimlenmiş sayı metnidir.
+## Büyük harf: Türkçe seçiliyken i → İ, ı → I (String.to_upper "i"yi "I" yapar: "elif" → "ELIF" olurdu).
+## Oyuncunun yazdığı ad / garaj adı gibi metinler için; çeviri anahtarları zaten büyük harfle yazılı.
+static func upper(text: String) -> String:
+	if current() == "tr":
+		text = text.replace("i", "İ").replace("ı", "I")
+	return text.to_upper()
+
+
+## Belirtme hâli (-ı / -i / -u / -ü): Türkçede "Elif Usta" → "Elif Usta'yı", "Bob" → "Bob'u", "Usta1234" → "Usta1234'ü"
+## (sayı okunuşuna göre: dört → ü). Son ünlü uyumu; ünlüyle biten adda kaynaştırma "y". Diğer dillerde ad olduğu gibi.
+static func accusative(name: String) -> String:
+	if current() != "tr" or name.strip_edges().is_empty():
+		return name
+	var text: String = name.strip_edges()
+	var last: String = ""
+	for i: int in range(text.length() - 1, -1, -1):
+		var c: String = text[i]
+		if c.is_valid_int() or "aeıioöuüAEIİOÖUÜ".contains(c) or c.to_lower() != c.to_upper():
+			last = c
+			break
+	if last.is_empty():
+		return name
+	var harmony: String = ""
+	var vowel_end: bool = false
+	if last.is_valid_int():
+		var spoken: Array = _number_ending(text)
+		harmony = spoken[0]
+		vowel_end = spoken[1]
+	else:
+		for i: int in range(text.length() - 1, -1, -1):
+			var v: String = text[i]
+			var found: String = ""
+			if "aıAI".contains(v):
+				found = "ı"
+			elif "eiEİ".contains(v):
+				found = "i"
+			elif "ouOU".contains(v):
+				found = "u"
+			elif "öüÖÜ".contains(v):
+				found = "ü"
+			if not found.is_empty():
+				harmony = found
+				break
+		vowel_end = "aeıioöuüAEIİOÖUÜ".contains(last)
+	if harmony.is_empty():
+		harmony = "i"
+	return text + "'" + ("y" if vowel_end else "") + harmony
+
+
+## Sondaki sayının okunuşunun son hecesi: [ek ünlüsü, ünlüyle mi bitiyor]. "1234" → dört (ü), "10" → on (u),
+## "20" → yirmi (yi), "300" → yüz (ü), "5000" → bin (i), "0" → sıfır (ı).
+static func _number_ending(text: String) -> Array:
+	var digits: String = ""
+	for i: int in range(text.length() - 1, -1, -1):
+		if not text[i].is_valid_int():
+			break
+		digits = text[i] + digits
+	var number: String = digits.lstrip("0")
+	if number.is_empty():
+		return ["ı", false]   # sıfır
+	var zeros: int = number.length() - number.rstrip("0").length()
+	var lead: int = int(number.rstrip("0").right(1))
+	match zeros:
+		0:   # bir, iki, üç, dört, beş, altı, yedi, sekiz, dokuz
+			return [["", "i", "i", "ü", "ü", "i", "ı", "i", "i", "u"][lead], lead in [2, 6, 7]]
+		1:   # on, yirmi, otuz, kırk, elli, altmış, yetmiş, seksen, doksan
+			return [["", "u", "i", "u", "ı", "i", "ı", "i", "i", "ı"][lead], lead in [2, 5]]
+		2:
+			return ["ü", false]   # yüz
+	return ["u", false] if zeros >= 6 else ["i", false]   # milyon / bin
+
+
 static func percent(value: String) -> String:
 	match current():
 		"en": return value + "%"

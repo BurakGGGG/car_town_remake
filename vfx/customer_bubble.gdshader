@@ -3,6 +3,7 @@ render_mode unshaded, cull_disabled, shadows_disabled, depth_draw_opaque;
 // Müşteri balonu / TOPLA işareti: aracın (ya da CarSpot'un) üstünde kameraya dönük küçük krem plaka,
 // koyu alt kenar ve çizili işaret (HUD plaka dili). glyph 0 = anahtar (müşteri), 1 = ₺ madeni para
 // (ödül hazır; glyph_offset ile sola kaydırılır, sağda Label3D "TOPLA" yazar).
+// glyph 2 = damalı bayrak (yarış daveti), 3 = arkadaşın yuvarlak fotoğrafı (avatar_tex, solda) + damalı bayrak (sağda).
 // Billboard vertex shader'da; hafif salınım TIME ile (script tarafında per-frame iş yok).
 
 uniform vec4 plate_color : source_color = vec4(0.953, 0.910, 0.812, 1.0);
@@ -14,6 +15,7 @@ uniform float aspect = 1.0;         // plaka genişlik/yükseklik (işaretler ka
 uniform int glyph = 0;
 uniform float glyph_offset = 0.0;   // işaretin yatay kayması (plaka yüksekliği = 1 birim)
 uniform float bob_amount = 0.012;
+uniform sampler2D avatar_tex : source_color, filter_linear;   // glyph 3: kare, kırpılmış (CarBubble hazırlar)
 
 void vertex() {
 	vec3 scale = vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), length(MODEL_MATRIX[2].xyz));
@@ -58,6 +60,23 @@ float sd_lira(vec2 p) {
 	return min(min(bar, min(t1, t2)), hook);
 }
 
+// Damalı bayrak: DİREK YOK — 4x3 dama deseni + ince koyu çerçeve. (Çerçeve şart: deseninin krem kareleri plakayla
+// aynı renk, çerçevesiz "havada duran koyu kareler" gibi görünüyordu.) c: bayrak merkezine göre.
+vec3 draw_flag(vec2 c, vec3 col) {
+	vec2 half_size = vec2(0.26, 0.18);
+	vec2 d = abs(c) - half_size;
+	float box = max(d.x, d.y);
+	float aa = fwidth(box) * 1.2;
+	float in_box = 1.0 - smoothstep(0.0, aa, box);
+	float frame = abs(box) - 0.014;
+	float in_frame = 1.0 - smoothstep(0.0, fwidth(frame) * 1.2, frame);
+	vec2 cell = floor((c + half_size) / (half_size * 2.0 / vec2(4.0, 3.0)));
+	float checker = mod(cell.x + cell.y, 2.0);
+	vec3 flag_col = mix(plate_color.rgb, ink_color.rgb, checker);
+	col = mix(col, flag_col, in_box);
+	return mix(col, ink_color.rgb, in_frame);
+}
+
 void fragment() {
 	vec2 p = vec2((UV.x - 0.5) * aspect, 0.5 - UV.y);   // y: -0.5..0.5 yukarı +, x en-boy oranıyla
 	float plate = sd_round_box(p, vec2(0.47 * aspect, 0.40), 0.12);
@@ -81,22 +100,19 @@ void fragment() {
 			col = mix(col, coin_color.rgb, in_disc);
 			col = mix(col, coin_edge.rgb, max(in_rim, in_lira));
 		} else if (glyph == 2) {
-			// Damalı bayrak: DİREK YOK — plakanın ortasında 4x3 dama deseni + ince koyu çerçeve.
-			// (Çerçeve şart: deseninin krem kareleri plakayla aynı renk, çerçevesiz "havada duran
-			// koyu kareler" gibi görünüyordu.)
-			vec2 c = gp - vec2(0.0, 0.03);
-			vec2 half_size = vec2(0.26, 0.18);
-			vec2 d = abs(c) - half_size;
-			float box = max(d.x, d.y);
-			float aa = fwidth(box) * 1.2;
-			float in_box = 1.0 - smoothstep(0.0, aa, box);
-			float frame = abs(box) - 0.014;
-			float in_frame = 1.0 - smoothstep(0.0, fwidth(frame) * 1.2, frame);
-			vec2 cell = floor((c + half_size) / (half_size * 2.0 / vec2(4.0, 3.0)));
-			float checker = mod(cell.x + cell.y, 2.0);
-			vec3 flag_col = mix(plate_color.rgb, ink_color.rgb, checker);
-			col = mix(col, flag_col, in_box);
-			col = mix(col, ink_color.rgb, in_frame);
+			col = draw_flag(gp - vec2(0.0, 0.03), col);
+		} else if (glyph == 3) {
+			// Arkadaş rakip: solda yuvarlak fotoğraf (amber halka), sağda damalı bayrak
+			float half_w = aspect * 0.5;
+			vec2 ac = p - vec2(-half_w + 0.42, 0.04);
+			float r = 0.31;
+			float disc = length(ac) - r;
+			float in_disc = 1.0 - smoothstep(0.0, fwidth(disc) * 1.2, disc);
+			vec2 uv = clamp(vec2(ac.x / (2.0 * r) + 0.5, 0.5 - ac.y / (2.0 * r)), vec2(0.0), vec2(1.0));
+			col = mix(col, texture(avatar_tex, uv).rgb, in_disc);
+			float ring = abs(length(ac) - r) - 0.035;
+			col = mix(col, coin_edge.rgb, 1.0 - smoothstep(0.0, fwidth(ring) * 1.2, ring));
+			col = draw_flag(p - vec2(half_w - 0.38, 0.03), col);
 		} else {
 			float wrench = sd_wrench(gp);
 			float aa = fwidth(wrench) * 1.2;

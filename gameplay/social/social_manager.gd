@@ -12,6 +12,17 @@ extends Node
 ##   users/{gön}/outbox/o_{alıcı} {name, code, at}          giden istek (gönderenin bekleyen listesi)
 ##   users/{a}/friends/f_{b}      {since}                   arkadaşlık; iki belgeyi de KABUL EDEN yazar
 ##   users/{alıcı}/gifts/p_{gön}_{gün} {part, name, at, day} hurdalık hediyesi (arkadaş yazar, günde bir)
+##   avatars/a_{uid}              {img, hash, at}           profil fotoğrafı (192 px JPEG, base64; sahibi yazar)
+##   reports/x_{şikâyetçi}_{hedef} {target, reason, av, img, name, at}  şikâyet (yalnız yazılır; konsoldan okunur)
+##   users/{alıcı}/races/e_{gön}  {name, car, paint, build, their_car, won, revenge, mw, ml, at}  YARIŞ HABERİ
+## YARIŞ HABERİ (aşama 3): gerçek arkadaşın aracıyla yarış bitince (RaceManager.friend_race_finished) arkadaşa yazılır —
+## kazansan da kaybetsen de. Gönderen başına tek belge (en son yarış). Alıcı listeyi okurken haberleri alır, skorun
+## karşı yönünü (mw / ml) RaceManager'a yazar, yeni haber için race_news yayar (HUD bildirimi). Gönderen kazandıysa
+## alıcı İNTİKAM AL ile onun o aracına (boya + modifiye) karşı yarışır; haber kullanılınca / TAMAM'da silinir.
+## PROFİL (PlayerProfile): açık garaj belgesine av / frame / flag / title / car / stats da yazılır. Avatar resmi ayrı
+## belgede: garaj belgesindeki "av" = "img:<hash>"; arkadaş hash değişmedikçe yeniden indirmez (cihazda
+## user://avatars/ önbelleği). Şikâyet edilen fotoğraf şikâyetçinin ekranında hemen gizlenir; ENGELLE arkadaşlıktan
+## çıkarır, isteklerini yok sayar (PlayerProfile.blocked).
 ## HURDALIK HEDİYESİ (orijinal "Ask Friends"): oyuncu bir parçayı İSTER → açık garaj belgesine
 ## "ask" {part, at} yazılır (arkadaşlar listeyi okurken zaten bu belgeyi okuyor: ek okuma yok). Arkadaşı
 ## GÖNDER'e basar → alıcının gifts koleksiyonuna 1 parça. Alıcı toplar (collect_gifts); sunucu bugünün
@@ -32,6 +43,10 @@ extends Node
 signal changed
 ## Oyuncuya gösterilecek kısa mesaj.
 signal notice(text: String)
+## Bir oyuncunun avatar resmi indi (ekranlar o satırı yeniler).
+signal avatar_ready(uid: String)
+## Yeni yarış haberi geldi (HUD kısa bildirim gösterir).
+signal race_news(event: Dictionary)
 
 enum State {
 	UNAVAILABLE,  ## eklenti yok (PC / editör)
@@ -56,6 +71,16 @@ const CODE_ATTEMPTS: int = 6
 
 const GARAGES: String = "garages"
 const CODES: String = "codes"
+const AVATARS: String = "avatars"
+const REPORTS: String = "reports"
+## Telefon bildirimi jetonu: push/p_{uid} = {token, lang, at} (PushService yazar; sunucu okur).
+const PUSH: String = "push"
+## Oyun açıkken yarış haberlerine bu aralıkla bakılır (tek liste okuması; telefon bildirimi ön planda görünmez).
+const NEWS_POLL: float = 120.0
+const AVATAR_CACHE_DIR: String = "user://avatars/"
+const AVATAR_CACHE_INDEX: String = "user://avatars/index.json"
+## Şikâyet nedenleri (kuralla aynı).
+const REPORT_REASONS: Array[String] = ["photo", "name", "garage"]
 
 ## Eşleşme için bekleyen isteğin sonucu (iç kullanım).
 signal _op_result(result: Dictionary)
@@ -64,8 +89,10 @@ signal _op_slot_free
 ## Testler kısaltır.
 var publish_delay: float = PUBLISH_DEBOUNCE
 var request_timeout: float = REQUEST_TIMEOUT
-var friends: Array[Dictionary] = []   ## {uid, name, code, level, value, ask_part, ask_at}
-var incoming: Array[Dictionary] = []  ## {uid, name, code, at}
+var friends: Array[Dictionary] = []   ## {uid, name, code, level, value, ask_part, ask_at} + profil (profile_fields)
+var incoming: Array[Dictionary] = []  ## {uid, name, code, at} + profil (garajı okunabildiyse)
+## Yarış haberleri: {uid (gönderen), name, car, paint, build, their_car, won, revenge, mw, ml, at} + arkadaşın profili.
+var race_events: Array[Dictionary] = []
 var outgoing: Array[Dictionary] = []  ## {uid, name, code, at}
 
 var _fb: Object
@@ -80,12 +107,21 @@ var _busy: int = 0                    # oyuncunun başlattığı süren işlem s
 var _refreshed_at: float = -1000.0
 var _op_timer: Timer
 var _publish_timer: Timer
+var _news_timer: Timer
+var _profile: PlayerProfile
+## Avatar önbelleği: uid → {hash, tex}; diskte user://avatars/<uid>.jpg + index (uid → hash).
+var _avatars: Dictionary = {}
+var _avatar_index: Dictionary = {}
+var _avatar_pending: Dictionary = {}   # uid → hash (indiriliyor)
 
 
 func _ready() -> void:
 	add_to_group("social")
 	_op_timer = _make_timer(REQUEST_TIMEOUT, _on_op_timeout)
 	_publish_timer = _make_timer(PUBLISH_DEBOUNCE, _on_publish_timeout)
+	_news_timer = _make_timer(NEWS_POLL, _on_news_poll)
+	_news_timer.one_shot = false
+	_news_timer.start()
 	if Engine.has_singleton(PLUGIN_NAME):
 		_fb = Engine.get_singleton(PLUGIN_NAME)
 	_setup.call_deferred()
@@ -105,6 +141,11 @@ func _setup() -> void:
 	_fb.connect("firestore_delete_task_completed", _on_delete_completed)
 	_save = get_tree().get_first_node_in_group("save_manager") as SaveManager
 	_cloud = get_tree().get_first_node_in_group("cloud_save") as CloudSaveManager
+	_profile = get_tree().get_first_node_in_group("player_profile") as PlayerProfile
+	_load_avatar_index()
+	var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager
+	if race:
+		race.friend_race_finished.connect(_on_friend_race_finished)
 	if _save:
 		_save.game_saved.connect(_on_local_saved)
 	if _cloud:
@@ -126,6 +167,31 @@ func is_ready() -> bool:
 ## Oyuncunun başlattığı bir işlem sürüyor mu (butonlar kilitli).
 func is_busy() -> bool:
 	return _busy > 0 or _state == State.LOADING
+
+
+## Oturumun Firebase kimliği (yoksa boş).
+func uid() -> String:
+	return _uid
+
+
+## Telefon bildirimi jetonunu yazar (PushService). Başarılıysa true.
+func write_push_token(token: String, lang: String) -> bool:
+	if not is_ready() or token.is_empty():
+		return false
+	return _ok(await _call(&"set", PUSH, "p_" + _uid, {"token": token, "lang": lang, "at": _now()}))
+
+
+func delete_push_token() -> void:
+	if not _uid.is_empty() and _fb != null:
+		await _call(&"delete", PUSH, "p_" + _uid)
+
+
+## Oyun açıkken yarış haberleri (yeni haber → race_news → HUD bildirimi). Oyuncunun işlemi sürüyorsa beklenir.
+func _on_news_poll() -> void:
+	if not is_ready() or _busy > 0 or _op_busy:
+		return
+	await _load_race_events()
+	changed.emit()
 
 
 func my_name() -> String:
@@ -346,6 +412,18 @@ func delete_all() -> bool:
 			await _call(&"delete", _inbox_of(doc_id.trim_prefix("o_")), "r_" + _uid)
 			ok = _ok(await _call(&"delete", _outbox_of(_uid), doc_id)) and ok
 		ok = _ok(await _call(&"delete", GARAGES, "g_" + _uid)) and ok
+		# Yarış haberleri: bana gelenler ve arkadaşlara yazdıklarım (lists[0] arkadaş listesi)
+		var news: Dictionary = await _call(&"list", _races_of(_uid))
+		ok = _ok(news) and ok
+		for doc_id: String in _ids(news):
+			ok = _ok(await _call(&"delete", _races_of(_uid), doc_id)) and ok
+		for doc_id: String in _ids(lists[0]):
+			var sent: Dictionary = await _call(&"delete", _races_of(doc_id.trim_prefix("f_")), "e_" + _uid)
+			ok = (_ok(sent) or _not_found(sent) or _permission_denied(sent)) and ok
+		var push_doc: Dictionary = await _call(&"delete", PUSH, "p_" + _uid)
+		ok = (_ok(push_doc) or _not_found(push_doc)) and ok
+		var avatar_doc: Dictionary = await _call(&"delete", AVATARS, "a_" + _uid)
+		ok = (_ok(avatar_doc) or _not_found(avatar_doc)) and ok
 		# Hurdalık hediyeleri GARAJDAN SONRA: sunucu bugünün hediyesini yalnızca garajı olmayan oyuncuya
 		# sildirir (günlük sınır; bkz. firestore.rules gifts)
 		var gifts: Dictionary = await _call(&"list", _gifts_of(_uid))
@@ -393,6 +471,7 @@ func _start_session() -> void:
 	_meta = _read_json(META_PATH)
 	if SaveSafe.s(_meta.get("uid", "")) == _uid and not my_code().is_empty() and not my_name().is_empty():
 		_set_state(State.READY)
+		await _restore_own_photo()
 		_request_publish()   # bu cihazda değişmiş olabilir
 		refresh(true)   # gelen istek sayısı HUD plakasında ekran açılmadan da görünsün
 		return
@@ -405,6 +484,7 @@ func _start_session() -> void:
 			"published": SaveSafe.s(doc.get("garage_json", ""))}
 		_write_meta()
 		_set_state(State.READY)
+		await _restore_own_photo()
 		_request_publish()
 		refresh(true)
 	elif _not_found(result):
@@ -439,7 +519,19 @@ func _on_publish_timeout() -> void:
 	if _cloud and _cloud.get_state() != CloudSaveManager.State.SYNCED:
 		return   # kayıt seçimi / çevrimdışı: bulut senkronu bitince yeni bir kayıt gelir
 	var garage_json: String = _garage_json()
-	if garage_json == SaveSafe.s(_meta.get("published", "")) and _ask_key() == SaveSafe.s(_meta.get("published_ask", "")):
+	if garage_json == SaveSafe.s(_meta.get("published", "")) and _ask_key() == SaveSafe.s(_meta.get("published_ask", "")) \
+			and _profile_key() == SaveSafe.s(_meta.get("published_profile", "")):
+		return
+	await _publish(my_name())
+
+
+## Profil düzenleme kapandı: açık garaj beklemeden yazılır (arkadaşlar yeni fotoğrafı hemen görsün).
+func publish_now() -> void:
+	if not is_ready():
+		return
+	_publish_timer.stop()
+	if _busy > 0 or (_cloud and _cloud.get_state() != CloudSaveManager.State.SYNCED):
+		_request_publish()
 		return
 	await _publish(my_name())
 
@@ -464,12 +556,48 @@ func _publish(name: String) -> bool:
 	var ask: Dictionary = _current_ask()
 	if not ask.is_empty():
 		doc["ask"] = {"part": String(ask["part"]), "at": int(ask["at"])}
+	if _profile:
+		doc.merge(_profile.public_fields())
+		# Avatar resmi garajdan ÖNCE: arkadaş yeni hash'i görünce belge hazır olsun
+		if not await _upload_avatar():
+			doc["av"] = SaveSafe.s(_meta.get("published_av", ""))   # resim yazılamadı: eski tanım kalsın
 	var result: Dictionary = await _call(&"set", GARAGES, "g_" + _uid, doc)
 	if not _ok(result):
 		return false
 	_meta["published"] = garage_json
 	_meta["published_ask"] = _ask_key()
+	_meta["published_profile"] = _profile_key()
 	_write_meta()
+	return true
+
+
+## Açık profilin karşılaştırma anahtarı (değiştiyse yeniden yayınlanır). İstatistikler dahil değil: yalnızca
+## garaj ya da profil değişince yazılır, yarış sayısı yüzünden her kayıtta yazılmasın.
+func _profile_key() -> String:
+	if _profile == null:
+		return ""
+	var fields: Dictionary = _profile.public_fields()
+	fields.erase("stats")
+	return JSON.stringify(fields, "", true)
+
+
+## Kendi avatar resmini avatars/a_{uid} belgesine yazar (yalnızca hash değiştiyse). Yazılacak resim yoksa true.
+func _upload_avatar() -> bool:
+	var av: String = _profile.my_av()
+	var hash: String = ProfileCatalog.image_hash(av)
+	if hash.is_empty() or hash == SaveSafe.s(_meta.get("published_av_hash", "")):
+		_meta["published_av"] = av
+		return true
+	var bytes: PackedByteArray = _profile.upload_bytes()
+	var b64: String = Marshalls.raw_to_base64(bytes)
+	if bytes.is_empty() or b64.length() > ProfileCatalog.PHOTO_B64_MAX:
+		return false
+	var result: Dictionary = await _call(&"set", AVATARS, "a_" + _uid, {"img": b64, "hash": hash, "at": _now()})
+	if not _ok(result):
+		return false
+	_meta["published_av"] = av
+	_meta["published_av_hash"] = hash
+	_store_avatar(_uid, hash, bytes)   # kendi resmim de önbellekte (arkadaş satırı / kart aynı yoldan çizer)
 	return true
 
 
@@ -622,6 +750,9 @@ func _send_request(code: String) -> bool:
 	if is_friend(uid):
 		notice.emit(Loc.t("Zaten arkadaşsınız."))
 		return false
+	if _profile and _profile.is_blocked(uid):
+		_profile.unblock(uid)   # engellediği oyuncuyu kendi isteğiyle ekliyor: engel kalkar
+		notice.emit(Loc.t("Bu oyuncunun engeli kaldırıldı."))
 	if _index_of(outgoing, uid) >= 0:
 		notice.emit(Loc.t("Bu oyuncuya zaten istek gönderdin."))
 		return false
@@ -675,6 +806,19 @@ func _load_lists() -> bool:
 		return false
 	incoming = _requests(inbox, "r_")
 	outgoing = _requests(outbox, "o_")
+	var kept: Array[Dictionary] = []
+	for entry: Dictionary in incoming:
+		var from: String = entry["uid"]
+		if _profile and _profile.is_blocked(from):
+			await _call(&"delete", _inbox_of(_uid), "r_" + from)   # engellenenin isteği: sessizce silinir
+			await _call(&"delete", _outbox_of(from), "o_" + _uid)
+			continue
+		# İstek gönderenin fotoğrafı / bayrağı (karar verirken kim olduğu görünsün)
+		var garage: Dictionary = await _call(&"get", GARAGES, "g_" + from)
+		if _ok(garage) and garage.get("data") is Dictionary:
+			entry.merge(profile_fields(garage["data"]))
+		kept.append(entry)
+	incoming = kept
 	var loaded: Array[Dictionary] = []
 	for doc_id: String in _ids(friend_list):
 		var uid: String = doc_id.trim_prefix("f_")
@@ -686,6 +830,9 @@ func _load_lists() -> bool:
 		loaded.append(entry)
 	loaded.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["level"]) > int(b["level"]))
 	friends = loaded
+	# Haberler arkadaş listesinden SONRA: "artık arkadaş değil" süzgeci güncel listeye bakar (önce okununca bütün
+	# haberler silinirdi)
+	await _load_race_events()
 	return true
 
 
@@ -703,7 +850,7 @@ func _friend_entry(uid: String, fallback: Dictionary) -> Dictionary:
 			and _now() - SaveSafe.i(ask.get("at", 0)) < JunkyardManager.ASK_LIFETIME:
 		ask_part = SaveSafe.s(ask.get("part", ""))
 		ask_at = SaveSafe.i(ask.get("at", 0))
-	return {
+	var entry: Dictionary = {
 		"uid": uid,
 		"name": SaveSafe.s(doc.get("name", fallback.get("name", ""))),
 		"code": SaveSafe.s(doc.get("code", fallback.get("code", ""))),
@@ -711,6 +858,34 @@ func _friend_entry(uid: String, fallback: Dictionary) -> Dictionary:
 		"value": SaveSafe.i(doc.get("value", 0)),
 		"ask_part": ask_part,
 		"ask_at": ask_at,
+	}
+	entry.merge(profile_fields(doc))
+	# Yarış: arkadaşın araçları, boyaları, modifiyeleri (garaj belgesi zaten okundu, ek okuma yok)
+	entry["race"] = PublicGarage.race_data(PublicGarage.parse(SaveSafe.s(doc.get("garage_json", ""))))
+	return entry
+
+
+## Açık garaj belgesinden profil alanları (geçersiz değerler boşa düşer; eski sürümün belgesinde hiçbiri yoktur).
+static func profile_fields(doc: Dictionary) -> Dictionary:
+	var av: String = SaveSafe.s(doc.get("av", ""))
+	var frame: String = SaveSafe.s(doc.get("frame", ""))
+	var flag: String = SaveSafe.s(doc.get("flag", ""))
+	var title: String = SaveSafe.s(doc.get("title", ""))
+	var car: String = SaveSafe.s(doc.get("car", ""))
+	var raw_stats: Dictionary = doc.get("stats", {}) if doc.get("stats") is Dictionary else {}
+	return {
+		"av": av if ProfileCatalog.is_valid_av(av) else "",
+		"frame": frame if ProfileCatalog.is_frame(frame) else ProfileCatalog.DEFAULT_FRAME,
+		"flag": flag if ProfileCatalog.is_flag(flag) else "",
+		"title": title if SocialNames.is_valid_title(title) else "",
+		"car": car if not CarCatalog.get_entry(StringName(car)).is_empty() else "",
+		"stats": {
+			"wins": maxi(SaveSafe.i(raw_stats.get("wins", 0)), 0),
+			"races": maxi(SaveSafe.i(raw_stats.get("races", 0)), 0),
+			"cars": maxi(SaveSafe.i(raw_stats.get("cars", 0)), 0),
+			"best": maxi(SaveSafe.i(raw_stats.get("best", 0)), 0),
+			"best_car": SaveSafe.s(raw_stats.get("best_car", "")),
+		},
 	}
 
 
@@ -726,6 +901,262 @@ func _requests(result: Dictionary, prefix: String) -> Array[Dictionary]:
 			"code": SaveSafe.s(doc.get("code", "")), "at": SaveSafe.i(doc.get("at", 0))})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["at"]) > int(b["at"]))
 	return out
+
+
+# --- Avatarlar ------------------------------------------------------------------------
+
+## Bir oyuncunun avatar resmi: {"texture", "illustrated"}. Hazır avatar hemen gelir; yüklenmiş fotoğraf önbellekte
+## yoksa indirmesi başlar (bitince avatar_ready) ve o sırada kask gösterilir. Engellenen / şikâyet edilip gizlenen
+## oyuncunun fotoğrafı yerine kask.
+func avatar_of(uid: String, av: String) -> Dictionary:
+	if FeaturedFriends.is_featured(uid):
+		return {"texture": ProfileCatalog.featured_texture(uid), "illustrated": true}
+	var hash: String = ProfileCatalog.image_hash(av)
+	if (_profile and _profile.is_blocked(uid)) or (_profile and _profile.is_hidden(uid, hash)):
+		return {"texture": ProfileCatalog.default_texture(), "illustrated": true}
+	if ProfileCatalog.is_preset(av):
+		return {"texture": ProfileCatalog.preset_texture(av), "illustrated": true}
+	if hash.is_empty():
+		return {"texture": ProfileCatalog.default_texture(), "illustrated": true}
+	var cached: Dictionary = _avatars.get(uid, {})
+	if SaveSafe.s(cached.get("hash", "")) == hash and cached.get("tex") is Texture2D:
+		return {"texture": cached["tex"], "illustrated": false}
+	if SaveSafe.s(_avatar_index.get(uid, "")) == hash:
+		var tex: Texture2D = _avatar_from_disk(uid)
+		if tex:
+			_avatars[uid] = {"hash": hash, "tex": tex}
+			return {"texture": tex, "illustrated": false}
+	_fetch_avatar(uid, hash)
+	return {"texture": ProfileCatalog.default_texture(), "illustrated": true}
+
+
+## Arkadaş / istek listesindeki bir oyuncunun girdisi (profil kartı için); yoksa boş.
+func person(uid: String) -> Dictionary:
+	for list: Array[Dictionary] in [friends, incoming, outgoing]:
+		var i: int = _index_of(list, uid)
+		if i >= 0:
+			return list[i]
+	return {}
+
+
+func _fetch_avatar(uid: String, hash: String) -> void:
+	if _avatar_pending.get(uid, "") == hash or not is_ready():
+		return
+	_avatar_pending[uid] = hash
+	var result: Dictionary = await _call(&"get", AVATARS, "a_" + uid)
+	_avatar_pending.erase(uid)
+	if not _ok(result) or not result.get("data") is Dictionary:
+		return
+	var data: Dictionary = result["data"]
+	var b64: String = SaveSafe.s(data.get("img", ""))
+	if b64.is_empty() or b64.length() > ProfileCatalog.PHOTO_B64_MAX:
+		return
+	var bytes: PackedByteArray = Marshalls.base64_to_raw(b64)
+	var got: String = ProfileCatalog.hash_of(bytes)
+	if ProfileCatalog.image_from_bytes(bytes) == null:
+		return
+	_store_avatar(uid, got, bytes)
+	avatar_ready.emit(uid)
+
+
+func _store_avatar(uid: String, hash: String, bytes: PackedByteArray) -> void:
+	var image: Image = ProfileCatalog.image_from_bytes(bytes)
+	if image == null:
+		return
+	_avatars[uid] = {"hash": hash, "tex": ImageTexture.create_from_image(image)}
+	DirAccess.make_dir_recursive_absolute(AVATAR_CACHE_DIR)
+	var file: FileAccess = FileAccess.open(AVATAR_CACHE_DIR + uid.validate_filename() + ".jpg", FileAccess.WRITE)
+	if file:
+		file.store_buffer(bytes)
+		file.close()
+		_avatar_index[uid] = hash
+		var index: FileAccess = FileAccess.open(AVATAR_CACHE_INDEX, FileAccess.WRITE)
+		if index:
+			index.store_string(JSON.stringify(_avatar_index))
+
+
+func _avatar_from_disk(uid: String) -> Texture2D:
+	var path: String = AVATAR_CACHE_DIR + uid.validate_filename() + ".jpg"
+	if not FileAccess.file_exists(path):
+		return null
+	var image: Image = ProfileCatalog.image_from_bytes(FileAccess.get_file_as_bytes(path))
+	return ImageTexture.create_from_image(image) if image else null
+
+
+func _load_avatar_index() -> void:
+	_avatar_index = _read_json(AVATAR_CACHE_INDEX)
+
+
+## Yeni cihaz / yeniden kurulum: kayıtta fotoğraf seçili ama dosyası yok → kendi avatar belgesinden geri yüklenir.
+func _restore_own_photo() -> void:
+	if _profile == null or not _profile.needs_photo_restore():
+		return
+	var result: Dictionary = await _call(&"get", AVATARS, "a_" + _uid)
+	if _ok(result) and result.get("data") is Dictionary:
+		_profile.restore_photo(Marshalls.base64_to_raw(SaveSafe.s((result["data"] as Dictionary).get("img", ""))))
+
+
+# --- Yarış haberleri -----------------------------------------------------------------
+
+## Gönderenin haberi (yoksa boş).
+func race_event(uid: String) -> Dictionary:
+	var i: int = _index_of(race_events, uid)
+	return race_events[i] if i >= 0 else {}
+
+
+## İNTİKAM yarışının rakip sahibi (RaceManager.start_revenge): gönderenin profili + haberdeki boya / modifiye.
+func revenge_owner(uid: String) -> Dictionary:
+	var event: Dictionary = race_event(uid)
+	if event.is_empty():
+		return {}
+	return {"uid": uid, "name": event["name"], "av": SaveSafe.s(event.get("av", "")), "frame": SaveSafe.s(event.get("frame", "")),
+		"flag": SaveSafe.s(event.get("flag", "")), "featured": false, "paint": event["paint"], "build": event["build"]}
+
+
+## Haber kapatıldı (TAMAM) ya da İNTİKAM için kullanıldı: sunucudan silinir.
+func dismiss_event(uid: String) -> void:
+	var i: int = _index_of(race_events, uid)
+	if i < 0:
+		return
+	race_events.remove_at(i)
+	changed.emit()
+	if is_ready():
+		await _call(&"delete", _races_of(_uid), "e_" + uid)
+
+
+func _load_race_events() -> void:
+	var result: Dictionary = await _call(&"list", _races_of(_uid))
+	if not _ok(result):
+		return
+	var data: Dictionary = result.get("data", {}) if result.get("data") is Dictionary else {}
+	var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager if is_inside_tree() else null
+	var seen: Dictionary = _meta.get("events_seen", {}) if _meta.get("events_seen") is Dictionary else {}
+	var loaded: Array[Dictionary] = []
+	var fresh: Array[Dictionary] = []
+	for key: Variant in data:
+		var id: String = SaveSafe.s(key)
+		var doc: Dictionary = data[key] if data[key] is Dictionary else {}
+		var from: String = id.trim_prefix("e_")
+		if not id.begins_with("e_") or doc.is_empty():
+			continue
+		if (_profile and _profile.is_blocked(from)) or not is_friend(from):
+			await _call(&"delete", _races_of(_uid), id)   # engellenen / artık arkadaş olmayan: sessizce silinir
+			continue
+		var event: Dictionary = _parse_event(from, doc)
+		if event.is_empty():
+			continue
+		if race:
+			race.set_their_counts(from, int(event["mw"]), int(event["ml"]))   # skorun onun yönü
+		loaded.append(event)
+		if SaveSafe.i(seen.get(from, -1)) != int(event["at"]):
+			fresh.append(event)
+			seen[from] = int(event["at"])
+	loaded.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["at"]) > int(b["at"]))
+	race_events = loaded
+	if not fresh.is_empty():
+		_meta["events_seen"] = seen
+		_write_meta()
+		for event: Dictionary in fresh:
+			race_news.emit(event)
+
+
+## Sunucudaki haber belgesi → haber (biçimsiz alanlar elenir) + arkadaşın profili (fotoğraf / çerçeve / bayrak).
+func _parse_event(from: String, doc: Dictionary) -> Dictionary:
+	var car: StringName = StringName(SaveSafe.s(doc.get("car", "")))
+	var their: StringName = StringName(SaveSafe.s(doc.get("their_car", "")))
+	if CarCatalog.get_entry(car).is_empty() or CarCatalog.get_entry(their).is_empty():
+		return {}
+	var paint: String = SaveSafe.s(doc.get("paint", ""))
+	var event: Dictionary = {
+		"uid": from, "name": SaveSafe.s(doc.get("name", "")), "car": car, "their_car": their,
+		"paint": paint if Color.html_is_valid(paint) else "",
+		"build": PerformanceMods.normalized(doc.get("build", {}) if doc.get("build") is Dictionary else {}),
+		"won": bool(doc.get("won", false)), "revenge": bool(doc.get("revenge", false)),
+		"mw": maxi(SaveSafe.i(doc.get("mw", 0)), 0), "ml": maxi(SaveSafe.i(doc.get("ml", 0)), 0),
+		"at": SaveSafe.i(doc.get("at", 0)),
+	}
+	var friend: Dictionary = person(from)
+	for key: String in ["av", "frame", "flag"]:
+		event[key] = SaveSafe.s(friend.get(key, ""))
+	if SaveSafe.s(friend.get("name", "")) != "":
+		event["name"] = friend["name"]   # güncel takma ad
+	return event
+
+
+## Gerçek arkadaşın aracıyla yarış bitti: ona haber yazılır (Emre / Elif'e yazılmaz). İNTİKAM için benim aracımın
+## boyası ve modifiyeleri de gider; skorun benim yönüm (mw / ml) habere eklenir.
+func _on_friend_race_finished(owner: Dictionary, won: bool, my_car: StringName, their_car: StringName, revenge: bool) -> void:
+	var uid: String = SaveSafe.s(owner.get("uid", ""))
+	if not is_ready() or uid.is_empty() or bool(owner.get("featured", false)) or not is_friend(uid):
+		return
+	var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager
+	var counts: Vector2i = race.my_counts(uid) if race else Vector2i.ZERO
+	var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+	var paint: String = SaveSafe.s((ownership.paint_state() if ownership else {}).get(String(my_car), ""))
+	var build: Dictionary = {}
+	var mine: Dictionary = PerformanceMods.build_of(my_car)
+	for category: StringName in mine:
+		build[String(category)] = int(mine[category])
+	var doc: Dictionary = {"name": my_name(), "car": String(my_car), "paint": paint, "build": build,
+		"their_car": String(their_car), "won": won, "revenge": revenge, "mw": counts.x, "ml": counts.y, "at": _now()}
+	await _call(&"set", _races_of(uid), "e_" + _uid, doc)
+
+
+# --- Şikâyet / engelleme ----------------------------------------------------------
+
+## Oyuncuyu şikâyet eder (reports/x_{ben}_{o}); fotoğrafı bu ekranda hemen gizlenir. Rapor konsoldan incelenir.
+func report(uid: String, reason: String) -> bool:
+	if not is_ready() or FeaturedFriends.is_featured(uid) or uid == _uid or not REPORT_REASONS.has(reason):
+		return false
+	var who: Dictionary = person(uid)
+	if who.is_empty():
+		var garage: Dictionary = await _call(&"get", GARAGES, "g_" + uid)
+		if _ok(garage) and garage.get("data") is Dictionary:
+			who = profile_fields(garage["data"])
+			who["name"] = SaveSafe.s((garage["data"] as Dictionary).get("name", ""))
+	var av: String = SaveSafe.s(who.get("av", ""))
+	var doc: Dictionary = {"target": uid, "reason": reason, "av": av, "name": SaveSafe.s(who.get("name", "")), "at": _now()}
+	# Şikâyet anındaki fotoğraf da rapora girer: oyuncu sonra değiştirse de incelemede görünsün
+	var cached: Dictionary = _avatars.get(uid, {})
+	var hash: String = ProfileCatalog.image_hash(av)
+	if reason == "photo" and not hash.is_empty() and SaveSafe.s(cached.get("hash", "")) == hash:
+		var path: String = AVATAR_CACHE_DIR + uid.validate_filename() + ".jpg"
+		if FileAccess.file_exists(path):
+			doc["img"] = Marshalls.raw_to_base64(FileAccess.get_file_as_bytes(path))
+	_busy += 1
+	changed.emit()
+	var ok: bool = _ok(await _call(&"set", REPORTS, "x_%s_%s" % [_uid, uid], doc))
+	_busy -= 1
+	if _profile and not hash.is_empty():
+		_profile.hide_photo(uid, hash)   # şikâyet edenin ekranında hemen gizlenir (gönderilemese de)
+	notice.emit(Loc.t("Şikâyetin alındı, inceleyeceğiz. Teşekkürler!") if ok
+		else Loc.t("Şikâyet gönderilemedi. İnternet bağlantını kontrol et."))
+	changed.emit()
+	return ok
+
+
+## Engeller: arkadaşlıktan çıkarır, bekleyen istekleri siler, fotoğrafını gizler, yeni isteklerini yok sayar.
+func block(uid: String) -> bool:
+	if _profile == null or FeaturedFriends.is_featured(uid) or uid == _uid or uid.is_empty():
+		return false
+	var who: Dictionary = person(uid)
+	_profile.block(uid, SaveSafe.s(who.get("name", "")))
+	if is_ready():
+		if is_friend(uid):
+			await remove_friend(uid)
+		if _index_of(incoming, uid) >= 0:
+			await reject(uid)
+		if _index_of(outgoing, uid) >= 0:
+			await cancel(uid)
+	notice.emit(Loc.t("%s engellendi, artık sana görünmez.") % SaveSafe.s(who.get("name", Loc.t("OYUNCU"))))
+	changed.emit()
+	return true
+
+
+func unblock(uid: String) -> void:
+	if _profile:
+		_profile.unblock(uid)
+		changed.emit()
 
 
 # --- Firestore istek kuyruğu ------------------------------------------------------
@@ -821,6 +1252,10 @@ static func _outbox_of(uid: String) -> String:
 
 static func _gifts_of(uid: String) -> String:
 	return "users/%s/gifts" % uid
+
+
+static func _races_of(uid: String) -> String:
+	return "users/%s/races" % uid
 
 
 static func _ok(result: Dictionary) -> bool:

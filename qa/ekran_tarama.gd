@@ -254,11 +254,25 @@ func _analyze(state: String, scope: Node) -> PackedStringArray:
 				# Aynı düğmenin içindeki ikon/yazı gibi (ortak ata BaseButton) bilinçli katmanlar hariç
 				if _shared_button(ca, cb):
 					continue
+				# Bilinçli rozet (meta qa_badge): kendi kabındaki komşusunun köşesine biner (HUD seviye rozeti avatarın)
+				if _badge_pair(ca, cb):
+					continue
 				# Arka plan: yazı olmayan bir öğe ötekini TAMAMEN kaplıyorsa (harita resmi, gölge) çakışma değil
 				if (ra.encloses(rb) and not _is_text(ca)) or (rb.encloses(ra) and not _is_text(cb)):
 					continue
 				issues.append("ÇAKIŞMA %.0f%%  %s ⟷ %s" % [inter / smaller * 100.0, _describe(ca), _describe(cb)])
 	return issues
+
+
+## Biri `qa_badge` işaretli (ya da onun içinde) ve ikisi aynı kabın çocukları: bilerek üst üste konmuş rozet.
+func _badge_pair(a: Node, b: Node) -> bool:
+	for pair: Array in [[a, b], [b, a]]:
+		var node: Node = pair[0]
+		while node and not node is CanvasLayer:
+			if node.has_meta(&"qa_badge"):
+				return node.get_parent() != null and node.get_parent().is_ancestor_of(pair[1])
+			node = node.get_parent()
+	return false
 
 
 func _is_text(c: Control) -> bool:
@@ -478,6 +492,17 @@ func _run() -> void:
 	await _screen(&"mastery", "ustalik")
 	await _screen(&"garage_value", "garaj_degeri")
 	await _screen(&"profile", "profil")
+	# PROFİL DÜZENLE (alt pano) — beş sekme, kırpıcı, kamera (masaüstünde kamera yok: "bulunamadı" yazısı)
+	for tab: Array in [[0, "foto"], [1, "cerceve"], [2, "bayrak"], [3, "vitrin"], [4, "isim"]]:
+		await _screen(&"profile_edit", "profil_duzenle_%s" % tab[1], func() -> void:
+			_hud.profile_edit_screen.call("_select_tab", int(tab[0])))
+	await _screen(&"avatar_crop", "profil_kirp", func() -> void:
+		var image: Image = (load("res://assets/ui/avatars/featured_elif.png") as Texture2D).get_image()
+		image.resize(600, 400)
+		_hud.avatar_cropper.set_image(image))
+	await _screen(&"avatar_camera", "profil_kamera", Callable(), 3.2)
+	await _screen(&"friend_card", "arkadas_karti", func() -> void:
+		_hud.friend_card_screen.show_for("featured_emre"))
 	await _screen(&"account", "hesap")
 	await _screen(&"account", "hesap_oneri", func() -> void:
 		_hud.login_screen.show_prompt())
@@ -502,6 +527,20 @@ func _run() -> void:
 	await _screen(&"gem_store", "elmas_magazasi")
 	await _screen(&"garage_edit", "dekor")
 	await _screen(&"race_challenge", "yaris_davet")
+	# ARKADAŞ RAKİP: davet başlığı / rakip plakasında fotoğraf + ad, sonuçta "… YENDİN!"
+	var race_mgr: RaceManager = get_first_node_in_group("race") as RaceManager
+	if _want("yaris_arkadas") and race_mgr:
+		race_mgr._rival_id = &"lambo_huracan"
+		race_mgr._rival_owner = FeaturedFriends.rival_owner("featured_emre")
+		await _screen(&"race_challenge", "yaris_arkadas_davet")
+		await _screen(&"race_result", "yaris_arkadas_sonuc", func() -> void:
+			var result: RaceResultScreen = _router.screen(&"race_result") as RaceResultScreen
+			result.hide_bonus()
+			result.show_result(true, 10.42, 10.87, 2000, 100, &"bmw_e60")
+			result.show_record(true, true, 10.42, 10.9)
+			result.offer_bonus(2000))
+		race_mgr._rival_owner = {}
+		race_mgr._rival_id = &""
 	await _screen(&"drag_race", "yaris_pist", Callable(), 2.5)
 	await _screen(&"race_result", "yaris_sonuc", func() -> void:
 		var result: RaceResultScreen = _router.screen(&"race_result") as RaceResultScreen

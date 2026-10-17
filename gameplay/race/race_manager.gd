@@ -26,8 +26,22 @@ extends Node
 ## dönene kadar şeritte bekler (yarış ekranı açıkken dünya çizilmez, kaçış görünmezdi); GARAJA DÖN'de kırmızıya
 ## bakmadan, trafiği birbirine katarak kaçar (TrafficVehicle.flee). Diğerlerinde kaybeden normal trafiğe döner.
 ##
+## ARKADAŞ RAKİP (2026-10-16, orijinal Car Town gibi): rakiplerin friend_chance'ı (%70) bir ARKADAŞIN aracıyla gelir —
+## balonda arkadaşın fotoğrafı, davet / sonuç panosunda adı. Önce GERÇEK arkadaşların performansa uyan araçlarına
+## bakılır (arkadaşın modifiyeli süresiyle, rival_window); uyan yoksa Emre / Elif gelir (yarışta her araca
+## sahipler; hangisinin geleceği aracın karakterine göre: FeaturedFriends.owner_for_car). Kalan %30 isimsiz NPC.
+## Arkadaşın aracı onun BOYASIYLA ve PERFORMANS MODİFİYELERİYLE gelir (rival_build); Emre / Elif fabrika
+## renginde ve modifiyesiz. İlk yarışta (eğitim) gerçek arkadaş gelmez: yarış kazanılabilir kalsın.
+##
+## ARKADAŞ YARIŞI SONUÇLARI (aşama 3, 2026-10-17): gerçek arkadaşın aracıyla yarış bitince friend_race_finished →
+## SocialManager arkadaşa HABER yazar (kazansan da kaybetsen de). Arkadaşın senin aracını yendiğini haber alınca
+## İNTİKAM AL: start_revenge pisti yoldan gelen araç olmadan DOĞRUDAN açar (onun o aracı, boyası, modifiyeleri; rövanş
+## yok). SKOR iki yönlü: kendi yönüm (ben onun aracına karşı: mw / ml) ve onun yönü (haberle gelen: tw / tl); karşı
+## yönü yalnızca o sayar → iki tarafın tabelası aynı kalır. Gerçek arkadaşı yenmek +%20 para (FRIEND_BONUS),
+## arkadaş başına günde bir kez. Emre / Elif'e karşı da kendi yönüm sayılır (haber / bonus yok).
+##
 ## Sahnede World/Gameplay/RaceManager olarak durur, "race" grubundan bulunur (autoload yok).
-## Kayıt: yalnızca KİŞİSEL REKORLAR saklanır (araç başına en iyi 300 m süresi + rekor koşunun
+## Kayıt: KİŞİSEL REKORLAR + profil kartındaki yarış / galibiyet sayıları ("wins", "races"; eski kayıtta 0). Rekorlar (araç başına en iyi 300 m süresi + rekor koşunun
 ## mesafe izi, ilerleme çubuğundaki "hayalet" için). SaveManager "race" bölümü olarak okur/yazar;
 ## eski kayıtta bölüm yoktur → rekorsuz başlanır (sürüm atlamaz).
 
@@ -43,6 +57,8 @@ signal challenge_clicked(vehicle: Node3D)
 signal records_changed
 ## Oyuncu kaybettiği yarışın rövanşını başlattı (aynı rakip yeniden pistte).
 signal rematch_started(count: int)
+## Arkadaşın (gerçek ya da Emre / Elif) aracıyla yarış bitti: haber + skor (SocialManager dinler).
+signal friend_race_finished(owner: Dictionary, won: bool, player_vehicle: StringName, rival_vehicle: StringName, revenge: bool)
 
 ## Bir rakip gittikten sonra yenisi ne kadar sonra gelir (sn).
 @export var challenge_interval_min: float = 5.0
@@ -84,6 +100,11 @@ const MAX_REMATCHES: int = 1
 
 ## Kaybedince verilen XP oranı (para yok).
 const LOSS_XP_RATIO: float = 0.3
+## Gerçek arkadaşı yenince ek para oranı (kullanıcı kararı: +%20, arkadaş başına günde bir).
+const FRIEND_BONUS: float = 0.2
+
+## Rakibin bir arkadaşın (gerçek ya da Emre / Elif) aracıyla gelme olasılığı (kullanıcı kararı: %70). Testler 0 / 1 verir.
+@export_range(0.0, 1.0) var friend_chance: float = 0.7
 
 ## Rakip duruş noktasına bu kadar yaklaşınca davet açılır (balon çıkar).
 const ARRIVE_DISTANCE: float = 0.45
@@ -95,6 +116,10 @@ var _challenger: TrafficVehicle
 ## Duruş noktası: yarış şeridindeki waypoint'ten türetilen, gidiş yönüne dönük işaret.
 var _stop: Marker3D
 var _rival_id: StringName = &""
+## Rakibin sahibi: {uid, name, av, frame, flag, featured, paint (Color hex ya da ""), build {kategori: kademe}};
+## isimsiz NPC'de boş. Rakip seçilirken belirlenir, rakip gidene kadar (rövanş dahil) aynı kalır.
+var _rival_owner: Dictionary = {}
+var _rival_appearance: CarAppearance
 var _traffic: TrafficManager
 const CarHitbox: GDScript = preload("res://car_hitbox.gd")
 
@@ -117,6 +142,16 @@ var _loser_waiting: bool = false
 var _loser_flees: bool = false
 ## KİŞİSEL REKORLAR: araç id → {"time": sn, "trace": PackedFloat32Array (her TRACE_STEP'te metre)}.
 var _records: Dictionary = {}
+## Profil kartı: biten yarış (rövanş dahil) ve galibiyet sayısı.
+var _races: int = 0
+var _wins: int = 0
+## ARKADAŞ SKORU: uid → {mw, ml: ben onun aracına karşı kazandım / kaybettim; tw, tl: o benim aracıma karşı (haberden)}.
+var _rivals: Dictionary = {}
+## Arkadaş bonusunun son verildiği gün: uid → UTC gün.
+var _bonus_day: Dictionary = {}
+## İNTİKAM: yoldan gelen araç yok, pist doğrudan açıldı (yarış oturumu bitene kadar yeni rakip gelmez).
+var _direct: bool = false
+var _revenge: bool = false
 
 
 func _ready() -> void:
@@ -127,7 +162,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if _traffic == null:
+	if _traffic == null or _direct:
 		return
 	if is_instance_valid(_challenger):
 		if _challenger.mode == TrafficVehicle.Mode.TRAFFIC:
@@ -197,6 +232,89 @@ func rival_id_for(player_id: StringName, busy: Dictionary = {}) -> StringName:
 	return free[_rng.randi_range(0, free.size() - 1)]
 
 
+## Rakip modeli + sahibi: {"id", "owner"}. friend_chance ile arkadaş turu: gerçek arkadaşın uyan aracı, yoksa
+## havuzdan seçilen araç Emre / Elif'in (aracın karakterine göre). Değilse isimsiz rakip (owner boş).
+func pick_rival(player_id: StringName, busy: Dictionary = {}) -> Dictionary:
+	if _rng.randf() < friend_chance:
+		if not is_first_race():
+			var real: Dictionary = _real_friend_pick(player_id, busy)
+			if not real.is_empty():
+				return real
+		var id: StringName = rival_id_for(player_id, busy)
+		return {"id": id, "owner": FeaturedFriends.rival_owner(FeaturedFriends.owner_for_car(id))}
+	return {"id": rival_id_for(player_id, busy), "owner": {}}
+
+
+## Rakip olabilecek sürelerin aralığı (sn): rival_pool'un vardığı pencere (oyuncunun modifiyeli süresine göre).
+static func rival_window(player_id: StringName) -> Vector2:
+	var pool: Array[StringName] = rival_pool(player_id)
+	var mine: float = PerformanceMods.time_300(player_id)
+	var low: float = mine * (1.0 - RIVAL_FASTER)
+	var high: float = mine * (1.0 + RIVAL_SLOWER)
+	for id: StringName in pool:
+		low = minf(low, DragRaceSim.base_time(id))
+		high = maxf(high, DragRaceSim.base_time(id))
+	return Vector2(low, high)
+
+
+## Gerçek arkadaşlardan biri (rastgele) ve onun penceredeki, şehirde olmayan araçlarından biri. Yoksa boş.
+func _real_friend_pick(player_id: StringName, busy: Dictionary) -> Dictionary:
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager if is_inside_tree() else null
+	if social == null or not social.is_ready():
+		return {}
+	var window: Vector2 = rival_window(player_id)
+	var options: Array[Dictionary] = []   # {friend, cars: Array[StringName]}
+	for friend: Dictionary in social.friends:
+		var race_data: Dictionary = friend.get("race", {}) if friend.get("race") is Dictionary else {}
+		var builds: Dictionary = race_data.get("builds", {}) if race_data.get("builds") is Dictionary else {}
+		var fits: Array[StringName] = []
+		for raw: Variant in race_data.get("cars", []):
+			var id: StringName = StringName(SaveSafe.s(raw))
+			if busy.has(id) or not _rival_eligible(id):
+				continue
+			var build: Dictionary = builds.get(String(id), {}) if builds.get(String(id)) is Dictionary else {}
+			var t: float = float(PerformanceMods.measure(id, build)["t300"]) if not build.is_empty() else DragRaceSim.base_time(id)
+			if t >= window.x and t <= window.y:
+				fits.append(id)
+		if not fits.is_empty():
+			options.append({"friend": friend, "cars": fits})
+	if options.is_empty():
+		return {}
+	var chosen: Dictionary = options[_rng.randi_range(0, options.size() - 1)]
+	var cars: Array[StringName] = chosen["cars"]
+	var car: StringName = cars[_rng.randi_range(0, cars.size() - 1)]
+	var friend_entry: Dictionary = chosen["friend"]
+	var race_info: Dictionary = friend_entry.get("race", {})
+	var owner: Dictionary = {
+		"uid": SaveSafe.s(friend_entry.get("uid", "")), "name": SaveSafe.s(friend_entry.get("name", "")),
+		"av": SaveSafe.s(friend_entry.get("av", "")), "frame": SaveSafe.s(friend_entry.get("frame", "")),
+		"flag": SaveSafe.s(friend_entry.get("flag", "")), "featured": false,
+		"paint": SaveSafe.s((race_info.get("paint", {}) as Dictionary).get(String(car), "")) if race_info.get("paint") is Dictionary else "",
+		"build": PerformanceMods.normalized((race_info.get("builds", {}) as Dictionary).get(String(car), {})) if race_info.get("builds") is Dictionary else {},
+	}
+	social.avatar_of(owner["uid"], owner["av"])   # fotoğraf önbellekte değilse araç yoldayken insin
+	return {"id": car, "owner": owner}
+
+
+## Rakip olabilir mi (katalogda, edinilebilir, hurdalık aracı değil): arkadaşın garajından gelen kimlik süzülür.
+static func _rival_eligible(id: StringName) -> bool:
+	var entry: Dictionary = CarCatalog.get_entry(id)
+	return not entry.is_empty() and bool(entry.get("obtainable", true)) and not RestorationCatalog.is_restoration(id)
+
+
+## Rakibin yoldaki görünümü: arkadaşın boyası (yoksa fabrika rengi); Emre / Elif fabrika renginde (kullanıcı kararı:
+## öne çıkan araçlar boyanmaz); isimsiz rakip null → trafik rastgele renk verir.
+static func _appearance_for(id: StringName, owner: Dictionary) -> CarAppearance:
+	if owner.is_empty():
+		return null
+	var appearance: CarAppearance = CarAppearance.new()
+	appearance.body_color = CarCatalog.default_color_for(CarCatalog.scene_path(id))
+	var hex: String = SaveSafe.s(owner.get("paint", ""))
+	if not hex.is_empty() and Color.html_is_valid(hex) and VehicleOwnership.is_paintable(id):
+		appearance.body_color = Color.html(hex)
+	return appearance
+
+
 static func _slowest(ids: Array[StringName]) -> StringName:
 	var slowest: StringName = &""
 	for id: StringName in ids:
@@ -245,6 +363,21 @@ func rival_id() -> StringName:
 	return _rival_id
 
 
+## Rakibin sahibi (arkadaş); isimsiz rakipte boş sözlük.
+func rival_owner() -> Dictionary:
+	return _rival_owner
+
+
+## Rakip aracın modifiyeleri (arkadaşın yapısı; yoksa boş = fabrika).
+func rival_build() -> Dictionary:
+	return _rival_owner.get("build", {}) if _rival_owner.get("build") is Dictionary else {}
+
+
+## Rakip aracın görünümü (yoldan gelen aracınki: pistte de aynı renk). Rakip yoksa null.
+func rival_appearance() -> CarAppearance:
+	return _rival_appearance
+
+
 ## Hemen bir rakip getirir ve davetini AÇAR (hata ayıklama / test): şeridi baştan sona sürmesini
 ## beklemez, doğrudan duruş noktasına konur.
 func request_challenge_now() -> bool:
@@ -265,6 +398,61 @@ func has_challenge() -> bool:
 
 # --- Ödül -------------------------------------------------------------------------
 
+## İNTİKAM: arkadaşın (haberdeki) aracına karşı pist doğrudan açılır. Yoldaki davet varsa kapanır. Rövanş yok.
+func start_revenge(owner: Dictionary, vehicle_id: StringName) -> bool:
+	if owner.is_empty() or CarCatalog.get_entry(vehicle_id).is_empty():
+		return false
+	release_challenger()
+	_direct = true
+	_revenge = true
+	_rival_id = vehicle_id
+	_rival_owner = owner.duplicate(true)
+	_rival_appearance = _appearance_for(vehicle_id, _rival_owner)
+	_reward_paid = false
+	_rematches = 0   # rövanş zaten çıkmaz (yolda bekleyen rakip yok); kayıpta normal teselli XP'si
+	return true
+
+
+func is_revenge() -> bool:
+	return _revenge
+
+
+## Rakip gerçek arkadaşsa ve bugün ondan bonus alınmadıysa kazanınca +%20.
+func friend_bonus_available() -> bool:
+	var uid: String = SaveSafe.s(_rival_owner.get("uid", ""))
+	return not uid.is_empty() and not bool(_rival_owner.get("featured", false)) \
+		and SaveSafe.i(_bonus_day.get(uid, -1)) != _today()
+
+
+## Arkadaşla skor: x = benim galibiyetlerim, y = onunkiler (iki yön toplamı).
+func score_with(uid: String) -> Vector2i:
+	var r: Dictionary = _rivals.get(uid, {})
+	return Vector2i(SaveSafe.i(r.get("mw", 0)) + SaveSafe.i(r.get("tl", 0)), SaveSafe.i(r.get("ml", 0)) + SaveSafe.i(r.get("tw", 0)))
+
+
+## Kendi yönümdeki sayılar (habere yazılır): x = kazandığım, y = kaybettiğim.
+func my_counts(uid: String) -> Vector2i:
+	var r: Dictionary = _rivals.get(uid, {})
+	return Vector2i(SaveSafe.i(r.get("mw", 0)), SaveSafe.i(r.get("ml", 0)))
+
+
+## Arkadaşın yönü (haberden): o benim aracıma karşı kaç kez kazandı / kaybetti. Yalnızca o sayar → olduğu gibi alınır.
+func set_their_counts(uid: String, wins: int, losses: int) -> void:
+	if uid.is_empty():
+		return
+	var r: Dictionary = _rivals.get(uid, {})
+	if SaveSafe.i(r.get("tw", 0)) == wins and SaveSafe.i(r.get("tl", 0)) == losses:
+		return
+	r["tw"] = maxi(wins, 0)
+	r["tl"] = maxi(losses, 0)
+	_rivals[uid] = r
+	records_changed.emit()   # kayıt
+
+
+static func _today() -> int:
+	return floori(Time.get_unix_time_from_system() / 86400.0)
+
+
 ## Bir yarışın ödülü (₺, XP) — kazanan/kaybedene göre. UI de bunu kullanır (hardcode yok).
 func reward_for(rival: StringName, won: bool) -> Dictionary:
 	var rival_class: String = String(CarCatalog.get_entry(rival).get("class", "D"))
@@ -283,6 +471,15 @@ func finish_race(won: bool) -> Dictionary:
 	if _reward_paid:
 		return {"money": 0, "xp": 0}
 	_reward_paid = true
+	_races += 1
+	if won:
+		_wins += 1
+	# Gerçek arkadaşı yendin: +%20, arkadaş başına günde bir
+	if won and int(reward["money"]) > 0 and friend_bonus_available():
+		var bonus: int = int(round(float(reward["money"]) * FRIEND_BONUS))
+		reward["money"] = int(reward["money"]) + bonus
+		reward["friend_bonus"] = bonus
+		_bonus_day[SaveSafe.s(_rival_owner.get("uid", ""))] = _today()
 	var economy: EconomyManager = get_tree().get_first_node_in_group("economy") as EconomyManager
 	if economy and int(reward["money"]) > 0:
 		economy.add_money(int(reward["money"]))
@@ -290,7 +487,15 @@ func finish_race(won: bool) -> Dictionary:
 	if progress and int(reward["xp"]) > 0:
 		progress.add_xp(int(reward["xp"]))
 	race_finished.emit(won, int(reward["money"]), int(reward["xp"]))
-	if won and is_instance_valid(_challenger):
+	if not _rival_owner.is_empty():
+		var uid: String = SaveSafe.s(_rival_owner.get("uid", ""))
+		var r: Dictionary = _rivals.get(uid, {})
+		r["mw" if won else "ml"] = SaveSafe.i(r.get("mw" if won else "ml", 0)) + 1
+		_rivals[uid] = r
+		friend_race_finished.emit(_rival_owner.duplicate(true), won, player_vehicle_id(), _rival_id, _revenge)
+	if _direct:
+		pass   # İNTİKAM: sonuç panosu sahibini gösterir; oturum bitince (end_race_session) temizlenir
+	elif won and is_instance_valid(_challenger):
 		_loser_waiting = true   # kaybeden rakip oyuncu dünyaya dönünce yola çıkar (end_race_session)
 		_loser_flees = _rng.randf() < flee_chance
 	elif won or not is_instance_valid(_challenger) or _rematches >= MAX_REMATCHES:
@@ -323,6 +528,9 @@ func start_rematch() -> bool:
 
 ## Yarış modundan çıkıldı (GARAJA DÖN / GERİ): rövanş bekleyen rakip yola döner.
 func end_race_session() -> void:
+	if _direct:
+		release_challenger()   # İNTİKAM bitti: yoldan yine rakip gelmeye başlar
+		return
 	if _loser_waiting:
 		release_challenger(_loser_flees)   # ~7'de 1: kaçar gibi gider
 	elif _awaiting_rematch:
@@ -344,6 +552,10 @@ func release_challenger(fled: bool = false) -> void:
 	var vehicle: TrafficVehicle = _challenger
 	_challenger = null
 	_rival_id = &""
+	_rival_owner = {}
+	_rival_appearance = null
+	_direct = false
+	_revenge = false
 	_awaiting_rematch = false
 	_loser_waiting = false
 	_loser_flees = false
@@ -357,6 +569,24 @@ func release_challenger(fled: bool = false) -> void:
 
 
 # --- Kişisel rekor ----------------------------------------------------------------
+
+func wins() -> int:
+	return _wins
+
+
+func races() -> int:
+	return _races
+
+
+## Bütün araçlar arasında en iyi 300 m: {"vehicle": id, "time": sn}; rekor yoksa boş.
+func overall_best() -> Dictionary:
+	var out: Dictionary = {}
+	for id: StringName in _records:
+		var time: float = float(_records[id]["time"])
+		if out.is_empty() or time < float(out["time"]):
+			out = {"vehicle": id, "time": time}
+	return out
+
 
 ## Bu aracın rekoru (sn); yoksa -1.
 func best_time(vehicle_id: StringName) -> float:
@@ -390,11 +620,31 @@ func state() -> Dictionary:
 		for meters: float in record["trace"]:
 			trace.append(snappedf(meters, 0.1))
 		best[String(id)] = {"time": snappedf(float(record["time"]), 0.001), "trace": trace}
-	return {"best": best}
+	var rivals: Dictionary = {}
+	for uid: String in _rivals:
+		var r: Dictionary = _rivals[uid]
+		rivals[uid] = {"mw": SaveSafe.i(r.get("mw", 0)), "ml": SaveSafe.i(r.get("ml", 0)),
+			"tw": SaveSafe.i(r.get("tw", 0)), "tl": SaveSafe.i(r.get("tl", 0))}
+	return {"best": best, "races": _races, "wins": _wins, "rivals": rivals, "bonus": _bonus_day.duplicate()}
 
 
 func load_state(data: Dictionary) -> void:
 	_records.clear()
+	_races = maxi(SaveSafe.i(data.get("races", 0)), 0)
+	_wins = clampi(SaveSafe.i(data.get("wins", 0)), 0, _races)
+	_rivals.clear()
+	_bonus_day.clear()
+	var rivals: Variant = data.get("rivals", {})
+	if rivals is Dictionary:
+		for uid: Variant in rivals:
+			var r: Variant = (rivals as Dictionary)[uid]
+			if r is Dictionary and _rivals.size() < 500:
+				_rivals[SaveSafe.s(uid)] = {"mw": maxi(SaveSafe.i(r.get("mw", 0)), 0), "ml": maxi(SaveSafe.i(r.get("ml", 0)), 0),
+					"tw": maxi(SaveSafe.i(r.get("tw", 0)), 0), "tl": maxi(SaveSafe.i(r.get("tl", 0)), 0)}
+	var bonus: Variant = data.get("bonus", {})
+	if bonus is Dictionary:
+		for uid: Variant in bonus:
+			_bonus_day[SaveSafe.s(uid)] = SaveSafe.i((bonus as Dictionary)[uid])
 	var best: Variant = data.get("best", {})
 	if not best is Dictionary:
 		return
@@ -416,6 +666,10 @@ func load_state(data: Dictionary) -> void:
 
 func reset() -> void:
 	_records.clear()
+	_races = 0
+	_wins = 0
+	_rivals.clear()
+	_bonus_day.clear()
 
 
 # --- İç ---------------------------------------------------------------------------
@@ -440,22 +694,33 @@ func _send_challenger() -> void:
 		_timer = 5.0   # henüz aracı yok (HOŞ GELDİN KUTUSU açılmadı): yarışacak araç olmadan rakip gelmez
 		return
 	# Rakip modeli ÖNCE seçilir (oyuncunun aracının performansına göre), araç o modelle yola çıkar: yoldan
-	# gelen araç ile yarışta karşına çıkan araç AYNI olur.
+	# gelen araç ile yarışta karşına çıkan araç AYNI olur. Sahibi (arkadaş / isimsiz) de o anda seçilir.
 	# Seçilen model bu arada şehre çıktıysa (aynı modelden tek araç) boştakilerden yeniden seçilir
 	if _rival_id == &"" or _traffic.is_model_in_use(_rival_id):
-		_rival_id = rival_id_for(player_vehicle_id(), _traffic.models_in_use())
-	var vehicle: TrafficVehicle = _traffic.spawn_challenger(_rival_id)
+		var pick: Dictionary = pick_rival(player_vehicle_id(), _traffic.models_in_use())
+		_rival_id = pick["id"]
+		_rival_owner = pick["owner"]
+		_rival_appearance = _appearance_for(_rival_id, _rival_owner)
+	var vehicle: TrafficVehicle = _traffic.spawn_challenger(_rival_id, _rival_appearance)
 	if vehicle == null:
 		_timer = 2.0   # model yükleniyor ya da şerit dolu: birazdan yine dener
 		return
 	_challenger = vehicle
 	_rival_id = vehicle.vehicle_id
+	_rival_appearance = vehicle.appearance   # isimsiz rakibin rastgele rengi de pistte aynı kalsın
 	_reward_paid = false
 
 
-## Rakip duruş noktasına geldi: durur, 🏁 balonunu açar ve zaman aşımı sayacı başlar.
+## Rakip duruş noktasına geldi: durur, 🏁 balonunu açar ve zaman aşımı sayacı başlar. Arkadaş rakipte balonda
+## fotoğrafı da vardır (fotoğraf o ana kadar inmediyse kask).
 func _open_challenge() -> void:
 	_wait = challenge_timeout
+	if not _rival_owner.is_empty():
+		var art: Dictionary = ProfileCard.avatar_for(get_tree(), _rival_owner)
+		_challenger.race_avatar = art.get("texture")
+		_challenger.race_avatar_illustrated = bool(art.get("illustrated", true))
+	else:
+		_challenger.race_avatar = null
 	_challenger.request_race_challenge(_stop)
 	challenger_ready.emit(_challenger)
 
