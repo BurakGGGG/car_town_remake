@@ -45,7 +45,7 @@ func until(cond: Callable, limit: float = 5.0) -> bool:
 
 
 func wipe_device() -> void:
-	for f: String in ["savegame.json", "cloud_sync.json", "social.json"]:
+	for f: String in ["savegame.json", "cloud_sync.json", "social.json", "push.json"]:
 		DirAccess.remove_absolute(OS.get_user_data_dir().path_join(f))
 
 
@@ -241,12 +241,18 @@ func _run() -> void:
 	print("== 5) Telefon bildirimi jetonu ==")
 	PushService.force_available = true   # masaüstü: izin / jeton yerine QA değeri
 	var push: PushService = w["push"]
+	push._state = {}   # önceki koşudan kalan cihaz durumu (öneri soruldu mu) sıfırlanır
 	check(push.available() and not push.is_enabled() and not fb.store.has("push/p_alice"), "kapalı başlar: rızasız jeton yazılmaz")
-	check(await push.enable() and push.is_enabled(), "AÇ: izin + jeton")
+	check(push.should_ask() and push.unavailable_reason() == "", "ilk yarıştan sonraki öneri sorulabilir (henüz sorulmadı)")
+	push.mark_asked()
+	check(not push.should_ask(), "öneri gösterildi: bir daha sorulmaz")
+	push._state.erase("asked")
+	check(await push.enable() and push.is_enabled() and not push.should_ask() and push.last_failure.is_empty(), "AÇ: izin + jeton")
 	var stored: Dictionary = fb.store.get("push/p_alice", {})
 	check(SaveSafe.s(stored.get("token", "")).length() > 20 and stored.get("lang") == Loc.current(), "push/p_alice = {token, lang: %s}" % stored.get("lang"))
 	await push.disable()
 	check(not push.is_enabled() and not fb.store.has("push/p_alice"), "KAPAT: sunucudan silindi")
+	check(not push.should_ask(), "ayarlardan kapattıysa öneri bir daha çıkmaz")
 	check(await push.enable(), "yeniden AÇ")
 	var poll_event: Dictionary = (fb.store["users/alice/races/e_dave"] as Dictionary).duplicate()
 	poll_event["at"] = int(poll_event["at"]) + 50

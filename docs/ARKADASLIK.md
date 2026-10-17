@@ -128,8 +128,12 @@ Orijinal Car Town gibi: yarış şeridinden gelen rakiplerin **%70'i bir arkada�
   Tetik `users/{uid}/races/{eventId}` yazması. Mantık `news.js` (birim testi `npm test`, uçtan uca `npm run e2e`:
   Functions + Firestore emülatörü). Geçersiz jeton gelince `push/p_{uid}` silinir. Durum çubuğu ikonu
   `mipmap/icon_monochrome` (export_presets adaptive_monochrome), renk amber.
-* **İstemci:** `gameplay/social/push_service.gd` — ARKADAŞLAR → "Arkadaşın seni yenince telefonuna haber gelsin mi? AÇ"
-  (rızasız jeton yazılmaz) → Android 13+ bildirim izni → FirebaseMessaging jetonu (JavaClassWrapper, Task yoklanır;
+* **İstemci:** `gameplay/social/push_service.gd` — açma / kapama **AYARLAR → SES VE BİLDİRİMLER → YARIŞ BİLDİRİMLERİ**
+  (2026-10-17, ARKADAŞLAR ekranından taşındı; Google girişi yoksa kilitli ve nedeni yazılı, son başarısız denemenin
+  nedeni satırda). İzin oyun açılışında İSTENMEZ: **ilk yarıştan sonra**, oyuncu şehre dönüp boşta kalınca bir kez
+  `ui/hud/push_prompt.gd` açılır ("YARIŞ HABERLERİ — Seni kim yendi, ilk sen duy!"; TAMAM → izin, ŞİMDİ DEĞİL → kapanır;
+  bu cihazda bir daha sorulmaz, `push.json` "asked"). Misafire sorulmaz, giriş yapınca bir sonraki yarıştan sonra sorulur.
+  QA `qa/bildirim_onerisi_qa.gd`. Akış: rıza (rızasız jeton yazılmaz) → Android 13+ bildirim izni → FirebaseMessaging jetonu (JavaClassWrapper, Task yoklanır;
   eklentide mesajlaşma modülü yok, kütüphane `export_plugin.gd` bağımlılığı) → `push/p_{uid}` = {token, lang, at}.
   KAPAT siler; çıkış yapınca jeton geçersiz kılınır; hesap silmede belge silinir. Oyun açıkken telefon bildirimi
   görünmez: `SocialManager` 2 dakikada bir haberleri yoklar (tek liste okuması) → HUD bildirimi.

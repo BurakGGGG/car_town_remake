@@ -76,6 +76,8 @@ signal camera_recenter_requested
 var showroom: ShowroomScreen
 ## Kodla kurulan PLAYER tabelası (giriş / profil / kayıt seçimi).
 var login_screen: LoginScreen
+## İlk yarıştan sonra bir kez: "Seni kim yendi, ilk sen duy!" → TAMAM → bildirim izni (PushPrompt).
+var push_prompt: PushPrompt
 ## Kodla kurulan AYARLAR tabelası ve onu açan dişli tabela (sağ üst).
 var settings_screen: SettingsScreen
 var settings_button: PlateButton
@@ -214,6 +216,7 @@ func _ready() -> void:
 	_build_router()
 	_build_showroom()
 	_build_login_screen()
+	_build_push_prompt()
 	_build_settings()
 	_build_camera_menu()
 	_build_quests()
@@ -1087,6 +1090,7 @@ func _on_race_completed(won: bool, player_time: float, rival_time: float) -> voi
 	var rematch: int = _race.rematch_count() if _race else 0
 	if _race:
 		reward = _race.finish_race(won)
+	_arm_push_prompt()
 	race_result_screen.show_result(won, player_time, rival_time,
 		int(reward["money"]), int(reward["xp"]), player_id if won else rival, rematch)
 	if int(reward.get("friend_bonus", 0)) > 0:
@@ -1426,6 +1430,7 @@ func _register_screens() -> void:
 	router.register(&"garage_value", garage_value_screen, UiRouter.Kind.MODAL)
 	router.register(&"profile", profile_screen, UiRouter.Kind.MODAL)
 	router.register(&"account", login_screen, UiRouter.Kind.MODAL)
+	router.register(&"push_prompt", push_prompt, UiRouter.Kind.MODAL)
 	router.register(&"settings", settings_screen, UiRouter.Kind.PLACE)   # tam ekran: oyun arkada görünmez
 	router.register(&"race_challenge", race_challenge_screen, UiRouter.Kind.MODAL)
 	router.register(&"drag_race", drag_race_screen, UiRouter.Kind.PLACE)
@@ -1791,6 +1796,48 @@ func open_photo_mode(mode: PhotoMode.Mode) -> void:
 func _build_login_screen() -> void:
 	login_screen = LoginScreen.new()
 	garage_screen.get_parent().add_child(login_screen)
+
+
+func _build_push_prompt() -> void:
+	push_prompt = PushPrompt.new()
+	garage_screen.get_parent().add_child(push_prompt)
+
+
+## YARIŞ BİLDİRİMİ ÖNERİSİ (kullanıcı kararı): izin oyun açılışında değil İLK YARIŞTAN SONRA istenir — o an oyuncu ne
+## için olduğunu bilir. Yarış bitince kurulur; oyuncu sonuç / rövanş ekranlarından şehre dönüp PUSH_PROMPT_IDLE sn boşta
+## kalınca (açık ekran, ders, kasa / restorasyon plakası yok) öneri açılır. Bildirim açılamıyorsa (misafir / PC) kurulmaz:
+## giriş yapan oyuncuya bir sonraki yarıştan sonra sorulur. Bu cihazda bir kez (PushService.should_ask).
+const PUSH_PROMPT_IDLE: float = 1.5
+var _push_prompt_timer: Timer
+var _push_prompt_idle: float = 0.0
+
+
+func _arm_push_prompt() -> void:
+	var push: PushService = get_tree().get_first_node_in_group("push") as PushService
+	if push == null or not push.should_ask() or is_instance_valid(_push_prompt_timer) or GarageVisit.is_visiting():
+		return
+	_push_prompt_idle = 0.0
+	_push_prompt_timer = Timer.new()
+	_push_prompt_timer.name = "PushPromptTimer"
+	_push_prompt_timer.wait_time = 0.5
+	add_child(_push_prompt_timer)
+	_push_prompt_timer.timeout.connect(_tick_push_prompt.bind(push))
+	_push_prompt_timer.start()
+
+
+func _tick_push_prompt(push: PushService) -> void:
+	if not push.should_ask():
+		_push_prompt_timer.queue_free()
+		return
+	if not router.top().is_empty() or (tutorial and tutorial.is_running()) or (crate_panel and crate_panel.visible) \
+			or (restoration_result and restoration_result.visible) or get_tree().root.get_node_or_null("LoadingScreen") != null:
+		_push_prompt_idle = 0.0
+		return
+	_push_prompt_idle += _push_prompt_timer.wait_time
+	if _push_prompt_idle < PUSH_PROMPT_IDLE:
+		return
+	_push_prompt_timer.queue_free()
+	router.open(&"push_prompt")
 
 
 func _on_profile_button_pressed() -> void:

@@ -3,13 +3,17 @@ extends Node
 ## TELEFON BİLDİRİMİ (FCM): arkadaşın senin aracını yenince oyun KAPALIYKEN de telefonuna "Bob Usta yarışta aracını
 ## yendi! İntikam almak için dokun" bildirimi gelir. Bildirimi sunucu gönderir (firebase/functions: news.js — yalnızca
 ## gönderen kazandıysa, aynı gönderen → aynı alıcı çiftine 6 saatte en çok bir; kullanıcı kuralı 2026-10-17).
-## Bu düğüm yalnızca cihaz jetonunu yönetir: oyuncu ARKADAŞLAR → YARIŞ BİLDİRİMLERİ: AÇ der → (Android 13+) bildirim izni
-## → FirebaseMessaging jetonu → push/p_{uid} = {token, lang}. Rızasız jeton yazılmaz. Oturum açıldıkça jeton / dil
-## değiştiyse yeniden yazılır; oyuncu çıkış yapınca jeton geçersiz kılınır (deleteToken: sunucu da belgeyi siler).
+## Bu düğüm yalnızca cihaz jetonunu yönetir: oyuncu AÇ der → (Android 13+) bildirim izni → FirebaseMessaging jetonu →
+## push/p_{uid} = {token, lang}. Rızasız jeton yazılmaz. Oturum açıldıkça jeton / dil değiştiyse yeniden yazılır;
+## oyuncu çıkış yapınca jeton geçersiz kılınır (deleteToken: sunucu da belgeyi siler).
+## NEREDEN AÇILIR (2026-10-17, kullanıcı kararı): AYARLAR → SES VE BİLDİRİMLER → YARIŞ BİLDİRİMLERİ (açma / kapama) ve
+## İLK YARIŞTAN SONRA bir kez çıkan öneri (PushPrompt: önce neden istendiği anlatılır, TAMAM → izin). İzin oyun
+## açılışında İSTENMEZ. Öneri bu cihazda bir kez gösterilir (should_ask / mark_asked; oyuncu ayarlardan açıp kapattıysa
+## da bir daha sorulmaz).
 ##
 ## Firebase eklentisinde mesajlaşma modülü yok: kütüphane export_plugin.gd bağımlılığıyla gelir, jeton Godot'un
 ## JavaClassWrapper köprüsüyle alınır (Task.isComplete yoklanır — Java dinleyicisi gerekmez). GarageSystem kurar,
-## "push" grubundan bulunur. Cihaza özel durum: user://push.json {enabled, uid, token, lang}.
+## "push" grubundan bulunur. Cihaza özel durum: user://push.json {enabled, uid, token, lang, asked}.
 
 signal changed
 
@@ -22,6 +26,9 @@ const MESSAGING_CLASS: String = "com.google.firebase.messaging.FirebaseMessaging
 
 ## QA / masaüstü görüntüsü: düğmeyi Android olmadan göstermek için.
 static var force_available: bool = false
+
+## Son AÇ denemesi neden olmadı (AYARLAR satırı gösterir; HUD bildirimi ayarlar açıkken görünmüyor). Başarıda boş.
+var last_failure: String = ""
 
 var _social: SocialManager
 var _state: Dictionary = {}
@@ -44,9 +51,29 @@ func _connect() -> void:
 
 ## Bildirim açılabilir mi (Android + Firebase eklentisi + sosyal oturum hazır).
 func available() -> bool:
+	return unavailable_reason() == ""
+
+
+## Neden açılamıyor: "" açılabilir, "signin" bu cihazda olur ama Google girişi / sosyal oturum yok, "platform" Android
+## değil ya da Firebase eklentisi yok (AYARLAR satırı gizlenir).
+func unavailable_reason() -> String:
+	if not (force_available or (OS.get_name() == "Android" and Engine.has_singleton("GodotFirebaseAndroid"))):
+		return "platform"
 	if _social == null or not _social.is_ready():
-		return false
-	return force_available or (OS.get_name() == "Android" and Engine.has_singleton("GodotFirebaseAndroid"))
+		return "signin"
+	return ""
+
+
+## İLK YARIŞTAN SONRAKİ ÖNERİ gösterilsin mi: açılabilir, kapalı ve bu cihazda henüz sorulmadı.
+func should_ask() -> bool:
+	return available() and not is_enabled() and not _busy and not bool(_state.get("asked", false))
+
+
+## Öneri gösterildi (ya da oyuncu kendisi açtı / kapattı): bir daha sorulmaz.
+func mark_asked() -> void:
+	if not bool(_state.get("asked", false)):
+		_state["asked"] = true
+		_write()
 
 
 ## Bu hesap için açık mı (cihazdaki son durum).
@@ -63,20 +90,27 @@ func enable() -> bool:
 	if not available() or _busy:
 		return false
 	_busy = true
+	_state["asked"] = true
+	last_failure = ""
 	changed.emit()
 	var ok: bool = await _ask_permission()
 	var token: String = ""
 	if not ok:
-		_social.notice.emit(Loc.t("Bildirim izni verilmedi. Telefonun Ayarlar > Uygulamalar bölümünden açabilirsin."))
+		last_failure = Loc.t("Bildirim izni verilmedi. Telefonun Ayarlar > Uygulamalar bölümünden açabilirsin.")
 	else:
 		token = await _fetch_token()
 		ok = not token.is_empty() and await _social.write_push_token(token, Loc.current())
 		if not ok:
-			_social.notice.emit(Loc.t("Bildirimler açılamadı. İnternet bağlantını kontrol edip tekrar dene."))
+			last_failure = Loc.t("Bildirimler açılamadı. İnternet bağlantını kontrol edip tekrar dene.")
 	if ok:
-		_state = {"enabled": true, "uid": _social.uid(), "token": token, "lang": Loc.current()}
-		_write()
+		_state["enabled"] = true
+		_state["uid"] = _social.uid()
+		_state["token"] = token
+		_state["lang"] = Loc.current()
 		_social.notice.emit(Loc.t("Yarış bildirimleri açık: arkadaşın seni yenince haber vereceğiz."))
+	else:
+		_social.notice.emit(last_failure)
+	_write()
 	_busy = false
 	changed.emit()
 	return ok
@@ -92,6 +126,8 @@ func disable() -> void:
 		await _social.delete_push_token()
 	_delete_token()
 	_state["enabled"] = false
+	_state["asked"] = true
+	last_failure = ""
 	_write()
 	_busy = false
 	changed.emit()

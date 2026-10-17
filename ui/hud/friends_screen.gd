@@ -33,11 +33,6 @@ var _code_label: Label
 var _name_edit: LineEdit
 var _name_row: HBoxContainer
 var _add_row: HBoxContainer
-## YARIŞ BİLDİRİMLERİ (telefon bildirimi, PushService): açıklama + AÇ / KAPAT.
-var _push_row: HBoxContainer
-var _push_caption: Label
-var _push_button: PlateButton
-var _push: PushService
 var _code_edit: LineEdit
 var _lists: VBoxContainer
 var _primary: PlateButton
@@ -151,17 +146,6 @@ func _build() -> void:
 	_add_row.add_child(add)
 	box.add_child(_add_row)
 
-	_push_row = _row()
-	_push_row.name = "PushRow"
-	_push_caption = _label(&"HudInkCaption", "")
-	_push_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_push_caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_push_row.add_child(_push_caption)
-	_push_button = _small_button(Loc.t("AÇ"), _on_push_pressed)
-	_push_button.name = "PushButton"
-	_push_row.add_child(_push_button)
-	box.add_child(_push_row)
-
 	_notice = _wrapped(&"HudInkCaption")
 	_notice.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
 	box.add_child(_notice)
@@ -193,9 +177,6 @@ func _build() -> void:
 
 func _connect_social() -> void:
 	_social = get_tree().get_first_node_in_group("social") as SocialManager
-	_push = get_tree().get_first_node_in_group("push") as PushService
-	if _push:
-		_push.changed.connect(_refresh)
 	if _social:
 		_social.changed.connect(_refresh)
 		_social.notice.connect(_on_notice)
@@ -226,15 +207,6 @@ func _refresh() -> void:
 	_primary.disabled = busy
 	_notice.text = _notice_text
 	_notice.visible = not _notice_text.is_empty()
-	# Telefon bildirimi: yalnızca Android'de, profil hazırken (rızayla açılır)
-	_push_row.visible = ready and not _renaming and _push != null and _push.available()
-	if _push_row.visible:
-		var on: bool = _push.is_enabled()
-		_push_caption.text = Loc.t("YARIŞ BİLDİRİMLERİ AÇIK") if on \
-			else Loc.t("Arkadaşın seni yenince telefonuna haber gelsin mi?")
-		_push_button.text = Loc.t("KAPAT") if on else Loc.t("AÇ")
-		_push_button.highlight = not on
-		_push_button.disabled = busy or _push.is_busy()
 	match state:
 		SocialManager.State.UNAVAILABLE:
 			_body.text = Loc.t("Arkadaş eklemek yalnızca Android sürümünde. Auto Yard ustalarının garajlarını yine de gezebilirsin.")
@@ -376,15 +348,6 @@ func _on_primary_pressed() -> void:
 				_social.rename(_name_edit.text)
 			else:
 				_social.refresh(true)
-	_refresh()
-
-
-func _on_push_pressed() -> void:
-	_notice_text = ""
-	if _push.is_enabled():
-		await _push.disable()
-	else:
-		await _push.enable()
 	_refresh()
 
 

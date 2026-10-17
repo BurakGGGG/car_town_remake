@@ -1,8 +1,8 @@
 class_name SettingsScreen
 extends Control
 ## AYARLAR — tam ekran: üstte başlık çubuğu (GERİ · AYARLAR · sürüm), solda kategori menüsü, sağda seçili
-## kategorinin içeriği. Kategoriler: DİL · GRAFİK VE PERFORMANS (kalite, pil tasarrufu, HUD boyutu) · SES ·
-## HESAP VE GİZLİLİK · DESTEK VE HAKKINDA.
+## kategorinin içeriği. Kategoriler: DİL · GRAFİK VE PERFORMANS (kalite, pil tasarrufu, HUD boyutu) · SES VE
+## BİLDİRİMLER (müzik, efekt, YARIŞ BİLDİRİMLERİ — PushService) · HESAP VE GİZLİLİK · DESTEK VE HAKKINDA.
 ## Uzun tek sütun yerine kategori başına bir sayfa: telefonda (480 birim) hiçbir sayfa kaydırma gerektirmez,
 ## gerekirse içerik tut-çek kaydırılır (TouchScroll).
 ##
@@ -54,6 +54,12 @@ var _hud_group: ButtonGroup = ButtonGroup.new()
 var _music_label: Label
 var _sfx_label: Label
 var _mute: PlateButton
+## YARIŞ BİLDİRİMLERİ (telefon bildirimi): bu cihazda olmuyorsa (PC / eklenti yok) satır gizli; girişsizken kilitli.
+var _push: PushService
+var _push_row: HBoxContainer
+var _push_rule: ColorRect
+var _push_toggle: PlateButton
+var _push_caption: Label
 var _privacy_options: PlateButton
 var _privacy_row: Control
 var _closing: bool = false
@@ -89,8 +95,11 @@ func close() -> void:
 func _connect() -> void:
 	_settings = get_tree().get_first_node_in_group("settings") as GameSettings
 	_ads = get_tree().get_first_node_in_group("ads") as AdService
+	_push = get_tree().get_first_node_in_group("push") as PushService
 	if _settings:
 		_settings.settings_changed.connect(_refresh)
+	if _push:
+		_push.changed.connect(_refresh)
 	_refresh()
 
 
@@ -188,7 +197,7 @@ func _build_nav(body: HBoxContainer) -> void:
 	var entries: Array = [
 		[Page.LANGUAGE, "DİL · LANGUAGE · IDIOMA"],
 		[Page.GRAPHICS, Loc.t("GRAFİK VE PERFORMANS")],
-		[Page.AUDIO, Loc.t("SES")],
+		[Page.AUDIO, Loc.t("SES VE BİLDİRİMLER")],
 		[Page.ACCOUNT, Loc.t("HESAP VE GİZLİLİK")],
 		[Page.ABOUT, Loc.t("DESTEK VE HAKKINDA")],
 	]
@@ -266,8 +275,8 @@ func _show_page(page: int) -> void:
 			_page_caption.text = Loc.t("Telefon ısınıyor ya da takılıyorsa kaliteyi düşür.")
 		Page.AUDIO:
 			_page_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_INHERIT
-			_page_title.text = Loc.t("SES")
-			_page_caption.text = Loc.t("Müzik ve efekt seslerini buradan ayarla.")
+			_page_title.text = Loc.t("SES VE BİLDİRİMLER")
+			_page_caption.text = Loc.t("Müzik, efekt sesleri ve telefon bildirimleri.")
 		Page.ACCOUNT:
 			_page_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_INHERIT
 			_page_title.text = Loc.t("HESAP VE GİZLİLİK")
@@ -347,6 +356,13 @@ func _build_audio() -> void:
 	_mute.pressed.connect(func() -> void:
 		if _settings:
 			_settings.set_muted(_mute.button_pressed))
+	_push_rule = _rule()
+	box.add_child(_push_rule)
+	_push_toggle = _toggle_row(box, Loc.t("YARIŞ BİLDİRİMLERİ"), " ")
+	_push_toggle.name = "PushToggle"
+	_push_row = _push_toggle.get_parent() as HBoxContainer
+	_push_caption = _push_row.get_child(0).get_child(1) as Label   # _text_block: başlık, açıklama
+	_push_toggle.pressed.connect(_on_push_toggled)
 
 
 func _build_account() -> void:
@@ -523,10 +539,41 @@ func _refresh() -> void:
 	_sfx_label.text = Loc.percent(str(roundi(_settings.sfx_volume * 100.0)))
 	_mute.set_pressed_no_signal(_settings.muted)
 	_paint_toggle(_mute, _settings.muted)
+	_refresh_push()
 	# Google: onay istenen bölgelerde giriş noktası ZORUNLU; gerekmiyorsa satır gösterilmez
 	var required: bool = _ads != null and _ads.privacy_options_required()
 	_privacy_options.visible = required
 	_privacy_row.visible = required
+
+
+## YARIŞ BİLDİRİMLERİ satırı: açık / kapalı, girişsizken kilitli ve nedeni yazılı, son başarısız denemenin nedeni.
+func _refresh_push() -> void:
+	var reason: String = _push.unavailable_reason() if _push else "platform"
+	_push_row.visible = reason != "platform"
+	_push_rule.visible = _push_row.visible
+	if not _push_row.visible:
+		return
+	var on: bool = _push.is_enabled()
+	_push_toggle.set_pressed_no_signal(on)
+	_paint_toggle(_push_toggle, on)
+	_push_toggle.disabled = reason == "signin" or _push.is_busy()
+	if reason == "signin":
+		_push_caption.text = Loc.t("Arkadaş yarışı haberleri için önce Google ile giriş yap (HESAP VE GİZLİLİK).")
+	elif not on and not _push.last_failure.is_empty():
+		_push_caption.text = _push.last_failure
+	else:
+		_push_caption.text = Loc.t("Bir arkadaşın seni yarışta yenince telefonuna haber gelir.")
+
+
+## Açmak telefonun bildirim iznini ister (Android 13+); sonuç PushService.changed ile satıra yansır.
+func _on_push_toggled() -> void:
+	if _push == null or _push.is_busy():
+		return
+	if _push.is_enabled():
+		await _push.disable()
+	else:
+		await _push.enable()
+	_refresh()
 
 
 ## Zemindeki soluk şerit çizgileri (yol dili): altta kesikli amber çizgi.
