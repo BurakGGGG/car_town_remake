@@ -7,6 +7,8 @@ extends RefCounted
 ## Karışan karakterler yok: I/1, O/0 (ekrandan okunup yazılan kod).
 const CODE_ALPHABET: String = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const CODE_LENGTH: int = 6
+## Davet linki jetonu uzunluğu (kod değil: gizli, elle yazılmaz).
+const INVITE_TOKEN_LENGTH: int = 12
 const NAME_MIN: int = 3
 const NAME_MAX: int = 16
 const NAME_PATTERN: String = "^[A-Za-z0-9ÇĞİÖŞÜçğıöşü ._-]{3,16}$"
@@ -47,6 +49,24 @@ static func is_valid_code(code: String) -> bool:
 	if code.length() != CODE_LENGTH:
 		return false
 	for c: String in code:
+		if not CODE_ALPHABET.contains(c):
+			return false
+	return true
+
+
+## Davet linki jetonu: kriptografik rastgele, INVITE_TOKEN_LENGTH karakter (~60 bit; tahmin edilemez). Kod alfabesi:
+## kurallarla aynı biçim (^[A-HJ-NP-Z2-9]{12}$). 256 alfabe boyunun (32) katı: dağılım düzgün.
+static func random_token() -> String:
+	var out: String = ""
+	for b: int in Crypto.new().generate_random_bytes(INVITE_TOKEN_LENGTH):
+		out += CODE_ALPHABET[b % CODE_ALPHABET.length()]
+	return out
+
+
+static func is_valid_token(token: String) -> bool:
+	if token.length() != INVITE_TOKEN_LENGTH:
+		return false
+	for c: String in token:
 		if not CODE_ALPHABET.contains(c):
 			return false
 	return true

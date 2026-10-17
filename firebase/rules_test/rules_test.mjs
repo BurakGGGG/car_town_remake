@@ -190,6 +190,37 @@ await check("gönderen kendi haberini siler", assertSucceeds(deleteDoc(doc(bob, 
 await setDoc(doc(bob, "users/alice/races/e_bob"), ev());
 await check("alice haberi siler (İNTİKAM / tamam)", assertSucceeds(deleteDoc(doc(alice, "users/alice/races/e_bob"))));
 
+console.log("== arkadaş daveti (link) ==");
+const carol = db("carol"), dave = db("dave");
+const nowSec = () => Math.floor(Date.now() / 1000);
+const inv = (over = {}) => ({ uid: "carol", name: "Carol Usta", code: "CAR234", at: nowSec(), ...over });
+const fr = (over = {}) => ({ since: 1, inv: "ABCDEFGH2345", ...over });
+await check("sahibi davet oluşturur", assertSucceeds(setDoc(doc(carol, "invites/ABCDEFGH2345"), inv())));
+await check("başkası adına davet oluşturulamaz", assertFails(setDoc(doc(eve, "invites/EVEEVEEVE234"), inv())));
+await check("biçimsiz jeton reddedilir", assertFails(setDoc(doc(carol, "invites/abc"), inv())));
+await check("ileri tarihli davet (uzun ömür) reddedilir", assertFails(setDoc(doc(carol, "invites/ABCDEFGH2346"), inv({ at: nowSec() + 3600 }))));
+await check("geri tarihli davet reddedilir", assertFails(setDoc(doc(carol, "invites/ABCDEFGH2347"), inv({ at: nowSec() - 3600 }))));
+await check("ek alan reddedilir", assertFails(setDoc(doc(carol, "invites/ABCDEFGH2348"), inv({ x: 1 }))));
+await check("davetin üzerine yazılamaz", assertFails(setDoc(doc(carol, "invites/ABCDEFGH2345"), inv())));
+await check("giriş yapmış herkes jetonla okur", assertSucceeds(getDoc(doc(dave, "invites/ABCDEFGH2345"))));
+await check("girişsiz okunamaz", assertFails(getDoc(doc(anon, "invites/ABCDEFGH2345"))));
+await check("davetler listelenemez", assertFails(getDocs(collection(dave, "invites"))));
+await check("dave davetle carol'ı kendi listesine ekler", assertSucceeds(setDoc(doc(dave, "users/dave/friends/f_carol"), fr())));
+await check("dave davetle kendini carol'ın listesine ekler", assertSucceeds(setDoc(doc(dave, "users/carol/friends/f_dave"), fr())));
+await check("davetle başkası carol'a eklenemez", assertFails(setDoc(doc(dave, "users/carol/friends/f_eve"), fr())));
+await check("davetle üçüncü kişinin listesine yazılamaz", assertFails(setDoc(doc(dave, "users/eve/friends/f_dave"), fr())));
+await check("davet başka bir oyuncu için kullanılamaz", assertFails(setDoc(doc(eve, "users/eve/friends/f_bob"), fr())));
+await check("carol kendi davetiyle kendini ekleyemez", assertFails(setDoc(doc(carol, "users/carol/friends/f_carol"), fr())));
+await check("biçimsiz inv reddedilir", assertFails(setDoc(doc(eve, "users/eve/friends/f_carol"), fr({ inv: "x" }))));
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), "invites/EXPEXPEXP234"), inv({ at: nowSec() - 3700 }));
+});
+await check("süresi dolan davetle eklenemez", assertFails(setDoc(doc(eve, "users/eve/friends/f_carol"), fr({ inv: "EXPEXPEXP234" }))));
+await check("eve daveti silemez", assertFails(deleteDoc(doc(eve, "invites/ABCDEFGH2345"))));
+await check("sahibi daveti siler", assertSucceeds(deleteDoc(doc(carol, "invites/ABCDEFGH2345"))));
+await check("silinen davetle eklenemez", assertFails(setDoc(doc(eve, "users/eve/friends/f_carol"), fr())));
+await check("eski istekli arkadaşlık yolu değişmedi (ek alansız)", assertFails(setDoc(doc(eve, "users/eve/friends/f_bob"), { since: 1 })));
+
 console.log("== bildirim jetonu (push) ==");
 const tok = (over = {}) => ({ token: "f".repeat(150), lang: "tr", at: 1, ...over });
 await check("sahibi jetonunu yazar", assertSucceeds(setDoc(doc(bob, "push/p_bob"), tok())));

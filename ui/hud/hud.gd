@@ -78,6 +78,8 @@ var showroom: ShowroomScreen
 var login_screen: LoginScreen
 ## İlk yarıştan sonra bir kez: "Seni kim yendi, ilk sen duy!" → TAMAM → bildirim izni (PushPrompt).
 var push_prompt: PushPrompt
+## Arkadaşın davet linki açılınca: davet edenin profil kartı + ARKADAŞ EKLE (InviteScreen, InviteLinks).
+var invite_screen: InviteScreen
 ## Kodla kurulan AYARLAR tabelası ve onu açan dişli tabela (sağ üst).
 var settings_screen: SettingsScreen
 var settings_button: PlateButton
@@ -217,6 +219,7 @@ func _ready() -> void:
 	_build_showroom()
 	_build_login_screen()
 	_build_push_prompt()
+	_build_invites()
 	_build_settings()
 	_build_camera_menu()
 	_build_quests()
@@ -1292,6 +1295,8 @@ func _build_router() -> void:
 func _android_back_for_crate_panel() -> bool:
 	if showroom and showroom.visible and showroom.is_revealing():
 		return true   # yoldaki kasa mağazada açılıyor: sonuç plakası TAMAM ile kapanır
+	if friends_screen and friends_screen.close_popup():
+		return true   # ARKADAŞLAR'ın KODLA EKLE penceresi önce kapanır
 	if crate_panel == null or not crate_panel.visible:
 		return false
 	if crate_panel.mode() == &"prompt":
@@ -1431,6 +1436,7 @@ func _register_screens() -> void:
 	router.register(&"profile", profile_screen, UiRouter.Kind.MODAL)
 	router.register(&"account", login_screen, UiRouter.Kind.MODAL)
 	router.register(&"push_prompt", push_prompt, UiRouter.Kind.MODAL)
+	router.register(&"invite", invite_screen, UiRouter.Kind.MODAL)
 	router.register(&"settings", settings_screen, UiRouter.Kind.PLACE)   # tam ekran: oyun arkada görünmez
 	router.register(&"race_challenge", race_challenge_screen, UiRouter.Kind.MODAL)
 	router.register(&"drag_race", drag_race_screen, UiRouter.Kind.PLACE)
@@ -1798,6 +1804,46 @@ func _build_login_screen() -> void:
 	garage_screen.get_parent().add_child(login_screen)
 
 
+## ARKADAŞ DAVETİ: link açılınca (InviteLinks) oyuncu boşta kalınca (açık ekran / ders / yükleme yok, ziyarette
+## değil) davet ekranı açılır. Giriş ya da takma ad için ayrıldıysa oturum hazır olunca BİR kez daha açılır (misafir
+## kalırsa ısrar etmez). Google girişi sahneyi yeniler: bekleyen davet (InviteLinks.pending) yeni HUD'da da açılır.
+var _invite_links: InviteLinks
+var _invite_wanted: bool = false
+var _invite_after_session: bool = false
+
+
+func _build_invites() -> void:
+	invite_screen = InviteScreen.new()
+	garage_screen.get_parent().add_child(invite_screen)
+	invite_screen.screen_requested.connect(func(id: StringName) -> void:
+		_invite_after_session = true
+		router.open(id))
+	_invite_links = InviteLinks.new()
+	add_child(_invite_links)
+	_invite_links.invite_opened.connect(func(_token: String) -> void: _invite_wanted = true)
+	_invite_wanted = not InviteLinks.pending.is_empty()
+	var timer: Timer = Timer.new()
+	timer.name = "InviteTimer"
+	timer.wait_time = 0.5
+	add_child(timer)
+	timer.timeout.connect(_tick_invite)
+	timer.start()
+
+
+func _tick_invite() -> void:
+	var token: String = InviteLinks.pending
+	if token.is_empty() or invite_screen.visible or not router.top().is_empty() or (tutorial and tutorial.is_running()) \
+			or get_tree().root.get_node_or_null("LoadingScreen") != null or GarageVisit.is_visiting():
+		return
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
+	if not _invite_wanted and not (_invite_after_session and social != null and social.is_ready()):
+		return
+	_invite_wanted = false
+	_invite_after_session = false
+	router.open(&"invite")
+	invite_screen.show_token(token)
+
+
 func _build_push_prompt() -> void:
 	push_prompt = PushPrompt.new()
 	garage_screen.get_parent().add_child(push_prompt)
@@ -1936,6 +1982,7 @@ func _build_profile_screens() -> void:
 	avatar_button.diameter = AVATAR_BUTTON_SIZE
 	avatar_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	avatar_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	avatar_button.view.flag_left = true   # sağ alt köşe seviye rozetinin: bayrak sola (üst üste biniyorlardı)
 	avatar_button.pressed.connect(_on_name_plate_pressed)
 	slot.add_child(avatar_button)
 	level_sign.reparent(slot, false)
@@ -1966,7 +2013,7 @@ func _connect_social() -> void:
 		# Hurdalık hediyesi / isteği gibi bildirimler ARKADAŞLAR ekranı dışında da görünsün (ekran açıkken
 		# kendi yazı satırında gösteriyor)
 		_social.notice.connect(func(text: String) -> void:
-			if not router.top() in [&"friends", &"friend_card", &"profile_edit", &"junkyard", &"restoration"]:   # onlar kendisi gösterir
+			if not router.top() in [&"friends", &"friend_card", &"profile_edit", &"junkyard", &"restoration", &"invite"]:   # onlar kendisi gösterir
 				_show_notice(text, HudPalette.COIN_DARK, 2.4))
 		# YARIŞ HABERİ: arkadaş senin aracına karşı yarıştı (ARKADAŞLAR ekranında İNTİKAM AL)
 		_social.race_news.connect(func(event: Dictionary) -> void:

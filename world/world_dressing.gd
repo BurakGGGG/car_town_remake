@@ -44,12 +44,22 @@ const TRAFFIC_END_INSET: float = 0.3
 const INK: Color = Color("2F3236")
 const AMBER: Color = Color("F5BE4C")
 
+## ŞEHRİN ORTAM IŞIĞI (2026-10-17). Main.tscn'de ortam (Environment) yoktu: GL Compatibility çizicisi bu durumda ortam
+## ışığını EN SON çizilen başka 3B görüntüden (mağaza salonu, garaj atölyesi, yarış pisti — kendi SubViewport'ları)
+## kalan değerle kullanıyor. Mağazadan dönünce bütün şehir kararıyor (ekran ort. parlaklık 0,59 → 0,48), garajdan
+## dönünce biraz açılıyordu; ters örülmüş yol işaretleri ise simsiyah çıkıyordu (telefonda görüldü, masaüstünde de
+## tekrar etti). Oyuncunun alıştığı görünüm, açılışta önceden çizilen yarış pistinin ortam ışığıydı: aynı değer açıkça
+## verilir — görünüm birebir aynı (ölçüldü: çim 0,739, kaldırım 0,969, yol 0,418), ekran değişince artık oynamaz.
+const AMBIENT_COLOR: Color = Color("CBD9E2")
+const AMBIENT_ENERGY: float = 1.0
+
 var _traffic: TrafficManager
 var _showroom: Node3D
 
 
 func _ready() -> void:
 	name = "WorldDressing"
+	_build_environment()
 	_build_roads()
 	_traffic = _find_traffic(get_tree().current_scene)
 	if _traffic:
@@ -59,6 +69,20 @@ func _ready() -> void:
 	add_child(IntersectionMarkings.new())    # kavşağın yaya geçitleri, dur / orta çizgileri, okları (eskileri gizlenir)
 	add_child(TrafficLights.new(_traffic))   # showroom önündeki kavşak; trafik yeşilde geçer
 	add_child(CityBillboard.new())           # showroom meydanında, günde bir değişen araç afişi
+
+
+func _build_environment() -> void:
+	if get_world_3d().environment != null:
+		return   # şehrin dünyasına sahnede ortam eklenmişse ona dokunulmaz (ekranların kendi dünyaları sayılmaz)
+	var environment: Environment = Environment.new()
+	environment.background_mode = Environment.BG_CLEAR_COLOR
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.ambient_light_color = AMBIENT_COLOR
+	environment.ambient_light_energy = AMBIENT_ENERGY
+	var node: WorldEnvironment = WorldEnvironment.new()
+	node.name = "CityEnvironment"
+	node.environment = environment
+	add_child(node)
 
 
 # --- Yollar ----------------------------------------------------------------------------------

@@ -33,6 +33,12 @@ const SEGMENTS: int = 48
 	set(value):
 		flag_code = value
 		_update_flag()
+## Bayrak sol altta: sağ alt köşesinde başka rozet olan avatar (HUD — seviye rozeti sağ altta, kullanıcı kararı;
+## ikisi üst üste biniyordu, 2026-10-17).
+@export var flag_left: bool = false:
+	set(value):
+		flag_left = value
+		_update_flag()
 ## Çerçeve kalınlığı çarpanı (1 = çapın %7'si).
 @export var ring_scale: float = 1.0:
 	set(value):
@@ -81,7 +87,7 @@ func _draw() -> void:
 	_draw_ring(c, r - ring * 0.5, ring)
 
 
-## Bayrak rozeti: dairenin sağ alt kenarına (merkezden 0,62 r) çapalanır; piksel boyu çapa göre tam sayıya yakın.
+## Bayrak rozeti: dairenin sağ (flag_left: sol) alt kenarına (merkezden 0,62 r) çapalanır; piksel boyu çapa göre tam sayıya yakın.
 func _update_flag() -> void:
 	if not is_inside_tree():
 		return
@@ -97,11 +103,11 @@ func _update_flag() -> void:
 	_flag.code = flag_code
 	var d: float = minf(size.x, size.y)
 	_flag.pixel = maxf(roundf(d * 0.26 / float(FlagIcon.H + 2)), 1.0)
-	var anchor: float = 0.5 + 0.31
-	_flag.anchor_left = anchor
-	_flag.anchor_right = anchor
-	_flag.anchor_top = anchor
-	_flag.anchor_bottom = anchor
+	var anchor_x: float = 0.5 - 0.31 if flag_left else 0.5 + 0.31
+	_flag.anchor_left = anchor_x
+	_flag.anchor_right = anchor_x
+	_flag.anchor_top = 0.5 + 0.31
+	_flag.anchor_bottom = 0.5 + 0.31
 	_flag.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_flag.grow_vertical = Control.GROW_DIRECTION_BOTH
 	var half: Vector2 = _flag.get_combined_minimum_size() * 0.5

@@ -60,3 +60,28 @@ godot-4 --headless --path . --import
 ```
 
 Betik kullanıcının sahnesine dokunmaz. Dışa aktarımda `use_active_scene=True` zorunlu: dışa aktarıcı varsayılan olarak bütün sahneleri gezip her birindeki seçimi alıyor. İlk denemede kullanıcının sahnesinde seçili duran araç parçaları GLB'ye girmişti (500 bin üçgen, 19 MB).
+
+## Şehrin ortam ışığı ve yol işaretlerinin kararması (2026-10-17)
+
+Telefonda görüldü, masaüstünde de tekrar etti: showroom'a girip çıkınca showroom önündeki ve yanındaki yaya geçitleri
+(dur çizgileri ve oklarla birlikte) simsiyah çiziliyor, bütün şehir de kararıyordu. Garaj ekranına girip çıkınca kısmen
+düzeliyordu. İki ayrı neden vardı:
+
+1. **Şehrin ortamı yoktu.** `Main.tscn`'de Environment / WorldEnvironment yok. GL Compatibility çizicisi bu durumda ortam
+   ışığını EN SON çizilen başka 3B görüntüden kalan değerle kullanıyor. Bu görüntüler mağaza salonu, garaj atölyesi ve
+   yarış pisti; her birinin kendi SubViewport'u ve kendi ortamı var.
+   - Ölçüm: ekran ortalama parlaklığı açılışta 0,59, mağaza sonrası 0,48, garaj sonrası 0,53.
+   - Oyuncunun alıştığı görünüm aslında açılışta önceden çizilen yarış pistinin ortam ışığıydı (`CBD9E2`, enerji 1,0).
+   - Düzeltme: `WorldDressing._build_environment()` şehre bu değerle kendi ortamını veriyor. Görünüm birebir aynı
+     (çim 0,739, kaldırım 0,969, yol 0,418); harita, ayarlar ve yarış dahil hiçbir ekran geçişinde artık değişmiyor.
+2. **Doğu ve kuzey kolun işaretleri ters örülmüştü.** Dörtgenlerin köşe sırası kola göre değiştiği için bu iki koldaki
+   işaretler arka yüz olarak çiziliyordu.
+   - İki yüzlü malzemede arka yüzün normali aşağı çevrilir; yüz yalnızca ortam ışığı alır, o da koyuysa simsiyah çıkar.
+   - Düzeltme: `IntersectionMarkings._quad` her dörtgeni yukarıdan saat yönünde (Godot'nun ön yüzü) örüyor. Showroom
+     önündeki geçit artık diğerleri gibi güneşle de aydınlanıyor, yani eskisinden biraz daha parlak.
+
+Test: `city_life_test` (her üçgen ön yüz, şehrin kendi ortamı var). Tekrar betikleri `~/Projects/ct_shots/yaya/`
+(`repro.gd`, `ambient.gd`, `bisect.gd`).
+
+**Kural:** kendi 3B dünyası olan her sahneye açık bir Environment ver, yoksa ortam ışığı başka ekrandan sızar. Kodla
+kurulan zemin mesh'lerinde yüz yönünü kontrol et.

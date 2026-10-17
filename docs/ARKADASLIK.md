@@ -143,6 +143,54 @@ Orijinal Car Town gibi: yarış şeridinden gelen rakiplerin **%70'i bir arkada�
   servis hesabı izni yayılana kadar "Permission denied while using the Eventarc Service Agent" hatası olağan: birkaç
   dakika sonra yeniden gönder. Artifact Registry temizlik politikası kurulmadı (eski kalıplar birikir; az ücret).
 
+## Davet linki (2026-10-17)
+
+Kullanıcı isteği: arkadaş kodu yazmak yerine link. A linki B'ye atar, B açınca A'nın profilini görür ve ekler. A onaylamaz,
+çünkü linki kendisi gönderdi. Linkler 1 saat geçerli.
+
+**Akış:**
+1. A, ARKADAŞLAR → **DAVET LİNKİ GÖNDER**'e basar. `SocialManager.create_invite` şu belgeyi yazar:
+   `invites/{jeton}` = {uid, name, code, at}. Jeton 12 karakter kriptografik rastgele (`SocialNames.random_token`).
+   Ardından telefonun paylaşım penceresi açılır (`LinkShare`; PC'de link panoya kopyalanır).
+2. Paylaşılan link: `https://autoyardwebsite.vercel.app/d/<jeton>`. Web sitesindeki `davet.html` + `davet.js`
+   (`vercel.json`'daki `/d/:token` yönlendirmesi) Android'de `intent://davet/<jeton>#Intent;scheme=autoyard;…` ile oyunu
+   açar. Oyun yüklü değilse sayfa `?yok` ile geri döner ve indirme düğmesi öne çıkar.
+3. Oyun linki `gameplay/social/invite_links.gd` ile okur: açılışta ve oyun her öne geldiğinde etkinliğin
+   `getIntent().getDataString()` değerine bakar. Masaüstü / QA için `-- --davet=<jeton>`. HUD, oyuncu boşta kalınca
+   `ui/hud/invite_screen.gd` ekranını açar.
+4. B, **ARKADAŞ EKLE**'ye basar. `accept_invite` iki arkadaşlık belgesini de yazar; belgelerde `inv` (jeton) durur ve
+   kural daveti doğrular. Aradaki bekleyen istekler silinir.
+
+**Ekran durumları:** eklenebilir · eklendi (GARAJINA GİT) · zaten arkadaş · kendi linkin · süresi dolmuş · bulunamadı ·
+bağlantı hatası (TEKRAR DENE) · giriş gerekli (GİRİŞ YAP) · takma ad yok (ARKADAŞLAR) · PC.
+
+**Giriş:** Google girişi sahneyi yeniler. Bekleyen davet `InviteLinks.pending` (statik) ile kaybolmaz; oturum hazır olunca
+ekran bir kez daha açılır. Oyuncu misafir kalırsa ısrar etmez.
+
+**Kurallar (`firebase/firestore.rules`):**
+- `invites`: yalnız sahibi oluşturur. `at` sunucu saatine ±10 dk olmalı, böylece ömür istemci saatiyle uzatılamaz.
+  Belge jetonla tek tek okunur (`get`), liste kapalı. Yalnız sahibi siler.
+- `friends`: yeni bir yol daha var. Geçerli davet (`inv`, diğer taraf oluşturmuş, `at + 3600` dolmamış) varsa linki açan
+  iki belgeyi de yazar. Kendini arkadaş ekleme kapalı.
+- Emülatör testi `rules_test.mjs`'de "arkadaş daveti" bölümü; bütün kurallar 0 hata.
+
+**Kararlar ve sınırlar:**
+- Link 1 saat içinde birden çok kişi tarafından kullanılabilir (A linki kime gönderdiyse).
+- Davet belgeleri cihazdaki listeden (`social.json` → "invites") temizlenir: yeni davette süresi dolanlar, hesap silmede
+  hepsi. Başka bir cihazdan silinen hesabın davetleri sunucuda kalır; ömrü dolmuştur, kod ve garaj silindiği için
+  "bulunamadı" görünür. İstenirse ileride sunucu tarafında temizlik eklenebilir.
+
+**Android:**
+- Ana etkinlik dışa kapalı (`exported=false`) ve eklentilerin uygulama içeriği birleşik manifest'te etkinlikten önce
+  geliyor. Bu yüzden `autoyard://davet` filtresi ayrı bir activity-alias olarak (`.InviteLink`) şablonun ana
+  manifest'ine, başlatıcı takma adının ardına yazılır.
+- Yazan, Firebase eklentisinin dışa aktarma kancası (`addons/GodotFirebaseAndroid/export_plugin.gd`
+  `_ensure_invite_link_alias`). Her dışa aktarımda denetler; android/ git'te olmadığı için şablon yeniden kurulsa da
+  geri gelir.
+- Doğrulanmış https App Link (linke dokununca tarayıcısız açılış) Play imza SHA-256'sı gerektirir; şimdilik yok.
+
+**Test:** `social_test` §12 (sahte Firebase'le uçtan uca); QA `qa/davet_linki_qa.gd` (1170x540 + 853x480).
+
 ## Kod
 
 | Dosya | Görev |
@@ -151,13 +199,14 @@ Orijinal Car Town gibi: yarış şeridinden gelen rakiplerin **%70'i bir arkada�
 | `gameplay/social/public_garage.gd` | Kayıttan yalnızca görsel kısım (para / gem / kasa / görev YOK) |
 | `gameplay/social/social_names.gd` | Kod alfabesi, takma ad kuralı, küfür filtresi |
 | `gameplay/social/garage_visit.gd` | Ziyaret: kendi sahneyi dondurur, Main.tscn'yi ziyaret kipinde açar |
-| `ui/hud/friends_screen.gd` | ARKADAŞLAR ekranı (kodla kurulur, UiRouter MODAL `friends`) |
+| `ui/hud/friends_screen.gd` | ARKADAŞLAR ekranı (kodla kurulur, UiRouter MODAL `friends`). 2026-10-17 yeniden tasarım: kaymayan başlık (sekmeler ARKADAŞLAR / İSTEKLER ● / HABERLER ●, ↻, ✕), DAVET LİNKİ + KODLA EKLE (pencere: kodun, arkadaş kodu, takma ad), yalnızca yatay kart vitrini kayar; ustalar başta altın şeritli. Kartta istatistik kutusu (ARANIZDA skor, KAZANMA %, KOLEKSİYON, EN İYİ 300 M); kartın düğmeler dışındaki her yeri profil açar; başlık altın kask rozeti + altın çizgi. QA `qa/arkadaslar_qa.gd` |
 | `ui/hud/visit_bar.gd` | Ziyaretteki tek arayüz |
 | `gameplay/social/player_profile.gd` | Profil seçimleri, fotoğraf dosyası, Google fotoğrafı, engellenenler (kayıt: "profile") |
 | `gameplay/social/profile_catalog.gd` | Hazır avatarlar, çerçeveler, bayraklar, fotoğraf kodlama |
 | `ui/hud/profile_card.gd` · `avatar_view.gd` · `avatar_button.gd` · `flag_icon.gd` | Kart, yuvarlak avatar + çerçeve, piksel bayrak |
 | `ui/hud/profile_edit_screen.gd` · `avatar_cropper.gd` · `camera_capture.gd` · `photo_picker.gd` | Düzenleme, kırpma, kamera, galeri |
 | `ui/hud/friend_card_screen.gd` | Arkadaş kartı (şikâyet / engel) |
+| `gameplay/social/invite_links.gd` · `ui/hud/invite_screen.gd` · `ui/hud/link_share.gd` | Davet linki: okuma, ekran, paylaşım |
 
 `SocialManager`'ı `GarageSystem` kodla kurar ("social" grubu). Oturum `CloudSaveManager`'ındır: sosyal yalnızca
 bulut kaydı **SYNCED** iken başlar ve açık garaj yalnızca o zaman yayınlanır (kayıt seçimi sürerken cihazdaki kayıt

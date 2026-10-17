@@ -54,6 +54,7 @@ class AndroidExportPlugin extends EditorExportPlugin:
 	func _export_begin(features: PackedStringArray, is_debug: bool, path: String, flags: int) -> void:
 		if not features.has("android"):
 			return
+		_ensure_invite_link_alias()
 		
 		if (not get_option("gradle_build/use_gradle_build")) or (not FileAccess.file_exists("res://android/build/google-services.json")):
 			_clean_line_from_file("res://android/build/build.gradle", BUILD_GRADLE_PLUGIN_LINE)
@@ -63,6 +64,43 @@ class AndroidExportPlugin extends EditorExportPlugin:
 		# Modify build.gradle and settings.gradle
 		_insert_line_if_missing("res://android/build/build.gradle", "id 'org.jetbrains.kotlin.android'", BUILD_GRADLE_PLUGIN_LINE)
 		_insert_line_if_missing("res://android/build/settings.gradle", "id 'org.jetbrains.kotlin.android' version versions.kotlinVersion", SETTINGS_GRADLE_PLUGIN_LINE)
+
+	# CarTownRemake eki (2026-10-17): ARKADAŞ DAVET LİNKİ — autoyard://davet/<jeton> oyunu açar (web sayfası /d/<jeton>
+	# yönlendirir; oyun linki gameplay/social/invite_links.gd ile okur). Ana etkinlik dışa KAPALI (exported=false) ve
+	# eklentilerin uygulama içeriği birleşik manifest'te etkinlikten ÖNCE geliyor (takma ad hedefinden önce gelirse uygulama
+	# kurulmaz). Bu yüzden takma ad şablonun ANA manifest'ine, başlatıcı takma adının hemen ardına yazılır — her dışa
+	# aktarımda denetlenir: android/ git'te değil, şablon yeniden kurulsa da geri gelir.
+	const INVITE_ALIAS_MARK := "<!-- autoyard-invite-link -->"
+	const INVITE_ALIAS := """
+        <!-- autoyard-invite-link -->
+        <activity-alias
+            android:name=".InviteLink"
+            android:targetActivity=".GodotApp"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="autoyard" android:host="davet" />
+            </intent-filter>
+        </activity-alias>"""
+
+	func _ensure_invite_link_alias() -> void:
+		var manifest := "res://android/build/src/main/AndroidManifest.xml"
+		if not FileAccess.file_exists(manifest):
+			return
+		var text := FileAccess.get_file_as_string(manifest)
+		if text.contains(INVITE_ALIAS_MARK):
+			return
+		var anchor := "</activity-alias>"
+		var at := text.find(anchor)
+		if at < 0:
+			push_warning("Davet linki: şablon manifest'inde başlatıcı takma adı yok, link oyunu açamayacak")
+			return
+		text = text.insert(at + anchor.length(), INVITE_ALIAS)
+		var file := FileAccess.open(manifest, FileAccess.WRITE)
+		file.store_string(text)
+		file.close()
 
 	func _insert_line_if_missing(file_path: String, after_line: String, insert_line: String) -> void:
 		var text := FileAccess.open(file_path, FileAccess.READ).get_as_text()

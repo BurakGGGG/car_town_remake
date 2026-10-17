@@ -113,7 +113,7 @@ class FakeFB extends Object:
 		match p[0]:
 			"players":
 				return id == me
-			"garages", "codes", "avatars":
+			"garages", "codes", "avatars", "invites":
 				return true
 			"reports":
 				return false   # yalnız konsoldan
@@ -149,6 +149,10 @@ class FakeFB extends Object:
 				var target: String = SaveSafe.s(data.get("target", ""))
 				return target != me and id == "x_%s_%s" % [me, target] \
 					and ["photo", "name", "garage"].has(SaveSafe.s(data.get("reason", "")))
+			"invites":
+				# davet: sahibi, üzerine yazılamaz, jeton biçimi, saat sunucuya ±10 dk
+				return not store.has(col + "/" + id) and SaveSafe.s(data.get("uid", "")) == me \
+					and SocialNames.is_valid_token(id) and absi(int(data.get("at", 0)) - int(Time.get_unix_time_from_system())) < 600
 			"codes":
 				if deny_codes > 0:
 					deny_codes -= 1
@@ -164,8 +168,14 @@ class FakeFB extends Object:
 						return owner == me and id != "o_" + me
 					"friends":
 						var other: String = id.trim_prefix("f_")
-						return (me == owner and store.has("users/%s/inbox/r_%s" % [owner, other])) \
-							or (other == me and store.has("users/%s/inbox/r_%s" % [me, owner]))
+						# davet linki: geçerli (1 saati dolmamış) davet, diğer taraf oluşturmuş
+						var invite: Dictionary = store.get("invites/" + SaveSafe.s(data.get("inv", "")), {})
+						var fresh: bool = not invite.is_empty() \
+							and int(invite.get("at", 0)) + 3600 > int(Time.get_unix_time_from_system())
+						var inviter: String = SaveSafe.s(invite.get("uid", ""))
+						return other != owner and ((me == owner and store.has("users/%s/inbox/r_%s" % [owner, other])) \
+							or (other == me and store.has("users/%s/inbox/r_%s" % [me, owner])) \
+							or (fresh and me == owner and inviter == other) or (fresh and other == me and inviter == owner))
 					"races":
 						# yarış haberi: yalnız arkadaş, kendi adına (e_{ben}), kendine değil
 						return owner != me and id == "e_" + me and store.has("users/%s/friends/f_%s" % [owner, me])
@@ -190,6 +200,8 @@ class FakeFB extends Object:
 				return id == "g_" + me
 			"avatars", "push":
 				return id == ("a_" if p[0] == "avatars" else "p_") + me
+			"invites":
+				return not store.has(col + "/" + id) or SaveSafe.s(store[col + "/" + id].get("uid", "")) == me
 			"codes":
 				return not store.has(col + "/" + id) or SaveSafe.s(store[col + "/" + id].get("uid", "")) == me
 			"users":
@@ -533,6 +545,56 @@ func _run() -> void:
 	check(leftovers.is_empty(), "alice'e ait belge kalmadı: %s" % [leftovers])
 	check(not fb.store.has("users/bob/friends/f_alice"), "bob'un listesinden de silindi")
 	check(fb.store.has("garages/g_bob") and fb.store.has("garages/g_carol"), "başkalarının garajı duruyor")
+	await close_session()
+
+	print("== 12) Davet linki: gönderen onaylamaz, 1 saat geçerli ==")
+	await open_session("gina")
+	check(await social().create_profile("Gina"), "gina profil")
+	var gina_code: String = social().my_code()
+	var link: String = await social().create_invite()
+	var token: String = InviteLinks.parse_token(link)
+	check(link.begins_with(SocialManager.INVITE_URL) and SocialNames.is_valid_token(token), "gina davet linki: %s" % link)
+	var invite_doc: Dictionary = fb.store.get("invites/" + token, {})
+	check(invite_doc.get("uid") == "gina" and invite_doc.get("code") == gina_code and invite_doc.get("name") == "Gina",
+		"davet belgesi: kim, kod, ad")
+	check(InviteLinks.parse_token("autoyard://davet/" + token.to_lower()) == token
+		and InviteLinks.parse_token(SocialManager.INVITE_URL + token + "?yok") == token
+		and InviteLinks.parse_token("autoyard://davet/KISA") == "", "link biçimleri ayrışır, biçimsiz jeton reddedilir")
+	check((await social().read_invite(token)).get("status") == "self", "kendi linki: self")
+	await close_session()
+	await open_session("hank")
+	check(await social().create_profile("Hank"), "hank profil")
+	var info: Dictionary = await social().read_invite(token)
+	var person: Dictionary = info.get("person", {})
+	check(info.get("status") == "ok" and info.get("uid") == "gina" and person.get("name") == "Gina",
+		"hank davette gina'nın profilini görüyor")
+	check(await social().accept_invite(info), "hank: ARKADAŞ EKLE")
+	check(fb.store.has("users/hank/friends/f_gina") and fb.store.has("users/gina/friends/f_hank"),
+		"iki taraflı arkadaşlık — gina onaylamadı")
+	check(SaveSafe.s((fb.store["users/gina/friends/f_hank"] as Dictionary).get("inv", "")) == token, "belgede davet jetonu")
+	check(social().is_friend("gina") and last_notice().contains("Gina"), "hank'in listesinde gina: %s" % last_notice())
+	check((await social().read_invite(token)).get("status") == "friend", "aynı link yeniden: zaten arkadaş")
+	await close_session()
+	var aged: Dictionary = (fb.store["invites/" + token] as Dictionary).duplicate()
+	aged["at"] = int(aged["at"]) - SocialManager.INVITE_TTL - 5   # 1 saat geçti
+	fb.store["invites/" + token] = aged
+	await open_session("ivy")
+	check(await social().create_profile("Ivy"), "ivy profil")
+	var late: Dictionary = await social().read_invite(token)
+	check(late.get("status") == "expired", "1 saat dolunca: expired")
+	late["status"] = "ok"   # ekran eski durumda kalmış gibi zorla dene
+	check(not await social().accept_invite(late) and not fb.store.has("users/gina/friends/f_ivy")
+		and not fb.store.has("users/ivy/friends/f_gina"), "süresi dolmuş davetle eklenemez, yarım kayıt yok")
+	check(last_notice().contains("süresi dolmuş"), "  ...mesaj: %s" % last_notice())
+	check((await social().read_invite("ABCDEFGHJKLM")).get("status") == "missing", "olmayan davet: missing")
+	check((await social().read_invite("kısa")).get("status") == "missing", "biçimsiz jeton: missing (sunucuya gitmez)")
+	await close_session()
+	await open_session("gina", false)
+	var second: String = InviteLinks.parse_token(await social().create_invite())
+	check(fb.store.has("invites/" + second), "gina bu cihazda ikinci davet")
+	cloud().delete_account()
+	check(await until(func() -> bool: return not fb.store.has("players/gina"), 8.0), "gina hesabını sildi")
+	check(not fb.store.has("invites/" + second), "hesap silinince bu cihazdaki davetler de silindi")
 	await close_session()
 
 	print("RESULT fails=%d" % fails)

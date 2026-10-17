@@ -15,6 +15,11 @@ extends Node
 ##   avatars/a_{uid}              {img, hash, at}           profil fotoğrafı (192 px JPEG, base64; sahibi yazar)
 ##   reports/x_{şikâyetçi}_{hedef} {target, reason, av, img, name, at}  şikâyet (yalnız yazılır; konsoldan okunur)
 ##   users/{alıcı}/races/e_{gön}  {name, car, paint, build, their_car, won, revenge, mw, ml, at}  YARIŞ HABERİ
+##   invites/{jeton}              {uid, name, code, at}     ARKADAŞ DAVETİ (link; 1 saat; jetonla okunur)
+## ARKADAŞ DAVETİ (2026-10-17, kullanıcı isteği): kod yazmak yerine link. A create_invite ile link üretir ve paylaşır
+## (ARKADAŞLAR → DAVET LİNKİ GÖNDER); B linke dokunur → oyun açılır (InviteLinks) → A'nın profil kartı → ARKADAŞ
+## EKLE (accept_invite) → iki arkadaşlık belgesini B yazar, belgede davet jetonu (inv) durur, kural daveti doğrular.
+## A ONAYLAMAZ: linki kendisi gönderdi. Link INVITE_TTL (1 saat) geçerli, o sürede linki alan herkes kullanabilir.
 ## YARIŞ HABERİ (aşama 3): gerçek arkadaşın aracıyla yarış bitince (RaceManager.friend_race_finished) arkadaşa yazılır —
 ## kazansan da kaybetsen de. Gönderen başına tek belge (en son yarış). Alıcı listeyi okurken haberleri alır, skorun
 ## karşı yönünü (mw / ml) RaceManager'a yazar, yeni haber için race_news yayar (HUD bildirimi). Gönderen kazandıysa
@@ -75,6 +80,11 @@ const AVATARS: String = "avatars"
 const REPORTS: String = "reports"
 ## Telefon bildirimi jetonu: push/p_{uid} = {token, lang, at} (PushService yazar; sunucu okur).
 const PUSH: String = "push"
+## ARKADAŞ DAVETİ: koleksiyon, ömür (sn; kural aynı süreyi sunucu saatiyle uygular) ve paylaşılan linkin başı. Web
+## sayfası (auto_yard_website /d/<jeton>) oyunu autoyard://davet/<jeton> ile açar; oyun yüklü değilse mağazaya yollar.
+const INVITES: String = "invites"
+const INVITE_TTL: int = 3600
+const INVITE_URL: String = "https://autoyardwebsite.vercel.app/d/"
 ## Oyun açıkken yarış haberlerine bu aralıkla bakılır (tek liste okuması; telefon bildirimi ön planda görünmez).
 const NEWS_POLL: float = 120.0
 const AVATAR_CACHE_DIR: String = "user://avatars/"
@@ -352,6 +362,152 @@ func remove_friend(uid: String) -> bool:
 	return ok
 
 
+# --- Arkadaş daveti (link) ---------------------------------------------------------
+
+## DAVET LİNKİ: yeni davet yazar, paylaşılacak linki döner (olmazsa boş; nedeni notice ile). Süresi dolmuş eski
+## davetler önce silinir. Link INVITE_TTL boyunca geçerli; linki kime gönderdiyse o kişiler kullanabilir.
+func create_invite() -> String:
+	if not is_ready() or _busy > 0 or my_code().is_empty():
+		return ""
+	_busy += 1
+	changed.emit()
+	await _prune_invites()
+	var link: String = ""
+	var denied: bool = false
+	var at: int = _now()
+	for attempt: int in CODE_ATTEMPTS:
+		var token: String = SocialNames.random_token()
+		var result: Dictionary = await _call(&"set", INVITES, token,
+			{"uid": _uid, "name": my_name(), "code": my_code(), "at": at})
+		if _ok(result):
+			var mine: Array = _meta.get("invites", []) if _meta.get("invites") is Array else []
+			mine.append({"token": token, "at": at})
+			_meta["invites"] = mine
+			_write_meta()
+			link = INVITE_URL + token
+			break
+		denied = _permission_denied(result)
+		if not denied:
+			break   # çevrimdışı vb.: yeni jeton denemek boşuna
+	if link.is_empty():
+		# Kural reddi: jeton çakışması çok olası değil; asıl neden telefonun saatinin 10 dk'dan fazla kayık olması
+		notice.emit(Loc.t("Davet linki oluşturulamadı. Telefonunun saatini kontrol et.") if denied
+			else Loc.t("Davet linki oluşturulamadı. İnternet bağlantını kontrol et."))
+	_busy -= 1
+	changed.emit()
+	return link
+
+
+## Linkteki daveti okur: {status, token, uid, at, person (davet edenin profil kartı girdisi)}. status: "ok" (eklenebilir),
+## "friend" (zaten arkadaş), "self" (kendi linki), "expired" (süresi dolmuş), "missing" (yok / hesap silinmiş),
+## "error" (okunamadı), "signin" (sosyal oturum yok: Google girişi gerekir).
+func read_invite(raw_token: String) -> Dictionary:
+	var token: String = raw_token.strip_edges().to_upper()
+	if not SocialNames.is_valid_token(token):
+		return {"status": "missing", "token": token}
+	if not is_ready():
+		return {"status": "signin", "token": token}
+	_busy += 1
+	changed.emit()
+	var out: Dictionary = await _read_invite(token)
+	_busy -= 1
+	changed.emit()
+	return out
+
+
+## DAVETİ KABUL: iki arkadaşlık belgesini de bu oyuncu yazar (belgede davet jetonu; kural daveti doğrular). Davet eden
+## onaylamaz. Aradaki bekleyen istekler silinir. `invite`: read_invite sonucu.
+func accept_invite(invite: Dictionary) -> bool:
+	var uid: String = SaveSafe.s(invite.get("uid", ""))
+	var token: String = SaveSafe.s(invite.get("token", ""))
+	if not is_ready() or _busy > 0 or uid.is_empty() or uid == _uid or not SocialNames.is_valid_token(token):
+		return false
+	if is_friend(uid):
+		notice.emit(Loc.t("Zaten arkadaşsınız."))
+		return true
+	if friends.size() >= MAX_FRIENDS:
+		notice.emit(Loc.t("Arkadaş listen dolu."))
+		return false
+	_busy += 1
+	changed.emit()
+	if _profile and _profile.is_blocked(uid):
+		_profile.unblock(uid)   # engellediği oyuncunun davetini kendisi kabul ediyor: engel kalkar
+	var since: Dictionary = {"since": _now(), "inv": token}
+	var mine: Dictionary = await _call(&"set", _friends_of(_uid), "f_" + uid, since)
+	var theirs: Dictionary = await _call(&"set", _friends_of(uid), "f_" + _uid, since) if _ok(mine) else {}
+	var ok: bool = _ok(mine) and _ok(theirs)
+	if ok:
+		if _index_of(incoming, uid) >= 0:
+			await _call(&"delete", _inbox_of(_uid), "r_" + uid)
+			await _call(&"delete", _outbox_of(uid), "o_" + _uid)
+			incoming.remove_at(_index_of(incoming, uid))
+		if _index_of(outgoing, uid) >= 0:
+			await _call(&"delete", _inbox_of(uid), "r_" + _uid)
+			await _call(&"delete", _outbox_of(_uid), "o_" + uid)
+			outgoing.remove_at(_index_of(outgoing, uid))
+		var person: Dictionary = invite.get("person", {}) if invite.get("person") is Dictionary else {}
+		if person.is_empty():
+			person = await _friend_entry(uid, {})
+		if not person.is_empty():
+			friends.append(person)
+		notice.emit(Loc.t("%s artık arkadaşın!") % SaveSafe.s(person.get("name", invite.get("name", ""))))
+	else:
+		var failed: Dictionary = theirs if _ok(mine) else mine
+		if _ok(mine):
+			await _call(&"delete", _friends_of(_uid), "f_" + uid)   # yarım kalmasın: karşı taraf yazılamadıysa geri al
+		# Kural reddi = davet geçersiz (süresi doldu / silindi); başka hata = bağlantı
+		notice.emit(Loc.t("Bu davetin süresi dolmuş. Arkadaşından yeni bir link iste.") if _permission_denied(failed)
+			else Loc.t("Arkadaş eklenemedi. İnternet bağlantını kontrol et."))
+	_busy -= 1
+	changed.emit()
+	return ok
+
+
+func _read_invite(token: String) -> Dictionary:
+	var result: Dictionary = await _call(&"get", INVITES, token)
+	if not _ok(result):
+		return {"status": "missing" if _not_found(result) else "error", "token": token}
+	var data: Dictionary = result.get("data", {}) if result.get("data") is Dictionary else {}
+	var uid: String = SaveSafe.s(data.get("uid", ""))
+	var at: int = SaveSafe.i(data.get("at", 0))
+	if uid.is_empty():
+		return {"status": "missing", "token": token}
+	var person: Dictionary = await _friend_entry(uid, {"name": SaveSafe.s(data.get("name", "")),
+		"code": SaveSafe.s(data.get("code", ""))})
+	if person.is_empty():
+		return {"status": "missing", "token": token}   # davet edenin hesabı silinmiş
+	var status: String = "ok"
+	if uid == _uid:
+		status = "self"
+	elif is_friend(uid):
+		status = "friend"
+	elif _now() >= at + INVITE_TTL:
+		status = "expired"
+	return {"status": status, "token": token, "uid": uid, "at": at, "name": SaveSafe.s(person.get("name", "")),
+		"person": person}
+
+
+## Kendi süresi dolmuş davetlerini siler (cihazdaki listeden; liste sunucuda okunamaz). `all`: hepsi (hesap silme).
+func _prune_invites(all: bool = false) -> bool:
+	var mine: Array = _meta.get("invites", []) if _meta.get("invites") is Array else []
+	var keep: Array = []
+	var ok: bool = true
+	for entry: Variant in mine:
+		var item: Dictionary = entry if entry is Dictionary else {}
+		var token: String = SaveSafe.s(item.get("token", ""))
+		if not all and _now() < SaveSafe.i(item.get("at", 0)) + INVITE_TTL:
+			keep.append(item)
+			continue
+		if SocialNames.is_valid_token(token):
+			var r: Dictionary = await _call(&"delete", INVITES, token)
+			if not (_ok(r) or _not_found(r)):
+				ok = false
+				keep.append(item)   # sonra yeniden denenir
+	_meta["invites"] = keep
+	_write_meta()
+	return ok
+
+
 ## Oyuncunun açık garajını okur ve ziyaret modunu açar. Başarısızsa false (mesaj notice ile).
 func visit(uid: String) -> bool:
 	if not is_ready() or _busy > 0:
@@ -434,6 +590,7 @@ func delete_all() -> bool:
 		if not code.is_empty():
 			var r: Dictionary = await _call(&"delete", CODES, code)
 			ok = (_ok(r) or _permission_denied(r)) and ok   # kod başkasınınsa (eski meta) sorun değil
+		ok = await _prune_invites(true) and ok   # davet linkleri (cihazda listelenenler)
 	_busy -= 1
 	if ok:
 		_meta = {}

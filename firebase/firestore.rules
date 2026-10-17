@@ -78,6 +78,23 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
+    // ARKADAŞ DAVETİ (link, 2026-10-17): invites/{jeton} = {uid, name, code, at}. Sahibi yazar; `at` sunucu saatine
+    // ±10 dk (davetin ömrü buna göre hesaplanır, istemci saatiyle uzatılamaz). Giriş yapmış herkes JETONLA tek belge
+    // okur (jeton sırdır; liste kapalı), sahibi siler. Davet INVITE_TTL (1 saat) geçerli: linki açan oyuncu bu sürede
+    // iki arkadaşlık belgesini de yazabilir (gönderen onaylamaz — linki kendisi gönderdi). Bkz. friends.
+    match /invites/{token} {
+      allow get: if signedIn();
+      allow create: if signedIn() && token.matches('^[A-HJ-NP-Z2-9]{12}$')
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'code', 'at'])
+        && request.resource.data.uid == request.auth.uid
+        && isValidName(request.resource.data.name)
+        && request.resource.data.code is string && request.resource.data.code.matches('^[A-HJ-NP-Z2-9]{6}$')
+        && request.resource.data.at is int
+        && request.resource.data.at * 1000 > request.time.toMillis() - 600000
+        && request.resource.data.at * 1000 < request.time.toMillis() + 600000;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
     match /users/{uid} {
       // GELEN İSTEK: users/{alıcı}/inbox/r_{gönderen}. Gönderen yazar; alıcı ve gönderen okur / siler.
       match /inbox/{reqId} {
@@ -134,17 +151,22 @@ service cloud.firestore {
       // ederken kurulur: iki belgeyi de alıcı yazar, o anda kendi gelen kutusunda istek durmalıdır.
       //   alıcı kendi listesine:      sahip == alıcı,  inbox/alıcı/r_{diğer} var
       //   alıcı gönderenin listesine:  diğer == alıcı,  inbox/alıcı/r_{sahip} var
-      // Silme (arkadaşlıktan çıkarma): iki taraf da iki belgeyi silebilir.
+      // DAVET LİNKİ: istek yerine geçerli davet (belgedeki `inv` jetonu; daveti diğer taraf oluşturmuş olmalı):
+      //   linki açan kendi listesine:  sahip == açan,  invites/inv.uid == diğer
+      //   açan davet edenin listesine:  diğer == açan,  invites/inv.uid == sahip
+      // Kendini arkadaş ekleme yok. Silme (arkadaşlıktan çıkarma): iki taraf da iki belgeyi silebilir.
       match /friends/{friendId} {
         allow read: if isOwner(uid);
-        allow create, update: if signedIn() && friendId.matches('^f_.+')
-          && request.resource.data.keys().hasOnly(['since'])
+        allow create, update: if signedIn() && friendId.matches('^f_.+') && friendId != 'f_' + uid
+          && request.resource.data.keys().hasOnly(['since', 'inv'])
           && request.resource.data.since is int
           && (
             (request.auth.uid == uid
               && exists(/databases/$(database)/documents/users/$(uid)/inbox/$('r_' + friendId[2:])))
             || (friendId == 'f_' + request.auth.uid
               && exists(/databases/$(database)/documents/users/$(request.auth.uid)/inbox/$('r_' + uid)))
+            || (request.auth.uid == uid && isValidInvite(request.resource.data, friendId[2:]))
+            || (friendId == 'f_' + request.auth.uid && isValidInvite(request.resource.data, uid))
           );
         allow delete: if signedIn()
           && (request.auth.uid == uid || friendId == 'f_' + request.auth.uid);
@@ -247,6 +269,14 @@ service cloud.firestore {
         && d.won is bool && d.revenge is bool
         && d.mw is int && d.mw >= 0 && d.ml is int && d.ml >= 0
         && d.at is int;
+    }
+
+    // Arkadaşlık belgesindeki davet jetonu geçerli mi: davet var, `inviter` oluşturmuş, 1 saati dolmamış.
+    function isValidInvite(data, inviter) {
+      return data.inv is string && data.inv.matches('^[A-HJ-NP-Z2-9]{12}$')
+        && exists(/databases/$(database)/documents/invites/$(data.inv))
+        && get(/databases/$(database)/documents/invites/$(data.inv)).data.uid == inviter
+        && (get(/databases/$(database)/documents/invites/$(data.inv)).data.at + 3600) * 1000 > request.time.toMillis();
     }
 
     function isValidRequest(data) {

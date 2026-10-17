@@ -180,8 +180,16 @@ func _stain(center: Vector3, size: float, angle: float, rect: Rect2) -> void:
 	_quad(corners, [Vector2(u0, v0), Vector2(u1, v0), Vector2(u1, v1), Vector2(u0, v1)])
 
 
+## Dörtgen yukarıdan bakınca SAAT YÖNÜNDE örülür (Godot'nun ön yüzü). Kolların köşe sırası kola göre ters dönüyordu
+## (doğu / kuzey kolu saat yönünün tersine → arka yüz): iki yüzlü malzemede bu yüzlerin normali aşağı çevrilip ışık
+## alamıyor, mağaza ekranından dönünce o iki koldaki çizgiler simsiyah çiziliyordu (2026-10-17, telefonda görüldü).
 func _quad(p: Array, uv: Array) -> void:
-	for i: int in [0, 1, 2, 0, 2, 3]:
+	var a: Vector3 = p[0]
+	var b: Vector3 = p[1]
+	var c: Vector3 = p[2]
+	var clockwise: bool = (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x) > 0.0
+	var order: PackedInt32Array = PackedInt32Array([0, 1, 2, 0, 2, 3]) if clockwise else PackedInt32Array([0, 2, 1, 0, 3, 2])
+	for i: int in order:
 		_st.set_normal(Vector3.UP)
 		_st.set_uv(uv[i])
 		_st.add_vertex(p[i])

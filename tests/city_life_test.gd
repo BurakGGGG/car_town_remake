@@ -5,6 +5,8 @@ extends SceneTree
 ##   - billboard: günde bir afiş (yerel gece yarısı), afiş dosyaları sıkıştırılmış + mipmap'li, bugünün afişi yüklenir
 ##   - kavşak çizgileri: tek gövde (alpha scissor atlas), sahnenin eski kare / kenar çizgileri gizli
 ##   - maliyet: lambalar 7, çizgiler 1, billboard 3 çizim gövdesi (ışık kaynağı yok)
+##   - 2026-10-17: kavşak çizgilerinin her üçgeni yukarıdan ön yüz (ters örülen doğu / kuzey kolu mağazadan dönünce
+##     simsiyah çiziliyordu) ve şehrin KENDİ ortam ışığı var (yoksa ortam ışığı son çizilen ekrandan sızıyordu)
 ## Çalıştırma: tools/run_tests.sh city_life_test (pencereli: doku arka planda yüklenir)
 
 var fails: int = 0
@@ -166,6 +168,19 @@ func _run() -> void:
 		check(mat != null and mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR and mat.albedo_texture != null,
 			"aşınmış boya atlası, alpha scissor (saydam sıralama yok)")
 		check(mesh_node.mesh.get_faces().size() / 3 >= 4 * 4 * 2, "dört kolun hepsi çizildi (%d üçgen)" % (mesh_node.mesh.get_faces().size() / 3))
+		var faces: PackedVector3Array = mesh_node.mesh.get_faces()
+		var reversed: int = 0
+		for i: int in range(0, faces.size(), 3):
+			var a: Vector3 = faces[i]
+			var b: Vector3 = faces[i + 1]
+			var c: Vector3 = faces[i + 2]
+			if (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x) <= 0.0:
+				reversed += 1
+		check(reversed == 0, "her üçgen yukarıdan ön yüz (ters örülmüş: %d)" % reversed)
+	var environment: Environment = main.get_world_3d().environment
+	check(environment != null and environment.ambient_light_source == Environment.AMBIENT_SOURCE_COLOR
+		and environment.ambient_light_color.is_equal_approx(WorldDressing.AMBIENT_COLOR),
+		"şehrin kendi ortam ışığı var (başka ekrandan sızmaz)")
 	var atlas_cfg: ConfigFile = ConfigFile.new()
 	atlas_cfg.load(IntersectionMarkings.ATLAS_PATH + ".import")
 	check(int(atlas_cfg.get_value("params", "compress/mode", 0)) == 2 and bool(atlas_cfg.get_value("params", "mipmaps/generate", false)),
