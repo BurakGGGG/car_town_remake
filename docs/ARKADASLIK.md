@@ -126,10 +126,15 @@ Orijinal Car Town gibi: yarış şeridinden gelen rakiplerin **%70'i bir arkada�
   yendi! İntikam almak için dokun 🏁" (İNTİKAM'da "intikamını aldı…"). Alıcının oyun diline göre TR / EN / ES.
   Kaybeden gönderen bildirim doğurmaz (haber oyun içinde görünür).
 * **Sınır (kullanıcı kuralı):** aynı gönderen → aynı alıcı çiftine 6 saatte EN ÇOK BİR: A→B gider, A→B tekrar gitmez,
-  A→C gider, C→B gider. Sınır SUNUCUDA (`push_log/l_{alıcı}_{gönderen}`, istemciye kapalı).
+  A→C gider, C→B gider. Sınır SUNUCUDA (`push_log/l_{alıcı}_{gönderen}`, istemciye kapalı). Hak YALNIZCA gönderilen
+  bildirimle tükenir: jetonu olmayan alıcı (bildirimi henüz açmamış) ya da FCM'nin reddettiği gönderim hakkı yemez.
+* **Veri yükü anahtarları:** FCM `from`, `message_type`, `google.` / `gcm.` ile başlayan anahtarları reddeder. İlk sürüm
+  `from` kullandığı için hiçbir bildirim gitmedi (2026-10-17, logda `Invalid data payload key: from`); artık `sender`.
+  Sunucu logu: `firebase functions:log --only raceNewsPush --project car-town-remake` (sonuç: skip / throttled /
+  no-token / sent / stale ya da hata).
 * **Sunucu:** `firebase/functions` — `raceNewsPush` (Cloud Functions 2. nesil, europe-west4; Firestore eur3).
   Tetik `users/{uid}/races/{eventId}` yazması. Mantık `news.js` (birim testi `npm test`, uçtan uca `npm run e2e`:
-  Functions + Firestore emülatörü). Geçersiz jeton gelince `push/p_{uid}` silinir. Durum çubuğu ikonu
+  Functions + Firestore emülatörü; emülatörde ileti FCM yerine `_e2e_fcm` koleksiyonuna yazılır). Geçersiz jeton gelince `push/p_{uid}` silinir. Durum çubuğu ikonu
   `mipmap/icon_monochrome` (export_presets adaptive_monochrome), renk amber.
 * **İstemci:** `gameplay/social/push_service.gd` — açma / kapama **AYARLAR → SES VE BİLDİRİMLER → YARIŞ BİLDİRİMLERİ**
   (2026-10-17, ARKADAŞLAR ekranından taşındı; Google girişi yoksa kilitli ve nedeni yazılı, son başarısız denemenin

@@ -14,6 +14,13 @@ const { cleanupExpired } = require("./cleanup");
 
 initializeApp();
 
+// Yerel emülatörde (npm run e2e) bildirim FCM'ye GİTMEZ: gönderilecek ileti _e2e_fcm koleksiyonuna yazılır, test/e2e.mjs
+// içeriğini denetler. FUNCTIONS_EMULATOR yalnızca Functions emülatöründe "true"dur; canlıda her zaman gerçek FCM.
+function messaging() {
+  if (process.env.FUNCTIONS_EMULATOR !== "true") return getMessaging();
+  return { send: (msg) => getFirestore().collection("_e2e_fcm").add(msg) };
+}
+
 exports.raceNewsPush = onDocumentWritten(
   { document: "users/{uid}/races/{eventId}", region: "europe-west4", maxInstances: 5 },
   async (event) => {
@@ -23,7 +30,7 @@ exports.raceNewsPush = onDocumentWritten(
     const after = event.data && event.data.after.exists ? event.data.after.data() : null;
     const result = await handleRaceNews({
       db: getFirestore(),
-      messaging: getMessaging(),
+      messaging: messaging(),
       recipient: event.params.uid,
       sender: eventId.slice(2),
       before,

@@ -34,22 +34,23 @@ function messageFor(lang, name, revenge) {
 /**
  * Tek haber yazmasını işler. Dönüş: "skip" | "throttled" | "no-token" | "sent" | "stale".
  * db: Firestore (yönetici) benzeri {doc(path) → {get, set, delete}, runTransaction(fn)}; messaging: {send(msg)}.
+ * 6 saatlik hak YALNIZCA gönderilen bildirimle tükenir (2026-10-17 düzeltmesi): jetonu olmayan alıcı (bildirimi henüz
+ * açmamış) ya da FCM'nin reddettiği gönderim hakkı yemez — yoksa oyuncu bildirimi açtıktan sonraki ilk yenilgiyi kaçırır.
  */
 async function handleRaceNews({ db, messaging, recipient, sender, before, after, now }) {
   if (!shouldNotify(before, after) || !recipient || !sender || recipient === sender) return "skip";
-  const logRef = db.doc(`push_log/l_${recipient}_${sender}`);
-  const allowed = await db.runTransaction(async (t) => {
-    const snap = await t.get(logRef);
-    if (snap.exists && now - (snap.data().at || 0) < PAIR_INTERVAL_MS) return false;
-    t.set(logRef, { at: now });
-    return true;
-  });
-  if (!allowed) return "throttled";
   const tokenRef = db.doc(`push/p_${recipient}`);
   const tokenSnap = await tokenRef.get();
-  if (!tokenSnap.exists) return "no-token";
-  const { token, lang } = tokenSnap.data();
+  const { token, lang } = tokenSnap.exists ? tokenSnap.data() : {};
   if (!token) return "no-token";
+  const logRef = db.doc(`push_log/l_${recipient}_${sender}`);
+  const reserved = await db.runTransaction(async (t) => {
+    const snap = await t.get(logRef);
+    if (snap.exists && now - (snap.data().at || 0) < PAIR_INTERVAL_MS) return null;
+    t.set(logRef, { at: now });
+    return { previous: snap.exists ? snap.data() : null };
+  });
+  if (!reserved) return "throttled";
   const text = messageFor(lang, after.name, after.revenge === true);
   try {
     await messaging.send({
@@ -58,10 +59,14 @@ async function handleRaceNews({ db, messaging, recipient, sender, before, after,
       // Durum çubuğu ikonu: launcher'ın tek renkli sürümü (mipmap/icon_monochrome, export_presets adaptive_monochrome);
       // vermezsek renkli launcher ikonu beyaz kare görünür. Vurgu rengi HUD amberi.
       android: { priority: "high", notification: { tag: `race_${sender}`, icon: "icon_monochrome", color: "#F5BE4C" } },
-      data: { type: "race", from: sender },
+      // Anahtar adlarına dikkat: FCM "from", "message_type", "google." / "gcm." ile başlayanları REDDEDER
+      // ("Invalid data payload key: from" — 2026-10-17'de bildirimler bu yüzden hiç gitmedi).
+      data: { type: "race", sender },
     });
     return "sent";
   } catch (e) {
+    // Gitmeyen bildirim hakkı tüketmez: çift kaydı eski hâline döner.
+    await (reserved.previous ? logRef.set(reserved.previous) : logRef.delete());
     const code = e && e.code;
     if (code === "messaging/registration-token-not-registered" || code === "messaging/invalid-registration-token") {
       await tokenRef.delete();   // cihaz jetonu geçersiz (uygulama silindi / çıkış yapıldı)

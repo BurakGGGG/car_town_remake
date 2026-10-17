@@ -26,9 +26,28 @@ function fakeDb(initial = {}) {
   };
 }
 
+// FCM sunucusunun veri yükü kuralları (yönetici SDK'sı yerelde denetlemez, gerçek gönderimde reddedilir): ayrılmış anahtar
+// ("from", "message_type", "google." / "gcm." ile başlayan) ve metin olmayan değer. 2026-10-17'de "from" anahtarı bütün
+// bildirimleri düşürdü; sahte bu yüzden aynı kuralı uygular.
+function fcmDataError(data) {
+  for (const [k, v] of Object.entries(data || {})) {
+    if (k === "from" || k === "message_type" || k.startsWith("google.") || k.startsWith("gcm.")) return `Invalid data payload key: ${k}`;
+    if (typeof v !== "string") return `data.${k} must be a string`;
+  }
+  return "";
+}
+
 function fakeMessaging(fail) {
   const sent = [];
-  return { sent, async send(m) { if (fail) { const e = new Error("x"); e.code = fail; throw e; } sent.push(m); } };
+  return {
+    sent,
+    async send(m) {
+      const bad = fcmDataError(m.data);
+      if (bad) { const e = new Error(bad); e.code = "messaging/invalid-argument"; throw e; }
+      if (fail) { const e = new Error("x"); e.code = fail; throw e; }
+      sent.push(m);
+    },
+  };
 }
 
 const win = (over = {}) => ({ name: "Bob Usta", car: "seat_leon", their_car: "vw_golf_7", won: true, revenge: false, at: 1, ...over });
@@ -53,7 +72,7 @@ test("kullanıcının örneği: A→B, A→B tekrar, A→C, C→B (6 saat kural�
   assert.equal(m.sent.length, 3);
   assert.deepEqual(m.sent.map((x) => x.token), ["tokB", "tokC", "tokB"]);
   assert.equal(m.sent[0].android.notification.icon, "icon_monochrome", "tek renkli durum çubuğu ikonu");
-  assert.equal(m.sent[0].data.from, "A");
+  assert.deepEqual(m.sent[0].data, { type: "race", sender: "A" });
   assert.equal(await handleRaceNews({ db, messaging: m, recipient: "B", sender: "A", before: win({ at: 2 }), after: win({ at: 5 }), now: t0 + PAIR_INTERVAL_MS }), "sent", "6 saat dolunca yine gider");
 });
 
@@ -64,16 +83,39 @@ test("kaybeden gönderen bildirim doğurmaz ve sınırı tüketmez", async () =>
   assert.equal(await handleRaceNews({ db, messaging: m, recipient: "B", sender: "A", before: null, after: win({ at: 9 }), now: 6 }), "sent");
 });
 
-test("jetonu olmayan alıcı: gönderilmez", async () => {
+test("jetonu olmayan alıcı: gönderilmez, hakkı tüketmez (bildirimi sonra açınca ilk yenilgi gelir)", async () => {
   const db = fakeDb();
-  assert.equal(await handleRaceNews({ db, messaging: fakeMessaging(), recipient: "B", sender: "A", before: null, after: win(), now: 1 }), "no-token");
+  const m = fakeMessaging();
+  assert.equal(await handleRaceNews({ db, messaging: m, recipient: "B", sender: "A", before: null, after: win({ at: 1 }), now: 1 }), "no-token");
+  assert.equal("push_log/l_B_A" in db.store, false);
+  db.store["push/p_B"] = { token: "tokB", lang: "tr" };
+  assert.equal(await handleRaceNews({ db, messaging: m, recipient: "B", sender: "A", before: win({ at: 1 }), after: win({ at: 2 }), now: H }), "sent");
 });
 
-test("geçersiz jeton silinir", async () => {
+test("geçersiz jeton silinir, hak geri verilir", async () => {
   const db = fakeDb({ "push/p_B": { token: "old", lang: "es" } });
   const r = await handleRaceNews({ db, messaging: fakeMessaging("messaging/registration-token-not-registered"), recipient: "B", sender: "A", before: null, after: win(), now: 1 });
   assert.equal(r, "stale");
   assert.equal("push/p_B" in db.store, false);
+  assert.equal("push_log/l_B_A" in db.store, false);
+});
+
+test("FCM reddederse: hata yükselir (logda görünür), hak geri verilir, eski kayıt korunur", async () => {
+  const old = { at: 5 };
+  const db = fakeDb({ "push/p_B": { token: "tokB", lang: "tr" }, "push_log/l_B_A": old });
+  const now = 5 + PAIR_INTERVAL_MS;
+  await assert.rejects(handleRaceNews({ db, messaging: fakeMessaging("messaging/internal-error"), recipient: "B", sender: "A", before: null, after: win(), now }));
+  assert.deepEqual(db.store["push_log/l_B_A"], old, "önceki gönderimin zamanı geri yazıldı");
+  const m = fakeMessaging();
+  assert.equal(await handleRaceNews({ db, messaging: m, recipient: "B", sender: "A", before: win({ at: 1 }), after: win({ at: 2 }), now: now + 1 }), "sent", "sonraki yarış yine dener");
+  assert.equal(m.sent.length, 1);
+});
+
+test("sahte FCM gerçeği gibi ayrılmış veri anahtarını reddeder", () => {
+  assert.match(fcmDataError({ from: "A" }), /Invalid data payload key: from/);
+  assert.match(fcmDataError({ "google.x": "1" }), /google\.x/);
+  assert.match(fcmDataError({ n: 1 }), /string/);
+  assert.equal(fcmDataError({ type: "race", sender: "A" }), "");
 });
 
 test("dile göre metin; İNTİKAM metni; bilinmeyen dil İngilizce", () => {
