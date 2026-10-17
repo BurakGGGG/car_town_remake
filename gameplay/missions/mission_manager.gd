@@ -26,6 +26,9 @@ signal rewards_claimed(summary: Dictionary)
 
 const HISTORY_DAYS: int = 14
 const CHECK_INTERVAL: float = 30.0
+## Açılıştan (kayıt yüklemesinden) sonra bu kadar saniye başarım kartı çıkmaz: yükleme ve kurulum sırasında değerler
+## (tamir alanı, araç, dekor …) otururken eski yıldızlar "yeni" sanılıp her açılışta yeniden duyuruluyordu.
+const ANNOUNCE_QUIET: float = 10.0
 const DDA_MIN: float = 0.65
 const DDA_MAX: float = 1.3
 
@@ -49,7 +52,10 @@ var _weekly: Array[Dictionary] = []
 var _weekly_final_claimed: bool = false
 var _weekly_all_counted: bool = false
 var _ach_claimed: Dictionary = {}
+## Başarım başına duyurulmuş en yüksek yıldız (kayda yazılır: bir yıldız en fazla bir kez duyurulur).
 var _ach_announced: Dictionary = {}
+## false iken (açılışın ilk ANNOUNCE_QUIET saniyesi) yeni yıldız sessizce duyurulmuş sayılır.
+var _announce_live: bool = false
 var _yesterday_ids: Array = []
 var _last_week_ids: Array = []
 var _timer: Timer
@@ -132,7 +138,10 @@ func _connect() -> void:
 	get_tree().create_timer(1.2).timeout.connect(func() -> void:
 		ensure_current()
 		_seed_legacy()
-		_mark_announced())
+		_mark_announced()
+		get_tree().create_timer(ANNOUNCE_QUIET).timeout.connect(func() -> void:
+			_mark_announced()
+			_announce_live = true))
 
 
 func _on_job_collected(job_id: StringName, _reward: int) -> void:
@@ -752,8 +761,8 @@ func scan_achievements() -> void:
 	for line: Dictionary in achievements():
 		var reached: int = stars_reached(line)
 		var known: int = int(_ach_announced.get(String(line["id"]), -1))
-		if known < 0:
-			_ach_announced[String(line["id"])] = reached
+		if known < 0 or not _announce_live:
+			_ach_announced[String(line["id"])] = maxi(known, reached)
 			continue
 		if reached > known:
 			_ach_announced[String(line["id"])] = reached
@@ -763,10 +772,12 @@ func scan_achievements() -> void:
 		missions_changed.emit()
 
 
+## Şu an ulaşılmış yıldızlar duyurulmuş sayılır. Yalnızca YÜKSELTİR: yükleme sırasında geçici olarak düşük okunan
+## bir değer (henüz kurulmamış tamir alanı …) eşiği düşürüp aynı yıldızı yeniden duyurtmasın.
 func _mark_announced() -> void:
-	_ach_announced.clear()
 	for line: Dictionary in achievements():
-		_ach_announced[String(line["id"])] = stars_reached(line)
+		var id: String = String(line["id"])
+		_ach_announced[id] = maxi(int(_ach_announced.get(id, -1)), stars_reached(line))
 
 
 ## Göç: eski oyuncunun (kasa sistemi + görev sistemi öncesi) tamir sayısı yaşam boyu sayaca yazılır,
@@ -960,7 +971,7 @@ func state() -> Dictionary:
 		"history": _history.duplicate(true),
 		"daily": {"day": _daily_day, "tasks": _tasks_out(_daily), "bonus": _daily_bonus_claimed, "all_counted": _daily_all_counted},
 		"weekly": {"week": _weekly_week, "tasks": _tasks_out(_weekly), "final": _weekly_final_claimed, "all_counted": _weekly_all_counted},
-		"ach": _ach_claimed.duplicate(),
+		"ach": _ach_claimed.duplicate(), "ach_seen": _ach_announced.duplicate(),
 		"yesterday": _yesterday_ids.duplicate(), "last_week": _last_week_ids.duplicate(),
 	}
 
@@ -1003,6 +1014,13 @@ func load_state(data: Dictionary) -> void:
 			var line: Dictionary = MissionCatalog.achievement(StringName(SaveSafe.s(key)))
 			if not line.is_empty():
 				_ach_claimed[SaveSafe.s(key)] = clampi(SaveSafe.i((ach as Dictionary)[key]), 0, (line["tiers"] as Array).size())
+	_ach_announced.clear()
+	var seen: Variant = data.get("ach_seen", {})
+	if seen is Dictionary:
+		for key: Variant in (seen as Dictionary):
+			var seen_line: Dictionary = MissionCatalog.achievement(StringName(SaveSafe.s(key)))
+			if not seen_line.is_empty():
+				_ach_announced[SaveSafe.s(key)] = clampi(SaveSafe.i((seen as Dictionary)[key]), 0, (seen_line["tiers"] as Array).size())
 	_yesterday_ids = _strings_in(data.get("yesterday"))
 	_last_week_ids = _strings_in(data.get("last_week"))
 	_mark_announced()
