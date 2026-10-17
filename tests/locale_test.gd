@@ -67,7 +67,7 @@ func _run() -> void:
 	check(Hud.format_thousands(1234567) == "1.234.567", "DE bin ayırıcısı nokta")
 	check(Loc.percent("25") == "25\u00a0%", "DE yüzde: 25 %")
 	check(Loc.decimal(9.72, 2) == "9,72", "DE ondalık virgül")
-	check(Loc.site_url("privacy") == "https://autoyardgame.vercel.app/de/datenschutz", "site bağlantısı Almanca sayfa")
+	check(Loc.site_url("privacy") == "https://autoyard.online/de/datenschutz", "site bağlantısı Almanca sayfa")
 	check(SettingsScreen.language_title() == "SPRACHE · LANGUAGE", "dil sayfası adı: %s" % SettingsScreen.language_title())
 
 	print("== FRANSIZCA ==")
@@ -77,7 +77,7 @@ func _run() -> void:
 	check(Loc.t("GÖREVLER") == "MISSIONS", "GÖREVLER → MISSIONS")
 	check(Hud.format_thousands(1234567) == "1\u00a0234\u00a0567", "FR bin ayırıcısı bölünmez boşluk")
 	check(Loc.percent("25") == "25\u00a0%", "FR yüzde: 25 %")
-	check(Loc.site_url("delete", false) == "autoyardgame.vercel.app/fr/supprimer-compte", "site bağlantısı Fransızca sayfa")
+	check(Loc.site_url("delete", false) == "autoyard.online/fr/supprimer-compte", "site bağlantısı Fransızca sayfa")
 
 	print("== KALICILIK ==")
 	var copy: GameSettings = GameSettings.new()

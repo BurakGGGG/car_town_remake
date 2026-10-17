@@ -16,7 +16,7 @@ const LANGUAGES: Array[String] = ["tr", "en", "es", "de", "fr"]
 const NAMES: Dictionary = {"tr": "TÜRKÇE", "en": "ENGLISH", "es": "ESPAÑOL", "de": "DEUTSCH", "fr": "FRANÇAIS"}
 const DIR: String = "res://locale/"
 ## Oyunun web sitesi; sayfa adresleri dile göre (sitenin src/i18n/<dil>.json "paths" alanıyla AYNI tutulmalı).
-const SITE_HOST: String = "autoyardgame.vercel.app"
+const SITE_HOST: String = "autoyard.online"
 const SITE_PATHS: Dictionary = {
 	"tr": {"privacy": "/gizlilik", "terms": "/kullanim-sartlari", "contact": "/iletisim", "delete": "/hesap-silme"},
 	"en": {"privacy": "/en/privacy", "terms": "/en/terms", "contact": "/en/contact", "delete": "/en/delete-account"},
@@ -159,7 +159,7 @@ static func decimal(value: float, digits: int = 1) -> String:
 
 
 ## Sitenin geçerli dildeki sayfası ("privacy", "terms", "contact", "delete"). with_scheme false: metin içinde
-## gösterilecek kısa biçim ("autoyardgame.vercel.app/hesap-silme").
+## gösterilecek kısa biçim ("autoyard.online/hesap-silme").
 static func site_url(page: String, with_scheme: bool = true) -> String:
 	var path: String = String((SITE_PATHS[current()] as Dictionary).get(page, "/"))
 	return ("https://" if with_scheme else "") + SITE_HOST + path
