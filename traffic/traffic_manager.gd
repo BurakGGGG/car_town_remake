@@ -99,6 +99,8 @@ var _runner_claim: TrafficVehicle
 var _claim_since: float = 0.0
 var _honked: Dictionary = {}   # araç → korna çaldığı kaçak
 var sfx: TrafficSfx
+## Şehir çevre sesleri (uğultu, araç lastikleri, kuşlar, ara sıra korna / uzak cıyaklama).
+var ambience: CityAmbience
 ## Kaçak kavşakta takılırsa (beklenmedik engel) talep bu kadar sonra düşer: karşı eksen sonsuza dek beklemesin.
 const RUNNER_CLAIM_MAX: float = 8.0
 
@@ -111,6 +113,8 @@ func _ready() -> void:
 	add_child(chase)
 	sfx = TrafficSfx.new()
 	add_child(sfx)
+	ambience = CityAmbience.new()
+	add_child(ambience)
 	for entry: Dictionary in CarCatalog.all():
 		if entry["traffic"]:
 			_candidates.append(entry["id"])

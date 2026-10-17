@@ -245,6 +245,16 @@ func _apply_focus() -> void:
 	global_position = _focus + _offset
 
 
+## Kameranın baktığı zemin noktası (y = 0 düzlemi; ekranın ortası). Herhangi bir Camera3D için — sesler (siren,
+## şehir sesleri) dinleyiciyi buraya koyar.
+static func ground_point(camera: Camera3D) -> Vector3:
+	var forward: Vector3 = -camera.global_basis.z
+	var origin: Vector3 = camera.global_position
+	if absf(forward.y) < 0.01:
+		return origin
+	return origin + forward * (-origin.y / forward.y)
+
+
 ## Ekranın dört köşesinin zemindeki (y = 0) izdüşümünü kapsayan dikdörtgen, odağa göre (X, Z).
 func _view_on_ground() -> Rect2:
 	var screen: Vector2 = get_viewport().get_visible_rect().size

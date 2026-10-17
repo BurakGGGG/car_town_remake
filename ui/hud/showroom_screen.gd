@@ -10,6 +10,13 @@ extends Control
 ## CrateDelivery); showroom kapanır, kamera kasaya gider. Listenin altındaki GERİ AL bölümü yalnızca
 ## daha önce keşfedilmiş ama satılmış araçları ₺ ile geri satar.
 ##
+## YOLDAKİ KASALAR (2026-10-17, kullanıcı kararı "kasa listeden açılsın"): garajda yer bulamayan kasa listenin
+## başındaki bu bölüme girer (alt sekmedeki MAĞAZA rozeti sayısını gösterir). Yer yokken alınan kasada showroom
+## kapanmaz, kasa bu bölümde seçili gelir. KASAYI AÇ: ödül CrateManager.open()'da verilip kaydedilir, açılış
+## sahnesi (gerilim → patlama → araç dönerek yükselir) bu platformda oynar — CrateDelivery'nin statik
+## yardımcıları ve CratePanel'in plaka metinleriyle (garajdaki açılışla aynı). TAMAM'da kasa kapanır (claim).
+## Sahne sürerken liste gizlenir, GERİ kilitlenir; showroom yine de kapanırsa kasa kapatılır (ödül zaten verildi).
+##
 ## Garaj ekranının çalışan düzenini örnek alır ama daha lüks bir mekân kurar: kendi 3D dünyası
 ## (SubViewport), koyu showroom zemini, ışıklı sergi platformu, spot ışıklar, cam/ahşap/metal duvar
 ## detayları ve merkezde TEK araç. Plakalar (krem zemin, koyu alt kenar, vida, kalın yazı) mevcut
@@ -71,6 +78,7 @@ var _platform_rim: MeshInstance3D          # ince amber ışık bandı
 var _blob: MeshInstance3D                  # araç altı yumuşak gölge
 
 var _title_group: HBoxContainer
+var _collection_button: PlateButton
 var _list_group: VBoxContainer
 var _info_group: VBoxContainer
 var _exit_group: HBoxContainer
@@ -81,6 +89,12 @@ var _exit_button: PlateButton
 
 var _plates: Dictionary = {}               # "crate:<id>" / "car:<id>" → PlateButton
 var _shown_crate: StringName = &""         # platformdaki kasa (araç gösteriliyorsa &"")
+var _shown_pending: int = 0                # platformdaki YOLDAKİ kasanın uid'i (0 = yok)
+var _reveal_uid: int = 0                   # bu platformda açılan kasa (sahne + sonuç plakası boyunca)
+var _reveal_done: bool = false             # sonuç plakası gösteriliyor: düğme TAMAM
+var _reveal_fx: CrateRevealFx
+var _fit: Dictionary = {}                  # platform / kamera kadrajı (yumuşak geçiş için son değerler)
+var _fit_tween: Tween
 var _closing_after_buy: bool = false       # satın alındı, showroom kapanıyor: buton kilitli kalır
 var _crates: CrateManager
 var _progress: PlayerProgress
@@ -141,7 +155,12 @@ func open() -> void:
 	var target: StringName = _shown_crate if _shown_crate != &"" else _first_crate()
 	_shown_crate = &""
 	_shown_vehicle = &""
-	_show_crate(target)
+	_shown_pending = 0
+	# Yolda kasa varsa önce o (alt sekmedeki rozet buraya getirir)
+	if _first_pending() > 0:
+		_show_pending(_first_pending())
+	else:
+		_show_crate(target)
 	set_process(true)
 	opened.emit()
 	_enter_animation()
@@ -179,6 +198,8 @@ func _claim_render_target() -> void:
 
 
 func _finish_close() -> void:
+	if _reveal_uid > 0:
+		_end_reveal()   # sahne yarıda kaldı: ödül zaten verildi, kasa kapanır
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_release_render_target()
 	_clear_preview()        # showroom kapalıyken araç modeli bellekte durmaz
@@ -197,6 +218,16 @@ func shown_vehicle() -> StringName:
 ## Gösterilen kasa (araç gösteriliyorsa &"").
 func shown_crate() -> StringName:
 	return _shown_crate
+
+
+## Platformdaki yoldaki kasanın uid'i (0 = yok).
+func shown_pending() -> int:
+	return _shown_pending
+
+
+## Bu platformda kasa açılıyor mu (sahne ya da sonuç plakası)? HUD Android GERİ'yi bu sürede yutar.
+func is_revealing() -> bool:
+	return _reveal_uid > 0
 
 
 # --- 3D showroom --------------------------------------------------------------
@@ -746,6 +777,7 @@ func _build_overlay() -> void:
 	collection.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	collection.pressed.connect(func() -> void: screen_requested.emit(&"collection"))
 	_title_group.add_child(collection)
+	_collection_button = collection
 
 	# Orta: solda araç plakaları, sağda bilgi + satın alma
 	var middle: HBoxContainer = HBoxContainer.new()
@@ -861,6 +893,17 @@ func _rebuild_list() -> void:
 	for child: Node in _list_box.get_children():
 		child.queue_free()
 	_plates.clear()
+	var pending: Array[int] = _crates.undelivered() if _crates else []
+	if not pending.is_empty():
+		_list_box.add_child(_section_label(Loc.t("YOLDAKİ KASALAR")))
+		for uid: int in pending:
+			var crate_id: StringName = _crates.get_crate(uid).get("crate", &"")
+			var name_text: String = Loc.t(String(CrateCatalog.get_entry(crate_id).get("display_name", Loc.t("KASA"))))
+			var pending_plate: PlateButton = _list_plate("pending:%d" % uid, Loc.t("%s\nAÇ") % name_text, HudIcon.Kind.BOX)
+			pending_plate.highlight = true
+			pending_plate.toggled.connect(func(pressed: bool) -> void:
+				if pressed:
+					_show_pending(uid))
 	_list_box.add_child(_section_label(Loc.t("ARAÇ KASALARI")))
 	for crate: Dictionary in CrateCatalog.all():
 		var id: StringName = crate["id"]
@@ -911,13 +954,14 @@ func _section_label(text: String) -> Label:
 
 ## Seçili kasayı platforma ve bilgi plakasına koyar.
 func _show_crate(crate_id: StringName) -> void:
-	if crate_id == &"" or (crate_id == _shown_crate and _shown_vehicle == &""):
+	if _reveal_uid > 0 or crate_id == &"" or (crate_id == _shown_crate and _shown_vehicle == &"" and _shown_pending == 0):
 		return
 	if not CrateCatalog.exists(crate_id):
 		push_warning("ShowroomScreen: '%s' kasası yok" % crate_id)
 		return
 	_shown_crate = crate_id
 	_shown_vehicle = &""
+	_shown_pending = 0
 	var plate: PlateButton = _plates.get("crate:%s" % crate_id)
 	if plate:
 		plate.set_pressed_no_signal(true)
@@ -927,7 +971,7 @@ func _show_crate(crate_id: StringName) -> void:
 
 ## GERİ AL listesindeki (keşfedilmiş, satılmış) aracı platforma koyar. Aynı anda tek model yüklenir.
 func _show_vehicle(vehicle_id: StringName) -> void:
-	if vehicle_id == &"" or vehicle_id == _shown_vehicle:
+	if _reveal_uid > 0 or vehicle_id == &"" or vehicle_id == _shown_vehicle:
 		return
 	var entry: Dictionary = CarCatalog.get_entry(vehicle_id)
 	if entry.is_empty():
@@ -935,6 +979,7 @@ func _show_vehicle(vehicle_id: StringName) -> void:
 		return
 	_shown_vehicle = vehicle_id
 	_shown_crate = &""
+	_shown_pending = 0
 	var plate: PlateButton = _plates.get("car:%s" % vehicle_id)
 	if plate:
 		plate.set_pressed_no_signal(true)
@@ -943,10 +988,164 @@ func _show_vehicle(vehicle_id: StringName) -> void:
 
 
 func _refresh_state() -> void:
-	if _shown_crate != &"":
+	if _reveal_uid > 0:
+		return   # açılış sahnesi plakayı kendisi yazar (ödül gem / sahiplik sinyalleri burayı çağırır)
+	if _shown_pending > 0:
+		_refresh_pending()
+	elif _shown_crate != &"":
 		_refresh_crate()
 	elif _shown_vehicle != &"":
 		_refresh_vehicle()
+
+
+# --- Yoldaki kasa: burada açılır -----------------------------------------------------
+
+func _first_pending() -> int:
+	var pending: Array[int] = _crates.undelivered() if _crates else []
+	return pending[0] if not pending.is_empty() else 0
+
+
+## Yoldaki kasayı platforma koyar (içerik gizli). Aracın modeli şimdiden arka planda yüklenir: AÇ'ta beklenmesin.
+func _show_pending(uid: int) -> void:
+	if _reveal_uid > 0 or _crates == null or not _crates.waiting_for_room(uid):
+		return
+	var crate: Dictionary = _crates.get_crate(uid)
+	_shown_pending = uid
+	_shown_crate = &""
+	_shown_vehicle = &""
+	_press_plate("pending:%d" % uid)
+	_load_crate_preview(crate["crate"])
+	CrateDelivery.prefetch_vehicle(crate.get("vehicle", &""))
+	_refresh_state()
+
+
+## Sıradaki yoldaki kasa, yoksa ilk mağaza kasası.
+func _show_default() -> void:
+	var next: int = _first_pending()
+	if next > 0:
+		_show_pending(next)
+		return
+	_shown_pending = 0
+	_shown_crate = &""
+	_show_crate(_first_crate())
+
+
+func _press_plate(key: String) -> void:
+	var plate: PlateButton = _plates.get(key)
+	if plate:
+		plate.set_pressed_no_signal(true)
+
+
+## Yoldaki kasa plakası: garajdaki kasaya dokununca çıkan soru plakasıyla aynı metin (olasılıklar, içerik gizli).
+func _refresh_pending() -> void:
+	if _crates == null or not _crates.waiting_for_room(_shown_pending):
+		# Bu arada garaja indi (yer açıldı) ya da açıldı: liste tazelenir
+		_shown_pending = 0
+		_rebuild_list()
+		_show_default()
+		return
+	var content: Dictionary = CratePanel.prompt_content(_crates.get_crate(_shown_pending).get("crate", &""))
+	_info_plate.set_content(content["title"], Loc.t("YOLDA  ·  GARAJDA YER YOK"), content["headline"], content["lines"])
+	_buy_button.kind = HudIcon.Kind.BOX
+	_buy_button.text = Loc.t("KASAYI AÇ")
+	_buy_button.disabled = false
+
+
+## KASAYI AÇ: ödül verilir + kaydedilir (CrateManager.open), sonra sahne platformda oynar.
+func _open_pending(uid: int) -> void:
+	var crate: CrateVisual = _preview as CrateVisual
+	if _crates == null or crate == null or _reveal_uid > 0:
+		return
+	# Bayrak open()'dan ÖNCE: open() kasalar / gem / sahiplik sinyallerini yayar, _refresh_state listeyi tazeleyip
+	# platformdaki kasayı (sahnesi oynayacak olanı) sıradakiyle değiştiriyordu (QA: kasa kıpırdamadı)
+	_reveal_uid = uid
+	var result: Dictionary = _crates.open(uid)
+	if result.is_empty():
+		_reveal_uid = 0
+		_rebuild_list()
+		_show_default()
+		return
+	_reveal_done = false
+	_shown_pending = 0
+	_set_reveal_chrome(true)
+	_info_plate.set_content(Loc.t(String(CrateCatalog.get_entry(result["crate"]).get("display_name", Loc.t("KASA")))),
+		Loc.t("AÇILIYOR…"), "???", PackedStringArray())
+	_buy_button.text = Loc.t("AÇILIYOR…")
+	_buy_button.disabled = true
+	_play_reveal(uid, crate, result)
+
+
+## Garajdaki açılışın aynısı (gerilim → patlama → araç dönerek yükselip platforma iner); sonra boş kasa çöker,
+## araç vitrinde kalır ve sonuç plakası gelir. Her beklemeden sonra showroom'un kapanıp kapanmadığına bakılır.
+func _play_reveal(uid: int, crate: CrateVisual, result: Dictionary) -> void:
+	var style: Array = CrateDelivery.reveal_style(result)
+	var rank: int = style[0]
+	CrateDelivery.prefetch_vehicle(result["vehicle"])
+	_spin_velocity = 0.0
+	var fx: CrateRevealFx = CrateDelivery.reveal_effects(_model_slot, crate, style[1], rank, PLATFORM_HEIGHT)
+	_reveal_fx = fx
+	fx.suspense(CrateVisual.suspense_time(rank))
+	crate.burst_open.connect(fx.burst, CONNECT_ONE_SHOT)
+	crate.lid_vanished.connect(fx.poof, CONNECT_ONE_SHOT)
+	await crate.play_open(rank)
+	if _reveal_uid != uid:
+		return
+	var car: Node3D = await CrateDelivery.make_vehicle(_model_slot, result["vehicle"])
+	if _reveal_uid != uid:
+		if is_instance_valid(car):
+			car.queue_free()
+		return
+	if car:
+		# Burun kasanın uzun ekseni (yerel +X) boyunca: model önü +Z
+		car.rotation.y = crate.rotation.y + PI * 0.5
+		car.global_position = crate.to_global(crate.vehicle_anchor()) - Vector3(0.0, 0.02, 0.0)
+		await CrateDelivery.rise(car, fx, rank, PLATFORM_HEIGHT)
+		if _reveal_uid != uid:
+			return
+		# Boş kasa çöker, ışıklar söner; araç platformun ortasına oturur ve vitrin dönüşü sürer
+		var vanish: Tween = crate.create_tween()
+		vanish.tween_property(crate, "scale", Vector3(1.0, 0.01, 1.0), 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+		vanish.tween_callback(crate.queue_free)
+		fx.fade_out(0.6)
+		_preview = car
+		_fit_to_platform(0.6, true)
+	_show_reveal_result(result)
+
+
+func _show_reveal_result(result: Dictionary) -> void:
+	_reveal_done = true
+	_idle_time = 0.0
+	var content: Dictionary = CratePanel.result_content(result)
+	_info_plate.set_content(content["title"], content["subtitle"], content["headline"], content["lines"])
+	_buy_button.kind = HudIcon.Kind.CHECK
+	_buy_button.text = Loc.t("TAMAM")
+	_buy_button.disabled = false
+
+
+## TAMAM: kasa kapanır (CLAIMED), liste tazelenir; sıradaki yoldaki kasa ya da mağaza kasası gelir.
+func _finish_reveal() -> void:
+	_end_reveal()
+	_rebuild_list()
+	_show_default()
+
+
+func _end_reveal() -> void:
+	var uid: int = _reveal_uid
+	_reveal_uid = 0
+	_reveal_done = false
+	if is_instance_valid(_reveal_fx):
+		_reveal_fx.queue_free()
+	_reveal_fx = null
+	_set_reveal_chrome(false)
+	if _crates and uid > 0:
+		_crates.claim(uid)
+
+
+## Sahne sürerken liste gizlenir, GERİ / KOLEKSİYON kilitlenir (yarıda kapatılıp ödül görülmeden geçilmesin).
+func _set_reveal_chrome(on: bool) -> void:
+	_list_group.visible = not on
+	_exit_button.disabled = on
+	_collection_button.disabled = on
 
 
 ## Kasa plakası: fiyat, seviye şartı ve havuzdaki her aracın GERÇEK olasılığı (açık oranlar).
@@ -979,7 +1178,7 @@ func _refresh_crate() -> void:
 			_buy_button.text = Loc.t("GEM YETERSİZ\nGEM AL") if _gem_store_available() else Loc.t("%d GEM\nGEM YETERSİZ") % price
 			_buy_button.disabled = not _gem_store_available()
 		"full":
-			_buy_button.text = Loc.t("ÖNCE GARAJDAKİ\nKASALARI AÇ")
+			_buy_button.text = Loc.t("ÖNCE BEKLEYEN\nKASALARI AÇ")
 			_buy_button.disabled = true
 		_:
 			_buy_button.text = Loc.t("%d GEM") % price
@@ -1025,6 +1224,13 @@ func _on_buy_pressed() -> void:
 	# ikinci basışta) ikinci bir kasa alınmasın.
 	if _closing or not visible:
 		return
+	if _reveal_uid > 0:
+		if _reveal_done:
+			_finish_reveal()
+		return
+	if _shown_pending > 0:
+		_open_pending(_shown_pending)
+		return
 	if _shown_crate != &"":
 		if _crates == null:
 			return
@@ -1032,6 +1238,11 @@ func _on_buy_pressed() -> void:
 			screen_requested.emit(&"gem_store")
 			return
 		var uid: int = _crates.buy(_shown_crate)   # gem + sonuç + kayıt CrateManager'da
+		if uid > 0 and _crates.waiting_for_room(uid):
+			# Teslimat aynı çağrıda denendi, garajda yer yok: showroom kapanmaz, kasa YOLDAKİ KASALAR'da seçili gelir
+			_rebuild_list()
+			_show_pending(uid)
+			return
 		if uid > 0:
 			_buy_button.disabled = true
 			_closing_after_buy = true
@@ -1081,12 +1292,43 @@ func _load_preview(scene_path: String) -> void:
 	_fit_to_platform()
 
 
-## Modeli platformun üstüne oturtur, platformu ve kamerayı aracın boyutuna göre ayarlar.
-func _fit_to_platform() -> void:
-	var bounds: AABB = _model_bounds(_preview)
+## Modeli platformun üstüne oturtur, platformu ve kamerayı aracın boyutuna göre ayarlar. `duration` > 0: önceki
+## kadrajdan yumuşak geçiş (kasadan çıkan araç vitrine oturunca). `in_slot`: sınırlar ModelSlot uzayında ölçülür —
+## kasadan çıkan araç slotun ortasında değil, döndürülmüş ve dünya ölçeğinde durur.
+func _fit_to_platform(duration: float = 0.0, in_slot: bool = false) -> void:
+	var bounds: AABB = _model_bounds(_preview, _model_slot if in_slot else null)
 	var center: Vector3 = bounds.get_center()
-	_model_slot.position = Vector3(-center.x, PLATFORM_HEIGHT - bounds.position.y, -center.z)
 	var radius: float = maxf(maxf(bounds.size.x, bounds.size.z) * 0.5, 0.25)
+	# Kamera kadrajı: aracın küre yarıçapı görüş açısına sığsın (araç içine girmez)
+	var sphere: float = maxf(bounds.size.length() * 0.5, 0.3)
+	var target: Dictionary = {
+		"slot": Vector3(-center.x, PLATFORM_HEIGHT - bounds.position.y, -center.z),
+		"radius": radius,
+		"distance": sphere / sin(deg_to_rad(CAM_FOV) * 0.5) * 1.34,   # araç ön planda, mekân arkada dursun
+		# Bakış noktası araçtan biraz yukarıda: araç alt-ortada kalsın, üstte duvar/tabela/tavan görünsün
+		"focus": Vector3(0.0, PLATFORM_HEIGHT + bounds.size.y * 0.45 + 0.24, 0.0),
+	}
+	if _fit_tween and _fit_tween.is_valid():
+		_fit_tween.kill()   # yeni model geldi: yarım kalan geçiş eski kadrajı geri yazmasın
+	if duration <= 0.0 or _fit.is_empty():
+		_apply_fit(target)
+		return
+	var from: Dictionary = _fit.duplicate()
+	var tween: Tween = create_tween()
+	_fit_tween = tween
+	tween.tween_method(func(t: float) -> void:
+		_apply_fit({"slot": (from["slot"] as Vector3).lerp(target["slot"], t),
+			"radius": lerpf(from["radius"], target["radius"], t),
+			"distance": lerpf(from["distance"], target["distance"], t),
+			"focus": (from["focus"] as Vector3).lerp(target["focus"], t)}),
+		0.0, 1.0, duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_tweens.append(tween)
+
+
+func _apply_fit(fit: Dictionary) -> void:
+	_fit = fit
+	_model_slot.position = fit["slot"]
+	var radius: float = fit["radius"]
 	var platform_radius: float = radius * 1.12
 	var base: CylinderMesh = _platform_base.mesh
 	base.top_radius = platform_radius
@@ -1099,23 +1341,22 @@ func _fit_to_platform() -> void:
 	rim.outer_radius = platform_radius + 0.014
 	var blob: PlaneMesh = _blob.mesh
 	blob.size = Vector2(radius * 2.5, radius * 2.5)
-	# Kamera kadrajı: aracın küre yarıçapı görüş açısına sığsın (araç içine girmez)
-	var sphere: float = maxf(bounds.size.length() * 0.5, 0.3)
-	_base_distance = sphere / sin(deg_to_rad(CAM_FOV) * 0.5) * 1.34   # araç ön planda, mekân arkada dursun
-	# Bakış noktası araçtan biraz yukarıda: araç alt-ortada kalsın, üstte duvar/tabela/tavan görünsün
-	_focus = Vector3(0.0, PLATFORM_HEIGHT + bounds.size.y * 0.45 + 0.24, 0.0)
+	_base_distance = fit["distance"]
+	_focus = fit["focus"]
 	_apply_camera()
 
 
-func _model_bounds(car: Node3D) -> AABB:
+## Modelin sınırları `space` uzayında (verilmezse modelin kendi uzayında).
+func _model_bounds(car: Node3D, space: Node3D = null) -> AABB:
 	var merged: AABB = AABB()
 	var first: bool = true
+	var inverse: Transform3D = (space if space else car).global_transform.affine_inverse()
 	var stack: Array[Node] = [car]
 	while not stack.is_empty():
 		var node: Node = stack.pop_back()
 		if node is MeshInstance3D:
 			var mesh_node: MeshInstance3D = node
-			var box: AABB = car.global_transform.affine_inverse() * mesh_node.global_transform * mesh_node.get_aabb()
+			var box: AABB = inverse * mesh_node.global_transform * mesh_node.get_aabb()
 			merged = box if first else merged.merge(box)
 			first = false
 		for child: Node in node.get_children():
@@ -1124,9 +1365,10 @@ func _model_bounds(car: Node3D) -> AABB:
 
 
 func _free_model() -> void:
-	if _preview:
-		_preview.queue_free()
-		_preview = null
+	# Slotta yalnızca önizleme olur; açılış sahnesinde kasa + çıkan araç + efektler de burada (yarıda kalırsa hepsi gider)
+	for child: Node in _model_slot.get_children():
+		child.queue_free()
+	_preview = null
 	_preview_rig = null
 
 
@@ -1148,8 +1390,8 @@ func _apply_camera() -> void:
 func _process(delta: float) -> void:
 	if _closing:
 		return
-	# Sürüklemeden kalan hız sönerek biter, sonra otomatik dönüş devreye girer
-	if not _dragging:
+	# Sürüklemeden kalan hız sönerek biter, sonra otomatik dönüş devreye girer (açılış sahnesinde durur)
+	if not _dragging and not (_reveal_uid > 0 and not _reveal_done):
 		_idle_time += delta
 		if absf(_spin_velocity) > 0.0001:
 			_display_root.rotate_y(_spin_velocity * delta)
@@ -1162,7 +1404,7 @@ func _process(delta: float) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if _closing:
+	if _closing or (_reveal_uid > 0 and not _reveal_done):
 		return
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event

@@ -60,6 +60,7 @@ var _models: Dictionary = {}  # bitki GLB yolu → Array[Transform3D]
 
 func _ready() -> void:
 	name = "CityScenery"
+	add_to_group("city_scenery")   # CityAmbience kuşları ağaç kümelerinden öttürür
 	_rng.seed = 20260929
 	_retire_old_sidewalks()
 	_build_sidewalks()
@@ -293,6 +294,16 @@ func _bushes_around(c: Vector2, n: int, placed: Array[Vector2]) -> void:
 		var p: Vector2 = c + Vector2(cos(a), sin(a)) * _rng.randf_range(0.35, 0.7)
 		if _free_for_bush(p):
 			_model(VEG_BUSH, p, _rng.randf_range(0.8, 1.3))
+
+
+## Ağaç taçlarının dünya konumları (yuvarlak ağaçlar ve çamlar; çalı yok) — şehir seslerinde kuşlar buradan öter.
+func tree_spots() -> PackedVector3Array:
+	var out: PackedVector3Array = PackedVector3Array()
+	for path: String in [VEG_TREE_A, VEG_TREE_B, VEG_PINE]:
+		for t: Transform3D in _models.get(path, []):
+			# Taç ortası ~4 m (ağacın kendi ölçeğiyle)
+			out.append(t.origin + Vector3.UP * 4.0 * t.basis.get_scale().y)
+	return out
 
 
 func _free_for_bush(p: Vector2) -> bool:

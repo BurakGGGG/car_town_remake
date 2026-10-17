@@ -13,8 +13,9 @@ extends Node3D
 ## hiçbir şeye değmeyen ve garajın ARKA-SOL köşesine en yakın nokta seçilir. İzometrik kamera tam bu
 ## köşeye bakar (iki iç duvarın birleştiği yer); ön-sağdaki havada asılı "GARAJI GENİŞLET" tabelası
 ## girişe yakın konan kasanın önüne biniyordu (QA ekran görüntüsü). Yer yoksa kasa
-## PURCHASED ("yolda") kalır; dekor / garaj değişince yeniden denenir. Nokta kasayla birlikte
-## kaydedilir: yeniden açılışta kasa aynı yerde durur.
+## PURCHASED ("yolda") kalır; dekor / garaj değişince yeniden denenir. Yolda kasa MAĞAZA'dan da açılabilir
+## (ShowroomScreen YOLDAKİ KASALAR; açılış sahnesi showroom platformunda — buradaki statik yardımcılarla).
+## Nokta kasayla birlikte kaydedilir: yeniden açılışta kasa aynı yerde durur.
 ##
 ## Açılış sahnesi yalnızca SUNUMDUR: ödül CrateManager.open() ile, sahne başlamadan verilip
 ## kaydedilmiştir. Gerçek kasa modeli / animasyonu geldiğinde bu dosya değişmez (CrateVisual).
@@ -110,7 +111,8 @@ func _sync() -> void:
 		var uid: int = int(c["uid"])
 		alive[uid] = true
 		var st: int = int(c["state"])
-		if st == CrateManager.State.PURCHASED:
+		# Hiç garaja inmemiş kasa (yolda ya da mağazadan açılıyor: konumu yok) dünyaya konmaz
+		if st == CrateManager.State.PURCHASED or c["pos"] == null:
 			continue
 		if not _visuals.has(uid) and st < CrateManager.State.REVEALED:
 			var pos: Vector2 = c["pos"]
@@ -249,10 +251,27 @@ func _refresh_view() -> void:
 ## Kasaya dokunulunca (AÇ plakası okunurken) aracın modeli arka planda yüklenmeye başlar: açılışta
 ## modelin kurulumu kareyi 60 ms kilitliyordu (QA ölçümü). Yalnızca o kasanın aracı, içerik gösterilmez.
 func _prefetch_vehicle(uid: int) -> void:
-	var path: String = CarCatalog.scene_path(_manager.get_crate(uid).get("vehicle", &"")) if _manager else ""
+	prefetch_vehicle(_manager.get_crate(uid).get("vehicle", &"") if _manager else &"")
+
+
+## Aracın sahnesini arka planda yüklemeye başlar (önbellekte değilse). Showroom açılışı da kullanır.
+static func prefetch_vehicle(vehicle: StringName) -> void:
+	var path: String = CarCatalog.scene_path(vehicle) if vehicle != &"" else ""
 	if path != "" and not ResourceLoader.has_cached(path) \
 			and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 		ResourceLoader.load_threaded_request(path)
+
+
+## Açılışın nadirlik sırası ve rengi: HOŞ GELDİN KUTUSU içindeki araç sıradan olsa da şenlikli açılır (altın ışık,
+## uzun gerilim, konfeti). Dönen: [rank: int, color: Color].
+static func reveal_style(result: Dictionary) -> Array:
+	var rarity: StringName = StringName(result["rarity"])
+	var rank: int = CrateCatalog.rarity_rank(rarity)
+	var color: Color = CrateCatalog.rarity_color(rarity)
+	if bool(result.get("gift", false)):
+		rank = maxi(rank, CrateCatalog.rarity_rank(&"epic"))
+		color = CrateCatalog.rarity_color(&"legendary")
+	return [rank, color]
 
 
 ## AÇ: ödül verilir + kaydedilir (CrateManager.open), sonra sahne oynar. Açılamıyorsa false.
@@ -275,26 +294,21 @@ func _play_reveal(uid: int, v: CrateVisual, result: Dictionary) -> void:
 	v.set_clickable(false)
 	_camera_state = _frame(v, true)
 	var vehicle: StringName = result["vehicle"]
-	var scene_path: String = CarCatalog.scene_path(vehicle)
-	var rarity: StringName = StringName(result["rarity"])
-	var rank: int = CrateCatalog.rarity_rank(rarity)
-	var color: Color = CrateCatalog.rarity_color(rarity)
-	if bool(result.get("gift", false)):
-		# HOŞ GELDİN KUTUSU: içindeki araç sıradan olsa da hediye şenlikli açılır (altın ışık, uzun gerilim, konfeti)
-		rank = maxi(rank, CrateCatalog.rarity_rank(&"epic"))
-		color = CrateCatalog.rarity_color(&"legendary")
+	var style: Array = reveal_style(result)
+	var rank: int = style[0]
+	var color: Color = style[1]
 	# Araç modeli (dokunulunca başlamadıysa) açılış animasyonu sırasında arka planda yüklenir
-	_prefetch_vehicle(uid)
-	var fx: CrateRevealFx = _effects(v, color, rank)
+	prefetch_vehicle(vehicle)
+	var fx: CrateRevealFx = reveal_effects(self, v, color, rank, _floor_y())
 	_revealing[uid] = {"fx": fx}
 	fx.suspense(CrateVisual.suspense_time(rank))
 	v.burst_open.connect(fx.burst, CONNECT_ONE_SHOT)
 	v.lid_vanished.connect(fx.poof, CONNECT_ONE_SHOT)
 	await v.play_open(rank)
-	var car: Node3D = await _spawn_vehicle(v, vehicle, scene_path)
+	var car: Node3D = await _spawn_vehicle(v, vehicle)
 	_revealing[uid] = {"car": car, "fx": fx}
 	if car:
-		await _rise(v, car, fx, rank)
+		await rise(car, fx, rank, _floor_y())
 		await _roll_out(v, car)
 	reveal_ready.emit(uid, result)
 
@@ -333,32 +347,41 @@ func finish_reveal(uid: int) -> void:
 	reveal_finished.emit(uid)
 
 
-func _spawn_vehicle(v: CrateVisual, vehicle: StringName, scene_path: String) -> Node3D:
+func _spawn_vehicle(v: CrateVisual, vehicle: StringName) -> Node3D:
+	var car: Node3D = await make_vehicle(self, vehicle)
+	if car == null:
+		return null
+	# Aracın uzun ekseni kasanın uzun ekseniyle hizalanır ve BURNU çıkış yönüne bakar (model önü +Z);
+	# yalnızca eksen hizalanınca araç yarı yarıya ters kalıyor, kasadan geri geri çıkıyordu.
+	var out_dir: Vector3 = _exit_dir(v)
+	car.rotation.y = atan2(out_dir.x, out_dir.z)
+	car.global_position = v.to_global(v.vehicle_anchor()) - Vector3(0.0, 0.02, 0.0)
+	return car
+
+
+## Kasadan çıkan aracı kurar ve `parent`a ekler: dünyadaki ölçek (kasaya sığar), oyuncunun görünümü, birleştirme.
+## Sahne arka planda yükleniyorsa bitmesi beklenir. Yüklenemezse null.
+static func make_vehicle(parent: Node3D, vehicle: StringName) -> Node3D:
+	var scene_path: String = CarCatalog.scene_path(vehicle)
 	if scene_path == "":
 		return null
 	while ResourceLoader.load_threaded_get_status(scene_path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
-		await get_tree().process_frame
+		await parent.get_tree().process_frame
 	var scene: PackedScene = null
 	if ResourceLoader.load_threaded_get_status(scene_path) == ResourceLoader.THREAD_LOAD_LOADED:
 		scene = ResourceLoader.load_threaded_get(scene_path) as PackedScene
 	if scene == null:
 		scene = load(scene_path) as PackedScene   # önbellekte zaten var (daha önce yüklenmiş araç)
-	if scene == null:
+	if scene == null or not is_instance_valid(parent):
 		push_warning("CrateDelivery: '%s' yüklenemedi" % scene_path)
 		return null
 	var car: Node3D = scene.instantiate() as Node3D
 	car.name = "RevealedVehicle"
 	car.scale = Vector3.ONE * VEHICLE_SCALE * CarCatalog.model_scale(vehicle)
-	add_child(car)
+	parent.add_child(car)
 	var rig: CarRig = CarRig.for_node(car)
 	rig.apply(CarAppearance.get_for(scene_path))
 	rig.optimize(true)   # açılan araç tekerini döndürmez: parçalar materyal başına birleşir
-	# Aracın uzun ekseni kasanın uzun ekseniyle hizalanır ve BURNU çıkış yönüne bakar (model önü +Z);
-	# yalnızca eksen hizalanınca araç yarı yarıya ters kalıyor, kasadan geri geri çıkıyordu.
-	var out_dir: Vector3 = _exit_dir(v)
-	car.rotation.y = atan2(out_dir.x, out_dir.z)
-	var anchor: Vector3 = v.to_global(v.vehicle_anchor())
-	car.global_position = anchor - Vector3(0.0, 0.02, 0.0)
 	return car
 
 
@@ -388,7 +411,7 @@ func _exit_dir(v: CrateVisual) -> Vector3:
 
 ## VİTRİN DÖNÜŞÜ: araç kasanın içinden küçükten büyüyerek yükselir, havada bir tur döner, kısa
 ## süre asılı kalır ve tozla yere iner (seker). Son açısı kasaya hizalı açıdır.
-func _rise(v: CrateVisual, car: Node3D, fx: CrateRevealFx, rank: int) -> void:
+static func rise(car: Node3D, fx: CrateRevealFx, rank: int, floor_y: float) -> void:
 	var rest: Vector3 = car.global_position
 	var final_scale: Vector3 = car.scale
 	var final_yaw: float = car.rotation.y
@@ -396,7 +419,7 @@ func _rise(v: CrateVisual, car: Node3D, fx: CrateRevealFx, rank: int) -> void:
 	var spin_time: float = 0.85 + 0.1 * float(rank)
 	car.scale = final_scale * 0.05
 	car.rotation.y = final_yaw - TAU
-	var tween: Tween = create_tween()
+	var tween: Tween = car.create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(car, "scale", final_scale, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_property(car, "global_position", rest + Vector3(0.0, lift, 0.0), spin_time * 0.6) \
@@ -406,17 +429,17 @@ func _rise(v: CrateVisual, car: Node3D, fx: CrateRevealFx, rank: int) -> void:
 	tween.tween_interval(0.12 + 0.05 * float(rank))
 	tween.tween_property(car, "global_position", rest, 0.32).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 	# İlk temas anında toz (düşüşün ~%30'unda tekerler yere değer)
-	tween.parallel().tween_callback(fx.dust.bind(Vector3(rest.x, _floor_y(), rest.z))).set_delay(0.1)
+	tween.parallel().tween_callback(fx.dust.bind(Vector3(rest.x, floor_y, rest.z))).set_delay(0.1)
 	await tween.finished
 
 
-## Açılış efektleri (nadirlik renginde ışık, kıvılcım, konfeti…). Kasanın open_effect sahnesi
-## varsa ışığa eklenir.
-func _effects(v: CrateVisual, color: Color, rank: int) -> CrateRevealFx:
+## Açılış efektleri (nadirlik renginde ışık, kıvılcım, konfeti…) `parent`a, kasanın altına (`floor_y`) kurulur.
+## Kasanın open_effect sahnesi varsa ışığa eklenir.
+static func reveal_effects(parent: Node3D, v: CrateVisual, color: Color, rank: int, floor_y: float) -> CrateRevealFx:
 	var fx: CrateRevealFx = CrateRevealFx.new()
 	fx.setup(color, rank)
-	add_child(fx)
-	fx.global_position = Vector3(v.global_position.x, _floor_y(), v.global_position.z)
+	parent.add_child(fx)
+	fx.global_position = Vector3(v.global_position.x, floor_y, v.global_position.z)
 	var light: OmniLight3D = fx.light()
 	var effect_path: String = String(CrateCatalog.get_entry(v.crate_id).get("open_effect", ""))
 	if effect_path != "" and ResourceLoader.exists(effect_path):

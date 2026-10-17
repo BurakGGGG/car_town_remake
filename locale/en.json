@@ -246,7 +246,6 @@
  "BİR EŞYA SEÇ": "PICK AN ITEM",
  "BİR GARAJ GELİŞTİRMESİ SATIN AL": "BUY A GARAGE UPGRADE",
  "BİR KASA SİPARİŞ ET": "ORDER A CRATE",
- "BİRAZ DEKORASYONU KALDIR": "REMOVE SOME DECORATIONS",
  "BİTKİ": "PLANTS",
  "BİTİR": "DONE",
  "BİTİRDİN!": "FINISHED!",
@@ -506,7 +505,6 @@
  "KASA AVCISI": "CRATE HUNTER",
  "KASA SİPARİŞİ": "CRATE ORDER",
  "KASA YOLDA": "CRATE ON ITS WAY",
- "KASA YOLDA: GARAJDA YER YOK\n%s": "CRATE ON THE WAY: NO SPACE IN THE GARAGE\n%s",
  "KASA ŞU AN AÇILAMIYOR": "THE CRATE CAN'T BE OPENED RIGHT NOW",
  "KASADAN ÇIKAR": "FROM CRATES",
  "KASAYA DOKUN": "TAP THE CRATE",
@@ -979,8 +977,6 @@
  "ÖDÜLÜ AL'a bas. Bu görevin ödülü bir ARAÇ KASASI!": "Press CLAIM. This task's reward is a CAR CRATE!",
  "ÖNCE BİR DESEN SEÇ": "PICK A PATTERN FIRST",
  "ÖNCE DUVARDAKİ EŞYAYI KALDIR": "REMOVE THE ITEM ON THE WALL FIRST",
- "ÖNCE GARAJDAKİ\nKASALARI AÇ": "FIRST OPEN THE\nCRATES IN YOUR GARAGE",
- "ÖNCE GARAJDAKİ BİR KASAYI AÇ": "FIRST OPEN A CRATE IN YOUR GARAGE",
  "ÖNCE GARAJI SEVİYE %d'E GENİŞLET": "FIRST EXPAND THE GARAGE TO LEVEL %d",
  "ÖR": "BUILD",
  "Ödül: %s ₺": "Reward: %s ₺",
@@ -1751,5 +1747,11 @@
  "Bildirim izni verilmedi. Telefonun Ayarlar > Uygulamalar bölümünden açabilirsin.": "Notification permission denied. You can allow it in your phone's Settings > Apps.",
  "Bildirimler açılamadı. İnternet bağlantını kontrol edip tekrar dene.": "Couldn't turn on notifications. Check your internet connection and try again.",
  "YARIŞ BİLDİRİMLERİ AÇIK": "RACE NOTIFICATIONS ON",
- "Yarış bildirimleri açık: arkadaşın seni yenince haber vereceğiz.": "Race notifications on: we'll let you know when a friend beats you."
+ "Yarış bildirimleri açık: arkadaşın seni yenince haber vereceğiz.": "Race notifications on: we'll let you know when a friend beats you.",
+ "YOLDAKİ KASALAR": "CRATES ON THE WAY",
+ "%s\nAÇ": "%s\nOPEN",
+ "YOLDA  ·  GARAJDA YER YOK": "ON THE WAY  ·  NO ROOM IN THE GARAGE",
+ "AÇILIYOR…": "OPENING…",
+ "ÖNCE BEKLEYEN\nKASALARI AÇ": "FIRST OPEN YOUR\nWAITING CRATES",
+ "KASA YOLDA: GARAJDA YER YOK\nMAĞAZADAN AÇABİLİRSİN": "CRATE ON THE WAY: NO ROOM IN THE GARAGE\nYOU CAN OPEN IT IN THE SHOP"
 }

@@ -3,7 +3,8 @@ extends SceneTree
 ## dışında); zamanlayıcı ilk 15 sn, sonra 2 dakika; kovalamaca araçları trafik listesine girmez ve seçilemez; şüpheli trafikten
 ## çok hızlı, polis şüpheliden hızlı ve aradaki mesafe kapanıyor ama polis asla çarpmıyor; şeritteki araç sağa
 ## çekilip yavaşlayarak yol veriyor ve sonra şeridine dönüyor; kavşakta karşı eksen bekliyor; siren polisle
-## çalıyor ve kovalamaca bitince her şey temizleniyor.
+## çalıyor, polis şehirdeyken hiç susmuyor (ekranın ortasında en yüksek, kenarında en kısık) ve kovalamaca bitince
+## her şey temizleniyor.
 ## Çalıştırma: tools/run_tests.sh police_chase_test (pencereli: traffic_pool_test ile aynı gerekçe)
 
 var fails: int = 0
@@ -109,6 +110,9 @@ func _run() -> void:
 	var min_car_speed: float = INF
 	var closest_pass: float = INF
 	var siren_ok: bool = false
+	var siren: PoliceSiren = chase.get_node("PoliceSiren") as PoliceSiren
+	var police_frames: int = 0
+	var quietest: float = 0.0
 	var last_suspect: float = 0.0
 	var last_police: float = -1.0
 	var frames_run: int = 0
@@ -128,6 +132,10 @@ func _run() -> void:
 				police_speed += p.chase_distance - last_police
 			last_police = p.chase_distance
 			siren_ok = siren_ok or chase.get_node("PoliceSiren").is_playing()
+		if p:
+			police_frames += 1
+			if police_frames > 30:   # açılış (birkaç onda bir sn) bittikten sonra
+				quietest = minf(quietest, siren.volume_db())
 		if s:
 			last_suspect = s.chase_distance
 			sway_low = minf(sway_low, chase._sway)
@@ -153,6 +161,11 @@ func _run() -> void:
 	check(sway_high - sway_low > 0.15, "şüpheli savrularak kaçtı (yanal %+.2f … %+.2f)" % [sway_low, sway_high])
 	check(max_steer > 8.0 and max_roll > 0.03, "ön teker döndü (%.0f°), gövde yattı (%.3f)" % [max_steer, max_roll])
 	check(siren_ok, "polis yoldayken siren çaldı")
+	check(police_frames > 30 and quietest >= PoliceSiren.FLOOR_DB - 0.5,
+		"siren polis şehirdeyken hiç susmadı (en kısık %.1f dB)" % quietest)
+	check(PoliceSiren.level_db(0.0) > PoliceSiren.level_db(0.5) and PoliceSiren.level_db(0.5) > PoliceSiren.level_db(1.0)
+		and PoliceSiren.level_db(1.0) > PoliceSiren.level_db(2.0) and PoliceSiren.level_db(9.0) >= PoliceSiren.FLOOR_DB,
+		"siren ekranın ortasında en yüksek, kenarına doğru kısılıyor, ekran dışında bile susmuyor")
 	check(max_shift > 0.06, "şeritteki araç sağa çekildi (%.3f)" % max_shift)
 	check(min_car_speed < free_speed * 0.6, "yol verirken yavaşladı (%.2f)" % min_car_speed)
 	check(closest_pass >= 0.3, "kovalamaca aracı yol veren aracın yanından açıklıkla geçti (%.2f)" % closest_pass)

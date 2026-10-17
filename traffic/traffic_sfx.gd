@@ -77,15 +77,16 @@ func _player(volume_db: float, polyphony: int) -> AudioStreamPlayer:
 
 static func _synthesize() -> void:
 	var honks: Array[AudioStreamWAV] = [
-		_horn([[0.0, 0.34]], 392.0, 494.0),                 # tek, uzun "döööt"
-		_horn([[0.0, 0.13], [0.19, 0.30]], 415.0, 523.0),   # çift "dıt-dııt"
+		horn_stream([[0.0, 0.34]], 392.0, 494.0),                 # tek, uzun "döööt"
+		horn_stream([[0.0, 0.13], [0.19, 0.30]], 415.0, 523.0),   # çift "dıt-dııt"
 	]
 	_honk_streams = honks
-	_screech_stream = _squeal(0.85)
+	_screech_stream = squeal_stream(0.85)
 
 
 ## Korna: iki tonlu (iki sinyal birlikte), zengin harmonik (kare dalgaya yakın), yumuşak atak / bırakış.
-static func _horn(beeps: Array, low: float, high: float) -> AudioStreamWAV:
+## `beeps`: [[başlangıç sn, süre sn], …]. CityAmbience de kullanır (ara sıra çalan uzak kornalar).
+static func horn_stream(beeps: Array, low: float, high: float) -> AudioStreamWAV:
 	var total: float = 0.0
 	for beep: Array in beeps:
 		total = maxf(total, float(beep[0]) + float(beep[1]))
@@ -105,9 +106,10 @@ static func _horn(beeps: Array, low: float, high: float) -> AudioStreamWAV:
 
 
 ## Lastik cıyaklaması: 1,4–2,6 kHz arasında rastgele kayan dar bantlı tonlar + biraz gürültü, sönerek biter.
-static func _squeal(seconds: float) -> AudioStreamWAV:
+## `seed`: başka tohum = başka cıyaklama (CityAmbience'in uzak cıyaklamaları).
+static func squeal_stream(seconds: float, seed: int = 7341) -> AudioStreamWAV:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	rng.seed = 7341
+	rng.seed = seed
 	var samples: PackedFloat32Array = PackedFloat32Array()
 	samples.resize(int(seconds * MIX_RATE))
 	var phases: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0])

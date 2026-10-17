@@ -246,7 +246,6 @@
  "BİR EŞYA SEÇ": "ELIGE UN OBJETO",
  "BİR GARAJ GELİŞTİRMESİ SATIN AL": "COMPRA UNA MEJORA DEL TALLER",
  "BİR KASA SİPARİŞ ET": "PIDE UNA CAJA",
- "BİRAZ DEKORASYONU KALDIR": "QUITA ALGO DE DECORACIÓN",
  "BİTKİ": "PLANTAS",
  "BİTİR": "LISTO",
  "BİTİRDİN!": "¡TERMINASTE!",
@@ -506,7 +505,6 @@
  "KASA AVCISI": "CAZADOR DE CAJAS",
  "KASA SİPARİŞİ": "PEDIDO DE CAJA",
  "KASA YOLDA": "CAJA EN CAMINO",
- "KASA YOLDA: GARAJDA YER YOK\n%s": "CAJA EN CAMINO: NO HAY SITIO EN EL TALLER\n%s",
  "KASA ŞU AN AÇILAMIYOR": "LA CAJA NO SE PUEDE ABRIR AHORA",
  "KASADAN ÇIKAR": "SALE EN CAJAS",
  "KASAYA DOKUN": "TOCA LA CAJA",
@@ -979,8 +977,6 @@
  "ÖDÜLÜ AL'a bas. Bu görevin ödülü bir ARAÇ KASASI!": "Pulsa RECOGER. ¡El premio de esta misión es una CAJA DE COCHE!",
  "ÖNCE BİR DESEN SEÇ": "ELIGE UN DISEÑO PRIMERO",
  "ÖNCE DUVARDAKİ EŞYAYI KALDIR": "QUITA PRIMERO EL OBJETO DE LA PARED",
- "ÖNCE GARAJDAKİ\nKASALARI AÇ": "PRIMERO ABRE LAS\nCAJAS DE TU TALLER",
- "ÖNCE GARAJDAKİ BİR KASAYI AÇ": "PRIMERO ABRE UNA CAJA DE TU TALLER",
  "ÖNCE GARAJI SEVİYE %d'E GENİŞLET": "PRIMERO AMPLÍA EL TALLER AL NIVEL %d",
  "ÖR": "CONSTRUIR",
  "Ödül: %s ₺": "Premio: %s ₺",
@@ -1751,5 +1747,11 @@
  "Bildirim izni verilmedi. Telefonun Ayarlar > Uygulamalar bölümünden açabilirsin.": "Permiso de notificaciones denegado. Puedes permitirlo en Ajustes > Aplicaciones del teléfono.",
  "Bildirimler açılamadı. İnternet bağlantını kontrol edip tekrar dene.": "No se pudieron activar las notificaciones. Comprueba tu conexión e inténtalo de nuevo.",
  "YARIŞ BİLDİRİMLERİ AÇIK": "NOTIFICACIONES DE CARRERAS ACTIVADAS",
- "Yarış bildirimleri açık: arkadaşın seni yenince haber vereceğiz.": "Notificaciones activadas: te avisaremos cuando un amigo te gane."
+ "Yarış bildirimleri açık: arkadaşın seni yenince haber vereceğiz.": "Notificaciones activadas: te avisaremos cuando un amigo te gane.",
+ "YOLDAKİ KASALAR": "CAJAS EN CAMINO",
+ "%s\nAÇ": "%s\nABRIR",
+ "YOLDA  ·  GARAJDA YER YOK": "EN CAMINO  ·  NO HAY SITIO EN EL TALLER",
+ "AÇILIYOR…": "ABRIENDO…",
+ "ÖNCE BEKLEYEN\nKASALARI AÇ": "PRIMERO ABRE TUS\nCAJAS PENDIENTES",
+ "KASA YOLDA: GARAJDA YER YOK\nMAĞAZADAN AÇABİLİRSİN": "CAJA EN CAMINO: NO HAY SITIO EN EL TALLER\nPUEDES ABRIRLA EN LA TIENDA"
 }

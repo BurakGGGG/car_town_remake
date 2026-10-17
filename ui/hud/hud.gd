@@ -1286,6 +1286,8 @@ func _build_router() -> void:
 ## Android GERİ, kasa panosu açıkken: "hazır" panosu kapanır (kasa beklemeye döner); sonuç panosu
 ## ödülü gösterir, GERİ ile geçilemez (yanlışlıkla kapatıp ödülü görmemeyi önler).
 func _android_back_for_crate_panel() -> bool:
+	if showroom and showroom.visible and showroom.is_revealing():
+		return true   # yoldaki kasa mağazada açılıyor: sonuç plakası TAMAM ile kapanır
 	if crate_panel == null or not crate_panel.visible:
 		return false
 	if crate_panel.mode() == &"prompt":
@@ -1591,6 +1593,9 @@ func _connect_crates() -> void:
 	_delivery = get_tree().get_first_node_in_group("crate_delivery") as CrateDelivery
 	if _crates:
 		_crates.crate_added.connect(_on_crate_added)
+		# MAĞAZA sekmesinin rozeti: garajda yer bulamayan ("yolda") kasa sayısı — mağazanın YOLDAKİ KASALAR bölümü
+		_crates.crates_changed.connect(_refresh_shop_badge)
+		_refresh_shop_badge()
 	if _delivery:
 		_delivery.crate_clicked.connect(_on_crate_clicked)
 		_delivery.reveal_ready.connect(_on_crate_revealed)
@@ -1654,6 +1659,12 @@ func _on_crate_added(uid: int) -> void:
 	if not String(crate.get("source", "")).begins_with("quest"):
 		return   # showroom satın alması _on_crate_purchased'da
 	router.close_all()
+	_announce_quest_crate.call_deferred(uid)   # teslimat crate_added'den SONRA denenir (crates_changed)
+
+
+func _announce_quest_crate(uid: int) -> void:
+	if _crates and _crates.waiting_for_room(uid):
+		return   # garajda yer yok: "yolda" bildirimi (_on_crate_blocked) MAĞAZA'yı gösterdi
 	if _delivery:
 		_delivery.focus_on_arrival(uid)
 	_show_notice(Loc.t("İLK ARAÇ KASAN GARAJINA GELDİ\nKASAYA DOKUN VE AÇ"), HudPalette.COIN_DARK, 3.0)
@@ -1703,14 +1714,19 @@ func _on_crate_done_pressed(uid: int) -> void:
 		_delivery.finish_reveal(uid)
 
 
+## Garajda yer yok: kasa "yolda" kalır ve MAĞAZA'dan açılır (kullanıcı kararı). Mağaza açıkken bildirim yok —
+## yer yokken alınan kasa orada YOLDAKİ KASALAR'da seçili gelir.
 func _on_crate_blocked(uid: int) -> void:
-	if _blocked_notified.has(uid):
+	_refresh_shop_badge()
+	if _blocked_notified.has(uid) or (showroom and showroom.visible):
+		_blocked_notified[uid] = true
 		return
 	_blocked_notified[uid] = true
-	# Yeri dolduran dekor mu kasalar mı: yanlış yönlendirme olmasın (QA: dekorsuz garajda "dekoru kaldır" diyordu)
-	var decor: DecorManager = get_tree().get_first_node_in_group("decor") as DecorManager
-	var hint: String = Loc.t("BİRAZ DEKORASYONU KALDIR") if decor and decor.instance_count() > 0 else Loc.t("ÖNCE GARAJDAKİ BİR KASAYI AÇ")
-	_show_notice(Loc.t("KASA YOLDA: GARAJDA YER YOK\n%s") % hint, HudPalette.INK, 2.4)
+	_show_notice(Loc.t("KASA YOLDA: GARAJDA YER YOK\nMAĞAZADAN AÇABİLİRSİN"), HudPalette.INK, 2.6)
+
+
+func _refresh_shop_badge() -> void:
+	shop_button.badge = _crates.undelivered().size() if _crates and not GarageVisit.is_visiting() else 0
 
 
 ## MAĞAZA ekranı: bina hitbox'ı ya da MAĞAZA sekmesi açar, oyun HUD'u gizlenir, GERİ ile döner.

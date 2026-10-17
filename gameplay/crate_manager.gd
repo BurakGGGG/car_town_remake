@@ -10,6 +10,12 @@ extends Node
 ##   kasaya dokunur, AÇ → open(): araç koleksiyona / kopya yıldızına yazılır, REVEALED kaydedilir →
 ##   açılış sahnesi biter → claim(): kasa listeden çıkar (CLAIMED).
 ##
+## GARAJDA YER YOKSA (2026-10-17, kullanıcı kararı "kasa listeden açılsın"): kasa PURCHASED ("yolda") kalır ve
+## MAĞAZA'nın YOLDAKİ KASALAR bölümüne girer (alt sekmede rozet); oradan AÇ'a basılınca open() doğrudan
+## PURCHASED'dan çalışır, açılış sahnesi showroom platformunda oynar. Yer boşalırsa kasa yine garaja iner.
+## Yolda kasa yeni satın almayı ENGELLEMEZ (eskiden engelliyordu: yer yokken hem alınamıyor hem açılamıyordu);
+## üst sınır yalnızca MAX_PENDING.
+##
 ## GÜVENLİK:
 ##   * Sonuç satın alma anında belirlenir ve kasayla birlikte kaydedilir. Uygulamayı kapatıp açmak,
 ##     kaydı yüklemek ya da buluttan geri yüklemek sonucu DEĞİŞTİRMEZ (sonuç kasanın verisidir).
@@ -64,9 +70,8 @@ func buy_block_reason(crate_id: StringName) -> String:
 	var progress: PlayerProgress = _progress()
 	if progress and progress.level < CrateCatalog.min_level(crate_id):
 		return "level"
-	# Garajda yer bekleyen ("yolda") kasa varken yenisi satılmaz: aksi halde oyuncu görmediği kasalara
-	# gem harcıyordu (QA: seviye 1 garaja 3 kasa sığıyor, 6 kasa alınabiliyordu).
-	if pending_count() >= MAX_PENDING or not undelivered().is_empty():
+	# Yolda (garajda yer bekleyen) kasa artık görünür ve mağazadan açılabilir: yalnızca üst sınır engeller.
+	if pending_count() >= MAX_PENDING:
 		return "full"
 	if progress and not progress.can_afford_gems(CrateCatalog.price(crate_id)):
 		return "gems"
@@ -199,15 +204,21 @@ func can_open(uid: int) -> bool:
 	return s == State.DELIVERED or s == State.WAITING_TO_OPEN
 
 
+## Garajda yer bulamamış ("yolda") kasa mı? Böyle kasa mağazadan açılır (open() bunu da kabul eder).
+func waiting_for_room(uid: int) -> bool:
+	return state_of(uid) == State.PURCHASED
+
+
 # --- Açılış ------------------------------------------------------------------------
 
-## KASAYI AÇ: kayıtlı sonuç koleksiyona yazılır (bir kez) ve REVEALED hemen kaydedilir.
+## KASAYI AÇ: kayıtlı sonuç koleksiyona yazılır (bir kez) ve REVEALED hemen kaydedilir. Dünyadaki kasa
+## (can_open) ya da garajda yer bulamamış yoldaki kasa (waiting_for_room — mağazadan açılış) açılabilir.
 ## Dönen sözlük: {uid, crate, vehicle, rarity, gift, duplicate, reacquired, discovered, stars,
 ## scrap_gems, discovery_gems, milestone_gems, gems}. Açılamıyorsa boş sözlük.
 ## gift: hediye kasası (HOŞ GELDİN KUTUSU) — keşif elması ve kilometre taşı ödenmez.
 func open(uid: int) -> Dictionary:
 	var c: Dictionary = _find(uid)
-	if c.is_empty() or not can_open(uid):
+	if c.is_empty() or not (can_open(uid) or waiting_for_room(uid)):
 		return {}
 	_set_state(c, State.OPENING)
 	var vehicle: StringName = c["vehicle"]

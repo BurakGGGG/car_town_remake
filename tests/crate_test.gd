@@ -211,7 +211,7 @@ func _run() -> void:
 		var wrong: Array[float] = []
 		for yaw: float in [0.0, 90.0, 180.0, 270.0]:
 			crate_v.rotation_degrees.y = yaw
-			var probe: Node3D = await delivery._spawn_vehicle(crate_v, rolled, CarCatalog.scene_path(rolled))
+			var probe: Node3D = await delivery._spawn_vehicle(crate_v, rolled)
 			var probe_nose: Vector3 = probe.global_transform.basis.z
 			probe_nose.y = 0.0
 			if probe_nose.normalized().dot(to_entry.normalized()) <= 0.0:
@@ -257,6 +257,32 @@ func _run() -> void:
 	check(own.owned_count() == count_before and own.duplicate_count(owned_id) == dups_before + 1, "satılabilir ikinci araç oluşmadı")
 	check(GarageValue.vehicles_value(self) == gv2, "garaj değeri kopyayla şişmedi")
 	crates.claim(dup_uid)
+
+	print("== 10b) GARAJDA YER YOK: KASA YOLDA, MAĞAZADAN AÇILIR ==")
+	# Kullanıcı kararı (2026-10-17): yer bulamayan kasa satın almayı kilitlemez ve PURCHASED'dan açılabilir
+	var filled: Array[int] = []
+	var waiting: int = 0
+	while waiting == 0 and filled.size() < CrateManager.MAX_PENDING:
+		var uid_fill: int = crates.grant_free(&"city_crate", "test")
+		# Sonraki bölümler Getz'in kopya sayısına bakıyor: rastgele çekiliş Getz çıkarmasın (Şahin zaten sahipli)
+		crates._find(uid_fill)["vehicle"] = &"tofas_sahin"
+		filled.append(uid_fill)
+		if crates.waiting_for_room(uid_fill):
+			waiting = uid_fill
+	check(waiting > 0 and delivery.visual_of(waiting) == null, "garaj doldu: son kasa yolda, dünyada değil (%d kasa)" % filled.size())
+	check(crates.pending_count() >= CrateManager.MAX_PENDING or crates.buy_block_reason(&"city_crate") != "full",
+		"yolda kasa satın almayı kilitlemiyor")
+	var waiting_vehicle: StringName = crates.get_crate(waiting).get("vehicle", &"")
+	var opened: Dictionary = crates.open(waiting)
+	check(not opened.is_empty() and opened["vehicle"] == waiting_vehicle and own.is_owned(waiting_vehicle)
+		and crates.state_of(waiting) == CrateManager.State.REVEALED, "yolda kasa açıldı, kayıtlı sonuç verildi")
+	check(delivery.visual_of(waiting) == null, "açılan yolda kasa dünyaya konmadı (konumu yok)")
+	crates.claim(waiting)
+	check(crates.state_of(waiting) == CrateManager.State.CLAIMED, "yolda kasa kapandı")
+	for uid_fill: int in filled:
+		if crates.can_open(uid_fill) and not crates.open(uid_fill).is_empty():
+			crates.claim(uid_fill)
+	check(crates.pending_count() == 0, "garaj boşaltıldı")
 
 	print("== 11) SATILAN ARAÇ KEŞFEDİLMİŞ KALIR, SHOWROOM GERİ SATAR ==")
 	var eco: EconomyManager = g(&"economy")

@@ -5,7 +5,8 @@ extends VBoxContainer
 ## SONUÇ — açılış sahnesinden sonra aracın adı, nadirliği ve ne olduğu (yeni / kopya ★ / geri geldi).
 ## HOŞ GELDİN KUTUSU (hediye): soruda olasılık yerine "RIZA USTA'DAN HEDİYE", sonuçta "AL, İLK ARACIN!".
 ## Mantık yok: AÇ ve TAMAM sinyalleri HUD üzerinden CrateDelivery'ye gider. Kasanın içindeki araç
-## soru kipinde ASLA gösterilmez.
+## soru kipinde ASLA gösterilmez. Plaka metinleri (prompt_content / result_content) MAĞAZA'daki yoldaki kasa
+## açılışıyla ortaktır.
 
 signal open_pressed(uid: int)
 signal dismissed(uid: int)
@@ -67,47 +68,55 @@ func show_prompt(uid_value: int, crate_id: StringName) -> void:
 	_uid = uid_value
 	_mode = &"prompt"
 	_stop_glow()
-	var entry: Dictionary = CrateCatalog.get_entry(crate_id)
-	var title: String = Loc.t(String(entry.get("display_name", Loc.t("KASA"))))
-	if CrateCatalog.is_gift(crate_id):
-		_plate.set_content(title, Loc.t("RIZA USTA'DAN HEDİYE"), "???", PackedStringArray([Loc.t("İÇİNDE İLK ARACIN VAR")]))
-		_action.text = Loc.t("AÇ")
-		_action.disabled = false
-		_cancel.visible = true
-		show()
-		_start_glow(CrateCatalog.rarity_color(&"legendary"), true)
-		return
-	var odds: Dictionary = CrateCatalog.rarity_odds(crate_id)
-	var lines: PackedStringArray = PackedStringArray()
-	for rarity: StringName in CrateCatalog.RARITY_ORDER:
-		if odds.has(rarity):
-			lines.append("%s  %s" % [CrateCatalog.rarity_label(rarity), Loc.percent(Loc.decimal(float(odds[rarity]) * 100.0))])
-	_plate.set_content(title, Loc.t("İÇİNDE BİR ARAÇ VAR"), "???", lines)
-	_action.text = Loc.t("AÇ")
-	_action.disabled = false
-	_cancel.visible = true
-	show()
+	_show_content(prompt_content(crate_id), Loc.t("AÇ"), true)
 
 
 ## SONUÇ kipi: araç dünyada göründükten sonra.
 func show_result(uid_value: int, result: Dictionary) -> void:
 	_uid = uid_value
 	_mode = &"result"
+	_show_content(result_content(result), Loc.t("TAMAM"), false)
+
+
+func _show_content(content: Dictionary, action: String, cancel: bool) -> void:
+	_plate.set_content(content["title"], content["subtitle"], content["headline"], content["lines"])
+	_action.text = action
+	_action.disabled = false
+	_cancel.visible = cancel
+	show()
+	if content.has("glow"):
+		_start_glow(content["glow"], bool(content["strong"]))
+
+
+## Soru plakasının metni: {title, subtitle, headline, lines} (+ hediyede {glow, strong}). Olasılıklar nadirlik
+## başına; içindeki araç ASLA yazılmaz.
+static func prompt_content(crate_id: StringName) -> Dictionary:
+	var entry: Dictionary = CrateCatalog.get_entry(crate_id)
+	var title: String = Loc.t(String(entry.get("display_name", Loc.t("KASA"))))
+	if CrateCatalog.is_gift(crate_id):
+		return {"title": title, "subtitle": Loc.t("RIZA USTA'DAN HEDİYE"), "headline": "???",
+			"lines": PackedStringArray([Loc.t("İÇİNDE İLK ARACIN VAR")]),
+			"glow": CrateCatalog.rarity_color(&"legendary"), "strong": true}
+	var odds: Dictionary = CrateCatalog.rarity_odds(crate_id)
+	var lines: PackedStringArray = PackedStringArray()
+	for rarity: StringName in CrateCatalog.RARITY_ORDER:
+		if odds.has(rarity):
+			lines.append("%s  %s" % [CrateCatalog.rarity_label(rarity), Loc.percent(Loc.decimal(float(odds[rarity]) * 100.0))])
+	return {"title": title, "subtitle": Loc.t("İÇİNDE BİR ARAÇ VAR"), "headline": "???", "lines": lines}
+
+
+## Sonuç plakasının metni (CrateManager.open() sonucundan): {title, subtitle, headline, lines, glow, strong}.
+static func result_content(result: Dictionary) -> Dictionary:
 	var vehicle: StringName = result["vehicle"]
 	var entry: Dictionary = CarCatalog.get_entry(vehicle)
 	var rarity: StringName = result["rarity"]
+	var title: String = String(entry.get("display_name", vehicle)).to_upper()
+	if bool(result.get("gift", false)):
+		return {"title": title, "subtitle": Loc.t("HOŞ GELDİN HEDİYESİ  ·  %s SINIFI") % String(entry.get("class", "?")),
+			"headline": Loc.t("AL, İLK ARACIN!"), "lines": PackedStringArray([Loc.t("İLK YARIŞLARINA BUNUNLA ÇIKARSIN")]),
+			"glow": CrateCatalog.rarity_color(&"legendary"), "strong": true}
 	var lines: PackedStringArray = PackedStringArray()
 	var headline: String
-	if bool(result.get("gift", false)):
-		_plate.set_content(String(entry.get("display_name", vehicle)).to_upper(),
-			Loc.t("HOŞ GELDİN HEDİYESİ  ·  %s SINIFI") % String(entry.get("class", "?")),
-			Loc.t("AL, İLK ARACIN!"), PackedStringArray([Loc.t("İLK YARIŞLARINA BUNUNLA ÇIKARSIN")]))
-		_action.text = Loc.t("TAMAM")
-		_action.disabled = false
-		_cancel.visible = false
-		show()
-		_start_glow(CrateCatalog.rarity_color(&"legendary"), true)
-		return
 	if bool(result["duplicate"]):
 		var stars: int = int(result["stars"])
 		headline = Loc.t("KOPYA  %s") % ("★".repeat(stars) + "☆".repeat(5 - stars))
@@ -118,14 +127,9 @@ func show_result(uid_value: int, result: Dictionary) -> void:
 		headline = Loc.t("YENİ!  KOLEKSİYONA EKLENDİ")
 	if int(result["gems"]) > 0:
 		lines.append(Loc.t("+%d GEM") % int(result["gems"]))
-	_plate.set_content(String(entry.get("display_name", vehicle)).to_upper(),
-		Loc.t("%s  ·  %s SINIFI") % [CrateCatalog.rarity_label(rarity), String(entry.get("class", "?"))],
-		headline, lines)
-	_action.text = Loc.t("TAMAM")
-	_action.disabled = false
-	_cancel.visible = false
-	show()
-	_start_glow(CrateCatalog.rarity_color(rarity), rarity == &"legendary" or rarity == &"epic")
+	return {"title": title, "subtitle": Loc.t("%s  ·  %s SINIFI") % [CrateCatalog.rarity_label(rarity), String(entry.get("class", "?"))],
+		"headline": headline, "lines": lines, "glow": CrateCatalog.rarity_color(rarity),
+		"strong": rarity == &"legendary" or rarity == &"epic"}
 
 
 ## "Sonra" düğmesiyle aynı davranış (Android GERİ için).

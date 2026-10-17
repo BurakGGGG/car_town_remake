@@ -452,9 +452,19 @@ hızlı, aradaki mesafe kapanır ("harita dışında yakalamış gibi"), polis g
 - Yol verme: TRAFFIC kipindeki araç arkadan gelen / karşıdan yaklaşan kovalamaca aracını 3,2 birimden görünce sağa
   0,08 kayar ve hızını %35'e indirir (`TrafficManager.chase_pressure`); geçince şeridine döner. Kayma kaldırımdaki
   tamir müşterilerine değmesin diye küçük. Kovalamaca sürerken kavşağa karşı eksen girmez (`holds_crossing`).
-- Siren (`traffic/police_siren.gd`): kodla sentez, döngülü. Bentley Türk/Amerikan tipi uluma (620–1.380 Hz, 2,4 sn),
-  Vito Alman "Martinshorn" (440 / 587 Hz, 0,6 sn). Dinleyici kameranın baktığı zemin noktası: ses polis yaklaştıkça
-  yükselir, uzaklaştıkça söner; duyulma yarıçapı zumla büyür; hafif Doppler. Ekran açıkken susar. SFX bus. Sentez
-  telefonda takılma yapmasın diye polis modeliyle birlikte 20 sn önceden iş parçacığında hazırlanır.
-- Test `tests/police_chase_test.gd` (pencereli, 31 kontrol); görsel QA `qa/police_chase_qa.gd` (şerit başına
+- Siren (`traffic/police_siren.gd`, 2026-10-17 yeniden — kullanıcı: "pek hoşuma gitmedi, daha gerçekçi yap"): kodla
+  sentez, döngülü, 24 kHz. Gerçek siren zinciri: kaynak → korna hoparlörü rezonansları (her harmonik o anki frekansında
+  süzülür) → sürücü doyması (tanh) → binalardan 5 kısa yankı (döngü içinde sarar). Bentley: elektronik siren, 4,6 sn
+  uluma (650 → 1.480 Hz, motorlu siren gibi hızlanıp yavaşlayan) + 3 sn yelp (0,3 sn), kare dalga kaynak (doluluk %46),
+  7,6 sn döngü. Vito: Martinshorn la / re (440 / 587 Hz) 0,65 sn, her ton hafif farklı akortlu iki kornadan (vuru),
+  ton başında basınç oturana kadar perde alttan gelir, 5,2 sn döngü. Her kovalamaca döngünün rastgele yerinden başlar.
+  DUYULMA (kullanıcı kararı): polis haritaya girdiği andan çıkana kadar duyulur; düzey ekrandaki konuma göre — tam
+  ortada −8 dB, ekran kenarında −21 dB (arası dB'de doğrusal), ekran dışında yarı ekran başına −8 dB ama −31'in altına
+  inmez (doğu ucundan gelen polis görünmeden ~2 sn önce kısık duyulur). Uzaklaştıkça alçak geçiren 11 kHz → 1,5 kHz
+  (boğuk), ekranın solundaki polis soldan (pan ±0,6), Doppler araç hızından (ses hızı 46 birim/sn, dinleyici ekran
+  ortasının 1,2 birim üstünde; kamera kaydırmak perdeyi oynatmaz). Kendi `PoliceSiren` bus'ı (kodla kurulur: LowPass +
+  Panner) → SFX. Susarken kısılarak durur (`is_playing` hemen false). Ekran açıkken susar. Sentez masaüstünde 0,2 / 0,4 sn
+  (uluma / iki ton); polis modeliyle birlikte 20 sn önceden iş parçacığında hazırlanır. Dinleme dosyaları:
+  `PoliceSiren.build(kind).save_to_wav(...)`.
+- Test `tests/police_chase_test.gd` (pencereli, 35 kontrol); görsel QA `qa/police_chase_qa.gd` (şerit başına
   kontakt + polisin ekran ortasına en yakın tam kare).

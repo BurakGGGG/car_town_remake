@@ -98,6 +98,12 @@ const BOLT_CLEAR: float = 13.0
 			_apply_styles()
 
 
+## Sağ üst köşede kırmızı sayı rozeti (0 = yok; ör. MAĞAZA sekmesinde yoldaki kasa sayısı). Kayda girmez.
+var badge: int = 0:
+	set(value):
+		badge = maxi(value, 0)
+		queue_redraw()
+
 ## Taban nedeniyle büyüyen yuvarlak tabelada ikonun büyütme oranı (1 = değişmedi).
 var _icon_scale: float = 1.0
 
@@ -223,6 +229,7 @@ func _draw() -> void:
 	if shape == Shape.ROUND:
 		if kind != HudIcon.Kind.NONE:
 			HudIcon.draw_icon(self, kind, size * 0.5 + Vector2(0.0, -1.0), icon_size * _icon_scale, ink, bg)
+		_draw_badge()
 		return
 
 	var has_icon: bool = kind != HudIcon.Kind.NONE or avatar != null
@@ -250,6 +257,21 @@ func _draw() -> void:
 				draw_rect(rect, ink, false, 1.5, true)
 		else:
 			HudIcon.draw_icon(self, kind, center, icon_size, ink, bg)
+	_draw_badge()
+
+
+## Rozet köşenin biraz dışına taşar (GemShopButton'daki "!" rozetiyle aynı renkler).
+func _draw_badge() -> void:
+	if badge <= 0:
+		return
+	var font: Font = get_theme_font(&"font")
+	var text: String = str(badge) if badge < 10 else "9+"
+	var center: Vector2 = Vector2(size.x - 3.0, 3.0)
+	draw_circle(center, 11.0, Color("A42E35"), true, -1.0, true)
+	draw_circle(center, 9.5, Color("E2474F"), true, -1.0, true)
+	if font:
+		var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14).x
+		draw_string(font, center + Vector2(-w * 0.5, 5.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14, Color.WHITE)
 
 
 func _ink_for(mode: DrawMode) -> Color:
