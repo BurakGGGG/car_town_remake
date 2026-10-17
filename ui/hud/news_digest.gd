@@ -403,7 +403,8 @@ static func date_text(date: Dictionary) -> String:
 	var months: Array[String] = [Loc.t("OCAK"), Loc.t("ŞUBAT"), Loc.t("MART"), Loc.t("NİSAN"), Loc.t("MAYIS"),
 		Loc.t("HAZİRAN"), Loc.t("TEMMUZ"), Loc.t("AĞUSTOS"), Loc.t("EYLÜL"), Loc.t("EKİM"), Loc.t("KASIM"), Loc.t("ARALIK")]
 	var month: int = clampi(int(date.get("month", 1)), 1, 12)
-	return "%d %s %d" % [int(date.get("day", 1)), months[month - 1], int(date.get("year", 2026))]
+	# Gün-ay-yıl sırası dilden gelir (DE "17. OKTOBER 2026"): çevrilebilir biçim
+	return Loc.t("%d %s %d") % [int(date.get("day", 1)), months[month - 1], int(date.get("year", 2026))]
 
 
 static func _pick(seed: int, options: Array) -> String:

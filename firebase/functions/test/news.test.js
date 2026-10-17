@@ -122,7 +122,9 @@ test("dile göre metin; İNTİKAM metni; bilinmeyen dil İngilizce", () => {
   assert.match(messageFor("tr", "Bob Usta", false).body, /^Bob Usta yarışta aracını yendi!/);
   assert.match(messageFor("tr", "Bob Usta", true).body, /intikamını aldı/);
   assert.match(messageFor("es", "Bob", false).body, /le ganó a tu coche/);
-  assert.match(messageFor("de", "Bob", false).body, /beat your car/);
+  assert.match(messageFor("de", "Bob", false).body, /^Bob hat dein Auto im Rennen geschlagen/);
+  assert.match(messageFor("fr", "Bob", true).body, /^Bob a pris sa revanche/);
+  assert.match(messageFor("it", "Bob", false).body, /beat your car/);
   assert.equal(messageFor("en", "x".repeat(40), false).body.startsWith("x".repeat(16) + " "), true, "ad 16 karakterle sınırlı");
 });
 

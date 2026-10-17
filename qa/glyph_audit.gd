@@ -5,6 +5,7 @@ func _initialize() -> void:
 	var font: Font = ThemeDB.fallback_font
 	var chars: Dictionary = {}
 	var sources: Array[String] = ["res://locale/strings.json", "res://locale/en.json", "res://locale/es.json",
+		"res://locale/de.json", "res://locale/fr.json",
 		"res://vehicles/crates.json", "res://decor/decorations.json", "res://vehicles/cars.json"]
 	var texts: Array[String] = []
 	for path: String in sources:

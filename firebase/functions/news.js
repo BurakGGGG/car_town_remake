@@ -15,6 +15,10 @@ const TEXT = {
     revenge: "{name} took revenge and beat your car! Tap for a rematch 🏁" },
   es: { title: "AUTO YARD", win: "¡{name} le ganó a tu coche en una carrera! Toca para vengarte 🏁",
     revenge: "¡{name} se vengó y le ganó a tu coche! Toca para la revancha 🏁" },
+  de: { title: "AUTO YARD", win: "{name} hat dein Auto im Rennen geschlagen! Tippe für deine Rache 🏁",
+    revenge: "{name} hat sich gerächt und dein Auto geschlagen! Tippe für die Revanche 🏁" },
+  fr: { title: "AUTO YARD", win: "{name} a battu ta voiture en course\u00a0! Touche pour te venger 🏁",
+    revenge: "{name} a pris sa revanche et battu ta voiture\u00a0! Touche pour une nouvelle manche 🏁" },
 };
 
 /** Bu yazma bildirim doğurur mu: belge var, gönderen kazandı ve yeni bir yarış (aynı belgenin başka alanı değişmedi). */

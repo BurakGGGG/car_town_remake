@@ -65,7 +65,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['token', 'lang', 'at'])
         && request.resource.data.token is string && request.resource.data.token.size() > 20
         && request.resource.data.token.size() <= 4096
-        && request.resource.data.lang in ['tr', 'en', 'es']
+        && request.resource.data.lang in ['tr', 'en', 'es', 'de', 'fr']
         && request.resource.data.at is int;
     }
 

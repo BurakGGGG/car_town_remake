@@ -249,7 +249,9 @@ const tok = (over = {}) => ({ token: "f".repeat(150), lang: "tr", at: 1, ...over
 await check("sahibi jetonunu yazar", assertSucceeds(setDoc(doc(bob, "push/p_bob"), tok())));
 await check("başkasının jetonuna yazılamaz", assertFails(setDoc(doc(eve, "push/p_bob"), tok())));
 await check("başkasının jetonu okunamaz", assertFails(getDoc(doc(eve, "push/p_bob"))));
-await check("bilinmeyen dil reddedilir", assertFails(setDoc(doc(bob, "push/p_bob"), tok({ lang: "de" }))));
+await check("bilinmeyen dil reddedilir", assertFails(setDoc(doc(bob, "push/p_bob"), tok({ lang: "it" }))));
+await check("Almanca kabul edilir", assertSucceeds(setDoc(doc(bob, "push/p_bob"), tok({ lang: "de" }))));
+await check("Fransızca kabul edilir", assertSucceeds(setDoc(doc(bob, "push/p_bob"), tok({ lang: "fr" }))));
 await check("kısa jeton reddedilir", assertFails(setDoc(doc(bob, "push/p_bob"), tok({ token: "abc" }))));
 await check("ek alan reddedilir", assertFails(setDoc(doc(bob, "push/p_bob"), tok({ uid: "bob" }))));
 await check("sahibi siler", assertSucceeds(deleteDoc(doc(bob, "push/p_bob"))));

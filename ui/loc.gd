@@ -1,9 +1,9 @@
 class_name Loc
-## DİL DESTEĞİ — Türkçe / İngilizce / İspanyolca.
+## DİL DESTEĞİ — Türkçe / İngilizce / İspanyolca / Almanca / Fransızca.
 ##
 ## Kaynak dil TÜRKÇE'dir: çeviri anahtarı (msgid) Türkçe metnin KENDİSİdir; böylece kodda ayrı anahtar
-## tablosu tutulmaz ve Türkçe oyun hiçbir çeviri dosyası olmadan çalışır. Çeviriler locale/en.json ve
-## locale/es.json'dadır ({"Türkçe metin": "çeviri"}); açılışta Translation nesnelerine yüklenir.
+## tablosu tutulmaz ve Türkçe oyun hiçbir çeviri dosyası olmadan çalışır. Çeviriler locale/<dil>.json'dadır
+## (en, es, de, fr; {"Türkçe metin": "çeviri"}); açılışta Translation nesnelerine yüklenir.
 ##
 ## KULLANIM: oyuncuya görünen her metin Loc.t("…") ile geçer; biçimli metinlerde ÖNCE çevir, SONRA
 ## biçimle: Loc.t("%s TAMİR YAP") % hedef. Veri dosyalarından / sabit kataloglardan gelen metin
@@ -11,10 +11,19 @@ class_name Loc
 ## locale/strings.json güncellenir → tools/i18n/check.py eksik çevirileri listeler.
 ## Dil değişimi sahneyi yeniden kurar (GameSettings.set_language): açık ekranların hepsi yeni dille kurulur.
 
-const LANGUAGES: Array[String] = ["tr", "en", "es"]
+const LANGUAGES: Array[String] = ["tr", "en", "es", "de", "fr"]
 ## Dil adları kendi dillerinde yazılır ve ÇEVRİLMEZ (seçim düğmeleri).
-const NAMES: Dictionary = {"tr": "TÜRKÇE", "en": "ENGLISH", "es": "ESPAÑOL"}
+const NAMES: Dictionary = {"tr": "TÜRKÇE", "en": "ENGLISH", "es": "ESPAÑOL", "de": "DEUTSCH", "fr": "FRANÇAIS"}
 const DIR: String = "res://locale/"
+## Oyunun web sitesi; sayfa adresleri dile göre (sitenin src/i18n/<dil>.json "paths" alanıyla AYNI tutulmalı).
+const SITE_HOST: String = "autoyardwebsite.vercel.app"
+const SITE_PATHS: Dictionary = {
+	"tr": {"privacy": "/gizlilik", "terms": "/kullanim-sartlari", "contact": "/iletisim", "delete": "/hesap-silme"},
+	"en": {"privacy": "/en/privacy", "terms": "/en/terms", "contact": "/en/contact", "delete": "/en/delete-account"},
+	"es": {"privacy": "/es/privacidad", "terms": "/es/terminos", "contact": "/es/contacto", "delete": "/es/eliminar-cuenta"},
+	"de": {"privacy": "/de/datenschutz", "terms": "/de/nutzungsbedingungen", "contact": "/de/kontakt", "delete": "/de/konto-loeschen"},
+	"fr": {"privacy": "/fr/confidentialite", "terms": "/fr/conditions", "contact": "/fr/contact", "delete": "/fr/supprimer-compte"},
+}
 
 static var _translations: Dictionary = {}   # dil → Translation (bir kez okunur)
 
@@ -60,7 +69,7 @@ static func tc(text: String, context: String) -> String:
 	return translated if translated != key else t(text)
 
 
-## Yüzde: TR "%25" · EN "25%" · ES "25 %". `value` biçimlenmiş sayı metnidir.
+## Yüzde: TR "%25" · EN "25%" · ES "25 %" · DE / FR "25 %" (bölünmez boşluk). `value` biçimlenmiş sayı metnidir.
 ## Büyük harf: Türkçe seçiliyken i → İ, ı → I (String.to_upper "i"yi "I" yapar: "elif" → "ELIF" olurdu).
 ## Oyuncunun yazdığı ad / garaj adı gibi metinler için; çeviri anahtarları zaten büyük harfle yazılı.
 static func upper(text: String) -> String:
@@ -137,15 +146,23 @@ static func percent(value: String) -> String:
 	match current():
 		"en": return value + "%"
 		"es": return value + " %"
+		"de", "fr": return value + "\u00a0%"
 	return "%" + value
 
 
-## Ondalıklı sayı: TR / ES virgül, EN nokta.
+## Ondalıklı sayı: TR / ES / DE / FR virgül, EN nokta.
 static func decimal(value: float, digits: int = 1) -> String:
 	var text: String = String.num(value, digits)
 	if not text.contains("."):
 		text += "." + "0".repeat(digits)
 	return text if current() == "en" else text.replace(".", ",")
+
+
+## Sitenin geçerli dildeki sayfası ("privacy", "terms", "contact", "delete"). with_scheme false: metin içinde
+## gösterilecek kısa biçim ("autoyardwebsite.vercel.app/hesap-silme").
+static func site_url(page: String, with_scheme: bool = true) -> String:
+	var path: String = String((SITE_PATHS[current()] as Dictionary).get(page, "/"))
+	return ("https://" if with_scheme else "") + SITE_HOST + path
 
 
 ## Cihaz dili desteklenenlerden biriyse o, değilse İngilizce.

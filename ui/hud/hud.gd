@@ -459,7 +459,10 @@ func _set_car_info_compact(on: bool) -> void:
 ## 12500 -> "12.500"
 static func format_thousands(value: int) -> String:
 	var digits: String = str(absi(value))
-	var separator: String = "," if Loc.current() == "en" else "."   # TR / ES: 1.000 · EN: 1,000
+	var separator: String = "."   # TR / ES / DE: 1.000 · EN: 1,000 · FR: 1 000 (bölünmez boşluk)
+	match Loc.current():
+		"en": separator = ","
+		"fr": separator = "\u00a0"
 	var out: String = ""
 	var count: int = 0
 	for i: int in range(digits.length() - 1, -1, -1):

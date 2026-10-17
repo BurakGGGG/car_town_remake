@@ -1926,5 +1926,7 @@
  "BEĞEN": "ME GUSTA",
  "BEĞENDİN": "TE GUSTÓ",
  "BEĞENİ": "ME GUSTA",
- "%s GÖNDER": "ENVIAR %s"
+ "%s GÖNDER": "ENVIAR %s",
+ "%d %s %d": "%d %s %d",
+ "%d dk": "%d min"
 }

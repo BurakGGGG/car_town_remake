@@ -128,7 +128,7 @@ func _triangles(node: Node) -> int:
 
 func _translations() -> void:
 	print("== 3) ÇEVİRİ ==")
-	for lang: String in ["en", "es"]:
+	for lang: String in ["en", "es", "de", "fr"]:
 		var table: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://locale/%s.json" % lang))
 		var missing: Array[String] = []
 		for id: StringName in _all():

@@ -1,5 +1,5 @@
 extends SceneTree
-## DİL DESTEĞİ — Türkçe / İngilizce / İspanyolca: çeviri yükleme, biçimli metinler, katalog metinleri,
+## DİL DESTEĞİ — Türkçe / İngilizce / İspanyolca / Almanca / Fransızca: çeviri yükleme, biçimli metinler, katalog metinleri,
 ## bin ayırıcısı, dil seçimi ve kalıcılığı, ekranlarda çevrilmemiş metin kalmaması.
 ## Çalıştırma: tools/run_tests.sh locale_test
 
@@ -59,10 +59,30 @@ func _run() -> void:
 	check(Hud.format_thousands(1500) == "1.500", "ES bin ayırıcısı nokta")
 	check(Loc.t("BU METİN YOK") == "BU METİN YOK", "çevirisi olmayan metin olduğu gibi döner")
 
+	print("== ALMANCA ==")
+	settings.set_language("de")
+	check(Loc.current() == "de", "dil Almanca")
+	check(Loc.t("KAPAT") == "SCHLIESSEN", "KAPAT → SCHLIESSEN")
+	check(Loc.t("GÖREVLER") == "AUFGABEN", "GÖREVLER → AUFGABEN")
+	check(Hud.format_thousands(1234567) == "1.234.567", "DE bin ayırıcısı nokta")
+	check(Loc.percent("25") == "25\u00a0%", "DE yüzde: 25 %")
+	check(Loc.decimal(9.72, 2) == "9,72", "DE ondalık virgül")
+	check(Loc.site_url("privacy") == "https://autoyardwebsite.vercel.app/de/datenschutz", "site bağlantısı Almanca sayfa")
+	check(SettingsScreen.language_title() == "SPRACHE · LANGUAGE", "dil sayfası adı: %s" % SettingsScreen.language_title())
+
+	print("== FRANSIZCA ==")
+	settings.set_language("fr")
+	check(Loc.current() == "fr", "dil Fransızca")
+	check(Loc.t("KAPAT") == "FERMER", "KAPAT → FERMER")
+	check(Loc.t("GÖREVLER") == "MISSIONS", "GÖREVLER → MISSIONS")
+	check(Hud.format_thousands(1234567) == "1\u00a0234\u00a0567", "FR bin ayırıcısı bölünmez boşluk")
+	check(Loc.percent("25") == "25\u00a0%", "FR yüzde: 25 %")
+	check(Loc.site_url("delete", false) == "autoyardwebsite.vercel.app/fr/supprimer-compte", "site bağlantısı Fransızca sayfa")
+
 	print("== KALICILIK ==")
 	var copy: GameSettings = GameSettings.new()
 	copy.load_settings()
-	check(copy.language == "es", "dil seçimi settings.cfg'ye yazıldı")
+	check(copy.language == "fr", "dil seçimi settings.cfg'ye yazıldı")
 	copy.free()
 	check(Loc.LANGUAGES.has(Loc.device_language()), "cihaz dili desteklenmiyorsa İngilizceye düşer")
 
@@ -138,6 +158,48 @@ func _run() -> void:
 	for line: String in leftovers:
 		print("     kalan: ", line)
 	check(leftovers.is_empty(), "İngilizce ekranlarda Türkçe harf kalmadı (%d)" % leftovers.size())
+	# Almanca / Fransızca: gerçek akış gibi sahne yeni dille yeniden kurulur, aynı panolar taranır
+	for lang: String in ["de", "fr"]:
+		settings.reload_on_language_change = true
+		settings.set_language(lang)
+		await frames(30)
+		current_scene = root.get_node("World") if root.has_node("World") else current_scene
+		hud = current_scene.find_child("HUD", true, false)
+		settings = get_first_node_in_group("settings")
+		settings.reload_on_language_change = false
+		check(hud != null and Loc.current() == lang, "%s: sahne yeni dille yeniden kuruldu" % lang)
+		# Ö / Ü / Ç Almanca ve Fransızcada da var: yalnızca Türkçeye özgü harfler + çevirisi olduğu hâlde ham kalan metin
+		var rest: Array[String] = await _leftovers(hud, "[ĞİŞğış]")
+		for line: String in rest:
+			print("     kalan (%s): %s" % [lang, line])
+		check(rest.is_empty(), "%s ekranlarında Türkçe harf kalmadı (%d)" % [lang, rest.size()])
 	settings.set_language("tr")
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
+
+
+## Açılan panolarda görünür, çevrilen (auto translate) metinlerde Türkçe harf (`letters`) ya da çevirisi olduğu
+## hâlde Türkçe kaynak hâliyle kalan metin.
+func _leftovers(hud: Hud, letters: String) -> Array[String]:
+	var turkish: RegEx = RegEx.create_from_string(letters)
+	var found: Array[String] = []
+	for id: StringName in [&"quests", &"settings", &"profile", &"garage_value", &"mastery"]:
+		hud.router.close_all()
+		await frames(4)
+		hud.router.open(id)
+		await frames(8)
+		for node: Node in hud.router.screen(id).find_children("*", "", true, false):
+			var text: String = ""
+			if node is Label:
+				text = (node as Label).text
+			elif node is Button:
+				text = (node as Button).text
+			else:
+				continue
+			if not (node as Control).is_visible_in_tree() or (node as Control).auto_translate_mode == Node.AUTO_TRANSLATE_MODE_DISABLED:
+				continue
+			var shown: String = (node as Control).atr(text)
+			if turkish.search(shown) or Loc.t(shown) != shown:
+				found.append("%s: %s" % [id, shown.replace("\n", " / ")])
+	hud.router.close_all()
+	return found

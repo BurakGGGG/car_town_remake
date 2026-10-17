@@ -1926,5 +1926,7 @@
  "BEĞEN": "LIKE",
  "BEĞENDİN": "LIKED",
  "BEĞENİ": "LIKES",
- "%s GÖNDER": "SEND %s"
+ "%s GÖNDER": "SEND %s",
+ "%d %s %d": "%d %s %d",
+ "%d dk": "%d min"
 }

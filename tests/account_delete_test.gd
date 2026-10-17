@@ -306,7 +306,7 @@ func _run() -> void:
 	cloud().delete_account()
 	await frames(12)
 	check(deleted_results == [false], "account_deleted(false)")
-	check(notices.size() == 1 and notices[0].contains(CloudSaveManager.DELETE_ACCOUNT_URL), "mesajda web sitesi adresi: %s" % ", ".join(notices))
+	check(notices.size() == 1 and notices[0].contains(Loc.site_url("delete", false)), "mesajda web sitesi adresi: %s" % ", ".join(notices))
 	check(not fb.docs.has(alice2), "bulut kaydı silindi")
 	check(eco().money == 5000, "cihazdaki ilerleme sıfırlandı")
 	check(not FileAccess.file_exists("user://savegame.before_signout.json"), "çıkış yedeği bırakılmadı (veriler zaten silindi)")

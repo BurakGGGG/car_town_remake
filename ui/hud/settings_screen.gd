@@ -20,10 +20,8 @@ enum Page { LANGUAGE, GRAPHICS, AUDIO, ACCOUNT, ABOUT }
 
 ## Sürüm adı: export_presets.cfg "version/name" ile AYNI tutulmalı (dışa aktarımda proje ayarına girmiyor).
 const VERSION: String = "1.0.7"
-const SITE: String = "https://autoyardwebsite.vercel.app"
-const PRIVACY_URL: String = SITE + "/gizlilik"
-const TERMS_URL: String = SITE + "/kullanim-sartlari"
-const SUPPORT_URL: String = SITE + "/iletisim"
+## "Dil" sözcüğü her dilin kendi yazımıyla (çevrilmez: language_title'da İngilizcesiyle yan yana durur).
+const LANGUAGE_WORDS: Dictionary = {"tr": "DİL", "es": "IDIOMA", "de": "SPRACHE", "fr": "LANGUE"}
 const VOLUME_STEP: float = 0.1
 const NAV_WIDTH: float = 250.0
 const MARGIN: int = 18
@@ -195,7 +193,7 @@ func _build_nav(body: HBoxContainer) -> void:
 	nav.add_theme_constant_override(&"separation", 8)
 	body.add_child(nav)
 	var entries: Array = [
-		[Page.LANGUAGE, "DİL · LANGUAGE · IDIOMA"],
+		[Page.LANGUAGE, language_title()],
 		[Page.GRAPHICS, Loc.t("GRAFİK VE PERFORMANS")],
 		[Page.AUDIO, Loc.t("SES VE BİLDİRİMLER")],
 		[Page.ACCOUNT, Loc.t("HESAP VE GİZLİLİK")],
@@ -209,7 +207,7 @@ func _build_nav(body: HBoxContainer) -> void:
 		button.button_group = _nav_group
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		if page == Page.LANGUAGE:
-			button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # üç dilde birden: her oyuncu bulur
+			button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # İngilizcesiyle birlikte: her oyuncu bulur
 		button.pressed.connect(func() -> void: _show_page(page))
 		nav.add_child(button)
 		_nav_buttons[page] = button
@@ -266,7 +264,7 @@ func _show_page(page: int) -> void:
 		(_nav_buttons[key] as PlateButton).highlight = key == page
 	match page:
 		Page.LANGUAGE:
-			_page_title.text = "DİL · LANGUAGE · IDIOMA"
+			_page_title.text = language_title()
 			_page_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 			_page_caption.text = Loc.t("Dil değişince oyun yeni dille yeniden açılır; ilerlemen korunur.")
 		Page.GRAPHICS:
@@ -286,6 +284,13 @@ func _show_page(page: int) -> void:
 			_page_title.text = Loc.t("DESTEK VE HAKKINDA")
 			_page_caption.text = Loc.t("Bir sorun mu var? Bize yaz.")
 	_content_scroll.scroll_vertical = 0
+
+
+## Dil sayfasının adı: geçerli dilde + İngilizcesi ("SPRACHE · LANGUAGE"). Beş dil tek plakaya sığmaz; anlamadığı bir
+## dile geçen oyuncu da İngilizce "LANGUAGE"ı tanır. İngilizcede yalnızca "LANGUAGE".
+static func language_title() -> String:
+	var own: String = String(LANGUAGE_WORDS.get(Loc.current(), ""))
+	return "LANGUAGE" if own.is_empty() else own + " · LANGUAGE"
 
 
 # --- Sayfalar ------------------------------------------------------------------------
@@ -375,8 +380,13 @@ func _build_account() -> void:
 		if _ads:
 			_ads.show_privacy_options())
 	box.add_child(_rule())
-	var links: HBoxContainer = _row(box)
-	for entry: Array in [[Loc.t("GİZLİLİK POLİTİKASI"), PRIVACY_URL], [Loc.t("KULLANIM ŞARTLARI"), TERMS_URL]]:
+	# Akış kabı: uzun dillerde (DE / FR) iki bağlantı yan yana sığmazsa alt alta iner, sayfayı genişletmez
+	var links: HFlowContainer = HFlowContainer.new()
+	links.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	links.add_theme_constant_override(&"h_separation", 8)
+	links.add_theme_constant_override(&"v_separation", 8)
+	box.add_child(links)
+	for entry: Array in [[Loc.t("GİZLİLİK POLİTİKASI"), Loc.site_url("privacy")], [Loc.t("KULLANIM ŞARTLARI"), Loc.site_url("terms")]]:
 		var link: PlateButton = _button(String(entry[0]) + "  ↗")
 		link.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var url: String = entry[1]
@@ -387,7 +397,7 @@ func _build_account() -> void:
 func _build_about() -> void:
 	var box: VBoxContainer = _new_page(Page.ABOUT)
 	var support: PlateButton = _link_row(box, Loc.t("DESTEK / İLETİŞİM"), Loc.t("Sorununu ya da önerini web sitemizden ilet."), "↗")
-	support.pressed.connect(func() -> void: OS.shell_open(SUPPORT_URL))
+	support.pressed.connect(func() -> void: OS.shell_open(Loc.site_url("contact")))
 	# EĞİTİM: Rıza Usta'nın dersleri baştan (ödüller ikinci kez verilmez). Ayarlar kapanır, ilk ders başlar.
 	var tutorial: PlateButton = _link_row(box, Loc.t("NASIL OYNANIR?"), Loc.t("Rıza Usta'nın derslerini baştan izle: tamir, yarış, araçlar, dekorasyon."), Loc.t("BAŞLAT"))
 	tutorial.pressed.connect(func() -> void:

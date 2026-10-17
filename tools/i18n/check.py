@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Çeviri denetimi: locale/strings.json'daki her metnin locale/en.json ve locale/es.json'da çevirisi var mı,
+"""Çeviri denetimi: locale/strings.json'daki her metnin locale/<dil>.json'da (en, es, de, fr) çevirisi var mı,
 biçim belirteçleri (%s %d %02d %%…) aynı sırada mı, eskimiş (artık kodda olmayan) çeviri var mı.
 Bilerek çevrilmeyen (editör / hata ayıklama) metinler: değeri "" olan anahtarlar.
 Çıkış kodu: hata varsa 1. Kullanım: python3 tools/i18n/check.py"""
@@ -16,7 +16,7 @@ def specs(text):
 
 source = json.load(open(os.path.join(ROOT, "locale/strings.json"), encoding="utf-8"))
 errors = 0
-for lang in ("en", "es"):
+for lang in ("en", "es", "de", "fr"):
     path = os.path.join(ROOT, f"locale/{lang}.json")
     data = json.load(open(path, encoding="utf-8"))
     missing = [k for k in source if k not in data]

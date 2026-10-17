@@ -91,8 +91,6 @@ const LOCAL_BACKUP_PATH: String = "user://savegame.before_cloud.json"
 const SIGNOUT_BACKUP_PATH: String = "user://savegame.before_signout.json"
 ## Local bulutun üstüne yazılmadan önceki bulut kaydı.
 const CLOUD_BACKUP_PATH: String = "user://cloud_backup.json"
-## Auth kullanıcısı silinemezse oyuncunun silmeyi tamamlayabileceği sayfa.
-const DELETE_ACCOUNT_URL: String = "autoyardwebsite.vercel.app/hesap-silme"
 
 enum Op { NONE, GOOGLE, GET, SET, SIGN_OUT, REAUTH, DELETE_DOC, DELETE_USER }
 
@@ -437,7 +435,7 @@ func _finish_delete(auth_deleted: bool) -> void:
 	_retry_timer.stop()
 	if not auth_deleted:
 		push_warning("CloudSaveManager: Firebase hesabı silinemedi, veriler silindi, oturum kapatılıyor")
-		notice.emit(Loc.t("İlerlemen ve bulut kaydın silindi, ancak Google hesap bağlantısı kaldırılamadı. Tamamlamak için: %s") % DELETE_ACCOUNT_URL)
+		notice.emit(Loc.t("İlerlemen ve bulut kaydın silindi, ancak Google hesap bağlantısı kaldırılamadı. Tamamlamak için: %s") % Loc.site_url("delete", false))   # oyuncunun dilindeki silme sayfası
 		account_deleted.emit(false)
 		_signout_resets_local = false   # veriler zaten silindi
 		_finish_sign_out()   # _on_sign_out_result dünyayı yeniler

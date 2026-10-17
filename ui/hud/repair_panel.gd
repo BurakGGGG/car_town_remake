@@ -320,7 +320,7 @@ func show_repairing(progress: float, remaining: float, boost_available: bool = f
 		_button.kind = HudIcon.Kind.WRENCH
 		_reward_label.text = Loc.t("Ödül: %s ₺") % Hud.format_thousands(_reward)
 	_lane.ratio = progress
-	_time_label.text = "%.1f sn" % remaining
+	_time_label.text = Loc.t("%s sn") % Loc.decimal(remaining)
 
 
 ## Tamir alanında performans parçası takılan oyuncu aracı: başlık (ör. "TURBO TAKILIYOR"), şerit, kalan süre
@@ -417,7 +417,7 @@ func _apply_selection_state() -> void:
 	# BİLGİ SIRASI (sabit): süre → maliyet → ödül (₺/dk ile) → XP → ustalık. Tek satırda toplanır;
 	# aynı sayı sağdaki ödül satırında TEKRARLANMAZ (orası yalnızca engel varsa konuşur).
 	var parts: PackedStringArray = PackedStringArray()
-	parts.append("%d sn" % int(round(effective_duration(t))))
+	parts.append(Loc.t("%s sn") % str(int(round(effective_duration(t)))))
 	if t.cost > 0:
 		parts.append("-%s ₺" % Hud.format_thousands(t.cost))
 	parts.append(Loc.t("+%s ₺ (%s ₺/dk)") % [

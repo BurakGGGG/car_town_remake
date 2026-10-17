@@ -969,7 +969,7 @@ static func _today() -> int:
 
 static func _clock_text(seconds: int) -> String:
 	var s: int = maxi(seconds, 0)
-	return "%d:%02d" % [s / 3600, (s % 3600) / 60] if s >= 3600 else "%d dk" % maxi(s / 60, 1)
+	return "%d:%02d" % [s / 3600, (s % 3600) / 60] if s >= 3600 else Loc.t("%d dk") % maxi(s / 60, 1)
 
 
 func _garage_json() -> String:
