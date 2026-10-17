@@ -1943,5 +1943,6 @@
  "Bu e-posta adresi %s hesabınla kayıtlı. %s ile doğrula, %s hesabın da aynı oyun hesabına bağlansın.": "Diese E-Mail-Adresse ist mit deinem %s-Konto registriert. Bestätige mit %s, dann wird dein %s-Konto mit demselben Spielkonto verknüpft.",
  "FACEBOOK'U BAĞLA": "FACEBOOK VERKNÜPFEN",
  "GOOGLE'I BAĞLA": "GOOGLE VERKNÜPFEN",
- "Seçtiğin hesabın e-postası farklı olduğu için %s bağlanmadı. Bu hesapla devam ediyorsun.": "%s wurde nicht verknüpft, weil das gewählte Konto eine andere E-Mail-Adresse hat. Du spielst mit diesem Konto weiter."
+ "Seçtiğin hesabın e-postası farklı olduğu için %s bağlanmadı. Bu hesapla devam ediyorsun.": "%s wurde nicht verknüpft, weil das gewählte Konto eine andere E-Mail-Adresse hat. Du spielst mit diesem Konto weiter.",
+ "Arkadaşının isteği değişti.": "Die Anfrage deines Freundes hat sich geändert."
 }

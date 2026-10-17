@@ -31,8 +31,9 @@ extends Node
 ## çıkarır, isteklerini yok sayar (PlayerProfile.blocked).
 ## HURDALIK HEDİYESİ (orijinal "Ask Friends"): oyuncu bir parçayı İSTER → açık garaj belgesine
 ## "ask" {part, at} yazılır (arkadaşlar listeyi okurken zaten bu belgeyi okuyor: ek okuma yok). Arkadaşı
-## GÖNDER'e basar → alıcının gifts koleksiyonuna 1 parça. Alıcı toplar (collect_gifts); sunucu bugünün
-## hediyesini silmeye izin vermez (günlük sınır), toplananlar JunkyardManager'da hatırlanır.
+## GÖNDER'e basar → alıcının gifts koleksiyonuna 1 parça. Alıcı toplar (collect_gifts: liste yenilenince, hurdalığa
+## girince ve istek açıkken NEWS_POLL'da bir oyun içinde); sunucu bugünün hediyesini silmeye izin vermez (günlük
+## sınır), toplananlar JunkyardManager'da hatırlanır.
 ## Belge kimlikleri hiçbir zaman çıplak UID değildir: eklenti sonuçları yalnızca belge kimliğiyle
 ## bildirir (koleksiyon yok) ve CloudSaveManager kendi sonucunu "kimlik == UID" diye tanır. Önek iki
 ## sistemin yanıtlarını ayırır. Bu node'un istekleri SIRAYLA gider (aynı anda tek istek), sonuç
@@ -221,6 +222,8 @@ func _on_news_poll() -> void:
 		return
 	await _load_race_events()
 	await _load_visits()
+	if not _current_ask().is_empty():
+		await collect_gifts()   # istek açıkken arkadaşın gönderdiği parça oyun içinde de gelsin (ekran açmayı beklemez)
 	changed.emit()
 
 
@@ -861,9 +864,11 @@ func ask_part(part_id: StringName) -> bool:
 	_busy += 1
 	changed.emit()
 	var ok: bool = await _publish(my_name())
+	if not ok:
+		jy.clear_ask()   # yayınlanamadı: arkadaşlar görmedi, 6 saatlik bekleme yanmasın (yeniden İSTE)
 	_busy -= 1
 	changed.emit()
-	notice.emit(Loc.t("Arkadaşlarından %s istedin.") % RestorationCatalog.part_name(part_id) if ok
+	notice.emit(Loc.t("Arkadaşlarından %s istedin.") % Loc.t(RestorationCatalog.part_name(part_id)) if ok
 		else Loc.t("İstek gönderilemedi. İnternet bağlantını kontrol et."))
 	return ok
 
@@ -889,18 +894,34 @@ func send_gift(uid: String) -> bool:
 	var day: int = _today()
 	var result: Dictionary = await _call(&"set", _gifts_of(uid), "p_%s_%d" % [_uid, day],
 		{"part": part, "name": my_name(), "at": _now(), "day": day})
-	_busy -= 1
 	var ok: bool = _ok(result)
-	if ok or _permission_denied(result):
+	var limit: bool = _permission_denied(result)
+	var stale: bool = false
+	if limit:
+		# Ret iki nedenden olur: bugün zaten gönderildi (günlük sınır; ör. başka cihazdan) ya da arkadaşın isteği
+		# bu arada değişti / süresi doldu (liste eski). Garajı yeniden okunur: istek aynı değilse kart güncellenir,
+		# günlük hak yanmaz. Okunamazsa günlük sınır sayılır.
+		var garage: Dictionary = await _call(&"get", GARAGES, "g_" + uid)
+		var ask: Dictionary = _ask_of(garage["data"]) if _ok(garage) and garage.get("data") is Dictionary else {}
+		stale = _not_found(garage) or (_ok(garage) and SaveSafe.s(ask.get("part", "")) != part)
+		limit = not stale
+		i = _index_of(friends, uid)
+		if stale and i >= 0:
+			friends[i]["ask_part"] = SaveSafe.s(ask.get("part", ""))
+			friends[i]["ask_at"] = SaveSafe.i(ask.get("at", 0))
+	_busy -= 1
+	if ok or limit:
 		var sent: Dictionary = _meta.get("gifts_sent", {}) if _meta.get("gifts_sent") is Dictionary else {}
 		sent[uid] = day
 		_meta["gifts_sent"] = sent
 		_write_meta()
 	if ok:
 		notice.emit(Loc.t("%s oyuncusuna 1 %s gönderdin.") % [SaveSafe.s(friends[i].get("name", "")),
-			RestorationCatalog.part_name(StringName(part))])
-	elif _permission_denied(result):
+			Loc.t(RestorationCatalog.part_name(StringName(part)))])
+	elif limit:
 		notice.emit(Loc.t("Bugün bu arkadaşına zaten hediye gönderdin."))
+	elif stale:
+		notice.emit(Loc.t("Arkadaşının isteği değişti."))
 	else:
 		notice.emit(Loc.t("Hediye gönderilemedi. İnternet bağlantını kontrol et."))
 	changed.emit()
@@ -1147,26 +1168,29 @@ func _friend_entry(uid: String, fallback: Dictionary) -> Dictionary:
 	if _not_found(result):
 		return {}
 	var doc: Dictionary = result.get("data", {}) if _ok(result) and result.get("data") is Dictionary else fallback
-	var ask_part: String = ""
-	var ask_at: int = 0
-	var ask: Variant = doc.get("ask", {})
-	if ask is Dictionary and RestorationCatalog.is_part(StringName(SaveSafe.s(ask.get("part", "")))) \
-			and _now() - SaveSafe.i(ask.get("at", 0)) < JunkyardManager.ASK_LIFETIME:
-		ask_part = SaveSafe.s(ask.get("part", ""))
-		ask_at = SaveSafe.i(ask.get("at", 0))
+	var ask: Dictionary = _ask_of(doc)
 	var entry: Dictionary = {
 		"uid": uid,
 		"name": SaveSafe.s(doc.get("name", fallback.get("name", ""))),
 		"code": SaveSafe.s(doc.get("code", fallback.get("code", ""))),
 		"level": maxi(SaveSafe.i(doc.get("level", 1)), 1),
 		"value": SaveSafe.i(doc.get("value", 0)),
-		"ask_part": ask_part,
-		"ask_at": ask_at,
+		"ask_part": SaveSafe.s(ask.get("part", "")),
+		"ask_at": SaveSafe.i(ask.get("at", 0)),
 	}
 	entry.merge(profile_fields(doc))
 	# Yarış: arkadaşın araçları, boyaları, modifiyeleri (garaj belgesi zaten okundu, ek okuma yok)
 	entry["race"] = PublicGarage.race_data(PublicGarage.parse(SaveSafe.s(doc.get("garage_json", ""))))
 	return entry
+
+
+## Açık garaj belgesindeki geçerli (süresi dolmamış) parça isteği: {part, at} ya da boş.
+static func _ask_of(doc: Dictionary) -> Dictionary:
+	var ask: Variant = doc.get("ask", {})
+	if ask is Dictionary and RestorationCatalog.is_part(StringName(SaveSafe.s(ask.get("part", "")))) \
+			and _now() - SaveSafe.i(ask.get("at", 0)) < JunkyardManager.ASK_LIFETIME:
+		return {"part": SaveSafe.s(ask.get("part", "")), "at": SaveSafe.i(ask.get("at", 0))}
+	return {}
 
 
 ## Açık garaj belgesinden profil alanları (geçersiz değerler boşa düşer; eski sürümün belgesinde hiçbiri yoktur).

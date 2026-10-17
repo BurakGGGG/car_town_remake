@@ -146,6 +146,12 @@ func set_ask(part_id: StringName) -> bool:
 	return true
 
 
+## Yayınlanamayan isteği geri alır (SocialManager): bekleme sıfırlanır, oyuncu yeniden isteyebilir.
+func clear_ask() -> void:
+	_ask = {}
+	junkyard_changed.emit()
+
+
 func gift_seen(gift_id: String) -> bool:
 	return _gift_seen.has(gift_id)
 

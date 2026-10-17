@@ -298,7 +298,7 @@ func _part_row(part_id: StringName, need: int, done: int, missing: int, have: in
 	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	text.add_theme_constant_override(&"separation", -2)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text.add_child(_label(&"HudInkValue", "%s  %d/%d" % [RestorationCatalog.part_name(part_id), done, need]))
+	text.add_child(_label(&"HudInkValue", "%s  %d/%d" % [Loc.t(RestorationCatalog.part_name(part_id)), done, need]))
 	var jy: JunkyardManager = _jy()
 	var asked: bool = jy != null and StringName(SaveSafe.s(jy.current_ask().get("part", ""))) == part_id
 	var caption: String = Loc.t("TAMAM") if missing == 0 else Loc.t("ENVANTERDE %d") % have
@@ -344,7 +344,7 @@ func _on_install_all() -> void:
 func _buy_part(part_id: StringName, missing: int, cost: int) -> void:
 	if not _can_pay(cost):
 		return
-	_ask(Loc.t("%d %s için %d GEM ödensin mi?") % [missing, RestorationCatalog.part_name(part_id), cost],
+	_ask(Loc.t("%d %s için %d GEM ödensin mi?") % [missing, Loc.t(RestorationCatalog.part_name(part_id)), cost],
 		Loc.t("%d GEM ÖDE") % cost, func() -> void:
 			var jy: JunkyardManager = _jy()
 			if jy:

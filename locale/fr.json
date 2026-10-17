@@ -1943,5 +1943,6 @@
  "Bu e-posta adresi %s hesabınla kayıtlı. %s ile doğrula, %s hesabın da aynı oyun hesabına bağlansın.": "Cette adresse e-mail est enregistrée avec ton compte %s. Confirme avec %s et ton compte %s sera associé au même compte de jeu.",
  "FACEBOOK'U BAĞLA": "ASSOCIER FACEBOOK",
  "GOOGLE'I BAĞLA": "ASSOCIER GOOGLE",
- "Seçtiğin hesabın e-postası farklı olduğu için %s bağlanmadı. Bu hesapla devam ediyorsun.": "%s n’a pas été associé, car le compte choisi a une autre adresse e-mail. Tu continues avec ce compte."
+ "Seçtiğin hesabın e-postası farklı olduğu için %s bağlanmadı. Bu hesapla devam ediyorsun.": "%s n’a pas été associé, car le compte choisi a une autre adresse e-mail. Tu continues avec ce compte.",
+ "Arkadaşının isteği değişti.": "La demande de ton ami a changé."
 }

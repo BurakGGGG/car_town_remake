@@ -653,7 +653,7 @@ func _connect_gameplay() -> void:
 	if junkyard:
 		junkyard.parts_gained.connect(func(part_id: StringName, amount: int, source: StringName) -> void:
 			if source == &"repair":
-				_show_notice(Loc.t("HURDALIK PARÇASI  +%d %s") % [amount, RestorationCatalog.part_name(part_id)],
+				_show_notice(Loc.t("HURDALIK PARÇASI  +%d %s") % [amount, Loc.t(RestorationCatalog.part_name(part_id))],
 					HudPalette.COIN_DARK, 2.0))
 		junkyard.tier_unlocked.connect(func(tier_id: StringName) -> void: _new_tiers.append(tier_id))
 		junkyard.opened.connect(func() -> void:

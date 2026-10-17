@@ -458,7 +458,7 @@ func _search(index: int) -> void:
 			return
 		var lines: PackedStringArray = PackedStringArray()
 		for part_id: StringName in parts:
-			lines.append("+%d %s" % [int(parts[part_id]), RestorationCatalog.part_name(part_id)])
+			lines.append("+%d %s" % [int(parts[part_id]), Loc.t(RestorationCatalog.part_name(part_id))])
 		_notice("  ·  ".join(lines), HudPalette.COIN_DARK)
 		_fly_parts(parts, _world.screen_point(_world.pile_position(index) + Vector3.UP * 1.2)))
 

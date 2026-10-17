@@ -99,7 +99,9 @@ oyuncunun gördüğü her şeyin tasarımıdır.
 - **Arkadaş hediyesi (2026-10-12, kullanıcı kararı: orijinal "Ask Friends"):** proje panosunda eksik
   parçaya İSTE (6 saatte bir) → istek açık garaj belgesinde ("ask", 24 saat) → arkadaş ARKADAŞLAR'da
   GÖNDER (bedava, günde bir) → users/{alıcı}/gifts/p_{gönderen}_{gün}; alıcı hurdalığa girince / liste
-  yenilenince toplar. Günlük sınır SUNUCUDA (firestore.rules gifts; emülatör testi firebase/rules_test).
+  yenilenince ve istek açıkken oyun içinde 2 dakikada bir (SocialManager haber yoklaması) toplar. İstek
+  yayınlanamazsa (internet yok) geri alınır, 6 saatlik bekleme yanmaz. Gönderim reddedilirse arkadaşın garajı
+  yeniden okunur: istek değişmişse kart güncellenir, günlük hak yanmaz (2026-10-18). Günlük sınır SUNUCUDA (firestore.rules gifts; emülatör testi firebase/rules_test).
   Kurallar canlıya yüklenmeden hediye çalışmaz (yükleme kullanıcı onayıyla).
 - **Kalan:** canlı kural yüklemesi; yığın / hediye ekonomisine hediyenin etkisi simülasyonda yok.
 

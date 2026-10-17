@@ -509,21 +509,44 @@ func _run() -> void:
 	var jy: JunkyardManager = get_first_node_in_group(&"junkyard") as JunkyardManager
 	check(social().friends.size() >= 1 and jy != null, "alice'in arkadaşı (bob) ve hurdalığı var")
 	var bolts_before: int = jy.part_count(&"bolt")
+	fb.online = false
+	check(not await social().ask_part(&"bolt") and last_notice().contains("gönderilemedi"), "internet yokken istek gönderilemedi")
+	check(jy.can_ask() and jy.current_ask().is_empty() and not garage_doc("alice").has("ask"),
+		"  ...6 saatlik bekleme yanmadı, yeniden istenebilir")
+	fb.online = true
 	check(await social().ask_part(&"bolt"), "alice arkadaşlarından civata istedi")
 	check(SaveSafe.s((garage_doc("alice").get("ask", {}) as Dictionary).get("part", "")) == "bolt", "istek açık garajda")
 	check(not await social().ask_part(&"nut") and last_notice().contains("bekle"), "6 saat dolmadan yeniden istenemez")
 	check(SaveSafe.s(((jy.state()["yard"] as Dictionary)["ask"] as Dictionary).get("part", "")) == "bolt", "istek kayıtta")
+	# Oyun açıkken gelen hediye: istek açıkken haber yoklaması kutuya da bakar (ekran açmayı beklemez). Belge kutuya
+	# doğrudan yazılır (toplama sınanıyor; parça bob'un aşağıdaki civatasına karışmasın diye somun).
+	var poll_gift: String = "users/alice/gifts/p_dave_%d" % floori(Time.get_unix_time_from_system() / 86400.0)
+	fb.store[poll_gift] = {"part": "nut", "name": "Dave Usta", "at": 1, "day": floori(Time.get_unix_time_from_system() / 86400.0)}
+	var poll_nuts: int = jy.part_count(&"nut")
+	await until(func() -> bool: return not social().is_busy() and not social()._op_busy)   # yoklama meşgulken atlar
+	await social()._on_news_poll()
+	check(jy.part_count(&"nut") == poll_nuts + 1 and last_notice().contains("HEDİYE"), "oyun içinde gelen hediye yoklamada toplandı")
+	fb.store.erase(poll_gift)
 	await close_session()
 	await open_session("bob", false)
 	await social().refresh(true)
 	var alice_entry: Dictionary = social().friends[social().friends.find_custom(func(e: Dictionary) -> bool: return e["uid"] == "alice")]
 	check(alice_entry.get("ask_part") == "bolt", "bob alice'in civata istediğini görüyor")
 	check(social().can_gift("alice") and not social().can_gift("nobody"), "bob gönderebilir")
+	# alice bu arada başka parça istedi (bob'un listesi eski): sunucu reddeder; günlük hak yanmaz, kart güncellenir
+	var alice_garage: Dictionary = fb.store["garages/g_alice"]
+	var bolt_ask: Dictionary = alice_garage["ask"]
+	alice_garage["ask"] = {"part": "nut", "at": int(bolt_ask["at"])}
+	check(not await social().send_gift("alice") and last_notice().contains("değişti"), "eski istekle gönderim: istek değişti")
+	var changed_entry: Dictionary = social().friends[social().friends.find_custom(func(e: Dictionary) -> bool: return e["uid"] == "alice")]
+	check(social().can_gift("alice") and changed_entry.get("ask_part") == "nut", "  ...günlük hak yanmadı, kart yeni isteği gösteriyor")
+	alice_garage["ask"] = bolt_ask
+	await social().refresh(true)
 	check(await social().send_gift("alice"), "bob 1 civata gönderdi")
 	var day: int = floori(Time.get_unix_time_from_system() / 86400.0)
 	check(fb.store.has("users/alice/gifts/p_bob_%d" % day), "hediye alice'in kutusunda")
 	check(not social().can_gift("alice"), "aynı gün ikinci hediye düğmesi yok")
-	check(not await social().send_gift("alice"), "  ...zorlansa da sunucu reddeder")
+	check(not await social().send_gift("alice") and last_notice().contains("zaten"), "  ...zorlansa da sunucu reddeder (günlük sınır)")
 	await close_session()
 	await open_session("alice", false)
 	await social().refresh(true)   # yenileme hediyeleri de toplar

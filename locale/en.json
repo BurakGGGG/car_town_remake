@@ -1946,5 +1946,6 @@
  "Bu e-posta adresi %s hesabınla kayıtlı. %s ile doğrula, %s hesabın da aynı oyun hesabına bağlansın.": "This email address is registered with your %s account. Confirm with %s and your %s account will be linked to the same game account.",
  "FACEBOOK'U BAĞLA": "LINK FACEBOOK",
  "GOOGLE'I BAĞLA": "LINK GOOGLE",
- "Seçtiğin hesabın e-postası farklı olduğu için %s bağlanmadı. Bu hesapla devam ediyorsun.": "%s wasn't linked because the account you chose has a different email. You're continuing with this account."
+ "Seçtiğin hesabın e-postası farklı olduğu için %s bağlanmadı. Bu hesapla devam ediyorsun.": "%s wasn't linked because the account you chose has a different email. You're continuing with this account.",
+ "Arkadaşının isteği değişti.": "Your friend's request has changed."
 }
