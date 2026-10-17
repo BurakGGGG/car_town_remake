@@ -11,6 +11,8 @@ extends Node3D
 ##   KORNA   — HORN_GAP'te bir, ekrandaki (yoksa yakındaki) yoldaki bir araçtan kısa korna (dıt / dıt-dıt / uzun /
 ##             kamyon / sabırsız); araç ekranda yoksa uzaktan.
 ##   CIYAK   — SQUEAL_GAP'te bir, ekran dışındaki bir yoldan uzak lastik cıyaklaması.
+##   MOTOR   — yalnızca EGZOTİK araçlarda (CarCatalog.is_exotic, şehirden ara sıra geçen süper araç): ExoticEngine,
+##             hızla vites / devir / gaz; 2026-10-17 kullanıcı: "bu egzotik araçlara trafikte motor uğultusu ekle".
 ## "Kafa ağrıtmasın": hepsi kısık ve seyrek; aynı anda en çok bir korna, bir cıyak, iki kuş; tekrar hissi olmasın diye
 ## her olayda perde ve konum değişir.
 ##
@@ -59,7 +61,8 @@ enum Bird { SPARROW, TIT, TRILL, BLACKBIRD, PIGEON }
 const BIRD_WEIGHTS: Array[float] = [0.34, 0.2, 0.14, 0.2, 0.12]
 const VARIANTS: int = 3
 
-## Arka planda üretilen ses bankası: "hum", "tire" (döngü), "birds" (tür → varyantlar), "horns", "squeals".
+## Arka planda üretilen ses bankası: "hum", "tire" (döngü), "birds" (tür → varyantlar), "horns", "squeals",
+## "engines" (silindir sayısı → egzotik motor döngüsü).
 static var _bank: Dictionary = {}
 
 var _manager: TrafficManager
@@ -74,7 +77,7 @@ var _hum: AudioStreamPlayer
 var _birds: Array[AudioStreamPlayer3D] = []
 var _horn: AudioStreamPlayer3D
 var _squeal: AudioStreamPlayer3D
-var _tires: Dictionary = {}       # araç → {"player", "last", "speed", "pitch"}
+var _tires: Dictionary = {}       # araç → {"player", "last", "speed", "pitch", "engine" (egzotikte ExoticEngine)}
 var _horn_target: Node3D
 var _bird_timer: float = 0.0
 var _bird_phrases: int = 0
@@ -237,7 +240,8 @@ func _update_tires(delta: float) -> void:
 		var entry: Dictionary = _tires.get(vehicle, {})
 		var at: Vector3 = vehicle.global_position
 		if entry.is_empty():
-			entry = {"player": _tire_player(), "last": at, "speed": 0.0, "pitch": _rng.randf_range(0.9, 1.1)}
+			entry = {"player": _tire_player(), "last": at, "speed": 0.0, "pitch": _rng.randf_range(0.9, 1.1),
+				"engine": _engine_for(vehicle)}
 			_tires[vehicle] = entry
 		var moved: float = (at - (entry["last"] as Vector3)).length() / delta
 		entry["last"] = at
@@ -252,9 +256,15 @@ func _update_tires(delta: float) -> void:
 		if rolling:
 			player.volume_db = TIRE_DB + linear_to_db(minf(level, TIRE_MAX))
 			player.pitch_scale = float(entry["pitch"]) * (0.82 + 0.2 * minf(level, 3.0))
+		var engine: ExoticEngine = entry["engine"]
+		if engine:
+			engine.global_position = at + Vector3.UP * 0.1
+			engine.drive(speed, delta)
 	for key: Variant in _tires.keys():   # silinmiş araç anahtarı tipli değişkene atanamaz
 		if not alive.has(key):
 			(_tires[key]["player"] as Node).queue_free()
+			if _tires[key]["engine"]:
+				(_tires[key]["engine"] as Node).queue_free()
 			_tires.erase(key)
 
 
@@ -264,6 +274,34 @@ func _tire_player() -> AudioStreamPlayer3D:
 	player.play(_rng.randf() * (_bank["tire"] as AudioStreamWAV).get_length())   # araçlar aynı fazda uğuldamasın
 	player.stream_paused = true
 	return player
+
+
+## Egzotik araca motor sesi (diğerlerine null). Döngü farklı yerden başlar, araç başına küçük perde farkı.
+func _engine_for(vehicle: Node3D) -> ExoticEngine:
+	var traffic_vehicle: TrafficVehicle = vehicle as TrafficVehicle
+	if traffic_vehicle == null or not CarCatalog.is_exotic(traffic_vehicle.vehicle_id):
+		return null
+	var cylinders: int = ExoticEngine.cylinders_of(traffic_vehicle.vehicle_id)
+	var stream: AudioStreamWAV = (_bank["engines"] as Dictionary).get(cylinders)
+	if stream == null:
+		return null
+	var engine: ExoticEngine = ExoticEngine.new()
+	engine.setup(stream, cylinders, _rng.randf_range(0.97, 1.03), BUS)
+	engine.attenuation_filter_cutoff_hz = AIR_CUTOFF
+	add_child(engine)
+	engine.global_position = vehicle.global_position
+	engine.play(_rng.randf() * stream.get_length())
+	engine.stream_paused = true
+	return engine
+
+
+## Yoldaki egzotik araçların motorları (QA / test).
+func exotic_engines() -> Array[ExoticEngine]:
+	var out: Array[ExoticEngine] = []
+	for entry: Dictionary in _tires.values():
+		if entry["engine"]:
+			out.append(entry["engine"])
+	return out
 
 
 func _vehicles() -> Array[Node3D]:
@@ -402,6 +440,7 @@ static func _synthesize() -> void:
 			TrafficSfx.horn_stream([[0.0, 0.08], [0.13, 0.08], [0.26, 0.2]], 466.0, 587.0),      # sabırsız
 		],
 		"squeals": [TrafficSfx.squeal_stream(0.7, 11), TrafficSfx.squeal_stream(1.0, 23)],
+		"engines": {6: ExoticEngine.make_stream(6), 8: ExoticEngine.make_stream(8), 10: ExoticEngine.make_stream(10)},
 	}
 	_bank = bank   # tek atama: ana iş parçacığı yalnızca görev bitince okur
 

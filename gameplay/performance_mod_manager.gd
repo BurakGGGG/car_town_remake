@@ -23,6 +23,8 @@ signal install_completed(vehicle_id: StringName, category: StringName, stage: in
 	new_class: String)
 ## Süren takmalar değişti (alan görünümü bunu izler).
 signal jobs_changed
+## ELMASLA BİTİR: elmas harcandı, takma anında bitiyor (HUD sesi).
+signal gem_finished(vehicle_id: StringName)
 ## Satın alma olmadı (neden: Status).
 signal purchase_failed(vehicle_id: StringName, category: StringName, status: int)
 
@@ -236,6 +238,7 @@ func finish_with_gems(vehicle_id: StringName) -> bool:
 		if is_inside_tree() else null
 	if progress_node == null or not progress_node.spend_gems(cost):
 		return false
+	gem_finished.emit(vehicle_id)
 	finish_now(vehicle_id)
 	return collect(vehicle_id)
 

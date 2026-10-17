@@ -38,6 +38,7 @@ signal repair_started(car: Node3D)                 # TAMİRE AL: araç CarSpot't
 signal repair_progress(car: Node3D, progress: float)
 signal repair_ready(car: Node3D)                   # sayaç bitti; ödül PARA TOPLA'yı bekliyor (CarSpot dolu)
 signal repair_collected(car: Node3D, reward: int, xp: int)  # para + XP verildi, araç yola ışınlandı
+signal gem_finished(car: Node3D)                   # ELMASLA BİTİR: elmas harcandı, iş anında bitti (HUD sesi)
 signal repair_cancelled(car: Node3D)
 signal job_collected(job_id: StringName, reward: int)   # iş türü + ödül (görev sayaçları; repair_collected ile aynı anda)
 signal repair_slot_freed(car: Node3D)              # CarSpot boşaldı
@@ -443,6 +444,7 @@ func finish_with_gems(car: Node3D) -> bool:
 	if state.advance(state.remaining + 0.001):
 		repair_progress.emit(state.car, state.repair_progress)
 		_finish_state(state)
+	gem_finished.emit(state.car)
 	return true
 
 
@@ -672,6 +674,8 @@ func _candidates() -> Array[Dictionary]:
 			continue
 		if v.busy_after_race():
 			continue   # yarıştan yeni çıktı: önce yola karışsın
+		if CarCatalog.is_exotic(v.vehicle_id):
+			continue   # egzotik araç şehirden yalnızca geçer (TrafficManager)
 		if v.is_in_intersection() or v.target == null or v.target.intersection_entry:
 			continue
 		var forward: Vector3 = _flat(v.global_transform.basis.z).normalized()

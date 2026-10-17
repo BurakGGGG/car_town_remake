@@ -124,6 +124,8 @@ var _car_tween: Tween
 var _repair_panel: RepairPanel
 var _repair_manager: RepairManager
 var _player_progress: PlayerProgress
+## Para toplama ve elmasla bitirme sesleri.
+var _sfx: HudSfx
 ## Ödül penceresi: sayaçların gerçek değeri, pencere kapanana dek bekletilen kısım ve sayma animasyonları.
 var _coin_value: int = 0
 var _gem_value: int = 0
@@ -546,8 +548,11 @@ func _connect_gameplay() -> void:
 			_show_notice(Loc.t("TAMİR ALANI İÇİN YER YOK\nBİR EŞYAYI TAŞI"), HudPalette.INK, 2.4))
 		_bays.bay_unlocked.connect(_on_bay_unlocked)
 		_bays.purchase_failed.connect(_on_bay_purchase_failed)
+	_sfx = HudSfx.new()
+	add_child(_sfx)
 	_repair_manager = get_tree().get_first_node_in_group("repair_manager") as RepairManager
 	if _repair_manager:
+		_repair_manager.gem_finished.connect(func(_car: Node3D) -> void: _sfx.gem_skip())
 		_repair_manager.target_changed.connect(_on_repair_target_changed)
 		_repair_manager.repair_started.connect(_on_repair_started)
 		_repair_manager.repair_slot_freed.connect(_on_repair_slot_freed)
@@ -588,6 +593,7 @@ func _connect_gameplay() -> void:
 	# PERFORMANS MODİFİYESİ: takma bitti / parça takıldı / süren takmaya dokunuldu
 	var mods: PerformanceModManager = get_tree().get_first_node_in_group("performance_mods") as PerformanceModManager
 	if mods:
+		mods.gem_finished.connect(func(_id: StringName) -> void: _sfx.gem_skip())
 		mods.install_ready.connect(func(id: StringName) -> void:
 			_show_notice(Loc.t("PARÇA HAZIR: %s\nTAMİR ALANINDAKİ ARACA DOKUN") % _car_name(id), HudPalette.COIN_DARK, 2.4))
 		mods.install_completed.connect(func(id: StringName, category: StringName, stage: int, old_class: String,
@@ -762,6 +768,7 @@ func _on_collect_pressed() -> void:
 
 ## PARA TOPLA: para + XP verildi → kısa ödül plakası; hedef bu araçsa plaka "TAMAMLANDI"ya geçer.
 func _on_repair_collected(car: Node3D, reward: int, xp: int) -> void:
+	_sfx.collect()
 	_show_notice(Loc.t("+%s ₺   +%d XP") % [format_thousands(reward), xp], HudPalette.COIN_DARK)
 	if car == _repair_target:
 		_refresh_repair_panel(true)

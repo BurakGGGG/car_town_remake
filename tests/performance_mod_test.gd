@@ -342,12 +342,16 @@ func _run() -> void:
 	check(mods.has_job(passat), "Passat'a ŞANZIMAN takılıyor")
 	var mod_cost: int = mods.gem_skip_cost(passat)
 	check(mod_cost == GemSkip.cost(mods.remaining(passat)) and mod_cost >= 2, "takmanın elmas fiyatı %d" % mod_cost)
+	var gem_sounds: Array[StringName] = []   # HUD elmas sesi bu sinyalle çalar
+	mods.gem_finished.connect(func(id: StringName) -> void: gem_sounds.append(id))
 	pp.gems = mod_cost - 1
 	check(not mods.finish_with_gems(passat) and mods.has_job(passat) and pp.gems == mod_cost - 1,
 		"elmas yetmezse hiçbir şey değişmez")
+	check(gem_sounds.is_empty(), "elmas yetmezse elmas sesi de yok")
 	pp.gems = 50
 	var gear_before: int = mods.stage_of(passat, &"gear")
 	check(mods.finish_with_gems(passat), "elmasla bitirildi")
+	check(gem_sounds == [passat], "takma elmasla bitince gem_finished (ses) bir kez")
 	check(not mods.has_job(passat) and mods.stage_of(passat, &"gear") == gear_before + 1 and pp.gems == 50 - mod_cost,
 		"parça hemen takıldı, %d elmas düştü" % mod_cost)
 	check(mods.gem_skip_cost(passat) == 0, "takma yokken fiyat 0")
@@ -368,7 +372,10 @@ func _run() -> void:
 	var long_state: RepairState = rm2.get_state(long_car)
 	check(repair_cost == GemSkip.cost(long_state.remaining) and repair_cost >= 2, "uzun tamirin elmas fiyatı %d" % repair_cost)
 	var gems_before: int = pp.gems
+	var repair_gem_sounds: Array[Node3D] = []
+	rm2.gem_finished.connect(func(car: Node3D) -> void: repair_gem_sounds.append(car))
 	check(rm2.finish_with_gems(long_car), "uzun tamir elmasla bitti")
+	check(repair_gem_sounds == [long_car], "tamir elmasla bitince gem_finished (ses) bir kez")
 	check(long_state.phase == RepairState.Phase.REWARD_WAITING and pp.gems == gems_before - repair_cost,
 		"PARA TOPLA bekliyor, %d elmas düştü" % repair_cost)
 	var short_type: RepairType = RepairType.by_id(&"engine")

@@ -24,6 +24,11 @@ extends Node3D
 ## KAÇAN KAYBEDEN: yarışı oyuncuya kaybeden rakip (TrafficVehicle.flee) kırmızıya bakmadan kaçar; yaklaşırken kavşağı
 ## talep eder (runner_crossing) — karşı eksen yeşilde bile yeni araç sokamaz, bekletilen araç korna çalar; trafik ona
 ## kovalamacadaki gibi yol verir (chase_pressure). Kalkışta lastik sesi (TrafficSfx).
+## EGZOTİK ARAÇ (2026-10-17, kullanıcı: "trafikte tek tük egzotik araç geçsin, 20'de 1"): rastgele doğan araçların
+## ortalama EXOTIC_EVERY'de biri trafiğe kapalı süper araçlardan (cars.json "exotic": GT3 / Huracán / 488 Pista) biridir;
+## art arda gelmesin diye arada en az EXOTIC_MIN_GAP araç olur. Sıra gelince model hemen arka planda yüklenir (yarışa
+## özel modellerin yanına), araç doğunca listeden düşer (sahnesini araç tutar). Egzotik yalnızca GEÇER: tamir müşterisi
+## olmaz (RepairManager). Motor sesi CityAmbience'ta (ExoticEngine).
 ## Polis kovalamacası: PoliceChase (çocuk düğüm, kodla kurulur) açılıştan 15 sn sonra, sonra 2 dakikada bir şüpheli + polis gönderir;
 ## bu araçlar `vehicles` listesinde DEĞİLDİR (sayılmaz, müşteri / rakip olmaz). Trafik onlara yol verir
 ## (chase_pressure) ve kovalamaca sürerken kavşakta karşı eksen bekler.
@@ -69,6 +74,10 @@ const HIDE_PROBES: Array[Vector3] = [Vector3.ZERO, Vector3(0.4, 0.0, 0.0), Vecto
 const HIDE_STEP: float = 0.3
 ## Bellekte tutulan yarışa özel model sayısı (rakip değişince eskisi bırakılır).
 const RACE_MODEL_LIMIT: int = 2
+## Egzotik araç ortalama bu kadar rastgele doğumda bir, en az EXOTIC_MIN_GAP normal araçtan sonra gelir: aradan sonraki
+## her doğumda 1 / (EXOTIC_EVERY − EXOTIC_MIN_GAP) şansla sıra gelir → ortalama aralık tam EXOTIC_EVERY.
+const EXOTIC_EVERY: int = 20
+const EXOTIC_MIN_GAP: int = 8
 
 var vehicles: Array[TrafficVehicle] = []
 var spawn_points: Array[TrafficWaypoint] = []
@@ -88,6 +97,9 @@ var _pool: Array[Dictionary] = []          # {id, scene}: yüklenmiş, spawn'a h
 ## dörtte biri GT3 / Huracán / 488 oluyordu.
 var _race_models: Array[Dictionary] = []
 var _pending: Dictionary = {}              # id → scene_path (arka planda yükleniyor)
+var _exotics: Array[StringName] = []       # cars.json "exotic" modelleri
+var _since_exotic: int = 0                 # son egzotikten beri doğan rastgele araç
+var _exotic_next: StringName = &""         # sırası gelen egzotik (yükleniyor / doğmayı bekliyor)
 var _rotate_timer: float = 0.0
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var chase: PoliceChase
@@ -118,6 +130,7 @@ func _ready() -> void:
 	for entry: Dictionary in CarCatalog.all():
 		if entry["traffic"]:
 			_candidates.append(entry["id"])
+	_exotics = CarCatalog.exotic_ids()
 	for i: int in mini(pool_size, _candidates.size()):
 		_request_model(_candidates[i])
 	_rotate_timer = pool_rotate_interval
@@ -140,17 +153,63 @@ func _physics_process(delta: float) -> void:
 func _try_spawn() -> bool:
 	if spawn_points.is_empty() or _pool.is_empty():
 		return false
-	var model: Dictionary = _free_model()
+	var model: Dictionary = _next_model()
 	if model.is_empty():
-		return false   # havuzdaki her model şehirde: boştaki bir model yükleniyor, sonra doğar
+		return false   # havuzdaki her model şehirde ya da sıradaki egzotik yükleniyor: sonra doğar
 	var candidates: Array[TrafficWaypoint] = spawn_points.duplicate()
 	candidates.shuffle()
 	for point: TrafficWaypoint in candidates:
 		var start: Vector3 = hidden_start(point)
 		if _is_clear(start):
 			_spawn_at(point, model, start)
+			_count_spawn(model["id"])
 			return true
 	return false
+
+
+## Sıradaki rastgele aracın modeli: egzotik sırası geldiyse o (yüklenene dek {}: sıradaki doğum bekler), yoksa havuzdan
+## şehirde olmayan bir model.
+func _next_model() -> Dictionary:
+	if _exotic_next != &"" and is_model_in_use(_exotic_next):
+		_exotic_next = _pick_exotic()   # bu arada yarış rakibi olarak şehre geldi: başka bir egzotik
+		if _exotic_next != &"":
+			_request_model(_exotic_next)
+	if _exotic_next != &"":
+		var entry: Dictionary = _pool_entry(_exotic_next)
+		if not entry.is_empty():
+			return entry
+		if _pending.has(_exotic_next):
+			return {}
+		_exotic_next = &""   # yüklenemedi ya da yarış modelleri arasından düştü: bu sefer normal araç
+	return _free_model()
+
+
+## Doğan rastgele araç sayılır. Egzotik doğunca sayaç sıfırlanır ve modeli listeden düşer (sahnesini araç tutar; rakip
+## olarak yeniden istenirse yüklenir). Aradan sonra sıra gelince model HEMEN yüklenmeye başlar: sonraki doğuma hazır olur.
+func _count_spawn(id: StringName) -> void:
+	if _exotics.has(id):
+		_since_exotic = 0
+		_exotic_next = &""
+		for i: int in range(_race_models.size() - 1, -1, -1):
+			if _race_models[i]["id"] == id:
+				_race_models.remove_at(i)
+		return
+	_since_exotic += 1
+	if _exotic_next == &"" and _since_exotic >= EXOTIC_MIN_GAP \
+			and _rng.randf() < 1.0 / float(EXOTIC_EVERY - EXOTIC_MIN_GAP):
+		_exotic_next = _pick_exotic()
+		if _exotic_next != &"":
+			_request_model(_exotic_next)
+
+
+## Şehirde olmayan rastgele bir egzotik model (&"" = yok).
+func _pick_exotic() -> StringName:
+	var used: Dictionary = models_in_use()
+	var options: Array[StringName] = []
+	for id: StringName in _exotics:
+		if not used.has(id):
+			options.append(id)
+	return options[_rng.randi() % options.size()] if not options.is_empty() else &""
 
 
 ## Bu noktada doğacak aracın başlangıç yeri (CORE_META'ya bakın). Nokta taşınmamışsa kendisi.

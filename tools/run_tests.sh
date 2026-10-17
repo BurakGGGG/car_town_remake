@@ -13,7 +13,7 @@ SUITE="${CT_SUITE_DIR:-$HOME/snap/godot-4/common/cloudtest}"
 GODOT="${GODOT:-godot-4}"
 OUT="${CT_OUT:-/tmp/ct_tests}"
 HEADLESS="tutorial_test save_test edge_test quest_test paint_test account_delete_test login_flow_test drag_transmission_test vehicle_wheel_test decor_test garage_decoration_placement_test crate_test release_test ads_test bay_move_test vehicle_display_test mission_test locale_test decor_v2_test social_test race_record_test purchase_test junkyard_test performance_mod_test car_thumbs_test luxury_decor_test police_lights_test office_decor_test welcome_crate_test profile_test friend_race_test race_news_test"
-WINDOWED="photo_mode_test repair_collect_test city_life_test race_rematch_test customer_patience_test police_chase_test touch_scroll_test scroll_drag_test settings_test ui_test login_reload_test race_test progression_test vehicle_asset_test vehicle_scale_test traffic_pool_test visit_test"
+WINDOWED="photo_mode_test repair_collect_test city_life_test race_rematch_test customer_patience_test police_chase_test touch_scroll_test scroll_drag_test settings_test ui_test login_reload_test race_test progression_test vehicle_asset_test vehicle_scale_test traffic_pool_test visit_test exotic_traffic_test"
 ALL="${*:-$HEADLESS $WINDOWED}"
 mkdir -p "$OUT"
 cd "$PROJ" || exit 1

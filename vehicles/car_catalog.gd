@@ -54,6 +54,20 @@ static func is_obtainable(id: StringName) -> bool:
 	return bool(get_entry(id).get("obtainable", false))
 
 
+## EGZOTİK ARAÇ (cars.json "exotic"): normal trafiğe kapalı süper araç; şehirden ara sıra geçer (TrafficManager,
+## ortalama 20 araçta bir) ve geçerken motoru duyulur (CityAmbience → ExoticEngine).
+static func is_exotic(id: StringName) -> bool:
+	return bool(get_entry(id).get("exotic", false))
+
+
+static func exotic_ids() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for entry: Dictionary in all():
+		if entry["exotic"]:
+			out.append(entry["id"])
+	return out
+
+
 ## ARACIN OYUN ÖLÇEĞİ — gerçek boyuttan türetilmiş çarpan (cars.json "model_scale").
 ## Aracı sahneye koyan HER yer (trafik, garaj, showroom, drag) kendi bağlam çarpanını bununla
 ## çarpar; böylece dört yerde de aynı fiziksel oran görünür. Koda araç adı gömülmez.
@@ -189,6 +203,7 @@ const SCHEMA: Array[Dictionary] = [
 	{"key": "world_node", "kind": Kind.NAME, "default": &""},
 	{"key": "plate_color", "kind": Kind.COLOR, "default": Color("F3E8CF")},
 	{"key": "traffic", "kind": Kind.BOOL, "default": true},
+	{"key": "exotic", "kind": Kind.BOOL, "default": false},    # true: trafiğe kapalı ama şehirden ARA SIRA geçer (TrafficManager)
 	{"key": "paintable", "kind": Kind.BOOL, "default": true},   # false: kaplamalı araç (polis) — boyası değişmez
 	{"key": "obtainable", "kind": Kind.BOOL, "default": true},  # false: oyuncu edinemez (polis: yalnızca kovalamacada)
 	{"key": "race", "kind": Kind.STATS, "default": {}},   # drag yarışı statları (bkz. RACE_STATS)
