@@ -5,9 +5,11 @@ extends Node
 ## Kayıt: SaveManager "profile" bölümü (eski kayıtta yoktur: varsayılanlar). Açık kısım (avatar tanımı, çerçeve,
 ## bayrak, garaj adı, vitrin aracı) SocialManager tarafından açık garaj belgesine yazılır (public_fields).
 ##
-## FOTOĞRAF (kullanıcı kararı 2026-10-16): kaynak galeri / kamera / 12 hazır avatar / Google. Fotoğraf koymayan
-## oyuncu Google fotoğrafını kullanır; profil düzenlemede kapatılabilir ("Google fotoğrafını kullanma").
-##   avatar ""      → otomatik: Google fotoğrafı (açık ve inmişse), yoksa kask (ProfileCatalog.DEFAULT_PRESET)
+## FOTOĞRAF (kullanıcı kararı 2026-10-16): kaynak galeri / kamera / 12 hazır avatar / Google. Google fotoğrafı
+## YALNIZCA oyuncu açarsa avatar olur (2026-10-17, gizlilik: önceden varsayılan açıktı ve herkese görünüyordu):
+## profil düzenlemede GOOGLE düğmesi ya da "GOOGLE: AÇIK". Kayıtta "google_photo" anahtarı; eski "use_google"
+## (varsayılanı true idi, oyuncu seçmeden yazılıyordu) okunmaz: herkes kapalı başlar.
+##   avatar ""      → otomatik: Google fotoğrafı (oyuncu açtıysa ve inmişse), yoksa kask (ProfileCatalog.DEFAULT_PRESET)
 ##   avatar "pNN"   → hazır avatar
 ##   avatar "photo" → galeri / kamera fotoğrafı (user://profile/photo.jpg, 192 px JPEG)
 ## Yüklenen resim (fotoğraf ya da Google) arkadaşlara avatars/a_{uid} belgesiyle gider; tanım "img:<hash>".
@@ -30,7 +32,7 @@ const MAX_HIDDEN: int = 200
 
 var avatar: String = ""
 var photo_hash: String = ""
-var use_google: bool = true
+var use_google: bool = false
 var frame_id: String = ProfileCatalog.DEFAULT_FRAME
 var frames_owned: Array[String] = []
 var flag: String = ""
@@ -59,7 +61,7 @@ func _ready() -> void:
 
 func state() -> Dictionary:
 	return {
-		"avatar": avatar, "photo_hash": photo_hash, "use_google": use_google, "frame": frame_id,
+		"avatar": avatar, "photo_hash": photo_hash, "google_photo": use_google, "frame": frame_id,
 		"frames": frames_owned.duplicate(), "flag": flag, "title": title, "showcase": String(showcase),
 		"blocked": blocked.duplicate(), "hidden": hidden.duplicate(),
 	}
@@ -72,7 +74,7 @@ func load_state(data: Dictionary) -> void:
 	photo_hash = SaveSafe.s(data.get("photo_hash", ""))
 	if not ProfileCatalog.is_hash(photo_hash):
 		photo_hash = ""
-	use_google = bool(data.get("use_google", true))
+	use_google = bool(data.get("google_photo", false))
 	var owned: Variant = data.get("frames", [])
 	if owned is Array:
 		for id: Variant in owned:
@@ -103,7 +105,7 @@ func load_state(data: Dictionary) -> void:
 func reset() -> void:
 	avatar = ""
 	photo_hash = ""
-	use_google = true
+	use_google = false
 	frame_id = ProfileCatalog.DEFAULT_FRAME
 	frames_owned.clear()
 	flag = ""

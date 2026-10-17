@@ -385,7 +385,7 @@ func _on_sign_out_result(success: bool) -> void:
 ## Silinemezlerse hesap silinmez (oyuncu tekrar dener).
 func _delete_social_then_doc() -> void:
 	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
-	if social and not await social.delete_all():
+	if social and not await social.delete_all(_delete_uid):
 		_abort_delete(Loc.t("Hesap silinmedi: arkadaşlık verilerine ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene."))
 		return
 	_delete_cloud_doc()

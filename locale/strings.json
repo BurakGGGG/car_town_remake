@@ -221,14 +221,14 @@
  ],
  "%s artık arkadaşın!": [
   "gameplay/social/social_manager.gd:453",
-  "gameplay/social/social_manager.gd:954",
+  "gameplay/social/social_manager.gd:988",
   "ui/hud/invite_screen.gd:202"
  ],
  "%s boya satın al": [
   "gameplay/missions/mission_catalog.gd:100"
  ],
  "%s engellendi, artık sana görünmez.": [
-  "gameplay/social/social_manager.gd:1308"
+  "gameplay/social/social_manager.gd:1342"
  ],
  "%s farklı araç keşfet": [
   "gameplay/missions/mission_catalog.gd:99"
@@ -249,10 +249,10 @@
   "gameplay/missions/mission_catalog.gd:98"
  ],
  "%s oyuncusuna 1 %s gönderdin.": [
-  "gameplay/social/social_manager.gd:814"
+  "gameplay/social/social_manager.gd:848"
  ],
  "%s oyuncusuna istek gönderildi.": [
-  "gameplay/social/social_manager.gd:934"
+  "gameplay/social/social_manager.gd:968"
  ],
  "%s seni Auto Yard'da arkadaşı olmaya çağırıyor. Ekleyince garajını gezebilir, aracına karşı yarışabilirsin.": [
   "ui/hud/invite_screen.gd:197"
@@ -601,7 +601,7 @@
   "ui/hud/visit_bar.gd:45"
  ],
  "ARKADAŞ HEDİYESİ  +%d PARÇA\n%s": [
-  "gameplay/social/social_manager.gd:850"
+  "gameplay/social/social_manager.gd:884"
  ],
  "ARKADAŞINI ÇAĞIR": [
   "ui/hud/friends_screen.gd:400"
@@ -812,10 +812,10 @@
   "ui/hud/profile_edit_screen.gd:504"
  ],
  "Arkadaşlarından %s istedin.": [
-  "gameplay/social/social_manager.gd:780"
+  "gameplay/social/social_manager.gd:814"
  ],
  "Arkadaşlarından istemek için Google hesabınla giriş yap.": [
-  "gameplay/social/social_manager.gd:767"
+  "gameplay/social/social_manager.gd:801"
  ],
  "Arıza yok": [
   "ui/hud/repair_panel.gd:115"
@@ -1204,34 +1204,34 @@
   "ui/hud/junkyard_screen.gd:37"
  ],
  "Bu kodla bir oyuncu bulunamadı.": [
-  "gameplay/social/social_manager.gd:899",
-  "gameplay/social/social_manager.gd:905",
-  "gameplay/social/social_manager.gd:920"
+  "gameplay/social/social_manager.gd:933",
+  "gameplay/social/social_manager.gd:939",
+  "gameplay/social/social_manager.gd:954"
  ],
  "Bu oyuncunun engeli kaldırıldı.": [
-  "gameplay/social/social_manager.gd:912"
+  "gameplay/social/social_manager.gd:946"
  ],
  "Bu oyuncunun garajı bulunamadı.": [
   "gameplay/social/social_manager.gd:525"
  ],
  "Bu oyuncuya zaten istek gönderdin.": [
-  "gameplay/social/social_manager.gd:914"
+  "gameplay/social/social_manager.gd:948"
  ],
  "Bu senin kendi davet linkin. Arkadaşına gönder, o açınca arkadaş olursunuz.": [
   "ui/hud/invite_screen.gd:212"
  ],
  "Bu senin kendi kodun.": [
   "gameplay/social/social_manager.gd:295",
-  "gameplay/social/social_manager.gd:905"
+  "gameplay/social/social_manager.gd:939"
  ],
  "Bu takma ad kullanılamaz. Harf, rakam, boşluk ve . _ - kullanabilirsin.": [
-  "gameplay/social/social_manager.gd:1386"
+  "gameplay/social/social_manager.gd:1420"
  ],
  "Budanmış yeşil çit bloğu.": [
   "decor/decorations.json:hedge.desc"
  ],
  "Bugün bu arkadaşına zaten hediye gönderdin.": [
-  "gameplay/social/social_manager.gd:817"
+  "gameplay/social/social_manager.gd:851"
  ],
  "Bulduğun parçalar PARÇALAR'da birikir. Aranan yığın 8 saatte yeniden dolar; bazen boş çıkar, moralini bozma!": [
   "ui/tutorial/tutorial_director.gd:586"
@@ -1877,7 +1877,7 @@
   "ui/hud/friend_card_screen.gd:152"
  ],
  "FOTOĞRAF KAYDEDİLEMEDİ": [
-  "ui/hud/photo_mode.gd:147"
+  "ui/hud/photo_mode.gd:154"
  ],
  "FOTOĞRAFI YERLEŞTİR": [
   "ui/hud/avatar_cropper.gd:80"
@@ -1929,6 +1929,9 @@
   "ui/hud/profile_edit_screen.gd:263"
  ],
  "GALERİYE KAYDEDİLDİ": [
+  "ui/hud/photo_mode.gd:149"
+ ],
+ "GALERİYE KAYDETMEK İÇİN İZİN GEREKİYOR": [
   "ui/hud/photo_mode.gd:142"
  ],
  "GARAJ": [
@@ -2571,7 +2574,7 @@
   "decor/decorations.json:compressor.desc"
  ],
  "Hediye gönderilemedi. İnternet bağlantını kontrol et.": [
-  "gameplay/social/social_manager.gd:819"
+  "gameplay/social/social_manager.gd:853"
  ],
  "Henüz aracın yok. İlk aracın hoş geldin kutusunda!": [
   "ui/hud/profile_edit_screen.gd:452"
@@ -2736,7 +2739,7 @@
   "ui/hud/friends_screen.gd:413"
  ],
  "KADRAJI AYARLA, SONRA ÇEK": [
-  "ui/hud/photo_mode.gd:231"
+  "ui/hud/photo_mode.gd:238"
  ],
  "KAHVE KÖŞESİ": [
   "decor/decorations.json:coffee_station.title"
@@ -3552,7 +3555,7 @@
   "ui/hud/profile_screen.gd:204"
  ],
  "OYUNCU": [
-  "gameplay/social/social_manager.gd:1308",
+  "gameplay/social/social_manager.gd:1342",
   "ui/hud/profile_edit_screen.gd:254",
   "ui/hud/profile_card.gd:119"
  ],
@@ -3644,7 +3647,7 @@
   "ui/hud/mod_workshop.gd:335"
  ],
  "PERMISSION": [
-  "gameplay/social/social_manager.gd:1428"
+  "gameplay/social/social_manager.gd:1462"
  ],
  "PERU": [
   "gameplay/social/profile_catalog.gd:45"
@@ -4563,7 +4566,7 @@
   "ui/hud/friends_screen.gd:475"
  ],
  "Takma ad %d–%d karakter olmalı.": [
-  "gameplay/social/social_manager.gd:1383"
+  "gameplay/social/social_manager.gd:1417"
  ],
  "Takma ad değiştirilemedi. Tekrar dene.": [
   "gameplay/social/social_manager.gd:262"
@@ -5060,7 +5063,7 @@
   "ui/loading/loading_screen.gd:37"
  ],
  "Yeniden istemek için %s bekle.": [
-  "gameplay/social/social_manager.gd:773"
+  "gameplay/social/social_manager.gd:807"
  ],
  "Yeşil gövdeli sütunlu matkap.": [
   "decor/decorations.json:drill_press.desc"
@@ -5109,7 +5112,7 @@
  ],
  "Zaten arkadaşsınız.": [
   "gameplay/social/social_manager.gd:426",
-  "gameplay/social/social_manager.gd:908"
+  "gameplay/social/social_manager.gd:942"
  ],
  "Zoom (ortografik size)": [
   "world_camera.gd:23"
@@ -5381,7 +5384,7 @@
   "ui/hud/mod_workshop.gd:506"
  ],
  "Önce ARKADAŞLAR'dan bir arkadaş ekle.": [
-  "gameplay/social/social_manager.gd:770"
+  "gameplay/social/social_manager.gd:804"
  ],
  "Önce ARKADAŞLAR'dan takma adını seç; sonra davet yeniden açılır.": [
   "ui/hud/invite_screen.gd:229"
@@ -5596,13 +5599,13 @@
   "ui/hud/push_prompt.gd:84"
  ],
  "İstek gönderilemedi. İnternet bağlantını kontrol et.": [
-  "gameplay/social/social_manager.gd:781",
-  "gameplay/social/social_manager.gd:900",
-  "gameplay/social/social_manager.gd:921",
-  "gameplay/social/social_manager.gd:928"
+  "gameplay/social/social_manager.gd:815",
+  "gameplay/social/social_manager.gd:934",
+  "gameplay/social/social_manager.gd:955",
+  "gameplay/social/social_manager.gd:962"
  ],
  "İstek kabul edilemedi. Tekrar dene.": [
-  "gameplay/social/social_manager.gd:945"
+  "gameplay/social/social_manager.gd:979"
  ],
  "İstiflenmiş ahşap paletler.": [
   "decor/decorations.json:pallet_stack.desc"
@@ -5693,10 +5696,10 @@
   "decor/decorations.json:office_safe.desc"
  ],
  "Şikâyet gönderilemedi. İnternet bağlantını kontrol et.": [
-  "gameplay/social/social_manager.gd:1290"
+  "gameplay/social/social_manager.gd:1324"
  ],
  "Şikâyetin alındı, inceleyeceğiz. Teşekkürler!": [
-  "gameplay/social/social_manager.gd:1289"
+  "gameplay/social/social_manager.gd:1323"
  ],
  "ŞİKAYET ET": [
   "ui/hud/friend_card_screen.gd:163",

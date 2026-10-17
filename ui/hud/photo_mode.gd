@@ -134,8 +134,15 @@ func capture() -> void:
 		await get_tree().process_frame
 	WorkerThreadPool.wait_for_task_completion(task)
 	var bytes: PackedByteArray = out[0] if out.size() > 0 else PackedByteArray()
+	# Android 7–9: depolama izni GİRİŞTE değil, ilk fotoğraf çekildikten sonra (kaydederken) istenir (kullanıcı kararı
+	# 2026-10-17). Reddedilirse çekim kaydedilmez, oyuncuya neden söylenir; sonraki çekimde yeniden sorulur.
 	if GallerySaver.needs_legacy_permission():
 		await _request_legacy_permission()
+		if GallerySaver.needs_legacy_permission():
+			_show_toast(Loc.t("GALERİYE KAYDETMEK İÇİN İZİN GEREKİYOR"), HudPalette.DANGER)
+			_busy = false
+			photo_saved.emit({"ok": false, "where": "", "error": "permission"})
+			return
 	var result: Dictionary = GallerySaver.save_jpeg(bytes, _next_file_name())
 	if bool(result.get("ok", false)):
 		print("PhotoMode: fotoğraf kaydedildi → %s" % result.get("where", ""))
@@ -456,7 +463,8 @@ func _next_file_name() -> String:
 	return PhotoCapture.file_name(now, _serial)
 
 
-## Android 7–9: depolama iznini ister ve yanıtı bekler (izin dışa aktarmada yoksa sistem hemen reddeder).
+## Android 7–9: depolama iznini ister ve yanıtı bekler. İzin manifeste yalnızca API ≤ 28 için eklenir
+## (addons/GodotFirebaseAndroid/export_plugin.gd, maxSdkVersion=28).
 func _request_legacy_permission() -> void:
 	if OS.request_permission(GallerySaver.LEGACY_PERMISSION):
 		return

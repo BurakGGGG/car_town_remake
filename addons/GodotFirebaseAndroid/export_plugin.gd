@@ -102,6 +102,12 @@ class AndroidExportPlugin extends EditorExportPlugin:
 		file.store_string(text)
 		file.close()
 
+	# CarTownRemake eki (2026-10-17): FOTOĞRAF MODU — Android 7–9'da (API ≤ 28) galeriye kaydetmek depolama izni ister.
+	# Yalnızca o sürümler için bildirilir (maxSdkVersion): Android 10+ izin istemez ve listede görünmez. Oyun izni
+	# girişte değil, ilk fotoğraf çekildikten sonra kaydederken ister (ui/hud/photo_mode.gd).
+	func _get_android_manifest_element_contents(platform: EditorExportPlatform, debug: bool) -> String:
+		return '<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />'
+
 	func _insert_line_if_missing(file_path: String, after_line: String, insert_line: String) -> void:
 		var text := FileAccess.open(file_path, FileAccess.READ).get_as_text()
 		if text.contains(insert_line):

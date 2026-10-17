@@ -206,14 +206,20 @@ func _run() -> void:
 	var a: Dictionary = fb.store.get("avatars/a_alice", {})
 	check(SaveSafe.s(a.get("hash", "")) == hash
 		and ProfileCatalog.hash_of(Marshalls.base64_to_raw(SaveSafe.s(a.get("img", "")))) == hash, "avatars/a_alice: aynı resim")
-	var writes_before: int = fb.calls.filter(func(c: String) -> bool: return c == "set avatars/a_alice").size()
+	var avatar_writes: Callable = func() -> int: return fb.calls.filter(func(c: String) -> bool: return c == "set avatars/a_alice").size()
+	var writes_before: int = avatar_writes.call()
+	p.set_frame("plate")
+	await social().publish_now()
+	check(avatar_writes.call() == writes_before, "fotoğraf değişmedikçe resim yeniden yüklenmez (yalnız çerçeve değişti)")
+	p.set_frame("checker")   # sonraki bölümler bu çerçeveyi bekler
 	p.set_preset("p05")
 	await social().publish_now()
 	check(SaveSafe.s((fb.store["garages/g_alice"] as Dictionary).get("av", "")) == "p05", "hazır avatara geçiş yayınlandı")
+	check(not fb.store.has("avatars/a_alice"), "hazır avatara geçince eski fotoğraf sunucudan silindi (2026-10-17)")
 	p.set_photo(photo(Color.BLUE))
 	await social().publish_now()
-	var writes_after: int = fb.calls.filter(func(c: String) -> bool: return c == "set avatars/a_alice").size()
-	check(writes_after == writes_before, "aynı fotoğraf (aynı hash) yeniden yüklenmez")
+	check(avatar_writes.call() == writes_before + 1 and SaveSafe.s(fb.store.get("avatars/a_alice", {}).get("hash", "")) == hash,
+		"aynı fotoğrafa dönünce yeniden yüklendi")
 	p.set_photo(photo(Color.GREEN))
 	var hash2: String = p.photo_hash
 	await social().publish_now()

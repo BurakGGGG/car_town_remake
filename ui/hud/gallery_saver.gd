@@ -5,8 +5,8 @@ extends RefCounted
 ## Android: eklenti yok; Godot'nun yerleşik JavaClassWrapper + AndroidRuntime köprüsüyle MediaStore'a
 ## eklenir (ContentResolver.insert + openOutputStream). Android 10+ (API 29) izin İSTEMEZ, dosya
 ## "Pictures/Auto Yard" klasörüne düşer ve galeride hemen görünür. Android 7–9'da MediaStore'a yazmak
-## WRITE_EXTERNAL_STORAGE ister: izin dışa aktarma ayarında (permissions/write_external_storage) açık
-## değilse sistem isteği hemen reddeder, kayıt başarısız olur (fotoğraf modu bunu oyuncuya söyler).
+## WRITE_EXTERNAL_STORAGE ister: dışa aktarma eklentisi bu izni manifeste yalnızca API ≤ 28 için ekler
+## (maxSdkVersion=28; yeni sürümlerde izin listesinde görünmez). Fotoğraf modu izni ilk çekimden sonra ister.
 ## Masaüstü: sistemin Resimler klasörü / Auto Yard (bulunamazsa user://photos). Testler `override_dir` verir.
 
 const FOLDER: String = "Auto Yard"

@@ -544,9 +544,27 @@ func visit(uid: String) -> bool:
 ## HESAP SİLME: bu oyuncunun bütün sosyal belgeleri silinir (arkadaşlıklar iki taraftan, istekler,
 ## açık garaj, kod). Auth kullanıcısı silinmeden ÖNCE çağrılmalı (sonra yetki kalmaz).
 ## Herhangi bir silme başarısızsa false; çağıran hesabı silmeyi durdurur.
-func delete_all() -> bool:
-	if _fb == null or _uid.is_empty():
+## `uid`: oturumdaki Google hesabı. Sosyal oturum hiç açılmadıysa (oyun internetsiz açıldı, bulut kaydı hata
+## durumunda) silme yine bu kimlikle yapılır; arkadaş kodu bu cihazda yoksa açık garajdan okunur (2026-10-17:
+## önceden bu durumda sosyal veriler silinmeden kalıyordu).
+func delete_all(uid: String = "") -> bool:
+	if _fb == null:
 		return true
+	var borrowed: bool = _uid.is_empty()
+	if borrowed:
+		if uid.is_empty():
+			return true
+		_uid = uid
+		_meta = _read_json(META_PATH)
+		if SaveSafe.s(_meta.get("uid", "")) != uid:
+			_meta = {"uid": uid}
+		if my_code().is_empty():
+			var own: Dictionary = await _call(&"get", GARAGES, "g_" + uid)
+			if _ok(own) and own.get("data") is Dictionary:
+				_meta["code"] = SaveSafe.s((own["data"] as Dictionary).get("code", ""))
+			elif not _not_found(own):
+				_uid = ""   # garaja ulaşılamadı: silme başarısız, oturum açılmamış hâliyle kalır
+				return false
 	_publish_timer.stop()
 	_busy += 1
 	var ok: bool = true
@@ -600,6 +618,8 @@ func delete_all() -> bool:
 		outgoing.clear()
 		_uid = ""   # hesap siliniyor: sonraki kayıtlar artık yayınlanmaz
 		_set_state(State.SIGNED_OUT)
+	elif borrowed:
+		_uid = ""   # oturum açılmamıştı: başarısız silmeden sonra da öyle kalsın (sonra normal açılabilsin)
 	return ok
 
 
@@ -721,6 +741,7 @@ func _publish(name: String) -> bool:
 	var result: Dictionary = await _call(&"set", GARAGES, "g_" + _uid, doc)
 	if not _ok(result):
 		return false
+	await _drop_unused_avatar()
 	_meta["published"] = garage_json
 	_meta["published_ask"] = _ask_key()
 	_meta["published_profile"] = _profile_key()
@@ -756,6 +777,19 @@ func _upload_avatar() -> bool:
 	_meta["published_av_hash"] = hash
 	_store_avatar(_uid, hash, bytes)   # kendi resmim de önbellekte (arkadaş satırı / kart aynı yoldan çizer)
 	return true
+
+
+## Avatar artık resim değilse (hazır avatar / kask / Google kapalı) sunucudaki son resim silinir: fotoğrafı
+## kaldıran oyuncunun resmi hesap silinene kadar beklemesin (2026-10-17). Garaj belgesi yeni tanımla yazıldıktan
+## SONRA çağrılır: arkadaşlar önce yeni tanımı görür. Silinemezse bir sonraki yayında yeniden denenir.
+func _drop_unused_avatar() -> void:
+	if SaveSafe.s(_meta.get("published_av_hash", "")).is_empty():
+		return
+	if not ProfileCatalog.image_hash(SaveSafe.s(_meta.get("published_av", ""))).is_empty():
+		return
+	var r: Dictionary = await _call(&"delete", AVATARS, "a_" + _uid)
+	if _ok(r) or _not_found(r):
+		_meta.erase("published_av_hash")
 
 
 # --- Hurdalık hediyesi -----------------------------------------------------------

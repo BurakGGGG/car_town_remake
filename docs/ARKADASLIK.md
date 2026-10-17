@@ -51,8 +51,11 @@ yakınlıkta ekrana sığmıyordu.
   GÖKKUŞAĞI 600 GEM), BAYRAK (44 piksel bayrak, kodla çizilir), VİTRİN (sahip olunan araçlar), İSİM (takma ad + garaj
   adı). Galeri / kamera görüntüsü kırpıcıdan geçer (kaydır, iki parmakla yakınlaştır, DÖNDÜR — JPEG'in EXIF yönü
   okunmaz).
-* **Fotoğraf koymayan** Google fotoğrafını kullanır (192 px JPEG'e çevrilip yüklenir; ayardan kapatılabilir).
-  Fotoğrafı olmayan / misafir: kask (hazır avatar p10).
+* **Google fotoğrafı yalnızca oyuncu açarsa** avatar olur (2026-10-17, gizlilik: önceden varsayılan açıktı): GOOGLE
+  düğmesi ya da "GOOGLE: AÇIK" (192 px JPEG'e çevrilip yüklenir). Kayıt anahtarı `google_photo`; eski `use_google`
+  okunmaz (oyuncu seçmeden true yazılıyordu), herkes kapalı başlar. Fotoğrafı olmayan / misafir: kask (hazır avatar p10).
+* **Fotoğraf kaldırılınca** (hazır avatar, KALDIR, Google kapalı) açık garaj yeni tanımla yazıldıktan sonra
+  `avatars/a_{uid}` silinir (`SocialManager._drop_unused_avatar`); önceden hesap silinene kadar kalıyordu.
 * **Arkadaş kartı** (satırdaki avatara / ada dokun): GARAJA GİT · ŞİKAYET ET (FOTOĞRAF / TAKMA AD / GARAJ) · ENGELLE ·
   ÇIKAR; gelen istekte KABUL · RET · ŞİKAYET ET · ENGELLE. Emre / Elif'te yalnız GARAJA GİT.
 * **Şikâyet:** `reports/x_{şikâyetçi}_{hedef}` (fotoğrafın o anki kopyasıyla); şikâyet edenin ekranında fotoğraf
@@ -177,8 +180,7 @@ ekran bir kez daha açılır. Oyuncu misafir kalırsa ısrar etmez.
 **Kararlar ve sınırlar:**
 - Link 1 saat içinde birden çok kişi tarafından kullanılabilir (A linki kime gönderdiyse).
 - Davet belgeleri cihazdaki listeden (`social.json` → "invites") temizlenir: yeni davette süresi dolanlar, hesap silmede
-  hepsi. Başka bir cihazdan silinen hesabın davetleri sunucuda kalır; ömrü dolmuştur, kod ve garaj silindiği için
-  "bulunamadı" görünür. İstenirse ileride sunucu tarafında temizlik eklenebilir.
+  hepsi. Kalanları (başka cihaz, silinen hesap) sunucudaki `cleanupExpired` süresi dolunca en geç 1 saatte siler.
 
 **Android:**
 - Ana etkinlik dışa kapalı (`exported=false`) ve eklentilerin uygulama içeriği birleşik manifest'te etkinlikten önce
@@ -247,8 +249,17 @@ reddedilir ("birazdan tekrar dene").
 
 ## Hesap silme
 
-`CloudSaveManager` Google doğrulamasından sonra, bulut kaydından ÖNCE `SocialManager.delete_all()` çağırır:
+`CloudSaveManager` Google doğrulamasından sonra, bulut kaydından ÖNCE `SocialManager.delete_all(uid)` çağırır:
 arkadaşlıklar iki taraftan, istekler, açık garaj ve kod silinir. Silinemezse hesap silinmez.
+Sosyal oturum hiç açılmamışsa (oyun internetsiz açıldı / bulut kaydı ERROR) silme yine Google hesabının uid'iyle yapılır,
+kod bu cihazda yoksa açık garajdan okunur (2026-10-17; önceden bu durumda sosyal veriler silinmeden kalıyordu).
+Test: social_test §13.
+
+## Sunucu temizliği (Cloud Function `cleanupExpired`, 2026-10-17)
+
+Saatte bir (europe-west4, Cloud Scheduler) süresi dolan kayıtlar silinir — gizlilik politikasındaki süreler:
+`invites` 1 saat dolunca, `push_log` 1 gün, `reports` 180 gün. Mantık `firebase/functions/cleanup.js`
+(test: `npm test`, emülatör: `npm run cleanup-e2e`).
 
 ## Testler
 

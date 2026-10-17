@@ -284,7 +284,8 @@ func wipe_files() -> void:
 
 
 ## Bir cihazda oturum: dünya kurulur, `account` Google ile girer, bulut SYNCED olur.
-func open_session(account: String, fresh_device: bool = true) -> void:
+## offline_start: internetsiz açılış (bulut OFFLINE kalır, sosyal oturum açılmaz); with_profile: PlayerProfile da kurulur.
+func open_session(account: String, fresh_device: bool = true, offline_start: bool = false, with_profile: bool = false) -> void:
 	if fresh_device:
 		wipe_files()
 	fb.account = account
@@ -301,7 +302,10 @@ func open_session(account: String, fresh_device: bool = true) -> void:
 	social.use_firebase(fb)
 	social.publish_delay = 0.3
 	social.request_timeout = 1.0
-	for n: Node in [eco, prog, upg, own, junkyard, save, cloud, social]:   # hurdalık kayıttan önce (oyundaki sıra)
+	var nodes: Array[Node] = [eco, prog, upg, own, junkyard, save, cloud, social]   # hurdalık kayıttan önce (oyundaki sıra)
+	if with_profile:
+		nodes.insert(nodes.find(save), PlayerProfile.new())
+	for n: Node in nodes:
 		root_node.add_child(n)
 	root.add_child(root_node)
 	cloud._fb = fb
@@ -315,6 +319,11 @@ func open_session(account: String, fresh_device: bool = true) -> void:
 	social.notice.connect(func(t: String) -> void: notices.append(t))
 	w = {"root": root_node, "eco": eco, "own": own, "save": save, "cloud": cloud, "social": social}
 	await frames(6)
+	if offline_start:
+		fb.online = false
+		cloud.sign_in()
+		await until(func() -> bool: return cloud.get_state() == CloudSaveManager.State.OFFLINE)
+		return
 	cloud.sign_in()
 	await until(func() -> bool: return cloud.get_state() == CloudSaveManager.State.SYNCED)
 	await until(func() -> bool: return social.get_state() not in [SocialManager.State.SIGNED_OUT, SocialManager.State.LOADING])
@@ -596,6 +605,53 @@ func _run() -> void:
 	check(await until(func() -> bool: return not fb.store.has("players/gina"), 8.0), "gina hesabını sildi")
 	check(not fb.store.has("invites/" + second), "hesap silinince bu cihazdaki davetler de silindi")
 	await close_session()
+
+	print("== 13) Hesap silme: oyun internetsiz açılmış, sosyal oturum hiç açılmamış ==")
+	var ivy_code: String = SaveSafe.s(garage_doc("ivy").get("code", ""))
+	await open_session("hank", false)
+	check(await social().send_request(ivy_code), "hank → ivy arkadaşlık isteği")
+	await close_session()
+	await open_session("ivy", true, true)   # yeni cihaz, internet yok
+	check(cloud().get_state() == CloudSaveManager.State.OFFLINE and social().get_state() == SocialManager.State.SIGNED_OUT,
+		"ivy: bulut çevrimdışı, sosyal oturum kapalı")
+	fb.online = true   # internet geldi, oturum henüz açılmadan HESABIMI SİL
+	cloud().delete_account()
+	check(await until(func() -> bool: return not fb.store.has("players/ivy"), 8.0), "ivy hesabını sildi")
+	var ivy_left: Array = fb.store.keys().filter(func(k: String) -> bool:
+		return k.contains("ivy") or k == "codes/" + ivy_code)
+	check(ivy_left.is_empty(), "oturum açılmadan da sosyal veriler silindi (garaj, kod, istek iki taraftan): %s" % [ivy_left])
+	await close_session()
+
+	print("== 14) Profil fotoğrafı: kaldırılınca sunucudan silinir, Google fotoğrafı varsayılan kapalı ==")
+	await open_session("jill", true, false, true)
+	check(await social().create_profile("Jill"), "jill profil")
+	var profile: PlayerProfile = get_first_node_in_group("player_profile") as PlayerProfile
+	check(profile != null and not profile.use_google, "Google fotoğrafı varsayılan kapalı (oyuncu açmadıkça avatar olmaz)")
+	var photo: Image = Image.create(256, 256, false, Image.FORMAT_RGB8)
+	photo.fill(Color(0.8, 0.3, 0.2))
+	check(profile.set_photo(photo), "jill fotoğraf koydu")
+	await social().publish_now()
+	check(fb.store.has("avatars/a_jill") and SaveSafe.s(garage_doc("jill").get("av", "")).begins_with("img:"),
+		"fotoğraf yüklendi, açık garajda img:")
+	var preset: String = ProfileCatalog.preset_ids()[0]
+	profile.set_preset(preset)
+	await social().publish_now()
+	check(not fb.store.has("avatars/a_jill") and garage_doc("jill").get("av") == preset,
+		"hazır avatara geçince eski fotoğraf sunucudan silindi")
+	check(profile.set_photo(photo), "yeniden fotoğraf")
+	await social().publish_now()
+	profile.set_auto()   # KALDIR: Google kapalı → kask
+	await social().publish_now()
+	check(not fb.store.has("avatars/a_jill") and SaveSafe.s(garage_doc("jill").get("av", "")) == "",
+		"KALDIR: fotoğraf sunucudan silindi, kask")
+	await close_session()
+	var legacy: PlayerProfile = PlayerProfile.new()
+	legacy.load_state({"use_google": true})
+	var old_default_off: bool = not legacy.use_google
+	legacy.load_state({"google_photo": true})
+	check(old_default_off and legacy.use_google and legacy.state().get("google_photo") == true,
+		"eski kayıttaki varsayılan 'açık' okunmaz; oyuncunun yeni seçimi saklanır")
+	legacy.free()
 
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
