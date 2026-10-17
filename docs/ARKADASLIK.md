@@ -160,7 +160,7 @@ Kullanıcı isteği: arkadaş kodu yazmak yerine link. A linki B'ye atar, B aç�
 1. A, ARKADAŞLAR → **DAVET LİNKİ GÖNDER**'e basar. `SocialManager.create_invite` şu belgeyi yazar:
    `invites/{jeton}` = {uid, name, code, at}. Jeton 12 karakter kriptografik rastgele (`SocialNames.random_token`).
    Ardından telefonun paylaşım penceresi açılır (`LinkShare`; PC'de link panoya kopyalanır).
-2. Paylaşılan link: `https://autoyardwebsite.vercel.app/d/<jeton>`. Web sitesindeki `davet.html` + `davet.js`
+2. Paylaşılan link: `https://autoyardgame.vercel.app/d/<jeton>`. Web sitesindeki `davet.html` + `davet.js`
    (`vercel.json`'daki `/d/:token` yönlendirmesi) Android'de `intent://davet/<jeton>#Intent;scheme=autoyard;…` ile oyunu
    açar. Oyun yüklü değilse sayfa `?yok` ile geri döner ve indirme düğmesi öne çıkar.
 3. Oyun linki `gameplay/social/invite_links.gd` ile okur: açılışta ve oyun her öne geldiğinde etkinliğin

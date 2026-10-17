@@ -409,7 +409,7 @@ func _build_about() -> void:
 			router.close_all()
 		director.restart())
 	box.add_child(_rule())
-	var info: Label = _caption(Loc.t("AUTO YARD  ·  SÜRÜM %s\nautoyardwebsite.vercel.app") % VERSION)
+	var info: Label = _caption(Loc.t("AUTO YARD  ·  SÜRÜM %s\n%s") % [VERSION, Loc.SITE_HOST])
 	box.add_child(info)
 
 

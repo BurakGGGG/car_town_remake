@@ -121,7 +121,7 @@
  "ASFALT": "ASPHALT",
  "ASFALT AVLU": "ASPHALTHOF",
  "ATÖLYE": "WERKSTATT",
- "AUTO YARD  ·  SÜRÜM %s\nautoyardwebsite.vercel.app": "AUTO YARD  ·  VERSION %s\nautoyardwebsite.vercel.app",
+ "AUTO YARD  ·  SÜRÜM %s\n%s": "AUTO YARD  ·  VERSION %s\n%s",
  "AUTO YARD  ·  v%s": "",
  "AUTOMOTIVE  ·  SHOWROOM": "AUTOMOBILE  ·  AUTOHAUS",
  "AVLU DÜZENİ": "HOF",

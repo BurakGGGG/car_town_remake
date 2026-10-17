@@ -121,7 +121,7 @@
  "ASFALT": "ASFALTO",
  "ASFALT AVLU": "PATIO DE ASFALTO",
  "ATÖLYE": "TALLER",
- "AUTO YARD  ·  SÜRÜM %s\nautoyardwebsite.vercel.app": "AUTO YARD  ·  VERSIÓN %s\nautoyardwebsite.vercel.app",
+ "AUTO YARD  ·  SÜRÜM %s\n%s": "AUTO YARD  ·  VERSIÓN %s\n%s",
  "AUTO YARD  ·  v%s": "",
  "AUTOMOTIVE  ·  SHOWROOM": "AUTOMOCIÓN  ·  EXPOSICIÓN",
  "AVLU DÜZENİ": "PATIO",

@@ -91,7 +91,9 @@ const PUSH: String = "push"
 ## sayfası (auto_yard_website /d/<jeton>) oyunu autoyard://davet/<jeton> ile açar; oyun yüklü değilse mağazaya yollar.
 const INVITES: String = "invites"
 const INVITE_TTL: int = 3600
-const INVITE_URL: String = "https://autoyardwebsite.vercel.app/d/"
+const INVITE_URL: String = "https://autoyardgame.vercel.app/d/"
+## Sitenin eski adresi (2026-10-17'ye kadar; Vercel yeni adrese yönlendirir): önceden paylaşılmış linkler de ayrışsın.
+const LEGACY_INVITE_URL: String = "https://autoyardwebsite.vercel.app/d/"
 ## Oyun açıkken yarış haberlerine bu aralıkla bakılır (tek liste okuması; telefon bildirimi ön planda görünmez).
 const NEWS_POLL: float = 120.0
 const AVATAR_CACHE_DIR: String = "user://avatars/"

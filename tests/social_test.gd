@@ -568,6 +568,7 @@ func _run() -> void:
 		"davet belgesi: kim, kod, ad")
 	check(InviteLinks.parse_token("autoyard://davet/" + token.to_lower()) == token
 		and InviteLinks.parse_token(SocialManager.INVITE_URL + token + "?yok") == token
+		and InviteLinks.parse_token(SocialManager.LEGACY_INVITE_URL + token) == token
 		and InviteLinks.parse_token("autoyard://davet/KISA") == "", "link biçimleri ayrışır, biçimsiz jeton reddedilir")
 	check((await social().read_invite(token)).get("status") == "self", "kendi linki: self")
 	await close_session()

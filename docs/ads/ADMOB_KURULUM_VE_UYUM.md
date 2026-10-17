@@ -50,7 +50,7 @@ bir hukukçuya gösterilmeli.
 
 ## 5. app-ads.txt
 
-Mağaza kaydındaki **geliştirici web sitesi** alanına `https://autoyardwebsite.vercel.app` girilmeli. AdMob → Uygulamalar → **app-ads.txt** sayfasında
+Mağaza kaydındaki **geliştirici web sitesi** alanına `https://autoyardgame.vercel.app` girilmeli (2026-10-17: eski autoyardwebsite.vercel.app adresi buraya yönlendirir). AdMob → Uygulamalar → **app-ads.txt** sayfasında
 verilen satır (`google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0`) sitenin `src/static/app-ads.txt` dosyasına yazılacak
 (yayın ID'yi aldıktan sonra; `vercel.app` alt alan adının AdMob tarafından kök alan adı olarak taranıp taranmadığı konsolda doğrulanmalı — ÖNCEDEN DOĞRULANMADI).
 

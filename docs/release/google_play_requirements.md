@@ -15,7 +15,7 @@ Kaynak: resmi Google sayfaları, bu oturumda çekildi.
 | İmza | Play App Signing; yükleme anahtarıyla imzalı AAB | ❌ gerçek yükleme anahtarı yok, AAB debug anahtarıyla imzalı |
 | Paket kimliği | Kalıcıdır, sonradan değişmez | `com.cartownBurak.app` — karar gerekli (P1) |
 | versionCode / Name | her yüklemede artan kod | 1 / 1.0.0 ✅ |
-| Hesap silme | Hesap oluşturulabiliyorsa uygulama içi silme yolu **+ web linki + Data safety beyanı** | uygulama içi: var (PROFİL → HESABIMI SİL, test 53 kontrol); web sayfası: ayrı repoda (autoyardwebsite.vercel.app) var; **gerçek telefonda Google yeniden doğrulama denenmedi**; Data safety formu konsolda doldurulmalı |
+| Hesap silme | Hesap oluşturulabiliyorsa uygulama içi silme yolu **+ web linki + Data safety beyanı** | uygulama içi: var (PROFİL → HESABIMI SİL, test 53 kontrol); web sayfası: ayrı repoda (autoyardgame.vercel.app) var; **gerçek telefonda Google yeniden doğrulama denenmedi**; Data safety formu konsolda doldurulmalı |
 | Mağaza metni | Ad ≤ 30, kısa açıklama ≤ 80, tam açıklama ≤ 4000 karakter | metinler yazılmamış/doğrulanmamış (ÖLÇÜLMEDİ) |
 | Kişisel geliştirici hesabı test şartı (kapalı test, tester sayısı/gün) | Resmi sayfadan **doğrulanamadı** (çekilen sayfa bu konuyu içermiyordu) | Play Console → Test ve yayınlama sayfasından kontrol edilmeli |
 | Gizlilik politikası | URL zorunlu | site repo'sunda /gizlilik var; konsola girilmeli |

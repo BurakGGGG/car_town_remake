@@ -1,6 +1,6 @@
 class_name InviteLinks
 extends Node
-## DAVET LİNKİ ALICISI (2026-10-17). Arkadaşın gönderdiği link (https://autoyardwebsite.vercel.app/d/<jeton>) web
+## DAVET LİNKİ ALICISI (2026-10-17). Arkadaşın gönderdiği link (https://autoyardgame.vercel.app/d/<jeton>) web
 ## sayfasında oyunu autoyard://davet/<jeton> ile açar (Android intent filtresi: addons/GodotFirebaseAndroid/
 ## export_plugin.gd). Bu düğüm açılışta ve oyun her öne geldiğinde etkinliğin intent verisine bakar — Godot'nun etkinliği
 ## (singleInstancePerTask) uygulama açıkken gelen yeni intent'i de getIntent()'e koyar —, jetonu ayıklar ve
@@ -33,7 +33,7 @@ func _notification(what: int) -> void:
 ## Linkten ya da metinden jeton (geçersizse boş): autoyard://davet/X, https://…/d/X ya da çıplak jeton.
 static func parse_token(text: String) -> String:
 	var token: String = text.strip_edges()
-	for prefix: String in [SCHEME, SocialManager.INVITE_URL]:
+	for prefix: String in [SCHEME, SocialManager.INVITE_URL, SocialManager.LEGACY_INVITE_URL]:
 		token = token.trim_prefix(prefix)
 	token = token.get_slice("?", 0).get_slice("#", 0).trim_suffix("/").to_upper()
 	return token if SocialNames.is_valid_token(token) else ""
