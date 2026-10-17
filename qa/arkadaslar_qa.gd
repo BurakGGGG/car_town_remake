@@ -3,6 +3,7 @@ extends SceneTree
 ## KODLA EKLE penceresi ve misafir durumu. Yalnızca vitrin kayıyor mu, başlık / ✕ yerinde mi; düğüm adları
 ## (Visit_ / Gift_ / Revenge_ / Person_) duruyor mu. Masaüstünde Firebase yok: oturum ve veri taklit edilir.
 ##   CT_NO_TUTORIAL=1 tools/qa_isolated.sh res://qa/arkadaslar_qa.gd --display-driver x11 --resolution 853x480
+##   Telefon tuvali: --resolution 1152x648 -- mobil  (853x480 tuval; 1440x648 → 1067x480)
 ## Kareler: /home/burak/Projects/ct_shots/arkadas/<genişlik>x<yükseklik>_*.png
 
 const OUT: String = "/home/burak/Projects/ct_shots/arkadas/"
@@ -26,6 +27,8 @@ func shot(file: String) -> void:
 
 
 func _initialize() -> void:
+	if OS.get_cmdline_user_args().has("mobil"):
+		get_root().content_scale_factor = 1.35   # telefon tuvali (pencere 1152x648 → 853x480; bkz. qa/ekran_tarama.gd)
 	DirAccess.make_dir_recursive_absolute(OUT)
 	_run.call_deferred()
 
@@ -40,8 +43,8 @@ func _person(uid: String, name: String, level: int, car: String) -> Dictionary:
 func _run() -> void:
 	change_scene_to_file("res://Main.tscn")
 	await create_timer(4.0).timeout
-	var size: Vector2i = root.get_window().size
-	prefix = "%dx%d_" % [size.x, size.y]
+	var canvas: Vector2 = root.get_visible_rect().size
+	prefix = "%dx%d_%s" % [roundi(canvas.x), roundi(canvas.y), "tuval_" if OS.get_cmdline_user_args().has("mobil") else ""]
 	var hud: Hud = root.get_node("World/HUD") as Hud
 	var router: UiRouter = hud.router
 	var screen: FriendsScreen = hud.friends_screen
@@ -90,6 +93,9 @@ func _run() -> void:
 	for card: Control in screen._cards.get_children():
 		tallest = maxf(tallest, card.get_combined_minimum_size().y)
 	check(tallest <= screen._scroll.size.y + 0.5, "en kalabalık kart vitrine sığıyor (%.0f / %.0f)" % [tallest, screen._scroll.size.y])
+	var window: Rect2 = Hud.screen_rect(screen.find_child("Window", true, false) as Control)
+	check(root.get_visible_rect().encloses(window), "pencere ekranda (%.0f x %.0f, alt %.0f / %.0f)" % [window.size.x,
+		window.size.y, window.end.y, root.get_visible_rect().size.y])
 	var avatar_y: Array[float] = []
 	var body_share: float = 1.0
 	for card: Control in screen._cards.get_children():

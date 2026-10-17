@@ -34,10 +34,18 @@ const CARD_WIDTH: float = 176.0
 const WIDE_CARD_WIDTH: float = 250.0
 const AVATAR_SIZE: float = 96.0
 const THUMB_SIZE: Vector2 = Vector2(160.0, 90.0)   # assets/cars/thumbs 176x110
+## KISA EKRAN (telefon tuvali 480 yükseklik; 2026-10-17 ölçümü: pencere 598 / 480, en kalabalık kart 460): avatar adın
+## soluna geçer, araç resmi küçülür, pencere payları daralır. Bütün pencereyi küçültmek yazıyı %75'e indirirdi.
+const COMPACT_HEIGHT: float = 600.0
+const COMPACT_AVATAR: float = 54.0
+const COMPACT_THUMB: Vector2 = Vector2(140.0, 60.0)
 const POPUP_WIDTH: float = 380.0
 
 var _social: SocialManager
 var _tab: Tab = Tab.FRIENDS
+var _compact: bool = false
+var _margin: MarginContainer
+var _rows: VBoxContainer
 var _window: PlatePanel
 var _tabs: Dictionary = {}               # Tab → PlateButton
 var _tab_group: ButtonGroup = ButtonGroup.new()
@@ -82,6 +90,7 @@ func open() -> void:
 		# İNTİKAM bekleyen haber varsa doğrudan oraya (HUD bildirimi "İNTİKAM İÇİN: ARKADAŞLAR" der)
 		_tab = Tab.NEWS if _social.is_ready() and not _social.race_events.is_empty() else Tab.FRIENDS
 	_scroll.scroll_horizontal = 0
+	_apply_compact()
 	_refresh()
 	if visible:
 		return
@@ -123,6 +132,7 @@ func _build() -> void:
 	for side: String in ["top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 14)
 	add_child(margin)
+	_margin = margin
 	_window = PlatePanel.new()
 	_window.name = "Window"
 	_window.theme_type_variation = &"HudCarPlate"
@@ -131,6 +141,7 @@ func _build() -> void:
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rows.add_theme_constant_override(&"separation", 8)
 	_window.add_child(rows)
+	_rows = rows
 
 	# Başlık: ad · sekmeler · yenile · kapat (kaymaz)
 	var header: HBoxContainer = _hbox(10)
@@ -193,6 +204,14 @@ func _build() -> void:
 	TouchScroll.attach(_scroll)
 
 	_build_popup()
+
+
+## Kısa ekranda sıkı düzen (açılışta; kartlar _refresh'te buna göre kurulur).
+func _apply_compact() -> void:
+	_compact = get_viewport_rect().size.y < COMPACT_HEIGHT
+	for side: String in ["top", "bottom"]:
+		_margin.add_theme_constant_override("margin_" + side, 6 if _compact else 14)
+	_rows.add_theme_constant_override(&"separation", 5 if _compact else 8)
 
 
 ## KODLA EKLE: senin kodun · arkadaşının kodu · takma adın (ekranın içinde, kendi karartmasıyla).
@@ -379,13 +398,16 @@ func _friend_card(entry: Dictionary, busy: bool) -> PanelContainer:
 	inner.add_child(_spacer(true))
 	var asked: String = SaveSafe.s(entry.get("ask_part", ""))
 	if not featured and not asked.is_empty():
-		var wish: Label = _centered(&"HudInkCaption", Loc.t("%s İSTİYOR") % RestorationCatalog.part_name(StringName(asked)))
-		wish.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
-		inner.add_child(wish)
+		var part: String = Loc.t(RestorationCatalog.part_name(StringName(asked)))
 		if _social and _social.can_gift(uid):
-			var gift: PlateButton = _button(Loc.t("GÖNDER"), func() -> void: _social.send_gift(uid), true, busy)
+			# İstek + düğme tek satır ("CIVATA GÖNDER"): kısa ekranda kartın en kalabalık hali buydu
+			var gift: PlateButton = _button(Loc.t("%s GÖNDER") % part, func() -> void: _social.send_gift(uid), true, busy)
 			gift.name = "Gift_" + uid
 			box.add_child(gift)
+		else:
+			var wish: Label = _centered(&"HudInkCaption", Loc.t("%s İSTİYOR") % part)
+			wish.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
+			inner.add_child(wish)
 	var go: PlateButton = _button(Loc.t("GARAJA GİT"), func() -> void: _on_visit_pressed(uid), true, busy)
 	go.name = "Visit_" + uid
 	box.add_child(go)
@@ -663,13 +685,31 @@ func _body(uid: String) -> Button:
 ## Kişi: avatar (+ bayrak), ad, alt yazı.
 func _add_person(box: VBoxContainer, entry: Dictionary, caption: String) -> void:
 	var avatar: AvatarView = AvatarView.new()
-	avatar.custom_minimum_size = Vector2(AVATAR_SIZE, AVATAR_SIZE)
+	var diameter: float = COMPACT_AVATAR if _compact else AVATAR_SIZE
+	avatar.custom_minimum_size = Vector2(diameter, diameter)
 	avatar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var art: Dictionary = ProfileCard.avatar_for(get_tree(), entry)
 	avatar.show_avatar(art.get("texture"), bool(art.get("illustrated", true)), SaveSafe.s(entry.get("frame", "")),
 		SaveSafe.s(entry.get("flag", "")))
-	box.add_child(avatar)
+	var align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_CENTER
+	if _compact:
+		# Kısa ekran: avatar solda, ad + alt yazı sağında (alt alta dizilince kart 70 birim uzuyordu)
+		var person_row: HBoxContainer = _hbox(6)
+		box.add_child(person_row)
+		avatar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		person_row.add_child(avatar)
+		var column: VBoxContainer = VBoxContainer.new()
+		column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		column.add_theme_constant_override(&"separation", 0)
+		person_row.add_child(column)
+		box = column
+		align = HORIZONTAL_ALIGNMENT_LEFT
+	else:
+		box.add_child(avatar)
 	var name_label: Label = _centered(&"HudPlateTitle", SaveSafe.s(entry.get("name", "")))
+	name_label.horizontal_alignment = align
 	name_label.clip_text = true
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	box.add_child(name_label)
@@ -677,13 +717,15 @@ func _add_person(box: VBoxContainer, entry: Dictionary, caption: String) -> void
 		return
 	var likes: int = SaveSafe.i((entry.get("stats", {}) as Dictionary).get("likes", 0)) if entry.get("stats") is Dictionary else 0
 	if likes <= 0:
-		box.add_child(_centered(&"HudInkCaption", caption))
+		var caption_label: Label = _centered(&"HudInkCaption", caption)
+		caption_label.horizontal_alignment = align
+		box.add_child(caption_label)
 		return
 	# GARAJIN BEĞENİSİ (OTO MANŞET): seviyenin yanında kalp + sayı — kart boyu değişmez (vitrin 16:9'da zaten dar)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.name = "Likes"
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.alignment = BoxContainer.ALIGNMENT_BEGIN if _compact else BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override(&"separation", 3)
 	row.add_child(_label(&"HudInkCaption", caption + "  ·"))
 	var heart: HudIcon = HudIcon.new()
@@ -767,7 +809,7 @@ func _stats(entry: Dictionary) -> PanelContainer:
 ## Vitrin aracının küçük resmi (assets/cars/thumbs); seçilmemişse aynı boyda boşluk (kartlar hizalı kalsın).
 func _thumb(car_id: String) -> TextureRect:
 	var thumb: TextureRect = TextureRect.new()
-	thumb.custom_minimum_size = THUMB_SIZE
+	thumb.custom_minimum_size = COMPACT_THUMB if _compact else THUMB_SIZE
 	thumb.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

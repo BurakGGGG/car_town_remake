@@ -102,8 +102,9 @@ const AVATAR_BUTTON_SIZE: float = 76.0
 const LEVEL_BADGE_SIZE: float = 26.0
 const LEVEL_BADGE_OVERHANG: float = 8.0
 const LEVEL_BADGE_FONT: int = 12
-## Bu panolar açıkken sol üst HUD gizlenir (geniş düzenleme panosu ona yer açarken sağdan taşıyordu; gazete tam sayfa).
-const HUD_FREE_SCREENS: Array[StringName] = [&"profile_edit", &"avatar_crop", &"avatar_camera", &"news"]
+## Bu panolar açıkken sol üst HUD gizlenir (geniş düzenleme panosu ona yer açarken sağdan taşıyordu; gazete tam sayfa;
+## arkadaş kartı 853 birimlik telefonda bloğun sağına itilince 47 birim taşıyordu — ekran taraması 2026-10-17).
+const HUD_FREE_SCREENS: Array[StringName] = [&"profile_edit", &"avatar_crop", &"avatar_camera", &"news", &"friend_card"]
 var _top_left_hidden_for_edit: bool = false
 var friend_card_screen: FriendCardScreen
 var profile_edit_screen: ProfileEditScreen

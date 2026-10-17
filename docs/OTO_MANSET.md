@@ -111,10 +111,14 @@ kartında; beğenisiz ziyaret de haber olur.
 - **Kural:** `firestore.rules` users/{uid}/visits (yalnız arkadaş, kendi adına, day == sunucu günü, liked bool, ek alan
   yok; sahip okur / siler, ziyaretçi kendi belgesini siler) + isValidStats'a isteğe bağlı `likes` (int ≥ 0). Emülatör
   testi `firebase/rules_test` (17 yeni kontrol). Hesap silme gelen ziyaretleri ve arkadaşlara yazdıklarımı da siler.
+  2026-10-17 kullanıcı onayıyla car-town-remake'e YÜKLENDİ.
 - **Test / QA:** news_sources_test §4b (sahte sunucu: sayma, günde bir, bildirim, gönderme, ustalar), qa/begeni_qa.gd.
 
 ## Bilinen / açık
 
 - Davetle eklenen arkadaş "yeni arkadaş" haberi olarak çıkar (ayrı "davet linkinle" ayrımı yok).
 - Araç fotoğrafı fabrika renginde (boyalı değil).
-- Önceden kalan: ekran taramasında 16:9 telefonda ARKADAŞLAR penceresi 38, arkadaş kartı 47 birim taşıyor.
+- 2026-10-17 düzeltildi (önceden kalan taşma): telefon tuvalinde (480 yükseklik) ARKADAŞLAR penceresi 598 birimdi →
+  kısa ekranda sıkı kart (FriendsScreen.COMPACT_*: avatar adın solunda 54, araç 140x60, dar paylar; istek + GÖNDER tek
+  düğme "CIVATA GÖNDER") → 468. Arkadaş kartı sol üst bloğun sağına itiliyordu → HUD_FREE_SCREENS'e friend_card.
+  Ekran taraması 7 profil 0 sorun; qa/arkadaslar_qa.gd "-- mobil" ile telefon tuvalinde ölçer.
