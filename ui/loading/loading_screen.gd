@@ -10,6 +10,10 @@ extends CanvasLayer
 ## ön ısıtılır — bkz. docs/OPTIMIZASYON_2026_10.md); o süre boyunca ekran üstte kalır, birkaç kare
 ## oturunca söner. Böylece arada siyah ekran ya da yarıda donmuş oyun görünmez.
 ##
+## İLK AÇILIŞ: çubuk dolunca ekran sönmez; çubuk ve ipucu söner, yerine hesap seçenekleri gelir
+## (LoginGate — FACEBOOK / GOOGLE / E-POSTA / misafir). Seçim yapılınca ekran söner. Ekran kökte durdukça
+## oyunun açılış akışları (ders, gazete, kasa hatırlatması) bekler.
+##
 ## Arka plan görseli: LOADING_IMAGE (2400×1080, önemli içerik ortadaki 1920×1080'de, alttaki ~200
 ## piksel sakin — çubuk ve yazı orada). Dosya yoksa koyu düz zemin. Aynı görsel motorun açılış
 ## ekranına da (application/boot_splash/image) verilir: dokunuştan oyuna tek, kesintisiz ekran.
@@ -28,6 +32,9 @@ const TIP_INTERVAL: float = 3.4
 ## Main eklendikten sonra ekranın üstte kaldığı kare sayısı (ilk ağır kareler).
 const SETTLE_FRAMES: int = 5
 const FADE_TIME: float = 0.35
+## Çubuk %100'de bu kadar durur, sonra giriş seçeneklerine yer açmak için söner (sn).
+const GATE_HOLD: float = 0.2
+const GATE_SWAP_TIME: float = 0.25
 
 ## Oyun yüklenirken gösterilen ipuçları (Türkçe = çeviri anahtarı). Oyunun gerçek kurallarıyla
 ## uyumlu olmalı: kural değişirse buradaki metin de değişir.
@@ -49,6 +56,7 @@ var _status: Label
 var _percent: Label
 var _tip: Label
 var _root: Control
+var _bottom: MarginContainer
 var _shown: float = 0.0
 var _elapsed: float = 0.0
 var _tip_timer: float = 0.0
@@ -130,9 +138,27 @@ func _finish_step() -> void:
 		return
 	_settle = -1
 	_show(1.0, 1.0)
+	if LoginGate.wanted(get_tree()):
+		_open_login_gate()
+		return
+	_fade_out()
+
+
+func _fade_out() -> void:
 	var tween: Tween = create_tween()
 	tween.tween_property(_root, "modulate:a", 0.0, FADE_TIME)
 	tween.tween_callback(queue_free)
+
+
+## İlk açılış: dolu çubuk ve ipucu söner, yerlerine giriş seçenekleri gelir; seçimden sonra ekran söner.
+func _open_login_gate() -> void:
+	set_process(false)
+	var tween: Tween = create_tween()
+	tween.tween_interval(GATE_HOLD)
+	tween.tween_property(_bottom, "modulate:a", 0.0, GATE_SWAP_TIME)
+	var gate: LoginGate = LoginGate.new()
+	gate.finished.connect(_fade_out)
+	_root.add_child(gate)
 
 
 func _show(value: float, delta: float) -> void:
@@ -187,18 +213,18 @@ func _build() -> void:
 		_root.add_child(art)
 
 	# Alt şerit: ipucu, çubuk + durum / yüzde
-	var bottom: MarginContainer = MarginContainer.new()
-	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bottom.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	bottom.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_bottom = MarginContainer.new()
+	_bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bottom.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	_bottom.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	for side: String in ["left", "right"]:
-		bottom.add_theme_constant_override("margin_" + side, 90)
-	bottom.add_theme_constant_override(&"margin_bottom", 34)
-	_root.add_child(bottom)
+		_bottom.add_theme_constant_override("margin_" + side, 90)
+	_bottom.add_theme_constant_override(&"margin_bottom", 34)
+	_root.add_child(_bottom)
 	var column: VBoxContainer = VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_theme_constant_override(&"separation", 12)
-	bottom.add_child(column)
+	_bottom.add_child(column)
 
 	_tip = _label(&"HudOutlinedLarge", Loc.t(TIPS[0]))
 	_tip.add_theme_font_size_override(&"font_size", 19)

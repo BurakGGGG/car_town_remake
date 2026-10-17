@@ -850,7 +850,7 @@ func _drop_unused_avatar() -> void:
 func ask_part(part_id: StringName) -> bool:
 	var jy: JunkyardManager = _junkyard()
 	if not is_ready() or jy == null:
-		notice.emit(Loc.t("Arkadaşlarından istemek için Google hesabınla giriş yap."))
+		notice.emit(Loc.t("Arkadaşlarından istemek için hesabınla giriş yap."))
 		return false
 	if friends.is_empty():
 		notice.emit(Loc.t("Önce ARKADAŞLAR'dan bir arkadaş ekle."))

@@ -2,8 +2,11 @@ extends SceneTree
 ## Giriş / çıkış / hesap değiştirme testi — sahte Firebase ile, PC'de, izole user:// klasöründe.
 ## Çalıştırma: tools/run_tests.sh login_flow_test
 ##
-## Sahte Firebase gerçek Firebase'in "son giriş" kuralını uygular: Google girişinin üzerinden zaman
+## Sahte Firebase gerçek Firebase'in "son giriş" kuralını uygular: girişin üzerinden zaman
 ## geçtiyse (fresh = false) deleteUser başarısız olur. Silme akışı önce girişi tazelemezse test düşer.
+## Facebook girişi ve HESAP BAĞLAMA da sahtelenir (Firebase "e-posta başına tek hesap"): aynı e-postalı
+## Facebook girişi Google hesabına bağlanır, PLAYER ekranından elle bağlama, başka hesaba bağlı kimlik,
+## e-postası farklı hesap, silmede hesabın KENDİ yoluyla tazelenmesi, uygulama kimliği yokken "hazır değil".
 
 class FakeFB extends Object:
 	signal auth_success(d: Dictionary)
@@ -13,10 +16,13 @@ class FakeFB extends Object:
 	signal firestore_get_task_completed(r: Dictionary)
 	signal firestore_write_task_completed(r: Dictionary)
 	signal firestore_delete_task_completed(r: Dictionary)
+	signal account_link_success(d: Dictionary)
+	signal account_link_failure(m: String)
 
 	var user: Dictionary = {}
 	var account: String = "alice"          # hesap seçicide seçilecek Google hesabı
-	var linked: Dictionary = {}            # google hesabı -> uid (silinen hesap buradan çıkar)
+	var linked: Dictionary = {}            # giriş kimliği -> uid: Google "hesap", Facebook "fb:hesap" (silinen hesap çıkar)
+	var uid_emails: Dictionary = {}        # uid -> hesabın e-postası (Firebase "e-posta başına tek hesap")
 	var docs: Dictionary = {}              # uid -> doküman
 	var online: bool = true
 	var fresh: bool = false                # son giriş yeni mi (Firebase recent-login kuralı)
@@ -26,6 +32,14 @@ class FakeFB extends Object:
 	var deletes: int = 0
 	var anon_counter: int = 0              # signInAnonymously ÇAĞRILMAMALI (misafir = oturumsuz)
 	var uid_counter: int = 0
+	var fb_account: String = "fiona"       # Facebook onayında seçilecek hesap
+	var fb_emails: Dictionary = {}         # Facebook hesabı -> e-posta (yoksa <hesap>@example.com)
+	var fb_cancel_next: bool = false
+	var fb_configured: bool = true         # false: manifest'te Facebook uygulama kimliği yok
+	var pending: Dictionary = {}           # e-posta çakışmasında bekletilen kimlik {key, email}
+	var google_calls: int = 0
+	var facebook_calls: int = 0
+	var rule_denials: int = 0              # kurallara uymayan yazma (profilde fazladan alan vb.)
 
 	func isSignedIn() -> bool:
 		return not user.is_empty()
@@ -39,22 +53,103 @@ class FakeFB extends Object:
 		call_deferred("emit_signal", "auth_success", user.duplicate())
 
 	func signInWithGoogle() -> void:
+		google_calls += 1
 		if cancel_next:
 			cancel_next = false
 			call_deferred("emit_signal", "auth_failure", "16: Cancelled by user.")
 			return
-		if not linked.has(account):
+		_sign_in(account, account + "@gmail.com", "g_%s")
+
+	func signInWithFacebook() -> void:
+		facebook_calls += 1
+		if not fb_configured:
+			call_deferred("emit_signal", "auth_failure", "Facebook login not configured")
+			return
+		if fb_cancel_next:
+			fb_cancel_next = false
+			call_deferred("emit_signal", "auth_failure", "Facebook login cancelled")
+			return
+		_sign_in("fb:" + fb_account, _fb_email(), "f_%s")
+
+	## Kimlik bağlıysa o hesaba girer; değilse e-posta başka hesabınsa ÇAKIŞMA (kimlik bekletilir), yoksa yeni hesap.
+	func _sign_in(key: String, email: String, uid_format: String) -> void:
+		if not linked.has(key):
+			var owner: String = _uid_of_email(email)
+			if not owner.is_empty():
+				pending = {"key": key, "email": email}
+				call_deferred("emit_signal", "auth_failure", "ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL: An account already exists with the same email address but different sign-in credentials.")
+				return
 			uid_counter += 1
-			linked[account] = "g_%s_%d" % [account, uid_counter]
-		_google_user(linked[account])
+			var uid: String = (uid_format % key.trim_prefix("fb:")) + "_%d" % uid_counter
+			linked[key] = uid
+			uid_emails[uid] = email
+		fresh = true
+		_set_user(linked[key])
 		call_deferred("emit_signal", "auth_success", user.duplicate())
 
-	func _google_user(uid: String) -> void:
-		fresh = true
-		user = {"uid": uid, "isAnonymous": false, "name": account.capitalize(), "email": account + "@gmail.com", "photoUrl": null}
+	func _fb_email() -> String:
+		return String(fb_emails.get(fb_account, fb_account + "@example.com"))
+
+	func _uid_of_email(email: String) -> String:
+		for uid: String in uid_emails:
+			if uid_emails[uid] == email:
+				return uid
+		return ""
+
+	## Kullanıcı sözlüğü: plugin getCurrentUser gibi "provider" (ilk yol) + "providers" (virgüllü).
+	func _set_user(uid: String) -> void:
+		var providers: PackedStringArray = PackedStringArray()
+		for key: String in linked:
+			if linked[key] == uid:
+				providers.append("facebook.com" if key.begins_with("fb:") else "google.com")
+		var email: String = String(uid_emails.get(uid, ""))
+		user = {"uid": uid, "isAnonymous": false, "name": email.get_slice("@", 0).capitalize(), "email": email,
+			"photoUrl": null, "provider": providers[0] if not providers.is_empty() else "", "providers": ",".join(providers)}
+
+	func linkGoogle() -> void:
+		if cancel_next:
+			cancel_next = false
+			call_deferred("emit_signal", "account_link_failure", "12501: ")
+			return
+		_link(account, account + "@gmail.com")
+
+	func linkFacebook() -> void:
+		if fb_cancel_next:
+			fb_cancel_next = false
+			call_deferred("emit_signal", "account_link_failure", "Facebook login cancelled")
+			return
+		_link("fb:" + fb_account, _fb_email())
+
+	func linkPendingCredential() -> void:
+		var p: Dictionary = pending
+		pending = {}
+		if p.is_empty() or user.is_empty():
+			call_deferred("emit_signal", "account_link_failure", "No pending credential")
+		elif String(p["email"]) != String(uid_emails.get(user["uid"], "")):
+			call_deferred("emit_signal", "account_link_failure", "ERROR_EMAIL_MISMATCH: signed-in account email differs")
+		else:
+			_link(p["key"], p["email"])
+
+	func clearPendingCredential() -> void:
+		pending = {}
+
+	## Firebase linkWithCredential: kimlik başka hesaba bağlıysa / e-postası başka hesabınsa reddeder.
+	func _link(key: String, email: String) -> void:
+		var uid: String = user.get("uid", "")
+		if linked.has(key) and linked[key] != uid:
+			call_deferred("emit_signal", "account_link_failure", "ERROR_CREDENTIAL_ALREADY_IN_USE: This credential is already associated with a different user account.")
+			return
+		var owner: String = _uid_of_email(email)
+		if not owner.is_empty() and owner != uid:
+			call_deferred("emit_signal", "account_link_failure", "ERROR_EMAIL_ALREADY_IN_USE: The email address is already in use by another account.")
+			return
+		linked[key] = uid
+		_set_user(uid)
+		call_deferred("emit_signal", "account_link_success", user.duplicate())
 
 	func signOut() -> void:
 		user = {}
+		pending = {}
 		call_deferred("emit_signal", "sign_out_success", true)
 
 	func deleteUser() -> void:
@@ -65,6 +160,7 @@ class FakeFB extends Object:
 		for g: String in linked.keys():
 			if linked[g] == user["uid"]:
 				linked.erase(g)
+		uid_emails.erase(user["uid"])
 		user = {}
 		call_deferred("emit_signal", "user_deleted", true)
 
@@ -79,6 +175,13 @@ class FakeFB extends Object:
 		call_deferred("emit_signal", "firestore_get_task_completed", r)
 
 	func firestoreSetDocument(_c: String, id: String, data: Dictionary, _merge: bool) -> void:
+		# firestore.rules isValidPlayer / isValidProfile: fazladan alan → PERMISSION_DENIED
+		var profile: Variant = data.get("profile", {})
+		if not data.keys().all(func(k: String) -> bool: return k in ["profile", "save_version", "save_json", "updated_at"]) \
+				or not (profile is Dictionary and (profile as Dictionary).keys().all(func(k: String) -> bool: return k in ["display_name", "email", "photo_url"])):
+			rule_denials += 1
+			call_deferred("emit_signal", "firestore_write_task_completed", {"status": false, "docID": id, "error": "PERMISSION_DENIED: Missing or insufficient permissions."})
+			return
 		if not online:
 			call_deferred("emit_signal", "firestore_write_task_completed", {"status": false, "docID": id, "error": "offline"})
 			return
@@ -99,6 +202,7 @@ const SIGNALS: Array[StringName] = [
 	&"auth_success", &"auth_failure",
 	&"sign_out_success", &"user_deleted", &"firestore_get_task_completed",
 	&"firestore_write_task_completed", &"firestore_delete_task_completed",
+	&"account_link_success", &"account_link_failure",
 ]
 
 var fb: FakeFB = FakeFB.new()
@@ -153,6 +257,8 @@ func make_world() -> void:
 	fb.firestore_get_task_completed.connect(cloud._on_get_completed)
 	fb.firestore_write_task_completed.connect(cloud._on_write_completed)
 	fb.firestore_delete_task_completed.connect(cloud._on_delete_completed)
+	fb.account_link_success.connect(cloud._on_link_success)
+	fb.account_link_failure.connect(cloud._on_link_failure)
 	cloud.account_deleted.connect(func(ok: bool) -> void: deleted_results.append(ok))
 	cloud.notice.connect(func(t: String) -> void: notices.append(t))
 	w = {"root": root_node, "eco": eco, "prog": prog, "own": own, "crates": crates, "save": save, "cloud": cloud}
@@ -373,6 +479,163 @@ func _run() -> void:
 	check(int(get_json("savegame.before_signout.json").get("economy", {}).get("money", -1)) == 1004, "yerel ilerleme yedeklendi (1004)")
 	await close_app()
 
+	print("Facebook: yapılandırılmamış / vazgeçme")
+	wipe_files()
+	await make_world()
+	notices.clear()
+	fb.fb_configured = false
+	cloud().sign_in_facebook()
+	await frames(6)
+	check(cloud().get_state() == CloudSaveManager.State.SIGNED_OUT and notices == PackedStringArray([Loc.t("Facebook girişi henüz hazır değil")]),
+		"uygulama kimliği yok → SIGNED_OUT, \"hazır değil\": %s" % ", ".join(notices))
+	fb.fb_configured = true
+	notices.clear()
+	fb.fb_cancel_next = true
+	cloud().sign_in_facebook()
+	await frames(6)
+	check(cloud().get_state() == CloudSaveManager.State.SIGNED_OUT and notices.is_empty(), "Facebook'tan vazgeçme: SIGNED_OUT, mesaj yok")
+
+	print("Aynı e-posta: Facebook girişi Google hesabına bağlanır (ilerleme Google hesabınınki)")
+	fb.account = "hank"
+	eco().set_money(7100)
+	own().add_vehicle(&"hyundai_getz")
+	(w["save"] as SaveManager).save_game()
+	cloud().sign_in()
+	await frames(10)
+	var hank: String = cloud().get_uid()
+	check(hank.begins_with("g_hank") and String(fb.docs[hank]["save_json"]).contains("7100"), "Hank Google'la girdi, 7100 bulutta")
+	cloud().sign_out()
+	await frames(8)
+	check(eco().money == 5000, "çıkış: cihaz misafir (5000)")
+	fb.fb_account = "hankfb"
+	fb.fb_emails["hankfb"] = "hank@gmail.com"
+	notices.clear()
+	var google_before: int = fb.google_calls
+	cloud().sign_in_facebook()
+	await frames(14)
+	check(fb.google_calls == google_before + 1, "çakışmada Google seçicisi kendiliğinden açıldı")
+	check(notices.size() >= 1 and notices[0].contains("Google"), "oyuncuya neden Google açıldığı söylendi: %s" % notices[0] if not notices.is_empty() else "-")
+	check(cloud().get_uid() == hank and cloud().get_state() == CloudSaveManager.State.SYNCED, "aynı hesap (Hank), SYNCED")
+	check(Array(cloud().get_providers()) == ["google.com", "facebook.com"], "hesapta iki yol: %s" % ", ".join(cloud().get_providers()))
+	check(eco().money == 7100, "Google hesabındaki ilerleme geldi (7100)")
+	check(notices[notices.size() - 1].contains(Loc.t("Artık iki yolla da aynı hesaba girebilirsin.")), "\"bağlandı\" denildi")
+	cloud().sign_out()
+	await frames(8)
+	google_before = fb.google_calls
+	cloud().sign_in_facebook()
+	await frames(10)
+	check(cloud().get_uid() == hank and fb.google_calls == google_before and eco().money == 7100,
+		"sonraki Facebook girişi doğrudan Hank'in hesabına, Google sorulmadan")
+	check(cloud().get_provider() == CloudSaveManager.PROVIDER_FACEBOOK, "bu cihazda giriş yolu Facebook (silmede Facebook'la doğrulanır)")
+	cloud().sign_out()
+	await frames(8)
+
+	print("Aynı e-posta ama Google seçicisinde BAŞKA hesap seçildi → bağlanmaz, o hesapla girilir")
+	fb.account = "ivy"
+	cloud().sign_in()
+	await frames(10)
+	cloud().sign_out()
+	await frames(8)
+	fb.fb_account = "ivyfb"
+	fb.fb_emails["ivyfb"] = "ivy@gmail.com"
+	fb.account = "jack"
+	notices.clear()
+	cloud().sign_in_facebook()
+	await frames(14)
+	check(cloud().get_uid().begins_with("g_jack") and Array(cloud().get_providers()) == ["google.com"], "Jack'in hesabıyla girildi, Facebook bağlanmadı")
+	check(notices.size() == 2 and notices[1].contains("Facebook"), "e-posta farklı denildi: %s" % ", ".join(notices))
+	check(fb.pending.is_empty(), "bekleyen kimlik bırakıldı")
+	cloud().sign_out()
+	await frames(8)
+
+	print("Çakışmadan sonra Google seçicisinden de vazgeçildi")
+	fb.cancel_next = true
+	notices.clear()
+	cloud().sign_in_facebook()
+	await frames(10)
+	check(cloud().get_state() == CloudSaveManager.State.SIGNED_OUT and not cloud().is_authenticated(), "SIGNED_OUT")
+	check(fb.pending.is_empty() and cloud()._pending_link_provider.is_empty(), "bekleyen kimlik temizlendi")
+
+	print("PLAYER ekranından elle bağlama: Google hesabına Facebook")
+	fb.account = "kate"
+	cloud().sign_in()
+	await frames(10)
+	var kate: String = cloud().get_uid()
+	check(cloud().can_link(CloudSaveManager.PROVIDER_FACEBOOK) and not cloud().can_link(CloudSaveManager.PROVIDER_GOOGLE),
+		"Facebook bağlanabilir, Google zaten bağlı")
+	fb.fb_account = "katefb"
+	fb.fb_cancel_next = true
+	notices.clear()
+	cloud().link_provider(CloudSaveManager.PROVIDER_FACEBOOK)
+	await frames(6)
+	check(not cloud().is_linking() and notices.is_empty() and Array(cloud().get_providers()) == ["google.com"], "vazgeçme: mesaj yok, bağlanmadı")
+	cloud().link_provider(CloudSaveManager.PROVIDER_FACEBOOK)
+	check(cloud().is_linking(), "bağlama sürüyor")
+	await frames(6)
+	check(not cloud().is_linking() and Array(cloud().get_providers()) == ["google.com", "facebook.com"] and cloud().get_uid() == kate,
+		"Facebook bağlandı, aynı hesap")
+	check(not cloud().can_link(CloudSaveManager.PROVIDER_FACEBOOK), "artık bağlanacak yol yok")
+	eco().set_money(6200)
+	await seconds(2.2)
+	check(String(fb.docs[kate]["save_json"]).contains("6200"), "bağlamadan sonra kayıt buluta yazılmaya devam ediyor")
+	cloud().sign_out()
+	await frames(8)
+	cloud().sign_in_facebook()
+	await frames(10)
+	check(cloud().get_uid() == kate and eco().money == 6200, "Facebook'la Kate'in hesabına girildi (6200)")
+	cloud().sign_out()
+	await frames(8)
+
+	print("Elle bağlama: Facebook hesabı başka oyun hesabına bağlı → bağlanmaz")
+	fb.account = "liam"
+	cloud().sign_in()
+	await frames(10)
+	notices.clear()
+	cloud().link_provider(CloudSaveManager.PROVIDER_FACEBOOK)   # katefb Kate'e bağlı
+	await frames(6)
+	check(Array(cloud().get_providers()) == ["google.com"] and notices.size() == 1 and notices[0].contains("başka bir oyun hesabına bağlı"),
+		"başka hesaba bağlı denildi: %s" % ", ".join(notices))
+	check(cloud().get_state() == CloudSaveManager.State.SYNCED and not cloud().is_linking(), "oturum ve senkron etkilenmedi")
+	cloud().sign_out()
+	await frames(8)
+
+	print("Facebook ile açılan hesap: giriş, ilerleme buluta, hesap Facebook'la silinir")
+	fb.fb_account = "fiona"
+	eco().set_money(4321)
+	own().add_vehicle(&"hyundai_getz")
+	(w["save"] as SaveManager).save_game()
+	cloud().sign_in_facebook()
+	await frames(10)
+	var fiona: String = cloud().get_uid()
+	check(fiona.begins_with("f_") and cloud().get_state() == CloudSaveManager.State.SYNCED, "Facebook hesabı SYNCED")
+	check(cloud().get_provider() == CloudSaveManager.PROVIDER_FACEBOOK and cloud().get_profile().get("provider") == "facebook.com",
+		"sağlayıcı facebook.com")
+	check(fb.docs.has(fiona) and String(fb.docs[fiona]["save_json"]).contains("4321"), "misafir ilerlemesi Facebook hesabına yazıldı")
+	fb.fresh = false
+	google_before = fb.google_calls
+	var facebook_before: int = fb.facebook_calls
+	deleted_results.clear()
+	cloud().delete_account()
+	await frames(14)
+	check(fb.facebook_calls == facebook_before + 1 and fb.google_calls == google_before,
+		"silmeden önce giriş FACEBOOK ile tazelendi (Google açılmadı)")
+	check(deleted_results == [true] and not fb.docs.has(fiona) and fb.user.is_empty(), "Facebook hesabı ve bulut kaydı silindi")
+
+	print("İki yolu bağlı hesap Google'la girilmişse silmede Google'la doğrulanır")
+	fb.account = "kate"
+	cloud().sign_in()
+	await frames(10)
+	fb.fresh = false
+	google_before = fb.google_calls
+	facebook_before = fb.facebook_calls
+	deleted_results.clear()
+	cloud().delete_account()
+	await frames(14)
+	check(fb.google_calls == google_before + 1 and fb.facebook_calls == facebook_before, "bu cihazdaki giriş yolu (Google) ile tazelendi")
+	check(deleted_results == [true] and not fb.linked.has("fb:katefb") and not fb.linked.has("kate"), "hesap ve iki giriş yolu silindi")
+	await close_app()
+
+	check(fb.rule_denials == 0, "hiçbir yazma Firestore kuralına takılmadı (profilde yalnız izinli alanlar)")
 	print("RESULT fails=%d" % fails)
 	fb.free()
 	quit(1 if fails > 0 else 0)

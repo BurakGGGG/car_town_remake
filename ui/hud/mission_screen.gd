@@ -268,8 +268,8 @@ func _on_claim_all() -> void:
 ## Gövde ekrandan uzunsa kaydırma alanı, sabit parçalar (başlık, sekmeler, alt düğmeler) düştükten
 ## sonra kalan yüksekliğe kısılır: KAPAT hep görünür kalır.
 func _fit_body() -> void:
-	if _body_scroll == null or _sign == null:
-		return
+	if _body_scroll == null or _sign == null or not is_inside_tree():
+		return   # dünya yenilenirken (giriş / çıkış / hesap silme) ertelenmiş çağrı ağaçtan çıkmış ekrana gelebilir
 	var separation: float = float(_column.get_theme_constant(&"separation"))
 	var fixed: float = _sign.get_combined_minimum_size().y + _tab_row.get_combined_minimum_size().y \
 			+ _footer.get_combined_minimum_size().y + separation * 3.0 + 12.0

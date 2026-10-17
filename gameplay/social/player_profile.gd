@@ -404,6 +404,8 @@ func _on_user_changed(profile: Dictionary) -> void:
 	var url: String = SaveSafe.s(profile.get("photo_url", ""))
 	if uid.is_empty() or url.is_empty():
 		return
+	if url.contains("facebook.com") or url.contains("fbcdn") or url.contains("fbsbx"):
+		return   # hesap Facebook'la açılmış: o fotoğraf adresi erişim jetonu ister (Google fotoğrafı seçeneği yalnız Google'da)
 	if SaveSafe.s(_google.get("uid", "")) == uid and SaveSafe.s(_google.get("url", "")) == url and _google_tex:
 		return
 	_download_google(uid, url)

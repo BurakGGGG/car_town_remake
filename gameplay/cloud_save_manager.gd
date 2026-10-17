@@ -1,6 +1,6 @@
 class_name CloudSaveManager
 extends Node
-## Google girişi (Firebase Auth) + bulut kaydı (Firestore players/{uid}).
+## Google / Facebook girişi (Firebase Auth) + bulut kaydı (Firestore players/{uid}).
 ## Sahnede World/Gameplay/CloudSaveManager olarak durur; arayanlar "cloud_save" grubundan bulur
 ## (autoload yok — proje kuralı). Firebase'e Android plugininin Engine singleton'ı
 ## ("GodotFirebaseAndroid") üzerinden doğrudan bağlanır; plugin yoksa (PC / editör) UNAVAILABLE
@@ -16,8 +16,17 @@ extends Node
 ## local dosyayla aynı kalır. Token / şifre / credential hiçbir yere yazılmaz (Firebase Auth yönetir).
 ##
 ## HESAP MODELİ: misafir = Firebase oturumu YOK (anonim hesap açılmaz; bulut kaydı zaten yalnızca
-## Google UID'sine yazılır). Hesap = Google UID'si, ilerleme o UID'nin Firestore dokümanındadır.
-## Giriş tek adımdır (tek hesap seçici). Oturum açılınca bulut kaydı okunur ve karar verilir:
+## hesap UID'sine yazılır). Hesap = Firebase UID'si (Google ya da Facebook ile girilir; Firebase'de "e-posta
+## başına tek hesap"), ilerleme o UID'nin Firestore dokümanındadır. Giriş tek adımdır (tek hesap seçici).
+##
+## HESAP BAĞLAMA (kullanıcı kararı 2026-10-17: aynı e-posta = aynı hesap): bir hesaba Google VE Facebook
+## bağlanabilir, ikisiyle de aynı UID'ye girilir. İki yol:
+##   • Girişte e-posta çakışması (bu e-posta öteki yolla kayıtlı): plugin reddedilen kimliği bekletir, oyun
+##     öteki yolun hesap seçicisini açar; oyuncu oradan girince bekleyen kimlik aynı hesaba bağlanır
+##     (e-postalar farklıysa bağlanmaz, oyuncu seçtiği hesapla girmiş olur).
+##   • PLAYER ekranında "FACEBOOK'U BAĞLA / GOOGLE'I BAĞLA" (link_provider): oturum açıkken ikinci yol.
+##
+## Oturum açılınca bulut kaydı okunur ve karar verilir:
 ##   bulut yok                  → local yüklenir (local başka hesabınsa o hesabın ilerlemesi yüklenmez)
 ##   aynıysa                    → bir şey yapılmaz
 ##   local'de ilerleme yok       → bulut yüklenir (cloud_sync.json kalmış olsa bile: boş kayıt buluta yazılmaz)
@@ -40,9 +49,9 @@ extends Node
 ## (ve uygulama öne gelince) yeniden denenir.
 ##
 ## HESABI SİL (Play hesap silme şartı): Firebase son girişin üzerinden zaman geçtiyse hesap silmeyi
-## reddeder ve plugin yeniden kimlik doğrulama sunmaz; bu yüzden önce Google girişi tazelenir (aynı
-## hesap seçilmeli), sonra players/{uid} silinir, sonra Firebase Auth kullanıcısı. Ardından bu
-## cihazdaki ilerleme ve yedekler silinir, yeni misafir oturumuyla sıfırdan başlanır. Bulut kaydı
+## reddeder ve plugin yeniden kimlik doğrulama sunmaz; bu yüzden önce giriş, hesabın kendi yoluyla (Google /
+## Facebook) tazelenir (aynı hesap seçilmeli), sonra players/{uid} silinir, sonra Firebase Auth kullanıcısı.
+## Ardından bu cihazdaki ilerleme ve yedekler silinir, yeni misafir oturumuyla sıfırdan başlanır. Bulut kaydı
 ## silinemezse hiçbir şey silinmez; yalnızca Auth kullanıcısı silinemezse veriler yine silinir ve
 ## oturum kapatılır (oyuncuya web sitesindeki form gösterilir).
 
@@ -58,15 +67,17 @@ signal notice(text: String)
 ## Hesap silme bitti: true → Google hesabı, bulut ve cihaz kaydı silindi; false → iptal / hata
 ## (açıklama notice ile gelir).
 signal account_deleted(success: bool)
+## Hesap bağlama başladı / bitti ya da bağlı giriş yolları değişti (PLAYER ekranı düğmeleri için).
+signal links_changed
 
 enum State {
 	UNAVAILABLE,  ## plugin yok (PC / editör): yalnızca local kayıt
 	SIGNED_OUT,   ## misafir (anonim ya da hiç oturum yok): yalnızca local kayıt
-	SIGNING_IN,   ## Google hesap seçimi / bağlama sürüyor
+	SIGNING_IN,   ## Google / Facebook hesap seçimi sürüyor
 	SYNCING,      ## bulut kaydı okunuyor / karar veriliyor
 	CONFLICT,     ## oyuncunun seçimi bekleniyor, buluta yazılmıyor
-	SYNCED,       ## Google oturumu açık, bulut güncel ya da yazılıyor
-	OFFLINE,      ## Google oturumu açık ama bulut erişilemiyor: local'le devam, sonra tekrar denenir
+	SYNCED,       ## oturum açık, bulut güncel ya da yazılıyor
+	OFFLINE,      ## oturum açık ama bulut erişilemiyor: local'le devam, sonra tekrar denenir
 	ERROR,        ## bulut kaydı bu sürümle okunamıyor: bulut korunur, yazılmaz
 	DELETING,     ## hesap siliniyor: buluta yazılmaz
 }
@@ -77,6 +88,15 @@ const PLUGIN_NAME: String = "GodotFirebaseAndroid"
 const COLLECTION: String = "players"
 ## Plugin'in "doküman yok" hata metni (Firestore.kt getDocument).
 const NOT_FOUND_ERROR: String = "Document does not exist"
+## Bulut kaydındaki profil alanları — firestore.rules isValidProfile ile AYNI olmalı (fazlası reddedilir).
+const CLOUD_PROFILE_KEYS: Array[String] = ["display_name", "email", "photo_url"]
+## Giriş yolları (plugin getCurrentUser "provider"; alanı yazmayan eski eklenti sürümünde herkes Google'dı).
+const PROVIDER_GOOGLE: String = "google.com"
+const PROVIDER_FACEBOOK: String = "facebook.com"
+## Firebase: bu e-postanın başka giriş yoluyla açılmış hesabı var (plugin hata metni bu kodla başlar).
+const ACCOUNT_EXISTS_ERROR: String = "ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL"
+## Plugin: Facebook uygulama kimliği manifest'te yok (res://firebase/facebook_app.cfg boştu).
+const FACEBOOK_NOT_CONFIGURED: String = "Facebook login not configured"
 ## Local kayıttan sonra buluta yazmadan önce beklenen süre (sn); aradaki kayıtlar tek yazmada birleşir.
 const UPLOAD_DEBOUNCE: float = 1.5
 ## Firestore okuma / yazma yanıt vermezse vazgeçme süresi (sn).
@@ -92,12 +112,15 @@ const SIGNOUT_BACKUP_PATH: String = "user://savegame.before_signout.json"
 ## Local bulutun üstüne yazılmadan önceki bulut kaydı.
 const CLOUD_BACKUP_PATH: String = "user://cloud_backup.json"
 
-enum Op { NONE, GOOGLE, GET, SET, SIGN_OUT, REAUTH, DELETE_DOC, DELETE_USER }
+enum Op { NONE, SIGN_IN, GET, SET, SIGN_OUT, REAUTH, DELETE_DOC, DELETE_USER, LINK, LINK_PENDING }
 
 var _fb: Object
 var _save: SaveManager
 var _state: State = State.UNAVAILABLE
 var _op: Op = Op.NONE
+var _sign_in_provider: String = PROVIDER_GOOGLE   # süren giriş / yeniden doğrulama hangi yolla
+var _pending_link_provider: String = ""   # e-posta çakışmasında bekletilen giriş yolu (öteki yolla girilince bağlanır)
+var _link_provider: String = ""           # PLAYER ekranından bağlanan yol
 var _user: Dictionary = {}          # getCurrentUser(): uid, name, email, photoUrl, isAnonymous
 var _meta: Dictionary = {}          # uid, synced_json, login_prompt_seen
 var _cloud_exists: bool = false
@@ -128,6 +151,8 @@ func _ready() -> void:
 		_fb.connect("firestore_write_task_completed", _on_write_completed)
 		_fb.connect("firestore_delete_task_completed", _on_delete_completed)
 		_fb.connect("user_deleted", _on_user_deleted)
+		_fb.connect("account_link_success", _on_link_success)
+		_fb.connect("account_link_failure", _on_link_failure)
 	_setup.call_deferred()
 
 
@@ -166,7 +191,7 @@ func get_state() -> State:
 	return _state
 
 
-## Google hesabıyla oturum açık mı (anonim oturum sayılmaz).
+## Hesapla (Google / Facebook) oturum açık mı (anonim oturum sayılmaz).
 func is_authenticated() -> bool:
 	return not _user.is_empty() and not _user.has("error") and not bool(_user.get("isAnonymous", true))
 
@@ -175,7 +200,7 @@ func get_uid() -> String:
 	return _str(_user.get("uid")) if is_authenticated() else ""
 
 
-## {uid, display_name, email, photo_url}; oturum yoksa boş.
+## {uid, display_name, email, photo_url, provider}; oturum yoksa boş.
 func get_profile() -> Dictionary:
 	if not is_authenticated():
 		return {}
@@ -184,7 +209,62 @@ func get_profile() -> Dictionary:
 		"display_name": _str(_user.get("name")),
 		"email": _str(_user.get("email")),
 		"photo_url": _str(_user.get("photoUrl")),
+		"provider": get_provider(),
 	}
+
+
+## Bu cihazda girişte kullanılan yol (bağlıysa; değilse hesabın ilk bağlı yolu): PROVIDER_GOOGLE /
+## PROVIDER_FACEBOOK; oturum yoksa "". Hesap silmede yeniden doğrulama bu yolla yapılır.
+func get_provider() -> String:
+	var providers: PackedStringArray = get_providers()
+	if providers.is_empty():
+		return ""
+	var used: String = _str(_meta.get("provider"))
+	return used if providers.has(used) else providers[0]
+
+
+## Hesaba bağlı bütün giriş yolları (sıra: Firebase'in sırası). Alanı yazmayan eski eklentide tek yol.
+func get_providers() -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	if not is_authenticated():
+		return out
+	for provider: String in _str(_user.get("providers")).split(",", false):
+		if provider in [PROVIDER_GOOGLE, PROVIDER_FACEBOOK]:
+			out.append(provider)
+	if out.is_empty():
+		var single: String = _str(_user.get("provider"))
+		out.append(single if single == PROVIDER_FACEBOOK else PROVIDER_GOOGLE)
+	return out
+
+
+## PLAYER ekranından bu yol şimdi bağlanabilir mi (oturum açık, yol bağlı değil, başka işlem yok).
+func can_link(provider: String) -> bool:
+	return is_authenticated() and not get_providers().has(provider) and _op == Op.NONE and not _signing_out \
+		and _state in [State.SYNCED, State.OFFLINE, State.ERROR]
+
+
+## Bağlama sürüyor mu (hesap seçici açık / Firebase yanıtı bekleniyor).
+func is_linking() -> bool:
+	return _op in [Op.LINK, Op.LINK_PENDING]
+
+
+## İkinci giriş yolunu (Google / Facebook) bu hesaba bağlar; sonuç notice + links_changed ile gelir.
+func link_provider(provider: String) -> void:
+	if _fb == null or not can_link(provider):
+		return
+	_upload_timer.stop()   # bağlama bitince bekleyen kayıt yazılır (_dirty)
+	_op = Op.LINK
+	_link_provider = provider
+	links_changed.emit()
+	if provider == PROVIDER_FACEBOOK:
+		_fb.linkFacebook()
+	else:
+		_fb.linkGoogle()
+
+
+## Oyuncuya gösterilen sağlayıcı adı ("Google" / "Facebook"); metinlerde "%s hesabın" biçiminde.
+static func provider_name(provider: String) -> String:
+	return "Facebook" if provider == PROVIDER_FACEBOOK else "Google"
 
 
 ## Bir Firestore / Auth işlemi ya da çıkış sürüyor mu (ziyarete giderken sahne donmadan önce bakılır).
@@ -199,14 +279,33 @@ func has_cloud_save() -> bool:
 
 ## GOOGLE İLE GİRİŞ: tek hesap seçici. Oturum açılınca bulut kaydı okunur (_decide).
 func sign_in() -> void:
+	_start_sign_in(PROVIDER_GOOGLE)
+
+
+## FACEBOOK İLE GİRİŞ: Facebook hesap onayı → Firebase. Sonrası Google girişiyle aynı (_decide).
+func sign_in_facebook() -> void:
+	_start_sign_in(PROVIDER_FACEBOOK)
+
+
+func _start_sign_in(provider: String) -> void:
 	if _fb == null:
-		notice.emit(Loc.t("Google girişi yalnızca Android sürümünde"))
+		notice.emit(Loc.t("Facebook girişi yalnızca Android sürümünde") if provider == PROVIDER_FACEBOOK
+			else Loc.t("Google girişi yalnızca Android sürümünde"))
 		return
 	if is_authenticated() or _op != Op.NONE:
 		return
 	_set_state(State.SIGNING_IN)
-	_op = Op.GOOGLE
-	_fb.signInWithGoogle()
+	_op = Op.SIGN_IN
+	_sign_in_provider = provider
+	_open_account_picker(provider)
+
+
+## Plugin'in hesap seçicisi; sonuç auth_success / auth_failure ile gelir.
+func _open_account_picker(provider: String) -> void:
+	if provider == PROVIDER_FACEBOOK:
+		_fb.signInWithFacebook()
+	else:
+		_fb.signInWithGoogle()
 
 
 ## ÇIKIŞ YAP: bekleyen değişiklik önce buluta yazılır; yazılamıyorsa çıkış YAPILMAZ (ilerleme
@@ -263,8 +362,8 @@ func can_delete_account() -> bool:
 		and _state in [State.SYNCED, State.OFFLINE, State.ERROR]
 
 
-## HESABI SİL: Google hesabı yeniden seçtirilir, ardından bulut kaydı, Firebase hesabı ve bu
-## cihazdaki ilerleme silinir. Sonuç account_deleted ile bildirilir. Süren bir bulut yazması
+## HESABI SİL: hesap kendi yoluyla (Google / Facebook) yeniden seçtirilir, ardından bulut kaydı, Firebase
+## hesabı ve bu cihazdaki ilerleme silinir. Sonuç account_deleted ile bildirilir. Süren bir bulut yazması
 ## beklenmez: Firestore yazmaları sırayla işler, silme ondan sonra gelir.
 func delete_account() -> void:
 	if not can_delete_account():
@@ -275,7 +374,8 @@ func delete_account() -> void:
 	_op_timer.stop()
 	_set_state(State.DELETING)
 	_op = Op.REAUTH
-	_fb.signInWithGoogle()
+	_sign_in_provider = get_provider()
+	_open_account_picker(_sign_in_provider)
 
 
 ## Açılışta giriş ekranı bir kez gösterilsin mi (Android, misafir, daha önce gösterilmemiş).
@@ -292,15 +392,22 @@ func mark_login_prompt_seen() -> void:
 
 func _on_auth_success(user: Dictionary) -> void:
 	match _op:
-		Op.GOOGLE:
+		Op.SIGN_IN:
+			if not _pending_link_provider.is_empty():
+				# E-posta çakışmasından sonra öteki yolla girildi: bekleyen kimlik bu hesaba bağlanır
+				_user = user
+				_op = Op.LINK_PENDING
+				_fb.linkPendingCredential()
+				return
 			_op = Op.NONE
-			_on_google_user(user)
+			_on_account_user(user)
 		Op.REAUTH:
 			_op = Op.NONE
 			if _str(user.get("uid")) != _delete_uid:
 				# Başka hesap seçildi: silme iptal, oturum artık o hesabın (normal hesap değişimi akışı)
-				_abort_delete(Loc.t("Hesap silinmedi: silmek için oyunda kullandığın Google hesabını seçmelisin."), false)
-				_on_google_user(user)
+				_abort_delete(Loc.t("Hesap silinmedi: silmek için oyunda kullandığın %s hesabını seçmelisin.")
+					% provider_name(_sign_in_provider), false)
+				_on_account_user(user)
 				return
 			_user = user
 			_delete_social_then_doc()
@@ -312,27 +419,105 @@ func _on_auth_failure(message: String) -> void:
 	if message.begins_with(Loc.t("Delete failed")):
 		return
 	match _op:
-		Op.GOOGLE:
+		Op.SIGN_IN:
 			_op = Op.NONE
-			push_warning("CloudSaveManager: Google girişi başarısız: %s" % message)
+			push_warning("CloudSaveManager: %s girişi başarısız: %s" % [provider_name(_sign_in_provider), message])
+			if message.begins_with(ACCOUNT_EXISTS_ERROR) and _pending_link_provider.is_empty():
+				_start_pending_link()
+				return
+			if not _pending_link_provider.is_empty():
+				_pending_link_provider = ""   # öteki yolla girilmedi: bekleyen kimlik bırakılır
+				_fb.clearPendingCredential()
 			_set_state(State.SIGNED_OUT)
 			if not _is_cancel(message):
-				notice.emit(Loc.t("Google girişi yapılamadı"))
+				notice.emit(_sign_in_error_text(message))
 		Op.SIGN_OUT:
 			_op = Op.NONE
 			_signing_out = false
 			push_warning("CloudSaveManager: çıkış başarısız: %s" % message)
 		Op.REAUTH:
 			_op = Op.NONE
-			push_warning("CloudSaveManager: silme öncesi Google doğrulaması başarısız: %s" % message)
-			_abort_delete("" if _is_cancel(message) else Loc.t("Hesap silinmedi: Google hesabı doğrulanamadı."))
+			push_warning("CloudSaveManager: silme öncesi %s doğrulaması başarısız: %s" % [provider_name(_sign_in_provider), message])
+			_abort_delete("" if _is_cancel(message) else Loc.t("Hesap silinmedi: %s hesabı doğrulanamadı.")
+				% provider_name(_sign_in_provider))
 
 
-func _on_google_user(user: Dictionary) -> void:
+## E-posta çakışması: bu e-posta öteki yolla (Google ↔ Facebook) açılmış bir hesaba ait. Öteki yolun hesap
+## seçicisi açılır; oyuncu girince bekleyen kimlik aynı hesaba bağlanır (_on_auth_success).
+func _start_pending_link() -> void:
+	_pending_link_provider = _sign_in_provider
+	var other: String = PROVIDER_GOOGLE if _sign_in_provider == PROVIDER_FACEBOOK else PROVIDER_FACEBOOK
+	notice.emit(Loc.t("Bu e-posta adresi %s hesabınla kayıtlı. %s ile doğrula, %s hesabın da aynı oyun hesabına bağlansın.")
+		% [provider_name(other), provider_name(other), provider_name(_sign_in_provider)])
+	_op = Op.SIGN_IN
+	_sign_in_provider = other
+	_open_account_picker(other)
+
+
+func _on_link_success(user: Dictionary) -> void:
+	match _op:
+		Op.LINK_PENDING:
+			_op = Op.NONE
+			notice.emit(Loc.t("%s hesabın bağlandı. Artık iki yolla da aynı hesaba girebilirsin.") % provider_name(_pending_link_provider))
+			_pending_link_provider = ""
+			_on_account_user(user)
+		Op.LINK:
+			_op = Op.NONE
+			_user = user
+			notice.emit(Loc.t("%s hesabın bağlandı. Artık iki yolla da aynı hesaba girebilirsin.") % provider_name(_link_provider))
+			_link_provider = ""
+			links_changed.emit()
+			if _dirty:
+				_request_upload()
+
+
+func _on_link_failure(message: String) -> void:
+	match _op:
+		Op.LINK_PENDING:
+			# Öteki yolla giriş yapıldı ama bağlanamadı: oyuncu o hesapla devam eder
+			_op = Op.NONE
+			push_warning("CloudSaveManager: bekleyen %s kimliği bağlanamadı: %s" % [provider_name(_pending_link_provider), message])
+			notice.emit(_link_error_text(_pending_link_provider, message))
+			_pending_link_provider = ""
+			_on_account_user(_fb.getCurrentUser())
+		Op.LINK:
+			_op = Op.NONE
+			push_warning("CloudSaveManager: %s bağlanamadı: %s" % [provider_name(_link_provider), message])
+			if not _is_cancel(message):
+				notice.emit(_link_error_text(_link_provider, message))
+			_link_provider = ""
+			links_changed.emit()
+			if _dirty:
+				_request_upload()
+
+
+## Bağlama hatasının oyuncu metni: hesap başka oyun hesabına bağlı / seçilen hesabın e-postası farklı / genel.
+func _link_error_text(provider: String, message: String) -> String:
+	if message.begins_with("ERROR_CREDENTIAL_ALREADY_IN_USE") or message.begins_with("ERROR_EMAIL_ALREADY_IN_USE") \
+			or message.begins_with(ACCOUNT_EXISTS_ERROR):
+		return Loc.t("Bu %s hesabı başka bir oyun hesabına bağlı, bağlanamadı.") % provider_name(provider)
+	if message.begins_with("ERROR_EMAIL_MISMATCH"):
+		return Loc.t("Seçtiğin hesabın e-postası farklı olduğu için %s bağlanmadı. Bu hesapla devam ediyorsun.") % provider_name(provider)
+	return Loc.t("%s bağlanamadı") % provider_name(provider)
+
+
+## Giriş hatasının oyuncu metni: e-posta başka yolla kayıtlı / Facebook henüz yapılandırılmadı / genel.
+func _sign_in_error_text(message: String) -> String:
+	if message.begins_with(ACCOUNT_EXISTS_ERROR):
+		return Loc.t("Bu e-posta adresiyle başka bir giriş yolundan açılmış hesabın var. Daha önce hangisiyle girdiysen onu seç.")
+	if message.begins_with(FACEBOOK_NOT_CONFIGURED):
+		return Loc.t("Facebook girişi henüz hazır değil")
+	if _sign_in_provider == PROVIDER_FACEBOOK:
+		return Loc.t("Facebook girişi yapılamadı")
+	return Loc.t("Google girişi yapılamadı")
+
+
+func _on_account_user(user: Dictionary) -> void:
 	_user = user
 	if not is_authenticated():
 		_set_state(State.SIGNED_OUT)
 		return
+	_meta["provider"] = _sign_in_provider   # bu cihazda hangi yolla girildi (silmede yeniden doğrulama)
 	mark_login_prompt_seen()
 	user_changed.emit(get_profile())
 	_begin_sync()
@@ -369,6 +554,7 @@ func _on_sign_out_result(success: bool) -> void:
 		_applying = false
 	_signout_resets_local = true
 	_meta.erase("uid")
+	_meta.erase("provider")
 	_meta.erase("synced_json")
 	_write_json(META_PATH, _meta)
 	user_changed.emit({})
@@ -435,7 +621,8 @@ func _finish_delete(auth_deleted: bool) -> void:
 	_retry_timer.stop()
 	if not auth_deleted:
 		push_warning("CloudSaveManager: Firebase hesabı silinemedi, veriler silindi, oturum kapatılıyor")
-		notice.emit(Loc.t("İlerlemen ve bulut kaydın silindi, ancak Google hesap bağlantısı kaldırılamadı. Tamamlamak için: %s") % Loc.site_url("delete", false))   # oyuncunun dilindeki silme sayfası
+		notice.emit(Loc.t("İlerlemen ve bulut kaydın silindi, ancak %s hesap bağlantısı kaldırılamadı. Tamamlamak için: %s")
+			% [provider_name(_sign_in_provider), Loc.site_url("delete", false)])   # oyuncunun dilindeki silme sayfası
 		account_deleted.emit(false)
 		_signout_resets_local = false   # veriler zaten silindi
 		_finish_sign_out()   # _on_sign_out_result dünyayı yeniler
@@ -592,8 +779,12 @@ func _request_upload_now() -> void:
 func _upload_now() -> void:
 	_dirty = false
 	_uploading_json = _save.snapshot_json()
-	var profile: Dictionary = get_profile()
-	profile.erase("uid")
+	# Firestore kuralı (isValidProfile) profilde YALNIZCA bu üç alana izin verir: get_profile'ın öteki
+	# alanları (uid, provider) yazılırsa kayıt PERMISSION_DENIED ile reddedilir.
+	var full: Dictionary = get_profile()
+	var profile: Dictionary = {}
+	for key: String in CLOUD_PROFILE_KEYS:
+		profile[key] = full.get(key, "")
 	_op = Op.SET
 	_op_timer.start(REQUEST_TIMEOUT)
 	_fb.firestoreSetDocument(COLLECTION, get_uid(), {
@@ -720,7 +911,8 @@ func _summary(data: Dictionary) -> Dictionary:
 	}
 
 
-## Google hesap seçiminden vazgeçildi mi (GoogleSignInStatusCodes 12501 / CommonStatusCodes 16).
+## Hesap seçiminden vazgeçildi mi (Google: GoogleSignInStatusCodes 12501 / CommonStatusCodes 16;
+## Facebook: "Facebook login cancelled").
 func _is_cancel(message: String) -> bool:
 	return message.begins_with("12501") or message.begins_with("16:") or message.to_lower().contains("cancel")
 

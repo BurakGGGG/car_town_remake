@@ -15,7 +15,9 @@ const DEPENDENCIES := [
 	"com.google.firebase:firebase-storage:21.0.1",
 	# CarTownRemake eki (2026-10-17): telefon bildirimi (FCM). Eklentide mesajlaşma modülü yok; jeton oyundan
 	# JavaClassWrapper ile alınır (gameplay/social/push_service.gd), bildirimi sunucu gönderir (firebase/functions).
-	"com.google.firebase:firebase-messaging:24.1.0"
+	"com.google.firebase:firebase-messaging:24.1.0",
+	# CarTownRemake eki (2026-10-17): Facebook girişi. Eklenti AAR'ı bu sürümle derlenir (tools/firebase_plugin/build.sh).
+	"com.facebook.android:facebook-login:18.3.0"
 ]
 
 func _enter_tree():
@@ -102,11 +104,50 @@ class AndroidExportPlugin extends EditorExportPlugin:
 		file.store_string(text)
 		file.close()
 
+	# CarTownRemake eki (2026-10-17): FACEBOOK GİRİŞİ — Facebook SDK'sı Privacy Sandbox izinleri getiriyor (reklam ölçümü için; biz yalnız
+	# giriş kullanıyoruz, AdMob bunları istemiyor) → birleşik manifest'ten çıkarılır. AD_ID kalır (AdMob kullanıyor).
+	const FACEBOOK_REMOVED_PERMISSIONS := [
+		"android.permission.ACCESS_ADSERVICES_ATTRIBUTION",
+		"android.permission.ACCESS_ADSERVICES_AD_ID",
+		"android.permission.ACCESS_ADSERVICES_CUSTOM_AUDIENCE",
+		"android.permission.ACCESS_ADSERVICES_TOPICS",
+	]
+
 	# CarTownRemake eki (2026-10-17): FOTOĞRAF MODU — Android 7–9'da (API ≤ 28) galeriye kaydetmek depolama izni ister.
 	# Yalnızca o sürümler için bildirilir (maxSdkVersion): Android 10+ izin istemez ve listede görünmez. Oyun izni
 	# girişte değil, ilk fotoğraf çekildikten sonra kaydederken ister (ui/hud/photo_mode.gd).
+	# Facebook SDK izinleri de burada çıkarılır (yukarı bakın).
 	func _get_android_manifest_element_contents(platform: EditorExportPlatform, debug: bool) -> String:
-		return '<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />'
+		var xml := '<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />'
+		for permission: String in FACEBOOK_REMOVED_PERMISSIONS:
+			xml += '\n<uses-permission android:name="%s" tools:node="remove" />' % permission
+		return xml
+
+	# FACEBOOK GİRİŞİ: uygulama kimliği ve istemci jetonu res://firebase/facebook_app.cfg'den <application> içine yazılır
+	# (kimlik "fb" önekiyle: önek yoksa Android sayıyı tamsayı okur, SDK reddeder). Otomatik uygulama olayları, reklam
+	# kimliği toplama ve SDK izlemesi KAPALI: SDK yalnızca giriş için var. Dosya boşsa SDK başlamaz (çökmez), Facebook
+	# düğmesi "hazır değil" der.
+	const FACEBOOK_CONFIG := "res://firebase/facebook_app.cfg"
+
+	func _get_android_manifest_application_element_contents(platform: EditorExportPlatform, debug: bool) -> String:
+		var xml := ""
+		for key: String in ["AutoLogAppEventsEnabled", "AdvertiserIDCollectionEnabled", "MonitorEnabled"]:
+			xml += '<meta-data android:name="com.facebook.sdk.%s" android:value="false" />\n' % key
+		var cfg := ConfigFile.new()
+		var app_id := ""
+		var client_token := ""
+		if cfg.load(FACEBOOK_CONFIG) == OK:
+			app_id = str(cfg.get_value("facebook", "app_id", "")).strip_edges()
+			client_token = str(cfg.get_value("facebook", "client_token", "")).strip_edges()
+		if app_id.is_empty() or client_token.is_empty():
+			push_warning("Facebook girişi: %s boş, Facebook düğmesi bu derlemede çalışmayacak" % FACEBOOK_CONFIG)
+			return xml
+		if not app_id.is_valid_int() or client_token.is_valid_float():
+			push_error("Facebook girişi: %s geçersiz (app_id yalnız rakam, client_token onaltılık metin olmalı)" % FACEBOOK_CONFIG)
+			return xml
+		xml += '<meta-data android:name="com.facebook.sdk.ApplicationId" android:value="fb%s" />\n' % app_id
+		xml += '<meta-data android:name="com.facebook.sdk.ClientToken" android:value="%s" />' % client_token
+		return xml
 
 	func _insert_line_if_missing(file_path: String, after_line: String, insert_line: String) -> void:
 		var text := FileAccess.open(file_path, FileAccess.READ).get_as_text()

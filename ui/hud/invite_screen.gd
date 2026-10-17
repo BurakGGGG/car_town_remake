@@ -221,7 +221,7 @@ func _show(state: String) -> void:
 			_primary.text = Loc.t("TAMAM")
 			_secondary.visible = false
 		"signin":
-			_body.text = Loc.t("Arkadaş eklemek için Google ile giriş yapmalısın. Girişten sonra davet yeniden açılır.")
+			_body.text = Loc.t("Arkadaş eklemek için giriş yapmalısın. Girişten sonra davet yeniden açılır.")
 			_primary.text = Loc.t("GİRİŞ YAP")
 			_primary.kind = HudIcon.Kind.HELMET
 			_secondary.text = Loc.t("VAZGEÇ")

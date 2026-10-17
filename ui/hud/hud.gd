@@ -1548,9 +1548,11 @@ func _sync_nav_tab(place: StringName) -> void:
 # --- Eğitim -----------------------------------------------------------------------------
 
 ## Ders katmanı bütün ekranların (showroom, yarış, düzenleyici) üstünde olmalı: temalı köke EN SON eklenir.
-## GİRİŞ ÖNERİSİ: açılışta değil, oyuncu biraz ilerleyince bir kez. Koşul: ilk ders (İLK TAMİR)
-## bitti — eğitim atlandıysa / yoksa LOGIN_PROMPT_LEVEL — ve oyuncu boşta (açık ekran, ders, kasa
-## panosu yok) en az LOGIN_PROMPT_IDLE saniye. Bir kez gösterildi mi (cloud_sync.json) tekrar gelmez.
+## GİRİŞ ÖNERİSİ (YEDEK): giriş artık ilk açılışta yükleme ekranında sorulur (LoginGate) ve seçim
+## login_prompt_seen yazar; bu öneri yalnızca o ekran hiç gösterilmediyse (yükleme yedek yoldan geçtiyse)
+## gelir. Koşul: ilk ders (İLK TAMİR) bitti — eğitim atlandıysa / yoksa LOGIN_PROMPT_LEVEL — ve oyuncu
+## boşta (açık ekran, ders, kasa panosu yok) en az LOGIN_PROMPT_IDLE saniye. Bir kez gösterildi mi
+## (cloud_sync.json) tekrar gelmez.
 const LOGIN_PROMPT_LEVEL: int = 2
 const LOGIN_PROMPT_IDLE: float = 3.0
 var _login_idle: float = 0.0
@@ -1573,7 +1575,8 @@ func _tick_login_prompt(cloud: CloudSaveManager, timer: Timer) -> void:
 		timer.queue_free()
 		return
 	if not _login_prompt_ready() or not router.top().is_empty() or (tutorial and tutorial.is_running()) \
-			or (crate_panel and crate_panel.visible) or (restoration_result and restoration_result.visible):
+			or (crate_panel and crate_panel.visible) or (restoration_result and restoration_result.visible) \
+			or get_tree().root.get_node_or_null("LoadingScreen") != null:   # ilk açılış giriş ekranı (LoginGate) açık
 		_login_idle = 0.0
 		return
 	_login_idle += timer.wait_time
@@ -1770,6 +1773,9 @@ func _build_showroom() -> void:
 func _build_settings() -> void:
 	settings_screen = SettingsScreen.new()
 	garage_screen.get_parent().add_child(settings_screen)
+	# AYARLAR tam ekran ve opak bir YER: üstünde açılan panolar (OYUN HESABI → hesap panosu) ondan SONRA
+	# çizilmeli. Hesap panosu daha önce kurulduğu için arkada kalıyordu (açılıyor ama görünmüyordu).
+	settings_screen.get_parent().move_child(settings_screen, login_screen.get_index())
 	settings_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
 	settings_button = PlateButton.new()
 	settings_button.name = "SettingsButton"

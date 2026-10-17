@@ -278,7 +278,7 @@ func _show_page(page: int) -> void:
 		Page.ACCOUNT:
 			_page_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_INHERIT
 			_page_title.text = Loc.t("HESAP VE GİZLİLİK")
-			_page_caption.text = Loc.t("Google hesabın, reklam tercihlerin ve yasal metinler.")
+			_page_caption.text = Loc.t("Oyun hesabın, reklam tercihlerin ve yasal metinler.")
 		Page.ABOUT:
 			_page_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_INHERIT
 			_page_title.text = Loc.t("DESTEK VE HAKKINDA")
@@ -372,7 +372,7 @@ func _build_audio() -> void:
 
 func _build_account() -> void:
 	var box: VBoxContainer = _new_page(Page.ACCOUNT)
-	var account: PlateButton = _link_row(box, Loc.t("GOOGLE HESABI"), Loc.t("Giriş yap, çıkış yap ya da hesabını sil."), Loc.t("AÇ"))
+	var account: PlateButton = _link_row(box, Loc.t("OYUN HESABI"), Loc.t("Giriş yap, çıkış yap ya da hesabını sil."), Loc.t("AÇ"))
 	account.pressed.connect(func() -> void: screen_requested.emit(&"account"))
 	_privacy_options = _link_row(box, Loc.t("REKLAM GİZLİLİK SEÇENEKLERİ"), Loc.t("Kişiselleştirilmiş reklam onayını değiştir."), Loc.t("AÇ"))
 	_privacy_row = _privacy_options.get_parent()
@@ -568,7 +568,7 @@ func _refresh_push() -> void:
 	_paint_toggle(_push_toggle, on)
 	_push_toggle.disabled = reason == "signin" or _push.is_busy()
 	if reason == "signin":
-		_push_caption.text = Loc.t("Arkadaş yarışı haberleri için önce Google ile giriş yap (HESAP VE GİZLİLİK).")
+		_push_caption.text = Loc.t("Arkadaş yarışı haberleri için önce giriş yap (HESAP VE GİZLİLİK).")
 	elif not on and not _push.last_failure.is_empty():
 		_push_caption.text = _push.last_failure
 	else:

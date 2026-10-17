@@ -161,7 +161,9 @@ func _run() -> void:
 	check(backdrop.color.a >= 0.999 and backdrop.get_global_rect().size.y >= root.get_visible_rect().size.y - 1.0, "arka plan opak ve ekranı kaplıyor (oyun arkada görünmez)")
 	screen.screen_requested.emit(&"account")
 	await frames(4)
-	check(router.top() == &"account" and screen.visible, "GOOGLE HESABI → hesap panosu AYARLAR'ın üstünde açıldı")
+	check(router.top() == &"account" and screen.visible and hud.login_screen.visible, "OYUN HESABI → hesap panosu açıldı")
+	check(hud.login_screen.get_parent() == screen.get_parent() and hud.login_screen.get_index() > screen.get_index(),
+		"hesap panosu AYARLAR'ın ÜSTÜNDE çiziliyor (arkasında kalmıyor)")
 	router.back()
 	await create_timer(0.4).timeout
 	check(router.top() == &"settings" and screen.visible, "hesaptan geri → AYARLAR")

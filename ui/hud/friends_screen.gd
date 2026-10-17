@@ -478,7 +478,7 @@ func _add_state_card(state: SocialManager.State, busy: bool) -> void:
 				Loc.t("Arkadaş eklemek yalnızca Android sürümünde. Auto Yard ustalarının garajlarını yine de gezebilirsin.")))
 		SocialManager.State.SIGNED_OUT:
 			var card: PanelContainer = _message_card(Loc.t("GOOGLE İLE GİRİŞ"),
-				Loc.t("Arkadaş eklemek ve garajlarını gezmek için Google ile giriş yap. İlerlemen de buluta kaydedilir."))
+				Loc.t("Arkadaş eklemek ve garajlarını gezmek için giriş yap (Google ya da Facebook). İlerlemen de buluta kaydedilir."))
 			(card.get_child(0) as VBoxContainer).add_child(_button(Loc.t("GİRİŞ YAP"),
 				func() -> void: screen_requested.emit(&"account"), true, busy))
 			_cards.add_child(card)

@@ -1,0 +1,327 @@
+diff --git a/firebase/build.gradle.kts b/firebase/build.gradle.kts
+index 896ccdb..8d12413 100644
+--- a/firebase/build.gradle.kts
++++ b/firebase/build.gradle.kts
+@@ -42,6 +42,8 @@ dependencies {
+     implementation("com.google.firebase:firebase-firestore:25.1.4")
+     implementation("com.google.firebase:firebase-database:21.0.0")
+     implementation("com.google.firebase:firebase-storage:21.0.1")
++    // CarTownRemake eki (2026-10-17): Facebook girişi (oyunda export_plugin.gd DEPENDENCIES ile aynı sürüm)
++    implementation("com.facebook.android:facebook-login:18.3.0")
+ }
+ 
+ // BUILD TASKS DEFINITION
+diff --git a/firebase/src/main/java/org/godotengine/plugin/firebase/Authentication.kt b/firebase/src/main/java/org/godotengine/plugin/firebase/Authentication.kt
+index 73681f8..de4d1ab 100644
+--- a/firebase/src/main/java/org/godotengine/plugin/firebase/Authentication.kt
++++ b/firebase/src/main/java/org/godotengine/plugin/firebase/Authentication.kt
+@@ -7,7 +7,17 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
+ import com.google.android.gms.auth.api.signin.GoogleSignInClient
+ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+ import com.google.android.gms.common.api.ApiException
++import com.facebook.CallbackManager
++import com.facebook.FacebookCallback
++import com.facebook.FacebookException
++import com.facebook.FacebookSdk
++import com.facebook.login.LoginManager
++import com.facebook.login.LoginResult
++import com.google.firebase.auth.AuthCredential
++import com.google.firebase.auth.FacebookAuthProvider
+ import com.google.firebase.auth.FirebaseAuth
++import com.google.firebase.auth.FirebaseAuthException
++import com.google.firebase.auth.FirebaseAuthUserCollisionException
+ import com.google.firebase.auth.GoogleAuthProvider
+ import com.google.firebase.auth.auth
+ import com.google.firebase.Firebase
+@@ -26,6 +36,21 @@ class Authentication(private val plugin: FirebasePlugin) {
+ 	private lateinit var googleSignInClient: GoogleSignInClient
+ 	private var isLinkingAnonymous = false
+ 
++	// CarTownRemake eki (2026-10-17): Facebook girişi. Facebook SDK'sı hesap seçimini yapar, erişim jetonu Firebase'e
++	// FacebookAuthProvider kimliği olarak verilir; sonuç Google girişiyle AYNI sinyallerle döner (auth_success /
++	// auth_failure). Uygulama kimliği manifest'te yoksa (henüz yapılandırılmadı) SDK başlamaz, giriş "not configured" der.
++	private val facebookCallbacks: CallbackManager = CallbackManager.Factory.create()
++	private var facebookCallbackRegistered = false
++
++	// HESAP BAĞLAMA (2026-10-17): oturum açıkken ikinci giriş yolunu (Google / Facebook) aynı Firebase hesabına
++	// bağlar; sonuç account_link_success (güncel kullanıcı) / account_link_failure ile döner. Girişte "bu e-posta
++	// başka yolla kayıtlı" (ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL) olursa reddedilen kimlik burada BEKLETİLİR:
++	// oyuncu öteki yolla girince linkPendingCredential onu aynı hesaba bağlar (e-postalar aynıysa).
++	private var facebookLinking = false
++	private var googleLinking = false
++	private var pendingCredential: AuthCredential? = null
++	private var pendingEmail: String? = null
++
+ 	fun authSignals(): MutableSet<SignalInfo> {
+ 		val signals: MutableSet<SignalInfo> = mutableSetOf()
+ 		signals.add(SignalInfo("auth_success", Dictionary::class.java))
+@@ -36,6 +61,8 @@ class Authentication(private val plugin: FirebasePlugin) {
+ 		signals.add(SignalInfo("password_reset_sent", Boolean::class.javaObjectType))
+ 		signals.add(SignalInfo("email_verification_sent", Boolean::class.javaObjectType))
+ 		signals.add(SignalInfo("user_deleted", Boolean::class.javaObjectType))
++		signals.add(SignalInfo("account_link_success", Dictionary::class.java))
++		signals.add(SignalInfo("account_link_failure", String::class.java))
+ 		return signals
+ 	}
+ 
+@@ -59,6 +86,9 @@ class Authentication(private val plugin: FirebasePlugin) {
+ 	}
+ 
+ 	fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
++		if (facebookCallbackRegistered && facebookCallbacks.onActivityResult(requestCode, resultCode, data)) {
++			return
++		}
+ 		if (requestCode == GOOGLE_SIGN_IN) {
+ 			val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+ 			try {
+@@ -67,15 +97,22 @@ class Authentication(private val plugin: FirebasePlugin) {
+ 				if (isLinkingAnonymous) {
+ 					isLinkingAnonymous = false
+ 					linkWithGoogle(account.idToken!!)
++				} else if (googleLinking) {
++					googleLinking = false
++					linkCurrentUser(GoogleAuthProvider.getCredential(account.idToken!!, null))
+ 				} else {
+ 					authWithGoogle(account.idToken!!)
+ 				}
+ 			} catch (e: ApiException) {
+ 				val wasLinking = isLinkingAnonymous
++				val wasLinkingAccount = googleLinking
+ 				isLinkingAnonymous = false
++				googleLinking = false
+ 				Log.w(TAG, "Google sign in failed", e)
+ 				if (wasLinking) {
+ 					plugin.emitGodotSignal("link_with_google_failure", e.message ?: "Unknown error")
++				} else if (wasLinkingAccount) {
++					plugin.emitGodotSignal("account_link_failure", e.message ?: "Unknown error")
+ 				} else {
+ 					plugin.emitGodotSignal("auth_failure", e.message ?: "Unknown error")
+ 				}
+@@ -184,7 +221,123 @@ class Authentication(private val plugin: FirebasePlugin) {
+ 	}
+ 
+ 	private fun authWithGoogle(idToken: String) {
+-		val credential = GoogleAuthProvider.getCredential(idToken, null)
++		authWithCredential(GoogleAuthProvider.getCredential(idToken, null))
++	}
++
++	/** Facebook hesap seçimi → Firebase girişi. Sonuç auth_success / auth_failure ile gelir. */
++	fun signInWithFacebook() {
++		facebookLinking = false
++		startFacebookLogin()
++	}
++
++	/** Oturum açık hesaba Facebook'u bağlar. Sonuç account_link_success / account_link_failure ile gelir. */
++	fun linkFacebook() {
++		if (auth.currentUser == null) {
++			plugin.emitGodotSignal("account_link_failure", "No user signed in.")
++			return
++		}
++		facebookLinking = true
++		startFacebookLogin()
++	}
++
++	/** Oturum açık hesaba Google'ı bağlar. Sonuç account_link_success / account_link_failure ile gelir. */
++	fun linkGoogle() {
++		if (auth.currentUser == null || !::googleSignInClient.isInitialized) {
++			plugin.emitGodotSignal("account_link_failure", "No user signed in.")
++			return
++		}
++		googleLinking = true
++		try {
++			activity.startActivityForResult(googleSignInClient.signInIntent, GOOGLE_SIGN_IN)
++		} catch (e: Exception) {
++			googleLinking = false
++			Log.e(TAG, "Error starting Google Sign-In", e)
++			plugin.emitGodotSignal("account_link_failure", "Google Sign-In failed: ${e.message}")
++		}
++	}
++
++	/** Girişte e-posta çakışmasıyla bekletilen kimliği şimdiki hesaba bağlar (e-postalar aynı olmalı). */
++	fun linkPendingCredential() {
++		val credential = pendingCredential
++		val email = pendingEmail
++		pendingCredential = null
++		pendingEmail = null
++		val user = auth.currentUser
++		if (credential == null || user == null) {
++			plugin.emitGodotSignal("account_link_failure", "No pending credential")
++			return
++		}
++		if (!email.isNullOrEmpty() && !email.equals(user.email, ignoreCase = true)) {
++			Log.w(TAG, "Pending credential email differs from signed-in account, not linking")
++			if (credential.provider == FacebookAuthProvider.PROVIDER_ID) {
++				logOutFacebook()
++			}
++			plugin.emitGodotSignal("account_link_failure", "ERROR_EMAIL_MISMATCH: signed-in account email differs")
++			return
++		}
++		linkCurrentUser(credential)
++	}
++
++	fun clearPendingCredential() {
++		if (pendingCredential?.provider == FacebookAuthProvider.PROVIDER_ID) {
++			logOutFacebook()
++		}
++		pendingCredential = null
++		pendingEmail = null
++	}
++
++	private fun startFacebookLogin() {
++		if (!FacebookSdk.isInitialized()) {
++			Log.e(TAG, "Facebook SDK not initialized (com.facebook.sdk.ApplicationId / ClientToken missing).")
++			failFacebook("Facebook login not configured")
++			return
++		}
++		val manager = LoginManager.getInstance()
++		if (!facebookCallbackRegistered) {
++			manager.registerCallback(facebookCallbacks, object : FacebookCallback<LoginResult> {
++				override fun onSuccess(result: LoginResult) {
++					val credential = FacebookAuthProvider.getCredential(result.accessToken.token)
++					if (facebookLinking) {
++						facebookLinking = false
++						Log.d(TAG, "Facebook login success, linking to current user")
++						linkCurrentUser(credential)
++					} else {
++						Log.d(TAG, "Facebook login success, signing in to Firebase")
++						authWithCredential(credential)
++					}
++				}
++
++				override fun onCancel() {
++					Log.d(TAG, "Facebook login cancelled")
++					failFacebook("Facebook login cancelled")
++				}
++
++				override fun onError(error: FacebookException) {
++					Log.w(TAG, "Facebook login failed", error)
++					failFacebook("Facebook login failed: ${error.message}")
++				}
++			})
++			facebookCallbackRegistered = true
++		}
++		try {
++			manager.logInWithReadPermissions(activity, listOf("public_profile", "email"))
++		} catch (e: Exception) {
++			Log.e(TAG, "Error starting Facebook login", e)
++			failFacebook("Facebook login failed: ${e.message}")
++		}
++	}
++
++	private fun failFacebook(message: String) {
++		if (facebookLinking) {
++			facebookLinking = false
++			plugin.emitGodotSignal("account_link_failure", message)
++		} else {
++			plugin.emitGodotSignal("auth_failure", message)
++		}
++	}
++
++	/** Hata metni Firebase hata koduyla başlar (ör. ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL: …): oyun ayırt eder. */
++	private fun authWithCredential(credential: AuthCredential) {
+ 		auth.signInWithCredential(credential)
+ 			.addOnSuccessListener { authResult ->
+ 				val uid = authResult.user?.uid
+@@ -193,8 +346,46 @@ class Authentication(private val plugin: FirebasePlugin) {
+ 			}
+ 			.addOnFailureListener { e ->
+ 				Log.w(TAG, "signInWithCredential:failure", e)
+-				plugin.emitGodotSignal("auth_failure", e.message ?: "Unknown error")
++				if (e is FirebaseAuthUserCollisionException && e.errorCode == "ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL") {
++					// Öteki yolla girilince bu hesaba bağlanmak üzere beklet (linkPendingCredential)
++					pendingCredential = e.updatedCredential ?: credential
++					pendingEmail = e.email
++				} else if (credential.provider == FacebookAuthProvider.PROVIDER_ID) {
++					logOutFacebook()   // aynı Facebook oturumu bir dahaki denemede kendiliğinden seçilmesin
++				}
++				plugin.emitGodotSignal("auth_failure", errorText(e))
++			}
++	}
++
++	private fun linkCurrentUser(credential: AuthCredential) {
++		val user = auth.currentUser
++		if (user == null) {
++			plugin.emitGodotSignal("account_link_failure", "No user signed in.")
++			return
++		}
++		user.linkWithCredential(credential)
++			.addOnSuccessListener {
++				Log.d(TAG, "linkWithCredential(${credential.provider}):success -> ${user.uid}")
++				plugin.emitGodotSignal("account_link_success", getCurrentUser())
+ 			}
++			.addOnFailureListener { e ->
++				Log.w(TAG, "linkWithCredential(${credential.provider}):failure", e)
++				if (credential.provider == FacebookAuthProvider.PROVIDER_ID) {
++					logOutFacebook()
++				}
++				plugin.emitGodotSignal("account_link_failure", errorText(e))
++			}
++	}
++
++	private fun errorText(e: Exception): String {
++		val code = (e as? FirebaseAuthException)?.errorCode
++		return if (code != null) "$code: ${e.message}" else e.message ?: "Unknown error"
++	}
++
++	private fun logOutFacebook() {
++		if (FacebookSdk.isInitialized()) {
++			LoginManager.getInstance().logOut()
++		}
+ 	}
+ 
+ 	private fun linkWithGoogle(idToken: String) {
+@@ -227,6 +418,10 @@ class Authentication(private val plugin: FirebasePlugin) {
+ 			userData["emailVerified"] = user.isEmailVerified
+ 			userData["isAnonymous"] = user.isAnonymous
+ 			userData["uid"] = user.uid
++			// Hangi hesapla girildi: "google.com" / "facebook.com" / "password" (ilk bağlı sağlayıcı)
++			userData["provider"] = user.providerData.firstOrNull { it.providerId != "firebase" }?.providerId ?: ""
++			// Bağlı bütün giriş yolları, virgülle ("google.com,facebook.com"): Godot'ya dizi yerine düz metin
++			userData["providers"] = user.providerData.map { it.providerId }.filter { it != "firebase" }.joinToString(",")
+ 		} else {
+ 			userData["error"] = "No user signed in"
+ 			Log.d(TAG, "No user signed in")
+@@ -241,6 +436,9 @@ class Authentication(private val plugin: FirebasePlugin) {
+ 
+ 	fun signOut() {
+ 		auth.signOut()
++		pendingCredential = null
++		pendingEmail = null
++		logOutFacebook()
+ 		googleSignInClient.signOut()
+ 			.addOnCompleteListener(activity) {
+ 				plugin.emitGodotSignal("sign_out_success", true)
+@@ -256,6 +454,7 @@ class Authentication(private val plugin: FirebasePlugin) {
+ 		auth.currentUser?.delete()
+ 			?.addOnSuccessListener {
+ 				Log.d(TAG, "User deleted.")
++				logOutFacebook()
+ 				plugin.emitGodotSignal("user_deleted", true)
+ 			}
+ 			?.addOnFailureListener { e ->
+diff --git a/firebase/src/main/java/org/godotengine/plugin/firebase/FirebasePlugin.kt b/firebase/src/main/java/org/godotengine/plugin/firebase/FirebasePlugin.kt
+index 8e68a32..4e094c1 100644
+--- a/firebase/src/main/java/org/godotengine/plugin/firebase/FirebasePlugin.kt
++++ b/firebase/src/main/java/org/godotengine/plugin/firebase/FirebasePlugin.kt
+@@ -67,6 +67,21 @@ class FirebasePlugin(godot: Godot) : GodotPlugin(godot) {
+ 	@UsedByGodot
+ 	fun linkAnonymousWithGoogle() = auth.linkAnonymousWithGoogle()
+ 
++	@UsedByGodot
++	fun signInWithFacebook() = auth.signInWithFacebook()
++
++	@UsedByGodot
++	fun linkFacebook() = auth.linkFacebook()
++
++	@UsedByGodot
++	fun linkGoogle() = auth.linkGoogle()
++
++	@UsedByGodot
++	fun linkPendingCredential() = auth.linkPendingCredential()
++
++	@UsedByGodot
++	fun clearPendingCredential() = auth.clearPendingCredential()
++
+ 	@UsedByGodot
+ 	fun getCurrentUser() = auth.getCurrentUser()
+ 
