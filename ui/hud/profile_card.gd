@@ -67,14 +67,15 @@ func _init() -> void:
 	info.add_child(_level)
 
 	var grid: GridContainer = GridContainer.new()
-	grid.columns = 3
+	grid.columns = 4
 	grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	grid.add_theme_constant_override(&"h_separation", 14)
 	grid.add_theme_constant_override(&"v_separation", 0)
-	for key: String in ["races", "cars", "best"]:
-		var caption: String = {"races": Loc.t("YARIŞ"), "cars": Loc.t("KOLEKSİYON"), "best": Loc.t("EN İYİ 300 M")}[key]
+	for key: String in ["races", "cars", "best", "likes"]:
+		var caption: String = {"races": Loc.t("YARIŞ"), "cars": Loc.t("KOLEKSİYON"), "best": Loc.t("EN İYİ 300 M"),
+			"likes": Loc.t("BEĞENİ")}[key]
 		grid.add_child(_label(&"HudInkCaption", caption))
-	for key: String in ["races", "cars", "best"]:
+	for key: String in ["races", "cars", "best", "likes"]:
 		var value: Label = _label(&"HudInkValue", "–")
 		grid.add_child(value)
 		_stats[key] = value
@@ -135,6 +136,8 @@ func show_person(entry: Dictionary) -> void:
 	_stats["cars"].text = "%d / %d" % [SaveSafe.i(stats.get("cars", 0)), VehicleOwnership.collection_ids().size()]
 	var best: int = SaveSafe.i(stats.get("best", 0))
 	_stats["best"].text = Loc.t("%s sn") % Loc.decimal(best / 1000.0, 2) if best > 0 else "–"
+	var likes: int = SaveSafe.i(stats.get("likes", 0))
+	_stats["likes"].text = Hud.format_thousands(likes) if likes > 0 else "–"
 	var best_car: Dictionary = CarCatalog.get_entry(StringName(SaveSafe.s(stats.get("best_car", ""))))
 	var caption: PackedStringArray = PackedStringArray()
 	if races > 0:

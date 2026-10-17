@@ -15,6 +15,7 @@ extends Node
 ##   avatars/a_{uid}              {img, hash, at}           profil fotoğrafı (192 px JPEG, base64; sahibi yazar)
 ##   reports/x_{şikâyetçi}_{hedef} {target, reason, av, img, name, at}  şikâyet (yalnız yazılır; konsoldan okunur)
 ##   users/{alıcı}/races/e_{gön}  {name, car, paint, build, their_car, won, revenge, mw, ml, at}  YARIŞ HABERİ
+##   users/{sahip}/visits/v_{ziy} {name, at, day, liked}   ZİYARET + BEĞENİ (ziyaretçi dönüşte yazar; sahip okur, siler)
 ##   invites/{jeton}              {uid, name, code, at}     ARKADAŞ DAVETİ (link; 1 saat; jetonla okunur)
 ## ARKADAŞ DAVETİ (2026-10-17, kullanıcı isteği): kod yazmak yerine link. A create_invite ile link üretir ve paylaşır
 ## (ARKADAŞLAR → DAVET LİNKİ GÖNDER); B linke dokunur → oyun açılır (InviteLinks) → A'nın profil kartı → ARKADAŞ
@@ -43,6 +44,12 @@ extends Node
 ##
 ## Cihazda tutulan: user://social.json = {uid, name, code, published}. Başka cihazda / yeniden kurulumda
 ## profil garages/g_{uid}'den geri okunur.
+##
+## OTO MANŞET (açılış gazetesi, 2026-10-17): news_items() son gazeteden bu yana olanları NewsDigest ham haberleri olarak
+## verir — arkadaşın senin aracına karşı kazandığı / kaybettiği yarış sayısı (haberdeki skorun son gazetedeki tabandan
+## farkı), gelen hediye parçalar, yeni arkadaş, gelen istek, arkadaşın yeni parça isteği. Taban social.json "news"
+## anahtarında (cihaza özel), news_shown() ile ilerler. Gazete toplanırken (quiet) hediye bildirimi gösterilmez, hediye
+## "gift_log"a yazılır; oyun içinde bildirimi görülen yarış haberi tabana hemen işlenir (gazete tekrarlamasın).
 
 ## Profil / listeler / durum değişti (ekran yenilensin).
 signal changed
@@ -96,6 +103,8 @@ const REPORT_REASONS: Array[String] = ["photo", "name", "garage"]
 signal _op_result(result: Dictionary)
 signal _op_slot_free
 
+## Gazete topluyor (NewsFlow): hediye bildirimi yerine gazete.
+var quiet: bool = false
 ## Testler kısaltır.
 var publish_delay: float = PUBLISH_DEBOUNCE
 var request_timeout: float = REQUEST_TIMEOUT
@@ -123,6 +132,9 @@ var _profile: PlayerProfile
 var _avatars: Dictionary = {}
 var _avatar_index: Dictionary = {}
 var _avatar_pending: Dictionary = {}   # uid → hash (indiriliyor)
+var _news_next: Dictionary = {}        # gazetede gösterilen durum (news_shown tabana yazar)
+var _news_gifts: int = 0               # gösterilen hediye kaydı sayısı
+var _news_visits: int = 0              # gösterilen ziyaret kaydı sayısı
 
 
 func _ready() -> void:
@@ -175,6 +187,11 @@ func is_ready() -> bool:
 
 
 ## Oyuncunun başlattığı bir işlem sürüyor mu (butonlar kilitli).
+## Arkadaş listesi / istekler / haberler bu oturumda en az bir kez okundu mu (gazete bunu bekler).
+func has_loaded() -> bool:
+	return _refreshed_at > 0.0
+
+
 func is_busy() -> bool:
 	return _busy > 0 or _state == State.LOADING
 
@@ -201,6 +218,7 @@ func _on_news_poll() -> void:
 	if not is_ready() or _busy > 0 or _op_busy:
 		return
 	await _load_race_events()
+	await _load_visits()
 	changed.emit()
 
 
@@ -538,7 +556,31 @@ func visit(uid: String) -> bool:
 		"level": SaveSafe.i(doc.get("level", 1)),
 		"value": SaveSafe.i(doc.get("value", 0)),
 		"garage": garage,
+		# BEĞEN yalnız gerçek arkadaşta (ustalara ziyaret yazılmaz); bugün beğendiysen düğme dolu gelir
+		"can_like": is_friend(uid) and not FeaturedFriends.is_featured(uid),
+		"liked_today": SaveSafe.i((_meta.get("likes_sent", {}) as Dictionary).get(uid, -1)) == _today()
+			if _meta.get("likes_sent") is Dictionary else false,
 	})
+
+
+## Arkadaş garajından dönüldü (kendi sahne ağaca geri takıldı): ziyaret (ve beğeni) sahibine yazılır.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_ENTER_TREE and not GarageVisit.is_visiting():
+		var last: Dictionary = GarageVisit.take_last()
+		if not last.is_empty():
+			_send_visit.call_deferred(SaveSafe.s(last.get("uid", "")), bool(last.get("liked", false)))
+
+
+func _send_visit(uid: String, liked: bool) -> void:
+	if not is_ready() or uid.is_empty() or not is_friend(uid) or FeaturedFriends.is_featured(uid):
+		return
+	var sent: Dictionary = _meta.get("likes_sent", {}) if _meta.get("likes_sent") is Dictionary else {}
+	var result: Dictionary = await _call(&"set", _visits_of(uid), "v_" + _uid,
+		{"name": my_name(), "at": _now(), "day": _today(), "liked": liked})
+	if _ok(result) and liked and SaveSafe.i(sent.get(uid, -1)) != _today():
+		sent[uid] = _today()
+		_meta["likes_sent"] = sent
+		_write_meta()
 
 
 ## HESAP SİLME: bu oyuncunun bütün sosyal belgeleri silinir (arkadaşlıklar iki taraftan, istekler,
@@ -594,6 +636,14 @@ func delete_all(uid: String = "") -> bool:
 		for doc_id: String in _ids(lists[0]):
 			var sent: Dictionary = await _call(&"delete", _races_of(doc_id.trim_prefix("f_")), "e_" + _uid)
 			ok = (_ok(sent) or _not_found(sent) or _permission_denied(sent)) and ok
+		# Ziyaretler: bana gelenler ve arkadaşlara yazdıklarım
+		var visits: Dictionary = await _call(&"list", _visits_of(_uid))
+		ok = _ok(visits) and ok
+		for doc_id: String in _ids(visits):
+			ok = _ok(await _call(&"delete", _visits_of(_uid), doc_id)) and ok
+		for doc_id: String in _ids(lists[0]):
+			var mine: Dictionary = await _call(&"delete", _visits_of(doc_id.trim_prefix("f_")), "v_" + _uid)
+			ok = (_ok(mine) or _not_found(mine) or _permission_denied(mine)) and ok
 		var push_doc: Dictionary = await _call(&"delete", PUSH, "p_" + _uid)
 		ok = (_ok(push_doc) or _not_found(push_doc)) and ok
 		var avatar_doc: Dictionary = await _call(&"delete", AVATARS, "a_" + _uid)
@@ -878,11 +928,24 @@ func collect_gifts() -> int:
 			var who: String = SaveSafe.s(doc.get("name", ""))
 			if not who.is_empty() and not names.has(who):
 				names.append(who)
+			if quiet:
+				_log_gift(id, who, SaveSafe.s(doc.get("part", "")))
 		if SaveSafe.i(doc.get("day", today)) < today and _ok(await _call(&"delete", _gifts_of(_uid), id)):
 			jy.forget_gift(id)
-	if got > 0:
+	if got > 0 and not quiet:
 		notice.emit(Loc.t("ARKADAŞ HEDİYESİ  +%d PARÇA\n%s") % [got, ", ".join(names)])
+	elif got > 0:
+		_write_meta()   # gazeteye kalan hediyeler kaybolmasın
 	return got
+
+
+## Gazete topluyorken gelen hediye: gönderen (belge kimliği p_{gön}_{gün}), adı ve parçası gazete için saklanır.
+func _log_gift(id: String, name: String, part: String) -> void:
+	var body: String = id.trim_prefix("p_")
+	var from: String = body.substr(0, body.rfind("_")) if body.rfind("_") > 0 else body
+	var log: Array = _meta.get("gift_log", []) if _meta.get("gift_log") is Array else []
+	log.append({"uid": from, "name": name, "part": part})
+	_meta["gift_log"] = log
 
 
 func _current_ask() -> Dictionary:
@@ -1024,7 +1087,55 @@ func _load_lists() -> bool:
 	# Haberler arkadaş listesinden SONRA: "artık arkadaş değil" süzgeci güncel listeye bakar (önce okununca bütün
 	# haberler silinirdi)
 	await _load_race_events()
+	await _load_visits()
 	return true
+
+
+## Garajıma gelen ziyaretler: beğeniler sayılır (ziyaretçi başına günde bir; toplam PlayerProfile.likes, açık garajda),
+## ziyaret gazete için kaydedilir (gazete toplanmıyorsa küçük bildirim) ve sunucudan silinir.
+func _load_visits() -> void:
+	var result: Dictionary = await _call(&"list", _visits_of(_uid))
+	if not _ok(result):
+		return
+	var data: Dictionary = result.get("data", {}) if result.get("data") is Dictionary else {}
+	var log: Array = _meta.get("visit_log", []) if _meta.get("visit_log") is Array else []
+	var counted: Dictionary = _meta.get("likes_counted", {}) if _meta.get("likes_counted") is Dictionary else {}
+	var liked_names: PackedStringArray = PackedStringArray()
+	var visit_names: PackedStringArray = PackedStringArray()
+	var changed_meta: bool = false
+	for key: Variant in data:
+		var id: String = SaveSafe.s(key)
+		var doc: Dictionary = data[key] if data[key] is Dictionary else {}
+		var from: String = id.trim_prefix("v_")
+		if not id.begins_with("v_") or doc.is_empty():
+			continue
+		if (_profile and _profile.is_blocked(from)) or not is_friend(from):
+			await _call(&"delete", _visits_of(_uid), id)
+			continue
+		var name: String = SaveSafe.s(person(from).get("name", doc.get("name", "")))
+		var day: int = SaveSafe.i(doc.get("day", 0))
+		var like: bool = bool(doc.get("liked", false)) and day > SaveSafe.i(counted.get(from, -1))
+		if like:
+			counted[from] = day
+			if _profile:
+				_profile.add_like()
+		if quiet:
+			log.append({"uid": from, "name": name, "liked": like})
+		elif like:
+			liked_names.append(name)
+		else:
+			visit_names.append(name)
+		changed_meta = true
+		await _call(&"delete", _visits_of(_uid), id)
+	if not changed_meta:
+		return
+	_meta["visit_log"] = log
+	_meta["likes_counted"] = counted
+	_write_meta()
+	if not liked_names.is_empty():
+		notice.emit(Loc.t("%s GARAJINI BEĞENDİ") % Loc.upper(", ".join(liked_names)))
+	elif not visit_names.is_empty():
+		notice.emit(Loc.t("%s GARAJINI GEZDİ") % Loc.upper(", ".join(visit_names)))
 
 
 ## Arkadaşın güncel adı / seviyesi açık garajından. Garaj yoksa (hesap silinmiş) boş; okunamazsa
@@ -1246,9 +1357,122 @@ func _load_race_events() -> void:
 	race_events = loaded
 	if not fresh.is_empty():
 		_meta["events_seen"] = seen
-		_write_meta()
 		for event: Dictionary in fresh:
 			race_news.emit(event)
+			if not quiet:
+				_note_race_seen(event)   # bildirimi görüldü: gazete tekrarlamasın
+		_write_meta()
+
+
+# --- OTO MANŞET ------------------------------------------------------------------------------------
+
+## Son gazeteden bu yana arkadaş haberleri (NewsDigest ham haberleri). `since`: tabanı olmayan olay (ilk gazete) bu
+## andan eskiyse sayılmaz. Gösterilen durum saklanır; news_shown() tabana yazar. İlk çağrıda arkadaş / istek tabanı
+## boşsa o anki liste taban olur (güncellemeden sonraki ilk gazete "10 yeni arkadaş" demesin).
+func news_items(since: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	_news_next = {}
+	_news_gifts = 0
+	_news_visits = 0
+	if not is_ready():
+		return out
+	var base: Dictionary = _meta.get("news", {}) if _meta.get("news") is Dictionary else {}
+	var at: int = maxi(SaveSafe.i(base.get("at", 0)), since)
+	var scores: Dictionary = base.get("scores", {}) if base.get("scores") is Dictionary else {}
+	var next: Dictionary = {"scores": scores.duplicate(), "asks": (base.get("asks", {}) as Dictionary).duplicate()
+		if base.get("asks") is Dictionary else {}, "at": _now()}
+	for event: Dictionary in race_events:
+		var uid: String = event["uid"]
+		var mw: int = int(event["mw"])
+		var ml: int = int(event["ml"])
+		var lost: int = 0
+		var won: int = 0
+		var old: Variant = scores.get(uid)
+		if old is Array and (old as Array).size() == 2:
+			lost = maxi(mw - SaveSafe.i(old[0]), 0)
+			won = maxi(ml - SaveSafe.i(old[1]), 0)
+		elif int(event["at"]) > at:
+			lost = 1 if bool(event["won"]) else 0
+			won = 0 if bool(event["won"]) else 1
+		next["scores"][uid] = [mw, ml]
+		if lost > 0:
+			out.append({"kind": NewsDigest.RACE_LOST, "people": [_news_person(uid, event)], "count": lost, "car": event["car"]})
+		if won > 0:
+			out.append({"kind": NewsDigest.RACE_WON, "people": [_news_person(uid, event)], "count": won, "car": event["their_car"]})
+	var log: Array = _meta.get("gift_log", []) if _meta.get("gift_log") is Array else []
+	for gift: Variant in log:
+		if gift is Dictionary and not RestorationCatalog.part(StringName(SaveSafe.s(gift.get("part", "")))).is_empty():
+			var from: String = SaveSafe.s(gift.get("uid", ""))
+			out.append({"kind": NewsDigest.GIFT, "people": [_news_person(from, {"name": SaveSafe.s(gift.get("name", ""))})],
+				"parts": {StringName(SaveSafe.s(gift["part"])): 1}})
+	_news_gifts = log.size()
+	var visits: Array = _meta.get("visit_log", []) if _meta.get("visit_log") is Array else []
+	for visit: Variant in visits:
+		if visit is Dictionary:
+			var from: String = SaveSafe.s(visit.get("uid", ""))
+			out.append({"kind": NewsDigest.VISIT, "people": [_news_person(from, {"name": SaveSafe.s(visit.get("name", ""))})],
+				"likes": 1 if bool(visit.get("liked", false)) else 0})
+	_news_visits = visits.size()
+	var friend_ids: Array = friends.map(func(f: Dictionary) -> String: return String(f["uid"]))
+	var request_ids: Array = incoming.map(func(r: Dictionary) -> String: return String(r["uid"]))
+	if base.get("friends") is Array:
+		for uid: String in friend_ids:
+			if not (base["friends"] as Array).has(uid):
+				out.append({"kind": NewsDigest.FRIEND_NEW, "people": [_news_person(uid, {})]})
+	if base.get("requests") is Array:
+		for uid: String in request_ids:
+			if not (base["requests"] as Array).has(uid):
+				out.append({"kind": NewsDigest.FRIEND_REQUEST, "people": [_news_person(uid, {})]})
+	next["friends"] = friend_ids
+	next["requests"] = request_ids
+	for entry: Dictionary in friends:
+		var uid: String = entry["uid"]
+		var ask_at: int = SaveSafe.i(entry.get("ask_at", 0))
+		var part: StringName = StringName(SaveSafe.s(entry.get("ask_part", "")))
+		if part != &"" and ask_at > SaveSafe.i(next["asks"].get(uid, at)) and can_gift(uid):
+			out.append({"kind": NewsDigest.ASK, "people": [_news_person(uid, entry)], "part": part})
+		if part != &"":
+			next["asks"][uid] = maxi(ask_at, SaveSafe.i(next["asks"].get(uid, 0)))
+	if not base.get("friends") is Array or not base.get("requests") is Array:
+		var first: Dictionary = base.duplicate()
+		first["friends"] = friend_ids
+		first["requests"] = request_ids
+		_meta["news"] = first   # ilk taban hemen yazılır (gazete açılmasa da)
+		_write_meta()
+	_news_next = next
+	return out
+
+
+## Gazete gösterildi: taban gösterilen duruma ilerler, gösterilen hediye kayıtları silinir.
+func news_shown() -> void:
+	if _news_next.is_empty():
+		return
+	_meta["news"] = _news_next
+	var log: Array = _meta.get("gift_log", []) if _meta.get("gift_log") is Array else []
+	_meta["gift_log"] = log.slice(mini(_news_gifts, log.size()))
+	var visits: Array = _meta.get("visit_log", []) if _meta.get("visit_log") is Array else []
+	_meta["visit_log"] = visits.slice(mini(_news_visits, visits.size()))
+	_news_next = {}
+	_news_gifts = 0
+	_news_visits = 0
+	_write_meta()
+
+
+## Gazeteye girmeyen (oyun içinde bildirimi görülen) yarış haberi: tabanı hemen ilerler.
+func _note_race_seen(event: Dictionary) -> void:
+	var base: Dictionary = _meta.get("news", {}) if _meta.get("news") is Dictionary else {}
+	var scores: Dictionary = base.get("scores", {}) if base.get("scores") is Dictionary else {}
+	scores[String(event["uid"])] = [int(event["mw"]), int(event["ml"])]
+	base["scores"] = scores
+	_meta["news"] = base
+
+
+## Gazetedeki kişi: arkadaş listesindeki güncel ad / fotoğraf, yoksa haberdeki ad.
+func _news_person(uid: String, fallback: Dictionary) -> Dictionary:
+	var entry: Dictionary = person(uid)
+	var source: Dictionary = entry if not entry.is_empty() else fallback
+	return {"uid": uid, "name": SaveSafe.s(source.get("name", fallback.get("name", ""))), "av": SaveSafe.s(source.get("av", "")),
+		"frame": SaveSafe.s(source.get("frame", "")), "flag": SaveSafe.s(source.get("flag", ""))}
 
 
 ## Sunucudaki haber belgesi → haber (biçimsiz alanlar elenir) + arkadaşın profili (fotoğraf / çerçeve / bayrak).
@@ -1447,6 +1671,10 @@ static func _gifts_of(uid: String) -> String:
 
 static func _races_of(uid: String) -> String:
 	return "users/%s/races" % uid
+
+
+static func _visits_of(uid: String) -> String:
+	return "users/%s/visits" % uid
 
 
 static func _ok(result: Dictionary) -> bool:

@@ -105,6 +105,9 @@ func _ensure_crate_system() -> void:
 		var mods: PerformanceModManager = PerformanceModManager.new()
 		mods.name = "PerformanceModManager"
 		add_child(mods)
+	# PASİF GELİR (OTO MANŞET): sen yokken ustanın kasası + yarım kalan işler (kayıt SaveManager'da, ondan ÖNCE hazır)
+	if get_tree().get_first_node_in_group("offline_earnings") == null:
+		add_child(OfflineEarnings.new())
 	# Takılan parçanın garajdaki görünümü (lifteki araç + kalan süre balonu)
 	if get_tree().get_first_node_in_group("performance_bays") == null:
 		var mod_bays: PerformanceBays = PerformanceBays.new()

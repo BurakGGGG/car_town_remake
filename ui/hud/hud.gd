@@ -78,6 +78,9 @@ var showroom: ShowroomScreen
 var login_screen: LoginScreen
 ## İlk yarıştan sonra bir kez: "Seni kim yendi, ilk sen duy!" → TAMAM → bildirim izni (PushPrompt).
 var push_prompt: PushPrompt
+## Oyuna girişte "sen yokken neler oldu" gazetesi (OTO MANŞET, NewsScreen) ve ne zaman açılacağı (NewsFlow).
+var news_screen: NewsScreen
+var news_flow: NewsFlow
 ## Arkadaşın davet linki açılınca: davet edenin profil kartı + ARKADAŞ EKLE (InviteScreen, InviteLinks).
 var invite_screen: InviteScreen
 ## Kodla kurulan AYARLAR tabelası ve onu açan dişli tabela (sağ üst).
@@ -99,8 +102,8 @@ const AVATAR_BUTTON_SIZE: float = 76.0
 const LEVEL_BADGE_SIZE: float = 26.0
 const LEVEL_BADGE_OVERHANG: float = 8.0
 const LEVEL_BADGE_FONT: int = 12
-## Bu alt panolar açıkken sol üst HUD gizlenir (geniş düzenleme panosu ona yer açarken sağdan taşıyordu).
-const HUD_FREE_SCREENS: Array[StringName] = [&"profile_edit", &"avatar_crop", &"avatar_camera"]
+## Bu panolar açıkken sol üst HUD gizlenir (geniş düzenleme panosu ona yer açarken sağdan taşıyordu; gazete tam sayfa).
+const HUD_FREE_SCREENS: Array[StringName] = [&"profile_edit", &"avatar_crop", &"avatar_camera", &"news"]
 var _top_left_hidden_for_edit: bool = false
 var friend_card_screen: FriendCardScreen
 var profile_edit_screen: ProfileEditScreen
@@ -221,6 +224,7 @@ func _ready() -> void:
 	_build_showroom()
 	_build_login_screen()
 	_build_push_prompt()
+	_build_news()
 	_build_invites()
 	_build_settings()
 	_build_camera_menu()
@@ -1443,6 +1447,7 @@ func _register_screens() -> void:
 	router.register(&"profile", profile_screen, UiRouter.Kind.MODAL)
 	router.register(&"account", login_screen, UiRouter.Kind.MODAL)
 	router.register(&"push_prompt", push_prompt, UiRouter.Kind.MODAL)
+	router.register(&"news", news_screen, UiRouter.Kind.MODAL)
 	router.register(&"invite", invite_screen, UiRouter.Kind.MODAL)
 	router.register(&"settings", settings_screen, UiRouter.Kind.PLACE)   # tam ekran: oyun arkada görünmez
 	router.register(&"race_challenge", race_challenge_screen, UiRouter.Kind.MODAL)
@@ -1856,6 +1861,15 @@ func _build_push_prompt() -> void:
 	garage_screen.get_parent().add_child(push_prompt)
 
 
+func _build_news() -> void:
+	news_screen = NewsScreen.new()
+	garage_screen.get_parent().add_child(news_screen)
+	news_flow = NewsFlow.new()
+	news_flow.hud = self
+	news_flow.screen = news_screen
+	add_child(news_flow)
+
+
 ## YARIŞ BİLDİRİMİ ÖNERİSİ (kullanıcı kararı): izin oyun açılışında değil İLK YARIŞTAN SONRA istenir — o an oyuncu ne
 ## için olduğunu bilir. Yarış bitince kurulur; oyuncu sonuç / rövanş ekranlarından şehre dönüp PUSH_PROMPT_IDLE sn boşta
 ## kalınca (açık ekran, ders, kasa / restorasyon plakası yok) öneri açılır. Bildirim açılamıyorsa (misafir / PC) kurulmaz:
@@ -2024,7 +2038,8 @@ func _connect_social() -> void:
 				_show_notice(text, HudPalette.COIN_DARK, 2.4))
 		# YARIŞ HABERİ: arkadaş senin aracına karşı yarıştı (ARKADAŞLAR ekranında İNTİKAM AL)
 		_social.race_news.connect(func(event: Dictionary) -> void:
-			_show_notice(FriendsScreen.event_notice(event), HudPalette.COIN_DARK, 3.2))
+			if not (news_flow and news_flow.is_gathering()):   # girişte toplanan haberler gazetede (OTO MANŞET)
+				_show_notice(FriendsScreen.event_notice(event), HudPalette.COIN_DARK, 3.2))
 	_refresh_friends_button()
 
 

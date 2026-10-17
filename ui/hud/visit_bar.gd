@@ -8,6 +8,7 @@ const HUD_THEME: Theme = preload("res://ui/theme/hud_theme.tres")
 const PANEL_WIDTH: float = 360.0
 
 var _back: PlateButton
+var _like: PlateButton
 
 
 func _ready() -> void:
@@ -58,6 +59,17 @@ func _ready() -> void:
 	_back.focus_mode = Control.FOCUS_NONE
 	_back.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_back.pressed.connect(_go_home)
+	# BEĞEN (OTO MANŞET): gerçek arkadaşın garajında; arkadaş başına günde bir (sahibi sayar), dönüşte yazılır
+	if bool(info.get("can_like", false)):
+		_like = PlateButton.new()
+		_like.name = "LikeButton"
+		_like.theme_type_variation = &"HudPlate"
+		_like.kind = HudIcon.Kind.HEART
+		_like.focus_mode = Control.FOCUS_NONE
+		_like.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_like.pressed.connect(_on_like)
+		row.add_child(_like)
+		_show_like()
 	row.add_child(_back)
 	_frame_garage.call_deferred()
 
@@ -74,6 +86,22 @@ func _frame_garage() -> void:
 	var lot: Rect2 = view.lot_rect()
 	camera.frame_box(AABB(Vector3(lot.position.x, 0.0, lot.position.y), Vector3(lot.size.x, 0.45, lot.size.y)),
 		0.17, 0.97, 0.03)
+
+
+func _on_like() -> void:
+	if GarageVisit.liked:
+		return
+	GarageVisit.liked = true
+	_show_like()
+	_like.pivot_offset = _like.size * 0.5
+	var tween: Tween = _like.create_tween()
+	tween.tween_property(_like, "scale", Vector2.ONE * 1.15, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_like, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _show_like() -> void:
+	_like.text = Loc.t("BEĞENDİN") if GarageVisit.liked else Loc.t("BEĞEN")
+	_like.highlight = GarageVisit.liked   # amber = beğenildi (soluk "kapalı" düğme gibi görünmesin; ikinci basış bir şey yapmaz)
 
 
 func _notification(what: int) -> void:

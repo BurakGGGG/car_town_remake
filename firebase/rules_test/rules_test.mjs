@@ -190,6 +190,29 @@ await check("gönderen kendi haberini siler", assertSucceeds(deleteDoc(doc(bob, 
 await setDoc(doc(bob, "users/alice/races/e_bob"), ev());
 await check("alice haberi siler (İNTİKAM / tamam)", assertSucceeds(deleteDoc(doc(alice, "users/alice/races/e_bob"))));
 
+console.log("== ziyaret + beğeni (visits) ==");
+const visitDay = Math.floor(Date.now() / 86400000);
+const vis = (over = {}) => ({ name: "Bob Usta", at: Math.floor(Date.now() / 1000), day: visitDay, liked: false, ...over });
+await check("arkadaş bob alice'in garajını gezdi", assertSucceeds(setDoc(doc(bob, "users/alice/visits/v_bob"), vis())));
+await check("bob beğenisini ekler (tek belge üzerine yazılır)", assertSucceeds(setDoc(doc(bob, "users/alice/visits/v_bob"), vis({ liked: true }))));
+await check("arkadaş olmayan eve yazamaz", assertFails(setDoc(doc(eve, "users/alice/visits/v_eve"), vis({ name: "Eve Usta" }))));
+await check("başkası adına yazılamaz", assertFails(setDoc(doc(bob, "users/alice/visits/v_carol"), vis())));
+await check("kendi garajına ziyaret yazılamaz", assertFails(setDoc(doc(alice, "users/alice/visits/v_alice"), vis({ name: "Usta Ali" }))));
+await check("dünün günü reddedilir (beğeni sınırı)", assertFails(setDoc(doc(bob, "users/alice/visits/v_bob"), vis({ day: visitDay - 1 }))));
+await check("ek alan (likes) reddedilir", assertFails(setDoc(doc(bob, "users/alice/visits/v_bob"), vis({ likes: 99 }))));
+await check("liked bool olmalı", assertFails(setDoc(doc(bob, "users/alice/visits/v_bob"), vis({ liked: 5 }))));
+await check("biçimsiz ad reddedilir", assertFails(setDoc(doc(bob, "users/alice/visits/v_bob"), vis({ name: "<b>x</b>" }))));
+await check("alice ziyaretleri listeler", assertSucceeds(getDocs(collection(alice, "users/alice/visits"))));
+await check("bob alice'in ziyaretlerini okuyamaz", assertFails(getDocs(collection(bob, "users/alice/visits"))));
+await check("eve silemez", assertFails(deleteDoc(doc(eve, "users/alice/visits/v_bob"))));
+await check("ziyaretçi kendi belgesini siler", assertSucceeds(deleteDoc(doc(bob, "users/alice/visits/v_bob"))));
+await setDoc(doc(bob, "users/alice/visits/v_bob"), vis({ liked: true }));
+await check("alice okuduğu ziyareti siler", assertSucceeds(deleteDoc(doc(alice, "users/alice/visits/v_bob"))));
+await check("garajda toplam beğeni (likes) yazılır", assertSucceeds(setDoc(doc(alice, "garages/g_alice"),
+  prof({ stats: { wins: 3, races: 5, cars: 12, best: 11234, best_car: "vw_golf_7", likes: 7 } }))));
+await check("eksi beğeni reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"),
+  prof({ stats: { wins: 3, races: 5, cars: 12, best: 11234, best_car: "vw_golf_7", likes: -1 } }))));
+
 console.log("== arkadaş daveti (link) ==");
 const carol = db("carol"), dave = db("dave");
 const nowSec = () => Math.floor(Date.now() / 1000);

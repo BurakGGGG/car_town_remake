@@ -106,8 +106,9 @@ func _ready() -> void:
 ## Kartı yeni adımın içeriğiyle doldurur ve yazıyı baştan akıtır.
 ## action "" ise düğme gizlenir (adım oyundaki bir eylemle ilerler).
 func present(chip: String, title: String, body: String, action: String, index: int, count: int,
-		coach: StringName = COACH_RIZA) -> void:
+		coach: StringName = COACH_RIZA, skippable: bool = true) -> void:
 	_badge.coach = coach
+	_skip.visible = skippable   # ders değil, tek seferlik konuşma (TutorialDirector.say): GEÇ yok
 	_chip.text = chip
 	_chip.visible = chip != ""
 	_title.text = title

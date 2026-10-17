@@ -61,7 +61,7 @@ func _run() -> void:
 	social.friends.clear()
 	for i: int in names.size():
 		social.friends.append(_person("f%d" % i, names[i], 5 + i * 3, CARS[i]))
-		social.friends[i]["stats"] = {"wins": 3 + i * 4, "races": 8 + i * 5, "cars": 6 + i * 2, "best": 11200 + i * 310}
+		social.friends[i]["stats"] = {"wins": 3 + i * 4, "races": 8 + i * 5, "cars": 6 + i * 2, "best": 11200 + i * 310, "likes": i * 7}
 	social.friends[1]["ask_part"] = "bolt"   # hurdalık isteği: GÖNDER
 	social.friends[1]["ask_at"] = int(Time.get_unix_time_from_system())
 	social.incoming.clear()

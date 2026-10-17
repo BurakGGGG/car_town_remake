@@ -46,6 +46,9 @@ const DECOR_LEVEL: int = 3
 const ORDER: Array[StringName] = [TutorialManager.BASICS, TutorialManager.VEHICLES, TutorialManager.RACE,
 	TutorialManager.DECOR, TutorialManager.JUNKYARD]
 
+## Tek seferlik konuşma (say) kapandı.
+signal said
+
 var hud: Hud
 var overlay: TutorialOverlay
 
@@ -144,6 +147,27 @@ func restart() -> void:
 
 func is_running() -> bool:
 	return _state != &"idle"
+
+
+## TEK SEFERLİK KONUŞMA (ders değil; ör. OTO MANŞET'ten sonra Rıza Usta pasif geliri anlatır): kart ortada, ekran
+## karartılı, TAMAM ya da GEÇ kapatır, sonra said yayılır. Ders oynarken açılmaz (false döner).
+func say(chip: String, title: String, body: String) -> bool:
+	if _state != &"idle" or overlay == null:
+		return false
+	_state = &"say"
+	overlay.activate()
+	overlay.set_mode(true, true, false, false)
+	overlay.set_target(Rect2(), false)
+	overlay.show_card(chip, title, body, Loc.t("TAMAM"), 0, 1, &"center", CoachCard.COACH_RIZA, false)
+	return true
+
+
+func _end_say() -> void:
+	overlay.hide_card()
+	overlay.deactivate()
+	_state = &"idle"
+	_next_allowed = _clock + 2.0   # bir ders hemen arkasından açılmasın
+	said.emit()
 
 
 # --- Ders başlatma ----------------------------------------------------------------------
@@ -324,12 +348,18 @@ func _step_done() -> void:
 
 
 func _on_action() -> void:
+	if _state == &"say":
+		_end_say()
+		return
 	if _state == &"steps" and _index >= 0 and _index < _steps.size() and _steps[_index].has("button"):
 		_step_done()
 
 
 ## DERSİ GEÇ: ders bitmiş sayılır (ödül yok).
 func _on_skip() -> void:
+	if _state == &"say":
+		_end_say()
+		return
 	if _chapter == &"":
 		return
 	var id: StringName = _chapter

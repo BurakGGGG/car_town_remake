@@ -44,7 +44,11 @@ enum Kind {
 	EYE_OFF,   ## üstü çizili göz (HUD'u gizle)
 	FILM,      ## klaket (sinema modu)
 	TARGET,    ## nişangâh (kamerayı ortala)
+	HEART,     ## kırmızı kalp (garaj beğenisi; COIN / GEM gibi kendi rengiyle) — sona eklendi
 }
+
+const HEART_RED: Color = Color("D7342A")
+const HEART_DARK: Color = Color("9C2117")
 
 @export var kind: Kind = Kind.COIN:
 	set(value):
@@ -158,6 +162,8 @@ static func draw_icon(ci: CanvasItem, kind: Kind, c: Vector2, s: float, ink: Col
 			_film(ci, c, s, ink, cutout)
 		Kind.TARGET:
 			_target(ci, c, s, ink, w)
+		Kind.HEART:
+			_heart(ci, c, s)
 		_:
 			pass
 
@@ -192,6 +198,22 @@ static func _gear(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Colo
 		ci.draw_colored_polygon(PackedVector2Array([inner - side, outer - side * 0.8, outer + side * 0.8, inner + side]), ink)
 	ci.draw_circle(c, 0.33 * s, ink, true, -1.0, true)
 	ci.draw_circle(c, 0.13 * s, cutout, true, -1.0, true)
+
+
+## Kalp: klasik kalp eğrisi, altında koyu "gölge" kopyası (para ikonu gibi tombul), sol üstte parıltı.
+static func _heart(ci: CanvasItem, c: Vector2, s: float) -> void:
+	var pts: PackedVector2Array = PackedVector2Array()
+	for i: int in 40:
+		var t: float = TAU * float(i) / 40.0
+		var x: float = 16.0 * pow(sin(t), 3.0)
+		var y: float = -(13.0 * cos(t) - 5.0 * cos(2.0 * t) - 2.0 * cos(3.0 * t) - cos(4.0 * t))
+		pts.append(Vector2(x, y + 1.5) / 17.0 * 0.46)
+	var shadow: PackedVector2Array = PackedVector2Array()
+	for p: Vector2 in pts:
+		shadow.append(p + Vector2(0.0, 0.06))
+	_poly(ci, c, s, shadow, HEART_DARK)
+	_poly(ci, c, s, pts, HEART_RED)
+	ci.draw_circle(c + Vector2(-0.2, -0.14) * s, s * 0.07, Color(1.0, 1.0, 1.0, 0.55))
 
 
 static func _pts(c: Vector2, s: float, raw: PackedVector2Array) -> PackedVector2Array:

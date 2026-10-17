@@ -673,8 +673,30 @@ func _add_person(box: VBoxContainer, entry: Dictionary, caption: String) -> void
 	name_label.clip_text = true
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	box.add_child(name_label)
-	if not caption.is_empty():
+	if caption.is_empty():
+		return
+	var likes: int = SaveSafe.i((entry.get("stats", {}) as Dictionary).get("likes", 0)) if entry.get("stats") is Dictionary else 0
+	if likes <= 0:
 		box.add_child(_centered(&"HudInkCaption", caption))
+		return
+	# GARAJIN BEĞENİSİ (OTO MANŞET): seviyenin yanında kalp + sayı — kart boyu değişmez (vitrin 16:9'da zaten dar)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "Likes"
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override(&"separation", 3)
+	row.add_child(_label(&"HudInkCaption", caption + "  ·"))
+	var heart: HudIcon = HudIcon.new()
+	heart.kind = HudIcon.Kind.HEART
+	heart.icon_size = 11.0
+	heart.custom_minimum_size = Vector2(11.0, 11.0)
+	heart.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	heart.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(heart)
+	var count: Label = _label(&"HudInkCaption", Hud.format_thousands(likes))
+	count.add_theme_color_override(&"font_color", HudIcon.HEART_DARK)
+	row.add_child(count)
+	box.add_child(row)
 
 
 ## İstek kartının gövdesi: kişi, kodu, durum yazısı (istek belgesinde araç / istatistik yok).

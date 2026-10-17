@@ -147,6 +147,22 @@ service cloud.firestore {
           && isValidRaceEvent(request.resource.data);
       }
 
+      // ZİYARET + BEĞENİ (OTO MANŞET, 2026-10-17): users/{sahip}/visits/v_{ziyaretçi} = {name, at, day, liked}. Arkadaşının
+      // garajını gezen, kendi garajına dönünce yazar; yalnızca ARKADAŞ, kendi adına, ziyaretçi başına TEK belge (son ziyaret
+      // üzerine yazılır: spam yok). liked: kalbe bastı — sahip ziyaretçi başına günde en çok bir beğeni sayar (day = sunucunun
+      // UTC günü). Sahip okur ve okuyunca siler; ziyaretçi kendi belgesini silebilir (hesap silme), başkalarınınkini okuyamaz.
+      match /visits/{visitId} {
+        allow read: if isOwner(uid);
+        allow delete: if isOwner(uid) || (signedIn() && visitId == 'v_' + request.auth.uid);
+        allow create, update: if signedIn() && uid != request.auth.uid && visitId == 'v_' + request.auth.uid
+          && exists(/databases/$(database)/documents/users/$(uid)/friends/$('f_' + request.auth.uid))
+          && request.resource.data.keys().hasOnly(['name', 'at', 'day', 'liked'])
+          && isValidName(request.resource.data.name)
+          && request.resource.data.at is int
+          && request.resource.data.day == today()
+          && request.resource.data.liked is bool;
+      }
+
       // ARKADAŞLAR: users/{sahip}/friends/f_{diğer}. İlişki karşılıklıdır ve YALNIZCA ALICI kabul
       // ederken kurulur: iki belgeyi de alıcı yazar, o anda kendi gelen kutusunda istek durmalıdır.
       //   alıcı kendi listesine:      sahip == alıcı,  inbox/alıcı/r_{diğer} var
@@ -228,10 +244,12 @@ service cloud.firestore {
       return a is string && a.matches('^(p[0-9]{2}|img:[0-9a-f]{8})?$');
     }
 
+    // likes: garajın toplam beğenisi (OTO MANŞET; sahibi sayar, isteğe bağlı — eski istemci yazmaz).
     function isValidStats(s) {
-      return s is map && s.keys().hasOnly(['wins', 'races', 'cars', 'best', 'best_car'])
+      return s is map && s.keys().hasOnly(['wins', 'races', 'cars', 'best', 'best_car', 'likes'])
         && s.wins is int && s.races is int && s.cars is int && s.best is int
-        && s.best_car is string && s.best_car.matches('^[a-z0-9_]{0,40}$');
+        && s.best_car is string && s.best_car.matches('^[a-z0-9_]{0,40}$')
+        && (!('likes' in s) || (s.likes is int && s.likes >= 0));
     }
 
     function isValidGarage(data) {

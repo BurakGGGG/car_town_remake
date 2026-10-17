@@ -17,6 +17,9 @@ const CarHitboxScript: GDScript = preload("res://car_hitbox.gd")
 
 static var _home: Node = null
 static var _info: Dictionary = {}
+## Ziyaretçi bu ziyarette kalbe bastı (VisitBar). Dönüşte SocialManager ziyaret belgesine yazar (take_last).
+static var liked: bool = false
+static var _last: Dictionary = {}
 
 
 static func is_visiting() -> bool:
@@ -40,6 +43,8 @@ static func begin(tree: SceneTree, visit_info: Dictionary) -> bool:
 	if not visit_info.get("garage") is Dictionary or (visit_info["garage"] as Dictionary).is_empty():
 		return false
 	_info = visit_info.duplicate(true)
+	liked = bool(_info.get("liked_today", false))
+	_last = {}
 	var scene: Node = (load(MAIN_SCENE) as PackedScene).instantiate()
 	if not _prepare(scene):
 		# Kaydı kapatılamayan bir ziyaret sahnesi kendi kaydının üzerine yazabilirdi: hiç açılmaz
@@ -65,12 +70,21 @@ static func end(tree: SceneTree) -> void:
 	if visit_scene:
 		tree.root.remove_child(visit_scene)
 		visit_scene.queue_free()
+	if bool(_info.get("can_like", false)):
+		_last = {"uid": SaveSafe.s(_info.get("uid", "")), "liked": liked}
 	_info = {}
 	if _home:
 		tree.root.add_child(_home)
 		tree.current_scene = _home
 		_restore_camera(_home)
 	_home = null
+
+
+## Biten ziyaret {uid, liked} (bir kez; yoksa boş). Kendi sahne geri takılınca SocialManager alır.
+static func take_last() -> Dictionary:
+	var out: Dictionary = _last
+	_last = {}
+	return out
 
 
 ## Ziyaret sahnesi ağaca girmeden: kaydı kapat, HUD'u ve bulut kaydını çıkar, ziyaret çubuğunu ekle.

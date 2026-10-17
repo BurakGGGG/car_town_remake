@@ -142,10 +142,10 @@ func set_target(rect: Rect2, circle: bool) -> void:
 
 
 func show_card(chip: String, title: String, body: String, action: String, index: int, count: int, place: StringName,
-		coach: StringName = CoachCard.COACH_RIZA) -> void:
+		coach: StringName = CoachCard.COACH_RIZA, skippable: bool = true) -> void:
 	place_card(place)
 	card.visible = true
-	card.present(chip, title, body, action, index, count, coach)
+	card.present(chip, title, body, action, index, count, coach, skippable)
 	if sfx:
 		sfx.play(&"pop")
 	if _card_tween:

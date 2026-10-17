@@ -12,7 +12,7 @@ extends Node
 ## Paralel bir ekonomi / XP / upgrade / araç / görev sistemi yoktur.
 ##
 ## Kaydedilmeyenler (oyun açılışında sıfırdan oluşur): trafikteki NPC'ler, bekleyen müşteriler,
-## süren tamirler, araç konumları, kamera, UI durumu, seçili araç.
+## araç konumları, kamera, UI durumu, seçili araç. Süren tamirler 2026-10-17'den beri kayıtta ("repairs").
 ##
 ## Kayıtta garajın FİZİKSEL seviyesi (garage_upgrades.garage_level) ile SATIN ALINMIŞ tamir alanı
 ## sayısı (repair_bays.unlocked) ayrı alanlardır: garaj büyük olup alan satın alınmamış olabilir.
@@ -72,6 +72,8 @@ var _tutorial: TutorialManager
 var _junkyard: JunkyardManager
 var _mods: PerformanceModManager
 var _profile: PlayerProfile
+var _repairs: RepairManager
+var _away: OfflineEarnings
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -106,6 +108,8 @@ func _setup() -> void:
 	_junkyard = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
 	_mods = get_tree().get_first_node_in_group("performance_mods") as PerformanceModManager
 	_profile = get_tree().get_first_node_in_group("player_profile") as PlayerProfile
+	_repairs = get_tree().get_first_node_in_group("repair_manager") as RepairManager
+	_away = get_tree().get_first_node_in_group("offline_earnings") as OfflineEarnings
 	if visit_mode:
 		_loading = true
 		_apply(GarageVisit.garage())
@@ -227,6 +231,10 @@ func new_game() -> void:
 		_mods.reset()
 	if _profile:
 		_profile.reset()
+	if _away:
+		_away.reset()
+	if _repairs:
+		_repairs.load_jobs([])
 	if _crates:
 		_crates.ensure_welcome(false)   # araçsız yeni oyun: ilk araç HOŞ GELDİN KUTUSU'ndan çıkar
 	_loading = false
@@ -262,6 +270,8 @@ func _progress_json() -> String:
 	data.erase("missions")   # gün / hafta değişimiyle kendiliğinden değişir; ilerleme sayılmaz
 	data.erase("ads")   # reklam sayaçları da zamanla / izlemeyle değişir; ilerleme sayılmaz
 	data.erase("tutorial")   # ders atlamak / izlemek bulut kaydını "ilerlemiş" göstermesin
+	data.erase("away")   # son görülme saati her yazımda değişir; kasa zamanla dolar
+	data.erase("repairs")   # süren tamirler geçicidir
 	_ignore_welcome(data)
 	return JSON.stringify(data, "", true)
 
@@ -372,6 +382,12 @@ func _collect() -> Dictionary:
 		# PROFİL: avatar seçimi, çerçeveler (elmasla alınanlar), bayrak, garaj adı, vitrin aracı, engellenenler.
 		# Eski kayıtta yoktur: varsayılan profil (Google fotoğrafı / kask, PLAKA çerçeve).
 		"profile": _profile.state() if _profile else {},
+		# YARIM KALAN TAMİRLER: oyun kapanırken alandaki işler (açılışta sen yokken bitenler gazeteye, kalanlar alana).
+		# Eski kayıtta yoktur: alanlar boş başlar (eskiden süren tamirler kayda girmezdi).
+		"repairs": _repairs.jobs_state() if _repairs else [],
+		# PASİF GELİR (OTO MANŞET): son görülme, ustanın kasası, biten yarım işler, gazete sayısı. Eski kayıtta yoktur:
+		# son görülme bilinmez, ilk açılışta yokluk sayılmaz.
+		"away": _away.state() if _away else {},
 	}
 
 
@@ -503,6 +519,12 @@ func _apply(data: Dictionary) -> void:
 	if _profile:
 		var profile_data: Variant = data.get("profile", {})
 		_profile.load_state(profile_data if profile_data is Dictionary else {})
+	if _repairs:
+		var repair_data: Variant = data.get("repairs", [])
+		_repairs.load_jobs(repair_data if repair_data is Array else [])
+	if _away:
+		var away_data: Variant = data.get("away", {})
+		_away.load_state(away_data if away_data is Dictionary else {})
 	if legacy:
 		if _missions:
 			_missions.mark_legacy_repairs_passed()   # geçilmiş tamir yıldızları ödenmiş sayılır

@@ -104,6 +104,17 @@ const CANDIDATE_RETRY: float = 0.1
 const RESTORE_TIMEOUT: float = 20.0   # model bu sürede yüklenemezse iş bırakılır (alan sonsuza dek kilitlenmesin)
 static var _carried: Array[Dictionary] = []
 static var _carried_at: int = 0
+## Dil değişiminde işler devirle gelir; aynı işler kayıtta da durduğu için yeni sahne kayıttakileri almamalı.
+static var _skip_saved: bool = false
+## YARIM KALAN İŞLER (2026-10-17, OTO MANŞET): oyun kapanırken alandaki işler kayda girer (jobs_state). Açılışta
+## (load_jobs) alanları hemen ayrılır ama araçları kurulmaz: OfflineEarnings yokluk süresini (sunucu saatiyle)
+## bulunca resume_saved_jobs çağırır — o sürede bitenler tam ödülle gazeteye gider, bitmeyenler alana geri kurulur.
+## OfflineEarnings yoksa (testler) HOLD_TIMEOUT sonra kayıttaki saatle kendisi devam eder.
+const HOLD_TIMEOUT: float = 12.0
+## Kare süresi en çok bu kadar sayaca işler: arka plandan dönüşteki dev kare yokluğu iki kez saymasın (yokluk
+## advance_all ile açıkça eklenir).
+const MAX_TICK: float = 0.5
+var _hold_time: float = 0.0
 
 var _active: Array[RepairState] = []   # açık işler (her biri bir CarSpot'ta); en fazla capacity() tane
 var _restoring: Array[Dictionary] = []   # devralınmış, aracı henüz kurulamamış işler (alanları ayrılmış)
@@ -125,9 +136,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_tick_hold(delta)
 	_tick_restore(delta)
 	_poll_target()
-	_tick_active(delta)
+	_tick_active(minf(delta, MAX_TICK))
 	_tick_customers(delta)
 
 
@@ -484,6 +496,7 @@ static func carry_over(tree: SceneTree) -> void:
 			"duration_scale": state.duration_scale, "reward_scale": state.reward_scale, "boosted": state.boosted,
 		})
 	_carried_at = Time.get_ticks_msec()
+	_skip_saved = true
 
 
 ## Yeni sahnede: devredilen işleri al (araçlar model yüklendikçe _tick_restore'da kurulur).
@@ -506,6 +519,8 @@ func _tick_restore(delta: float) -> void:
 		return
 	_restore_time -= delta
 	for job: Dictionary in _restoring.duplicate():
+		if job.get("hold", false):
+			continue   # kayıttan gelen iş yokluk süresini bekliyor (resume_saved_jobs)
 		if int(job["bay"]) >= capacity():
 			_restoring.erase(job)   # alan artık yok (kayıt farklı yüklendi): iş bırakılır
 			continue
@@ -529,6 +544,154 @@ func _tick_restore(delta: float) -> void:
 		_occupy_bay(vehicle, state)
 		if state.advance(0.0):
 			_finish_state(state)   # yenileme sırasında bitti (ya da zaten para bekliyordu)
+
+
+# --- Yarım kalan işler (kayıt / yokluk) ----------------------------------------------------------
+
+## Kayda giden süren işler: devirdekiyle aynı alanlar + görünüm renkleri (CarAppearance kaynağı JSON'a girmez) +
+## kaydın anı (OfflineEarnings yoksa yokluk buradan ölçülür).
+func jobs_state() -> Array:
+	var out: Array = []
+	var at: int = int(Time.get_unix_time_from_system())
+	for state: RepairState in _active:
+		var car: TrafficVehicle = state.car as TrafficVehicle
+		if not is_instance_valid(car) or state.repair_type == null:
+			continue
+		out.append(_saved_job(car.vehicle_id, car.appearance, state.repair_type.id, state.severity, state.bay_index,
+			state.elapsed, state.duration_scale, state.reward_scale, state.boosted, at))
+	for job: Dictionary in _restoring:   # henüz kurulamamış (ya da yokluğu bekleyen) işler de kaybolmasın
+		out.append(_saved_job(job["vehicle"], job.get("appearance") as CarAppearance, job["type"], job["severity"], job["bay"],
+			job["elapsed"], job["duration_scale"], job["reward_scale"], job["boosted"], int(job.get("saved_at", at))))
+	return out
+
+
+static func _saved_job(vehicle: StringName, look: CarAppearance, type: StringName, severity: float, bay: int, elapsed: float,
+		duration_scale: float, reward_scale: float, boosted: bool, at: int) -> Dictionary:
+	var colors: Dictionary = {}
+	if look:
+		colors = {"body": look.body_color.to_html(false), "wheel": look.wheel_color.to_html(false),
+			"glass": look.glass_color.to_html(true)}
+	return {"vehicle": String(vehicle), "colors": colors, "type": String(type), "severity": snappedf(severity, 0.001),
+		"bay": bay, "elapsed": snappedf(elapsed, 0.01), "duration_scale": duration_scale, "reward_scale": reward_scale,
+		"boosted": boosted, "saved_at": at}
+
+
+## Kayıttan gelen işler: alanları hemen ayrılır (oyuncu o arada aynı alana iş açamasın), araçları yokluk süresi
+## bilinince kurulur. Dil değişimindeki yeniden kurulumda işler devirle geldiği için kayıttakiler alınmaz.
+func load_jobs(jobs: Array) -> void:
+	for job: Dictionary in _restoring.duplicate():
+		if job.get("hold", false):
+			_restoring.erase(job)   # yeniden yükleme: eski kayıttan bekleyenler bırakılır
+	if _skip_saved:
+		_skip_saved = false
+		return
+	for raw: Variant in jobs:
+		if not raw is Dictionary:
+			continue
+		var data: Dictionary = raw
+		var type: RepairType = _type_by_id(StringName(SaveSafe.s(data.get("type", ""))))
+		var bay: int = SaveSafe.i(data.get("bay", -1))
+		var vehicle: StringName = StringName(SaveSafe.s(data.get("vehicle", "")))
+		if type == null or bay < 0 or bay >= repair_car_spots.size() or vehicle == &"":
+			continue
+		var look: CarAppearance = null
+		var colors: Dictionary = data.get("colors", {}) if data.get("colors") is Dictionary else {}
+		if Color.html_is_valid(SaveSafe.s(colors.get("body", ""))):
+			look = CarAppearance.new()
+			look.body_color = Color.html(SaveSafe.s(colors["body"]))
+			if Color.html_is_valid(SaveSafe.s(colors.get("wheel", ""))):
+				look.wheel_color = Color.html(SaveSafe.s(colors["wheel"]))
+			if Color.html_is_valid(SaveSafe.s(colors.get("glass", ""))):
+				look.glass_color = Color.html(SaveSafe.s(colors["glass"]))
+		_restoring.append({"vehicle": vehicle, "appearance": look, "type": type.id,
+			"severity": clampf(SaveSafe.f(data.get("severity", 1.0)), 0.1, 3.0), "bay": bay,
+			"elapsed": maxf(SaveSafe.f(data.get("elapsed", 0.0)), 0.0),
+			"duration_scale": clampf(SaveSafe.f(data.get("duration_scale", 1.0)), 0.1, 1.0),
+			"reward_scale": clampf(SaveSafe.f(data.get("reward_scale", 1.0)), 0.1, 10.0),
+			"boosted": SaveSafe.b(data.get("boosted", false)), "saved_at": SaveSafe.i(data.get("saved_at", 0)), "hold": true})
+	_hold_time = HOLD_TIMEOUT
+
+
+## Yokluk süresi bilindi: o sürede biten kayıttaki işler [{type, reward, xp}] olarak döner (ödülü gazete verir), kalanlar
+## geçen süre eklenip alana kurulur.
+func resume_saved_jobs(away: float) -> Array[Dictionary]:
+	var done: Array[Dictionary] = []
+	for job: Dictionary in _restoring.duplicate():
+		if not job.get("hold", false):
+			continue
+		var type: RepairType = _type_by_id(job["type"])
+		job["elapsed"] = float(job["elapsed"]) + maxf(away, 0.0)
+		if type and float(job["elapsed"]) >= type.duration * float(job["duration_scale"]):
+			_restoring.erase(job)
+			done.append(_settled(type, int(round(float(type.reward) * float(job["reward_scale"])))))
+		else:
+			job.erase("hold")
+	_restore_time = RESTORE_TIMEOUT
+	return done
+
+
+## OfflineEarnings hiç sormadıysa (yalnız oyun testleri): kayıttaki saatle devam edilir, bitenler kendi ödülünü alır.
+func _tick_hold(delta: float) -> void:
+	if _hold_time <= 0.0:
+		return
+	_hold_time -= delta
+	if _hold_time > 0.0:
+		return
+	var held: Array[Dictionary] = []
+	for job: Dictionary in _restoring:
+		if job.get("hold", false):
+			held.append(job)
+	if held.is_empty():
+		return
+	var away: float = maxf(float(int(Time.get_unix_time_from_system()) - int(held[0].get("saved_at", 0))), 0.0) \
+		if int(held[0].get("saved_at", 0)) > 0 else 0.0
+	for job: Dictionary in resume_saved_jobs(away):
+		_grant(job)
+
+
+## Arka plandan dönüş: süren işler geçen süre kadar ilerler (bitenler ₺ balonuyla bekler).
+func advance_all(seconds: float) -> void:
+	if seconds <= 0.0:
+		return
+	for state: RepairState in _active.duplicate():
+		if is_instance_valid(state.car) and state.phase == RepairState.Phase.REPAIRING and state.advance(seconds):
+			repair_progress.emit(state.car, state.repair_progress)
+			_finish_state(state)
+	for job: Dictionary in _restoring:
+		if not job.get("hold", false):
+			job["elapsed"] = float(job["elapsed"]) + seconds
+
+
+## Uzun yokluktan dönüş: bitip ₺ balonu bekleyen işler ödülü verilmeden kapatılır (araç yola döner, alan boşalır) ve
+## [{type, reward, xp}] olarak döner — ödülü gazete verir.
+func settle_finished() -> Array[Dictionary]:
+	var done: Array[Dictionary] = []
+	for state: RepairState in _active.duplicate():
+		if state.phase != RepairState.Phase.REWARD_WAITING:
+			continue
+		done.append(_settled(state.repair_type, state.repair_reward))
+		state.is_collected = true
+		_release(state)
+	return done
+
+
+## Biten işin gazete kaydı: ödül işin başındaki çarpanla, XP ustalık çarpanıyla (ustalık sayacı ödeme anında işler).
+func _settled(type: RepairType, reward: int) -> Dictionary:
+	var mastery: JobMastery = _mastery()
+	var xp: int = int(round(float(type.xp) * (mastery.xp_multiplier(type.id) if mastery else 1.0)))
+	return {"type": String(type.id), "reward": reward, "xp": xp}
+
+
+func _grant(job: Dictionary) -> void:
+	var economy: EconomyManager = _economy()
+	if economy:
+		economy.add_money(int(job["reward"]))
+	var player: PlayerProgress = _player()
+	if player:
+		player.add_xp(int(job["xp"]))
+	var mastery: JobMastery = _mastery()
+	if mastery:
+		mastery.record(StringName(job["type"]))
 
 
 func _type_by_id(id: StringName) -> RepairType:
@@ -573,6 +736,14 @@ func collect(car: Node3D) -> bool:
 		mastery.record(state.repair_type.id)
 	repair_collected.emit(vehicle, state.repair_reward, xp_gain)
 	job_collected.emit(state.repair_type.id, state.repair_reward)
+	_release(state)
+	return true
+
+
+## İş kapandı: lift iner, araç boş bir yol noktasından trafiğe döner, alan boşalır.
+func _release(state: RepairState) -> void:
+	var vehicle: TrafficVehicle = state.car as TrafficVehicle
+	_active.erase(state)
 	var lift_bays: RepairBayManager = _bays()
 	if lift_bays:
 		lift_bays.release_lift(state.bay_index)   # araç eski kotuna iner, lift alçak kalır
@@ -582,7 +753,6 @@ func collect(car: Node3D) -> bool:
 			vehicle.tree_exiting.disconnect(on_exit)
 		vehicle.return_to_traffic(_pick_return_point())
 	repair_slot_freed.emit(vehicle)
-	return true
 
 
 ## Yola dönüş noktası: çevresi boş bir trafik spawn noktası (rastgele); hiçbiri boş değilse rastgele biri.

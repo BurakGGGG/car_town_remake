@@ -38,6 +38,8 @@ var frames_owned: Array[String] = []
 var flag: String = ""
 var title: String = ""
 var showcase: StringName = &""
+## Garajın toplam beğenisi (arkadaşlar ziyarette kalbe basar; SocialManager ziyaretçi başına günde bir sayar).
+var likes: int = 0
 ## uid → takma ad (ENGELLENENLER listesinde gösterilir).
 var blocked: Dictionary = {}
 ## uid → avatar hash: şikâyet edenin ekranında gizlenen fotoğraf (oyuncu fotoğrafını değiştirirse yenisi görünür).
@@ -63,7 +65,7 @@ func state() -> Dictionary:
 	return {
 		"avatar": avatar, "photo_hash": photo_hash, "google_photo": use_google, "frame": frame_id,
 		"frames": frames_owned.duplicate(), "flag": flag, "title": title, "showcase": String(showcase),
-		"blocked": blocked.duplicate(), "hidden": hidden.duplicate(),
+		"blocked": blocked.duplicate(), "hidden": hidden.duplicate(), "likes": likes,
 	}
 
 
@@ -89,6 +91,7 @@ func load_state(data: Dictionary) -> void:
 	title = raw_title if SocialNames.is_valid_title(raw_title) else ""
 	var car: StringName = StringName(SaveSafe.s(data.get("showcase", "")))
 	showcase = car if not CarCatalog.get_entry(car).is_empty() else &""
+	likes = maxi(SaveSafe.i(data.get("likes", 0)), 0)
 	for key: String in ["blocked", "hidden"]:
 		var raw: Variant = data.get(key, {})
 		if not raw is Dictionary:
@@ -111,6 +114,7 @@ func reset() -> void:
 	flag = ""
 	title = ""
 	showcase = &""
+	likes = 0
 	blocked.clear()
 	hidden.clear()
 
@@ -353,7 +357,15 @@ func stats() -> Dictionary:
 	var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 	if ownership:
 		out["cars"] = ownership.discovered_count()
+	if likes > 0:
+		out["likes"] = likes   # yalnız varken: beğeni kuralı yüklenmeden önceki sunucu bu alanı reddederdi
 	return out
+
+
+## Bir arkadaş garajı beğendi (SocialManager ziyaretçi başına günde bir çağırır).
+func add_like() -> void:
+	likes += 1
+	changed.emit()
 
 
 # --- İç ---------------------------------------------------------------------------

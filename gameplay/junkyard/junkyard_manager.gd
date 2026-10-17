@@ -512,6 +512,11 @@ func next_pile_seconds() -> int:
 	return best
 
 
+## Yığının dolduğu / dolacağı an (unix sn; 0 = hiç aranmadı). OTO MANŞET "sen yokken doldu" haberine bakar.
+func pile_ready_at(index: int) -> int:
+	return _pile_ready_at[index] if index >= 0 and index < _pile_ready_at.size() else 0
+
+
 func ready_pile_count() -> int:
 	var n: int = 0
 	for i: int in pile_count():
