@@ -3,6 +3,7 @@
 //   cleanupExpired  saatte bir süresi dolan davet / bildirim kaydı / şikâyet / e-posta kodu silinir (mantık cleanup.js)
 //   emailCodeSend   E-POSTA İLE GİRİŞ: 6 haneli kodu oyuncunun e-postasına yollar (mantık email_code.js, gönderim Resend)
 //   emailCodeVerify kodu doğrular, Firebase özel jetonu döner (oyun signInWithCustomToken ile girer)
+//   accountCleanup  Firebase hesabı silinince o UID'nin bütün verisi silinir (mantık account_cleanup.js)
 // Test: npm test. Bölge europe-west4: Firestore eur3 (europe-west1 / europe-west4) ile aynı yer.
 // Gönderim: firebase/ klasöründen `firebase deploy --only functions --project car-town-remake` (Blaze planı gerekir).
 
@@ -17,6 +18,8 @@ const { getMessaging } = require("firebase-admin/messaging");
 const { handleRaceNews } = require("./news");
 const { cleanupExpired } = require("./cleanup");
 const { sendCode, verifyCode, CodeError, clientIp } = require("./email_code");
+const { cleanupAccount } = require("./account_cleanup");
+const functionsV1 = require("firebase-functions/v1");
 
 // Resend API anahtarı (Secret Manager; kodda / depoda YOK). Kurulum: firebase functions:secrets:set RESEND_API_KEY
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
@@ -106,6 +109,14 @@ exports.raceNewsPush = onDocumentWritten(
     console.log(`raceNewsPush: ${result}`);   // kimin kimi yendiği (UID çifti) günlüğe yazılmaz
   },
 );
+
+// Auth "kullanıcı silindi" olayı yalnızca 1. nesilde var (2. nesil Auth olaylarını desteklemiyor, ikisi aynı dosyada
+// yan yana çalışır). 1. nesil europe-west4'ü desteklemiyor → europe-west1 (Firestore eur3 bu bölgeyi de kapsar).
+exports.accountCleanup = functionsV1.region("europe-west1").runWith({ timeoutSeconds: 300, memory: "512MB" })
+  .auth.user().onDelete(async (user) => {
+    const deleted = await cleanupAccount({ db: getFirestore(), uid: user.uid });
+    console.log(`accountCleanup: ${JSON.stringify(deleted)}`);   // yalnızca sayılar
+  });
 
 exports.cleanupExpired = onSchedule(
   { schedule: "every 60 minutes", region: "europe-west4", timeZone: "Europe/Istanbul", maxInstances: 1 },
