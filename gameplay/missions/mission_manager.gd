@@ -135,13 +135,26 @@ func _connect() -> void:
 	if gem:
 		gem.day_changed.connect(func(_day: int) -> void: ensure_current())
 	# Kayıt yüklemesi SaveManager'ın ertelenmiş kurulumunda olur; ilk gün kontrolü ondan sonra.
+	# Zamanlayıcı SceneTree'nindir: arkadaş garajı ziyaretinde kendi sahne ağaçtan çıkar (GarageVisit) ama süre işler.
+	# Ziyaret açılışın ilk saniyelerinde başlarsa get_tree() null oluyordu (hata, o oturum başarım duyurusu kapalı).
 	get_tree().create_timer(1.2).timeout.connect(func() -> void:
+		await _until_in_tree()
 		ensure_current()
 		_seed_legacy()
 		_mark_announced()
 		get_tree().create_timer(ANNOUNCE_QUIET).timeout.connect(func() -> void:
+			await _until_in_tree()
 			_mark_announced()
 			_announce_live = true))
+
+
+## Ağaçtaysa hemen döner; değilse (arkadaş garajı ziyareti) kendi sahne geri takılıp bir kare oturunca döner
+## (geri takılırken öteki yöneticiler de gruplarına yeniden girsin).
+func _until_in_tree() -> void:
+	if is_inside_tree():
+		return
+	await tree_entered
+	await get_tree().process_frame
 
 
 func _on_job_collected(job_id: StringName, _reward: int) -> void:
