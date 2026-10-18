@@ -4,6 +4,8 @@
 //                           (oluşturan cihaz değişmiş ya da hesap silinmiş olsa da kalmaz)
 //   push_log/l_{alıcı}_{g}  `at` (ms) + 1 gün   → yalnızca 6 saatlik bildirim sınırı için gerekir
 //   reports/x_{ş}_{hedef}   `at` (sn) + 180 gün → şikâyet incelemesi ve kötüye kullanımı önleme süresi
+//   email_codes/{özet}      `at` (ms) + 1 saat  → giriş kodu (10 dk geçerli) + saatlik gönderim sınırı (email_code.js)
+//   email_ips/{özet}        `at` (ms) + 1 saat  → adres başına saatlik gönderim sınırı
 // Belgeler istemciye kapalı ya da yalnızca sahibine açık; silmeyi yönetici yetkisiyle bu fonksiyon yapar.
 
 const DAY_S = 24 * 60 * 60;
@@ -11,6 +13,8 @@ const RULES = [
   { collection: "invites", unit: "s", maxAgeS: 60 * 60 },
   { collection: "push_log", unit: "ms", maxAgeS: DAY_S },
   { collection: "reports", unit: "s", maxAgeS: 180 * DAY_S },
+  { collection: "email_codes", unit: "ms", maxAgeS: 60 * 60 },
+  { collection: "email_ips", unit: "ms", maxAgeS: 60 * 60 },
 ];
 const BATCH = 400;
 

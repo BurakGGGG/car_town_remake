@@ -12,7 +12,7 @@ index 896ccdb..8d12413 100644
  
  // BUILD TASKS DEFINITION
 diff --git a/firebase/src/main/java/org/godotengine/plugin/firebase/Authentication.kt b/firebase/src/main/java/org/godotengine/plugin/firebase/Authentication.kt
-index 73681f8..de4d1ab 100644
+index 73681f8..b6c2b5e 100644
 --- a/firebase/src/main/java/org/godotengine/plugin/firebase/Authentication.kt
 +++ b/firebase/src/main/java/org/godotengine/plugin/firebase/Authentication.kt
 @@ -7,7 +7,17 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -97,7 +97,7 @@ index 73681f8..de4d1ab 100644
  				} else {
  					plugin.emitGodotSignal("auth_failure", e.message ?: "Unknown error")
  				}
-@@ -184,7 +221,123 @@ class Authentication(private val plugin: FirebasePlugin) {
+@@ -184,7 +221,137 @@ class Authentication(private val plugin: FirebasePlugin) {
  	}
  
  	private fun authWithGoogle(idToken: String) {
@@ -217,12 +217,26 @@ index 73681f8..de4d1ab 100644
 +		}
 +	}
 +
++	// E-POSTA KODUYLA GİRİŞ (2026-10-18): oyunun Cloud Function'ı (emailCodeVerify) e-posta kodunu doğrulayıp Firebase
++	// özel jetonu verir; bu jetonla girilir. Sonuç öteki girişlerle AYNI sinyallerle döner (auth_success / auth_failure).
++	fun signInWithCustomToken(token: String) {
++		auth.signInWithCustomToken(token)
++			.addOnSuccessListener { authResult ->
++				Log.d(TAG, "signInWithCustomToken:success -> ${authResult.user?.uid}")
++				plugin.emitGodotSignal("auth_success", getCurrentUser())
++			}
++			.addOnFailureListener { e ->
++				Log.w(TAG, "signInWithCustomToken:failure", e)
++				plugin.emitGodotSignal("auth_failure", errorText(e))
++			}
++	}
++
 +	/** Hata metni Firebase hata koduyla başlar (ör. ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL: …): oyun ayırt eder. */
 +	private fun authWithCredential(credential: AuthCredential) {
  		auth.signInWithCredential(credential)
  			.addOnSuccessListener { authResult ->
  				val uid = authResult.user?.uid
-@@ -193,8 +346,46 @@ class Authentication(private val plugin: FirebasePlugin) {
+@@ -193,8 +360,46 @@ class Authentication(private val plugin: FirebasePlugin) {
  			}
  			.addOnFailureListener { e ->
  				Log.w(TAG, "signInWithCredential:failure", e)
@@ -270,9 +284,13 @@ index 73681f8..de4d1ab 100644
  	}
  
  	private fun linkWithGoogle(idToken: String) {
-@@ -227,6 +418,10 @@ class Authentication(private val plugin: FirebasePlugin) {
+@@ -225,8 +430,13 @@ class Authentication(private val plugin: FirebasePlugin) {
+ 			userData["email"] = user.email
+ 			userData["photoUrl"] = user.photoUrl?.toString()
  			userData["emailVerified"] = user.isEmailVerified
- 			userData["isAnonymous"] = user.isAnonymous
+-			userData["isAnonymous"] = user.isAnonymous
++			// Özel jetonla girilen, giriş yolu bağlı olmayan hesap (e-posta koduyla açılmış) anonim SAYILMAZ: e-postası vardır
++			userData["isAnonymous"] = user.isAnonymous && user.email.isNullOrEmpty()
  			userData["uid"] = user.uid
 +			// Hangi hesapla girildi: "google.com" / "facebook.com" / "password" (ilk bağlı sağlayıcı)
 +			userData["provider"] = user.providerData.firstOrNull { it.providerId != "firebase" }?.providerId ?: ""
@@ -281,7 +299,7 @@ index 73681f8..de4d1ab 100644
  		} else {
  			userData["error"] = "No user signed in"
  			Log.d(TAG, "No user signed in")
-@@ -241,6 +436,9 @@ class Authentication(private val plugin: FirebasePlugin) {
+@@ -241,6 +451,9 @@ class Authentication(private val plugin: FirebasePlugin) {
  
  	fun signOut() {
  		auth.signOut()
@@ -291,7 +309,7 @@ index 73681f8..de4d1ab 100644
  		googleSignInClient.signOut()
  			.addOnCompleteListener(activity) {
  				plugin.emitGodotSignal("sign_out_success", true)
-@@ -256,6 +454,7 @@ class Authentication(private val plugin: FirebasePlugin) {
+@@ -256,6 +469,7 @@ class Authentication(private val plugin: FirebasePlugin) {
  		auth.currentUser?.delete()
  			?.addOnSuccessListener {
  				Log.d(TAG, "User deleted.")
@@ -300,10 +318,10 @@ index 73681f8..de4d1ab 100644
  			}
  			?.addOnFailureListener { e ->
 diff --git a/firebase/src/main/java/org/godotengine/plugin/firebase/FirebasePlugin.kt b/firebase/src/main/java/org/godotengine/plugin/firebase/FirebasePlugin.kt
-index 8e68a32..4e094c1 100644
+index 8e68a32..fc1c87c 100644
 --- a/firebase/src/main/java/org/godotengine/plugin/firebase/FirebasePlugin.kt
 +++ b/firebase/src/main/java/org/godotengine/plugin/firebase/FirebasePlugin.kt
-@@ -67,6 +67,21 @@ class FirebasePlugin(godot: Godot) : GodotPlugin(godot) {
+@@ -67,6 +67,24 @@ class FirebasePlugin(godot: Godot) : GodotPlugin(godot) {
  	@UsedByGodot
  	fun linkAnonymousWithGoogle() = auth.linkAnonymousWithGoogle()
  
@@ -321,6 +339,9 @@ index 8e68a32..4e094c1 100644
 +
 +	@UsedByGodot
 +	fun clearPendingCredential() = auth.clearPendingCredential()
++
++	@UsedByGodot
++	fun signInWithCustomToken(token: String) = auth.signInWithCustomToken(token)
 +
  	@UsedByGodot
  	fun getCurrentUser() = auth.getCurrentUser()

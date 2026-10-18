@@ -5,7 +5,7 @@ extends Control
 ## Arka plan yükleme ekranının görselidir; oyun (Main) altta yüklenmiş durur, LoadingScreen kökte
 ## kaldıkça ders / gazete / kasa hatırlatması / bildirim izni beklemededir (hepsi ona bakar).
 ##
-## YALNIZCA BİR KEZ: seçim yapılınca (misafir ya da Google girişi) CloudSaveManager login_prompt_seen
+## YALNIZCA BİR KEZ: seçim yapılınca (misafir ya da hesapla giriş) CloudSaveManager login_prompt_seen
 ## yazar; sonraki açılışlar doğrudan oyuna gider. Seçim yapmadan uygulama kapatılırsa bir dahaki açılışta
 ## yine gelir. PC'de (Firebase eklentisi yok) gösterilmez; ekran taraması için CT_LOGIN_GATE=1 zorlar.
 ##
@@ -14,7 +14,9 @@ extends Control
 ## gerekirse HUD'un PLAYER ekranı kendiliğinden açılır ve ekran çekilir. Vazgeçilir / hata olursa düğmeler
 ## geri gelir, hata metni düğmelerin üstünde görünür. E-posta öteki yolla kayıtlıysa CloudSaveManager öteki yolun
 ## seçicisini açar ve iki yolu aynı hesapta birleştirir; ekran bunu da aynı bekleyişle karşılar.
-## E-POSTA şimdilik yalnızca düğme (bağlantı sonraki adım): "Çok yakında" der.
+## E-POSTA: EmailCodePanel açılır (adres → 6 haneli kod); kod kabul edilince Google girişiyle aynı bekleyiş.
+## FACEBOOK: Meta onayına kadar (CloudSaveManager.FACEBOOK_READY) girmek yerine "üzerinde çalışıyoruz" der.
+## MİSAFİR: önce onay penceresi (ilerleme hesaba kaydedilmez, telefon değişirse kaybolur); onaylanınca oyun başlar.
 
 ## Ekran işini bitirdi (seçim yapıldı): LoadingScreen söner, oyun başlar.
 signal finished
@@ -35,6 +37,8 @@ const LIGHT_INK: Color = Color("FFFFFF")
 const WIDE_SIZE: Vector2 = Vector2(226.0, 58.0)
 const GUEST_SIZE: Vector2 = Vector2(74.0, 58.0)
 const BOTTOM_MARGIN: int = 30
+## Misafir onay penceresinin genişliği (PLAYER ekranıyla aynı).
+const CONFIRM_WIDTH: float = 380.0
 ## Düğmeler sırayla belirir (sn).
 const APPEAR_DELAY: float = 0.25
 const APPEAR_STAGGER: float = 0.06
@@ -44,7 +48,9 @@ const BUSY_STATES: Array[CloudSaveManager.State] = [
 	CloudSaveManager.State.SIGNING_IN, CloudSaveManager.State.SYNCING, CloudSaveManager.State.DELETING,
 ]
 
+var _bottom: MarginContainer
 var _status: Label
+var _modal: Control                  # açık pencere (misafir onayı / e-posta); açıkken alttaki düğmeler gizli
 var _buttons: Array[LoginOptionButton] = []
 var _signing_in: bool = false
 var _sign_in_cloud_id: int = 0      # girişin başladığı CloudSaveManager (sahne yenilenince değişir)
@@ -72,6 +78,7 @@ func _ready() -> void:
 
 func _build() -> void:
 	var bottom: MarginContainer = MarginContainer.new()
+	_bottom = bottom
 	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bottom.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	bottom.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -102,13 +109,13 @@ func _build() -> void:
 	row.add_theme_constant_override(&"separation", 10)
 	column.add_child(row)
 	_add(row, &"FacebookButton", LoginOptionButton.new(FACEBOOK_BLUE, LIGHT_INK, FACEBOOK_LOGO,
-		Loc.t("FACEBOOK İLE DEVAM ET")), WIDE_SIZE, _on_sign_in.bind(CloudSaveManager.PROVIDER_FACEBOOK))
+		Loc.t("FACEBOOK İLE DEVAM ET")), WIDE_SIZE, _on_facebook)
 	_add(row, &"GoogleButton", LoginOptionButton.new(GOOGLE_WHITE, GOOGLE_INK, GOOGLE_LOGO,
 		Loc.t("GOOGLE İLE DEVAM ET")), WIDE_SIZE, _on_sign_in.bind(CloudSaveManager.PROVIDER_GOOGLE))
 	_add(row, &"EmailButton", LoginOptionButton.new(MAIL_ORANGE, LIGHT_INK, MAIL_LOGO,
-		Loc.t("E-POSTA İLE DEVAM ET")), WIDE_SIZE, _on_coming_soon)
+		Loc.t("E-POSTA İLE DEVAM ET")), WIDE_SIZE, _on_email)
 	_add(row, &"GuestButton", LoginOptionButton.new(GUEST_SLATE, LIGHT_INK, GUEST_LOGO,
-		Loc.t("MİSAFİR"), true), GUEST_SIZE, _on_guest)
+		Loc.t("MİSAFİR"), true), GUEST_SIZE, _open_guest_confirm)
 
 
 func _add(row: HBoxContainer, node_name: StringName, button: LoginOptionButton, min_size: Vector2,
@@ -145,13 +152,7 @@ func _on_sign_in(provider: String) -> void:
 		_show_status(Loc.t("Facebook girişi yapılamadı") if provider == CloudSaveManager.PROVIDER_FACEBOOK
 			else Loc.t("Google girişi yapılamadı"))
 		return
-	if not cloud.notice.is_connected(_on_notice):
-		cloud.notice.connect(_on_notice)
-	_notice_text = ""
-	_sign_in_cloud_id = cloud.get_instance_id()
-	_cloud_id = _sign_in_cloud_id
-	_settled = 0
-	_set_busy(true)
+	_watch_sign_in(cloud)
 	# PC'de hemen "yalnızca Android" uyarısı verir, _process düğmeleri geri getirir
 	if provider == CloudSaveManager.PROVIDER_FACEBOOK:
 		cloud.sign_in_facebook()
@@ -159,16 +160,118 @@ func _on_sign_in(provider: String) -> void:
 		cloud.sign_in()
 
 
+## Giriş başladı: sonuç _process'te beklenir (eşitleme durulunca ekran kapanır, olmazsa düğmeler geri gelir).
+func _watch_sign_in(cloud: CloudSaveManager) -> void:
+	if not cloud.notice.is_connected(_on_notice):
+		cloud.notice.connect(_on_notice)
+	_notice_text = ""
+	_sign_in_cloud_id = cloud.get_instance_id()
+	_cloud_id = _sign_in_cloud_id
+	_settled = 0
+	_set_busy(true)
+
+
+## FACEBOOK: Meta onayı gelene kadar giriş yok, yalnızca bilgi.
+func _on_facebook() -> void:
+	if not CloudSaveManager.FACEBOOK_READY:
+		_show_status(Loc.t("Facebook girişi üzerinde çalışıyoruz, çok yakında!"))
+		return
+	_on_sign_in(CloudSaveManager.PROVIDER_FACEBOOK)
+
+
+## E-POSTA: kod penceresi; kod kabul edilince giriş Google'daki gibi beklenir.
+func _on_email() -> void:
+	var cloud: CloudSaveManager = _cloud()
+	if cloud == null:
+		_show_status(Loc.t("E-posta ile giriş yapılamadı"))
+		return
+	var panel: EmailCodePanel = EmailCodePanel.new()
+	panel.setup(cloud)
+	panel.accepted.connect(func() -> void:
+		_close_modal()
+		_watch_sign_in(cloud))
+	panel.cancelled.connect(_close_modal)
+	_open_modal(panel)
+
+
+## MİSAFİR: önce ne kaybedilebileceği söylenir; onaylanınca oyun başlar, GERİ DÖN seçeneklere döner.
+func _open_guest_confirm() -> void:
+	var modal: Control = Control.new()
+	modal.name = "GuestConfirm"
+	modal.mouse_filter = Control.MOUSE_FILTER_STOP
+	modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var dim: ColorRect = ColorRect.new()
+	dim.color = Color(0.0, 0.0, 0.0, 0.55)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	modal.add_child(dim)
+	var center: CenterContainer = CenterContainer.new()
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	modal.add_child(center)
+	var column: VBoxContainer = VBoxContainer.new()
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_theme_constant_override(&"separation", 8)
+	center.add_child(column)
+
+	var sign: PlatePanel = PlatePanel.new()
+	sign.theme_type_variation = &"HudCarPlate"
+	sign.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var title: Label = Label.new()
+	title.theme_type_variation = &"HudSignTitle"
+	title.text = Loc.t("MİSAFİR OLARAK OYNA?")
+	sign.add_child(title)
+	column.add_child(sign)
+	var info: PlatePanel = PlatePanel.new()
+	info.theme_type_variation = &"HudCarPlate"
+	info.custom_minimum_size = Vector2(CONFIRM_WIDTH, 0.0)
+	var body: Label = Label.new()
+	body.theme_type_variation = &"HudInkCaption"
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.custom_minimum_size = Vector2(CONFIRM_WIDTH - 24.0, 0.0)
+	body.text = Loc.t("Misafir olarak oynarsan ilerlemen bir hesaba kaydedilmez, yalnızca bu telefonda durur. Oyunu silersen ya da telefon değiştirirsen ilerlemen kaybolur.\n\nİstersen sonra AYARLAR'dan giriş yapabilirsin.")
+	info.add_child(body)
+	column.add_child(info)
+	var back: PlateButton = _plate_button(&"HudPlate", Loc.t("GERİ DÖN, GİRİŞ YAP"), _close_modal)
+	back.name = "BackButton"
+	back.custom_minimum_size = Vector2(CONFIRM_WIDTH, 54.0)
+	column.add_child(back)
+	var guest: PlateButton = _plate_button(&"HudPlateSmall", Loc.t("MİSAFİR OLARAK DEVAM ET"), _on_guest)
+	guest.name = "GuestConfirmButton"
+	guest.custom_minimum_size = Vector2(CONFIRM_WIDTH, 0.0)
+	column.add_child(guest)
+	_open_modal(modal)
+
+
+func _plate_button(variation: StringName, text: String, on_pressed: Callable) -> PlateButton:
+	var button: PlateButton = PlateButton.new()
+	button.theme_type_variation = variation
+	button.text = text
+	button.focus_mode = Control.FOCUS_NONE
+	button.pressed.connect(on_pressed)
+	return button
+
+
+func _open_modal(modal: Control) -> void:
+	_close_modal()
+	_modal = modal
+	_bottom.visible = false
+	add_child(modal)
+
+
+func _close_modal() -> void:
+	if _modal == null:
+		return
+	_modal.queue_free()
+	_modal = null
+	_bottom.visible = true
+
+
 func _on_guest() -> void:
 	var cloud: CloudSaveManager = _cloud()
 	if cloud:
 		cloud.mark_login_prompt_seen()
-	_finish()
-
-
-## E-POSTA: bağlantısı sonraki adım.
-func _on_coming_soon() -> void:
-	_show_status(Loc.t("Çok yakında!"))
+	_finish()   # onay penceresi ekranla birlikte söner
 
 
 ## Giriş sürerken de gösterilir (ör. "bu e-posta Google hesabınla kayıtlı, Google ile doğrula"); giriş

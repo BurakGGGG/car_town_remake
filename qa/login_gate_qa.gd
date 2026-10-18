@@ -1,8 +1,9 @@
 extends SceneTree
 ## İLK AÇILIŞ GİRİŞ EKRANI (LoginGate): yükleme çubuğu dolunca giriş seçenekleri gelir mi, düğmeler
-## tuvale sığıyor mu, yazılar düğmeye sığıyor mu, ekran açıkken ders başlamıyor mu, E-POSTA ("çok yakında"),
-## FACEBOOK / GOOGLE (PC'de eklenti yok → uyarı) / misafir doğru davranıyor mu, misafirden sonra ekran kalkıp seçim
-## kaydediliyor mu. Görüntüler ~/Projects/ct_shots/login_gate/<etiket>_*.png.
+## tuvale sığıyor mu, yazılar düğmeye sığıyor mu, ekran açıkken ders başlamıyor mu, E-POSTA penceresi (adres → kod;
+## sunucu sahte: kod gönderildi / yanlış kod), FACEBOOK ("üzerinde çalışıyoruz"), GOOGLE (PC'de eklenti yok → uyarı),
+## MİSAFİR onay penceresi (GERİ DÖN → seçenekler; DEVAM ET → oyun), misafirden sonra ekran kalkıp seçim kaydediliyor mu.
+## Görüntüler ~/Projects/ct_shots/login_gate/<etiket>_*.png.
 ## PC'de ekran yalnız CT_LOGIN_GATE=1 ile açılır:
 ##   CT_LOGIN_GATE=1 QA_LANG=tr tools/qa_isolated.sh res://qa/login_gate_qa.gd --display-driver x11 \
 ##       --resolution 1152x648 -- p16x9 mobil
@@ -12,6 +13,19 @@ const BUTTONS: Array[String] = ["FacebookButton", "GoogleButton", "EmailButton",
 
 var _tag: String = "qa"
 var _problems: int = 0
+
+
+## E-posta penceresi için sahte eklenti (PC'de yok): kod adımını görmek yeter, girişe gidilmez.
+class StubPlugin extends Object:
+	func signInWithCustomToken(_token: String) -> void:
+		pass
+
+
+## Sahte Cloud Function: kod hep "gönderilir", doğrulamada kod yanlış.
+static func _fake_function(fn_name: String, _data: Dictionary) -> Dictionary:
+	if fn_name == "emailCodeSend":
+		return {"resend_after": 60}
+	return {"error": "wrong_code", "attempts_left": 4}
 
 
 func _initialize() -> void:
@@ -47,6 +61,17 @@ func _until(condition: Callable, seconds: float) -> bool:
 			return true
 		await process_frame
 	return false
+
+
+## Denetimin (ya da penceredeki her düğmenin) tuvalin içinde olduğu.
+func _check_fits(control: Control, canvas: Rect2, what: String) -> void:
+	if control == null:
+		_check(false, "%s yok" % what)
+		return
+	for button: Node in [control] + control.find_children("*", "Button", true, false):
+		var rect: Rect2 = (button as Control).get_global_rect()
+		if (button as Control).is_visible_in_tree() and rect.size.x > 0.0:
+			_check(canvas.encloses(rect), "%s: %s tuvalde %s" % [what, button.name, rect])
 
 
 func _gate() -> Control:
@@ -99,15 +124,47 @@ func _run() -> void:
 	_check(tutorial == null or not tutorial.is_running(), "giriş ekranı açıkken ders başlamadı")
 
 	var status: Label = gate.find_child("Status", true, false) as Label
+	var cloud: CloudSaveManager = get_first_node_in_group("cloud_save") as CloudSaveManager
+	var stub: StubPlugin = StubPlugin.new()
+	cloud._fb = stub
+	cloud._call_function = _fake_function
 	(gate.find_child("EmailButton", true, false) as Button).pressed.emit()
-	await _frames(10)
-	_check(status.visible and status.text == Loc.t("Çok yakında!"), "E-POSTA → \"%s\"" % status.text)
-	_shot("2_eposta")
+	await _frames(20)
+	var panel: Control = gate.find_child("EmailCodePanel", true, false) as Control
+	_check(panel != null and panel.visible, "E-POSTA → kod penceresi açıldı")
+	if panel:
+		_check_fits(panel, canvas, "e-posta penceresi")
+		_shot("2_eposta")
+		var edit: LineEdit = panel.find_child("Input", true, false) as LineEdit
+		var primary: Button = panel.find_child("PrimaryButton", true, false) as Button
+		edit.text = "yanlis-adres"
+		primary.pressed.emit()
+		await _frames(6)
+		_shot("2b_eposta_hatali")
+		edit.text = "oyuncu@example.com"
+		primary.pressed.emit()
+		await _frames(10)
+		_check(edit.max_length == 6 and edit.text.is_empty(), "kod gönderildi → 6 haneli kod adımı")
+		_shot("2c_kod")
+		edit.text = "123456"
+		edit.text_changed.emit("123456")   # 6 hane dolunca kendiliğinden doğrulanır
+		await _frames(10)
+		_shot("2d_kod_yanlis")
+		_check_fits(panel, canvas, "kod penceresi")
+		(panel.find_child("BackButton", true, false) as Button).pressed.emit()   # E-POSTAYI DEĞİŞTİR
+		await _frames(4)
+		(panel.find_child("BackButton", true, false) as Button).pressed.emit()   # VAZGEÇ
+		await _frames(6)
+	_check(gate.find_child("EmailCodePanel", true, false) == null and (gate.find_child("EmailButton", true, false) as Control).is_visible_in_tree(),
+		"VAZGEÇ → pencere kapandı, seçenekler geri geldi")
+	cloud._fb = null
+	stub.free()
 	(gate.find_child("FacebookButton", true, false) as Button).pressed.emit()
 	await _frames(10)
 	var facebook: Button = gate.find_child("FacebookButton", true, false) as Button
-	_check(not facebook.disabled and status.text == Loc.t("Facebook girişi yalnızca Android sürümünde"),
-		"FACEBOOK (PC, eklenti yok) → düğmeler geri geldi, \"%s\"" % status.text)
+	_check(not facebook.disabled and status.text == Loc.t("Facebook girişi üzerinde çalışıyoruz, çok yakında!"),
+		"FACEBOOK (Meta onayı bekleniyor) → \"%s\"" % status.text)
+	_shot("2e_facebook")
 	(gate.find_child("GoogleButton", true, false) as Button).pressed.emit()
 	await _frames(10)
 	var google: Button = gate.find_child("GoogleButton", true, false) as Button
@@ -116,6 +173,21 @@ func _run() -> void:
 	_shot("3_google_pc")
 
 	(gate.find_child("GuestButton", true, false) as Button).pressed.emit()
+	await _frames(20)
+	var confirm: Control = gate.find_child("GuestConfirm", true, false) as Control
+	_check(confirm != null and root.get_node_or_null("LoadingScreen") != null, "MİSAFİR → önce onay penceresi, ekran yerinde")
+	if confirm:
+		_check_fits(confirm.find_child("BackButton", true, false) as Control, canvas, "misafir onayı GERİ DÖN")
+		_check_fits(confirm.find_child("GuestConfirmButton", true, false) as Control, canvas, "misafir onayı DEVAM ET")
+		_shot("3b_misafir_onay")
+		(confirm.find_child("BackButton", true, false) as Button).pressed.emit()
+		await _frames(6)
+		_check(gate.find_child("GuestConfirm", true, false) == null and root.get_node_or_null("LoadingScreen") != null,
+			"GERİ DÖN → seçeneklere dönüldü")
+		(gate.find_child("GuestButton", true, false) as Button).pressed.emit()
+		await _frames(10)
+		confirm = gate.find_child("GuestConfirm", true, false) as Control
+		(confirm.find_child("GuestConfirmButton", true, false) as Button).pressed.emit()
 	var gone: bool = await _until(func() -> bool: return root.get_node_or_null("LoadingScreen") == null, 3.0)
 	_check(gone, "MİSAFİR → yükleme ekranı kalktı")
 	var meta: Variant = JSON.parse_string(FileAccess.get_file_as_string(CloudSaveManager.META_PATH))

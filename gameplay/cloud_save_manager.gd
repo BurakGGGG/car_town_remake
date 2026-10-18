@@ -1,6 +1,6 @@
 class_name CloudSaveManager
 extends Node
-## Google / Facebook girişi (Firebase Auth) + bulut kaydı (Firestore players/{uid}).
+## Google / Facebook / e-posta koduyla giriş (Firebase Auth) + bulut kaydı (Firestore players/{uid}).
 ## Sahnede World/Gameplay/CloudSaveManager olarak durur; arayanlar "cloud_save" grubundan bulur
 ## (autoload yok — proje kuralı). Firebase'e Android plugininin Engine singleton'ı
 ## ("GodotFirebaseAndroid") üzerinden doğrudan bağlanır; plugin yoksa (PC / editör) UNAVAILABLE
@@ -25,6 +25,12 @@ extends Node
 ##     öteki yolun hesap seçicisini açar; oyuncu oradan girince bekleyen kimlik aynı hesaba bağlanır
 ##     (e-postalar farklıysa bağlanmaz, oyuncu seçtiği hesapla girmiş olur).
 ##   • PLAYER ekranında "FACEBOOK'U BAĞLA / GOOGLE'I BAĞLA" (link_provider): oturum açıkken ikinci yol.
+##
+## E-POSTA KODUYLA GİRİŞ (2026-10-18): request_email_code → Cloud Function (firebase/functions/email_code.js) e-postaya
+## 6 haneli kod yollar; submit_email_code → kod doğruysa Firebase özel jetonu gelir, eklenti signInWithCustomToken ile
+## girer. Sunucu e-postanın hesabını bulur: aynı e-postalı Google / Facebook hesabı varsa AYNI UID'ye girilir, yoksa
+## yeni hesap açılır (giriş yolu bağlı değildir; get_providers boş, get_provider PROVIDER_EMAIL). Her hesabın e-postasına
+## kod gidebildiği için bu cihazda kodla girildiyse hesap silmede de kodla doğrulanır (email_reauth_needed).
 ##
 ## Oturum açılınca bulut kaydı okunur ve karar verilir:
 ##   bulut yok                  → local yüklenir (local başka hesabınsa o hesabın ilerlemesi yüklenmez)
@@ -69,6 +75,14 @@ signal notice(text: String)
 signal account_deleted(success: bool)
 ## Hesap bağlama başladı / bitti ya da bağlı giriş yolları değişti (PLAYER ekranı düğmeleri için).
 signal links_changed
+## E-posta kodu yollandı (E-POSTA İLE GİRİŞ penceresi kod adımına geçer); adres küçük harfe çevrilmiştir.
+signal email_code_sent(email: String)
+## Kod yollanamadı / doğrulanamadı: oyuncuya gösterilecek metin (pencere açık kalır).
+signal email_code_failed(text: String)
+## Kod doğrulandı, Firebase'e giriliyor (girişte SIGNING_IN, silmede DELETING sürer; pencere kapanır).
+signal email_code_accepted
+## Hesap silme bu cihazda kodla girilmiş hesabı e-posta koduyla yeniden doğrulamak istiyor (PLAYER penceresi açar).
+signal email_reauth_needed(email: String)
 
 enum State {
 	UNAVAILABLE,  ## plugin yok (PC / editör): yalnızca local kayıt
@@ -93,6 +107,15 @@ const CLOUD_PROFILE_KEYS: Array[String] = ["display_name", "email", "photo_url"]
 ## Giriş yolları (plugin getCurrentUser "provider"; alanı yazmayan eski eklenti sürümünde herkes Google'dı).
 const PROVIDER_GOOGLE: String = "google.com"
 const PROVIDER_FACEBOOK: String = "facebook.com"
+## E-posta koduyla giriş (oyunun adı; Firebase'de bu yol kayıtlı değildir — özel jeton). Her hesabın e-postasına kod gider.
+const PROVIDER_EMAIL: String = "email"
+## Facebook girişi Meta'nın onayını bekliyor (işletme doğrulaması, 2026-10-18): Facebook düğmeleri girmek yerine
+## "üzerinde çalışıyoruz" der. Altyapı hazır; Meta uygulamayı Canlı moda alınca true yapılır.
+const FACEBOOK_READY: bool = false
+## E-posta kodu Cloud Function'ları (callable, düz HTTP ile çağrılır: POST {data} → {result} / {error: {details}}).
+const EMAIL_FUNCTIONS_URL: String = "https://europe-west4-car-town-remake.cloudfunctions.net/"
+## Sunucunun yeni kod için beklettiği süre (sn; email_code.js RESEND_MS ile aynı).
+const EMAIL_RESEND_SECONDS: int = 60
 ## Firebase: bu e-postanın başka giriş yoluyla açılmış hesabı var (plugin hata metni bu kodla başlar).
 const ACCOUNT_EXISTS_ERROR: String = "ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL"
 ## Plugin: Facebook uygulama kimliği manifest'te yok (res://firebase/facebook_app.cfg boştu).
@@ -131,6 +154,10 @@ var _applying: bool = false         # buluttan yükleme sırasındaki local kay�
 var _signing_out: bool = false
 var _signout_resets_local: bool = true   # false: veriler zaten silindi (hesap silme sonrası çıkış)
 var _delete_uid: String = ""        # silinmekte olan hesabın UID'i (yeniden girişte aynı hesap mı)
+var _email_http: HTTPRequest
+var _email_busy: bool = false       # e-posta kodu isteği sunucuda
+## Cloud Function çağrısı (testte sahtesiyle değişir): (ad, veri) → sonuç sözlüğü ya da {"error": neden, ...}.
+var _call_function: Callable = _http_call_function
 var _op_timer: Timer
 var _upload_timer: Timer
 var _retry_timer: Timer
@@ -213,17 +240,23 @@ func get_profile() -> Dictionary:
 	}
 
 
-## Bu cihazda girişte kullanılan yol (bağlıysa; değilse hesabın ilk bağlı yolu): PROVIDER_GOOGLE /
-## PROVIDER_FACEBOOK; oturum yoksa "". Hesap silmede yeniden doğrulama bu yolla yapılır.
+## Bu cihazda girişte kullanılan yol: e-posta koduyla girildiyse PROVIDER_EMAIL; değilse bağlıysa o yol, yoksa
+## hesabın ilk bağlı yolu (PROVIDER_GOOGLE / PROVIDER_FACEBOOK); hiç yol bağlı değilse (kodla açılmış hesap)
+## PROVIDER_EMAIL; oturum yoksa "". Hesap silmede yeniden doğrulama bu yolla yapılır.
 func get_provider() -> String:
-	var providers: PackedStringArray = get_providers()
-	if providers.is_empty():
+	if not is_authenticated():
 		return ""
 	var used: String = _str(_meta.get("provider"))
+	if used == PROVIDER_EMAIL and not _str(_user.get("email")).is_empty():
+		return PROVIDER_EMAIL
+	var providers: PackedStringArray = get_providers()
+	if providers.is_empty():
+		return PROVIDER_EMAIL
 	return used if providers.has(used) else providers[0]
 
 
-## Hesaba bağlı bütün giriş yolları (sıra: Firebase'in sırası). Alanı yazmayan eski eklentide tek yol.
+## Hesaba bağlı Google / Facebook yolları (sıra: Firebase'in sırası); e-posta koduyla açılmış hesapta boş.
+## "providers" alanını yazmayan eski eklentide herkes tek yollu (Google ya da Facebook) sayılır.
 func get_providers() -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
 	if not is_authenticated():
@@ -231,7 +264,7 @@ func get_providers() -> PackedStringArray:
 	for provider: String in _str(_user.get("providers")).split(",", false):
 		if provider in [PROVIDER_GOOGLE, PROVIDER_FACEBOOK]:
 			out.append(provider)
-	if out.is_empty():
+	if out.is_empty() and not _user.has("providers"):
 		var single: String = _str(_user.get("provider"))
 		out.append(single if single == PROVIDER_FACEBOOK else PROVIDER_GOOGLE)
 	return out
@@ -262,14 +295,16 @@ func link_provider(provider: String) -> void:
 		_fb.linkGoogle()
 
 
-## Oyuncuya gösterilen sağlayıcı adı ("Google" / "Facebook"); metinlerde "%s hesabın" biçiminde.
+## Oyuncuya gösterilen sağlayıcı adı ("Google" / "Facebook" / "E-posta"); metinlerde "%s hesabın" biçiminde.
 static func provider_name(provider: String) -> String:
+	if provider == PROVIDER_EMAIL:
+		return Loc.t("E-posta")
 	return "Facebook" if provider == PROVIDER_FACEBOOK else "Google"
 
 
-## Bir Firestore / Auth işlemi ya da çıkış sürüyor mu (ziyarete giderken sahne donmadan önce bakılır).
+## Bir Firestore / Auth işlemi, e-posta kodu isteği ya da çıkış sürüyor mu (ziyarete giderken sahne donmadan önce bakılır).
 func is_busy() -> bool:
-	return _op != Op.NONE or _signing_out
+	return _op != Op.NONE or _signing_out or _email_busy
 
 
 ## Son okumada bulutta kayıt vardı mı.
@@ -306,6 +341,140 @@ func _open_account_picker(provider: String) -> void:
 		_fb.signInWithFacebook()
 	else:
 		_fb.signInWithGoogle()
+
+
+# --- E-posta koduyla giriş ----------------------------------------------------------
+
+## E-POSTA İLE GİRİŞ 1. adım: adrese 6 haneli kod yollanır (emailCodeSend). Sonuç email_code_sent / email_code_failed.
+## Hesap silmede (email_reauth_needed) aynı yolla hesabın e-postasına kod istenir.
+func request_email_code(email: String) -> void:
+	if _email_busy:
+		return
+	email = email.strip_edges().to_lower()
+	if not is_valid_email(email):
+		email_code_failed.emit(Loc.t("Geçerli bir e-posta adresi yaz."))
+		return
+	if not _email_allowed():
+		return
+	var result: Dictionary = await _email_call("emailCodeSend", {"email": email, "lang": Loc.current()})
+	if result.has("error"):
+		email_code_failed.emit(_email_error_text(result))
+		return
+	email_code_sent.emit(email)
+
+
+## 2. adım: kod doğruysa sunucunun özel jetonuyla Firebase'e girilir (misafirken giriş; hesap silmede yeniden
+## doğrulama — Op.REAUTH sürer, _on_auth_success silmeye devam eder). Yanlışsa email_code_failed, pencere açık kalır.
+func submit_email_code(email: String, code: String) -> void:
+	if _email_busy or not _email_allowed():
+		return
+	email = email.strip_edges().to_lower()
+	code = code.strip_edges()
+	if code.length() != 6 or not code.is_valid_int():
+		email_code_failed.emit(Loc.t("Kod 6 haneli olmalı."))
+		return
+	var result: Dictionary = await _email_call("emailCodeVerify", {"email": email, "code": code})
+	if result.has("error"):
+		email_code_failed.emit(_email_error_text(result))
+		return
+	var token: String = _str(result.get("token"))
+	if token.is_empty() or not _email_allowed():
+		email_code_failed.emit(_email_error_text({"error": "internal"}))   # bu arada başka yolla girildi / işlem başladı
+		return
+	if not _is_email_reauth():
+		_set_state(State.SIGNING_IN)
+		_op = Op.SIGN_IN
+		_sign_in_provider = PROVIDER_EMAIL
+	email_code_accepted.emit()
+	_fb.signInWithCustomToken(token)
+
+
+## Hesap silmede e-posta doğrulamasından vazgeçildi: hiçbir şey silinmez.
+func cancel_email_reauth() -> void:
+	if _is_email_reauth():
+		_op = Op.NONE
+		_abort_delete("")
+
+
+## Basit biçim denetimi (asıl denetim sunucuda): boşluksuz, tek @, alan adında iç nokta.
+static func is_valid_email(email: String) -> bool:
+	var at: int = email.find("@")
+	if email.length() > 254 or email.contains(" ") or at <= 0 or email.count("@") != 1:
+		return false
+	var domain: String = email.substr(at + 1)
+	return domain.contains(".") and not domain.begins_with(".") and not domain.ends_with(".")
+
+
+## Kod istenebilir / doğrulanabilir mi: misafirken (başka işlem yokken) ya da hesap silme kod bekliyorken.
+func _email_allowed() -> bool:
+	if _fb == null:
+		email_code_failed.emit(Loc.t("E-posta ile giriş yalnızca Android sürümünde"))
+		return false
+	return _is_email_reauth() or (not is_authenticated() and _op == Op.NONE and not _signing_out)
+
+
+func _is_email_reauth() -> bool:
+	return _op == Op.REAUTH and _sign_in_provider == PROVIDER_EMAIL
+
+
+func _email_call(fn_name: String, data: Dictionary) -> Dictionary:
+	_email_busy = true
+	var result: Variant = await _call_function.call(fn_name, data)
+	_email_busy = false
+	return result if result is Dictionary else {"error": "internal"}
+
+
+## Callable Cloud Function'ı düz HTTP ile çağırır. Dönüş: {result} içeriği ya da {"error": neden, ...ayrıntılar}
+## ("network": sunucuya ulaşılamadı).
+func _http_call_function(fn_name: String, data: Dictionary) -> Dictionary:
+	if _email_http == null:
+		_email_http = HTTPRequest.new()
+		_email_http.timeout = REQUEST_TIMEOUT + 8.0   # soğuk başlayan fonksiyon + e-posta gönderimi
+		add_child(_email_http)
+	var err: Error = _email_http.request(EMAIL_FUNCTIONS_URL + fn_name, ["Content-Type: application/json"],
+		HTTPClient.METHOD_POST, JSON.stringify({"data": data}))
+	if err != OK:
+		return {"error": "network"}
+	var response: Array = await _email_http.request_completed
+	if int(response[0]) != HTTPRequest.RESULT_SUCCESS:
+		return {"error": "network"}
+	var body: Variant = JSON.parse_string((response[3] as PackedByteArray).get_string_from_utf8())
+	if not body is Dictionary:
+		return {"error": "internal"}
+	if int(response[1]) == 200 and body.get("result") is Dictionary:
+		return body["result"]
+	var error: Variant = body.get("error")
+	var details: Variant = error.get("details") if error is Dictionary else null
+	var out: Dictionary = (details as Dictionary).duplicate() if details is Dictionary else {}
+	out["error"] = _str(out.get("reason", "internal"))
+	return out
+
+
+## Sunucu nedeninin oyuncu metni (email_code.js CodeError reason).
+func _email_error_text(result: Dictionary) -> String:
+	match _str(result.get("error")):
+		"bad_email":
+			return Loc.t("Geçerli bir e-posta adresi yaz.")
+		"bad_code":
+			return Loc.t("Kod 6 haneli olmalı.")
+		"cooldown":
+			return Loc.t("Yeni kod için %d saniye bekle.") % maxi(1, int(result.get("retry_after", EMAIL_RESEND_SECONDS)))
+		"too_many":
+			return Loc.t("Çok fazla kod istendi. %d dakika sonra tekrar dene.") \
+				% maxi(1, ceili(float(result.get("retry_after", 3600)) / 60.0))
+		"wrong_code":
+			return Loc.t("Kod yanlış. Kalan deneme: %d") % int(result.get("attempts_left", 0))
+		"expired":
+			return Loc.t("Kodun süresi doldu. Yeni kod iste.")
+		"no_code", "too_many_attempts":
+			return Loc.t("Bu kod artık geçerli değil. Yeni kod iste.")
+		"disabled":
+			return Loc.t("Bu hesap kapatılmış.")
+		"send_failed":
+			return Loc.t("E-posta gönderilemedi. Biraz sonra tekrar dene.")
+		"network":
+			return Loc.t("Sunucuya ulaşılamadı. İnternet bağlantını kontrol et.")
+	return Loc.t("Bir sorun oldu. Biraz sonra tekrar dene.")
 
 
 ## ÇIKIŞ YAP: bekleyen değişiklik önce buluta yazılır; yazılamıyorsa çıkış YAPILMAZ (ilerleme
@@ -362,7 +531,7 @@ func can_delete_account() -> bool:
 		and _state in [State.SYNCED, State.OFFLINE, State.ERROR]
 
 
-## HESABI SİL: hesap kendi yoluyla (Google / Facebook) yeniden seçtirilir, ardından bulut kaydı, Firebase
+## HESABI SİL: hesap kendi yoluyla (Google / Facebook seçici ya da e-posta kodu) yeniden doğrulanır, ardından bulut kaydı, Firebase
 ## hesabı ve bu cihazdaki ilerleme silinir. Sonuç account_deleted ile bildirilir. Süren bir bulut yazması
 ## beklenmez: Firestore yazmaları sırayla işler, silme ondan sonra gelir.
 func delete_account() -> void:
@@ -375,6 +544,9 @@ func delete_account() -> void:
 	_set_state(State.DELETING)
 	_op = Op.REAUTH
 	_sign_in_provider = get_provider()
+	if _sign_in_provider == PROVIDER_EMAIL:
+		email_reauth_needed.emit(_str(_user.get("email")))   # kod gelince submit_email_code silmeye devam eder
+		return
 	_open_account_picker(_sign_in_provider)
 
 
@@ -438,8 +610,9 @@ func _on_auth_failure(message: String) -> void:
 		Op.REAUTH:
 			_op = Op.NONE
 			push_warning("CloudSaveManager: silme öncesi %s doğrulaması başarısız: %s" % [provider_name(_sign_in_provider), message])
-			_abort_delete("" if _is_cancel(message) else Loc.t("Hesap silinmedi: %s hesabı doğrulanamadı.")
-				% provider_name(_sign_in_provider))
+			_abort_delete("" if _is_cancel(message) else (Loc.t("Hesap silinmedi: e-posta doğrulanamadı.")
+				if _sign_in_provider == PROVIDER_EMAIL else Loc.t("Hesap silinmedi: %s hesabı doğrulanamadı.")
+				% provider_name(_sign_in_provider)))
 
 
 ## E-posta çakışması: bu e-posta öteki yolla (Google ↔ Facebook) açılmış bir hesaba ait. Öteki yolun hesap
@@ -507,6 +680,8 @@ func _sign_in_error_text(message: String) -> String:
 		return Loc.t("Bu e-posta adresiyle başka bir giriş yolundan açılmış hesabın var. Daha önce hangisiyle girdiysen onu seç.")
 	if message.begins_with(FACEBOOK_NOT_CONFIGURED):
 		return Loc.t("Facebook girişi henüz hazır değil")
+	if _sign_in_provider == PROVIDER_EMAIL:
+		return Loc.t("E-posta ile giriş yapılamadı")
 	if _sign_in_provider == PROVIDER_FACEBOOK:
 		return Loc.t("Facebook girişi yapılamadı")
 	return Loc.t("Google girişi yapılamadı")

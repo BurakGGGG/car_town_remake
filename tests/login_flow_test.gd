@@ -7,6 +7,9 @@ extends SceneTree
 ## Facebook girişi ve HESAP BAĞLAMA da sahtelenir (Firebase "e-posta başına tek hesap"): aynı e-postalı
 ## Facebook girişi Google hesabına bağlanır, PLAYER ekranından elle bağlama, başka hesaba bağlı kimlik,
 ## e-postası farklı hesap, silmede hesabın KENDİ yoluyla tazelenmesi, uygulama kimliği yokken "hazır değil".
+## E-POSTA KODUYLA GİRİŞ: sahte Cloud Function (FakeCodeServer) kodu "yollar", doğrular, e-postanın hesabının özel
+## jetonunu verir (yoksa yeni hesap); kodla açılan hesaba aynı e-postalı Google girişi aynı UID'ye bağlanır (Firebase:
+## Google e-postası doğrulanmış sağlayıcı); kodla girilmiş hesap silinirken kodla yeniden doğrulanır.
 
 class FakeFB extends Object:
 	signal auth_success(d: Dictionary)
@@ -40,6 +43,7 @@ class FakeFB extends Object:
 	var google_calls: int = 0
 	var facebook_calls: int = 0
 	var rule_denials: int = 0              # kurallara uymayan yazma (profilde fazladan alan vb.)
+	var custom_calls: int = 0              # signInWithCustomToken (e-posta koduyla giriş)
 
 	func isSignedIn() -> bool:
 		return not user.is_empty()
@@ -71,18 +75,34 @@ class FakeFB extends Object:
 			return
 		_sign_in("fb:" + fb_account, _fb_email(), "f_%s")
 
+	## E-posta kodundan sonra sunucunun özel jetonu ("token:<uid>"): o hesaba girilir, giriş tazelenir.
+	func signInWithCustomToken(token: String) -> void:
+		custom_calls += 1
+		var uid: String = token.trim_prefix("token:")
+		if not uid_emails.has(uid):
+			call_deferred("emit_signal", "auth_failure", "ERROR_INVALID_CUSTOM_TOKEN: The custom token format is incorrect.")
+			return
+		fresh = true
+		_set_user(uid)
+		call_deferred("emit_signal", "auth_success", user.duplicate())
+
 	## Kimlik bağlıysa o hesaba girer; değilse e-posta başka hesabınsa ÇAKIŞMA (kimlik bekletilir), yoksa yeni hesap.
+	## İstisna (gerçek Firebase gibi): e-postası doğrulanmış, hiç yolu bağlı olmayan hesaba (e-posta koduyla açılmış)
+	## Google girişi doğrudan bağlanır.
 	func _sign_in(key: String, email: String, uid_format: String) -> void:
 		if not linked.has(key):
 			var owner: String = _uid_of_email(email)
-			if not owner.is_empty():
+			if not owner.is_empty() and not key.begins_with("fb:") and not linked.values().has(owner):
+				linked[key] = owner
+			elif not owner.is_empty():
 				pending = {"key": key, "email": email}
 				call_deferred("emit_signal", "auth_failure", "ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL: An account already exists with the same email address but different sign-in credentials.")
 				return
-			uid_counter += 1
-			var uid: String = (uid_format % key.trim_prefix("fb:")) + "_%d" % uid_counter
-			linked[key] = uid
-			uid_emails[uid] = email
+			else:
+				uid_counter += 1
+				var uid: String = (uid_format % key.trim_prefix("fb:")) + "_%d" % uid_counter
+				linked[key] = uid
+				uid_emails[uid] = email
 		fresh = true
 		_set_user(linked[key])
 		call_deferred("emit_signal", "auth_success", user.duplicate())
@@ -198,6 +218,47 @@ class FakeFB extends Object:
 		call_deferred("emit_signal", "firestore_delete_task_completed", {"status": true, "docID": id})
 
 
+## Sahte e-posta kodu Cloud Function'ları (firebase/functions/email_code.js gibi): kod "yollanır" (sent'e yazılır),
+## doğru kodla e-postanın hesabının jetonu döner, hesap yoksa açılır. Yanıt bir kare sonra gelir (HTTP gibi).
+class FakeCodeServer extends RefCounted:
+	var fb: FakeFB
+	var codes: Dictionary = {}       # e-posta -> geçerli kod
+	var sent: Array[Dictionary] = []
+	var online: bool = true
+	var calls: int = 0
+	var email_uids: int = 0
+
+	func call_function(fn_name: String, data: Dictionary) -> Dictionary:
+		calls += 1
+		await (Engine.get_main_loop() as SceneTree).process_frame
+		if not online:
+			return {"error": "network"}
+		var email: String = String(data.get("email", ""))
+		if fn_name == "emailCodeSend":
+			var code: String = "%06d" % (482100 + sent.size())
+			codes[email] = code
+			sent.append({"email": email, "code": code, "lang": String(data.get("lang", ""))})
+			return {"resend_after": 60}
+		if not codes.has(email):
+			return {"error": "no_code"}
+		if String(data.get("code", "")) != codes[email]:
+			return {"error": "wrong_code", "attempts_left": 4}
+		codes.erase(email)
+		var uid: String = fb._uid_of_email(email)
+		var created: bool = uid.is_empty()
+		if created:
+			email_uids += 1
+			uid = "e_%d" % email_uids
+			fb.uid_emails[uid] = email
+		return {"token": "token:" + uid, "created": created}
+
+	func last_code(email: String) -> String:
+		for i: int in range(sent.size() - 1, -1, -1):
+			if sent[i]["email"] == email:
+				return sent[i]["code"]
+		return ""
+
+
 const SIGNALS: Array[StringName] = [
 	&"auth_success", &"auth_failure",
 	&"sign_out_success", &"user_deleted", &"firestore_get_task_completed",
@@ -206,6 +267,8 @@ const SIGNALS: Array[StringName] = [
 ]
 
 var fb: FakeFB = FakeFB.new()
+var code_server: FakeCodeServer = FakeCodeServer.new()
+var email_events: PackedStringArray = PackedStringArray()
 var w: Dictionary = {}
 var fails: int = 0
 var deleted_results: Array[bool] = []
@@ -259,6 +322,12 @@ func make_world() -> void:
 	fb.firestore_delete_task_completed.connect(cloud._on_delete_completed)
 	fb.account_link_success.connect(cloud._on_link_success)
 	fb.account_link_failure.connect(cloud._on_link_failure)
+	code_server.fb = fb
+	cloud._call_function = code_server.call_function
+	cloud.email_code_sent.connect(func(e: String) -> void: email_events.append("sent:" + e))
+	cloud.email_code_failed.connect(func(t: String) -> void: email_events.append("failed:" + t))
+	cloud.email_code_accepted.connect(func() -> void: email_events.append("accepted"))
+	cloud.email_reauth_needed.connect(func(e: String) -> void: email_events.append("reauth:" + e))
 	cloud.account_deleted.connect(func(ok: bool) -> void: deleted_results.append(ok))
 	cloud.notice.connect(func(t: String) -> void: notices.append(t))
 	w = {"root": root_node, "eco": eco, "prog": prog, "own": own, "crates": crates, "save": save, "cloud": cloud}
@@ -633,9 +702,133 @@ func _run() -> void:
 	await frames(14)
 	check(fb.google_calls == google_before + 1 and fb.facebook_calls == facebook_before, "bu cihazdaki giriş yolu (Google) ile tazelendi")
 	check(deleted_results == [true] and not fb.linked.has("fb:katefb") and not fb.linked.has("kate"), "hesap ve iki giriş yolu silindi")
+
+	await _email_scenarios()
 	await close_app()
 
 	check(fb.rule_denials == 0, "hiçbir yazma Firestore kuralına takılmadı (profilde yalnız izinli alanlar)")
 	print("RESULT fails=%d" % fails)
 	fb.free()
 	quit(1 if fails > 0 else 0)
+
+
+## E-posta koduyla giriş: kod adımları, yeni hesap, aynı e-posta = aynı hesap (Google ↔ kod), kodla silme / vazgeçme.
+func email_sign_in(email: String) -> void:
+	cloud().request_email_code(email)
+	await frames(4)
+	cloud().submit_email_code(email, code_server.last_code(email.strip_edges().to_lower()))
+	await frames(12)
+
+
+func _email_scenarios() -> void:
+	print("E-posta kodu: misafir ilerlemesi kodla açılan yeni hesaba gider")
+	check(cloud().get_state() == CloudSaveManager.State.SIGNED_OUT, "başlangıç misafir")
+	eco().set_money(3300)
+	own().add_vehicle(&"hyundai_getz")
+	(w["save"] as SaveManager).save_game()
+	email_events.clear()
+	cloud().request_email_code("eda@")
+	await frames(3)
+	check(Array(email_events) == ["failed:" + Loc.t("Geçerli bir e-posta adresi yaz.")] and code_server.calls == 0,
+		"bozuk adres sunucuya gitmeden reddedildi")
+	email_events.clear()
+	cloud().request_email_code("  Eda@Example.COM ")
+	check(cloud().is_busy(), "kod isteği sürerken meşgul")
+	await frames(4)
+	check(Array(email_events) == ["sent:eda@example.com"] and code_server.sent.size() == 1, "kod yollandı (küçük harfli adres)")
+	check(code_server.sent[0]["lang"] == Loc.current(), "kod e-postası oyuncunun dilinde istendi")
+	email_events.clear()
+	cloud().submit_email_code("eda@example.com", "000000")
+	await frames(4)
+	check(email_events.size() == 1 and email_events[0].begins_with("failed:") and email_events[0].contains(Loc.t("Kod yanlış. Kalan deneme: %d") % 4),
+		"yanlış kod: kalan hak söylendi (%s)" % ", ".join(email_events))
+	check(not cloud().is_authenticated() and cloud().get_state() == CloudSaveManager.State.SIGNED_OUT, "yanlış kodla girilmedi")
+	cloud().submit_email_code("eda@example.com", "12a")
+	await frames(2)
+	check(email_events[email_events.size() - 1] == "failed:" + Loc.t("Kod 6 haneli olmalı."), "eksik kod sunucuya gitmedi")
+	email_events.clear()
+	var custom_before: int = fb.custom_calls
+	cloud().submit_email_code("eda@example.com", code_server.last_code("eda@example.com"))
+	await frames(12)
+	var eda: String = cloud().get_uid()
+	check(Array(email_events) == ["accepted"] and fb.custom_calls == custom_before + 1, "doğru kod: özel jetonla girildi")
+	check(eda == "e_1" and cloud().get_state() == CloudSaveManager.State.SYNCED, "yeni e-posta hesabı SYNCED")
+	check(cloud().get_provider() == CloudSaveManager.PROVIDER_EMAIL and cloud().get_providers().is_empty()
+		and cloud().get_profile().get("provider") == CloudSaveManager.PROVIDER_EMAIL, "giriş yolu e-posta, bağlı Google / Facebook yok")
+	check(cloud().can_link(CloudSaveManager.PROVIDER_GOOGLE), "e-posta hesabına Google bağlanabilir")
+	check(fb.docs.has(eda) and String(fb.docs[eda]["save_json"]).contains("3300"), "misafir ilerlemesi e-posta hesabına yazıldı")
+	check(get_json("cloud_sync.json").get("provider") == CloudSaveManager.PROVIDER_EMAIL, "bu cihazın giriş yolu kaydedildi (e-posta)")
+	var server_before: int = code_server.calls
+	cloud().request_email_code("eda@example.com")
+	await frames(3)
+	check(code_server.calls == server_before, "oturum açıkken kod istenmez")
+	cloud().sign_out()
+	await frames(8)
+
+	print("E-posta kodu: Google hesabının e-postasıyla AYNI hesaba girilir (Otto)")
+	await sign_in_as("otto")
+	var otto: String = cloud().get_uid()
+	eco().set_money(8800)
+	await seconds(2.2)
+	cloud().sign_out()
+	await frames(8)
+	await email_sign_in("otto@gmail.com")
+	check(cloud().get_uid() == otto and eco().money == 8800, "kodla Otto'nun Google hesabına girildi (8800)")
+	check(cloud().get_provider() == CloudSaveManager.PROVIDER_EMAIL and Array(cloud().get_providers()) == ["google.com"],
+		"bu cihazda e-postayla girildi, hesapta Google yolu duruyor (%s, %s)" % [cloud().get_provider(), cloud().get_providers()])
+	cloud().sign_out()
+	await frames(8)
+
+	print("Kodla açılan hesaba aynı e-postalı Google girişi aynı hesaba bağlanır")
+	await email_sign_in("gus@gmail.com")
+	var gus: String = cloud().get_uid()
+	eco().set_money(4100)
+	await seconds(2.2)
+	cloud().sign_out()
+	await frames(8)
+	await sign_in_as("gus")
+	check(cloud().get_uid() == gus and eco().money == 4100 and Array(cloud().get_providers()) == ["google.com"],
+		"Google'la Gus'ın e-posta hesabına girildi, Google yolu eklendi")
+	check(cloud().get_provider() == CloudSaveManager.PROVIDER_GOOGLE, "bu cihazın giriş yolu artık Google")
+	cloud().sign_out()
+	await frames(8)
+
+	print("Sunucuya ulaşılamıyor")
+	code_server.online = false
+	email_events.clear()
+	cloud().request_email_code("eda@example.com")
+	await frames(4)
+	check(Array(email_events) == ["failed:" + Loc.t("Sunucuya ulaşılamadı. İnternet bağlantını kontrol et.")], "ağ hatası söylendi")
+	code_server.online = true
+
+	print("Kodla girilmiş hesabı silme: önce kodla yeniden doğrulama, vazgeçince hiçbir şey silinmez")
+	await email_sign_in("eda@example.com")
+	check(cloud().get_uid() == eda, "Eda'nın hesabına tekrar girildi")
+	fb.fresh = false
+	email_events.clear()
+	deleted_results.clear()
+	var google_before: int = fb.google_calls
+	var facebook_before: int = fb.facebook_calls
+	cloud().delete_account()
+	await frames(4)
+	check(Array(email_events) == ["reauth:eda@example.com"] and cloud().get_state() == CloudSaveManager.State.DELETING,
+		"silme e-posta kodu istedi (%s)" % ", ".join(email_events))
+	check(fb.google_calls == google_before and fb.facebook_calls == facebook_before, "Google / Facebook seçicisi açılmadı")
+	cloud().cancel_email_reauth()
+	await frames(8)
+	check(deleted_results == [false] and cloud().get_uid() == eda and cloud().get_state() == CloudSaveManager.State.SYNCED
+		and fb.docs.has(eda), "vazgeçildi: hesap ve kayıt duruyor, senkron sürüyor")
+	deleted_results.clear()
+	email_events.clear()
+	cloud().delete_account()
+	await frames(4)
+	cloud().request_email_code("eda@example.com")
+	await frames(4)
+	cloud().submit_email_code("eda@example.com", "999999")
+	await frames(4)
+	check(deleted_results.is_empty() and cloud().get_state() == CloudSaveManager.State.DELETING, "yanlış kodla silinmedi, kod bekleniyor")
+	cloud().submit_email_code("eda@example.com", code_server.last_code("eda@example.com"))
+	await frames(16)
+	check(deleted_results == [true] and not fb.docs.has(eda) and fb.user.is_empty() and not fb.uid_emails.has(eda),
+		"kodla doğrulandı: e-posta hesabı ve bulut kaydı silindi")
+	check(cloud().get_state() == CloudSaveManager.State.SIGNED_OUT and eco().money == 5000, "cihaz yeni misafir oyununda")

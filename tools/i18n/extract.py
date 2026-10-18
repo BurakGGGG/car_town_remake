@@ -24,8 +24,8 @@ STR = re.compile(r'(?<![&\^$])"((?:[^"\\\n]|\\.)*)"')
 
 TR_UPPER = "ÇĞİÖŞÜ"
 # Sezgilerin kod sandığı ama oyuncunun gördüğü kısa metinler (Loc.t ile çevrilir)
-INCLUDE = {"%s sn", "%s ve %s", "%d dakika", "%d saat", "%d %s %d", "%d dk"}
-EXCLUDE = {"FWD", "RWD", "AWD", "Master", "Document does not exist", "Facebook login not configured", "USD", "mock: hata", "mock: hazır değil", "mock: iptal", "mock: kapalı", "TÜRKÇE", "ENGLISH", "ESPAÑOL", "DEUTSCH", "FRANÇAIS", "LANGUAGE", " · LANGUAGE",
+INCLUDE = {"%s sn", "%s ve %s", "%d dakika", "%d saat", "%d %s %d", "%d dk", "E-posta"}
+EXCLUDE = {"FWD", "RWD", "AWD", "Master", "Document does not exist", "Facebook login not configured", "Content-Type: application/json", "USD", "mock: hata", "mock: hazır değil", "mock: iptal", "mock: kapalı", "TÜRKÇE", "ENGLISH", "ESPAÑOL", "DEUTSCH", "FRANÇAIS", "LANGUAGE", " · LANGUAGE",
            "DİL", "IDIOMA", "SPRACHE", "LANGUE"}
 
 

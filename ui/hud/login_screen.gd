@@ -1,6 +1,6 @@
 class_name LoginScreen
 extends Control
-## PLAYER tabelası: Google / Facebook girişi, profil / çıkış ve kayıt seçimi (bu cihaz ↔ bulut).
+## PLAYER tabelası: Google / Facebook / e-posta koduyla giriş, profil / çıkış ve kayıt seçimi (bu cihaz ↔ bulut).
 ## Ekran TAMAMEN KODLA kurulur (.tscn yok); HUD onu ShowroomScreen gibi temalı Root'un altına ekler.
 ## Mantık burada değil: her şey CloudSaveManager'dadır ("cloud_save" grubu); bu ekran yalnızca
 ## durumunu gösterir ve butonları ona iletir. CloudSaveManager yoksa (PC / node eklenmemiş) misafir
@@ -14,7 +14,11 @@ extends Control
 ## açılır; SONRA KARAR VER ile kapatılabilir, seçim yapılana kadar buluta yazılmaz.
 ##
 ## HESABIMI SİL iki adımlıdır: ilk basış yalnızca neyin silineceğini anlatan onay görünümünü açar,
-## silme EVET, KALICI OLARAK SİL ile başlar (hesap kendi yoluyla — Google / Facebook — yeniden seçtirilir).
+## silme EVET, KALICI OLARAK SİL ile başlar (hesap kendi yoluyla — Google / Facebook — yeniden seçtirilir; bu cihazda
+## e-posta koduyla girildiyse E-POSTA penceresi açılır, kod hesabın e-postasına gider).
+##
+## E-POSTA İLE GİRİŞ: EmailCodePanel bu ekranın üstünde açılır (kod adımı, klavye payı orada).
+## FACEBOOK: Meta onayına kadar (CloudSaveManager.FACEBOOK_READY) Facebook düğmeleri "üzerinde çalışıyoruz" der.
 
 signal opened
 signal closed
@@ -25,6 +29,8 @@ const CHOICE_WIDTH: float = 200.0
 const GOOGLE_MARK: Texture2D = preload("res://ui/icons/google_g.svg")
 ## Facebook ile giriş düğmesinde mavi yuvarlak "f" logosu.
 const FACEBOOK_MARK: Texture2D = preload("res://ui/icons/facebook_logo.svg")
+## E-posta ile giriş düğmesinde turuncu zarf.
+const MAIL_MARK: Texture2D = preload("res://ui/icons/mail_plate.svg")
 
 var _cloud: CloudSaveManager
 var _title: Label
@@ -39,6 +45,8 @@ var _local_info: Label
 var _cloud_info: Label
 var _primary: PlateButton
 var _facebook: PlateButton
+var _email: PlateButton
+var _email_panel: EmailCodePanel
 var _link: PlateButton
 var _secondary: PlateButton
 var _delete: PlateButton
@@ -71,6 +79,7 @@ func open() -> void:
 func close() -> void:
 	if not visible:
 		return
+	_close_email_panel(true)
 	hide()
 	closed.emit()
 
@@ -174,6 +183,19 @@ func _build() -> void:
 	_facebook.pressed.connect(_on_facebook_pressed)
 	column.add_child(_facebook)
 
+	# Misafirken üçüncü yol: e-postaya gelen kodla (şifresiz)
+	_email = PlateButton.new()
+	_email.name = "EmailButton"
+	_email.theme_type_variation = &"HudPlate"
+	_email.text = Loc.t("E-POSTA İLE GİRİŞ")
+	_email.kind = HudIcon.Kind.NONE
+	_email.avatar = MAIL_MARK
+	_email.avatar_frame = false
+	_email.custom_minimum_size = Vector2(PANEL_WIDTH, 54.0)
+	_email.focus_mode = Control.FOCUS_NONE
+	_email.pressed.connect(_open_email_panel.bind(""))
+	column.add_child(_email)
+
 	_secondary = PlateButton.new()
 	_secondary.name = "SecondaryButton"
 	_secondary.theme_type_variation = &"HudPlateSmall"
@@ -245,6 +267,7 @@ func _connect_cloud() -> void:
 	_cloud.notice.connect(_on_notice)
 	_cloud.account_deleted.connect(_on_account_deleted)
 	_cloud.links_changed.connect(_refresh)
+	_cloud.email_reauth_needed.connect(_open_email_panel)
 	_refresh()
 	await get_tree().process_frame
 	# Dünya yenilendiyse (giriş / çıkış / hesap silme) sonucu bir kez söyle
@@ -322,6 +345,8 @@ func _refresh() -> void:
 	_google_mark(false)
 	_facebook.visible = false
 	_facebook.disabled = false
+	_email.visible = false
+	_email.disabled = false
 	_link.visible = false
 	_delete.visible = false
 	if _confirm_delete and not (_cloud and _cloud.can_delete_account()):
@@ -330,7 +355,10 @@ func _refresh() -> void:
 	if _confirm_delete:
 		_title.text = Loc.t("HESABI SİL")
 		_account_box.visible = true
-		_body.text = Loc.t("%s hesabın oyundan silinir. Bulut kaydın ve bu cihazdaki tüm ilerlemen (para, elmas, araçlar, garaj, görevler) kalıcı olarak silinir ve oyun baştan başlar.\n\nBu işlem GERİ ALINAMAZ. Devam edersen %s hesabını bir kez daha seçmen istenecek.") % [provider, provider]
+		if String(profile.get("provider", "")) == CloudSaveManager.PROVIDER_EMAIL:
+			_body.text = Loc.t("Hesabın oyundan silinir. Bulut kaydın ve bu cihazdaki tüm ilerlemen (para, elmas, araçlar, garaj, görevler) kalıcı olarak silinir ve oyun baştan başlar.\n\nBu işlem GERİ ALINAMAZ. Devam edersen e-postana gelecek kodu girmen istenecek.")
+		else:
+			_body.text = Loc.t("%s hesabın oyundan silinir. Bulut kaydın ve bu cihazdaki tüm ilerlemen (para, elmas, araçlar, garaj, görevler) kalıcı olarak silinir ve oyun baştan başlar.\n\nBu işlem GERİ ALINAMAZ. Devam edersen %s hesabını bir kez daha seçmen istenecek.") % [provider, provider]
 		_primary.text = Loc.t("EVET, KALICI OLARAK SİL")
 		_primary.add_theme_color_override(&"font_color", HudPalette.DANGER_DARK)
 		_secondary.text = Loc.t("VAZGEÇ")
@@ -346,6 +374,7 @@ func _refresh() -> void:
 			_primary.text = Loc.t("GOOGLE İLE GİRİŞ")
 			_google_mark(true)
 			_facebook.visible = true
+			_email.visible = true
 			_secondary.text = Loc.t("MİSAFİR OLARAK DEVAM ET")
 		CloudSaveManager.State.SIGNING_IN, CloudSaveManager.State.SYNCING:
 			_body.text = Loc.t("Bağlanıyor…")
@@ -354,6 +383,8 @@ func _refresh() -> void:
 			_primary.disabled = true
 			_facebook.visible = not signed_in
 			_facebook.disabled = true
+			_email.visible = not signed_in
+			_email.disabled = true
 			_secondary.text = Loc.t("KAPAT")
 		CloudSaveManager.State.CONFLICT:
 			_body.text = Loc.t("Bu cihazda kayıt bulundu.\nBulut kaydı bulundu.\nHangisini kullanmak istiyorsun?")
@@ -372,7 +403,9 @@ func _refresh() -> void:
 			_primary.text = Loc.t("ÇIKIŞ YAP")
 			_secondary.text = Loc.t("KAPAT")
 		CloudSaveManager.State.DELETING:
-			_body.text = Loc.t("Hesap siliniyor… %s hesabını seçtiysen bu birkaç saniye sürer.") % provider
+			_body.text = Loc.t("Hesap siliniyor… E-postana gelen kodu girince bu birkaç saniye sürer.") \
+				if String(profile.get("provider", "")) == CloudSaveManager.PROVIDER_EMAIL \
+				else Loc.t("Hesap siliniyor… %s hesabını seçtiysen bu birkaç saniye sürer.") % provider
 			_primary.text = Loc.t("SİLİNİYOR")
 			_primary.disabled = true
 			_secondary.text = Loc.t("KAPAT")
@@ -382,12 +415,13 @@ func _refresh() -> void:
 	_refresh_link(linked)
 
 
-## İkinci giriş yolu: bağlı olmayan yol düğmede (logosuyla); bağlanırken soluk, ikisi de bağlıysa gizli.
+## İkinci giriş yolu: bağlı olmayan yol düğmede (logosuyla; önce Google — e-postayla açılmış hesapta ikisi de yok);
+## bağlanırken soluk, ikisi de bağlıysa gizli.
 func _refresh_link(linked: PackedStringArray) -> void:
 	if _cloud == null or not _cloud.is_authenticated() or linked.size() >= 2:
 		return
-	var missing: String = CloudSaveManager.PROVIDER_GOOGLE if linked.has(CloudSaveManager.PROVIDER_FACEBOOK) \
-		else CloudSaveManager.PROVIDER_FACEBOOK
+	var missing: String = CloudSaveManager.PROVIDER_FACEBOOK if linked.has(CloudSaveManager.PROVIDER_GOOGLE) \
+		else CloudSaveManager.PROVIDER_GOOGLE
 	var linking: bool = _cloud.is_linking()
 	if not linking and not _cloud.can_link(missing):
 		return
@@ -418,16 +452,50 @@ func _on_primary_pressed() -> void:
 func _on_link_pressed() -> void:
 	if _cloud == null:
 		return
+	var provider: String = String(_link.get_meta(&"provider", ""))
+	if provider == CloudSaveManager.PROVIDER_FACEBOOK and not CloudSaveManager.FACEBOOK_READY:
+		_on_notice(Loc.t("Facebook girişi üzerinde çalışıyoruz, çok yakında!"))
+		return
 	_notice_text = ""
-	_cloud.link_provider(String(_link.get_meta(&"provider", "")))
+	_cloud.link_provider(provider)
 	_refresh()
 
 
 func _on_facebook_pressed() -> void:
 	if _cloud == null:
 		return
+	if not CloudSaveManager.FACEBOOK_READY:
+		_on_notice(Loc.t("Facebook girişi üzerinde çalışıyoruz, çok yakında!"))
+		return
 	_notice_text = ""
 	_cloud.sign_in_facebook()
+	_refresh()
+
+
+## E-POSTA penceresi: reauth_email boş → misafir girişi; dolu → hesap silmede kodla yeniden doğrulama.
+func _open_email_panel(reauth_email: String) -> void:
+	if _cloud == null:
+		return
+	_close_email_panel(false)
+	_notice_text = ""
+	if not visible:
+		open()
+	_email_panel = EmailCodePanel.new()
+	_email_panel.setup(_cloud, reauth_email)
+	_email_panel.accepted.connect(_close_email_panel.bind(false))
+	_email_panel.cancelled.connect(_close_email_panel.bind(true))
+	add_child(_email_panel)
+	_refresh()
+
+
+## cancel: vazgeçildi (silme doğrulamasıysa silme iptal); değilse kod kabul edildi, giriş / silme sürer.
+func _close_email_panel(cancel: bool) -> void:
+	if _email_panel == null:
+		return
+	_email_panel.queue_free()
+	_email_panel = null
+	if cancel and _cloud:
+		_cloud.cancel_email_reauth()
 	_refresh()
 
 
