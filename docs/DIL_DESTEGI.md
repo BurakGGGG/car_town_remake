@@ -40,7 +40,7 @@ Test: `tests/locale_test.gd`.
 
 ## Bilinen sınırlar
 
-* Araç adları (TOFAŞ ŞAHİN, BMW E46) özel isimdir, çevrilmez.
+* Araç adları (BURSAN ATMACA 95, BAVARIA CLUB 46) özel isimdir, çevrilmez; hepsi kurgusaldır (gerçek marka / model adı kullanılmaz, bkz. docs/ARAC_ADLARI.md).
 * Testler Türkçe metinleri denetler: `tools/run_tests.sh` her paketten önce `settings.cfg`'ye `language="tr"` yazar.
 * Geliştirme makinesinin dili İngilizceyse (en_US) oyun editörde İngilizce açılır; AYARLAR'dan değiştirilebilir.
 

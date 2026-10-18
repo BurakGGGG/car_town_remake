@@ -27,7 +27,7 @@ Deine eigene Werkstatt mitten in der Stadt! Kaputte Autos biegen direkt aus dem 
 • 10 Werkstatt-Ränge und 99 Level
 
 🚗 SCHROTTPLATZ
-• 28 Klassiker zum Restaurieren, vom Anadol A1 bis zum Lamborghini Miura
+• 28 Klassiker zum Restaurieren, vom Hitit A-67 bis zum Bull Matador 400
 • Durchsuche die Schrotthaufen, sammle Teile und bitte Freunde um das fehlende Stück
 • Jeden Tag 3 neue Wracks, die Haufen füllen sich alle 8 Stunden neu
 
@@ -81,7 +81,7 @@ Votre propre garage en pleine ville ! Les voitures en panne quittent la circula
 • 10 rangs de garage et 99 niveaux
 
 🚗 CASSE
-• 28 classiques à restaurer, de l’Anadol A1 à la Lamborghini Miura
+• 28 classiques à restaurer, de la Hitit A-67 à la Bull Matador 400
 • Fouillez les tas de ferraille, récupérez des pièces et demandez à un ami celle qui vous manque
 • 3 nouvelles épaves chaque jour, des tas qui se remplissent toutes les 8 heures
 

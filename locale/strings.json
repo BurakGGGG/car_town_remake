@@ -239,7 +239,7 @@
   "ui/hud/news_digest.gd:333"
  ],
  "%s HESABI": [
-  "ui/hud/login_screen.gd:314"
+  "ui/hud/login_screen.gd:337"
  ],
  "%s KASA AÇ": [
   "gameplay/missions/mission_catalog.gd:56",
@@ -337,13 +337,16 @@
  "%s YERLEŞTİ": [
   "world/garage_editor.gd:377"
  ],
+ "%s adresine 6 haneli bir kod gönderdik. Gelmediyse gereksiz (spam) klasörüne de bak.": [
+  "ui/hud/email_code_panel.gd:183"
+ ],
  "%s artık arkadaşın!": [
   "gameplay/social/social_manager.gd:476",
   "gameplay/social/social_manager.gd:1074",
   "ui/hud/invite_screen.gd:202"
  ],
  "%s bağlanamadı": [
-  "gameplay/cloud_save_manager.gd:501"
+  "gameplay/cloud_save_manager.gd:674"
  ],
  "%s boya satın al": [
   "gameplay/missions/mission_catalog.gd:100"
@@ -373,11 +376,11 @@
   "gameplay/missions/mission_catalog.gd:112"
  ],
  "%s hesabın bağlandı. Artık iki yolla da aynı hesaba girebilirsin.": [
-  "gameplay/cloud_save_manager.gd:461",
-  "gameplay/cloud_save_manager.gd:467"
+  "gameplay/cloud_save_manager.gd:634",
+  "gameplay/cloud_save_manager.gd:640"
  ],
  "%s hesabın oyundan silinir. Bulut kaydın ve bu cihazdaki tüm ilerlemen (para, elmas, araçlar, garaj, görevler) kalıcı olarak silinir ve oyun baştan başlar.\n\nBu işlem GERİ ALINAMAZ. Devam edersen %s hesabını bir kez daha seçmen istenecek.": [
-  "ui/hud/login_screen.gd:333"
+  "ui/hud/login_screen.gd:361"
  ],
  "%s ile senin aracını %d kez geride bıraktı. İntikam için ARKADAŞLAR'a uğra.": [
   "ui/hud/news_digest.gd:262"
@@ -482,7 +485,7 @@
   "ui/hud/car_gallery.gd:286"
  ],
  "%s ₺\nSEVİYE %d\n%d ARAÇ\n%s": [
-  "ui/hud/login_screen.gd:284"
+  "ui/hud/login_screen.gd:307"
  ],
  "%s ₺ / KARO": [
   "ui/hud/garage_edit_screen.gd:858"
@@ -1268,7 +1271,7 @@
   "decor/decorations.json:wall_concrete.title"
  ],
  "BU CİHAZDAKİ KAYIT": [
-  "ui/hud/login_screen.gd:135"
+  "ui/hud/login_screen.gd:144"
  ],
  "BU KARO BOYALI DEĞİL": [
   "world/garage_editor.gd:971"
@@ -1283,7 +1286,7 @@
   "gameplay/social/profile_catalog.gd:47"
  ],
  "BULUT KAYDI": [
-  "ui/hud/login_screen.gd:136"
+  "ui/hud/login_screen.gd:145"
  ],
  "BURADASIN": [
   "ui/hud/map_screen.gd:240"
@@ -1311,9 +1314,9 @@
   "decor/decorations.json:mailbox.desc"
  ],
  "Bağlanıyor…": [
-  "ui/hud/login_screen.gd:351",
-  "ui/hud/login_screen.gd:397",
-  "ui/loading/login_gate.gd:228"
+  "ui/hud/login_screen.gd:380",
+  "ui/hud/login_screen.gd:431",
+  "ui/loading/login_gate.gd:331"
  ],
  "Başlangıç Değerleri (test)": [
   "ui/hud/hud.gd:43"
@@ -1381,6 +1384,9 @@
  "Bir sorun mu var? Bize yaz.": [
   "ui/hud/settings_screen.gd:285"
  ],
+ "Bir sorun oldu. Biraz sonra tekrar dene.": [
+  "gameplay/cloud_save_manager.gd:477"
+ ],
  "Biçilmiş şeritli suni çim.": [
   "decor/decorations.json:turf.desc"
  ],
@@ -1388,16 +1394,16 @@
   "decor/decorations.json:tyre_planter.desc"
  ],
  "Bu %s hesabı başka bir oyun hesabına bağlı, bağlanamadı.": [
-  "gameplay/cloud_save_manager.gd:498"
+  "gameplay/cloud_save_manager.gd:671"
  ],
- "Bu Tofaş Şahin artık senin! Drag yarışlarına bununla çıkacaksın; yeni araçlar ileride kasalardan çıkar. Plakadaki TAMAM'a bas.": [
+ "Bu Bursan Atmaca artık senin! Drag yarışlarına bununla çıkacaksın; yeni araçlar ileride kasalardan çıkar. Plakadaki TAMAM'a bas.": [
   "ui/tutorial/tutorial_director.gd:668"
  ],
  "Bu ad kullanılamaz. Harf, rakam, boşluk ve . _ - kullanabilirsin.": [
   "ui/hud/profile_edit_screen.gd:514"
  ],
  "Bu cihazda kayıt bulundu.\nBulut kaydı bulundu.\nHangisini kullanmak istiyorsun?": [
-  "ui/hud/login_screen.gd:359"
+  "ui/hud/login_screen.gd:390"
  ],
  "Bu davet linkinin süresi dolmuş (linkler 1 saat geçerli). %s oyuncusundan yeni bir link iste.": [
   "ui/hud/invite_screen.gd:216"
@@ -1406,10 +1412,10 @@
   "gameplay/social/social_manager.gd:482"
  ],
  "Bu e-posta adresi %s hesabınla kayıtlı. %s ile doğrula, %s hesabın da aynı oyun hesabına bağlansın.": [
-  "gameplay/cloud_save_manager.gd:450"
+  "gameplay/cloud_save_manager.gd:623"
  ],
  "Bu e-posta adresiyle başka bir giriş yolundan açılmış hesabın var. Daha önce hangisiyle girdiysen onu seç.": [
-  "gameplay/cloud_save_manager.gd:507"
+  "gameplay/cloud_save_manager.gd:680"
  ],
  "Bu fotoğraf biçimi açılamadı. JPEG ya da PNG seç.": [
   "ui/hud/photo_picker.gd:53"
@@ -1417,8 +1423,14 @@
  "Bu garaj oyunun daha yeni bir sürümüyle kaydedilmiş. Oyunu güncelle.": [
   "gameplay/social/social_manager.gd:553"
  ],
+ "Bu hesap kapatılmış.": [
+  "gameplay/cloud_save_manager.gd:472"
+ ],
  "Bu iş sabır ister. Sende o göz var.": [
   "ui/hud/junkyard_screen.gd:37"
+ ],
+ "Bu kod artık geçerli değil. Yeni kod iste.": [
+  "gameplay/cloud_save_manager.gd:470"
  ],
  "Bu kodla bir oyuncu bulunamadı.": [
   "gameplay/social/social_manager.gd:1019",
@@ -1454,16 +1466,16 @@
   "ui/tutorial/tutorial_director.gd:616"
  ],
  "Bulut kaydı bu sürümle açılamıyor": [
-  "gameplay/cloud_save_manager.gd:699"
+  "gameplay/cloud_save_manager.gd:874"
  ],
  "Bulut kaydı bu sürümle açılamıyor. Bulut kaydına dokunulmadı; bu cihazdaki kayıt kullanılıyor.": [
-  "ui/hud/login_screen.gd:371"
+  "ui/hud/login_screen.gd:402"
  ],
  "Bulut kaydı güncel.\nÇıkış yaparsan bu cihazda yeni bir misafir oyunu başlar; ilerlemen hesabında güvende kalır, tekrar girince geri gelir.": [
-  "ui/hud/login_screen.gd:363"
+  "ui/hud/login_screen.gd:394"
  ],
  "Buluta ulaşılamıyor. Bu cihazdaki kayıt kullanılıyor; bağlantı gelince eşitlenecek.\nEşitlenmemiş değişiklik varken çıkış yapılamaz.": [
-  "ui/hud/login_screen.gd:367"
+  "ui/hud/login_screen.gd:398"
  ],
  "Burada iki aracı ve kazanırsan alacağın ödülü görürsün. YARIŞ'a bas!": [
   "ui/tutorial/tutorial_director.gd:742"
@@ -1603,7 +1615,7 @@
   "decor/decorations.json:manager_desk.desc"
  ],
  "CloudSaveManager: bulut kaydı silinemedi: %s": [
-  "gameplay/cloud_save_manager.gd:590"
+  "gameplay/cloud_save_manager.gd:765"
  ],
  "Current Garage": [
   "garage_system.gd:11"
@@ -1701,7 +1713,7 @@
   "ui/hud/mission_screen.gd:419"
  ],
  "DEVAM ET": [
-  "ui/hud/login_screen.gd:343"
+  "ui/hud/login_screen.gd:371"
  ],
  "DEVİR SINIRI": [
   "gameplay/race/drag_race_sim.gd:699"
@@ -1745,6 +1757,9 @@
  ],
  "DOSYA DOLABI": [
   "decor/decorations.json:filing_cabinet.title"
+ ],
+ "DOĞRULA": [
+  "ui/hud/email_code_panel.gd:188"
  ],
  "DRAG NASIL OYNANIR?": [
   "ui/tutorial/tutorial_director.gd:748"
@@ -1834,7 +1849,7 @@
   "ui/tutorial/tutorial_director.gd:878"
  ],
  "Delete failed": [
-  "gameplay/cloud_save_manager.gd:419"
+  "gameplay/cloud_save_manager.gd:591"
  ],
  "Derzli beton blok.": [
   "decor/decorations.json:wall_block.desc"
@@ -1853,6 +1868,9 @@
  ],
  "Dokun, içine gir": [
   "ui/hud/mod_workshop.gd:114"
+ ],
+ "Doğrulanıyor…": [
+  "ui/hud/email_code_panel.gd:252"
  ],
  "Drag yarışı başlangıç ışık ağacı.": [
   "decor/decorations.json:start_lights.desc"
@@ -1953,7 +1971,30 @@
   "vehicles/restorations.json:parts.gear"
  ],
  "E-POSTA İLE DEVAM ET": [
-  "ui/loading/login_gate.gd:109"
+  "ui/loading/login_gate.gd:116"
+ ],
+ "E-POSTA İLE GİRİŞ": [
+  "ui/hud/email_code_panel.gd:171",
+  "ui/hud/login_screen.gd:190"
+ ],
+ "E-POSTAYI DEĞİŞTİR": [
+  "ui/hud/email_code_panel.gd:189"
+ ],
+ "E-posta": [
+  "gameplay/cloud_save_manager.gd:301"
+ ],
+ "E-posta adresini yaz, sana 6 haneli bir giriş kodu gönderelim. Şifre gerekmez.": [
+  "ui/hud/email_code_panel.gd:175"
+ ],
+ "E-posta gönderilemedi. Biraz sonra tekrar dene.": [
+  "gameplay/cloud_save_manager.gd:474"
+ ],
+ "E-posta ile giriş yalnızca Android sürümünde": [
+  "gameplay/cloud_save_manager.gd:411"
+ ],
+ "E-posta ile giriş yapılamadı": [
+  "gameplay/cloud_save_manager.gd:684",
+  "ui/loading/login_gate.gd:186"
  ],
  "EFEKTLER": [
   "ui/hud/settings_screen.gd:356"
@@ -2041,7 +2082,7 @@
   "ui/hud/restoration_panel.gd:215"
  ],
  "EVET, KALICI OLARAK SİL": [
-  "ui/hud/login_screen.gd:334"
+  "ui/hud/login_screen.gd:362"
  ],
  "EYLÜL": [
   "ui/hud/news_digest.gd:404"
@@ -2095,13 +2136,13 @@
   "ui/hud/paint_panel.gd:151"
  ],
  "FACEBOOK İLE DEVAM ET": [
-  "ui/loading/login_gate.gd:105"
+  "ui/loading/login_gate.gd:112"
  ],
  "FACEBOOK İLE GİRİŞ": [
-  "ui/hud/login_screen.gd:168"
+  "ui/hud/login_screen.gd:177"
  ],
  "FACEBOOK'U BAĞLA": [
-  "ui/hud/login_screen.gd:397"
+  "ui/hud/login_screen.gd:431"
  ],
  "FI": [
   "gameplay/social/profile_catalog.gd:48",
@@ -2143,14 +2184,19 @@
   "gameplay/repair/repair_type.gd:66"
  ],
  "Facebook girişi henüz hazır değil": [
-  "gameplay/cloud_save_manager.gd:509"
+  "gameplay/cloud_save_manager.gd:682"
  ],
  "Facebook girişi yalnızca Android sürümünde": [
-  "gameplay/cloud_save_manager.gd:292"
+  "gameplay/cloud_save_manager.gd:327"
  ],
  "Facebook girişi yapılamadı": [
-  "gameplay/cloud_save_manager.gd:511",
-  "ui/loading/login_gate.gd:145"
+  "gameplay/cloud_save_manager.gd:686",
+  "ui/loading/login_gate.gd:152"
+ ],
+ "Facebook girişi üzerinde çalışıyoruz, çok yakında!": [
+  "ui/hud/login_screen.gd:457",
+  "ui/hud/login_screen.gd:468",
+  "ui/loading/login_gate.gd:177"
  ],
  "Fileli masa ve iki raket.": [
   "decor/decorations.json:ping_pong.desc"
@@ -2394,6 +2440,9 @@
  "GERİ AL\n%s ₺": [
   "ui/hud/showroom_screen.gd:1218"
  ],
+ "GERİ DÖN, GİRİŞ YAP": [
+  "ui/loading/login_gate.gd:235"
+ ],
  "GEÇ": [
   "gameplay/race/drag_race_sim.gd:698"
  ],
@@ -2414,15 +2463,15 @@
   "ui/hud/profile_edit_screen.gd:271"
  ],
  "GOOGLE İLE DEVAM ET": [
-  "ui/loading/login_gate.gd:107"
+  "ui/loading/login_gate.gd:114"
  ],
  "GOOGLE İLE GİRİŞ": [
   "ui/hud/friends_screen.gd:480",
-  "ui/hud/login_screen.gd:346",
-  "ui/hud/login_screen.gd:352"
+  "ui/hud/login_screen.gd:374",
+  "ui/hud/login_screen.gd:381"
  ],
  "GOOGLE'I BAĞLA": [
-  "ui/hud/login_screen.gd:398"
+  "ui/hud/login_screen.gd:432"
  ],
  "GOOGLE: AÇIK": [
   "ui/hud/profile_edit_screen.gd:304"
@@ -2502,7 +2551,7 @@
   "gameplay/quest_catalog.gd:45"
  ],
  "Garajın büyümeye başladı! Giriş yap, ilerlemen hesabına kaydedilsin. Telefon değişse de kaybolmaz.": [
-  "ui/hud/login_screen.gd:261"
+  "ui/hud/login_screen.gd:284"
  ],
  "Garajına bir araç teslimat kasası geldi. İçinde ne var? Kasaya dokun!": [
   "ui/tutorial/tutorial_director.gd:810"
@@ -2537,6 +2586,11 @@
  "Geri sayım biter, ışıklar YEŞİL yanar: o an ekrana dokun! Erken dokunursan HATALI ÇIKIŞ cezası yersin, geç kalırsan rakip kaçar.": [
   "ui/tutorial/tutorial_director.gd:753"
  ],
+ "Geçerli bir e-posta adresi yaz.": [
+  "gameplay/cloud_save_manager.gd:355",
+  "gameplay/cloud_save_manager.gd:457",
+  "ui/hud/email_code_panel.gd:238"
+ ],
  "Giriş yap, çıkış yap ya da hesabını sil.": [
   "ui/hud/settings_screen.gd:375"
  ],
@@ -2544,11 +2598,11 @@
   "ui/hud/map_screen.gd:142"
  ],
  "Google girişi yalnızca Android sürümünde": [
-  "gameplay/cloud_save_manager.gd:293"
+  "gameplay/cloud_save_manager.gd:328"
  ],
  "Google girişi yapılamadı": [
-  "gameplay/cloud_save_manager.gd:512",
-  "ui/loading/login_gate.gd:146"
+  "gameplay/cloud_save_manager.gd:687",
+  "ui/loading/login_gate.gd:153"
  ],
  "Gri endüstriyel tuğla.": [
   "decor/decorations.json:wall_brick_grey.desc"
@@ -2630,6 +2684,9 @@
  "GÜÇ EĞRİSİ": [
   "ui/hud/mod_dyno.gd:124"
  ],
+ "Gönderiliyor…": [
+  "ui/hud/email_code_panel.gd:241"
+ ],
  "Göstergeli, maşalı akü şarj cihazı.": [
   "decor/decorations.json:battery_charger.desc"
  ],
@@ -2658,6 +2715,7 @@
   "decor/decorations.json:sign_no_entry.title"
  ],
  "GİRİŞ YAP": [
+  "ui/hud/email_code_panel.gd:188",
   "ui/hud/profile_screen.gd:170",
   "ui/hud/invite_screen.gd:225",
   "ui/hud/friends_screen.gd:482"
@@ -2777,11 +2835,14 @@
  "HER GECE YENİ MAL": [
   "ui/tutorial/tutorial_director.gd:632"
  ],
+ "HESABI DOĞRULA": [
+  "ui/hud/email_code_panel.gd:171"
+ ],
  "HESABI SİL": [
-  "ui/hud/login_screen.gd:331"
+  "ui/hud/login_screen.gd:356"
  ],
  "HESABIMI SİL": [
-  "ui/hud/login_screen.gd:188"
+  "ui/hud/login_screen.gd:210"
  ],
  "HESAP  %s": [
   "ui/hud/profile_screen.gd:204"
@@ -2899,30 +2960,42 @@
  "Her gece yarısı sahaya yeni arabalar gelir. Tamir işlerinden de arada parça çıkar. Hadi kolay gelsin evlat!": [
   "ui/tutorial/tutorial_director.gd:633"
  ],
+ "Hesabın oyundan silinir. Bulut kaydın ve bu cihazdaki tüm ilerlemen (para, elmas, araçlar, garaj, görevler) kalıcı olarak silinir ve oyun baştan başlar.\n\nBu işlem GERİ ALINAMAZ. Devam edersen e-postana gelecek kodu girmen istenecek.": [
+  "ui/hud/login_screen.gd:359"
+ ],
  "Hesabın ve tüm verilerin silindi. Yeni bir oyunla misafir olarak devam ediyorsun.": [
-  "gameplay/cloud_save_manager.gd:634",
-  "ui/hud/login_screen.gd:278"
+  "gameplay/cloud_save_manager.gd:809",
+  "ui/hud/login_screen.gd:301"
  ],
  "Hesabın yüklendi.": [
-  "gameplay/cloud_save_manager.gd:737"
+  "gameplay/cloud_save_manager.gd:912"
+ ],
+ "Hesabının e-posta adresine 6 haneli bir kod gönderiyoruz.": [
+  "ui/hud/email_code_panel.gd:174"
  ],
  "Hesap siliniyor… %s hesabını seçtiysen bu birkaç saniye sürer.": [
-  "ui/hud/login_screen.gd:375"
+  "ui/hud/login_screen.gd:408"
+ ],
+ "Hesap siliniyor… E-postana gelen kodu girince bu birkaç saniye sürer.": [
+  "ui/hud/login_screen.gd:406"
  ],
  "Hesap silinmedi: %s hesabı doğrulanamadı.": [
-  "gameplay/cloud_save_manager.gd:441"
+  "gameplay/cloud_save_manager.gd:614"
  ],
  "Hesap silinmedi: arkadaşlık verilerine ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene.": [
-  "gameplay/cloud_save_manager.gd:573"
+  "gameplay/cloud_save_manager.gd:748"
  ],
  "Hesap silinmedi: bulut kaydına ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene.": [
-  "gameplay/cloud_save_manager.gd:591"
+  "gameplay/cloud_save_manager.gd:766"
  ],
  "Hesap silinmedi: bulut yanıt vermedi. İnternet bağlantını kontrol edip tekrar dene.": [
-  "gameplay/cloud_save_manager.gd:841"
+  "gameplay/cloud_save_manager.gd:1016"
+ ],
+ "Hesap silinmedi: e-posta doğrulanamadı.": [
+  "gameplay/cloud_save_manager.gd:613"
  ],
  "Hesap silinmedi: silmek için oyunda kullandığın %s hesabını seçmelisin.": [
-  "gameplay/cloud_save_manager.gd:408"
+  "gameplay/cloud_save_manager.gd:580"
  ],
  "Hibrit Türbin": [
   "gameplay/race/performance_mods.gd:73",
@@ -3100,11 +3173,11 @@
   "ui/hud/gem_store_screen.gd:123",
   "ui/hud/mastery_screen.gd:84",
   "ui/hud/invite_screen.gd:239",
-  "ui/hud/login_screen.gd:357",
-  "ui/hud/login_screen.gd:365",
-  "ui/hud/login_screen.gd:369",
-  "ui/hud/login_screen.gd:373",
-  "ui/hud/login_screen.gd:378"
+  "ui/hud/login_screen.gd:388",
+  "ui/hud/login_screen.gd:396",
+  "ui/hud/login_screen.gd:400",
+  "ui/hud/login_screen.gd:404",
+  "ui/hud/login_screen.gd:411"
  ],
  "KAPIDA %d ARKADAŞLIK İSTEĞİ VAR": [
   "ui/hud/news_digest.gd:232"
@@ -3193,7 +3266,7 @@
   "ui/hud/friends_screen.gd:287"
  ],
  "KAYIT SEÇ": [
-  "ui/hud/login_screen.gd:311"
+  "ui/hud/login_screen.gd:334"
  ],
  "KAYIŞ": [
   "vehicles/restorations.json:parts.belt"
@@ -3250,9 +3323,15 @@
  "KLİMA": [
   "decor/decorations.json:wall_ac.title"
  ],
+ "KOD GÖNDER": [
+  "ui/hud/email_code_panel.gd:181"
+ ],
  "KODLA EKLE": [
   "ui/hud/friends_screen.gd:177",
   "ui/hud/friends_screen.gd:244"
+ ],
+ "KODU YENİDEN GÖNDER": [
+  "ui/hud/email_code_panel.gd:199"
  ],
  "KOLAY": [
   "ui/hud/mission_screen.gd:16"
@@ -3464,11 +3543,22 @@
  "Klasörler, kitaplar, küçük kupa ve maket araba dolu raf.": [
   "decor/decorations.json:bookcase.desc"
  ],
+ "Kod 6 haneli olmalı.": [
+  "gameplay/cloud_save_manager.gd:374",
+  "gameplay/cloud_save_manager.gd:459",
+  "ui/hud/email_code_panel.gd:249"
+ ],
  "Kod 6 karakter olmalı (ör. AY-7K2Q4M).": [
   "gameplay/social/social_manager.gd:315"
  ],
+ "Kod yanlış. Kalan deneme: %d": [
+  "gameplay/cloud_save_manager.gd:466"
+ ],
  "Kodun kopyalandı.": [
   "ui/hud/friends_screen.gd:536"
+ ],
+ "Kodun süresi doldu. Yeni kod iste.": [
+  "gameplay/cloud_save_manager.gd:468"
  ],
  "Kompresör Kiti": [
   "gameplay/race/performance_mods.gd:83"
@@ -3762,11 +3852,14 @@
  "Mermer ayaklı, kavisli okuma lambası.": [
   "decor/decorations.json:floor_lamp.desc"
  ],
+ "Misafir olarak oynarsan ilerlemen bir hesaba kaydedilmez, yalnızca bu telefonda durur. Oyunu silersen ya da telefon değiştirirsen ilerlemen kaybolur.\n\nİstersen sonra AYARLAR'dan giriş yapabilirsin.": [
+  "ui/loading/login_gate.gd:232"
+ ],
  "Misafir olarak oynuyorsun. İlerlemen bu cihazda kayıtlı.\nGiriş yaparsan ilerlemen buluta yedeklenir, telefon değişse de kaybolmaz.": [
-  "ui/hud/login_screen.gd:345"
+  "ui/hud/login_screen.gd:373"
  ],
  "Misafir olarak oynuyorsun. İlerlemen bu cihazda kayıtlı.\nHesapla giriş yalnızca Android sürümünde.": [
-  "ui/hud/login_screen.gd:341"
+  "ui/hud/login_screen.gd:369"
  ],
  "MÜDÜR MASASI": [
   "decor/decorations.json:manager_desk.title"
@@ -3808,13 +3901,17 @@
   "ui/hud/repair_panel.gd:355"
  ],
  "MİSAFİR": [
-  "ui/loading/login_gate.gd:111"
+  "ui/loading/login_gate.gd:118"
  ],
  "MİSAFİR KOLTUKLARI": [
   "decor/decorations.json:visitor_chairs.title"
  ],
  "MİSAFİR OLARAK DEVAM ET": [
-  "ui/hud/login_screen.gd:349"
+  "ui/hud/login_screen.gd:378",
+  "ui/loading/login_gate.gd:239"
+ ],
+ "MİSAFİR OLARAK OYNA?": [
+  "ui/loading/login_gate.gd:222"
  ],
  "MİSAFİR VAR: %s GARAJINI GEZDİ": [
   "ui/hud/news_digest.gd:225"
@@ -4041,8 +4138,8 @@
  ],
  "PLAYER": [
   "ui/hud/hud.tscn:73",
-  "ui/hud/login_screen.gd:101",
-  "ui/hud/login_screen.gd:311"
+  "ui/hud/login_screen.gd:110",
+  "ui/hud/login_screen.gd:334"
  ],
  "POLONYA": [
   "gameplay/social/profile_catalog.gd:47"
@@ -4521,7 +4618,7 @@
   "ui/tutorial/tutorial_director.gd:578"
  ],
  "SONRA KARAR VER": [
-  "ui/hud/login_screen.gd:361"
+  "ui/hud/login_screen.gd:392"
  ],
  "SOĞUTMA": [
   "gameplay/race/performance_mods.gd:69"
@@ -4610,7 +4707,7 @@
   "gameplay/quest_catalog.gd:26"
  ],
  "Seçtiğin hesabın e-postası farklı olduğu için %s bağlanmadı. Bu hesapla devam ediyorsun.": [
-  "gameplay/cloud_save_manager.gd:500"
+  "gameplay/cloud_save_manager.gd:673"
  ],
  "SiC İnvertör": [
   "gameplay/race/performance_mods.gd:87"
@@ -4625,7 +4722,7 @@
   "decor/decorations.json:air_hockey.desc"
  ],
  "Son değişiklikler buluta yazılamadığı için çıkış yapılmadı. İnternet bağlantını kontrol edip tekrar dene.": [
-  "gameplay/cloud_save_manager.gd:830"
+  "gameplay/cloud_save_manager.gd:1005"
  ],
  "Sorununu ya da önerini web sitemizden ilet.": [
   "ui/hud/settings_screen.gd:399"
@@ -4661,6 +4758,7 @@
   "gameplay/race/performance_mods.gd:82"
  ],
  "Sunucuya ulaşılamadı. İnternet bağlantını kontrol et.": [
+  "gameplay/cloud_save_manager.gd:476",
   "ui/hud/friends_screen.gd:489"
  ],
  "SÖK": [
@@ -4703,7 +4801,7 @@
   "ui/hud/garage_edit_screen.gd:1002"
  ],
  "SİLİNİYOR": [
-  "ui/hud/login_screen.gd:376"
+  "ui/hud/login_screen.gd:409"
  ],
  "SİNEMA EKRANI": [
   "decor/decorations.json:lux_cinema_wall.title"
@@ -4912,9 +5010,6 @@
  ],
  "TEŞEKKÜRLER! GEMLER HESABINA EKLENDİ": [
   "ui/hud/gem_store_screen.gd:232"
- ],
- "TOGG": [
-  "vehicles/crates.json:set.togg"
  ],
  "TOP ŞİMŞİR": [
   "decor/decorations.json:topiary.title"
@@ -5167,6 +5262,7 @@
   "ui/hud/race_challenge_screen.gd:104",
   "ui/hud/restoration_panel.gd:220",
   "ui/hud/garage_edit_screen.gd:428",
+  "ui/hud/email_code_panel.gd:189",
   "ui/hud/avatar_cropper.gd:117",
   "ui/hud/garage_screen.gd:831",
   "ui/hud/friend_card_screen.gd:155",
@@ -5176,7 +5272,7 @@
   "ui/hud/invite_screen.gd:227",
   "ui/hud/invite_screen.gd:231",
   "ui/hud/hud.gd:835",
-  "ui/hud/login_screen.gd:336",
+  "ui/hud/login_screen.gd:364",
   "ui/hud/crate_panel.gd:47"
  ],
  "VE": [
@@ -5191,9 +5287,6 @@
  ],
  "VIP KADİFE KÖŞE": [
   "decor/decorations.json:lux_velvet_lounge.title"
- ],
- "VW GRUBU": [
-  "vehicles/crates.json:set.vw_grubu"
  ],
  "Vites geçişi −%d ms": [
   "gameplay/race/performance_mods.gd:481"
@@ -5220,6 +5313,9 @@
  ],
  "WEBP": [
   "gameplay/social/profile_catalog.gd:140"
+ ],
+ "WULF GRUBU": [
+  "vehicles/crates.json:set.vw_grubu"
  ],
  "Weber Karbüratör": [
   "gameplay/race/performance_mods.gd:84"
@@ -5366,6 +5462,9 @@
  "YENİ!  KOLEKSİYONA EKLENDİ": [
   "ui/hud/crate_panel.gd:127"
  ],
+ "YENİDEN GÖNDER (%d)": [
+  "ui/hud/email_code_panel.gd:199"
+ ],
  "YER YOK — SÜRÜKLEYİP BOŞ BİR YERE TAŞI": [
   "world/garage_editor.gd:356"
  ],
@@ -5490,6 +5589,12 @@
  "Yeni kasalar MAĞAZA'da: kasalar GEM ile alınır. Gem; seviye atlayınca, görevlerden ve günlük girişten gelir.": [
   "ui/tutorial/tutorial_director.gd:839"
  ],
+ "Yeni kod gönderildi.": [
+  "ui/hud/email_code_panel.gd:282"
+ ],
+ "Yeni kod için %d saniye bekle.": [
+  "gameplay/cloud_save_manager.gd:461"
+ ],
  "Yeni tamir alanı açarak aynı anda birden çok aracı tamir edebilirsin.": [
   "ui/loading/loading_screen.gd:44"
  ],
@@ -5596,6 +5701,9 @@
  "dönen kütle −%%%s": [
   "gameplay/race/performance_mods.gd:490"
  ],
+ "e-posta adresin": [
+  "ui/hud/email_code_panel.gd:179"
+ ],
  "hafif volan": [
   "gameplay/race/performance_mods.gd:484"
  ],
@@ -5645,7 +5753,7 @@
   "gameplay/race/performance_mods.gd:479"
  ],
  "zaman aşımı": [
-  "gameplay/cloud_save_manager.gd:838"
+  "gameplay/cloud_save_manager.gd:1013"
  ],
  "ÇALIŞMA MASASI": [
   "decor/decorations.json:office_desk.title"
@@ -5681,10 +5789,10 @@
   "decor/decorations.json:car_ramps.title"
  ],
  "ÇIKIŞ YAP": [
-  "ui/hud/login_screen.gd:352",
-  "ui/hud/login_screen.gd:364",
-  "ui/hud/login_screen.gd:368",
-  "ui/hud/login_screen.gd:372"
+  "ui/hud/login_screen.gd:381",
+  "ui/hud/login_screen.gd:395",
+  "ui/hud/login_screen.gd:399",
+  "ui/hud/login_screen.gd:403"
  ],
  "ÇIPLAK ŞASİ": [
   "ui/hud/restoration_panel.gd:244"
@@ -5725,8 +5833,8 @@
  "Çift monitörlü masa, ofis koltuğu ve masa telefonu.": [
   "decor/decorations.json:office_desk.desc"
  ],
- "Çok yakında!": [
-  "ui/loading/login_gate.gd:171"
+ "Çok fazla kod istendi. %d dakika sonra tekrar dene.": [
+  "gameplay/cloud_save_manager.gd:463"
  ],
  "ÇÖP KONTEYNERİ": [
   "decor/decorations.json:dumpster.title"
@@ -5747,10 +5855,10 @@
   "ui/hud/hud.gd:1304"
  ],
  "Çıkış yapılamadı": [
-  "gameplay/cloud_save_manager.gd:537"
+  "gameplay/cloud_save_manager.gd:712"
  ],
  "Çıkış yapıldı. Bu cihazda yeni bir misafir oyunu başladı; hesabına tekrar girince ilerlemen geri gelir.": [
-  "gameplay/cloud_save_manager.gd:562"
+  "gameplay/cloud_save_manager.gd:737"
  ],
  "ÖDEME BEKLENİYOR\nÖDEME TAMAMLANINCA GEMLER GELİR": [
   "ui/hud/gem_store_screen.gd:230"
@@ -5830,7 +5938,7 @@
   "ui/hud/mission_screen.gd:288"
  ],
  "Önce hangi kaydı kullanacağını seçmelisin.": [
-  "gameplay/cloud_save_manager.gd:317"
+  "gameplay/cloud_save_manager.gd:486"
  ],
  "ÜCRETSİZ": [
   "ui/hud/paint_panel.gd:152"
@@ -6027,7 +6135,7 @@
   "decor/decorations.json:checkered_flags.desc"
  ],
  "İlerlemen ve bulut kaydın silindi, ancak %s hesap bağlantısı kaldırılamadı. Tamamlamak için: %s": [
-  "gameplay/cloud_save_manager.gd:624"
+  "gameplay/cloud_save_manager.gd:799"
  ],
  "İnce derzli açık gri karo.": [
   "decor/decorations.json:tile_grey.desc"
@@ -6169,6 +6277,9 @@
  "ŞİMDİ!": [
   "ui/hud/drag_race_screen.gd:912",
   "ui/hud/drag_race_screen.gd:1152"
+ ],
+ "ŞİMŞEK": [
+  "vehicles/crates.json:set.togg"
  ],
  "şimdi": [
   "ui/hud/mod_dyno.gd:131",

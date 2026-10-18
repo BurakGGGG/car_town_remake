@@ -24,7 +24,7 @@
   "sets": [
     {"id": "yerli_klasikler", "name": "YERLİ KLASİKLER", "cars": ["tofas_sahin", "renault_toros"]},
     {"id": "kore_hatti", "name": "KORE HATTI", "cars": ["hyundai_era", "hyundai_getz", "hyundai_accent_blue"]},
-    {"id": "vw_grubu", "name": "VW GRUBU", "cars": ["vw_passat_b55", "vw_golf_7", "vw_beetle", "skoda_kamiq", "seat_leon", "audi_a3"]},
+    {"id": "vw_grubu", "name": "WULF GRUBU", "cars": ["vw_passat_b55", "vw_golf_7", "vw_beetle", "skoda_kamiq", "seat_leon", "audi_a3"]},
     {"id": "sicak_kompakt", "name": "SICAK KOMPAKT", "cars": ["ford_focus", "vw_golf_7", "seat_leon", "honda_civic"]},
     {"id": "aile_sedani", "name": "AİLE SEDANI", "cars": ["hyundai_era", "vw_passat_b55", "renault_fluence", "volvo_s60"]},
     {"id": "bavyera", "name": "BAVYERA", "cars": ["bmw_e46", "bmw_e60"]},
@@ -32,7 +32,7 @@
     {"id": "italyan", "name": "İTALYAN", "cars": ["alfa_romeo_159", "lambo_huracan", "ferrari_488_pista"]},
     {"id": "super_spor", "name": "SÜPER SPOR", "cars": ["audi_rs6", "porsche_gt3", "lambo_huracan", "ferrari_488_pista"]},
     {"id": "amerikan", "name": "AMERİKAN", "cars": ["chevrolet_camaro", "tesla_model_y"]},
-    {"id": "togg", "name": "TOGG", "cars": ["togg_t10x", "togg_t10f"]}
+    {"id": "togg", "name": "ŞİMŞEK", "cars": ["togg_t10x", "togg_t10f"]}
   ],
   "crates": [
     {

@@ -665,7 +665,7 @@ func _basics_steps() -> Array[Dictionary]:
 			"done": func() -> bool: return _flags.has(&"revealed") or hud.crate_panel.mode() == &"result",
 			"back": func() -> bool: return not hud.crate_panel.visible and not (_delivery and _delivery.is_revealing())},
 		{"title": Loc.t("AL, İLK ARACIN!"),
-			"text": Loc.t("Bu Tofaş Şahin artık senin! Drag yarışlarına bununla çıkacaksın; yeni araçlar ileride kasalardan çıkar. Plakadaki TAMAM'a bas."),
+			"text": Loc.t("Bu Bursan Atmaca artık senin! Drag yarışlarına bununla çıkacaksın; yeni araçlar ileride kasalardan çıkar. Plakadaki TAMAM'a bas."),
 			"skip_if": no_gift,
 			"target": func() -> Control:
 				return hud.crate_panel.find_child("CrateAction", true, false) as Control if hud.crate_panel.mode() == &"result" else null,

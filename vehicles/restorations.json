@@ -85,7 +85,7 @@
  "cars": [
   {
    "id": "tofas_murat_124",
-   "name": "Tofaş Murat 124",
+   "name": "Bursan Hacı 124",
    "year": 1971,
    "class": "D",
    "tier": "basic",
@@ -100,7 +100,7 @@
   },
   {
    "id": "anadol_a1",
-   "name": "Anadol A1",
+   "name": "Hitit A-67 Classic",
    "year": 1967,
    "class": "D",
    "tier": "basic",
@@ -115,7 +115,7 @@
   },
   {
    "id": "vw_beetle_1967",
-   "name": "Volkswagen Beetle",
+   "name": "Wulf Bug 67",
    "year": 1967,
    "class": "D",
    "tier": "basic",
@@ -130,7 +130,7 @@
   },
   {
    "id": "fiat_500_1965",
-   "name": "Fiat 500",
+   "name": "Fito Piccolo 65",
    "year": 1965,
    "class": "D",
    "tier": "basic",
@@ -145,7 +145,7 @@
   },
   {
    "id": "tofas_murat_131",
-   "name": "Tofaş Murat 131",
+   "name": "Bursan M-131 Box",
    "year": 1979,
    "class": "D",
    "tier": "basic",
@@ -160,7 +160,7 @@
   },
   {
    "id": "mini_cooper_1965",
-   "name": "Mini Cooper",
+   "name": "Micro Bulldog 65",
    "year": 1965,
    "class": "D",
    "tier": "basic",
@@ -175,7 +175,7 @@
   },
   {
    "id": "willys_jeep_mb",
-   "name": "Willys Jeep MB",
+   "name": "Veteran WW2 Classic",
    "year": 1944,
    "class": "D",
    "tier": "basic",
@@ -190,7 +190,7 @@
   },
   {
    "id": "peugeot_404",
-   "name": "Peugeot 404",
+   "name": "Lion Quatre 68",
    "year": 1968,
    "class": "D",
    "tier": "basic",
@@ -205,7 +205,7 @@
   },
   {
    "id": "mercedes_w123",
-   "name": "Mercedes-Benz W123",
+   "name": "Stern Tank 123",
    "year": 1980,
    "class": "D",
    "tier": "basic",
@@ -220,7 +220,7 @@
   },
   {
    "id": "vw_t1_bus",
-   "name": "Volkswagen T1",
+   "name": "Wulf Flower Bus 65",
    "year": 1965,
    "class": "D",
    "tier": "basic",
@@ -235,7 +235,7 @@
   },
   {
    "id": "land_rover_series3",
-   "name": "Land Rover Series III",
+   "name": "Moorland Trek III",
    "year": 1975,
    "class": "D",
    "tier": "basic",
@@ -250,7 +250,7 @@
   },
   {
    "id": "chevrolet_bel_air_1956",
-   "name": "Chevrolet Bel Air",
+   "name": "Crossbow Sunset 56",
    "year": 1956,
    "class": "D",
    "tier": "basic",
@@ -265,7 +265,7 @@
   },
   {
    "id": "ford_mustang_1967",
-   "name": "Ford Mustang Fastback",
+   "name": "Forge Wild Pony 67",
    "year": 1967,
    "class": "A",
    "tier": "classic",
@@ -280,7 +280,7 @@
   },
   {
    "id": "chevrolet_corvette_c2",
-   "name": "Chevrolet Corvette C2",
+   "name": "Crossbow Razorback 63",
    "year": 1963,
    "class": "A",
    "tier": "classic",
@@ -295,7 +295,7 @@
   },
   {
    "id": "jaguar_e_type",
-   "name": "Jaguar E-Type",
+   "name": "Ocelot Classic 61",
    "year": 1961,
    "class": "A",
    "tier": "classic",
@@ -310,7 +310,7 @@
   },
   {
    "id": "aston_martin_db5",
-   "name": "Aston Martin DB5",
+   "name": "Agent Spy 005",
    "year": 1964,
    "class": "B",
    "tier": "classic",
@@ -325,7 +325,7 @@
   },
   {
    "id": "dodge_charger_1970",
-   "name": "Dodge Charger",
+   "name": "Blacktop Bruiser 70",
    "year": 1970,
    "class": "A",
    "tier": "classic",
@@ -340,7 +340,7 @@
   },
   {
    "id": "porsche_911_1973",
-   "name": "Porsche 911 Carrera RS",
+   "name": "Stallion RS-73",
    "year": 1973,
    "class": "A",
    "tier": "classic",
@@ -355,7 +355,7 @@
   },
   {
    "id": "mercedes_300sl",
-   "name": "Mercedes-Benz 300 SL",
+   "name": "Stern Gullwing 55",
    "year": 1955,
    "class": "B",
    "tier": "classic",
@@ -370,7 +370,7 @@
   },
   {
    "id": "lamborghini_miura",
-   "name": "Lamborghini Miura",
+   "name": "Bull Matador 400",
    "year": 1968,
    "class": "A",
    "tier": "classic",
@@ -385,7 +385,7 @@
   },
   {
    "id": "ford_escort_rs1600",
-   "name": "Ford Escort RS1600",
+   "name": "Forge Rallye 72",
    "year": 1972,
    "class": "B",
    "tier": "race",
@@ -400,7 +400,7 @@
   },
   {
    "id": "lancia_stratos",
-   "name": "Lancia Stratos HF",
+   "name": "Asta Cometa 74",
    "year": 1974,
    "class": "A",
    "tier": "race",
@@ -415,7 +415,7 @@
   },
   {
    "id": "bmw_m3_e30",
-   "name": "BMW M3 E30",
+   "name": "Bavaria Legend 90",
    "year": 1990,
    "class": "A",
    "tier": "race",
@@ -430,7 +430,7 @@
   },
   {
    "id": "toyota_celica_gt4",
-   "name": "Toyota Celica GT-Four",
+   "name": "Tornado Quad 93",
    "year": 1993,
    "class": "A",
    "tier": "race",
@@ -445,7 +445,7 @@
   },
   {
    "id": "lancia_delta_integrale",
-   "name": "Lancia Delta Integrale",
+   "name": "Asta Sedici 92",
    "year": 1992,
    "class": "A",
    "tier": "race",
@@ -460,7 +460,7 @@
   },
   {
    "id": "audi_quattro_s1",
-   "name": "Audi Sport Quattro S1",
+   "name": "Vier Sport 85",
    "year": 1985,
    "class": "A",
    "tier": "race",
@@ -475,7 +475,7 @@
   },
   {
    "id": "ford_rs200",
-   "name": "Ford RS200",
+   "name": "Forge Group B 200",
    "year": 1986,
    "class": "A",
    "tier": "race",
@@ -490,7 +490,7 @@
   },
   {
    "id": "mitsubishi_evo6",
-   "name": "Mitsubishi Lancer Evo VI",
+   "name": "Tridia Rally VI",
    "year": 1999,
    "class": "A",
    "tier": "race",

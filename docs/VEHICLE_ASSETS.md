@@ -8,6 +8,9 @@ SOURCE GLB → optimize_car.gd → optimized GLB (+albedo) → sarmalayıcı .ts
    → CarPartMap (roller) → make_paint_mask.gd → cars.json → garaj / showroom / trafik / drag
 ```
 
+> 2026-10-18'den beri araç adları kurgusaldır (gerçek marka / model adı yok): yeni araç eklerken
+> `docs/ARAC_ADLARI.md` kurallarına göre ad seç. Aşağıdaki gerçek adlar o tarihten önceki kayıttır.
+
 ## 1. Bulunan dosyalar
 
 `assets/cars/source/` taranınca 16 GLB çıktı; 7'si zaten entegre (biri `renault_r12.glb` →
