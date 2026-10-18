@@ -564,11 +564,15 @@ func _connect_auto_save() -> void:
 		_decor.tiles_changed.connect(request_save)   # zemin karoları (dekorasyon v2) ayrı sinyalle gelir
 
 
-## Kaydı DEBOUNCE saniye sonraya planlar; bu süre içinde gelen yeni istekler tek yazmada birleşir.
+## Kaydı EN GEÇ DEBOUNCE saniye sonraya planlar; bu süre içinde gelen yeni istekler aynı yazmada birleşir.
+## Zamanlayıcı kuruluysa yeniden başlatılmaz: eskiden her istek süreyi sıfırlıyordu ve istekler hiç durmazsa
+## (açılışın ilk saniyelerindeki yükleme dalgası) kayıt yazılmıyordu — o arada alınan ödül / boya, uygulama
+## kapanınca kayboluyordu (quest_test / paint_test, 2026-10-18).
 func request_save() -> void:
 	if _loading or not auto_save:
 		return
-	_timer.start(DEBOUNCE)
+	if _timer.is_stopped():
+		_timer.start(DEBOUNCE)
 
 
 func _on_debounce_timeout() -> void:
