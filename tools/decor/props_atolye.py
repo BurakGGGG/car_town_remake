@@ -68,9 +68,14 @@ cyl(0.05, 0.72, (0, 0, 0.36), STEEL, seg=8)
 cyl(0.22, 0.04, (0, 0, 0.02), STEEL, seg=12)
 cyl(0.035, 1.55, (0, 0, 0.78), STEEL, seg=8)
 cone(0.95, 0.06, 0.34, (0, 0, 1.68), RED, seg=12)
-for i in range(3):
+for i in range(3):                                           # sandalyeler (eskiden yalnızca havada oturak plakası)
     a = _m.tau * i / 3.0
-    box((0.34, 0.34, 0.04), (_m.cos(a) * 0.62, _m.sin(a) * 0.62, 0.44), WHITE)
+    ca, sa = _m.cos(a), _m.sin(a)
+    box((0.34, 0.34, 0.04), (ca * 0.62, sa * 0.62, 0.44), WHITE, rot=(0, 0, a))
+    for (u, v) in ((-0.14, -0.14), (-0.14, 0.14), (0.14, -0.14), (0.14, 0.14)):
+        lx, ly = ca * (0.62 + u) - sa * v, sa * (0.62 + u) + ca * v
+        cyl(0.016, 0.44, (lx, ly, 0.22), STEEL, seg=6)
+    box((0.04, 0.34, 0.34), (ca * 0.775, sa * 0.775, 0.63), WHITE, rot=(0, 0, a))   # sırtlık: masaya bakar
 finish("parasol_table")
 
 # 7) Mangal
@@ -103,9 +108,12 @@ finish("deck_chair")
 clear()
 box((0.72, 0.86, 0.52), (0, 0, 0.26), WOOD)
 box((0.26, 0.05, 0.34), (0, -0.44, 0.19), DARK)
+prism([(-0.36, 0.52), (0.36, 0.52), (0.0, 0.78)], 0.86, 'xz', WOOD)   # ön / arka üçgen alınlık
 for s in range(2):
+    # Y etrafında + dönüş önden bakınca saat yönü: sağ plaka (+x) dış ucu aşağı inmeli → +36°. Eskiden işaret
+    # tersti, çatı "V" gibi yukarı açılıyordu (2026-10-18).
     box((0.46, 0.90, 0.05), ((1 if s else -1) * 0.20, 0, 0.66), mat("Cati", (0.40, 0.10, 0.06), 0.8),
-        rot=(0, _m.radians((1 if s else -1) * -36), 0))
+        rot=(0, _m.radians((1 if s else -1) * 36), 0))
 finish("dog_house")
 
 print("atolye + yasam partisi tamam")

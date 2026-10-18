@@ -58,7 +58,6 @@ for x in (-0.20, 0.20):
     for y in (-0.42, 0.0, 0.42):
         ball(0.04, (x, y, 0.045), RUBBER, seg=8, ring=5)
         cyl(0.02, 0.05, (x, y, 0.08), STEEL, seg=6)
-box((0.30, 0.12, 0.02), (0.55, 0.0, 0.01), mat("KartonP", (0.42, 0.30, 0.16), 0.95))   # yer kartonu yanında
 finish("creeper")
 
 # ---------------------------------------------------------------- 4) ATÖLYE LAVABOSU

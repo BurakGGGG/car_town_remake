@@ -151,8 +151,10 @@ finish("poster_vintage")
 
 clear()  # 9) Neon şimşek
 plate(0.50, 0.70, (0, 0, 0.35), BACK_N, d=0.03)
-for (x, z, a) in [(0.06, 0.52, -25), (-0.02, 0.38, 60), (0.03, 0.22, -25)]:
-    box((0.05, 0.025, 0.22), (x, -0.03, z), N_YEL, rot=(0, _m.radians(a), 0))
+# Zikzak tek çizgi: noktalar birleşik (eskiden üç ayrı çubuk ters açılarla birbirinden kopuktu)
+bolt = [(0.09, 0.63), (-0.07, 0.37), (0.07, 0.37), (-0.09, 0.08)]
+for a, b in zip(bolt, bolt[1:]):
+    seg_xz(a, b, -0.03, N_YEL, t=0.05, d=0.025)
 finish("neon_bolt")
 
 clear()  # 10) Neon OPEN
@@ -180,10 +182,15 @@ finish("neon_piston")
 
 clear()  # 13) Neon araç silueti (çizgi)
 plate(1.10, 0.52, (0, 0, 0.26), BACK_N, d=0.03)
-segs = [(-0.42, 0.22, 0.18, 0), (0.42, 0.22, 0.18, 0), (0.0, 0.14, 0.86, 0),
-        (-0.24, 0.30, 0.20, 20), (0.20, 0.30, 0.22, -25), (-0.02, 0.40, 0.40, 0)]
-for (x, z, w, a) in segs:
-    box((w, 0.02, 0.02), (x, -0.032, z), N_CYAN, rot=(0, _m.radians(a), 0))
+# Gövde dış hattı noktadan noktaya (eskiden ön / arka cam açıları ters işaretliydi, çizgiler kopuktu); alt çizgide
+# teker kemerleri boş kalır
+body = [(-0.46, 0.17), (-0.46, 0.25), (-0.30, 0.27), (-0.15, 0.40), (0.16, 0.40), (0.31, 0.28), (0.46, 0.26),
+        (0.46, 0.17)]
+for a, b in zip(body, body[1:]):
+    seg_xz(a, b, -0.032, N_CYAN, t=0.022, d=0.02)
+for a, b in [((-0.46, 0.17), (-0.35, 0.17)), ((-0.17, 0.17), (0.17, 0.17)), ((0.35, 0.17), (0.46, 0.17)),
+             ((-0.22, 0.29), (0.25, 0.29)), ((0.01, 0.29), (0.01, 0.40))]:      # alt hat, cam altı, orta direk
+    seg_xz(a, b, -0.032, N_CYAN, t=0.022, d=0.02)
 for x in (-0.26, 0.26):
     torus(0.07, 0.012, (x, -0.034, 0.14), N_CYAN, rot=(R90, 0, 0), seg=16)
 finish("neon_car")

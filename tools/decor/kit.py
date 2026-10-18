@@ -47,12 +47,15 @@ def mat(name, rgb, rough=0.8, metal=0.0, emit=None, alpha=1.0):
         # GLTF'e alphaMode=BLEND yazılması için: hem Alpha girdisi hem blend_method gerekli.
         # Sadece Base Color'un alfası yeterli değil — cam OPAK çıkıyor (kupa vitrininde
         # kupalar görünmüyordu).
+        # Blender 4.2+ (5.2 dahil) blend_method'u kaldırdı: yerine surface_render_method. Yalnızca eskisi denenince
+        # 5.2'de istisna sessizce yutuluyor, cam yine OPAK çıkıyordu (2026-10-18, trophy_case yeniden üretimi).
         if "Alpha" in b.inputs:
             b.inputs["Alpha"].default_value = alpha
-        try:
-            m.blend_method = 'BLEND'
-        except Exception:
-            pass
+        for attr, value in (("surface_render_method", 'BLENDED'), ("blend_method", 'BLEND')):
+            try:
+                setattr(m, attr, value)
+            except Exception:
+                pass
     _MATS[key] = m
     return m
 
@@ -98,6 +101,26 @@ def torus(major, minor, loc, material, rot=(0, 0, 0), seg=12, mseg=6):
                                      major_segments=seg, minor_segments=mseg,
                                      location=loc, rotation=rot)
     return _place(bpy.context.object, material)
+
+
+def seg_xz(p0, p1, y, material, t=0.03, d=0.03):
+    """Önden görünen (x, z) düzleminde iki nokta arası düz çubuk (neon tüp, harf çizgisi), `y` derinliğinde.
+    Açı noktalardan hesaplanır: elle derece yazılmaz. DİKKAT: Y ekseni etrafında + dönüş önden (-Y'den)
+    bakınca SAAT YÖNÜDÜR; neon_car / neon_bolt / dog_house bu işareti ters varsayıp bozuk çıkmıştı.
+    Uçlar t/2 uzatılır: birleşen çizgilerin köşesinde boşluk kalmaz."""
+    dx, dz = p1[0] - p0[0], p1[1] - p0[1]
+    length = math.hypot(dx, dz)
+    return box((t, d, length + t), ((p0[0] + p1[0]) / 2.0, y, (p0[1] + p1[1]) / 2.0), material,
+               rot=(0, math.atan2(dx, dz), 0))
+
+
+def rod(p0, p1, r, material, seg=8):
+    """İki 3B nokta arası silindir (amortisör, çerçeve borusu, asılı hortum): yönü noktalardan."""
+    a, b = mathutils.Vector(p0), mathutils.Vector(p1)
+    o = cyl(r, (b - a).length, tuple((a + b) / 2.0), material, seg=seg)
+    o.rotation_mode = 'QUATERNION'
+    o.rotation_quaternion = mathutils.Vector((0.0, 0.0, 1.0)).rotation_difference(b - a)
+    return o
 
 
 def prism(pts, depth, plane, material, offset=0.0):

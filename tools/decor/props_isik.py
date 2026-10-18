@@ -42,35 +42,41 @@ cone(0.20, 0.0, 0.26, (0.53, 0, 1.44), mat("OkUc", (0.58, 0.40, 0.03), 0.6),
      rot=(0, _m.radians(90), 0), seg=3)
 finish("arrow_sign")
 
+# Tabela harfleri: birim kare (0..1 genişlik, 0..1 yükseklik) içinde çizgiler. Eskiden harfler elle kutu kutu
+# konuyordu: panelin altına sarkıyor, panelden taşıyor, "G"nin kolu ters yöne bakıyordu (2026-10-18 düzeltildi).
+GLYPHS = {
+    "G": [((1, 1), (0, 1)), ((0, 1), (0, 0)), ((0, 0), (1, 0)), ((1, 0), (1, 0.45)), ((1, 0.45), (0.5, 0.45))],
+    "A": [((0, 0), (0, 1)), ((0, 1), (1, 1)), ((1, 1), (1, 0)), ((0, 0.5), (1, 0.5))],
+    "R": [((0, 0), (0, 1)), ((0, 1), (1, 1)), ((1, 1), (1, 0.5)), ((1, 0.5), (0, 0.5)), ((0.4, 0.5), (1, 0))],
+    "J": [((0.3, 1), (1, 1)), ((1, 1), (1, 0)), ((1, 0), (0, 0)), ((0, 0), (0, 0.3))],
+}
+
+
+def word(text, x0, z0, w, h, gap, y, mats, t, d=0.03):
+    """Yazıyı (x0, z0) sol alt köşesinden, harf başına w x h kutuda çizer; renkler harf harf sırayla."""
+    for i, ch in enumerate(text):
+        lx = x0 + i * (w + gap)
+        for (a, b) in GLYPHS[ch]:
+            seg_xz((lx + a[0] * w, z0 + a[1] * h), (lx + b[0] * w, z0 + b[1] * h), y, mats[i % len(mats)], t=t, d=d)
+
+
 # 4) Garaj tabelası (direkli, yazılı pano)
 clear()
 for s in range(2):
     x = (1 if s else -1) * 0.85
     box((0.14, 0.14, 2.30), (x, 0, 1.15), STEEL)
 box((2.10, 0.10, 0.85), (0, 0, 2.60), CREAM)
-box((2.16, 0.06, 0.09), (0, 0.02, 2.99), RED)
-box((2.16, 0.06, 0.09), (0, 0.02, 2.21), RED)
-for i in range(5):
-    box((0.22, 0.05, 0.34), (-0.72 + i * 0.36, 0.06, 2.58), DARK)
+box((2.16, 0.06, 0.09), (0, -0.05, 2.99), RED)              # şeritler ve yazı ÖN yüzde (-Y); eskiden arkadaydı
+box((2.16, 0.06, 0.09), (0, -0.05, 2.21), RED)
+word("GARAJ", -0.85, 2.38, 0.26, 0.44, 0.10, -0.065, [DARK], t=0.06)
 finish("garage_sign")
 
 # 5) Neon "GARAJ" tabelası (duvar) — kodla üretilenin yerine geçer
 clear()
 box((1.80, 0.10, 0.78), (0, 0, 0.39), DARK)
 box((1.66, 0.04, 0.64), (0, -0.06, 0.39), mat("NeonZemin", (0.06, 0.03, 0.08), 0.4))
-# G A R A J: her harf dikey çubuk + karakteristik kollar
-letters = [
-    [(-0.62, 0.20, 0.03, 0.44), (-0.72, 0.42, 0.22, 0.03), (-0.52, 0.0, 0.03, 0.20)],
-    [(-0.26, 0.20, 0.03, 0.44), (-0.06, 0.20, 0.03, 0.44), (-0.16, 0.22, 0.22, 0.03)],
-    [(0.16, 0.20, 0.03, 0.44), (0.30, 0.34, 0.03, 0.18), (0.24, 0.42, 0.18, 0.03),
-     (0.30, 0.08, 0.03, 0.20)],
-    [(0.56, 0.20, 0.03, 0.44), (0.76, 0.20, 0.03, 0.44), (0.66, 0.22, 0.22, 0.03)],
-    [(1.06, 0.26, 0.03, 0.34), (0.94, 0.06, 0.03, 0.14), (1.00, 0.0, 0.14, 0.03)],
-]
-for li, parts in enumerate(letters):
-    color = NEON_P if li % 2 == 0 else NEON_B
-    for (lx, lz, sx, sz) in parts:
-        box((sx, 0.03, sz), (lx - 0.22, -0.10, lz), color)
+# G A R A J: iç panelin (1,66 x 0,64, orta z 0,39) ortasında, harf harf pembe / mavi tüp
+word("GARAJ", -0.73, 0.19, 0.22, 0.40, 0.09, -0.10, [NEON_P, NEON_B], t=0.035)
 finish("neon_garage")
 
 # 6) Duvar saati

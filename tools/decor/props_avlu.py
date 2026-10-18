@@ -65,8 +65,11 @@ finish("extinguisher_stand")
 clear()
 box((0.26, 0.22, 0.12), (0, 0, 0.06), DARK)
 box((0.22, 0.18, 1.05), (0, 0, 0.62), BLUE)
-box((0.16, 0.02, 0.18), (0, 0.10, 0.98), WHITE)
-cyl(0.012, 0.42, (0.13, 0.06, 0.55), DARK, rot=(0, _m.radians(24), 0), seg=6)
+box((0.16, 0.02, 0.18), (0, -0.10, 0.98), WHITE)            # gösterge ÖN yüzde (-Y; eskiden arkadaydı)
+# Hortum askıdan aşağı sarkar (eskiden yandan dışarı çapraz bir çubuk gibi çıkıyordu), ucunda tabanca
+box((0.05, 0.05, 0.04), (0.125, -0.04, 0.86), DARK)
+rod((0.13, -0.04, 0.85), (0.17, -0.04, 0.44), 0.013, DARK, seg=6)
+box((0.04, 0.03, 0.09), (0.17, -0.04, 0.40), DARK)
 finish("air_station")
 
 # 8) Çıkış rampası (çift)

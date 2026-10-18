@@ -98,8 +98,11 @@ box((1.16, 0.42, 0.14), (0, 0, 0.07), WOOD)                 # kaide
 for s in range(2):                                          # yan sütunlar
     box((0.06, 0.42, 1.66), ((1 if s else -1) * 0.55, 0, 0.97), WOOD)
 box((1.16, 0.42, 0.08), (0, 0, 1.84), WOOD)                 # üst
-box((1.04, 0.03, 1.60), (0, -0.19, 0.96), GLASS)            # ön cam
-box((1.04, 0.42, 0.04), (0, 0.10, 1.86), GLOW)              # üst aydınlatma
+# Ön cam SAYDAM (eski modeldeki elle düzeltilmiş "CamSeffaf" ile aynı değerler; kaynağa işlenmemişti, yeniden
+# üretince cam opak çıkıp kupalar görünmüyordu — 2026-10-18)
+box((1.04, 0.03, 1.60), (0, -0.19, 0.96), mat("CamSeffaf", (0.42, 0.52, 0.58), 0.10, 0.0, alpha=0.30))
+box((1.00, 0.34, 0.025), (0, 0, 1.787), GLOW)              # üst aydınlatma: tablanın ALTINDA (eskiden üst yüzle
+                                                            # aynı yükseklikte titriyor, arkadan 10 cm taşıyordu)
 for shelf in range(3):
     z = 0.42 + shelf * 0.44
     box((1.02, 0.36, 0.03), (0, 0, z), WOOD)

@@ -73,9 +73,15 @@ box((0.62, 0.20, 0.26), (0.02, 0, 0.60), mat("MotorBlok", (0.20, 0.21, 0.23), 0.
 box((0.46, 0.26, 0.20), (-0.18, 0, 0.84), RED := mat("Depo", (0.46, 0.05, 0.05), 0.35))
 box((0.40, 0.24, 0.10), (-0.56, 0, 0.86), DARK)             # sele
 box((0.22, 0.20, 0.08), (-0.86, 0, 0.92), DARK)
-cyl(0.035, 0.66, (0.52, 0, 0.72), CHROME, rot=(0, _m.radians(20), 0), seg=8)  # ön amortisör
-box((0.06, 0.62, 0.05), (0.60, 0, 1.02), CHROME)            # gidon
-cyl(0.09, 0.06, (0.72, 0, 0.92), CREAM, rot=(0, _m.radians(70), 0), seg=12)   # far
+# Ön amortisör ön teker göbeğinden gidon boğazına (eskiden +20° ters eğikti: alt ucu motorun içindeydi); çerçeve
+# boruları ve arka salıncak noktadan noktaya (2026-10-18)
+for y in (-0.07, 0.07):
+    rod((0.66, y, 0.345), (0.55, y, 0.98), 0.03, CHROME)                  # ön amortisör çifti
+    rod((-0.22, y, 0.52), (-0.66, y, 0.345), 0.025, CHROME)               # arka salıncak
+rod((0.55, 0, 0.95), (0.04, 0, 0.86), 0.03, CHROME)                       # üst boru (depo altı)
+rod((0.54, 0, 0.90), (0.30, 0, 0.56), 0.03, CHROME)                       # ön boru (motora)
+box((0.06, 0.62, 0.05), (0.55, 0, 1.00), CHROME)            # gidon
+cyl(0.09, 0.06, (0.64, 0, 0.90), CREAM, rot=(0, _m.radians(80), 0), seg=12)   # far
 cyl(0.05, 0.52, (0.10, -0.20, 0.42), CHROME, rot=(0, _m.radians(90), 0), seg=8)  # egzoz
 finish("motorcycle")
 
