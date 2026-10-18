@@ -34,6 +34,8 @@ signal instance_added(item: StringName)
 const MAX_COPIES: int = 99
 ## Duvar parçası daha çok gerekir (büyük garajı odalara bölmek yüzlerce segment olabilir).
 const MAX_WALL_COPIES: int = 600
+## Yüklenen eşya konumunun her ekseninde sınır (gerçek garajlarda en uç değer ~6; elle yazılmış kayda karşı).
+const POS_LIMIT: float = 100.0
 const SURFACE_FLOOR: StringName = &"floor"
 const SURFACE_WALL: StringName = &"wall"
 
@@ -705,11 +707,13 @@ func _load_instance(raw: Variant) -> void:
 		return
 	var pos: Vector3 = _vec_in(rec.get("position"), Vector3.INF)
 	var rot: Vector3 = _vec_in(rec.get("rotation"), Vector3.ZERO)
-	var scale: Vector3 = _vec_in(rec.get("scale"), Vector3.ONE)
-	if not _finite(pos) or not _finite(rot) or not _finite(scale):
+	if not _finite(pos) or not _finite(rot):
 		return
+	# Oyun ölçeği hiç değiştirmez (hep ONE) ve eşyalar avlunun içindedir. Arkadaşın garajını elle yazan biri ölçeği
+	# 1e6 / 0 / eksi, konumu ±1e30 yazabiliyordu: ziyaret görüntüsü dev bir eşyayla örtülüyor, dönüşüm bozuluyordu.
+	pos = pos.clamp(Vector3.ONE * -POS_LIMIT, Vector3.ONE * POS_LIMIT)
 	_instances.append({"iid": iid, "item": item, "pos": pos, "rot": Vector3(0.0, _wrap(rot.y), 0.0),
-		"scale": scale})
+		"scale": Vector3.ONE})
 
 
 ## v8 → v9: sahiplik dizisi → adetler; "yuva → eşya" → gerçek konumlu örnekler. Yalnızca O ANKİ
@@ -719,7 +723,7 @@ func _load_instance(raw: Variant) -> void:
 func _migrate_v8(old: Dictionary) -> Dictionary:
 	var owned: Dictionary = {}
 	for raw: Variant in (old.get("owned", []) as Array):
-		owned[String(raw)] = 1
+		owned[SaveSafe.s(raw)] = 1
 	var level: int = _garage_level()
 	var lot: Rect2 = _legacy_lot(level)
 	var instances: Array = []
@@ -728,8 +732,8 @@ func _migrate_v8(old: Dictionary) -> Dictionary:
 	var placed: Variant = old.get("placed", {})
 	if placed is Dictionary:
 		for raw_slot: Variant in (placed as Dictionary):
-			var slot: StringName = StringName(String(raw_slot))
-			var item: String = String((placed as Dictionary)[raw_slot])
+			var slot: StringName = StringName(SaveSafe.s(raw_slot))
+			var item: String = SaveSafe.s((placed as Dictionary)[raw_slot])
 			var kind: StringName = DecorLegacySlots.kind_of(slot)
 			if kind == DecorLegacySlots.SLOT_FLOOR_SURFACE:
 				surfaces[String(SURFACE_FLOOR)] = item
@@ -817,4 +821,4 @@ static func _vec_in(raw: Variant, fallback: Vector3) -> Vector3:
 	var d: Dictionary = raw
 	if not (d.has("x") and d.has("y") and d.has("z")):
 		return fallback
-	return Vector3(float(d["x"]), float(d["y"]), float(d["z"]))
+	return Vector3(SaveSafe.f(d["x"]), SaveSafe.f(d["y"]), SaveSafe.f(d["z"]))

@@ -256,6 +256,11 @@ func _run() -> void:
 	var entry: Dictionary = social().person("alice")
 	check(SaveSafe.s(entry.get("av", "")) == "img:" + hash2 and entry.get("frame") == "checker" and entry.get("flag") == "TR",
 		"bob'un listesinde alice'in profili")
+	# Yarış yöneticisi arkadaşın aracını yolda rakip seçince fotoğrafı ÖNCEDEN indirir (race_manager): liste yüklenince
+	# fotoğraf hazır olabilir. "İnene kadar kask" yolunu sınamak için bellekteki ve diskteki kopya silinir.
+	social()._avatars.erase("alice")
+	social()._avatar_index.erase("alice")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SocialManager.AVATAR_CACHE_DIR + "alice.jpg"))
 	var first: Dictionary = social().avatar_of("alice", entry["av"])
 	check(bool(first["illustrated"]), "fotoğraf inene kadar kask")
 	var got: bool = await until(func() -> bool: return not bool(social().avatar_of("alice", entry["av"])["illustrated"]), 3.0)

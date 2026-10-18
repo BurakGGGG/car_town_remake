@@ -195,7 +195,7 @@ static func clear_cache() -> void:
 static func normalized(build: Dictionary) -> Dictionary:
 	var out: Dictionary = {}
 	for category: StringName in CATEGORIES:
-		var stage: int = clampi(int(build.get(category, build.get(String(category), 0))), 0, STAGES)
+		var stage: int = clampi(SaveSafe.i(build.get(category, build.get(String(category), 0))), 0, STAGES)   # arkadaş verisi: tür güvenli
 		if stage > 0:
 			out[category] = stage
 	return out

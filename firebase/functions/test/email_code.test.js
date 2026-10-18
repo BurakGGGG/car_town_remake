@@ -106,6 +106,34 @@ test("yanlış kod: kalan hak söylenir, 5. yanlışta kod yanar", async () => {
   assert.strictEqual(Object.keys(auth.users).length, 0);
 });
 
+test("yanlış denemeler kodlar arasında saatlik sayılır: yeni kod istemek tahmin hakkını yenilemez", async () => {
+  const db = fakeDb(); const auth = fakeAuth(); const mail = fakeMail();
+  const send = (now, code) => ec.sendCode({ db, mail, email: "a@b.co", lang: "tr", ip: "x", now, randomCode: () => code });
+  await send(T0, "111111");
+  for (let i = 0; i < 3; i++) await rejects(ec.verifyCode({ db, auth, email: "a@b.co", code: "000000", now: T0 + i }), "wrong_code");
+  await send(T0 + 2 * MIN, "222222");   // yeni kod: kod başına hak 5 olsa da saatte 2 hak kaldı
+  const e = await rejects(ec.verifyCode({ db, auth, email: "a@b.co", code: "000000", now: T0 + 2 * MIN }), "wrong_code");
+  assert.strictEqual(e.extra.attempts_left, 1);
+  await rejects(ec.verifyCode({ db, auth, email: "a@b.co", code: "000000", now: T0 + 2 * MIN }), "too_many_attempts");
+  // saatlik hak bitti: yeni kod gönderilmez (e-posta gitmez), doğru kod da geçmez
+  const busy = await rejects(send(T0 + 4 * MIN, "333333"), "too_many");
+  assert.strictEqual(busy.extra.retry_after, 56 * 60);
+  assert.strictEqual(mail.sent.length, 2);
+  await rejects(ec.verifyCode({ db, auth, email: "a@b.co", code: "222222", now: T0 + 4 * MIN }), "no_code");
+  // bir saat sonra yanlışlar düşer: yeni kodla girilir
+  await send(T0 + 61 * MIN, "444444");
+  const v = await ec.verifyCode({ db, auth, email: "a@b.co", code: "444444", now: T0 + 61 * MIN });
+  assert.strictEqual(typeof v.token, "string");
+  assert.strictEqual(Object.keys(auth.users).length, 1);
+});
+
+test("dil alanına yerleşik nesne adı (__proto__, constructor) verilirse İngilizce e-posta gider", () => {
+  for (const lang of ["__proto__", "constructor", "toString", 42, null, ["tr"]]) {
+    const m = ec.mailFor(lang, "123456");
+    assert.match(m.subject, /^Your Auto Yard sign-in code: 123456$/, String(lang));
+  }
+});
+
 test("süresi dolan kod (10 dk) geçmez; yeni kod eskisini geçersiz kılar", async () => {
   const db = fakeDb(); const auth = fakeAuth(); const mail = fakeMail();
   await ec.sendCode({ db, mail, email: "a@b.co", lang: "tr", ip: "x", now: T0, randomCode: () => "111111" });

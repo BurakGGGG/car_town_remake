@@ -79,6 +79,8 @@ static func to_json(garage: Dictionary) -> String:
 
 ## Sunucudan gelen JSON'u okur. Geçersizse ya da sürümü desteklenmiyorsa boş sözlük.
 ## `max_len`: oyunla gelen öne çıkan garajlar sunucudan geçmez, Firestore sınırına bağlı değildir.
+## Yalnızca AÇIK bölümler döner (from_snapshot süzgeci): belgeyi oyunu atlayıp elle yazan biri tamir işi, ekonomi,
+## ilerleme gibi bölümler eklerse ziyaret modunda SaveManager._apply onları da yüklüyordu.
 static func parse(json: String, max_len: int = MAX_JSON) -> Dictionary:
 	if json.is_empty() or json.length() > max_len:
 		return {}
@@ -88,7 +90,7 @@ static func parse(json: String, max_len: int = MAX_JSON) -> Dictionary:
 	var version: int = SaveSafe.i((raw as Dictionary).get("version", 0))
 	if version < SaveManager.MIN_VERSION or version > SaveManager.SAVE_VERSION:
 		return {}
-	return raw
+	return from_snapshot(raw)
 
 
 ## Oyuncu seviyesi (liste satırında gösterilir).

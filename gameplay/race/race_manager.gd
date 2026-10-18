@@ -400,7 +400,8 @@ func has_challenge() -> bool:
 
 ## İNTİKAM: arkadaşın (haberdeki) aracına karşı pist doğrudan açılır. Yoldaki davet varsa kapanır. Rövanş yok.
 func start_revenge(owner: Dictionary, vehicle_id: StringName) -> bool:
-	if owner.is_empty() or CarCatalog.get_entry(vehicle_id).is_empty():
+	# Araç arkadaşın yazdığı haberden gelir: edinilemeyen (polis) araç elle yazılmış olabilir, yarışa çıkmaz
+	if owner.is_empty() or not CarCatalog.is_obtainable(vehicle_id):
 		return false
 	release_challenger()
 	_direct = true

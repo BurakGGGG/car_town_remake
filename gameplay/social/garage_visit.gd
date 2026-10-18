@@ -77,6 +77,9 @@ static func end(tree: SceneTree) -> void:
 		tree.root.add_child(_home)
 		tree.current_scene = _home
 		_restore_camera(_home)
+		var ownership: VehicleOwnership = tree.get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+		if ownership:
+			ownership.reapply_paint()   # paylaşılan araç görünümleri arkadaşın boyalarında kalmasın
 	_home = null
 
 

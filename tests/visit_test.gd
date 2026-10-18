@@ -58,9 +58,14 @@ func bob_garage() -> Dictionary:
 		"garage_upgrades": {String(GarageUpgradeManager.GARAGE_ID): 3},
 		"repair_bays": {"unlocked": 2, "layout": []},
 		"decor": {},
-		"vehicles": {"owned": ["hyundai_getz", "ford_focus"], "paint": {}},
+		"vehicles": {"owned": ["hyundai_getz", "ford_focus"], "paint": {"hyundai_getz": "ff00ff"}},
 	}
 	return PublicGarage.from_snapshot(snap)
+
+
+## Aracın sahneler arasında paylaşılan görünümündeki gövde rengi (ziyaret sahnesi de buna yazar).
+func shared_color(id: StringName) -> Color:
+	return CarAppearance.get_for(CarCatalog.scene_path(id)).body_color
 
 
 func _run() -> void:
@@ -122,13 +127,15 @@ func _run() -> void:
 	await frames(2)
 	var go: PlateButton = screen.find_child("Visit_bob", true, false) as PlateButton
 	check(go != null, "GARAJA GİT düğmesi")
-	var save_before: String = file_text("savegame.json")
 	var meta_before: String = file_text("cloud_sync.json")
 	var social_before: String = file_text("social.json")
 	var writes_before: int = fb.calls.filter(func(c: String) -> bool: return c.begins_with("set") or c.begins_with("delete")).size()
 	var left_before: float = marker.time_left
 	go.pressed.emit()
 	check(await until(func() -> bool: return GarageVisit.is_visiting() and current_scene != home), "ziyaret başladı")
+	# Karşılaştırma ziyaret BAŞLADIKTAN sonraki kayıtla: ziyaretten hemen önce kendi kayıt bilerek yazılır ve pasif gelirin
+	# last_seen'i (saniye) değişir. Denetlenen, ziyaret sırasında / dönüşte hiçbir şeyin yazmaması.
+	var save_before: String = file_text("savegame.json")
 	await frames(20)
 
 	print("== 3) Ziyaret sahnesi ==")
@@ -165,8 +172,13 @@ func _run() -> void:
 	check(writes_now == writes_before, "buluta yazılmadı (%d → %d)" % [writes_before, writes_now])
 
 	print("== 4) GARAJIMA DÖN ==")
+	check(shared_color(&"hyundai_getz").is_equal_approx(Color.MAGENTA), "ziyarette bob'un boyası görünüyor (eflatun Getz)")
 	(bar.find_child("BackHomeButton", true, false) as PlateButton).pressed.emit()
 	await frames(6)
+	var own_paint: VehicleOwnership = get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+	check(own_paint != null and shared_color(&"hyundai_getz").is_equal_approx(own_paint.paint_color(&"hyundai_getz"))
+		and not shared_color(&"hyundai_getz").is_equal_approx(Color.MAGENTA),
+		"dönünce kendi araçların kendi renginde (arkadaşın boyası kalmadı)")
 	check(not GarageVisit.is_visiting() and current_scene == home and home.is_inside_tree(), "kendi sahneye dönüldü (aynı düğüm)")
 	check(not is_instance_valid(visit), "ziyaret sahnesi silindi")
 	check(get_first_node_in_group("economy") == eco and eco.money == 77777, "para yerinde (77777)")
@@ -203,9 +215,9 @@ func _run() -> void:
 		check(fbtn != null, "%s listede (GARAJA GİT)" % entry["name"])
 		var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(FeaturedFriends.DIR + uid + ".json"))
 		var expected_items: int = ((raw["garage"]["decor"] as Dictionary)["instances"] as Array).size()
-		var save_text: String = file_text("savegame.json")
 		fbtn.pressed.emit()
 		check(await until(func() -> bool: return GarageVisit.is_visiting()), "%s garajı açıldı" % entry["name"])
+		var save_text: String = file_text("savegame.json")   # ziyaret öncesi bilinçli kayıttan sonra (bkz. 2. bölüm)
 		await frames(30)
 		var fdecor: DecorManager = get_first_node_in_group("decor") as DecorManager
 		var fview: GarageDecorView = get_first_node_in_group("garage_decor_view") as GarageDecorView

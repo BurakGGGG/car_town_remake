@@ -30,7 +30,7 @@ function shouldNotify(before, after) {
 
 /** Alıcının diline göre başlık + metin (bilinmeyen dil → İngilizce). Ad kuralla süzülmüş takma addır. */
 function messageFor(lang, name, revenge) {
-  const t = TEXT[lang] || TEXT.en;
+  const t = typeof lang === "string" && Object.hasOwn(TEXT, lang) ? TEXT[lang] : TEXT.en;   // "__proto__" yerleşik nesneyi döndürmesin
   const safe = String(name || "").slice(0, 16);
   return { title: t.title, body: (revenge ? t.revenge : t.win).replace("{name}", safe) };
 }

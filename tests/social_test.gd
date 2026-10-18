@@ -382,6 +382,16 @@ func _run() -> void:
 	var future: Dictionary = pub.duplicate(true)
 	future["version"] = SaveManager.SAVE_VERSION + 1
 	check(PublicGarage.parse(PublicGarage.to_json(future)).is_empty(), "daha yeni sürüm reddedilir")
+	# Elle yazılmış belge: oyunu atlayan biri açık garaja gizli bölümler / tutarsız sayılar / yanlış türler koyabilir
+	var injected: Dictionary = PublicGarage.parse(JSON.stringify(snap))
+	check(not injected.has("economy") and not injected.has("crates") and not (injected["progress"] as Dictionary).has("xp"),
+		"elle eklenmiş ekonomi / kasa / XP bölümleri okunurken de atılır (ziyaret modunda yüklenmez)")
+	var fields: Dictionary = SocialManager.profile_fields({"stats": {"wins": 50, "races": 10, "cars": 99999, "likes": -5}})
+	check(fields["stats"]["wins"] == 10 and fields["stats"]["cars"] == CarCatalog.size() and fields["stats"]["likes"] == 0,
+		"istatistikler tutarlı sınırlanır (galibiyet <= yarış, araç <= katalog, beğeni >= 0)")
+	var build: Dictionary = PerformanceMods.normalized({"motor": null, "turbo": {"x": 1}, "air": "3", "tire": 99})
+	check(build.size() == 2 and int(build.get(&"air", 0)) == 3 and int(build.get(&"tire", 0)) == PerformanceMods.STAGES,
+		"yanlış türdeki modifiye kademeleri hata vermeden 0..5'e iner")
 
 	print("== 2) Alice: profil ==")
 	await open_session("alice")
@@ -486,6 +496,21 @@ func _run() -> void:
 	check(await social().rename("Carol Usta"), "ad değişti")
 	check(garage_doc("carol").get("name") == "Carol Usta" and garage_doc("carol").get("code") == carol_code, "sunucuda yeni ad, kod aynı")
 	check(not await social().rename("x"), "geçersiz ad reddedilir")
+	await close_session()
+
+	print("== 9b) Elle yazılmış istek: ad / kod gönderenin garajından, garajı olmayanın isteği düşer ==")
+	fb.store["users/bob/inbox/r_carol"] = {"name": "admin", "code": alice_code, "at": 9999999999}
+	fb.store["users/bob/inbox/r_ghost"] = {"name": "Destek Ekibi", "code": "ABC234", "at": 1}
+	await open_session("bob", false)
+	await social().refresh(true)
+	var spoof: Array = social().incoming.filter(func(r: Dictionary) -> bool: return r["uid"] == "carol")
+	check(spoof.size() == 1 and spoof[0]["name"] == "Carol Usta" and spoof[0]["code"] == carol_code,
+		"istekte yazan 'admin' / alice'in kodu değil, carol'ın garajındaki ad ve kod görünür")
+	check(social().incoming.filter(func(r: Dictionary) -> bool: return r["uid"] == "ghost").is_empty()
+		and not fb.store.has("users/bob/inbox/r_ghost"), "açık garajı olmayan gönderenin isteği silindi")
+	check(SocialManager.their_name("admin", "x").begins_with("Usta") and SocialManager.their_name(" Carol  Usta ", "x") == "Carol Usta"
+		and SocialManager.their_name("AutoYard Destek", "x").begins_with("Usta"), "başkasının adı süzgeçten geçer")
+	fb.store.erase("users/bob/inbox/r_carol")
 	await close_session()
 
 	print("== 10) Çevrimdışı / zaman aşımı ==")

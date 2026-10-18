@@ -79,6 +79,10 @@ const PUBLISH_DEBOUNCE: float = 20.0
 ## Listeler bu süreden yeniyse ekran açılınca yeniden okunmaz (okuma kotası).
 const REFRESH_MIN_INTERVAL: float = 30.0
 const MAX_FRIENDS: int = 100
+## Bir yenilemede işlenen en çok gelen istek: herkes istek yazabildiği için her biri bir garaj okuması ister.
+const MAX_INCOMING: int = 30
+## Başkasının belgesindeki sayıların üst sınırı (ekranda "1000000000000000 KEZ YENDİ" görünmesin).
+const STAT_MAX: int = 999999
 ## Kod çakışırsa (sunucu reddeder) en fazla bu kadar yeni kod denenir.
 const CODE_ATTEMPTS: int = 6
 
@@ -495,7 +499,7 @@ func _read_invite(token: String) -> Dictionary:
 	var at: int = SaveSafe.i(data.get("at", 0))
 	if uid.is_empty():
 		return {"status": "missing", "token": token}
-	var person: Dictionary = await _friend_entry(uid, {"name": SaveSafe.s(data.get("name", "")),
+	var person: Dictionary = await _friend_entry(uid, {"name": their_name(data.get("name", ""), uid),
 		"code": SaveSafe.s(data.get("code", ""))})
 	if person.is_empty():
 		return {"status": "missing", "token": token}   # davet edenin hesabı silinmiş
@@ -556,7 +560,7 @@ func visit(uid: String) -> bool:
 		_save.save_game()   # kendi garajın donmadan önce son durum diskte olsun
 	return GarageVisit.begin(get_tree(), {
 		"uid": uid,
-		"name": SaveSafe.s(doc.get("name", "")),
+		"name": their_name(doc.get("name", ""), uid),
 		"code": SaveSafe.s(doc.get("code", "")),
 		"level": SaveSafe.i(doc.get("level", 1)),
 		"value": SaveSafe.i(doc.get("value", 0)),
@@ -948,7 +952,8 @@ func collect_gifts() -> int:
 			continue
 		if jy.receive_gift(id, StringName(SaveSafe.s(doc.get("part", "")))):
 			got += 1
-			var who: String = SaveSafe.s(doc.get("name", ""))
+			var sender: String = id.trim_prefix("p_").get_slice("_", 0)
+			var who: String = their_name(person(sender).get("name", doc.get("name", "")), sender)
 			if not who.is_empty() and not names.has(who):
 				names.append(who)
 			if quiet:
@@ -1043,7 +1048,7 @@ func _send_request(code: String) -> bool:
 	var their: Dictionary = garage.get("data", {}) if garage.get("data") is Dictionary else {}
 	var at: int = _now()
 	var mine: Dictionary = {"name": my_name(), "code": my_code(), "at": at}
-	var theirs: Dictionary = {"name": SaveSafe.s(their.get("name", "")), "code": code, "at": at}
+	var theirs: Dictionary = {"name": their_name(their.get("name", ""), uid), "code": code, "at": at}
 	if not _ok(await _call(&"set", _inbox_of(uid), "r_" + _uid, mine)):
 		notice.emit(Loc.t("İstek gönderilemedi. İnternet bağlantını kontrol et."))
 		return false
@@ -1084,20 +1089,28 @@ func _load_lists() -> bool:
 	incoming = _requests(inbox, "r_")
 	outgoing = _requests(outbox, "o_")
 	var kept: Array[Dictionary] = []
-	for entry: Dictionary in incoming:
+	for entry: Dictionary in incoming.slice(0, MAX_INCOMING):   # en yeniler; fazlası sonraki yenilemelerde
 		var from: String = entry["uid"]
 		if _profile and _profile.is_blocked(from):
 			await _call(&"delete", _inbox_of(_uid), "r_" + from)   # engellenenin isteği: sessizce silinir
 			await _call(&"delete", _outbox_of(from), "o_" + _uid)
 			continue
-		# İstek gönderenin fotoğrafı / bayrağı (karar verirken kim olduğu görünsün)
+		# İstek gönderenin fotoğrafı / bayrağı (karar verirken kim olduğu görünsün). Ad ve kod da GARAJDAN: istek
+		# belgesindeki ad / kod gönderenin yazdığıdır, başka bir oyuncununkini taklit edebilir.
 		var garage: Dictionary = await _call(&"get", GARAGES, "g_" + from)
+		if _not_found(garage):
+			await _call(&"delete", _inbox_of(_uid), "r_" + from)   # açık garajı olmayan (silinmiş / sahte) gönderen
+			continue
 		if _ok(garage) and garage.get("data") is Dictionary:
-			entry.merge(profile_fields(garage["data"]))
+			var doc: Dictionary = garage["data"]
+			entry.merge(profile_fields(doc))
+			entry["name"] = their_name(doc.get("name", ""), from)
+			var code: String = SaveSafe.s(doc.get("code", ""))
+			entry["code"] = code if SocialNames.is_valid_code(code) else ""
 		kept.append(entry)
 	incoming = kept
 	var loaded: Array[Dictionary] = []
-	for doc_id: String in _ids(friend_list):
+	for doc_id: String in _ids(friend_list).slice(0, MAX_FRIENDS):   # davet linkiyle sınırsız eklenebiliyordu
 		var uid: String = doc_id.trim_prefix("f_")
 		var entry: Dictionary = await _friend_entry(uid, {})
 		if entry.is_empty():
@@ -1135,7 +1148,7 @@ func _load_visits() -> void:
 		if (_profile and _profile.is_blocked(from)) or not is_friend(from):
 			await _call(&"delete", _visits_of(_uid), id)
 			continue
-		var name: String = SaveSafe.s(person(from).get("name", doc.get("name", "")))
+		var name: String = their_name(person(from).get("name", doc.get("name", "")), from)
 		var day: int = SaveSafe.i(doc.get("day", 0))
 		var like: bool = bool(doc.get("liked", false)) and day > SaveSafe.i(counted.get(from, -1))
 		if like:
@@ -1171,10 +1184,10 @@ func _friend_entry(uid: String, fallback: Dictionary) -> Dictionary:
 	var ask: Dictionary = _ask_of(doc)
 	var entry: Dictionary = {
 		"uid": uid,
-		"name": SaveSafe.s(doc.get("name", fallback.get("name", ""))),
+		"name": their_name(doc.get("name", fallback.get("name", "")), uid),
 		"code": SaveSafe.s(doc.get("code", fallback.get("code", ""))),
-		"level": maxi(SaveSafe.i(doc.get("level", 1)), 1),
-		"value": SaveSafe.i(doc.get("value", 0)),
+		"level": clampi(SaveSafe.i(doc.get("level", 1)), 1, SaveManager.MAX_LEVEL),
+		"value": maxi(SaveSafe.i(doc.get("value", 0)), 0),
 		"ask_part": SaveSafe.s(ask.get("part", "")),
 		"ask_at": SaveSafe.i(ask.get("at", 0)),
 	}
@@ -1193,7 +1206,16 @@ static func _ask_of(doc: Dictionary) -> Dictionary:
 	return {}
 
 
+## BAŞKA OYUNCUDAN gelen takma ad (garaj, istek, davet, hediye, haber, ziyaret belgesi): kendi adımızla aynı süzgeçten
+## (biçim + uygunsuz kelime + "admin" / "autoyard") geçmezse oyuncunun kimliğinden türeyen "Usta1234" gösterilir.
+## Belgeyi oyunu atlayıp elle yazan biri adını süzgeçsiz yazabiliyordu. Şikâyet belgesindeki ad bilerek ham kalır.
+static func their_name(raw: Variant, uid: String) -> String:
+	var name: String = SocialNames.clean_name(SaveSafe.s(raw))
+	return name if SocialNames.is_valid_name(name) else "Usta%04d" % (absi(uid.hash()) % 10000)
+
+
 ## Açık garaj belgesinden profil alanları (geçersiz değerler boşa düşer; eski sürümün belgesinde hiçbiri yoktur).
+## Sayılar kendi içinde tutarlı olacak biçimde sınırlanır (elle yazılmış belgede galibiyet yarıştan çok olabiliyordu).
 static func profile_fields(doc: Dictionary) -> Dictionary:
 	var av: String = SaveSafe.s(doc.get("av", ""))
 	var frame: String = SaveSafe.s(doc.get("frame", ""))
@@ -1201,6 +1223,7 @@ static func profile_fields(doc: Dictionary) -> Dictionary:
 	var title: String = SaveSafe.s(doc.get("title", ""))
 	var car: String = SaveSafe.s(doc.get("car", ""))
 	var raw_stats: Dictionary = doc.get("stats", {}) if doc.get("stats") is Dictionary else {}
+	var races: int = clampi(SaveSafe.i(raw_stats.get("races", 0)), 0, STAT_MAX)
 	return {
 		"av": av if ProfileCatalog.is_valid_av(av) else "",
 		"frame": frame if ProfileCatalog.is_frame(frame) else ProfileCatalog.DEFAULT_FRAME,
@@ -1208,11 +1231,12 @@ static func profile_fields(doc: Dictionary) -> Dictionary:
 		"title": title if SocialNames.is_valid_title(title) else "",
 		"car": car if not CarCatalog.get_entry(StringName(car)).is_empty() else "",
 		"stats": {
-			"wins": maxi(SaveSafe.i(raw_stats.get("wins", 0)), 0),
-			"races": maxi(SaveSafe.i(raw_stats.get("races", 0)), 0),
-			"cars": maxi(SaveSafe.i(raw_stats.get("cars", 0)), 0),
+			"wins": clampi(SaveSafe.i(raw_stats.get("wins", 0)), 0, races),
+			"races": races,
+			"cars": clampi(SaveSafe.i(raw_stats.get("cars", 0)), 0, CarCatalog.size()),
 			"best": maxi(SaveSafe.i(raw_stats.get("best", 0)), 0),
 			"best_car": SaveSafe.s(raw_stats.get("best_car", "")),
+			"likes": clampi(SaveSafe.i(raw_stats.get("likes", 0)), 0, STAT_MAX),
 		},
 	}
 
@@ -1225,8 +1249,8 @@ func _requests(result: Dictionary, prefix: String) -> Array[Dictionary]:
 		var id: String = SaveSafe.s(doc_id)
 		if not id.begins_with(prefix):
 			continue
-		out.append({"uid": id.trim_prefix(prefix), "name": SaveSafe.s(doc.get("name", "")),
-			"code": SaveSafe.s(doc.get("code", "")), "at": SaveSafe.i(doc.get("at", 0))})
+		out.append({"uid": id.trim_prefix(prefix), "name": their_name(doc.get("name", ""), id.trim_prefix(prefix)),
+			"code": SaveSafe.s(doc.get("code", "")), "at": mini(SaveSafe.i(doc.get("at", 0)), _now())})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["at"]) > int(b["at"]))
 	return out
 
@@ -1509,11 +1533,11 @@ func _parse_event(from: String, doc: Dictionary) -> Dictionary:
 		return {}
 	var paint: String = SaveSafe.s(doc.get("paint", ""))
 	var event: Dictionary = {
-		"uid": from, "name": SaveSafe.s(doc.get("name", "")), "car": car, "their_car": their,
+		"uid": from, "name": their_name(doc.get("name", ""), from), "car": car, "their_car": their,
 		"paint": paint if Color.html_is_valid(paint) else "",
 		"build": PerformanceMods.normalized(doc.get("build", {}) if doc.get("build") is Dictionary else {}),
 		"won": bool(doc.get("won", false)), "revenge": bool(doc.get("revenge", false)),
-		"mw": maxi(SaveSafe.i(doc.get("mw", 0)), 0), "ml": maxi(SaveSafe.i(doc.get("ml", 0)), 0),
+		"mw": clampi(SaveSafe.i(doc.get("mw", 0)), 0, STAT_MAX), "ml": clampi(SaveSafe.i(doc.get("ml", 0)), 0, STAT_MAX),
 		"at": SaveSafe.i(doc.get("at", 0)),
 	}
 	var friend: Dictionary = person(from)

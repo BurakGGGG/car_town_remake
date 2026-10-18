@@ -43,6 +43,7 @@ func _initialize() -> void:
 	_tile_save()
 	_legacy()
 	_walls()
+	_hostile_save()
 	await _rules()
 	await _fading()
 	await _editor_tools()
@@ -134,6 +135,24 @@ func _legacy() -> void:
 	decor.load_state({"owned": {"floor_tile": 1}, "surfaces": {"floor": "floor_tile"}, "tiles": {"palette": [], "rows": []}})
 	check(decor.tile_count() == 0, "karo kaydı olan v2 dosyasında eski kaplama yeniden yayılmaz")
 	decor.reset()
+
+
+func _hostile_save() -> void:
+	print("== ELLE YAZILMIŞ KAYIT (arkadaşın açık garajı: dev ölçek, uç konum, yanlış tür) ==")
+	var before: Dictionary = decor.state()
+	decor.load_state({"owned": {"sofa": 2}, "instances": [
+		{"instance_id": "h1", "catalog_id": "sofa", "position": {"x": 1e30, "y": -1e30, "z": 2.5},
+			"rotation": {"x": 0, "y": 90, "z": 0}, "scale": {"x": 1e6, "y": 1e6, "z": 1e6}},
+		{"instance_id": "h2", "catalog_id": "sofa", "position": {"x": {"a": 1}, "y": "abc", "z": [1]},
+			"rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 0, "y": -3, "z": 0}}]})
+	var list: Array[Dictionary] = decor.instances()
+	check(list.size() == 2, "iki eşya yüklendi, hata yok (%d)" % list.size())
+	if list.size() == 2:
+		check(list[0]["scale"] == Vector3.ONE and list[1]["scale"] == Vector3.ONE, "ölçek her zaman 1 (1e6 / 0 / eksi yok sayıldı)")
+		var lim: float = DecorManager.POS_LIMIT
+		check(list[0]["pos"] == Vector3(lim, -lim, 2.5), "uç konum avluya yakın sınıra çekildi (%s)" % list[0]["pos"])
+		check(list[1]["pos"] == Vector3.ZERO, "yanlış türdeki konum 0 sayıldı (%s)" % list[1]["pos"])
+	decor.load_state(before)
 
 
 func _walls() -> void:

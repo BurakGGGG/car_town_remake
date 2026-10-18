@@ -448,6 +448,12 @@ func load_paint(data: Dictionary) -> void:
 	_apply_all_paint()
 
 
+## Arkadaş ziyaretinden dönünce (GarageVisit.end): araç görünümleri sahneler arasında paylaşılır, ziyaret sahnesi
+## arkadaşın boyalarını yazmıştı; yeniden uygulanmazsa oyuncunun kendi araçları o renklerde kalıyordu.
+func reapply_paint() -> void:
+	_apply_all_paint()
+
+
 func _factory_color(vehicle_id: StringName) -> Color:
 	return CarCatalog.default_color_for(CarCatalog.scene_path(vehicle_id))
 

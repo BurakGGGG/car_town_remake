@@ -9,7 +9,7 @@
 // e-postalı Google girişini aynı hesaba bağlar, hesabın öteki yollarını SİLMEZ.
 //
 // Belgeler (istemciye kapalı — firestore.rules "başka her yol kapalı"; yalnız bu fonksiyon yönetici yetkisiyle yazar):
-//   email_codes/{sha256(e-posta)}  {salt, hash, code_at, attempts, sends: [ms], at}  kod düz metin SAKLANMAZ
+//   email_codes/{sha256(e-posta)}  {salt, hash, code_at, attempts, sends: [ms], fails: [ms], at}  kod düz metin SAKLANMAZ
 //   email_ips/{sha256(ip)}          {sends: [ms], at}                                 bir adresten kod bombası olmasın
 // `at` = son gönderim (ms); cleanup.js ikisini de 1 saat sonra siler (gizlilik metni: "en geç 1 saat").
 
@@ -21,6 +21,9 @@ const HOUR_MS = 60 * 60 * 1000;
 const MAX_SENDS_PER_HOUR = 5;
 const MAX_IP_SENDS_PER_HOUR = 20;
 const MAX_ATTEMPTS = 5;
+// Yanlış denemeler e-posta başına SAATLİK de sayılır ve yeni kod istemek sıfırlamaz: yoksa saldırgan her saat 5 kod × 5
+// deneme = 25 tahmin yapabiliyordu (6 hanede sürekli saldırıyla yılda ~%20 ele geçirme). Böyle saatte 5 (~%4).
+const MAX_FAILS_PER_HOUR = 5;
 const MAX_EMAIL_LENGTH = 254;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -75,7 +78,8 @@ const codeHash = (salt, code) => sha256(salt + ":" + code);
 
 /** Alıcının diline göre konu + düz metin + HTML (bilinmeyen dil → İngilizce). */
 function mailFor(lang, code) {
-  const t = MAIL[lang] || MAIL.en;
+  // Yalnızca sözlüğün kendi anahtarı: "__proto__" / "constructor" gibi bir dil yerleşik nesneyi döndürüp metni bozuyordu
+  const t = typeof lang === "string" && Object.hasOwn(MAIL, lang) ? MAIL[lang] : MAIL.en;
   const subject = t.subject.replace("{code}", code);
   const text = `${t.title}: ${code}\n\n${t.body}\n\n${t.ignore}\n\nAuto Yard · https://autoyard.online`;
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1f2a44">`
@@ -107,7 +111,11 @@ async function sendCode({ db, mail, email, lang, ip, now, randomCode }) {
     const [codeSnap, ipSnap] = [await t.get(codeRef), await t.get(ipRef)];
     const prev = codeSnap.exists ? codeSnap.data() : {};
     const sends = recent(prev.sends, now);
+    const fails = recent(prev.fails, now);
     const ipSends = recent(ipSnap.exists ? ipSnap.data().sends : [], now);
+    if (fails.length >= MAX_FAILS_PER_HOUR) {   // deneme hakkı bitti: yeni kod da işe yaramaz, gönderilmez
+      throw new CodeError("resource-exhausted", "too_many", { retry_after: Math.ceil((Math.min(...fails) + HOUR_MS - now) / 1000) });
+    }
     const last = sends.length ? Math.max(...sends) : 0;
     if (last && now - last < RESEND_MS) {
       throw new CodeError("resource-exhausted", "cooldown", { retry_after: Math.ceil((RESEND_MS - (now - last)) / 1000) });
@@ -116,7 +124,7 @@ async function sendCode({ db, mail, email, lang, ip, now, randomCode }) {
       const oldest = Math.min(...(sends.length >= MAX_SENDS_PER_HOUR ? sends : ipSends));
       throw new CodeError("resource-exhausted", "too_many", { retry_after: Math.ceil((oldest + HOUR_MS - now) / 1000) });
     }
-    t.set(codeRef, { salt, hash: codeHash(salt, code), code_at: now, attempts: 0, sends: [...sends, now], at: now });
+    t.set(codeRef, { salt, hash: codeHash(salt, code), code_at: now, attempts: 0, sends: [...sends, now], fails, at: now });
     t.set(ipRef, { sends: [...ipSends, now], at: now });
   });
   try {
@@ -144,6 +152,11 @@ async function verifyCode({ db, auth, email, code, now }) {
     const doc = snap.exists ? snap.data() : {};
     if (!doc.hash) return { reason: "no_code" };
     const spent = { salt: "", hash: "", attempts: 0 };
+    const fails = recent(doc.fails, now);
+    if (fails.length >= MAX_FAILS_PER_HOUR) {   // saatlik hak bitmiş: kod denenmeden yanar
+      t.set(codeRef, spent, { merge: true });
+      return { reason: "too_many_attempts" };
+    }
     if (now - (doc.code_at || 0) > CODE_TTL_MS) {
       t.set(codeRef, spent, { merge: true });
       return { reason: "expired" };
@@ -155,12 +168,14 @@ async function verifyCode({ db, auth, email, code, now }) {
       return { ok: true };
     }
     const attempts = (doc.attempts || 0) + 1;
-    if (attempts >= MAX_ATTEMPTS) {
-      t.set(codeRef, spent, { merge: true });
+    fails.push(now);
+    const left = Math.min(MAX_ATTEMPTS - attempts, MAX_FAILS_PER_HOUR - fails.length);
+    if (left <= 0) {
+      t.set(codeRef, { ...spent, fails }, { merge: true });
       return { reason: "too_many_attempts" };
     }
-    t.set(codeRef, { attempts }, { merge: true });
-    return { reason: "wrong_code", attempts_left: MAX_ATTEMPTS - attempts };
+    t.set(codeRef, { attempts, fails }, { merge: true });
+    return { reason: "wrong_code", attempts_left: left };
   });
   if (!verdict.ok) {
     const { reason, ...extra } = verdict;
@@ -192,6 +207,6 @@ async function userForEmail(auth, email) {
 }
 
 module.exports = {
-  CODE_TTL_MS, RESEND_MS, HOUR_MS, MAX_SENDS_PER_HOUR, MAX_IP_SENDS_PER_HOUR, MAX_ATTEMPTS,
+  CODE_TTL_MS, RESEND_MS, HOUR_MS, MAX_SENDS_PER_HOUR, MAX_IP_SENDS_PER_HOUR, MAX_ATTEMPTS, MAX_FAILS_PER_HOUR,
   CodeError, normalizeEmail, isValidEmail, mailFor, sendCode, verifyCode, sha256, clientIp,
 };
