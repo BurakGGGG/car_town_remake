@@ -1980,5 +1980,9 @@
  "Yeni kod gönderildi.": "A new code has been sent.",
  "Yeni kod için %d saniye bekle.": "Wait %d seconds for a new code.",
  "e-posta adresin": "your email address",
- "Çok fazla kod istendi. %d dakika sonra tekrar dene.": "Too many codes requested. Try again in %d minutes."
+ "Çok fazla kod istendi. %d dakika sonra tekrar dene.": "Too many codes requested. Try again in %d minutes.",
+ "Yarışı kaybedersen aynı rakiple bir kez ücretsiz rövanş yapabilirsin.": "Lost a race? You get one free rematch against the same rival.",
+ "Bekleyen müşterilerin sabrı sınırlı: onları çok bekletirsen vazgeçip giderler.": "Waiting customers have limited patience: keep them waiting too long and they drive off.",
+ "Sen yokken de garajın çalışır: döndüğünde birikmiş kazancın seni bekler.": "Your garage keeps working while you're away: your earnings will be waiting when you return.",
+ "Hurdalıkta yığınları arayıp parça topla, klasik araçları restore ederek garajına kat.": "Search the junkyard piles for parts and restore classic cars to add them to your garage."
 }

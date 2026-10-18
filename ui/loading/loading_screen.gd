@@ -17,6 +17,9 @@ extends CanvasLayer
 ## Arka plan görseli: LOADING_IMAGE (2400×1080, önemli içerik ortadaki 1920×1080'de, alttaki ~200
 ## piksel sakin — çubuk ve yazı orada). Dosya yoksa koyu düz zemin. Aynı görsel motorun açılış
 ## ekranına da (application/boot_splash/image) verilir: dokunuştan oyuna tek, kesintisiz ekran.
+## Ekran açık kaldıkça (giriş seçenekleri dahil) SLIDES sırayla, yumuşak geçişle gelir; sonuncudan sonra
+## yeniden LOADING_IMAGE. Slaytlar tools/make_loading_scenes.gd ile çizilir (aynı yerleşim), bellekte en
+## çok iki görsel durur, sıradaki arka planda yüklenir.
 ##
 ## Sahne dosyası elle yazılmaz: tools/make_loading_scene.gd üretir.
 
@@ -24,11 +27,22 @@ const MAIN_SCENE: String = "res://Main.tscn"
 ## Arka plan yüklemesinden ÖNCE ana iş parçacığında yüklenmesi gereken betikler (bkz. _ready).
 const MAIN_THREAD_FIRST: Array[String] = ["res://ads/admob_provider.gd"]
 const LOADING_IMAGE: String = "res://ui/loading/loading_bg.png"
+## LOADING_IMAGE'den sonra gelen görseller (sırayla). Dosyası olmayan atlanır.
+const SLIDES: Array[String] = [
+	"res://ui/loading/slides/drag.png",
+	"res://ui/loading/slides/showroom.png",
+	"res://ui/loading/slides/hurdalik.png",
+	"res://ui/loading/slides/kovalamaca.png",
+]
+## Her görsel bu kadar durur, sonra sıradakine SLIDE_FADE sürede geçilir (sn).
+const SLIDE_HOLD: float = 3.6
+const SLIDE_FADE: float = 0.9
 const THEME_PATH: String = "res://ui/theme/hud_theme.tres"
 ## Görsel yokken zemin; motorun açılış ekranı rengiyle AYNI (geçiş fark edilmesin).
 const BG_COLOR: Color = Color("1E2124")
-## İpuçları bu aralıkla değişir (sn).
-const TIP_INTERVAL: float = 3.4
+## İpuçları bu aralıkla değişir (sn); değişim kısa bir solup belirmeyle (TIP_FADE her yön).
+const TIP_INTERVAL: float = 2.4
+const TIP_FADE: float = 0.12
 ## Main eklendikten sonra ekranın üstte kaldığı kare sayısı (ilk ağır kareler).
 const SETTLE_FRAMES: int = 5
 const FADE_TIME: float = 0.35
@@ -49,6 +63,10 @@ const TIPS: Array[String] = [
 	"Arkadaş kodunla arkadaşlarının garajlarını ziyaret edebilirsin.",
 	"Garaj değerin araçlarından, geliştirmelerden ve tamir alanlarından oluşur; rütbeni belirler.",
 	"Her araçla kişisel rekorunu kır: ilerleme çubuğundaki halka rekor temponu gösterir.",
+	"Yarışı kaybedersen aynı rakiple bir kez ücretsiz rövanş yapabilirsin.",
+	"Bekleyen müşterilerin sabrı sınırlı: onları çok bekletirsen vazgeçip giderler.",
+	"Sen yokken de garajın çalışır: döndüğünde birikmiş kazancın seni bekler.",
+	"Hurdalıkta yığınları arayıp parça topla, klasik araçları restore ederek garajına kat.",
 ]
 
 var _bar: XpLane
@@ -63,6 +81,14 @@ var _tip_timer: float = 0.0
 var _tip_index: int = 0
 var _main: Node
 var _settle: int = -1
+var _gate_open: bool = false
+var _art: TextureRect            # görünen görsel
+var _art_next: TextureRect       # üstünde belirerek gelen sıradaki
+var _slides: Array[String] = []  # LOADING_IMAGE + var olan SLIDES
+var _slide_index: int = 0
+var _slide_timer: float = 0.0
+var _slide_fading: bool = false
+var _requested: Array[String] = []   # arka planda istenip henüz alınmamış slaytlar
 
 
 func _ready() -> void:
@@ -94,6 +120,9 @@ func _apply_language() -> void:
 
 func _process(delta: float) -> void:
 	_elapsed += delta
+	_rotate_slide(delta)
+	if _gate_open:
+		return
 	_rotate_tip(delta)
 	if _main != null:
 		_finish_step()
@@ -152,7 +181,7 @@ func _fade_out() -> void:
 
 ## İlk açılış: dolu çubuk ve ipucu söner, yerlerine giriş seçenekleri gelir; seçimden sonra ekran söner.
 func _open_login_gate() -> void:
-	set_process(false)
+	_gate_open = true   # süreç açık kalır: slaytlar giriş seçenekleri beklerken de döner
 	var tween: Tween = create_tween()
 	tween.tween_interval(GATE_HOLD)
 	tween.tween_property(_bottom, "modulate:a", 0.0, GATE_SWAP_TIME)
@@ -173,7 +202,78 @@ func _rotate_tip(delta: float) -> void:
 		return
 	_tip_timer = 0.0
 	_tip_index = (_tip_index + 1) % TIPS.size()
-	_tip.text = Loc.t(TIPS[_tip_index])
+	var tween: Tween = create_tween()
+	tween.tween_property(_tip, "modulate:a", 0.0, TIP_FADE)
+	tween.tween_callback(func() -> void: _tip.text = Loc.t(TIPS[_tip_index]))
+	tween.tween_property(_tip, "modulate:a", 1.0, TIP_FADE)
+
+
+## Slayt: görsel SLIDE_HOLD durur; yarısında sıradaki arka planda yüklenmeye başlar, hazırsa üstünde belirir.
+## Hazır değilse görünen görsel biraz daha bekler (yükleme oyunun sahnesiyle aynı iş parçacıklarını paylaşır).
+func _rotate_slide(delta: float) -> void:
+	if _slides.size() < 2 or _slide_fading:
+		return
+	_slide_timer += delta
+	if _slide_timer >= SLIDE_HOLD * 0.5:
+		_request_slide(_next_slide())
+	if _slide_timer < SLIDE_HOLD:
+		return
+	var texture: Texture2D = _take_slide(_next_slide())
+	if texture == null:
+		return
+	_slide_fading = true
+	_art_next.texture = texture
+	_art_next.modulate.a = 0.0
+	var tween: Tween = create_tween()
+	tween.tween_property(_art_next, "modulate:a", 1.0, SLIDE_FADE).set_trans(Tween.TRANS_SINE)
+	tween.tween_callback(_end_slide_fade)
+
+
+func _end_slide_fade() -> void:
+	_art.texture = _art_next.texture   # önceki görsel bırakılır: bellekte en çok iki görsel
+	_art_next.texture = null
+	_art_next.modulate.a = 0.0
+	_slide_index = (_slide_index + 1) % _slides.size()
+	_slide_timer = 0.0
+	_slide_fading = false
+
+
+func _next_slide() -> String:
+	return _slides[(_slide_index + 1) % _slides.size()]
+
+
+func _request_slide(path: String) -> void:
+	if path in _requested or ResourceLoader.has_cached(path):
+		return
+	if ResourceLoader.load_threaded_request(path) == OK:
+		_requested.append(path)
+
+
+## Yüklenmiş slayt; henüz hazır değilse null. Yüklenemeyen slayt listeden çıkar.
+func _take_slide(path: String) -> Texture2D:
+	if not path in _requested:
+		if ResourceLoader.has_cached(path):
+			return load(path) as Texture2D
+		_request_slide(path)
+		return null
+	match ResourceLoader.load_threaded_get_status(path):
+		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			return null
+		ResourceLoader.THREAD_LOAD_LOADED:
+			_requested.erase(path)
+			return ResourceLoader.load_threaded_get(path) as Texture2D
+	push_warning("LoadingScreen: slayt yüklenemedi, atlanıyor: %s" % path)
+	_requested.erase(path)
+	_slides.erase(path)
+	return null
+
+
+## Alınmamış arka plan yüklemesi yükleyicide görsele referans tutar (ekran kapandıktan sonra da ~10 MB
+## bellekte kalırdı): çıkışta alınıp bırakılır.
+func _exit_tree() -> void:
+	for path: String in _requested:
+		ResourceLoader.load_threaded_get(path)
+	_requested.clear()
 
 
 # --- Kurulum ---------------------------------------------------------------------------
@@ -204,13 +304,16 @@ func _build() -> void:
 		title.add_theme_constant_override(&"outline_size", 14)
 		center.add_child(title)
 	if ResourceLoader.exists(LOADING_IMAGE):
-		var art: TextureRect = TextureRect.new()
-		art.texture = load(LOADING_IMAGE)
-		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED   # ekranı doldurur, kenarlar kırpılır
-		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		_root.add_child(art)
+		_art = _art_rect()
+		_art.texture = load(LOADING_IMAGE)
+		_root.add_child(_art)
+		_art_next = _art_rect()
+		_art_next.modulate.a = 0.0
+		_root.add_child(_art_next)
+		_slides.append(LOADING_IMAGE)
+		for path: String in SLIDES:
+			if ResourceLoader.exists(path):
+				_slides.append(path)
 
 	# Alt şerit: ipucu, çubuk + durum / yüzde
 	_bottom = MarginContainer.new()
@@ -226,7 +329,8 @@ func _build() -> void:
 	column.add_theme_constant_override(&"separation", 12)
 	_bottom.add_child(column)
 
-	_tip = _label(&"HudOutlinedLarge", Loc.t(TIPS[0]))
+	_tip_index = randi() % TIPS.size()   # her açılış başka ipucuyla başlar (açılış çoğu zaman birkaç saniye)
+	_tip = _label(&"HudOutlinedLarge", Loc.t(TIPS[_tip_index]))
 	_tip.add_theme_font_size_override(&"font_size", 19)
 	_tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -256,6 +360,15 @@ func _build() -> void:
 	_percent.add_theme_constant_override(&"outline_size", 5)
 	_percent.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(_percent)
+
+
+func _art_rect() -> TextureRect:
+	var art: TextureRect = TextureRect.new()
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED   # ekranı doldurur, kenarlar kırpılır
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	return art
 
 
 func _label(variation: StringName, text: String) -> Label:

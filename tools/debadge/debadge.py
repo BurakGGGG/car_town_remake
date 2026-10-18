@@ -13,6 +13,7 @@ Yöntem (her araç tek atlas, tek UV):
      (_pad_islands'ın bıraktığı) de yeni renge çekilir; mip'te eski logo hâlesi kalmaz.
 
 Kullanım:
+  blender --background --factory-startup --python tools/debadge/debadge.py -- copy <id> <anahtar> <çıktı.jpg>
   blender --background --factory-startup --python tools/debadge/debadge.py -- render <id> [<id> ...]
   blender --background --factory-startup --python tools/debadge/debadge.py -- apply  <id> [<id> ...]
 Çıktı: ~/Projects/ct_shots/debadge/<id>/ (görünümler, kamera.json, apply sonrası *_after.png önizlemeleri).
@@ -207,14 +208,14 @@ def setup_render(rx, ry):
     sc.render.image_settings.color_mode = "RGBA"
 
 
-def render_views(cid, entry, image_override=None, suffix=""):
+def render_views(cid, entry, image_override=None, suffix="", out_dir=None):
     """Görünümleri çizer; image_override verilirse dokunun yerine o çizilir (maske görünümü)."""
     glb, albedo, mask = paths(entry)
     reset_scene()
     meshes, img = load_car(glb, image_override or albedo)
     tri, uv, bvh = gather(meshes)
     lo, hi, L, W = axes(tri)
-    out = os.path.join(OUT_ROOT, cid)
+    out = out_dir or os.path.join(OUT_ROOT, cid)
     os.makedirs(out, exist_ok=True)
     cams = {}
     for name, (d, up) in view_dirs(lo, hi, L, W).items():
@@ -372,19 +373,25 @@ def raster_uv(tri_uv, size):
     return xx.ravel()[ok], yy.ravel()[ok], np.c_[l1[ok], l2[ok], l3[ok]]
 
 
-def apply(cid, entry, spec):
+def apply(cid, entry, spec, copy_to=None, copy_key=""):
+    """copy_to verilirse KOPYA kipi: kaynak oyunun ŞU ANKİ dokusu, sonuç yalnız copy_to'ya yazılır (oyun dokusu ve
+    boya maskesi değişmez); görünümler <id>/<copy_key>/ altına çizilir. Yükleme ekranı görseli gibi tek seferlik
+    çizimlerde (ör. polis kaplamasındaki yerel yazılar) kullanılır."""
     glb, albedo_path, mask_path = paths(entry)
-    out = os.path.join(OUT_ROOT, cid)
+    out = os.path.join(OUT_ROOT, cid, copy_key) if copy_to else os.path.join(OUT_ROOT, cid)
     os.makedirs(out, exist_ok=True)
-    orig_albedo = os.path.join(out, "orig_albedo.jpg")
-    orig_mask = os.path.join(out, "orig_paintmask.png")
-    if not os.path.exists(orig_albedo):
-        import shutil
-        shutil.copy2(albedo_path, orig_albedo)
-        shutil.copy2(mask_path, orig_mask)
+    if copy_to:
+        orig_albedo, orig_mask = albedo_path, mask_path
+    else:
+        orig_albedo = os.path.join(out, "orig_albedo.jpg")
+        orig_mask = os.path.join(out, "orig_paintmask.png")
+        if not os.path.exists(orig_albedo):
+            import shutil
+            shutil.copy2(albedo_path, orig_albedo)
+            shutil.copy2(mask_path, orig_mask)
     # Görünümleri ORİJİNAL dokuyla yeniden çiz (tekrar apply aynı sonucu verir)
-    render_views(cid, entry, orig_albedo, "")
-    render_views(cid, entry, orig_mask, "_mask")
+    render_views(cid, entry, orig_albedo, "", out)
+    render_views(cid, entry, orig_mask, "_mask", out)
     reset_scene()
     meshes, _ = load_car(glb, orig_albedo)
     tri, uv, bvh = gather(meshes)
@@ -484,8 +491,12 @@ def apply(cid, entry, spec):
                 acc[ok] += alb_new[yy[ok], xx[ok]]; cnt[ok] += 1
             alb_new[ry_, rx_] = acc / np.maximum(cnt, 1)[:, None]
             grow |= ring
-    save_raw(alb_new, albedo_path, out, "RGB")
-    save_raw(msk_new, mask_path, out, "L")
+    if copy_to:
+        save_raw(alb_new, copy_to, out, "RGB")
+        log(cid, "KOPYA:", copy_to)
+    else:
+        save_raw(alb_new, albedo_path, out, "RGB")
+        save_raw(msk_new, mask_path, out, "L")
     log(cid, "TOPLAM texel:", total)
     return total
 
@@ -535,6 +546,12 @@ def main():
             render_views(cid, entry, None, "_after")
         elif mode == "after":
             render_views(cid, entry, None, "_after")
+        elif mode == "copy":
+            # -- copy <id> <badges.json anahtarı> <çıktı.jpg>: oyun dokusuna dokunmadan temizlenmiş kopya
+            key, dst = argv[2], argv[3]
+            apply(cid, entry, spec[key], dst, key.split("@")[-1])
+            render_views(cid, entry, dst, "_after", os.path.join(OUT_ROOT, cid, key.split("@")[-1]))
+            break
 
 
 main()

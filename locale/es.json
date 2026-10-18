@@ -1980,5 +1980,9 @@
  "Yeni kod gönderildi.": "Se envió un código nuevo.",
  "Yeni kod için %d saniye bekle.": "Espera %d segundos para pedir un código nuevo.",
  "e-posta adresin": "tu correo electrónico",
- "Çok fazla kod istendi. %d dakika sonra tekrar dene.": "Se pidieron demasiados códigos. Inténtalo de nuevo en %d minutos."
+ "Çok fazla kod istendi. %d dakika sonra tekrar dene.": "Se pidieron demasiados códigos. Inténtalo de nuevo en %d minutos.",
+ "Yarışı kaybedersen aynı rakiple bir kez ücretsiz rövanş yapabilirsin.": "¿Perdiste una carrera? Tienes una revancha gratis contra el mismo rival.",
+ "Bekleyen müşterilerin sabrı sınırlı: onları çok bekletirsen vazgeçip giderler.": "Los clientes que esperan tienen poca paciencia: si los haces esperar demasiado, se van.",
+ "Sen yokken de garajın çalışır: döndüğünde birikmiş kazancın seni bekler.": "Tu taller sigue trabajando mientras no estás: al volver te esperan tus ganancias.",
+ "Hurdalıkta yığınları arayıp parça topla, klasik araçları restore ederek garajına kat.": "Busca piezas en los montones del desguace y restaura coches clásicos para sumarlos a tu taller."
 }

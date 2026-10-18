@@ -1977,5 +1977,9 @@
  "Yeni kod gönderildi.": "Un nouveau code a été envoyé.",
  "Yeni kod için %d saniye bekle.": "Attends %d secondes pour un nouveau code.",
  "e-posta adresin": "ton adresse e-mail",
- "Çok fazla kod istendi. %d dakika sonra tekrar dene.": "Trop de codes demandés. Réessaie dans %d minutes."
+ "Çok fazla kod istendi. %d dakika sonra tekrar dene.": "Trop de codes demandés. Réessaie dans %d minutes.",
+ "Yarışı kaybedersen aynı rakiple bir kez ücretsiz rövanş yapabilirsin.": "Course perdue ? Tu as droit à une revanche gratuite contre le même adversaire.",
+ "Bekleyen müşterilerin sabrı sınırlı: onları çok bekletirsen vazgeçip giderler.": "Les clients qui attendent ont une patience limitée : si tu les fais trop attendre, ils repartent.",
+ "Sen yokken de garajın çalışır: döndüğünde birikmiş kazancın seni bekler.": "Ton garage continue de tourner en ton absence : tes gains t’attendent à ton retour.",
+ "Hurdalıkta yığınları arayıp parça topla, klasik araçları restore ederek garajına kat.": "Fouille les tas de la casse pour trouver des pièces et restaure des voitures classiques pour ton garage."
 }
