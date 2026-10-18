@@ -1300,6 +1300,9 @@ func _build_router() -> void:
 	router.name = "UiRouter"
 	add_child(router)
 	router.stack_changed.connect(_on_ui_stack_changed)
+	# Kök viewport sahne yenilemesinden sağ çıkar: dil değişimi / bulut kaydı AYARLAR açıkken sahneyi yeniden
+	# kurunca disable_3d açık kalıyor, dünya bir ekran açılıp kapanana dek gri görünüyordu.
+	_sync_world_rendering()
 	router.exit_hint_requested.connect(func() -> void:
 		_show_notice(Loc.t("Çıkmak için tekrar GERİ'ye bas"), Color(1.0, 0.9, 0.5), 1.8))
 	router.back_override = _android_back_for_crate_panel
