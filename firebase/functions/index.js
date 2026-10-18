@@ -16,7 +16,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { handleRaceNews } = require("./news");
 const { cleanupExpired } = require("./cleanup");
-const { sendCode, verifyCode, CodeError } = require("./email_code");
+const { sendCode, verifyCode, CodeError, clientIp } = require("./email_code");
 
 // Resend API anahtarı (Secret Manager; kodda / depoda YOK). Kurulum: firebase functions:secrets:set RESEND_API_KEY
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
@@ -44,16 +44,13 @@ function mailer() {
         headers: { Authorization: `Bearer ${RESEND_API_KEY.value()}`, "Content-Type": "application/json" },
         body: JSON.stringify({ from: MAIL_FROM, to: [to], subject, text, html }),
       });
-      if (!res.ok) throw new Error(`Resend ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      // Günlüğe yalnızca durum + hata türü (validation_error, rate_limit_exceeded…): Resend'in iletisi alıcı adresini içerebilir
+      if (!res.ok) {
+        const kind = await res.json().then((b) => String((b && b.name) || "?").slice(0, 40), () => "?");
+        throw new Error(`Resend ${res.status} ${kind}`);
+      }
     },
   };
-}
-
-// İsteği yapan adres (yalnızca gönderim sınırı için, özeti saklanır). Cloud Run X-Forwarded-For'un ilk öğesi istemcinin
-// yazdığı olabilir; yanıltılırsa yalnızca adres sınırı aşılır, e-posta başına sınır (saatte 5) yine geçerli.
-function clientIp(req) {
-  const forwarded = String(req.rawRequest.headers["x-forwarded-for"] || "").split(",")[0].trim();
-  return forwarded || req.rawRequest.ip || "";
 }
 
 function toHttpsError(e) {
@@ -62,13 +59,15 @@ function toHttpsError(e) {
   return new HttpsError("internal", "internal", { reason: "internal" });
 }
 
-const CODE_OPTS = { region: "europe-west4", maxInstances: 5 };
+// cors: false — oyun yerel HTTP ile çağırır (Origin yok, CORS'a ihtiyacı yok). Varsayılan (true) her siteye izin veriyordu:
+// başka bir sayfa ziyaretçilerinin tarayıcısından kod gönderip her ziyaretçinin ayrı adresiyle adres sınırını aşabilirdi.
+const CODE_OPTS = { region: "europe-west4", maxInstances: 5, cors: false };
 
 exports.emailCodeSend = onCall({ ...CODE_OPTS, secrets: [RESEND_API_KEY] }, async (req) => {
   try {
     return await sendCode({
       db: getFirestore(), mail: mailer(), email: req.data && req.data.email, lang: req.data && req.data.lang,
-      ip: clientIp(req), now: Date.now(),
+      ip: clientIp(req.rawRequest.headers, req.rawRequest.ip), now: Date.now(),
     });
   } catch (e) {
     throw toHttpsError(e);
@@ -104,7 +103,7 @@ exports.raceNewsPush = onDocumentWritten(
       after,
       now: Date.now(),
     });
-    console.log(`raceNewsPush ${eventId} → ${event.params.uid}: ${result}`);
+    console.log(`raceNewsPush: ${result}`);   // kimin kimi yendiği (UID çifti) günlüğe yazılmaz
   },
 );
 

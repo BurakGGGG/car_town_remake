@@ -145,6 +145,21 @@ func _run() -> void:
 		"gürültülü fotoğraf da sığar (kalite düşürülür)")
 	check(ProfileCatalog.image_from_bytes(PackedByteArray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])) == null,
 		"tanınmayan baytlar reddedilir")
+	# Başka oyuncunun fotoğrafı: başlıktaki boyut çözmeden okunur, dev boyutlu (bellek bombası) dosya reddedilir
+	check(ProfileCatalog.jpeg_size(bytes) == Vector2i(ProfileCatalog.PHOTO_SIZE, ProfileCatalog.PHOTO_SIZE),
+		"JPEG başlığından boyut okunur (%s)" % ProfileCatalog.jpeg_size(bytes))
+	var net: Image = ProfileCatalog.image_from_net(bytes)
+	check(net != null and net.get_width() == ProfileCatalog.PHOTO_SIZE, "oyunun yüklediği fotoğraf ağdan kabul edilir")
+	var bomb: PackedByteArray = bytes.duplicate()
+	var sof: int = 2
+	while not (bomb[sof + 1] >= 0xC0 and bomb[sof + 1] <= 0xC3):
+		sof += 2 + ((bomb[sof + 2] << 8) | bomb[sof + 3])
+	bomb[sof + 5] = 0x3E; bomb[sof + 6] = 0x80; bomb[sof + 7] = 0x3E; bomb[sof + 8] = 0x80   # 16000 × 16000
+	check(ProfileCatalog.jpeg_size(bomb) == Vector2i(16000, 16000) and ProfileCatalog.image_from_net(bomb) == null,
+		"başlığında 16000×16000 yazan küçük JPEG çözülmeden reddedilir")
+	check(ProfileCatalog.image_from_net(photo(Color.RED).save_png_to_buffer()) == null, "ağdan PNG kabul edilmez (oyun JPEG yükler)")
+	check(ProfileCatalog.image_from_net(bytes.slice(0, 20)) == null and ProfileCatalog.image_from_net(PackedByteArray()) == null,
+		"yarım / boş JPEG reddedilir")
 	var bad_flags: Array[String] = []
 	for code: String in ProfileCatalog.flag_codes():
 		var img: Image = FlagIcon.image(code)

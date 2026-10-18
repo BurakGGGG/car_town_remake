@@ -17,8 +17,10 @@ service cloud.firestore {
 
     // HERKESE AÇIK GARAJ: yalnızca görsel veri (para / gem / kasa yok). Giriş yapmış herkes okur
     // (arkadaş kodu ile bulunur, ziyaret edilir), yalnızca sahibi yazar.
+    // OKUMA YALNIZCA KİMLİKLE (get): oyun hiçbir zaman koleksiyonu listelemez; liste açık olsaydı herhangi bir hesap
+    // bütün oyuncuların garajını / adını / kodunu toplu indirebilirdi. Aynısı avatars ve codes için.
     match /garages/{garageId} {
-      allow read: if signedIn();
+      allow get: if signedIn();
       allow create, update: if signedIn() && garageId == 'g_' + request.auth.uid
         && isValidGarage(request.resource.data);
       allow delete: if signedIn() && garageId == 'g_' + request.auth.uid;
@@ -28,7 +30,7 @@ service cloud.firestore {
     // giriş yapmış HERKES görebilir; yalnızca sahibi yazar / siler. Açık garajdaki "av" = "img:<hash>" bu belgeyi
     // gösterir, arkadaş hash değişmedikçe yeniden indirmez.
     match /avatars/{avatarId} {
-      allow read: if signedIn();
+      allow get: if signedIn();
       allow create, update: if signedIn() && avatarId == 'a_' + request.auth.uid
         && request.resource.data.keys().hasOnly(['img', 'hash', 'at'])
         && request.resource.data.img is string && request.resource.data.img.size() > 0
@@ -41,11 +43,14 @@ service cloud.firestore {
     // ŞİKÂYET (Play kullanıcı içeriği politikası): reports/x_{şikâyetçi}_{hedef}. Yalnızca YAZILIR; okuma ve silme
     // istemciye kapalı (Firebase konsolundan incelenir). Bir oyuncu aynı kişiyi bir belgeyle şikâyet eder (yeniden
     // şikâyet aynı belgenin üzerine yazar: spam yok). "img": şikâyet anında görülen fotoğraf (sonra değişse de kalsın).
+    // Hedefin açık garajı olmalı (şikâyet edilen ad / fotoğraf / garaj oradan görünür): uydurma hedeflerle sınırsız
+    // belge yazılamaz, bir hesap en çok gerçek oyuncu sayısı kadar şikâyet bırakabilir.
     match /reports/{reportId} {
       allow create, update: if signedIn()
         && request.resource.data.keys().hasOnly(['target', 'reason', 'av', 'img', 'name', 'at'])
         && request.resource.data.target is string && request.resource.data.target != request.auth.uid
         && reportId == 'x_' + request.auth.uid + '_' + request.resource.data.target
+        && exists(/databases/$(database)/documents/garages/$('g_' + request.resource.data.target))
         && request.resource.data.reason in ['photo', 'name', 'garage']
         && request.resource.data.av is string && isValidAv(request.resource.data.av)
         && request.resource.data.name is string && request.resource.data.name.size() <= 16
@@ -71,7 +76,7 @@ service cloud.firestore {
 
     // ARKADAŞ KODU → UID. Kod bir kez alınır (üzerine yazılamaz), yalnızca sahibi siler.
     match /codes/{code} {
-      allow read: if signedIn();
+      allow get: if signedIn();
       allow create: if signedIn() && code.matches('^[A-HJ-NP-Z2-9]{6}$')
         && request.resource.data.keys().hasOnly(['uid'])
         && request.resource.data.uid == request.auth.uid;

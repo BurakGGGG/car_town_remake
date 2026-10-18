@@ -60,6 +60,16 @@ function isValidEmail(email) {
   return email.length <= MAX_EMAIL_LENGTH && EMAIL_RE.test(email);
 }
 
+/**
+ * İsteği yapan adres (yalnızca gönderim sınırı için; özeti saklanır). X-Forwarded-For'un SON öğesi: Cloud Run'ın
+ * ön ucu bağlanan adresi listenin sonuna ekler. İlk öğeler istemcinin kendi yazdığı başlıktan gelir: ilk öğe
+ * alınsaydı her istekte başka bir uydurma adres yazılarak adres başına sınır (saatte 20) hiç dolmazdı.
+ */
+function clientIp(headers, fallback) {
+  const parts = String((headers && headers["x-forwarded-for"]) || "").split(",").map((s) => s.trim()).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : String(fallback || "");
+}
+
 const sha256 = (text) => crypto.createHash("sha256").update(text).digest("hex");
 const codeHash = (salt, code) => sha256(salt + ":" + code);
 
@@ -183,5 +193,5 @@ async function userForEmail(auth, email) {
 
 module.exports = {
   CODE_TTL_MS, RESEND_MS, HOUR_MS, MAX_SENDS_PER_HOUR, MAX_IP_SENDS_PER_HOUR, MAX_ATTEMPTS,
-  CodeError, normalizeEmail, isValidEmail, mailFor, sendCode, verifyCode, sha256,
+  CodeError, normalizeEmail, isValidEmail, mailFor, sendCode, verifyCode, sha256, clientIp,
 };

@@ -142,6 +142,47 @@ static func image_from_bytes(bytes: PackedByteArray) -> Image:
 	return image if err == OK and not image.is_empty() else null
 
 
+## BAŞKA OYUNCUNUN fotoğrafı (avatars belgesi / önbelleği). Oyun her zaman PHOTO_SIZE JPEG yükler; başka biçim ya da
+## başlığında NET_PHOTO_MAX_SIDE'dan büyük boyut yazan dosya ÇÖZÜLMEDEN reddedilir: belgeyi oyunu atlayıp elle yazan
+## biri 1 KB'lık JPEG'in başlığına 16000×16000 yazarsa motor ~800 MB ayırıyordu (fotoğrafı gören arkadaşın oyunu çöker).
+const NET_PHOTO_MAX_SIDE: int = 512
+
+
+static func image_from_net(bytes: PackedByteArray) -> Image:
+	var size: Vector2i = jpeg_size(bytes)
+	if size.x <= 0 or size.y <= 0 or size.x > NET_PHOTO_MAX_SIDE or size.y > NET_PHOTO_MAX_SIDE:
+		return null
+	return image_from_bytes(bytes)
+
+
+## JPEG başlığındaki boyut (çerçeve başlığı SOFn); JPEG değilse ya da okunamazsa (0, 0). Çözmez, yalnızca bölümleri atlar.
+static func jpeg_size(bytes: PackedByteArray) -> Vector2i:
+	if bytes.size() < 4 or bytes[0] != 0xFF or bytes[1] != 0xD8:
+		return Vector2i.ZERO
+	var i: int = 2
+	while i + 3 < bytes.size():
+		if bytes[i] != 0xFF:
+			return Vector2i.ZERO
+		var marker: int = bytes[i + 1]
+		if marker == 0xFF:
+			i += 1   # dolgu baytı
+			continue
+		if marker == 0x01 or (marker >= 0xD0 and marker <= 0xD7):
+			i += 2   # uzunluksuz işaretler
+			continue
+		if marker == 0xD9 or marker == 0xDA:
+			return Vector2i.ZERO   # çerçeve başlığından önce görüntü verisi / son: bozuk
+		var length: int = (bytes[i + 2] << 8) | bytes[i + 3]
+		if length < 2:
+			return Vector2i.ZERO
+		if marker >= 0xC0 and marker <= 0xCF and marker != 0xC4 and marker != 0xC8 and marker != 0xCC:
+			if i + 8 >= bytes.size():
+				return Vector2i.ZERO
+			return Vector2i((bytes[i + 7] << 8) | bytes[i + 8], (bytes[i + 5] << 8) | bytes[i + 6])
+		i += 2 + length
+	return Vector2i.ZERO
+
+
 # --- Çerçeveler ------------------------------------------------------------------
 
 static func frame(id: String) -> Dictionary:

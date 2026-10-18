@@ -166,3 +166,14 @@ test("e-posta metni: 5 dil, bilinmeyen dil İngilizce, Fransızcada noktalamadan
   assert.deepStrictEqual(ec.mailFor("xx", "1"), ec.mailFor("en", "1"));
   assert.ok(!/ [:;!?]/.test(ec.mailFor("fr", "1").text));
 });
+
+test("adres: X-Forwarded-For'un SON öğesi (Cloud Run'ın eklediği); istemcinin yazdığı ilk öğeler sayılmaz", () => {
+  assert.strictEqual(ec.clientIp({ "x-forwarded-for": "9.9.9.9" }, "10.0.0.1"), "9.9.9.9");
+  assert.strictEqual(ec.clientIp({ "x-forwarded-for": "1.1.1.1, 2.2.2.2,  9.9.9.9 " }, "10.0.0.1"), "9.9.9.9");
+  // Her istekte uydurma bir ilk öğe yazmak adresi değiştirmez: sınır aynı adrese işler
+  const a = ec.clientIp({ "x-forwarded-for": "203.0.113.1, 9.9.9.9" }, "");
+  const b = ec.clientIp({ "x-forwarded-for": "203.0.113.2, 9.9.9.9" }, "");
+  assert.strictEqual(a, b);
+  assert.strictEqual(ec.clientIp({}, "10.0.0.1"), "10.0.0.1");
+  assert.strictEqual(ec.clientIp({ "x-forwarded-for": " , " }, undefined), "");
+});

@@ -1281,14 +1281,14 @@ func _fetch_avatar(uid: String, hash: String) -> void:
 		return
 	var bytes: PackedByteArray = Marshalls.base64_to_raw(b64)
 	var got: String = ProfileCatalog.hash_of(bytes)
-	if ProfileCatalog.image_from_bytes(bytes) == null:
+	if ProfileCatalog.image_from_net(bytes) == null:
 		return
 	_store_avatar(uid, got, bytes)
 	avatar_ready.emit(uid)
 
 
 func _store_avatar(uid: String, hash: String, bytes: PackedByteArray) -> void:
-	var image: Image = ProfileCatalog.image_from_bytes(bytes)
+	var image: Image = ProfileCatalog.image_from_net(bytes)
 	if image == null:
 		return
 	_avatars[uid] = {"hash": hash, "tex": ImageTexture.create_from_image(image)}
@@ -1307,7 +1307,7 @@ func _avatar_from_disk(uid: String) -> Texture2D:
 	var path: String = AVATAR_CACHE_DIR + uid.validate_filename() + ".jpg"
 	if not FileAccess.file_exists(path):
 		return null
-	var image: Image = ProfileCatalog.image_from_bytes(FileAccess.get_file_as_bytes(path))
+	var image: Image = ProfileCatalog.image_from_net(FileAccess.get_file_as_bytes(path))
 	return ImageTexture.create_from_image(image) if image else null
 
 

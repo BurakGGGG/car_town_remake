@@ -40,6 +40,7 @@ await check("çıplak uid kimliği reddedilir", assertFails(setDoc(doc(alice, "g
 await check("başkasının garajına yazılamaz", assertFails(setDoc(doc(eve, "garages/g_alice"), garage())));
 await check("giriş yapmış herkes okur", assertSucceeds(getDoc(doc(bob, "garages/g_alice"))));
 await check("girişsiz okunamaz", assertFails(getDoc(doc(anon, "garages/g_alice"))));
+await check("garajlar listelenemez (toplu indirme yok)", assertFails(getDocs(collection(bob, "garages"))));
 await check("ek alan (money) reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), garage({ money: 5 }))));
 await check("Türkçe ad kabul", assertSucceeds(setDoc(doc(alice, "garages/g_alice"), garage({ name: "Şahin Çağrı" }))));
 await check("kısa ad reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), garage({ name: "Al" }))));
@@ -56,6 +57,7 @@ await check("başkası adına kod alınamaz", assertFails(setDoc(doc(eve, "codes
 await check("biçimsiz kod (O/0/I/1) reddedilir", assertFails(setDoc(doc(bob, "codes/BOB0I1"), { uid: "bob" })));
 await check("bob kodunu alır", assertSucceeds(setDoc(doc(bob, "codes/BQB234"), { uid: "bob" })));
 await check("kod okunur", assertSucceeds(getDoc(doc(bob, "codes/ABC234"))));
+await check("kodlar listelenemez (kod → uid haritası çıkarılamaz)", assertFails(getDocs(collection(bob, "codes"))));
 await check("başkasının kodu silinemez", assertFails(deleteDoc(doc(eve, "codes/ABC234"))));
 
 console.log("== istek (alice → bob) ==");
@@ -150,6 +152,8 @@ await check("40000'den büyük resim reddedilir", assertFails(setDoc(doc(alice, 
 await check("boş resim reddedilir", assertFails(setDoc(doc(alice, "avatars/a_alice"), av({ img: "" }))));
 await check("ek alan (url) reddedilir", assertFails(setDoc(doc(alice, "avatars/a_alice"), av({ url: "http://x" }))));
 await check("başkası silemez", assertFails(deleteDoc(doc(eve, "avatars/a_alice"))));
+await check("başkası fotoğrafı kimlikle okur", assertSucceeds(getDoc(doc(bob, "avatars/a_alice"))));
+await check("fotoğraflar listelenemez (toplu indirme yok)", assertFails(getDocs(collection(bob, "avatars"))));
 await check("sahibi siler (hesap silme)", assertSucceeds(deleteDoc(doc(alice, "avatars/a_alice"))));
 
 console.log("== reports ==");
@@ -158,6 +162,7 @@ await check("eve alice'i şikâyet eder", assertSucceeds(setDoc(doc(eve, "report
 await check("aynı şikâyet yeniden yazılır (tek belge)", assertSucceeds(setDoc(doc(eve, "reports/x_eve_alice"), rep({ img: "QUJD", at: 2 }))));
 await check("başkası adına şikâyet edilemez", assertFails(setDoc(doc(eve, "reports/x_bob_alice"), rep())));
 await check("kimlik hedefle uyuşmazsa reddedilir", assertFails(setDoc(doc(eve, "reports/x_eve_bob"), rep())));
+await check("garajı olmayan (uydurma) hedef şikâyet edilemez", assertFails(setDoc(doc(eve, "reports/x_eve_zed"), rep({ target: "zed" }))));
 await check("kendini şikâyet edemez", assertFails(setDoc(doc(alice, "reports/x_alice_alice"), rep())));
 await check("bilinmeyen neden reddedilir", assertFails(setDoc(doc(eve, "reports/x_eve_alice"), rep({ reason: "spam" }))));
 await check("şikâyet okunamaz (yalnız konsol)", assertFails(getDoc(doc(eve, "reports/x_eve_alice"))));
