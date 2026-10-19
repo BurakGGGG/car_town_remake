@@ -5,7 +5,8 @@ extends PlatePanel
 ## (FriendCardScreen) ve ileride yarış davet / sonuç panoları aynı kartı kullanır. Kodla kurulur.
 ##
 ## KİŞİ SÖZLÜĞÜ (show_person): {uid, name, level, value, av, frame, flag, title, car, stats{wins, races, cars, best,
-## best_car}, featured}. SocialManager arkadaş girdileri, FeaturedFriends.all() ve me() aynı biçimdedir.
+## best_car}, featured, garages{own, cap}}. `garages` (GARAJLARIM özeti, PublicGarage.car_garage_summary) yoksa garaj
+## şeridi gizlenir (eski sürümdeki arkadaş, öne çıkan garajlar). SocialManager arkadaş girdileri, FeaturedFriends.all() ve me() aynı biçimdedir.
 ## `actions`: kartın sağ altındaki boş sütun; ekran kendi düğmesini (DÜZENLE) koyar.
 
 const CARD_WIDTH: float = 500.0
@@ -22,6 +23,8 @@ var _name: Label
 var _flag: FlagIcon
 var _title: Label
 var _level: Label
+var _garage_row: HBoxContainer
+var _garage_label: Label
 var _stats: Dictionary = {}   # anahtar → değer etiketi
 var _best_caption: Label
 var _thumb: TextureRect
@@ -65,6 +68,26 @@ func _init() -> void:
 	info.add_child(_title)
 	_level = _label(&"HudInkCaption", "")
 	info.add_child(_level)
+	# GARAJLARIM rozeti: en üst garaj + garaj sayısı + toplam park yeri (kullanıcı kararı 2026-10-19)
+	_garage_row = HBoxContainer.new()
+	_garage_row.name = "GarageRow"
+	_garage_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_garage_row.add_theme_constant_override(&"separation", 5)
+	var garage_icon: HudIcon = HudIcon.new()
+	garage_icon.kind = HudIcon.Kind.GARAGE
+	garage_icon.icon_size = 14.0
+	garage_icon.color = HudPalette.COIN_DARK
+	garage_icon.custom_minimum_size = Vector2(16.0, 16.0)
+	garage_icon.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_garage_row.add_child(garage_icon)
+	# Uzun dillerde (EN/ES "NEIGHBORHOOD GARAGE · …" ≈ 280 > 239 birim) ikinci satıra kayar: bilgi kesilmez
+	_garage_label = _label(&"HudInkCaption", "")
+	_garage_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_garage_label.max_lines_visible = 2
+	_garage_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_garage_row.add_child(_garage_label)
+	_garage_row.visible = false
+	info.add_child(_garage_row)
 
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = 4
@@ -129,6 +152,9 @@ func show_person(entry: Dictionary) -> void:
 	if bool(entry.get("featured", false)):
 		level_text += Loc.t("  ·  AUTO YARD USTASI")
 	_level.text = level_text
+	var garages: Dictionary = entry.get("garages", {}) if entry.get("garages") is Dictionary else {}
+	_garage_label.text = garage_text(garages)
+	_garage_row.visible = not _garage_label.text.is_empty()
 	var stats: Dictionary = entry.get("stats", {}) if entry.get("stats") is Dictionary else {}
 	var races: int = SaveSafe.i(stats.get("races", 0))
 	var wins: int = SaveSafe.i(stats.get("wins", 0))
@@ -151,6 +177,17 @@ func show_person(entry: Dictionary) -> void:
 	var thumb_path: String = THUMB_DIR + car_id + ".png"
 	_thumb.texture = load(thumb_path) as Texture2D if not car.is_empty() and ResourceLoader.exists(thumb_path) else null
 	_car_name.text = CarCatalog.label(car) if not car.is_empty() else Loc.t("SEÇİLMEDİ")
+
+
+## "UÇAK HANGARI · 5 GARAJ · 64 YER" (özet boşsa ""). Dar sütun (≈240 birim): tek boşluklu ayraç, kısa birim.
+static func garage_text(summary: Dictionary) -> String:
+	var own: Array = summary.get("own", []) if summary.get("own") is Array else []
+	if own.is_empty():
+		return ""
+	var top: StringName = StringName(SaveSafe.s(own[own.size() - 1]))
+	var cap: int = SaveSafe.i(summary.get("cap", 0))
+	return " · ".join(PackedStringArray([Loc.upper(CarGarageCatalog.display_name(top)),
+		Loc.tn("%d GARAJ", own.size()) % own.size(), Loc.tn("%d YER", cap) % cap]))
 
 
 ## Avatar resmi: kendi kartım PlayerProfile'dan, öne çıkanlar oyunla gelen portreden, diğerleri SocialManager
@@ -186,6 +223,9 @@ static func me(tree: SceneTree) -> Dictionary:
 	var profile: PlayerProfile = tree.get_first_node_in_group("player_profile") as PlayerProfile
 	if profile:
 		out.merge(profile.public_fields())
+	var garages: CarGarageManager = tree.get_first_node_in_group("car_garages") as CarGarageManager
+	if garages:
+		out["garages"] = garages.public_summary()
 	return out
 
 

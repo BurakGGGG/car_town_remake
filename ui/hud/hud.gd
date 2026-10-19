@@ -171,6 +171,11 @@ var _garage_panel_open: bool = false
 var garage_value_screen: GarageValueScreen
 ## KOLEKSİYON tabelası (showroom ve garaj ekranından açılır).
 var collection_screen: CollectionScreen
+## TÜM ARAÇLAR panosu (garajın alt şeridinden açılır: sınıf / nadirlik süzgeci, sıralama).
+var all_cars_screen: AllCarsScreen
+## GARAJLARIM panosu (garaj ekranının başlığından) ve garajın İÇ YÜKSELTMELER alt panosu.
+var car_garages_screen: CarGaragesScreen
+var car_garage_upgrade_screen: CarGarageUpgradeScreen
 var junkyard_screen: JunkyardScreen
 var restoration_panel: RestorationPanel
 var map_screen: MapScreen
@@ -598,6 +603,21 @@ func _connect_gameplay() -> void:
 		restoration_bays.finale_finished.connect(func(id: StringName) -> void:
 			if restoration_result.visible and restoration_result.vehicle_id == id:
 				restoration_result.hide_panel())   # tören atlandı (kayıt değişti)
+	# GARAJLARIM: araç bekliyor (garajlar dolu) / garaja girdi, inşaat ve iç yükseltme bitti
+	var car_garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
+	if car_garages:
+		car_garages.gem_finished.connect(func(_garage: StringName) -> void: _sfx.gem_skip())
+		car_garages.vehicle_waiting.connect(func(id: StringName) -> void:
+			_show_notice(Loc.t("GARAJLAR DOLU: %s BEKLİYOR\nYER AÇ YA DA YENİ GARAJ AL") % _car_name(id), HudPalette.DANGER, 2.6))
+		car_garages.waiting_parked.connect(func(ids: Array[StringName]) -> void:
+			var text: String = Loc.t("%s GARAJA GİRDİ") % _car_name(ids[0]) if ids.size() == 1 \
+				else Loc.t("%d ARAÇ GARAJA GİRDİ") % ids.size()
+			_show_notice(text, HudPalette.COIN_DARK, 2.2))
+		car_garages.build_finished.connect(func(garage: StringName) -> void:
+			_show_notice(Loc.t("%s HAZIR!") % CarGarageCatalog.display_name(garage), HudPalette.COIN_DARK, 2.4))
+		car_garages.upgrade_finished.connect(func(garage: StringName, item: StringName, level: int) -> void:
+			_show_notice(Loc.t("%s · %s %d. SEVİYE") % [CarGarageCatalog.display_name(garage),
+				CarGarageCatalog.item_name(item), level], HudPalette.COIN_DARK, 2.2))
 	# PERFORMANS MODİFİYESİ: takma bitti / parça takıldı / süren takmaya dokunuldu
 	var mods: PerformanceModManager = get_tree().get_first_node_in_group("performance_mods") as PerformanceModManager
 	if mods:
@@ -1337,6 +1357,22 @@ func _build_progress_screens() -> void:
 	host.add_child(profile_screen)
 	collection_screen = CollectionScreen.new()
 	host.add_child(collection_screen)
+	all_cars_screen = AllCarsScreen.new()
+	all_cars_screen.current_vehicle = garage_screen.shown_vehicle
+	all_cars_screen.current_garage = garage_screen.current_garage
+	host.add_child(all_cars_screen)
+	all_cars_screen.vehicle_chosen.connect(garage_screen.show_vehicle)
+	car_garages_screen = CarGaragesScreen.new()
+	car_garages_screen.current_garage = garage_screen.current_garage
+	host.add_child(car_garages_screen)
+	car_garage_upgrade_screen = CarGarageUpgradeScreen.new()
+	host.add_child(car_garage_upgrade_screen)
+	car_garages_screen.garage_chosen.connect(garage_screen.go_to_garage)
+	car_garages_screen.upgrades_requested.connect(func(garage: StringName) -> void:
+		car_garage_upgrade_screen.garage = garage
+		router.open(&"car_garage_upgrades"))
+	car_garages_screen.gem_store_requested.connect(func() -> void: router.open(&"gem_store"))
+	car_garage_upgrade_screen.gem_store_requested.connect(func() -> void: router.open(&"gem_store"))
 	gem_store_screen = GemStoreScreen.new()
 	gem_store_screen.hud = self
 	host.add_child(gem_store_screen)
@@ -1461,6 +1497,9 @@ func _register_screens() -> void:
 	router.register(&"drag_race", drag_race_screen, UiRouter.Kind.PLACE)
 	router.register(&"race_result", race_result_screen, UiRouter.Kind.MODAL)
 	router.register(&"collection", collection_screen, UiRouter.Kind.MODAL)
+	router.register(&"all_cars", all_cars_screen, UiRouter.Kind.MODAL)
+	router.register(&"car_garages", car_garages_screen, UiRouter.Kind.MODAL)
+	router.register(&"car_garage_upgrades", car_garage_upgrade_screen, UiRouter.Kind.SUB)
 	router.register(&"friends", friends_screen, UiRouter.Kind.MODAL)
 	router.register(&"gem_store", gem_store_screen, UiRouter.Kind.MODAL)
 	router.register(&"map", map_screen, UiRouter.Kind.PLACE)

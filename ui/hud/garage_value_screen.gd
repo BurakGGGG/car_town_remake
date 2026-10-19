@@ -1,6 +1,6 @@
 class_name GarageValueScreen
 extends Control
-## GARAJ DEĞERİ tabelası: garajın toplam değeri, hangi kalemden geldiği ve 10 basamaklı rütbe merdiveni.
+## GARAJ DEĞERİ tabelası: garajın toplam değeri, hangi kalemden geldiği ve 15 basamaklı rütbe merdiveni (kısaltılmış).
 ## Ekran TAMAMEN KODLA kurulur (.tscn yok) ve GarageScreen'in üstüne oturur; "yol mobilyası / plaka" dili.
 ##
 ## HİÇBİR MANTIK BURADA DEĞİL: değer de rütbe de GarageValue'nun statik hesabıdır (kayda yazılmaz,
@@ -10,6 +10,9 @@ extends Control
 signal closed
 
 const PLATE_WIDTH: float = 460.0
+## Merdivende şimdiki rütbeden sonra gösterilen rütbe sayısı: 15 basamağın hepsi telefonda (480 birim) KAPAT'ı ekranın
+## altına itiyordu. Ulaşılmış rütbeler tek satırda, kalanlar "+N RÜTBE DAHA" satırında toplanır.
+const LADDER_AHEAD: int = 5
 
 var _value_label: Label
 var _rank_label: Label
@@ -140,12 +143,22 @@ func _refresh() -> void:
 	_breakdown.add_child(_row(Loc.t("GELİŞTİRMELER"), GarageValue.upgrades_value(tree), false))
 	_breakdown.add_child(_row(Loc.t("TAMİR ALANLARI"), GarageValue.bays_value(tree), false))
 	_breakdown.add_child(_row(Loc.t("BOYA"), GarageValue.paint_value(tree), false))
+	_breakdown.add_child(_row(Loc.t("ARAÇ GARAJLARI"), GarageValue.garages_value(tree), false))
 
 	for child: Node in _ladder.get_children():
 		_ladder.remove_child(child)
 		child.queue_free()
-	for i: int in GarageValue.THRESHOLDS.size():
-		_ladder.add_child(_ladder_row(i + 1, value, rank))
+	var first: int = 1
+	if rank >= 3:
+		_ladder.add_child(_summary_row(Loc.t("1.–%d. RÜTBE") % (rank - 1), Loc.t("AÇILDI"), false))
+		first = rank
+	var count: int = GarageValue.THRESHOLDS.size()
+	var last: int = mini(count, rank + LADDER_AHEAD)
+	for i: int in range(first, last + 1):
+		_ladder.add_child(_ladder_row(i, value, rank))
+	if last < count:
+		_ladder.add_child(_summary_row(Loc.tn("+%d RÜTBE DAHA", count - last) % (count - last),
+			"%s ₺" % Hud.format_thousands(GarageValue.THRESHOLDS[count - 1]), true))
 
 
 ## "ARAÇLAR .......... 85.000 ₺"
@@ -158,6 +171,26 @@ func _row(caption: String, amount: int, dim: bool) -> HBoxContainer:
 	if dim:
 		left.modulate.a = 0.45
 		right.modulate.a = 0.45
+	row.add_child(left)
+	row.add_child(right)
+	return row
+
+
+## Merdivenin toplu satırı (ulaşılmış rütbeler / kalan rütbeler): numara sütunu boş, merdivenle hizalı.
+func _summary_row(caption: String, amount: String, dim: bool) -> HBoxContainer:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override(&"separation", 8)
+	var spacer: Control = Control.new()
+	spacer.custom_minimum_size = Vector2(24.0, 0.0)
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var left: Label = _label(&"HudInkCaption", caption)
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var right: Label = _label(&"HudInkCaption", amount)
+	if dim:
+		left.modulate.a = 0.45
+		right.modulate.a = 0.45
+	row.add_child(spacer)
 	row.add_child(left)
 	row.add_child(right)
 	return row

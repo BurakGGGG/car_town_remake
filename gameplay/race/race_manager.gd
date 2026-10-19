@@ -145,6 +145,9 @@ var _records: Dictionary = {}
 ## Profil kartı: biten yarış (rövanş dahil) ve galibiyet sayısı.
 var _races: int = 0
 var _wins: int = 0
+## ARAÇ BAŞINA (ARAÇLAR ekranının EN ÇOK YARIŞILAN / EN ÇOK KAZANAN sıralaması): araç id → Vector2i(yarış, galibiyet).
+## Toplamla aynı anda sayılır; satılan aracın sayacı silinmez (geri alınınca kaldığı yerden devam eder).
+var _car_counts: Dictionary = {}
 ## ARKADAŞ SKORU: uid → {mw, ml: ben onun aracına karşı kazandım / kaybettim; tw, tl: o benim aracıma karşı (haberden)}.
 var _rivals: Dictionary = {}
 ## Arkadaş bonusunun son verildiği gün: uid → UTC gün.
@@ -475,6 +478,10 @@ func finish_race(won: bool) -> Dictionary:
 	_races += 1
 	if won:
 		_wins += 1
+	var car: StringName = player_vehicle_id()
+	var counts: Vector2i = _car_counts.get(car, Vector2i.ZERO)
+	_car_counts[car] = counts + Vector2i(1, 1 if won else 0)
+	records_changed.emit()   # kayıt (ödülsüz rövanş kaybında para / XP değişmez, sayaç yine yazılsın)
 	# Gerçek arkadaşı yendin: +%20, arkadaş başına günde bir
 	if won and int(reward["money"]) > 0 and friend_bonus_available():
 		var bonus: int = int(round(float(reward["money"]) * FRIEND_BONUS))
@@ -579,6 +586,16 @@ func races() -> int:
 	return _races
 
 
+## Bu araçla biten yarış sayısı (rövanş dahil).
+func vehicle_races(vehicle_id: StringName) -> int:
+	return (_car_counts.get(vehicle_id, Vector2i.ZERO) as Vector2i).x
+
+
+## Bu araçla kazanılan yarış sayısı.
+func vehicle_wins(vehicle_id: StringName) -> int:
+	return (_car_counts.get(vehicle_id, Vector2i.ZERO) as Vector2i).y
+
+
 ## Bütün araçlar arasında en iyi 300 m: {"vehicle": id, "time": sn}; rekor yoksa boş.
 func overall_best() -> Dictionary:
 	var out: Dictionary = {}
@@ -626,13 +643,28 @@ func state() -> Dictionary:
 		var r: Dictionary = _rivals[uid]
 		rivals[uid] = {"mw": SaveSafe.i(r.get("mw", 0)), "ml": SaveSafe.i(r.get("ml", 0)),
 			"tw": SaveSafe.i(r.get("tw", 0)), "tl": SaveSafe.i(r.get("tl", 0))}
-	return {"best": best, "races": _races, "wins": _wins, "rivals": rivals, "bonus": _bonus_day.duplicate()}
+	var cars: Dictionary = {}
+	for id: StringName in _car_counts:
+		var counts: Vector2i = _car_counts[id]
+		cars[String(id)] = {"r": counts.x, "w": counts.y}
+	return {"best": best, "races": _races, "wins": _wins, "cars": cars, "rivals": rivals, "bonus": _bonus_day.duplicate()}
 
 
 func load_state(data: Dictionary) -> void:
 	_records.clear()
 	_races = maxi(SaveSafe.i(data.get("races", 0)), 0)
 	_wins = clampi(SaveSafe.i(data.get("wins", 0)), 0, _races)
+	_car_counts.clear()
+	var cars: Variant = data.get("cars", {})
+	if cars is Dictionary:
+		for key: Variant in cars:
+			var raw: Variant = (cars as Dictionary)[key]
+			var id: StringName = StringName(SaveSafe.s(key))
+			if not raw is Dictionary or id == &"" or CarCatalog.get_entry(id).is_empty():
+				continue
+			var count: int = maxi(SaveSafe.i((raw as Dictionary).get("r", 0)), 0)
+			if count > 0:
+				_car_counts[id] = Vector2i(count, clampi(SaveSafe.i((raw as Dictionary).get("w", 0)), 0, count))
 	_rivals.clear()
 	_bonus_day.clear()
 	var rivals: Variant = data.get("rivals", {})
@@ -669,6 +701,7 @@ func reset() -> void:
 	_records.clear()
 	_races = 0
 	_wins = 0
+	_car_counts.clear()
 	_rivals.clear()
 	_bonus_day.clear()
 

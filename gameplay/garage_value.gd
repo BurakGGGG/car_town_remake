@@ -1,5 +1,5 @@
 class_name GarageValue
-## GARAJ DEĞERİ — oyuncunun garajına yaptığı toplam yatırımın ₺ karşılığı ve 10 basamaklı rütbesi.
+## GARAJ DEĞERİ — oyuncunun garajına yaptığı toplam yatırımın ₺ karşılığı ve 15 basamaklı rütbesi.
 ## Car Town'ın "Garage Value" prensibi: XP'den ve paradan BAĞIMSIZ, uzun vadeli prestij ekseni.
 ##
 ## TÜRETİLMİŞ DEĞERDİR: hiçbir yerde saklanmaz, kayda yazılmaz, sinyali yoktur — her sorulduğunda
@@ -7,7 +7,8 @@ class_name GarageValue
 ## sahneye node eklemez, save şemasını büyütmez, iki kaynak arasında tutarsızlık doğmaz.
 ##
 ## Değer = sahip olunan araçların katalog fiyatı + garaj geliştirmelerine ödenen + açılan tamir
-## alanlarına ödenen + boyanan araç başına sabit katkı (+ ileride dekor eşyaları).
+## alanlarına ödenen + boyanan araç başına sabit katkı + dekor eşyaları + ARAÇ GARAJLARINA (GARAJLARIM: garaj ve iç
+## yükseltmeler) ödenen.
 ## Rütbe pahalı araçları kilitler (CarCatalog "min_garage_rank"), böylece "önce koleksiyonunu
 ## büyüt, sonra pahalı aracı al" hedefi doğar.
 
@@ -28,6 +29,13 @@ const THRESHOLDS: Array[int] = [
 	550000,   # 9
 	700000,   # 10 — 16 araçlık sette tavan: ölçülen 1.088.500 ₺ (600 dk simülasyonu),
 	          #      yani 10. rütbeye 5. saatte ulaşılıyor ve üstü boş kalıyor
+	# 11–15 GARAJLARIM ile (kullanıcı kararı 2026-10-19, docs/GARAJLAR_TASARIM.md §5): 74 aracın hepsi 8,26 M (12. rütbe),
+	# 13–15 için araç garajları şart; 5 garaj + tüm iç kalemler ≈ 25 M, ikisi birlikte ≈ 34 M → 15. rütbe neredeyse her şey.
+	2000000,  # 11
+	5000000,  # 12
+	10000000, # 13
+	20000000, # 14
+	32000000, # 15
 ]
 
 const RANK_NAMES: Array[String] = [
@@ -41,6 +49,12 @@ const RANK_NAMES: Array[String] = [
 	"HARİKA GARAJ",
 	"GÖZ KORKUTAN GARAJ",
 	"EFSANE GARAJ",
+	# 11–15: EFSANE GARAJ'ın yıldızlı devamı (kullanıcı kararı)
+	"EFSANE ★",
+	"EFSANE ★★",
+	"EFSANE ★★★",
+	"EFSANE ★★★★",
+	"EFSANE ★★★★★",
 ]
 
 ## Boyanan her aracın garaj değerine katkısı (boya bedeli gemle ödendiği için sabit karşılık).
@@ -50,7 +64,13 @@ const PAINT_VALUE: int = 2000
 ## Garajın toplam değeri (₺).
 static func compute(tree: SceneTree) -> int:
 	return vehicles_value(tree) + upgrades_value(tree) + bays_value(tree) + paint_value(tree) \
-		+ decor_value(tree)
+		+ decor_value(tree) + garages_value(tree)
+
+
+## ARAÇ GARAJLARINA (GARAJLARIM) ödenen: garajlar + iç yükseltmeler (inşaattaki ve süren iş dahil: para düştü).
+static func garages_value(tree: SceneTree) -> int:
+	var garages: CarGarageManager = tree.get_first_node_in_group("car_garages") as CarGarageManager
+	return garages.spent_total() if garages else 0
 
 
 ## Satın alınmış garaj dekorasyonunun katkısı (yuvaya konmuş olması gerekmez — Car Town'daki
@@ -100,7 +120,7 @@ static func paint_value(tree: SceneTree) -> int:
 	return ownership.paint_state().size() * PAINT_VALUE if ownership else 0
 
 
-## 1–10 arası rütbe.
+## 1–15 arası rütbe.
 static func rank(value: int) -> int:
 	var result: int = 1
 	for i: int in THRESHOLDS.size():

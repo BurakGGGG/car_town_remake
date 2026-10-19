@@ -1,5 +1,5 @@
 extends SceneTree
-## OTO MANŞET QA (2026-10-17, adım 1: sahte veriyle görünüm): kalabalık / sade / tek arkadaş / ziyaret manşetli gazeteler,
+## OTO MANŞET QA (2026-10-17, adım 1: sahte veriyle görünüm): kalabalık / sade / tek arkadaş / ziyaret / garaj manşetli gazeteler,
 ## fırlatmanın ortası, sayfa ekrana sığıyor mu, TAMAM durunca mı açılıyor, kapanınca router boşalıyor mu.
 ## Seslerin dinleme dosyaları da yazılır (zil, pat, hışırtı).
 ## Telefon tuvali (scale 1,35, bkz. qa/ekran_tarama.gd): pencere 1152x648 → 853x480 (16:9), 1440x648 → 1067x480 (20:9).
@@ -84,6 +84,18 @@ func _run() -> void:
 			{"kind": NewsDigest.PILES, "count": 6},
 			{"kind": NewsDigest.MISSIONS, "daily": true, "weekly": true},
 		] as Array[Dictionary], 8],
+		# GARAJLARIM (2026-10-19): arkadaşın lüks garajı manşette, kendi inşaatın sütunda, iç yükseltme KISA KISA'da
+		["05_garajlar", [
+			{"kind": NewsDigest.FRIEND_GARAGE, "people": [_person("featured_elif", "Elif Usta", "")], "garage": CarGarageCatalog.HANGAR},
+			{"kind": NewsDigest.GARAGE_BUILT, "garage": CarGarageCatalog.NEON},
+			{"kind": NewsDigest.GARAGE_UPGRADED, "garage": CarGarageCatalog.SANAYI, "item": CarGarageCatalog.FLOOR},
+			{"kind": NewsDigest.GARAGE_UPGRADED, "garage": CarGarageCatalog.MAHALLE, "item": CarGarageCatalog.PARK},
+			{"kind": NewsDigest.EARNINGS, "money": 1800, "jobs": 5, "minutes": 300},
+		] as Array[Dictionary], 9],
+		["06_insaat", [
+			{"kind": NewsDigest.GARAGE_BUILT, "garage": CarGarageCatalog.SHOWROOM},
+			{"kind": NewsDigest.MOD_READY, "car": &"bmw_e60", "category": &"motor"},
+		] as Array[Dictionary], 10],
 	]
 	for case: Array in cases:
 		print("%s" % case[0])

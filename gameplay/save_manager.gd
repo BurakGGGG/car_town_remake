@@ -74,6 +74,7 @@ var _mods: PerformanceModManager
 var _profile: PlayerProfile
 var _repairs: RepairManager
 var _away: OfflineEarnings
+var _car_garages: CarGarageManager
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -110,6 +111,7 @@ func _setup() -> void:
 	_profile = get_tree().get_first_node_in_group("player_profile") as PlayerProfile
 	_repairs = get_tree().get_first_node_in_group("repair_manager") as RepairManager
 	_away = get_tree().get_first_node_in_group("offline_earnings") as OfflineEarnings
+	_car_garages = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
 	if visit_mode:
 		_loading = true
 		_apply(GarageVisit.garage())
@@ -201,6 +203,8 @@ func new_game() -> void:
 		_progress.reset()
 	if _upgrades:
 		_upgrades.reset()
+	if _car_garages:
+		_car_garages.reset()   # sahiplikten önce (bkz. _apply)
 	if _ownership:
 		_ownership.reset()
 	if _quests:
@@ -272,6 +276,12 @@ func _progress_json() -> String:
 	data.erase("tutorial")   # ders atlamak / izlemek bulut kaydını "ilerlemiş" göstermesin
 	data.erase("away")   # son görülme saati her yazımda değişir; kasa zamanla dolar
 	data.erase("repairs")   # süren tamirler geçicidir
+	# GARAJLARIM: park yerleri / bekleyenler sahipliğin yansımasıdır (araçlar "vehicles"ta sayılır); ilerleme yalnız
+	# alınan garaj, seviye, inşaat ve iştir. Yoksa HOŞ GELDİN KUTUSU'ndan çıkan araç MAHALLE'ye girince "ilerleme" olurdu.
+	var car_garages: Dictionary = data.get("car_garages", {})
+	car_garages.erase("waiting")
+	for garage: Variant in car_garages.get("garages", {}):
+		(car_garages["garages"][garage] as Dictionary).erase("slots")
 	_ignore_welcome(data)
 	return JSON.stringify(data, "", true)
 
@@ -388,6 +398,9 @@ func _collect() -> Dictionary:
 		# PASİF GELİR (OTO MANŞET): son görülme, ustanın kasası, biten yarım işler, gazete sayısı. Eski kayıtta yoktur:
 		# son görülme bilinmez, ilk açılışta yokluk sayılmaz.
 		"away": _away.state() if _away else {},
+		# GARAJLARIM: alınmış / inşaattaki araç garajları, iç yükseltmeler (süren işin bitişi unix sn), araçların park
+		# yerleri ve bekleme otoparkı. Eski kayıtta yoktur: yalnız MAHALLE GARAJI, araçlar sırayla yerleşir.
+		"car_garages": _car_garages.state() if _car_garages else {},
 	}
 
 
@@ -449,6 +462,11 @@ func _apply(data: Dictionary) -> void:
 			levels[GarageUpgradeManager.GARAGE_ID] = maxi(
 				SaveSafe.i(upgrade_data.get(SaveSafe.s(GarageUpgradeManager.CAPACITY_ID), 1)), unlocked_bays)
 		_upgrades.apply_levels(levels)
+	if _car_garages:
+		# SAHİPLİKTEN ÖNCE: sahiplik yüklenince uzlaştırma kayıttaki park yerlerini bulur (sonra değil — yoksa
+		# araçlar önce eski yerleşimle dağıtılır, kayıttaki yerler kaybolurdu)
+		var garage_data: Variant = data.get("car_garages", {})
+		_car_garages.load_state(garage_data if garage_data is Dictionary else {})
 	if _ownership:
 		# v1 kayıtta "vehicles" yoktur: liste boş gider, yüklemeden sonra HOŞ GELDİN KUTUSU gelir (_ensure_welcome)
 		var vehicle_data: Dictionary = data.get("vehicles", {}) if typeof(data.get("vehicles")) == TYPE_DICTIONARY else {}
@@ -459,6 +477,8 @@ func _apply(data: Dictionary) -> void:
 		_ownership.load_paint(paint if paint is Dictionary else {})
 		# v9 ve öncesi: "discovered" yoktur, sahip olunanlar keşfedilmiş sayılır; yarış aracı başlangıç
 		_ownership.load_collection(vehicle_data)
+	if _car_garages:
+		_car_garages.reconcile()   # kayıtta yerleşimi olmayan araçlar (eski kayıt) sırayla yerleşir
 	# v9 ve öncesi (kasa sisteminden önceki oyuncu): eski ilerleme için geriye dönük ödül verilmez —
 	# İLK KASA görevi alınmış sayılır (bedava kasa yok), geçilmiş tamir / koleksiyon kilometre taşları
 	# ödenmiş sayılır (bkz. aşağıda). Yalnızca o günün giriş ödülü normal şekilde gelir.

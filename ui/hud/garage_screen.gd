@@ -66,8 +66,16 @@ func _fix_car_list_layout() -> void:
 	var index: int = car_list.get_index()
 	bottom_group.remove_child(car_list)
 	scroll.add_child(car_list)
-	bottom_group.add_child(scroll)
-	bottom_group.move_child(scroll, index)
+	# Şeridin solunda TÜM ARAÇLAR plakası (filtre / sıralama panosu): ikisi bir satırda, modifiye kipinde birlikte gizlenir
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "StripRow"
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override(&"separation", 6)
+	row.add_child(_build_all_cars_button())
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(scroll)
+	bottom_group.add_child(row)
+	bottom_group.move_child(row, index)
 	car_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL   # az araçta kabı doldurur
 	car_list.alignment = BoxContainer.ALIGNMENT_CENTER          # ... ve ortalanır
 	# Şerit yüksekliği plakalar kurulduktan SONRA belli olur: her minimum boy değişiminde
@@ -262,14 +270,7 @@ func _ready() -> void:
 	var title: Label = find_child("TitleLabel", true, false) as Label
 	if title:
 		title.text = Loc.t("ARAÇLAR")
-	var wall_sign: Label3D = car_viewport.get_node_or_null("Environment/WallSignText") as Label3D
-	if wall_sign:
-		wall_sign.text = Loc.t("ARAÇLAR")
-		# Yazı tabela tahtasına (0,76 m) sığsın: punto gerçek font ölçüsünden (dil değişince uzunluk değişir)
-		var font: Font = wall_sign.font if wall_sign.font else ThemeDB.fallback_font
-		var width: float = font.get_string_size(wall_sign.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 96).x
-		# Hedef 300 px (tahtanın ~%80'i): tahtanın sağ ucu telefonda aksiyon plakalarının arkasında kalıyor
-		wall_sign.font_size = clampi(int(96.0 * 300.0 / maxf(width, 1.0)), 28, wall_sign.font_size)
+	_set_wall_sign(Loc.t("ARAÇLAR"))
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_release_render_target()   # garaj hiç açılmasa da tam ekran hedef ayrılıyordu
 	car_viewport.physics_object_picking = true      # park etmiş araçlara tıklanabilsin
@@ -289,7 +290,17 @@ func _ready() -> void:
 	_build_race_pick()
 	_build_performance_button()
 	_build_collection_button()
+	_build_move()
+	_build_waiting_note()
 	_build_sell()
+	_build_empty_panel()
+	_build_garage_selector()
+	car_list.source = _list_source
+	_interior_view = GarageInteriorView.new()
+	_interior_view.name = "InteriorView"
+	add_child(_interior_view)
+	_interior_view.car_tapped.connect(_on_interior_car_tapped)
+	view.gui_input.connect(_on_view_gui_input)
 	_build_detail()
 	_wrap_info_column()
 	_workshop = ModWorkshop.new()
@@ -403,13 +414,20 @@ func open() -> void:
 		key_light.shadow_enabled = GameSettings.shadows_enabled()
 	_claim_render_target()
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
+	_pick_garage_on_open()
 	car_list.open()   # listeyi güncel sahiplikle kurar (yeni alınan araç burada belirir)
-	# Gösterilecek araç: listede seçili olan, yoksa sahip olunan ilk araç
+	_apply_garage_look()   # iç mekân + araçlar ÖNCE: gösterim lifte model yüklemek yerine park etmiş araca odaklanır
+	# Gösterilecek araç: listede seçili olan, yoksa içinde bulunulan garajın ilk aracı (garaj boşsa boş garaj)
 	var target: StringName = car_list.selected_vehicle()
-	if target == &"" or not _is_owned(target):
-		target = _first_owned()
+	var here: Array[StringName] = _list_source()
+	if target == &"" or not here.has(target):
+		target = here[0] if not here.is_empty() else (&"" if _garage != &"" else _first_owned())
 	_shown_vehicle = &""
-	_show_vehicle(target, false)
+	if target == &"":
+		_show_empty()
+	else:
+		_show_vehicle(target, false)
+	_refresh_title()
 	_refresh_collection()
 	_actions_clear()
 	set_process(true)
@@ -455,8 +473,10 @@ func _claim_render_target() -> void:
 
 func _finish_close() -> void:
 	_close_mods()
+	_interior_view.exit()   # iç mekân ve park etmiş araçlar bellekte kalmasın
 	_sell_panel.hide()
 	_detail_panel.hide()
+	_move_panel.hide()
 	action_column.show()
 	_paint_panel.close()   # önizleme bırakılır; yeniden açılışta aksiyon plakaları görünür
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
@@ -570,12 +590,14 @@ func _show_vehicle(vehicle_id: StringName, animated: bool) -> void:
 
 
 func _apply(entry: Dictionary) -> void:
+	_leave_empty()
 	car_name_label.text = String(entry["display_name"]).to_upper()
 	year_label.text = str(entry["year"])
 	condition_gauge.ratio = entry["condition"]
 	condition_label.text = "%d%%" % roundi(float(entry["condition"]) * 100.0)
 	value_label.text = Hud.format_thousands(entry["price"])
-	_load_preview(entry["scene_path"])
+	if not _focus_interior(_shown_vehicle):
+		_load_preview(entry["scene_path"])
 	_refresh_detail()
 	_actions_clear()
 	_refresh_race_pick()
@@ -587,6 +609,8 @@ func _apply(entry: Dictionary) -> void:
 			_paint_panel.set_vehicle(_shown_vehicle)   # yeni aracın rengi seçili, önizleme yok
 		else:
 			_paint_panel.close()   # closed sinyali aksiyon plakalarını geri getirir
+	_move_panel.hide()
+	_refresh_garage_actions()
 
 
 ## Lift üstündeki modeli serbest bırakır (garaj kapanışı / araç değişimi).
@@ -648,6 +672,9 @@ func _owner_node() -> VehicleOwnership:
 func _on_ownership_changed() -> void:
 	if not visible or _closing:
 		return
+	if _garage != &"":
+		_refresh_collection()
+		return   # GARAJLARIM: hangi aracın nerede durduğunu yerleşim sinyali söyler (_on_layout_changed)
 	if _shown_vehicle != &"" and not _is_owned(_shown_vehicle):
 		_shown_vehicle = &""
 		_show_vehicle(_first_owned(), false)
@@ -662,6 +689,7 @@ func _refresh_collection() -> void:
 	var ownership: VehicleOwnership = _owner_node()
 	var owned: Array[StringName] = ownership.owned_vehicle_ids() if ownership else ([_shown_vehicle] as Array[StringName])
 	_listed = owned
+	_refresh_all_cars_button(owned.size())
 	if not SHOW_PARKED_CARS:
 		_clear_collection()
 		_fit_camera(1)   # kadraj tek araca göre: lift ortada, kamera yakın
@@ -760,6 +788,8 @@ func _clear_collection() -> void:
 
 ## Araç sayısı arttıkça kamera açılır; hepsi kadraja sığar, izometrik açı değişmez.
 func _fit_camera(count: int) -> void:
+	if _interior_view and _interior_view.active:
+		return   # iç mekân kamerası GarageInteriorView'da
 	preview_camera.size = lerpf(CAM_SIZE_MIN, CAM_SIZE_MAX,
 		clampf(float(count - 1) / CAM_FULL_AT, 0.0, 1.0))
 	preview_camera.position = _camera_home + CAM_SHIFT * clampf(float(count - 1) / CAM_SHIFT_AT, 0.0, 1.0)
@@ -856,6 +886,7 @@ func _open_sell() -> void:
 		_sell_payout.text = "+%s ₺" % Hud.format_thousands(ownership.sell_price(_shown_vehicle))
 		_sell_confirm.disabled = false
 	_paint_panel.close()
+	_move_panel.hide()
 	action_column.hide()
 	_sell_panel.show()
 
@@ -999,6 +1030,7 @@ func _open_detail() -> void:
 	_refresh_detail()
 	_paint_panel.close()
 	_sell_panel.hide()
+	_move_panel.hide()
 	action_column.hide()
 	_detail_panel.show()
 
@@ -1076,18 +1108,20 @@ func _build_performance_button() -> void:
 
 ## MODİFİYE kipine geçer (lifteki araç sahip olunan bir araçsa).
 func open_mods() -> void:
-	if _shown_vehicle == &"" or not _is_owned(_shown_vehicle) or _workshop.is_active():
-		return
-	_kill_tweens()   # giriş animasyonu sürerken eski hedef konum genişleyen sağ plakayı ekrandan iterdi
+	if _shown_vehicle == &"" or not _is_owned(_shown_vehicle) or _workshop.is_active() \
+			or _garage == CarGarageManager.WAITING:
+		return   # bekleyen araç modifiyeye giremez (garajlar dolu)
+	_kill_tweens()
+	_set_selector_visible(false)   # giriş animasyonu sürerken eski hedef konum genişleyen sağ plakayı ekrandan iterdi
 	_actions_clear()
 	_paint_panel.close()
 	_sell_panel.hide()
 	_detail_panel.hide()
 	action_column.hide()
 	_info_scroll.hide()
-	var list_scroll: Control = bottom_group.get_node_or_null("CarListScroll") as Control
-	if list_scroll:
-		list_scroll.hide()
+	var strip: Control = bottom_group.get_node_or_null("StripRow") as Control
+	if strip:
+		strip.hide()
 	_set_title(Loc.t("MODİFİYE"))
 	_right_layout = {}
 	for key: String in ["anchor_left", "anchor_top", "anchor_right", "anchor_bottom", "offset_left", "offset_top",
@@ -1109,10 +1143,10 @@ func _close_mods() -> void:
 	_right_layout = {}
 	action_column.show()
 	_info_scroll.show()
-	var list_scroll: Control = bottom_group.get_node_or_null("CarListScroll") as Control
-	if list_scroll:
-		list_scroll.show()
-	_set_title(Loc.t("ARAÇLAR"))
+	var strip: Control = bottom_group.get_node_or_null("StripRow") as Control
+	if strip:
+		strip.show()
+	_refresh_title()
 	_apply_responsive_layout()
 	_place_car_list.call_deferred()
 
@@ -1176,12 +1210,51 @@ func _build_collection_button() -> void:
 	action_column.add_child(button)
 
 
+## Alt şeridin solundaki TÜM ARAÇLAR plakası: sınıf / nadirlik süzgeçli, sıralanabilir ızgara (AllCarsScreen, UiRouter).
+var _all_cars_button: PlateButton
+
+
+func _build_all_cars_button() -> PlateButton:
+	_all_cars_button = PlateButton.new()
+	_all_cars_button.name = "AllCarsButton"
+	_all_cars_button.theme_type_variation = &"HudPlate"
+	_all_cars_button.kind = HudIcon.Kind.GRID
+	_all_cars_button.text = Loc.t("TÜM ARAÇLAR")
+	_all_cars_button.custom_minimum_size = Vector2(96.0, 0.0)
+	_all_cars_button.focus_mode = Control.FOCUS_NONE
+	_all_cars_button.pressed.connect(func() -> void:
+		_actions_clear()
+		screen_requested.emit(&"all_cars"))
+	return _all_cars_button
+
+
+func _refresh_all_cars_button(count: int) -> void:
+	if _all_cars_button:
+		_all_cars_button.text = Loc.t("TÜM ARAÇLAR\n%d") % count
+
+
+## TÜM ARAÇLAR panosundan seçildi: araç lifte çıkar, alt şerit onun plakasına kayar.
+func show_vehicle(vehicle_id: StringName) -> void:
+	if not visible or _closing or not _is_owned(vehicle_id):
+		return
+	var home: StringName = _garages().garage_of(vehicle_id) if _garages() and _garage != &"" else &""
+	if home != &"" and home != _garage:
+		_switch_garage(home, vehicle_id)
+	else:
+		car_list.select(vehicle_id)   # vehicle_selected → _show_vehicle
+	var column: Control = car_list.get_node_or_null(NodePath(String(vehicle_id))) as Control
+	var scroll: ScrollContainer = car_list.get_parent() as ScrollContainer
+	if column and scroll:
+		scroll.ensure_control_visible.call_deferred(column)
+
+
 func _open_paint() -> void:
 	if not GameFeatures.PAINT:
 		return   # özellik kapalı: pano hiçbir yoldan açılmaz (plaka zaten gizli)
-	if _shown_vehicle == &"" or not VehicleOwnership.is_paintable(_shown_vehicle):
+	if _shown_vehicle == &"" or not VehicleOwnership.is_paintable(_shown_vehicle) or _garage == CarGarageManager.WAITING:
 		return
 	_actions_clear()
+	_move_panel.hide()
 	action_column.hide()
 	_paint_panel.open(_shown_vehicle)
 
@@ -1228,3 +1301,524 @@ func _on_action_toggled(pressed: bool, action: StringName) -> void:
 func _actions_clear() -> void:
 	for button: PlateButton in [detail_button, repair_button, sell_button]:
 		button.set_pressed_no_signal(false)
+
+
+# --- GARAJLARIM: garaj seçici, TAŞI, bekleyen araç, boş garaj (docs/GARAJLAR_TASARIM.md §2–6) ------------------
+
+## İçinde bulunulan garaj (CarGarageCatalog id ya da CarGarageManager.WAITING = bekleme otoparkı). Garaj yöneticisi
+## yoksa (arkadaş garajı ziyareti) &"": eski tek garaj görünümü, alt şeritte bütün araçlar.
+var _garage: StringName = &""
+var _garage_manager: CarGarageManager
+var _prev_garage: PlateButton
+var _next_garage: PlateButton
+var _title_hit: Button
+var _move_button: PlateButton
+var _move_panel: PlatePanel
+var _move_list: VBoxContainer
+var _waiting_note: PlatePanel
+var _empty_panel: PlatePanel
+var _empty: bool = false
+var _interior_view: GarageInteriorView
+var _look: Dictionary = {}     # duvar mesh adı → özgün materyal
+var _tinted: Dictionary = {}   # "mesh|garaj" → renklendirilmiş kopya
+
+## Faz 3'ün Blender garajları gelene kadar garajlar KUTU garajdır: bugünkü oda, duvarları garajın rengine boyanır.
+const TINTED_MESHES: Array[String] = ["BackWall", "LeftWall", "BackBand", "LeftBand"]
+
+
+func _garages() -> CarGarageManager:
+	if _garage_manager == null and is_inside_tree():
+		_garage_manager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
+		if _garage_manager:
+			_garage_manager.layout_changed.connect(_on_layout_changed)
+			_garage_manager.garages_changed.connect(_refresh_title)
+			_garage_manager.garages_changed.connect(_refresh_interior_levels)
+	return _garage_manager
+
+
+## İçinde bulunulan garaj.
+func current_garage() -> StringName:
+	return _garage
+
+
+## Alt şeridin kaynağı: içinde bulunulan garajın araçları (yönetici yoksa sahip olunan hepsi).
+func _list_source() -> Array[StringName]:
+	var manager: CarGarageManager = _garages()
+	if manager == null or _garage == &"":
+		var ownership: VehicleOwnership = _owner_node()
+		var all: Array[StringName] = []
+		if ownership:
+			all = ownership.owned_vehicle_ids()
+		return all
+	return manager.cars_in(_garage)
+
+
+## Oklarla gezilen sıra: alınmış garajlar (merdiven sırasıyla) + bekleyen varsa BEKLEYENLER.
+func _garage_cycle() -> Array[StringName]:
+	var out: Array[StringName] = []
+	var manager: CarGarageManager = _garages()
+	if manager == null:
+		return out
+	out = manager.owned_garages()
+	if not manager.waiting_ids().is_empty():
+		out.append(CarGarageManager.WAITING)
+	return out
+
+
+## Açılışta: listede seçili aracın garajı; o yoksa son bakılan garaj (hâlâ geçerliyse); yoksa MAHALLE.
+func _pick_garage_on_open() -> void:
+	var manager: CarGarageManager = _garages()
+	if manager == null:
+		_garage = &""
+		return
+	var cycle: Array[StringName] = _garage_cycle()
+	var home: StringName = manager.garage_of(car_list.selected_vehicle()) if car_list.selected_vehicle() != &"" else &""
+	if home != &"":
+		_garage = home
+	elif not cycle.has(_garage):
+		_garage = CarGarageCatalog.MAHALLE
+
+
+## Başka garaja geçer; `focus` o garajdaysa lifte o çıkar, yoksa garajın ilk aracı (garaj boşsa boş garaj).
+func _switch_garage(garage: StringName, focus: StringName = &"") -> void:
+	_garage = garage
+	_sell_panel.hide()
+	_detail_panel.hide()
+	_move_panel.hide()
+	_paint_panel.close()
+	_actions_clear()
+	car_list.refresh()
+	_apply_garage_look()   # iç mekân ve araçları önce (bkz. open)
+	var cars: Array[StringName] = _list_source()
+	var target: StringName = focus if cars.has(focus) else (cars[0] if not cars.is_empty() else &"")
+	if target == &"":
+		_show_empty()
+	elif target == _shown_vehicle:
+		car_list.select(target)
+		_leave_empty()
+		_refresh_garage_actions()
+		_focus_interior(target)
+	else:
+		_show_vehicle(target, true)
+	_refresh_title()
+	_place_car_list.call_deferred()
+
+
+func _step_garage(step: int) -> void:
+	var cycle: Array[StringName] = _garage_cycle()
+	if cycle.size() < 2 or is_modding():
+		return
+	_switch_garage(cycle[posmod(cycle.find(_garage) + step, cycle.size())])
+
+
+## Yerleşim değişti (araç geldi / satıldı / taşındı, bekleyen garaja girdi, yer açıldı).
+func _on_layout_changed() -> void:
+	if not visible or _closing or _garage == &"":
+		return
+	var manager: CarGarageManager = _garages()
+	if is_modding():
+		car_list.refresh()
+		return
+	var cars: Array[StringName] = _list_source()
+	if _shown_vehicle != &"" and not cars.has(_shown_vehicle):
+		var home: StringName = manager.garage_of(_shown_vehicle)
+		if home != &"":   # taşındı ya da bekleme otoparkından garaja girdi: araç izlenir
+			_switch_garage(home, _shown_vehicle)
+			return
+	if _garage == CarGarageManager.WAITING and cars.is_empty():
+		_switch_garage(CarGarageCatalog.MAHALLE)
+		return
+	car_list.refresh()
+	_sync_interior_cars()
+	if _shown_vehicle == &"" or not cars.has(_shown_vehicle):
+		if cars.is_empty():
+			_show_empty()
+		else:
+			_shown_vehicle = &""
+			_show_vehicle(cars[0], false)
+	_refresh_title()
+
+
+# --- Başlık: ‹ GARAJ ADI  dolu/kapasite › ---------------------------------------------------------------
+
+## Sahnedeki başlık plakası iki ok plakasının arasına alınır; plakanın kendisine basınca GARAJLARIM panosu açılır.
+func _build_garage_selector() -> void:
+	var sign: Control = get_node_or_null("%TitleSign") as Control
+	if sign == null:
+		return
+	var host: Node = sign.get_parent()
+	var index: int = sign.get_index()
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "GarageSelector"
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override(&"separation", 6)
+	host.remove_child(sign)
+	_prev_garage = _arrow_button("PrevGarage", "‹", -1)
+	_next_garage = _arrow_button("NextGarage", "›", 1)
+	row.add_child(_prev_garage)
+	row.add_child(sign)
+	row.add_child(_next_garage)
+	host.add_child(row)
+	host.move_child(row, index)
+	_title_hit = Button.new()
+	_title_hit.name = "GaragesHit"
+	_title_hit.flat = true
+	_title_hit.focus_mode = Control.FOCUS_NONE
+	for state: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed", &"focus", &"disabled"]:
+		_title_hit.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	_title_hit.pressed.connect(func() -> void:
+		if _garages() and not is_modding():
+			_actions_clear()
+			screen_requested.emit(&"car_garages"))
+	sign.add_child(_title_hit)
+	_set_selector_visible(false)
+
+
+func _arrow_button(node_name: String, glyph: String, step: int) -> PlateButton:
+	var button: PlateButton = PlateButton.new()
+	button.name = node_name
+	button.theme_type_variation = &"HudPlateSmall"
+	button.bolts = false
+	button.text = glyph
+	button.add_theme_font_size_override(&"font_size", 22)
+	button.custom_minimum_size = Vector2(PlateButton.MIN_PLATE_HEIGHT, 0.0)
+	button.focus_mode = Control.FOCUS_NONE
+	button.pressed.connect(_step_garage.bind(step))
+	return button
+
+
+func _set_selector_visible(on: bool) -> void:
+	var cycle_size: int = _garage_cycle().size() if on else 0
+	if _prev_garage:
+		_prev_garage.visible = cycle_size > 1
+		_next_garage.visible = cycle_size > 1
+	if _title_hit:
+		_title_hit.visible = on and _garages() != null
+
+
+func _refresh_title() -> void:
+	if is_modding():
+		return
+	var manager: CarGarageManager = _garages()
+	_set_selector_visible(manager != null and _garage != &"")
+	if manager == null or _garage == &"":
+		_set_title(Loc.t("ARAÇLAR"))
+	elif _garage == CarGarageManager.WAITING:
+		_set_title(Loc.t("BEKLEYENLER   %d") % manager.waiting_ids().size())
+	else:
+		_set_title("%s   %d/%d" % [CarGarageCatalog.display_name(_garage), manager.used(_garage), manager.capacity(_garage)])
+
+
+## Duvar tabelası: garajın adı, tabela tahtasına (0,76 m) sığacak puntoda.
+func _set_wall_sign(text: String) -> void:
+	var wall_sign: Label3D = car_viewport.get_node_or_null("Environment/WallSignText") as Label3D
+	if wall_sign == null:
+		return
+	if not wall_sign.has_meta(&"base_size"):
+		wall_sign.set_meta(&"base_size", wall_sign.font_size)
+	wall_sign.text = text
+	# Punto gerçek font ölçüsünden (dil değişince uzunluk değişir). Hedef 300 px (tahtanın ~%80'i): tahtanın sağ
+	# ucu telefonda aksiyon plakalarının arkasında kalıyor
+	var font: Font = wall_sign.font if wall_sign.font else ThemeDB.fallback_font
+	var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 96).x
+	wall_sign.font_size = clampi(int(96.0 * 300.0 / maxf(width, 1.0)), 28, int(wall_sign.get_meta(&"base_size")))
+
+
+## Pişmiş 3D iç mekânı olan garajlar (GarageInterior): MAHALLE ve BEKLEYENLER (çatı katı otopark). Ötekiler Faz 3
+## sürerken KUTU garaj (aşağıda).
+func _interior_id(garage: StringName) -> StringName:
+	if garage == CarGarageManager.WAITING:
+		return &"waiting"
+	return garage if GarageInterior.has_scene(garage) else &""
+
+
+## İç mekân kipine girer / çıkar; girildiyse araçlar park yerlerine konur. Eski oda ve lift gizlenir.
+func _apply_interior() -> bool:
+	var id: StringName = _interior_id(_garage) if _garage != &"" else &""
+	if id == &"" or not visible:
+		_interior_view.exit()
+		return false
+	var hide: Array[Node3D] = [car_slot]
+	var room: Node3D = car_viewport.get_node_or_null("Environment") as Node3D
+	if room:
+		hide.append(room)
+	if not _interior_view.enter(id, car_viewport, preview_camera, car_viewport.get_node_or_null("KeyLight") as DirectionalLight3D,
+			hide):
+		return false
+	_refresh_interior_levels()
+	_sync_interior_cars()
+	return true
+
+
+func _refresh_interior_levels() -> void:
+	var manager: CarGarageManager = _garages()
+	if not _interior_view.active or manager == null or not CarGarageCatalog.has(_garage):
+		return
+	var levels: Dictionary = {}
+	for item: StringName in CarGarageCatalog.ITEMS:
+		levels[item] = manager.item_level(_garage, item)
+	levels[&"floor"] = manager.item_level(_garage, CarGarageCatalog.FLOOR)
+	_interior_view.set_levels(levels)
+
+
+## Park yerlerindeki araçlar: garajın yerleri; BEKLEYENLER'de en son gelen çekicinin kasasında, ötekiler sırayla.
+func _sync_interior_cars() -> void:
+	var manager: CarGarageManager = _garages()
+	if not _interior_view.active or manager == null:
+		return
+	if _garage == CarGarageManager.WAITING:
+		var waiting: Array[StringName] = manager.waiting_ids()
+		var tow: StringName = waiting.pop_back() if not waiting.is_empty() else &""
+		_interior_view.sync_cars(waiting, tow)
+	else:
+		_interior_view.sync_cars(manager.slots_of(_garage))
+
+
+## İç mekândaysa kamera araca gider, BOYA önizlemesi park etmiş aracın görünüm sürücüsünü kullanır. Lift modeli
+## yüklenmez (varsa serbest). İç mekânda değilse false.
+func _focus_interior(vehicle_id: StringName) -> bool:
+	if not _interior_view.active or not _interior_view.has_car(vehicle_id):
+		return false
+	if _preview:
+		_preview.queue_free()
+		_preview = null
+	_preview_rig = _interior_view.rig_of(vehicle_id)
+	_interior_view.focus(vehicle_id)
+	return true
+
+
+func _on_interior_car_tapped(vehicle_id: StringName) -> void:
+	if is_modding() or _closing:
+		return
+	car_list.select(vehicle_id)   # vehicle_selected → _show_vehicle (alt şerit de eşlenir)
+	if _shown_vehicle != vehicle_id:
+		_show_vehicle(vehicle_id, true)
+
+
+func _on_view_gui_input(event: InputEvent) -> void:
+	if _interior_view.handle_input(event):
+		view.accept_event()
+
+
+## KUTU GARAJ görünümü: duvarlar garajın rengine boyanır, tabelada garajın adı (MAHALLE ve bekleyenler: özgün oda).
+func _apply_garage_look() -> void:
+	if _apply_interior():
+		return
+	var environment: Node = car_viewport.get_node_or_null("Environment")
+	if environment == null:
+		return
+	var tinted: bool = CarGarageCatalog.has(_garage) and _garage != CarGarageCatalog.MAHALLE
+	for mesh_name: String in TINTED_MESHES:
+		var mesh: MeshInstance3D = environment.get_node_or_null(mesh_name) as MeshInstance3D
+		if mesh == null:
+			continue
+		if not _look.has(mesh_name):
+			_look[mesh_name] = mesh.material_override
+		var base: StandardMaterial3D = _look[mesh_name] as StandardMaterial3D
+		if not tinted or base == null:
+			mesh.material_override = _look[mesh_name]
+			continue
+		var key: String = "%s|%s" % [mesh_name, _garage]
+		if not _tinted.has(key):
+			var copy: StandardMaterial3D = base.duplicate() as StandardMaterial3D
+			copy.albedo_color = base.albedo_color * CarGarageCatalog.tint(_garage)
+			_tinted[key] = copy
+		mesh.material_override = _tinted[key]
+	if _garage == CarGarageManager.WAITING:
+		_set_wall_sign(Loc.t("BEKLEYENLER"))
+	elif CarGarageCatalog.has(_garage):
+		_set_wall_sign(CarGarageCatalog.display_name(_garage))
+	else:
+		_set_wall_sign(Loc.t("ARAÇLAR"))
+
+
+# --- Aksiyonlar: bekleyen araç, TAŞI, boş garaj ---------------------------------------------------------
+
+## Bekleyen araç yarışa / modifiyeye / boyaya giremez, taşınamaz (yer yok): yalnız DETAY, SAT, KOLEKSİYON.
+func _refresh_garage_actions() -> void:
+	var manager: CarGarageManager = _garages()
+	var waiting: bool = manager != null and _garage == CarGarageManager.WAITING
+	_waiting_note.visible = waiting and not _empty
+	_race_button.visible = not waiting
+	repair_button.visible = not waiting
+	var modify: Control = action_column.get_node_or_null("ModifyButton") as Control
+	if modify:
+		modify.visible = not waiting
+	_paint_button.visible = GameFeatures.PAINT and VehicleOwnership.is_paintable(_shown_vehicle) and not waiting
+	_move_button.visible = manager != null and not waiting and manager.owned_garages().size() > 1
+
+
+func _build_waiting_note() -> void:
+	_waiting_note = _note_panel("WaitingNote", Loc.t("BEKLİYOR"),
+		Loc.t("GARAJLAR DOLU. YER AÇILINCA KENDİLİĞİNDEN GİRER."), Loc.t("GARAJLARIM"))
+	_waiting_note.visible = false
+	action_column.add_child(_waiting_note)
+	action_column.move_child(_waiting_note, 0)
+
+
+func _build_empty_panel() -> void:
+	_empty_panel = _note_panel("EmptyPanel", Loc.t("GARAJ BOŞ"),
+		Loc.t("YENİ ARAÇLAR BOŞ YERİ OLAN EN ÜST GARAJA PARK EDER. BAŞKA GARAJDAN TAŞI İLE DE GETİREBİLİRSİN."),
+		Loc.t("GARAJLARIM"))
+	_empty_panel.visible = false
+	right_group.add_child(_empty_panel)
+
+
+## Başlık + açıklama + GARAJLARIM plakası.
+func _note_panel(node_name: String, title_text: String, body_text: String, button_text: String) -> PlatePanel:
+	var panel: PlatePanel = PlatePanel.new()
+	panel.name = node_name
+	panel.theme_type_variation = &"HudCarPlate"
+	panel.custom_minimum_size = Vector2(190.0, 0.0)
+	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var box: VBoxContainer = VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override(&"separation", 4)
+	var title: Label = Label.new()
+	title.theme_type_variation = &"HudPlateTitle"
+	title.text = title_text
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var body: Label = Label.new()
+	body.theme_type_variation = &"HudInkCaption"
+	body.text = body_text
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.custom_minimum_size = Vector2(170.0, 0.0)
+	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var button: PlateButton = PlateButton.new()
+	button.theme_type_variation = &"HudPlateSmall"
+	button.text = button_text
+	button.bolts = false
+	button.focus_mode = Control.FOCUS_NONE
+	button.pressed.connect(func() -> void:
+		_actions_clear()
+		screen_requested.emit(&"car_garages"))
+	box.add_child(title)
+	box.add_child(body)
+	box.add_child(button)
+	panel.add_child(box)
+	return panel
+
+
+## Garaj boş: lift boş kalır, bilgi ve aksiyon plakalarının yerine GARAJ BOŞ notu.
+func _show_empty() -> void:
+	_empty = true
+	_clear_preview()
+	if _interior_view.active:
+		_interior_view.overview()
+	car_name_label.text = ""
+	_info_scroll.hide()
+	action_column.hide()
+	_sell_panel.hide()
+	_detail_panel.hide()
+	_move_panel.hide()
+	_waiting_note.hide()
+	_empty_panel.show()
+
+
+func _leave_empty() -> void:
+	if not _empty:
+		return
+	_empty = false
+	_empty_panel.hide()
+	_info_scroll.show()
+	action_column.show()
+	_apply_responsive_layout()
+
+
+func _build_move() -> void:
+	_move_button = PlateButton.new()
+	_move_button.name = "MoveButton"
+	_move_button.theme_type_variation = &"HudPlate"
+	_move_button.kind = HudIcon.Kind.BOX
+	_move_button.text = Loc.t("TAŞI")
+	_move_button.custom_minimum_size = Vector2(86.0, 0.0)
+	_move_button.focus_mode = Control.FOCUS_NONE
+	_move_button.visible = false
+	_move_button.pressed.connect(_open_move)
+	action_column.add_child(_move_button)
+	_move_panel = PlatePanel.new()
+	_move_panel.name = "MovePanel"
+	_move_panel.theme_type_variation = &"HudCarPlate"
+	_move_panel.custom_minimum_size = Vector2(190.0, 0.0)
+	_move_panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_move_panel.visible = false
+	var box: VBoxContainer = VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override(&"separation", 4)
+	var title: Label = Label.new()
+	title.theme_type_variation = &"HudPlateTitle"
+	title.text = Loc.t("BAŞKA GARAJA TAŞI")
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(title)
+	_move_list = VBoxContainer.new()
+	_move_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_move_list.add_theme_constant_override(&"separation", 4)
+	box.add_child(_move_list)
+	var cancel: PlateButton = PlateButton.new()
+	cancel.theme_type_variation = &"HudPlateSmall"
+	cancel.text = Loc.t("VAZGEÇ")
+	cancel.bolts = false
+	cancel.focus_mode = Control.FOCUS_NONE
+	cancel.pressed.connect(_close_move)
+	box.add_child(cancel)
+	_move_panel.add_child(box)
+	right_group.add_child(_move_panel)
+
+
+## Hedefler: öteki alınmış garajlar, doluluklarıyla. Dolu garaj basılamaz.
+func _open_move() -> void:
+	var manager: CarGarageManager = _garages()
+	if manager == null or _shown_vehicle == &"":
+		return
+	for child: Node in _move_list.get_children():
+		_move_list.remove_child(child)
+		child.queue_free()
+	for garage: StringName in manager.owned_garages():
+		if garage == _garage:
+			continue
+		var full: bool = manager.used(garage) >= manager.capacity(garage)
+		var button: PlateButton = PlateButton.new()
+		button.name = "MoveTo_%s" % garage
+		button.theme_type_variation = &"HudPlateSmall"
+		button.bolts = false
+		button.focus_mode = Control.FOCUS_NONE
+		button.text = "%s\n%s" % [CarGarageCatalog.display_name(garage), Loc.t("DOLU") if full
+			else "%d/%d" % [manager.used(garage), manager.capacity(garage)]]
+		button.disabled = full
+		button.pressed.connect(_on_move_picked.bind(garage))
+		_move_list.add_child(button)
+	_actions_clear()
+	_paint_panel.close()
+	_sell_panel.hide()
+	_detail_panel.hide()
+	action_column.hide()
+	_move_panel.show()
+
+
+func _close_move() -> void:
+	_move_panel.hide()
+	action_column.show()
+	_actions_clear()
+
+
+## Araç taşınır; yerleşim sinyali ekranı hedef garaja geçirir (araç izlenir).
+func _on_move_picked(garage: StringName) -> void:
+	var car: StringName = _shown_vehicle
+	_close_move()
+	var manager: CarGarageManager = _garages()
+	if manager:
+		manager.move(car, garage)
+
+
+## GARAJLARIM'dan GİT / BEKLEYENLER: o garaja geçilir (alınmamış garaja, boş bekleme otoparkına geçilmez).
+func go_to_garage(garage: StringName) -> void:
+	var manager: CarGarageManager = _garages()
+	if not visible or _closing or manager == null or is_modding():
+		return
+	if garage == CarGarageManager.WAITING and manager.waiting_ids().is_empty():
+		return
+	if garage != CarGarageManager.WAITING and not manager.is_owned(garage):
+		return
+	if garage != _garage:
+		_switch_garage(garage)

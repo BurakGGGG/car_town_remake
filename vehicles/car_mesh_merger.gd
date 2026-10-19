@@ -60,7 +60,8 @@ static func request(key: String, parts: Array, group_count: int, callback: Calla
 		return
 	if not threaded:
 		var mesh: ArrayMesh = build(parts, group_count)
-		_store(key, mesh)
+		if mesh:
+			_store(key, mesh)
 		callback.call(mesh)
 		return
 	_jobs[key] = {"callbacks": [callback], "parts": parts, "groups": group_count, "read": 0,
@@ -70,11 +71,13 @@ static func request(key: String, parts: Array, group_count: int, callback: Calla
 		(Engine.get_main_loop() as SceneTree).process_frame.connect(_pump)
 
 
-## Aynı karede baştan sona kurar (aşamalar ardışık; test ve araçlar için).
+## Aynı karede baştan sona kurar (aşamalar ardışık; test ve araçlar için). Okunamayan parça varsa null.
 static func build(parts: Array, group_count: int) -> ArrayMesh:
 	var data: Array = []
 	for part: Array in parts:
 		data.append(_read(part))
+	if not data.all(_readable):
+		return null
 	var mesh: ArrayMesh = ArrayMesh.new()
 	for group: Array in _merge(data, group_count):
 		_upload(mesh, group)
@@ -108,6 +111,11 @@ static func _pump() -> void:
 					job["read"] = int(job["read"]) + 1
 					if float(Time.get_ticks_usec() - start) / 1000.0 > READ_BUDGET_MS:
 						return
+				# Okunamayan parça: iş bırakılır, araç parçalı kalır (geri çağrı yok). Arka plandaki _merge boş diziyi
+				# çeviremeyip yarıda kalıyordu; iş "arka planda" aşamasında sonsuza dek takılı kalıyordu (busy() hep true).
+				if not (job["data"] as Array).all(_readable):
+					_jobs.erase(key)
+					continue
 				_lock.lock()
 				job["stage"] = 1
 				_lock.unlock()
@@ -172,6 +180,12 @@ static func _read(part: Array) -> Dictionary:
 		lods.append([float(lod["edge_length"]) * scale, lod["index_data"]])
 	return {"arrays": source.surface_get_arrays(surface), "lods": lods, "xf": xf, "group": part[3],
 		"wide": int(raw.get("vertex_count", 0)) > 65536}
+
+
+## Parçanın dizileri okunabildi mi: sahte işleyicide (--headless) yüzey verisi boş döner.
+static func _readable(item: Dictionary) -> bool:
+	var arrays: Array = item["arrays"]
+	return arrays.size() > Mesh.ARRAY_VERTEX and arrays[Mesh.ARRAY_VERTEX] is PackedVector3Array
 
 
 ## 2) ARKA PLAN: grup başına birleşik diziler + LOD indeksleri. Dönen: [[arrays, lods, grup], …]

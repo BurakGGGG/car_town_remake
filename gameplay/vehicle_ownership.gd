@@ -356,16 +356,20 @@ func load_collection(data: Dictionary) -> void:
 # --- Yarış aracı ---------------------------------------------------------------------
 
 ## Yarışa çıkan araç: seçili araç sahipteyse o; değilse başlangıç aracı, o da yoksa ilk araç.
+## BEKLEME OTOPARKINDAKİ araç (GARAJLARIM: garajlar dolu) yarışa çıkamaz: sıradaki park etmiş araca düşülür.
 func race_vehicle_id() -> StringName:
-	if _race_vehicle != &"" and is_owned(_race_vehicle):
+	if _race_vehicle != &"" and is_owned(_race_vehicle) and not _is_waiting(_race_vehicle):
 		return _race_vehicle
-	if is_owned(starting_vehicle_id):
+	if is_owned(starting_vehicle_id) and not _is_waiting(starting_vehicle_id):
 		return starting_vehicle_id
+	for id: StringName in _owned:
+		if not _is_waiting(id):
+			return id
 	return _owned[0] if not _owned.is_empty() else &""
 
 
 func set_race_vehicle(vehicle_id: StringName) -> bool:
-	if not is_owned(vehicle_id):
+	if not is_owned(vehicle_id) or _is_waiting(vehicle_id):
 		return false
 	if _race_vehicle == vehicle_id:
 		return true
@@ -496,6 +500,13 @@ func _pay(entry: Dictionary) -> bool:
 
 func _progress() -> PlayerProgress:
 	return get_tree().get_first_node_in_group("player_progress") as PlayerProgress
+
+
+## GARAJLARIM: araç bekleme otoparkında mı (garaj yöneticisi yoksa — ziyaret, test — hiçbir araç beklemez).
+func _is_waiting(vehicle_id: StringName) -> bool:
+	var garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager \
+		if is_inside_tree() else null
+	return garages != null and garages.is_waiting(vehicle_id)
 
 
 func _grant_starting() -> void:

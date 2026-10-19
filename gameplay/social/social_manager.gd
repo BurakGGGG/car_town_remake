@@ -101,6 +101,8 @@ const INVITE_URL: String = "https://autoyard.online/d/"
 const LEGACY_INVITE_URLS: Array[String] = ["https://autoyardgame.vercel.app/d/", "https://autoyardwebsite.vercel.app/d/"]
 ## Oyun açıkken yarış haberlerine bu aralıkla bakılır (tek liste okuması; telefon bildirimi ön planda görünmez).
 const NEWS_POLL: float = 120.0
+## OTO MANŞET'e haber olan arkadaş garajları (lüks garajlar; SANAYİ / NEON haber olmaz: kullanıcı kararı).
+const NEWS_GARAGES: Array[StringName] = [CarGarageCatalog.SHOWROOM, CarGarageCatalog.HANGAR]
 const AVATAR_CACHE_DIR: String = "user://avatars/"
 const AVATAR_CACHE_INDEX: String = "user://avatars/index.json"
 ## Şikâyet nedenleri (kuralla aynı).
@@ -1193,7 +1195,10 @@ func _friend_entry(uid: String, fallback: Dictionary) -> Dictionary:
 	}
 	entry.merge(profile_fields(doc))
 	# Yarış: arkadaşın araçları, boyaları, modifiyeleri (garaj belgesi zaten okundu, ek okuma yok)
-	entry["race"] = PublicGarage.race_data(PublicGarage.parse(SaveSafe.s(doc.get("garage_json", ""))))
+	var garage: Dictionary = PublicGarage.parse(SaveSafe.s(doc.get("garage_json", "")))
+	entry["race"] = PublicGarage.race_data(garage)
+	# GARAJLARIM özeti: profil kartı rozeti + lüks garaj haberi (eski sürümdeki arkadaşta yok: boş)
+	entry["garages"] = PublicGarage.car_garage_summary(garage)
 	return entry
 
 
@@ -1475,6 +1480,8 @@ func news_items(since: int) -> Array[Dictionary]:
 				out.append({"kind": NewsDigest.FRIEND_REQUEST, "people": [_news_person(uid, {})]})
 	next["friends"] = friend_ids
 	next["requests"] = request_ids
+	next["garages"] = friend_garage_news(friends, base.get("garages", {}) if base.get("garages") is Dictionary else {},
+		out, _news_person)
 	for entry: Dictionary in friends:
 		var uid: String = entry["uid"]
 		var ask_at: int = SaveSafe.i(entry.get("ask_at", 0))
@@ -1483,14 +1490,43 @@ func news_items(since: int) -> Array[Dictionary]:
 			out.append({"kind": NewsDigest.ASK, "people": [_news_person(uid, entry)], "part": part})
 		if part != &"":
 			next["asks"][uid] = maxi(ask_at, SaveSafe.i(next["asks"].get(uid, 0)))
-	if not base.get("friends") is Array or not base.get("requests") is Array:
+	if not base.get("friends") is Array or not base.get("requests") is Array or not base.get("garages") is Dictionary:
 		var first: Dictionary = base.duplicate()
 		first["friends"] = friend_ids
 		first["requests"] = request_ids
+		first["garages"] = next["garages"]
 		_meta["news"] = first   # ilk taban hemen yazılır (gazete açılmasa da)
 		_write_meta()
 	_news_next = next
 	return out
+
+
+## ARKADAŞIN LÜKS GARAJI (OTO MANŞET, kullanıcı kararı 2026-10-19): tabanda (son gösterilen gazete) olmayan
+## CAM SHOWROOM / UÇAK HANGARI için `out`a FRIEND_GARAGE haberi eklenir. Tabanında olmayan arkadaş (yeni arkadaş, ilk
+## sürüm) haber vermez, yalnızca tabana girer; özeti okunamayanın tabanı korunur. Dönen: yeni taban {uid: [garaj]}.
+## `person`: (uid, girdi) → haberdeki kişi.
+static func friend_garage_news(friend_list: Array, base: Dictionary, out: Array[Dictionary], person: Callable) -> Dictionary:
+	var next: Dictionary = {}
+	for entry: Variant in friend_list:
+		if not entry is Dictionary:
+			continue
+		var uid: String = SaveSafe.s((entry as Dictionary).get("uid", ""))
+		var summary: Dictionary = (entry as Dictionary).get("garages", {}) if (entry as Dictionary).get("garages") is Dictionary else {}
+		if summary.is_empty():
+			if base.get(uid) is Array:
+				next[uid] = base[uid]
+			continue
+		var luxury: Array = []
+		for id: Variant in summary.get("own", []):
+			if NEWS_GARAGES.has(StringName(SaveSafe.s(id))):
+				luxury.append(SaveSafe.s(id))
+		next[uid] = luxury
+		if not base.get(uid) is Array:
+			continue
+		for id: String in luxury:
+			if not (base[uid] as Array).has(id):
+				out.append({"kind": NewsDigest.FRIEND_GARAGE, "people": [person.call(uid, entry)], "garage": StringName(id)})
+	return next
 
 
 ## Gazete gösterildi: taban gösterilen duruma ilerler, gösterilen hediye kayıtları silinir.

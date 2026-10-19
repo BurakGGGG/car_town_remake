@@ -133,6 +133,11 @@ func _ensure_crate_system() -> void:
 		var purchases: PurchaseManager = PurchaseManager.new()
 		purchases.name = "PurchaseManager"
 		add_child(purchases)
+	# GARAJLARIM: araç garajları, kapasite, bekleme otoparkı (kayıt SaveManager'da, ondan ÖNCE hazır olmalı)
+	if get_tree().get_first_node_in_group("car_garages") == null:
+		var car_garages: CarGarageManager = CarGarageManager.new()
+		car_garages.name = "CarGarageManager"
+		add_child(car_garages)
 
 
 ## AYARLAR (grafik / performans / ses; cihaza özel, kayda girmez)

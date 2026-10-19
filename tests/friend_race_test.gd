@@ -39,10 +39,12 @@ func _run() -> void:
 	print("== 2) Emre / Elif araç dağılımı ==")
 	var unmapped: Array[String] = []
 	var emre: int = 0
+	var eligible: int = 0
 	for entry: Dictionary in CarCatalog.all():
 		var id: StringName = entry["id"]
 		if not RaceManager._rival_eligible(id):
 			continue
+		eligible += 1
 		var owner: String = FeaturedFriends.owner_for_car(id)
 		if not FeaturedFriends.EMRE_CARS.has(String(id)) and not FeaturedFriends.ELIF_CARS.has(String(id)):
 			unmapped.append(String(id))
@@ -51,7 +53,8 @@ func _run() -> void:
 	check(unmapped.is_empty(), "rakip olabilen her araç listede: %s" % [unmapped])
 	check(FeaturedFriends.owner_for_car(&"lambo_huracan") == "featured_emre" and FeaturedFriends.owner_for_car(&"tofas_sahin") == "featured_elif",
 		"Huracán Emre'nin, Şahin Elif'in")
-	check(emre >= 10 and emre <= 20, "dağılım dengeli (Emre %d)" % emre)
+	# 2026-10-20: sabit 10–20 (29 araçta) yerine oran: araç partileri geldikçe sınır büyür
+	check(emre >= eligible * 0.35 and emre <= eligible * 0.65, "dağılım dengeli (Emre %d / %d)" % [emre, eligible])
 	var both: Array[String] = []
 	for id: String in FeaturedFriends.EMRE_CARS:
 		if FeaturedFriends.ELIF_CARS.has(id):

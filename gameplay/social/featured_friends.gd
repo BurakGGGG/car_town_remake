@@ -27,12 +27,18 @@ const PROFILES: Dictionary = {
 ## YARIŞ RAKİBİ (2026-10-16): Emre ve Elif yarışta HER araca sahiptir; hangisinin geleceği aracın karakterine
 ## göre (kullanıcı kararı: havalı / spor / süper / premium → Emre, tatlı / şehir / aile → Elif). Listede olmayan
 ## (yeni eklenen) araç sınıfına göre: S / A → Emre, diğerleri → Elif.
+## 2026-10-20: sekizinci partinin 15 aracı aynı kurala göre eklendi (Emre 8 süper / premium / spor, Elif 7 aile /
+## şehir / ticari).
 const EMRE_CARS: Array[String] = ["bmw_e46", "bmw_e60", "mercedes_cls", "mercedes_s400", "audi_rs6", "audi_a3",
 	"porsche_gt3", "lambo_huracan", "ferrari_488_pista", "chevrolet_camaro", "alfa_romeo_159", "seat_leon",
-	"honda_civic", "vw_golf_7", "togg_t10f"]
+	"honda_civic", "vw_golf_7", "togg_t10f",
+	"bugatti_chiron", "bugatti_veyron", "ferrari_laferrari", "porsche_taycan", "mercedes_g", "audi_a6", "bmw_f30",
+	"cupra_formentor"]
 const ELIF_CARS: Array[String] = ["tofas_sahin", "renault_toros", "hyundai_era", "hyundai_getz", "hyundai_accent_blue",
 	"renault_fluence", "vw_passat_b55", "ford_focus", "opel_corsa", "skoda_kamiq", "vw_beetle", "togg_t10x",
-	"tesla_model_y", "volvo_s60"]
+	"tesla_model_y", "volvo_s60",
+	"toyota_corolla", "renault_megane_4", "vw_passat_b8", "skoda_superb", "chery_tiggo_8", "ford_transit",
+	"mercedes_sprinter"]
 
 static var _entries: Array[Dictionary] = []
 static var _loaded: bool = false

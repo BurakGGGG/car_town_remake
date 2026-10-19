@@ -53,6 +53,9 @@ static var _appearance_hooked: Dictionary = {}  # scene yolu → true (changed s
 
 ## Hangi araçlar listelenecek (ebeveyn _ready'sinde kurulur; kurulum bir kare ertelenmiştir).
 var mode: Mode = Mode.SHOP
+## OWNED kipinde listelenecek araç id'leri (Array[StringName] döner); boşsa sahip olunan bütün araçlar.
+## Garaj ekranı içinde bulunulan garajın (GARAJLARIM) araçlarını verir.
+var source: Callable = Callable()
 
 var _plates: Array[PlateButton] = []
 var _columns: Array[VBoxContainer] = []
@@ -89,6 +92,15 @@ func close() -> void:
 	hide()
 
 
+## Liste kaynağı değişti (garaj ekranında başka garaja geçildi): plakalar yeniden kurulur.
+func refresh() -> void:
+	if not _built:
+		return
+	_rebuild_if_needed()
+	_prewarm_thumbnails()
+	_refresh_actions()
+
+
 ## Listede seçili araç (yoksa boş).
 func selected_vehicle() -> StringName:
 	return _selected
@@ -120,7 +132,10 @@ func _entries() -> Array[Dictionary]:
 	if mode == Mode.SHOP or _ownership == null:
 		return CarCatalog.all()
 	var out: Array[Dictionary] = []
-	for id: StringName in _ownership.owned_vehicle_ids():
+	var ids: Array[StringName] = _ownership.owned_vehicle_ids()
+	if source.is_valid():
+		ids.assign(source.call())
+	for id: StringName in ids:
 		var entry: Dictionary = CarCatalog.get_entry(id)
 		if not entry.is_empty():
 			out.append(entry)

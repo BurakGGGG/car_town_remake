@@ -534,6 +534,19 @@ func _photo(item: Dictionary, area: Vector2, large: bool) -> Control:
 					_corner(stack, avatar, 6.0 * _scale)
 				else:
 					_centered(stack, avatar)
+		NewsDigest.GARAGE_BUILT, NewsDigest.GARAGE_UPGRADED, NewsDigest.FRIEND_GARAGE:
+			if large or people.is_empty():
+				var garage_icon: HudIcon = HudIcon.new()
+				garage_icon.kind = HudIcon.Kind.GARAGE
+				garage_icon.icon_size = area.y * (0.55 if large else 0.5)
+				garage_icon.custom_minimum_size = Vector2.ONE * area.y * (0.65 if large else 0.6)
+				_centered(stack, garage_icon)
+			if not people.is_empty():
+				var avatar: AvatarView = _avatar(people[0] as Dictionary, (54.0 * _scale) if large else area.y - 4.0)
+				if large:
+					_corner(stack, avatar, 6.0 * _scale)
+				else:
+					_centered(stack, avatar)
 		NewsDigest.VISIT, NewsDigest.FRIEND_NEW, NewsDigest.FRIEND_REQUEST:
 			var group: HBoxContainer = HBoxContainer.new()
 			group.mouse_filter = Control.MOUSE_FILTER_IGNORE

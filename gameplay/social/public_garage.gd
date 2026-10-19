@@ -8,6 +8,9 @@ extends RefCounted
 ## OLMAYANLAR: para, XP, gem, kasalar, görevler, reklam sayaçları, ustalık. Bunlar başkasına gösterilmez.
 ## YARIŞ (2026-10-16): araç başına takılı performans kademeleri ("performance.builds") — arkadaşın aracı yarışa
 ## onun modifiyeleriyle gelir (RaceManager). Takma işleri ve gösterge tabanı taşınmaz.
+## GARAJLARIM (2026-10-19): yalnız ÖZET ("car_garage_summary": alınmış garajlar + toplam park yeri) — profil rozeti ve
+## arkadaşın lüks garajı haberi için. Yerleşim, iç kalemler ve süren işler taşınmaz (ziyarette garajlar yok: kullanıcı
+## kararı). Belge alanı değil garaj JSON'unun içinde: Firestore kuralı değişmeden taşınır.
 ##
 ## Biçim kayıt sözlüğüyle aynıdır (SaveManager.validate / _apply olduğu gibi okur); ikinci bir model yok.
 
@@ -15,6 +18,7 @@ extends RefCounted
 const COPIED_KEYS: Array[String] = ["garage_upgrades", "repair_bays", "decor"]
 ## Firestore kuralıyla aynı sınır (garages.garage_json.size() < 20000).
 const MAX_JSON: int = 19000
+const SUMMARY_KEY: String = "car_garage_summary"
 
 
 ## Kayıt sözlüğünden açık garaj sözlüğü.
@@ -35,7 +39,39 @@ static func from_snapshot(snapshot: Dictionary) -> Dictionary:
 	var performance: Dictionary = snapshot.get("performance", {}) if snapshot.get("performance") is Dictionary else {}
 	if performance.get("builds") is Dictionary and not (performance["builds"] as Dictionary).is_empty():
 		out["performance"] = {"builds": performance["builds"]}
+	var summary: Dictionary = car_garage_summary(snapshot)
+	if not summary.is_empty():
+		out[SUMMARY_KEY] = summary
 	return out
+
+
+## Araç garajlarının özeti {"own": Array[String] (merdiven sırasıyla), "cap": int}; yoksa boş. Kayıttan ("car_garages"
+## bölümü: garajların PARK YERİ seviyesinden) ya da açık garajdan (SUMMARY_KEY, sunucudan gelen veri: süzülür) okunur.
+static func car_garage_summary(garage: Dictionary) -> Dictionary:
+	var own: Array = []
+	var cap: int = 0
+	if garage.get("car_garages") is Dictionary:
+		var garages: Variant = (garage["car_garages"] as Dictionary).get("garages", {})
+		if not garages is Dictionary:
+			return {}
+		for id: StringName in CarGarageCatalog.ids():
+			var row: Variant = (garages as Dictionary).get(String(id))
+			if not row is Dictionary:
+				continue
+			own.append(String(id))
+			var levels: Variant = (row as Dictionary).get("levels", {})
+			var park: int = SaveSafe.i((levels as Dictionary).get(String(CarGarageCatalog.PARK), 1)) if levels is Dictionary else 1
+			cap += CarGarageCatalog.capacity_at(id, clampi(park, 1, CarGarageCatalog.max_level(id, CarGarageCatalog.PARK)))
+	elif garage.get(SUMMARY_KEY) is Dictionary:
+		var raw: Dictionary = garage[SUMMARY_KEY]
+		var listed: Array = raw.get("own", []) if raw.get("own") is Array else []
+		for id: StringName in CarGarageCatalog.ids():
+			if listed.has(String(id)):
+				own.append(String(id))
+		cap = clampi(SaveSafe.i(raw.get("cap", 0)), 0, CarGarageCatalog.total_max_capacity())
+	if own.is_empty():
+		return {}
+	return {"own": own, "cap": cap}
 
 
 ## Arkadaşın garajından yarış verisi: {cars: Array[String] (tekil), paint: {id: hex}, builds: {id: {kategori: kademe}}}.

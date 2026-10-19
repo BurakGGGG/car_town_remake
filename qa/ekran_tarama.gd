@@ -257,6 +257,9 @@ func _analyze(state: String, scope: Node) -> PackedStringArray:
 				# Bilinçli rozet (meta qa_badge): kendi kabındaki komşusunun köşesine biner (HUD seviye rozeti avatarın)
 				if _badge_pair(ca, cb):
 					continue
+				# Açılır liste (meta qa_popup): altındaki içeriğin üstünde durmak için açılır
+				if _in_popup(ca) != _in_popup(cb):
+					continue
 				# Arka plan: yazı olmayan bir öğe ötekini TAMAMEN kaplıyorsa (harita resmi, gölge) çakışma değil
 				if (ra.encloses(rb) and not _is_text(ca)) or (rb.encloses(ra) and not _is_text(cb)):
 					continue
@@ -272,6 +275,15 @@ func _badge_pair(a: Node, b: Node) -> bool:
 			if node.has_meta(&"qa_badge"):
 				return node.get_parent() != null and node.get_parent().is_ancestor_of(pair[1])
 			node = node.get_parent()
+	return false
+
+
+## `qa_popup` işaretli bir açılır listenin (TÜM ARAÇLAR sıralama / süzgeç listesi) içinde mi.
+func _in_popup(node: Node) -> bool:
+	while node and not node is CanvasLayer:
+		if node.has_meta(&"qa_popup"):
+			return true
+		node = node.get_parent()
 	return false
 
 
@@ -312,6 +324,89 @@ func _want(state: String) -> bool:
 
 
 ## Ekranı açar, açılış animasyonunu bekler, ölçer, kapatır.
+## GARAJLARIM (docs/GARAJLAR_TASARIM.md): QA kaydında garaj bölümü yok → 4 araç MAHALLE'de, kalanı BEKLİYOR. Sırayla:
+## bekleyenler, ilk pano; sonra SANAYİ + NEON + HANGAR alınıp bitirilir (bekleyenler yerleşir, HANGAR boş kalır),
+## CAM SHOWROOM inşaatta, MAHALLE'de iç iş sürüyor. Durumlar "garajlar_" önekiyle süzülür.
+func _garage_states() -> void:
+	var wanted: bool = _only.is_empty()
+	for prefix: String in _only:   # "garajlar" ya da daha dar bir önek ("garajlar_pano"): kurulum yine koşar
+		wanted = wanted or prefix.begins_with("garajlar") or "garajlar".begins_with(prefix)
+	if not wanted:
+		return
+	var manager: CarGarageManager = get_first_node_in_group("car_garages") as CarGarageManager
+	var screen: GarageScreen = _router.screen(&"garage") as GarageScreen
+	if manager == null:
+		return
+	var open_garage: Callable = func(garage: StringName) -> void:
+		_router.close_all()
+		await wait(0.35)
+		_router.open(&"garage")
+		await wait(0.6)
+		screen.go_to_garage(garage)
+		await wait(0.6)
+	if not manager.waiting_ids().is_empty() and _want("garajlar_bekleyen"):
+		await open_garage.call(CarGarageManager.WAITING)
+		await _report("garajlar_bekleyen", screen)
+	if _want("garajlar_mahalle"):   # pişmiş 3D iç mekân (sv.1; sv.3 görünümü seviyeler doğrudan verilerek)
+		await open_garage.call(CarGarageCatalog.MAHALLE)
+		await wait(0.6)
+		await _report("garajlar_mahalle", screen)
+		var iv: GarageInteriorView = screen.get("_interior_view") as GarageInteriorView
+		if iv and iv.active:
+			iv.set_levels({&"floor": 3, &"walls": 3, &"lights": 3, &"lift": 3, &"park": 3})
+			iv.overview(false)
+			await wait(0.5)
+			await _report("garajlar_mahalle_sv3", screen)
+	if _want("garajlar_pano_ilk"):
+		await open_garage.call(CarGarageCatalog.MAHALLE)
+		_router.open(&"car_garages")
+		await wait(0.7)
+		await _report("garajlar_pano_ilk", _router.screen(&"car_garages"))
+	var progress: PlayerProgress = get_first_node_in_group("player_progress") as PlayerProgress
+	var economy: EconomyManager = get_first_node_in_group("economy") as EconomyManager
+	progress.load_state(30, 0, progress.gems)
+	economy.set_money(30000000)
+	for garage: StringName in [CarGarageCatalog.SANAYI, CarGarageCatalog.NEON, CarGarageCatalog.HANGAR]:
+		if not manager.is_owned(garage):
+			manager.purchase(garage)
+			manager.clock_offset += CarGarageCatalog.build_time(garage) + 1.0
+			manager.call("_check_timers")
+	if not manager.is_owned(CarGarageCatalog.SHOWROOM) and not manager.is_building(CarGarageCatalog.SHOWROOM):
+		manager.purchase(CarGarageCatalog.SHOWROOM)
+	manager.upgrade_item(CarGarageCatalog.MAHALLE, CarGarageCatalog.PARK)
+	if _want("garajlar_sanayi"):
+		await open_garage.call(CarGarageCatalog.SANAYI)
+		await _report("garajlar_sanayi", screen)
+	if _want("garajlar_bos"):
+		await open_garage.call(CarGarageCatalog.HANGAR)
+		await _report("garajlar_bos", screen)
+	if _want("garajlar_tasi"):
+		await open_garage.call(CarGarageCatalog.NEON)
+		screen.call("_open_move")
+		await wait(0.35)
+		await _report("garajlar_tasi", screen)
+	if _want("garajlar_pano"):
+		await open_garage.call(CarGarageCatalog.NEON)
+		_router.open(&"car_garages")
+		await wait(0.7)
+		await _report("garajlar_pano", _router.screen(&"car_garages"))
+	if _want("garajlar_ic"):
+		await open_garage.call(CarGarageCatalog.MAHALLE)
+		_router.open(&"car_garages")
+		await wait(0.5)
+		_hud.car_garage_upgrade_screen.garage = CarGarageCatalog.MAHALLE
+		_router.open(&"car_garage_upgrades")
+		await wait(0.7)
+		await _report("garajlar_ic", _router.screen(&"car_garage_upgrades"))
+	if _want("garajlar_tum_araclar"):
+		await open_garage.call(CarGarageCatalog.NEON)
+		_router.open(&"all_cars")
+		var board: AllCarsScreen = _router.screen(&"all_cars") as AllCarsScreen
+		board.set_query("", &"", VehicleSort.NEWEST)
+		await wait(0.9)
+		await _report("garajlar_tum_araclar", board)
+
+
 func _screen(id: StringName, state: String, setup: Callable = Callable(), settle: float = 0.7) -> void:
 	if not _want(state):
 		return
@@ -523,6 +618,24 @@ func _run() -> void:
 		_router.open(&"collection")
 		await wait(0.9)
 		await _report("koleksiyon", _router.screen(&"collection"))
+	# TÜM ARAÇLAR: garajın alt şeridindeki plakadan açılır (garaj YER olarak altta kalır)
+	for entry: Array in [["tum_araclar", VehicleSort.NEWEST, false], ["tum_araclar_hizli", VehicleSort.FASTEST, false],
+			["tum_araclar_menu", VehicleSort.MOST_RACED, true]]:
+		if not _want(String(entry[0])):
+			continue
+		_router.close_all()
+		await wait(0.35)
+		_router.open(&"garage")
+		await wait(0.6)
+		_router.open(&"all_cars")
+		var board: AllCarsScreen = _router.screen(&"all_cars") as AllCarsScreen
+		board.set_query("", &"", entry[1])
+		await wait(0.9)
+		if entry[2]:
+			(board.find_child("SortButton", true, false) as PlateButton).pressed.emit()
+			await wait(0.35)
+		await _report(String(entry[0]), board)
+	await _garage_states()
 	await _screen(&"friends", "arkadaslar")
 	await _screen(&"gem_store", "elmas_magazasi")
 	await _screen(&"garage_edit", "dekor")
