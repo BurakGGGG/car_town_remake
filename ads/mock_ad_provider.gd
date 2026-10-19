@@ -14,12 +14,19 @@ var last_shown_slot: StringName = &""
 ## Gizlilik seçenekleri giriş noktası gerekli mi (testler / masaüstü önizleme için)?
 var privacy_required: bool = false
 var privacy_shows: int = 0
+## Kişiselleştirme düğmesi (AppLovin tarzı) testleri: toggle=true ise AYARLAR düğmeyi gösterir.
+var toggle: bool = false
+var personalized: bool = true
 
 var _loaded: Dictionary = {}   # yuva → bool
 
 
 func start(on_ready: Callable) -> void:
 	on_ready.call_deferred(start_ok)
+
+
+func unit_for(slot: StringName) -> String:
+	return "mock/%s" % slot
 
 
 func load_rewarded(slot: StringName, _unit_id: String, on_result: Callable) -> void:
@@ -51,3 +58,15 @@ func privacy_options_required() -> bool:
 func show_privacy_options(on_done: Callable) -> void:
 	privacy_shows += 1
 	on_done.call_deferred()
+
+
+func personalization_toggle() -> bool:
+	return toggle
+
+
+func personalized_ads() -> bool:
+	return personalized
+
+
+func set_personalized_ads(on: bool) -> void:
+	personalized = on

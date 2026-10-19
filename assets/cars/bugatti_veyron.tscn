@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://buad258muhcj3"]
+
+[ext_resource type="PackedScene" uid="uid://dunkhdv4mt60h" path="res://assets/cars/optimized/bugatti_veyron.glb" id="1_bugat"]
+
+[node name="bugatti_veyron" instance=ExtResource("1_bugat")]

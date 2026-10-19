@@ -1,6 +1,7 @@
 class_name AdMobProvider
 extends AdProvider
-## GERÇEK sağlayıcı: Poing Studios AdMob eklentisi (addons/admob) → Google Mobile Ads SDK + UMP.
+## AdMob sağlayıcısı: Poing Studios AdMob eklentisi (addons/admob) → Google Mobile Ads SDK + UMP.
+## 2026-10-19'dan beri KULLANILMIYOR (AdMob hesabı reddedildi; AdConfig.NETWORK = APPLOVIN, SDK dışa aktarımda kapalı).
 ## Yalnızca Android'de, eklenti tekilleri (singleton) varken kurulur; AdService bunu seçer.
 ##
 ## Kural notları (eklenti belgesi + Google rehberi):
@@ -57,6 +58,12 @@ func _init_sdk(on_ready: Callable) -> void:
 	init_listener.on_initialization_complete = func(_status: InitializationStatus) -> void:
 		on_ready.call(true)
 	MobileAds.initialize(init_listener)
+
+
+## Debug derlemede test birimi, release'te gerçek birim; güvensizse boş (yuva kapalı).
+func unit_for(slot: StringName) -> String:
+	var unit: String = AdConfig.rewarded_unit(slot)
+	return unit if AdConfig.unit_is_safe(unit) else ""
 
 
 func load_rewarded(slot: StringName, unit_id: String, on_result: Callable) -> void:

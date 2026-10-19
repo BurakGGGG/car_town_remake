@@ -87,7 +87,7 @@
   "ui/hud/news_digest.gd:392"
  ],
  "%d dk": [
-  "gameplay/social/social_manager.gd:995",
+  "gameplay/social/social_manager.gd:1000",
   "ui/hud/mod_workshop.gd:847"
  ],
  "%d km/sa": [
@@ -217,10 +217,10 @@
   "ui/hud/hud.gd:1209"
  ],
  "%s GARAJINI BEĞENDİ": [
-  "gameplay/social/social_manager.gd:1159"
+  "gameplay/social/social_manager.gd:1172"
  ],
  "%s GARAJINI GEZDİ": [
-  "gameplay/social/social_manager.gd:1161",
+  "gameplay/social/social_manager.gd:1174",
   "ui/hud/news_digest.gd:335"
  ],
  "%s GÖNDER": [
@@ -341,8 +341,8 @@
   "ui/hud/email_code_panel.gd:183"
  ],
  "%s artık arkadaşın!": [
-  "gameplay/social/social_manager.gd:476",
-  "gameplay/social/social_manager.gd:1074",
+  "gameplay/social/social_manager.gd:480",
+  "gameplay/social/social_manager.gd:1079",
   "ui/hud/invite_screen.gd:202"
  ],
  "%s bağlanamadı": [
@@ -352,7 +352,7 @@
   "gameplay/missions/mission_catalog.gd:100"
  ],
  "%s engellendi, artık sana görünmez.": [
-  "gameplay/social/social_manager.gd:1592"
+  "gameplay/social/social_manager.gd:1616"
  ],
  "%s farklı araç keşfet": [
   "gameplay/missions/mission_catalog.gd:99"
@@ -395,10 +395,10 @@
   "gameplay/missions/mission_catalog.gd:98"
  ],
  "%s oyuncusuna 1 %s gönderdin.": [
-  "gameplay/social/social_manager.gd:919"
+  "gameplay/social/social_manager.gd:923"
  ],
  "%s oyuncusuna istek gönderildi.": [
-  "gameplay/social/social_manager.gd:1054"
+  "gameplay/social/social_manager.gd:1059"
  ],
  "%s sana %s gönderdi. Hurdalıkta işine yarayacak.": [
   "ui/hud/news_digest.gd:291"
@@ -511,7 +511,7 @@
   "gameplay/missions/mission_catalog.gd:107"
  ],
  "(şerit noktası %s, verilen %s)": [
-  "gameplay/race/race_manager.gd:751"
+  "gameplay/race/race_manager.gd:752"
  ],
  "*.png, *.jpg, *.jpeg, *.webp": [
   "ui/hud/photo_picker.gd:8"
@@ -529,7 +529,7 @@
   "gameplay/progression_effects.gd:29"
  ],
  "+%d GEM": [
-  "gameplay/missions/mission_manager.gd:712",
+  "gameplay/missions/mission_manager.gd:725",
   "ui/hud/mission_screen.gd:294",
   "ui/hud/mission_screen.gd:409",
   "ui/hud/mission_screen.gd:623",
@@ -543,7 +543,7 @@
   "ui/hud/news_screen.gd:189"
  ],
  "+%d XP": [
-  "gameplay/missions/mission_manager.gd:715",
+  "gameplay/missions/mission_manager.gd:728",
   "ui/hud/race_result_screen.gd:57",
   "ui/hud/repair_panel.gd:425",
   "ui/hud/mission_screen.gd:411",
@@ -782,7 +782,7 @@
   "ui/hud/visit_bar.gd:46"
  ],
  "ARKADAŞ HEDİYESİ  +%d PARÇA\n%s": [
-  "gameplay/social/social_manager.gd:959"
+  "gameplay/social/social_manager.gd:964"
  ],
  "ARKADAŞINI ÇAĞIR": [
   "ui/hud/friends_screen.gd:422"
@@ -972,7 +972,7 @@
   "ui/hud/friends_screen.gd:478"
  ],
  "Arkadaş eklenemedi. İnternet bağlantını kontrol et.": [
-  "gameplay/social/social_manager.gd:483"
+  "gameplay/social/social_manager.gd:487"
  ],
  "Arkadaş kodu (AY-…)": [
   "ui/hud/friends_screen.gd:262"
@@ -981,11 +981,11 @@
   "ui/loading/loading_screen.gd:63"
  ],
  "Arkadaş listen dolu.": [
-  "gameplay/social/social_manager.gd:321",
-  "gameplay/social/social_manager.gd:452"
+  "gameplay/social/social_manager.gd:325",
+  "gameplay/social/social_manager.gd:456"
  ],
  "Arkadaş listesi yüklenemedi. İnternet bağlantını kontrol et.": [
-  "gameplay/social/social_manager.gd:305"
+  "gameplay/social/social_manager.gd:309"
  ],
  "Arkadaş yarışı haberleri için önce giriş yap (HESAP VE GİZLİLİK).": [
   "ui/hud/settings_screen.gd:571"
@@ -997,13 +997,13 @@
   "ui/hud/profile_edit_screen.gd:504"
  ],
  "Arkadaşlarından %s istedin.": [
-  "gameplay/social/social_manager.gd:871"
+  "gameplay/social/social_manager.gd:875"
  ],
  "Arkadaşlarından istemek için hesabınla giriş yap.": [
-  "gameplay/social/social_manager.gd:856"
+  "gameplay/social/social_manager.gd:860"
  ],
  "Arkadaşının isteği değişti.": [
-  "gameplay/social/social_manager.gd:924"
+  "gameplay/social/social_manager.gd:928"
  ],
  "Arıza yok": [
   "ui/hud/repair_panel.gd:115"
@@ -1142,7 +1142,7 @@
   "ui/hud/friends_screen.gd:488"
  ],
  "BAŞARIM\n%s ★%d": [
-  "gameplay/missions/mission_manager.gd:770"
+  "gameplay/missions/mission_manager.gd:783"
  ],
  "BAŞARIMLAR": [
   "ui/hud/mission_screen.gd:102",
@@ -1412,7 +1412,7 @@
   "ui/hud/invite_screen.gd:216"
  ],
  "Bu davetin süresi dolmuş. Arkadaşından yeni bir link iste.": [
-  "gameplay/social/social_manager.gd:482"
+  "gameplay/social/social_manager.gd:486"
  ],
  "Bu e-posta adresi %s hesabınla kayıtlı. %s ile doğrula, %s hesabın da aynı oyun hesabına bağlansın.": [
   "gameplay/cloud_save_manager.gd:623"
@@ -1424,7 +1424,7 @@
   "ui/hud/photo_picker.gd:53"
  ],
  "Bu garaj oyunun daha yeni bir sürümüyle kaydedilmiş. Oyunu güncelle.": [
-  "gameplay/social/social_manager.gd:553"
+  "gameplay/social/social_manager.gd:557"
  ],
  "Bu hesap kapatılmış.": [
   "gameplay/cloud_save_manager.gd:472"
@@ -1436,34 +1436,34 @@
   "gameplay/cloud_save_manager.gd:470"
  ],
  "Bu kodla bir oyuncu bulunamadı.": [
-  "gameplay/social/social_manager.gd:1019",
-  "gameplay/social/social_manager.gd:1025",
-  "gameplay/social/social_manager.gd:1040"
+  "gameplay/social/social_manager.gd:1024",
+  "gameplay/social/social_manager.gd:1030",
+  "gameplay/social/social_manager.gd:1045"
  ],
  "Bu oyuncunun engeli kaldırıldı.": [
-  "gameplay/social/social_manager.gd:1032"
+  "gameplay/social/social_manager.gd:1037"
  ],
  "Bu oyuncunun garajı bulunamadı.": [
-  "gameplay/social/social_manager.gd:548"
+  "gameplay/social/social_manager.gd:552"
  ],
  "Bu oyuncuya zaten istek gönderdin.": [
-  "gameplay/social/social_manager.gd:1034"
+  "gameplay/social/social_manager.gd:1039"
  ],
  "Bu senin kendi davet linkin. Arkadaşına gönder, o açınca arkadaş olursunuz.": [
   "ui/hud/invite_screen.gd:212"
  ],
  "Bu senin kendi kodun.": [
-  "gameplay/social/social_manager.gd:318",
-  "gameplay/social/social_manager.gd:1025"
+  "gameplay/social/social_manager.gd:322",
+  "gameplay/social/social_manager.gd:1030"
  ],
  "Bu takma ad kullanılamaz. Harf, rakam, boşluk ve . _ - kullanabilirsin.": [
-  "gameplay/social/social_manager.gd:1670"
+  "gameplay/social/social_manager.gd:1694"
  ],
  "Budanmış yeşil çit bloğu.": [
   "decor/decorations.json:hedge.desc"
  ],
  "Bugün bu arkadaşına zaten hediye gönderdin.": [
-  "gameplay/social/social_manager.gd:922"
+  "gameplay/social/social_manager.gd:926"
  ],
  "Bulduğun parçalar PARÇALAR'da birikir. Aranan yığın 8 saatte yeniden dolar; bazen boş çıkar, moralini bozma!": [
   "ui/tutorial/tutorial_director.gd:616"
@@ -1837,10 +1837,10 @@
   "ui/hud/friends_screen.gd:569"
  ],
  "Davet linki oluşturulamadı. Telefonunun saatini kontrol et.": [
-  "gameplay/social/social_manager.gd:417"
+  "gameplay/social/social_manager.gd:421"
  ],
  "Davet linki oluşturulamadı. İnternet bağlantını kontrol et.": [
-  "gameplay/social/social_manager.gd:418"
+  "gameplay/social/social_manager.gd:422"
  ],
  "Davet linkini gönder": [
   "ui/hud/friends_screen.gd:567"
@@ -1920,7 +1920,7 @@
   "decor/decorations.json:world_map.title"
  ],
  "DÜNÜN GÖREV ÖDÜLLERİ": [
-  "gameplay/missions/mission_manager.gd:249"
+  "gameplay/missions/mission_manager.gd:262"
  ],
  "DÜZ DUVAR": [
   "decor/decorations.json:wall_plain.title"
@@ -2453,7 +2453,7 @@
   "ui/hud/drag_race_screen.gd:1196"
  ],
  "GEÇEN HAFTANIN GÖREV ÖDÜLLERİ": [
-  "gameplay/missions/mission_manager.gd:281"
+  "gameplay/missions/mission_manager.gd:294"
  ],
  "GEÇİŞ ": [
   "ui/hud/drag_race_screen.gd:1115"
@@ -2518,7 +2518,7 @@
   "gameplay/garage_upgrade.gd:61"
  ],
  "Garaj açılamadı. İnternet bağlantını kontrol et.": [
-  "gameplay/social/social_manager.gd:547"
+  "gameplay/social/social_manager.gd:551"
  ],
  "Garaj bayrağı taşıyan direk.": [
   "decor/decorations.json:flagpole.desc"
@@ -2620,7 +2620,7 @@
   "gameplay/missions/mission_catalog.gd:110"
  ],
  "GÖREV TAMAM\n%s": [
-  "gameplay/missions/mission_manager.gd:404"
+  "gameplay/missions/mission_manager.gd:417"
  ],
  "GÖREV TAMAMLANDI!": [
   "ui/tutorial/tutorial_director.gd:792"
@@ -2743,11 +2743,11 @@
   "ui/hud/mission_screen.gd:244"
  ],
  "HAFTALIK BÜYÜK ÖDÜL\n+%d GEM%s  +%d XP": [
-  "gameplay/missions/mission_manager.gd:738"
+  "gameplay/missions/mission_manager.gd:751"
  ],
  "HAFTALIK GÖREV TAMAM\n%s": [
-  "gameplay/missions/mission_manager.gd:414",
-  "gameplay/missions/mission_manager.gd:435"
+  "gameplay/missions/mission_manager.gd:427",
+  "gameplay/missions/mission_manager.gd:448"
  ],
  "HAFTALIK GÖREVLER %d GÜN %02d SAAT SONRA YENİLENİR": [
   "ui/hud/mission_screen.gd:482"
@@ -2952,7 +2952,7 @@
   "decor/decorations.json:compressor.desc"
  ],
  "Hediye gönderilemedi. İnternet bağlantını kontrol et.": [
-  "gameplay/social/social_manager.gd:926"
+  "gameplay/social/social_manager.gd:930"
  ],
  "Henüz aracın yok. İlk aracın hoş geldin kutusunda!": [
   "ui/hud/profile_edit_screen.gd:452"
@@ -3031,6 +3031,9 @@
  ],
  "HİNDİSTAN": [
   "gameplay/social/profile_catalog.gd:50"
+ ],
+ "HİPER": [
+  "vehicles/crates.json:set.hiper"
  ],
  "Hızlı Hücre Paketi": [
   "gameplay/race/performance_mods.gd:88"
@@ -3214,7 +3217,7 @@
   "decor/decorations.json:reception_desk.title"
  ],
  "KASA": [
-  "gameplay/missions/mission_manager.gd:732",
+  "gameplay/missions/mission_manager.gd:745",
   "ui/hud/showroom_screen.gd:901",
   "ui/hud/showroom_screen.gd:1071",
   "ui/hud/mission_screen.gd:613",
@@ -3527,7 +3530,7 @@
   "ui/hud/avatar_cropper.gd:101"
  ],
  "Kayıt buluta yazılıyor, birazdan tekrar dene.": [
-  "gameplay/social/social_manager.gd:539",
+  "gameplay/social/social_manager.gd:543",
   "ui/hud/friend_card_screen.gd:227",
   "ui/hud/friends_screen.gd:576"
  ],
@@ -3555,7 +3558,7 @@
   "ui/hud/email_code_panel.gd:249"
  ],
  "Kod 6 karakter olmalı (ör. AY-7K2Q4M).": [
-  "gameplay/social/social_manager.gd:315"
+  "gameplay/social/social_manager.gd:319"
  ],
  "Kod yanlış. Kalan deneme: %d": [
   "gameplay/cloud_save_manager.gd:466"
@@ -4029,7 +4032,7 @@
   "ui/hud/settings_screen.gd:375"
  ],
  "OYUNCU": [
-  "gameplay/social/social_manager.gd:1592",
+  "gameplay/social/social_manager.gd:1616",
   "ui/hud/profile_edit_screen.gd:254",
   "ui/hud/profile_card.gd:120"
  ],
@@ -4124,7 +4127,7 @@
   "ui/hud/mod_workshop.gd:335"
  ],
  "PERMISSION": [
-  "gameplay/social/social_manager.gd:1716"
+  "gameplay/social/social_manager.gd:1740"
  ],
  "PERU": [
   "gameplay/social/profile_catalog.gd:45"
@@ -4283,10 +4286,10 @@
   "ui/hud/profile_edit_screen.gd:454"
  ],
  "Profil oluşturulamadı. İnternet bağlantını kontrol edip tekrar dene.": [
-  "gameplay/social/social_manager.gd:265"
+  "gameplay/social/social_manager.gd:269"
  ],
  "Profilin hazır! Kodunu arkadaşlarınla paylaş.": [
-  "gameplay/social/social_manager.gd:262"
+  "gameplay/social/social_manager.gd:266"
  ],
  "Proje bırakılsın mı? Takılan parçalar envantere döner, tamir alanı boşalır.": [
   "ui/hud/restoration_panel.gd:385"
@@ -5074,13 +5077,13 @@
   "ui/hud/friends_screen.gd:497"
  ],
  "Takma ad %d–%d karakter olmalı.": [
-  "gameplay/social/social_manager.gd:1667"
+  "gameplay/social/social_manager.gd:1691"
  ],
  "Takma ad değiştirilemedi. Tekrar dene.": [
-  "gameplay/social/social_manager.gd:285"
+  "gameplay/social/social_manager.gd:289"
  ],
  "Takma adın değişti.": [
-  "gameplay/social/social_manager.gd:283"
+  "gameplay/social/social_manager.gd:287"
  ],
  "Takma adını ARKADAŞLAR ekranında oluşturabilirsin.": [
   "ui/hud/profile_edit_screen.gd:492"
@@ -5194,6 +5197,9 @@
  ],
  "Tüm araçlar, garaj Sv.4, 3 alan, 10. rütbe ve 35 ustalık yıldızı": [
   "gameplay/missions/mission_catalog.gd:114"
+ ],
+ "TİCARİ": [
+  "vehicles/crates.json:set.ticari"
  ],
  "UA": [
   "gameplay/social/profile_catalog.gd:46",
@@ -5611,7 +5617,7 @@
   "ui/loading/loading_screen.gd:58"
  ],
  "Yeniden istemek için %s bekle.": [
-  "gameplay/social/social_manager.gd:862"
+  "gameplay/social/social_manager.gd:866"
  ],
  "Yeşil gövdeli sütunlu matkap.": [
   "decor/decorations.json:drill_press.desc"
@@ -5659,8 +5665,8 @@
   "ui/hud/mission_screen.gd:16"
  ],
  "Zaten arkadaşsınız.": [
-  "gameplay/social/social_manager.gd:449",
-  "gameplay/social/social_manager.gd:1028"
+  "gameplay/social/social_manager.gd:453",
+  "gameplay/social/social_manager.gd:1033"
  ],
  "Zoom (ortografik size)": [
   "world_camera.gd:23"
@@ -5941,7 +5947,7 @@
   "ui/hud/mod_workshop.gd:506"
  ],
  "Önce ARKADAŞLAR'dan bir arkadaş ekle.": [
-  "gameplay/social/social_manager.gd:859"
+  "gameplay/social/social_manager.gd:863"
  ],
  "Önce ARKADAŞLAR'dan takma adını seç; sonra davet yeniden açılır.": [
   "ui/hud/invite_screen.gd:229"
@@ -6159,13 +6165,13 @@
   "ui/hud/push_prompt.gd:84"
  ],
  "İstek gönderilemedi. İnternet bağlantını kontrol et.": [
-  "gameplay/social/social_manager.gd:872",
-  "gameplay/social/social_manager.gd:1020",
-  "gameplay/social/social_manager.gd:1041",
-  "gameplay/social/social_manager.gd:1048"
+  "gameplay/social/social_manager.gd:876",
+  "gameplay/social/social_manager.gd:1025",
+  "gameplay/social/social_manager.gd:1046",
+  "gameplay/social/social_manager.gd:1053"
  ],
  "İstek kabul edilemedi. Tekrar dene.": [
-  "gameplay/social/social_manager.gd:1065"
+  "gameplay/social/social_manager.gd:1070"
  ],
  "İstenenler: %s. ARKADAŞLAR'dan bedavaya gönderebilirsin.": [
   "ui/hud/news_digest.gd:308"
@@ -6268,10 +6274,10 @@
   "decor/decorations.json:office_safe.desc"
  ],
  "Şikâyet gönderilemedi. İnternet bağlantını kontrol et.": [
-  "gameplay/social/social_manager.gd:1574"
+  "gameplay/social/social_manager.gd:1598"
  ],
  "Şikâyetin alındı, inceleyeceğiz. Teşekkürler!": [
-  "gameplay/social/social_manager.gd:1573"
+  "gameplay/social/social_manager.gd:1597"
  ],
  "ŞİKAYET ET": [
   "ui/hud/friend_card_screen.gd:163",

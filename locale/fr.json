@@ -545,6 +545,7 @@
  "Kayıt buluta yazılıyor, birazdan tekrar dene.": "Sauvegarde dans le cloud en cours, réessaie dans un instant.",
  "Kazanınca para ve XP alırsın, kaybetsen de biraz XP kazanırsın. Her araçla kişisel rekorunu kır: üstteki çubukta eski rekorun hayalet olarak koşar.": "Si tu gagnes, tu reçois de l’argent et de l’XP ; même si tu perds, tu gagnes un peu d’XP. Bats ton record personnel avec chaque voiture : ton ancien record court comme un fantôme sur la barre du haut.",
  "Kişiselleştirilmiş reklam onayını değiştir.": "Modifie ton consentement aux publicités personnalisées.",
+ "KİŞİSELLEŞTİRİLMİŞ REKLAMLAR": "PUBLICITÉS PERSONNALISÉES",
  "Klasik yuvarlak atölye saati.": "Horloge d’atelier ronde et classique.",
  "Kod 6 karakter olmalı (ör. AY-7K2Q4M).": "Le code doit comporter 6 caractères (par ex. AY-7K2Q4M).",
  "Kodun kopyalandı.": "Ton code a été copié.",
@@ -1981,5 +1982,7 @@
  "Yarışı kaybedersen aynı rakiple bir kez ücretsiz rövanş yapabilirsin.": "Course perdue ? Tu as droit à une revanche gratuite contre le même adversaire.",
  "Bekleyen müşterilerin sabrı sınırlı: onları çok bekletirsen vazgeçip giderler.": "Les clients qui attendent ont une patience limitée : si tu les fais trop attendre, ils repartent.",
  "Sen yokken de garajın çalışır: döndüğünde birikmiş kazancın seni bekler.": "Ton garage continue de tourner en ton absence : tes gains t’attendent à ton retour.",
- "Hurdalıkta yığınları arayıp parça topla, klasik araçları restore ederek garajına kat.": "Fouille les tas de la casse pour trouver des pièces et restaure des voitures classiques pour ton garage."
+ "Hurdalıkta yığınları arayıp parça topla, klasik araçları restore ederek garajına kat.": "Fouille les tas de la casse pour trouver des pièces et restaure des voitures classiques pour ton garage.",
+ "HİPER": "HYPERCARS",
+ "TİCARİ": "UTILITAIRES"
 }

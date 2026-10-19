@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://buwokwt8vet5v"]
+
+[ext_resource type="PackedScene" uid="uid://tf26x1an1odl" path="res://assets/cars/optimized/porsche_taycan.glb" id="1_porsc"]
+
+[node name="porsche_taycan" instance=ExtResource("1_porsc")]

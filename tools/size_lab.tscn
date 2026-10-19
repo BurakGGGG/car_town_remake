@@ -59,12 +59,27 @@
 [ext_resource type="PackedScene" uid="uid://b0w2td3h8p7ef" path="res://assets/cars/audi_quattro_s1.tscn" id="57_56wnj"]
 [ext_resource type="PackedScene" uid="uid://tp646d54eik7" path="res://assets/cars/ford_rs200.tscn" id="58_6mm78"]
 [ext_resource type="PackedScene" uid="uid://dq1kegrjpys3h" path="res://assets/cars/mitsubishi_evo6.tscn" id="59_2vaos"]
+[ext_resource type="PackedScene" uid="uid://b6khmsb3d0lb8" path="res://assets/cars/audi_a6.tscn" id="60_w8cle"]
+[ext_resource type="PackedScene" uid="uid://duxx0sheltyfp" path="res://assets/cars/bmw_f30.tscn" id="61_egq1o"]
+[ext_resource type="PackedScene" uid="uid://bc76cbxmw1vym" path="res://assets/cars/bugatti_chiron.tscn" id="62_37heo"]
+[ext_resource type="PackedScene" uid="uid://buad258muhcj3" path="res://assets/cars/bugatti_veyron.tscn" id="63_74nn0"]
+[ext_resource type="PackedScene" uid="uid://k5umoikr0a6m" path="res://assets/cars/chery_tiggo_8.tscn" id="64_e1wx8"]
+[ext_resource type="PackedScene" uid="uid://b22rc3v0p8pd5" path="res://assets/cars/toyota_corolla.tscn" id="65_urc7a"]
+[ext_resource type="PackedScene" uid="uid://vq6mds4q1a8i" path="res://assets/cars/cupra_formentor.tscn" id="66_iad2h"]
+[ext_resource type="PackedScene" uid="uid://ct3sjp1sb2sem" path="res://assets/cars/ferrari_laferrari.tscn" id="67_bfbfv"]
+[ext_resource type="PackedScene" uid="uid://pxf75645fswa" path="res://assets/cars/ford_transit.tscn" id="68_pjymf"]
+[ext_resource type="PackedScene" uid="uid://dhrvomox60ybs" path="res://assets/cars/renault_megane_4.tscn" id="69_thx36"]
+[ext_resource type="PackedScene" uid="uid://dfmgq4hdn2pos" path="res://assets/cars/mercedes_g.tscn" id="70_s3lsm"]
+[ext_resource type="PackedScene" uid="uid://bua12jc8gv3wc" path="res://assets/cars/mercedes_sprinter.tscn" id="71_8t7om"]
+[ext_resource type="PackedScene" uid="uid://xhs3c2r0skk3" path="res://assets/cars/vw_passat_b8.tscn" id="72_gseh3"]
+[ext_resource type="PackedScene" uid="uid://buwokwt8vet5v" path="res://assets/cars/porsche_taycan.tscn" id="73_8bxcb"]
+[ext_resource type="PackedScene" uid="uid://ccvt5efeaitoe" path="res://assets/cars/skoda_superb.tscn" id="74_jll03"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0fuxv"]
 albedo_color = Color(0.55, 0.57, 0.6, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_a0owi"]
-size = Vector2(9.2, 35)
+size = Vector2(9.2, 43.8)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wq25m"]
 albedo_color = Color(0.2, 0.75, 0.3, 1)
@@ -75,7 +90,7 @@ size = Vector3(1, 0.02, 0.05)
 [node name="SizeLab" type="Node3D" unique_id=228455966]
 
 [node name="Floor" type="MeshInstance3D" parent="." unique_id=1339549133]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.7, -0.001, 15.4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.7, -0.001, 19.8)
 material_override = SubResource("StandardMaterial3D_0fuxv")
 mesh = SubResource("PlaneMesh_a0owi")
 
@@ -121,7 +136,7 @@ text = "RENAULT FLUENCE
 font_size = 48
 
 [node name="vw_passat_b55" parent="." unique_id=1412565957 instance=ExtResource("4_haqhs")]
-transform = Transform3D(1.12, 0, 0, 0, 1.12, 0, 0, 0, 1.12, 5.4, 0, 0)
+transform = Transform3D(1.14, 0, 0, 0, 1.14, 0, 0, 0, 1.14, 5.4, 0, 0)
 
 [node name="Label_vw_passat_b55" type="Label3D" parent="." unique_id=1626213083]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 0.85)
@@ -198,7 +213,7 @@ text = "SKODA KAMIQ
 font_size = 48
 
 [node name="vw_golf_7" parent="." unique_id=863263318 instance=ExtResource("11_k687w")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0, 4.4)
+transform = Transform3D(1.02, 0, 0, 0, 1.02, 0, 0, 0, 1.02, 3.6, 0, 4.4)
 
 [node name="Label_vw_golf_7" type="Label3D" parent="." unique_id=653581003]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 5.25)
@@ -231,7 +246,7 @@ text = "HONDA CIVIC VTEC
 font_size = 48
 
 [node name="audi_a3" parent="." unique_id=1847610931 instance=ExtResource("14_r3lws")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0, 6.6)
+transform = Transform3D(0.98, 0, 0, 0, 0.98, 0, 0, 0, 0.98, 1.8, 0, 6.6)
 
 [node name="Label_audi_a3" type="Label3D" parent="." unique_id=1314525145]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 7.45)
@@ -253,7 +268,7 @@ text = "VOLVO S60
 font_size = 48
 
 [node name="bmw_e60" parent="." unique_id=1737461319 instance=ExtResource("16_w8cle")]
-transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 5.4, 0, 6.6)
+transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 6.12053, 0, 30.686068)
 
 [node name="Label_bmw_e60" type="Label3D" parent="." unique_id=2022182713]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 7.45)
@@ -286,7 +301,7 @@ text = "MERCEDES CLS
 font_size = 48
 
 [node name="audi_rs6" parent="." unique_id=1627122957 instance=ExtResource("19_74nn0")]
-transform = Transform3D(1.23, 0, 0, 0, 1.23, 0, 0, 0, 1.23, 4.6714344, 0, 11.057062)
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, 4.6714344, 0, 11.057062)
 
 [node name="Label_audi_rs6" type="Label3D" parent="." unique_id=467446500]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 9.650001)
@@ -319,7 +334,7 @@ text = "LAMBORGHINI HURACÁN
 font_size = 48
 
 [node name="ferrari_488_pista" parent="." unique_id=1185431463 instance=ExtResource("22_iad2h")]
-transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, 1.8, 0, 11)
+transform = Transform3D(1.05, 0, 0, 0, 1.05, 0, 0, 0, 1.05, 1.8, 0, 11)
 
 [node name="Label_ferrari_488_pista" type="Label3D" parent="." unique_id=825753448]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 11.85)
@@ -330,7 +345,7 @@ text = "FERRARI 488 PISTA
 font_size = 48
 
 [node name="opel_corsa" parent="." unique_id=1260024682 instance=ExtResource("23_bfbfv")]
-transform = Transform3D(0.82, 0, 0, 0, 0.82, 0, 0, 0, 0.82, 3.6, 0, 11)
+transform = Transform3D(0.87, 0, 0, 0, 0.87, 0, 0, 0, 0.87, 3.6, 0, 11)
 
 [node name="Label_opel_corsa" type="Label3D" parent="." unique_id=1991263358]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 11.85)
@@ -341,7 +356,7 @@ text = "OPEL CORSA
 font_size = 48
 
 [node name="tesla_model_y" parent="." unique_id=923411873 instance=ExtResource("24_pjymf")]
-transform = Transform3D(1.24, 0, 0, 0, 1.24, 0, 0, 0, 1.24, 5.4, 0, 11)
+transform = Transform3D(1.085, 0, 0, 0, 1.085, 0, 0, 0, 1.085, 5.3791194, 0, 11.119388)
 
 [node name="Label_tesla_model_y" type="Label3D" parent="." unique_id=66023319]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 11.85)
@@ -385,7 +400,7 @@ text = "VW BEETLE
 font_size = 48
 
 [node name="togg_t10x" parent="." unique_id=263409091 instance=ExtResource("28_gseh3")]
-transform = Transform3D(1.16, 0, 0, 0, 1.16, 0, 0, 0, 1.16, 6.165749, -1.1920929e-07, 11.068469)
+transform = Transform3D(1.16, 0, 0, 0, 1.16, 0, 0, 0, 1.16, 4.2238555, -1.1920929e-07, 34.262665)
 
 [node name="Label_togg_t10x" type="Label3D" parent="." unique_id=1069449768]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 14.05)
@@ -396,7 +411,7 @@ text = "TOGG T10X
 font_size = 48
 
 [node name="togg_t10f" parent="." unique_id=319537661 instance=ExtResource("29_8bxcb")]
-transform = Transform3D(1.07, 0, 0, 0, 1.07, 0, 0, 0, 1.07, 2.3202686, 0, 13.201459)
+transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, 3.0409079, 1.0728836e-06, 39.83259)
 
 [node name="Label_togg_t10f" type="Label3D" parent="." unique_id=1382003724]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 16.25)
@@ -734,4 +749,169 @@ pixel_size = 0.0025
 billboard = 1
 text = "MITSUBISHI LANCER EVO VI
 0.9900"
+font_size = 48
+
+[node name="audi_a6" parent="." unique_id=1235649620 instance=ExtResource("60_w8cle")]
+transform = Transform3D(1.21, 0, 0, 0, 1.21, 0, 0, 0, 1.21, 5.493381, 0, 30.691095)
+
+[node name="Label_audi_a6" type="Label3D" parent="." unique_id=548070496]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 31.65)
+pixel_size = 0.0025
+billboard = 1
+text = "VIER SECHS 19
+1.1300"
+font_size = 48
+
+[node name="bmw_f30" parent="." unique_id=454588158 instance=ExtResource("61_egq1o")]
+transform = Transform3D(1.08, 0, 0, 0, 1.08, 0, 0, 0, 1.08, 0.60856616, 0, 39.138218)
+
+[node name="Label_bmw_f30" type="Label3D" parent="." unique_id=649870545]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 33.85)
+pixel_size = 0.0025
+billboard = 1
+text = "BAVARIA DREI 15
+1.0600"
+font_size = 48
+
+[node name="bugatti_chiron" parent="." unique_id=1415422730 instance=ExtResource("62_37heo")]
+transform = Transform3D(1.08, 0, 0, 0, 1.08, 0, 0, 0, 1.08, 2.6794467, -1.1920929e-07, 35.088287)
+
+[node name="Label_bugatti_chiron" type="Label3D" parent="." unique_id=1329061851]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 33.85)
+pixel_size = 0.0025
+billboard = 1
+text = "OVALE TONNERRE 16
+1.0400"
+font_size = 48
+
+[node name="bugatti_veyron" parent="." unique_id=1476342014 instance=ExtResource("63_74nn0")]
+transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, 2.022519, 0, 35.143093)
+
+[node name="Label_bugatti_veyron" type="Label3D" parent="." unique_id=1625306795]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 33.85)
+pixel_size = 0.0025
+billboard = 1
+text = "OVALE ÉCLAIR 05
+1.0200"
+font_size = 48
+
+[node name="chery_tiggo_8" parent="." unique_id=576855973 instance=ExtResource("64_e1wx8")]
+transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 3.6579447, 2.3841858e-07, 34.302483)
+
+[node name="Label_chery_tiggo_8" type="Label3D" parent="." unique_id=1862164080]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 33.85)
+pixel_size = 0.0025
+billboard = 1
+text = "KİRAZ KAPLAN 8
+1.0800"
+font_size = 48
+
+[node name="toyota_corolla" parent="." unique_id=1778508815 instance=ExtResource("65_urc7a")]
+transform = Transform3D(1.08, 0, 0, 0, 1.08, 0, 0, 0, 1.08, -0.82365143, -2.3841858e-07, 36.427933)
+
+[node name="Label_toyota_corolla" type="Label3D" parent="." unique_id=1477195418]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 36.05)
+pixel_size = 0.0025
+billboard = 1
+text = "TORNADO HALE 21
+1.0500"
+font_size = 48
+
+[node name="cupra_formentor" parent="." unique_id=738317733 instance=ExtResource("66_iad2h")]
+transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, 1.9948826, -2.3841858e-07, 39.780632)
+
+[node name="Label_cupra_formentor" type="Label3D" parent="." unique_id=1910512914]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 36.05)
+pixel_size = 0.0025
+billboard = 1
+text = "IBERO FARO 20
+1.0100"
+font_size = 48
+
+[node name="ferrari_laferrari" parent="." unique_id=168139428 instance=ExtResource("67_bfbfv")]
+transform = Transform3D(1.05, 0, 0, 0, 1.05, 0, 0, 0, 1.05, 1.3419526, 0, 35.117283)
+
+[node name="Label_ferrari_laferrari" type="Label3D" parent="." unique_id=410208420]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 36.05)
+pixel_size = 0.0025
+billboard = 1
+text = "FURIA ASSOLUTA 13
+1.0700"
+font_size = 48
+
+[node name="ford_transit" parent="." unique_id=1751955203 instance=ExtResource("68_pjymf")]
+transform = Transform3D(1.42, 0, 0, 0, 1.42, 0, 0, 0, 1.42, -0.79220295, 0, 40.633568)
+
+[node name="Label_ford_transit" type="Label3D" parent="." unique_id=202068222]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 36.05)
+pixel_size = 0.0025
+billboard = 1
+text = "FORGE HAMAL 19
+1.3100"
+font_size = 48
+
+[node name="renault_megane_4" parent="." unique_id=655111908 instance=ExtResource("69_thx36")]
+transform = Transform3D(1.078, 0, 0, 0, 1.078, 0, 0, 0, 1.078, 0.45292735, 0, 37.86472)
+
+[node name="Label_renault_megane_4" type="Label3D" parent="." unique_id=608604270]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 38.25)
+pixel_size = 0.0025
+billboard = 1
+text = "ROMBO KAYRA 19
+1.0600"
+font_size = 48
+
+[node name="mercedes_g" parent="." unique_id=1560974229 instance=ExtResource("70_s3lsm")]
+transform = Transform3D(1.18, 0, 0, 0, 1.18, 0, 0, 0, 1.18, 3.5930192, -2.3841858e-07, 39.798542)
+
+[node name="Label_mercedes_g" type="Label3D" parent="." unique_id=1041193280]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 38.25)
+pixel_size = 0.0025
+billboard = 1
+text = "STERN FESTUNG 18
+1.1100"
+font_size = 48
+
+[node name="mercedes_sprinter" parent="." unique_id=608666230 instance=ExtResource("71_8t7om")]
+transform = Transform3D(1.67, 0, 0, 0, 1.67, 0, 0, 0, 1.67, -0.14868593, 0, 40.56039)
+
+[node name="Label_mercedes_sprinter" type="Label3D" parent="." unique_id=898702830]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 38.25)
+pixel_size = 0.0025
+billboard = 1
+text = "STERN DOLMUŞ 19
+1.5900"
+font_size = 48
+
+[node name="vw_passat_b8" parent="." unique_id=1583695438 instance=ExtResource("72_gseh3")]
+transform = Transform3D(1.11, 0, 0, 0, 1.11, 0, 0, 0, 1.11, 0.0123848915, 0, 39.144203)
+
+[node name="Label_vw_passat_b8" type="Label3D" parent="." unique_id=273954260]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 0.02, 38.25)
+pixel_size = 0.0025
+billboard = 1
+text = "WULF KOMBI 16
+1.0900"
+font_size = 48
+
+[node name="porsche_taycan" parent="." unique_id=1848072854 instance=ExtResource("73_8bxcb")]
+transform = Transform3D(1.11, 0, 0, 0, 1.11, 0, 0, 0, 1.11, 5.6640105, 0, 39.516613)
+
+[node name="Label_porsche_taycan" type="Label3D" parent="." unique_id=812926841]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 40.449997)
+pixel_size = 0.0025
+billboard = 1
+text = "STALLION FOHLEN 20
+1.1300"
+font_size = 48
+
+[node name="skoda_superb" parent="." unique_id=665490799 instance=ExtResource("74_jll03")]
+transform = Transform3D(1.16, 0, 0, 0, 1.16, 0, 0, 0, 1.16, 2.5346248, 0, 39.827137)
+
+[node name="Label_skoda_superb" type="Label3D" parent="." unique_id=865173020]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 40.449997)
+pixel_size = 0.0025
+billboard = 1
+text = "ARROW KANZLER 16
+1.1100"
 font_size = 48

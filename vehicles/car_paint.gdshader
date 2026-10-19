@@ -9,8 +9,11 @@ shader_type spatial;
 // pası aynen korunur; koyu renklerde de kaporta detayı kaybolmaz. Oran 1'i aşan parlamalarda renk
 // kanal kanal kırpılıp ton kaymasın diye yumuşakça beyaza gider.
 // recolor = 0 (varsayılan renk) iken doku hiç işlenmez. CarRig bu uniform'ları CarAppearance'tan doldurur.
+// Doku ve maske sınırlı mipmap kademesiyle okunur (car_texture.gdshaderinc: uzakta UV adaları karışmasın).
 
-uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic;
+#include "res://vehicles/car_texture.gdshaderinc"
+
+uniform sampler2D albedo_tex : source_color, filter_linear_mipmap;
 uniform sampler2D paint_mask : hint_default_black, filter_linear_mipmap;
 uniform vec4 paint : source_color = vec4(1.0);   // dokudaki fabrika boyası (CarPartMap.default_paint)
 uniform vec4 tint : source_color = vec4(1.0);    // istenen boya (CarAppearance.body_color)
@@ -22,8 +25,8 @@ uniform float roughness = 0.45;
 const vec3 LUMA = vec3(0.299, 0.587, 0.114);
 
 void fragment() {
-	vec3 t = texture(albedo_tex, UV).rgb;
-	float m = recolor * texture(paint_mask, UV).r;
+	vec3 t = car_texture(albedo_tex, UV).rgb;
+	float m = recolor * car_texture(paint_mask, UV).r;
 	if (m > 0.001) {
 		float l = max(dot(t, LUMA), 0.02);
 		float pl = max(dot(paint.rgb, LUMA), 0.02);

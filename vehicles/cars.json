@@ -199,7 +199,7 @@
         "height_m": 1.463,
         "wheelbase_m": 2.703
       },
-      "model_scale": 1.12
+      "model_scale": 1.14
     },
     {
       "id": "hyundai_era",
@@ -551,7 +551,7 @@
         "height_m": 1.452,
         "wheelbase_m": 2.637
       },
-      "model_scale": 1.0
+      "model_scale": 1.02
     },
     {
       "id": "seat_leon",
@@ -701,7 +701,7 @@
         "height_m": 1.427,
         "wheelbase_m": 2.637
       },
-      "model_scale": 1.0
+      "model_scale": 0.98
     },
     {
       "id": "volvo_s60",
@@ -951,7 +951,7 @@
         "height_m": 1.46,
         "wheelbase_m": 2.929
       },
-      "model_scale": 1.23
+      "model_scale": 1.2
     },
     {
       "id": "porsche_gt3",
@@ -1104,7 +1104,7 @@
         "height_m": 1.206,
         "wheelbase_m": 2.65
       },
-      "model_scale": 1.10
+      "model_scale": 1.05
     },
     {
       "id": "opel_corsa",
@@ -1154,7 +1154,7 @@
         "height_m": 1.44,
         "wheelbase_m": 2.491
       },
-      "model_scale": 0.82
+      "model_scale": 0.87
     },
     {
       "id": "tesla_model_y",
@@ -1204,7 +1204,7 @@
         "height_m": 1.624,
         "wheelbase_m": 2.89
       },
-      "model_scale": 1.24
+      "model_scale": 1.085
     },
     {
       "id": "chevrolet_camaro",
@@ -1454,7 +1454,760 @@
         "height_m": 1.56,
         "wheelbase_m": 2.89
       },
-      "model_scale": 1.07
+      "model_scale": 1.1
+    },
+    {
+      "id": "audi_a6",
+      "brand": "VIER",
+      "model": "SECHS 19",
+      "display_name": "VIER SECHS 19",
+      "year": 2019,
+      "price": 135000,
+      "condition": 0.85,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/audi_a6.tscn",
+      "source_path": "res://assets/cars/source/audi_a6.glb",
+      "optimized_path": "res://assets/cars/optimized/audi_a6.glb",
+      "default_color": "#2F3C4E",
+      "available_colors": [
+        "#2F3C4E",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#F3E8CF",
+      "traffic": true,
+      "class": "A",
+      "rarity": "rare",
+      "min_level": 24,
+      "min_garage_rank": 6,
+      "race": {
+        "top_speed": 250,
+        "acceleration": 74,
+        "reaction": 80,
+        "grip": 84
+      },
+      "performance": {
+        "variant": "Vier Sechs 19",
+        "engine": "2.0 TFSI",
+        "hp": 245,
+        "zero_100": 6.0,
+        "top_speed": 250,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.939,
+        "width_m": 1.886,
+        "height_m": 1.457,
+        "wheelbase_m": 2.924
+      },
+      "model_scale": 1.21
+    },
+    {
+      "id": "bmw_f30",
+      "brand": "BAVARIA",
+      "model": "DREI 15",
+      "display_name": "BAVARIA DREI 15",
+      "year": 2015,
+      "price": 92000,
+      "condition": 0.85,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/bmw_f30.tscn",
+      "source_path": "res://assets/cars/source/bmw_f30.glb",
+      "optimized_path": "res://assets/cars/optimized/bmw_f30.glb",
+      "default_color": "#EA525D",
+      "available_colors": [
+        "#EA525D",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": true,
+      "class": "A",
+      "rarity": "rare",
+      "min_level": 18,
+      "min_garage_rank": 4,
+      "race": {
+        "top_speed": 235,
+        "acceleration": 64,
+        "reaction": 78,
+        "grip": 82
+      },
+      "performance": {
+        "variant": "Bavaria Drei 15",
+        "engine": "2.0 Turbo",
+        "hp": 184,
+        "zero_100": 7.3,
+        "top_speed": 235,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.633,
+        "width_m": 1.811,
+        "height_m": 1.429,
+        "wheelbase_m": 2.81
+      },
+      "model_scale": 1.08
+    },
+    {
+      "id": "bugatti_chiron",
+      "brand": "OVALE",
+      "model": "TONNERRE 16",
+      "display_name": "OVALE TONNERRE 16",
+      "year": 2016,
+      "price": 900000,
+      "condition": 0.85,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/bugatti_chiron.tscn",
+      "source_path": "res://assets/cars/source/bugatti_chiron.glb",
+      "optimized_path": "res://assets/cars/optimized/bugatti_chiron.glb",
+      "default_color": "#0188F2",
+      "available_colors": [
+        "#0188F2",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": false,
+      "exotic": true,
+      "class": "S",
+      "rarity": "legendary",
+      "min_level": 39,
+      "min_garage_rank": 10,
+      "race": {
+        "top_speed": 420,
+        "acceleration": 100,
+        "reaction": 94,
+        "grip": 96
+      },
+      "performance": {
+        "variant": "Ovale Tonnerre 16",
+        "engine": "8.0 W16 Quad-Turbo",
+        "hp": 1500,
+        "zero_100": 2.42,
+        "top_speed": 420,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.544,
+        "width_m": 2.038,
+        "height_m": 1.212,
+        "wheelbase_m": 2.711
+      },
+      "model_scale": 1.08
+    },
+    {
+      "id": "bugatti_veyron",
+      "brand": "OVALE",
+      "model": "ÉCLAIR 05",
+      "display_name": "OVALE ÉCLAIR 05",
+      "year": 2005,
+      "price": 700000,
+      "condition": 0.85,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/bugatti_veyron.tscn",
+      "source_path": "res://assets/cars/source/bugatti_veyron.glb",
+      "optimized_path": "res://assets/cars/optimized/bugatti_veyron.glb",
+      "default_color": "#EAEBF6",
+      "available_colors": [
+        "#EAEBF6",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": false,
+      "exotic": true,
+      "class": "S",
+      "rarity": "legendary",
+      "min_level": 37,
+      "min_garage_rank": 10,
+      "race": {
+        "top_speed": 407,
+        "acceleration": 100,
+        "reaction": 92,
+        "grip": 94
+      },
+      "performance": {
+        "variant": "Ovale Éclair 05",
+        "engine": "8.0 W16 Quad-Turbo",
+        "hp": 1001,
+        "zero_100": 2.5,
+        "top_speed": 407,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.462,
+        "width_m": 1.998,
+        "height_m": 1.204,
+        "wheelbase_m": 2.71
+      },
+      "model_scale": 1.1
+    },
+    {
+      "id": "chery_tiggo_8",
+      "brand": "KİRAZ",
+      "model": "KAPLAN 8",
+      "display_name": "KİRAZ KAPLAN 8",
+      "year": 2023,
+      "price": 70000,
+      "condition": 0.85,
+      "category": "suv",
+      "scene_path": "res://assets/cars/chery_tiggo_8.tscn",
+      "source_path": "res://assets/cars/source/chery_tiggo_8.glb",
+      "optimized_path": "res://assets/cars/optimized/chery_tiggo_8.glb",
+      "default_color": "#1F2529",
+      "available_colors": [
+        "#1F2529",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#9FD6C8",
+      "traffic": true,
+      "class": "C",
+      "rarity": "common",
+      "min_level": 14,
+      "min_garage_rank": 3,
+      "race": {
+        "top_speed": 190,
+        "acceleration": 44,
+        "reaction": 68,
+        "grip": 72
+      },
+      "performance": {
+        "variant": "Kiraz Kaplan 8",
+        "engine": "1.6 TGDI",
+        "hp": 183,
+        "zero_100": 10.0,
+        "top_speed": 190,
+        "drivetrain": "FWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.722,
+        "width_m": 1.86,
+        "height_m": 1.745,
+        "wheelbase_m": 2.71
+      },
+      "model_scale": 1.15
+    },
+    {
+      "id": "toyota_corolla",
+      "brand": "TORNADO",
+      "model": "HALE 21",
+      "display_name": "TORNADO HALE 21",
+      "year": 2021,
+      "price": 48000,
+      "condition": 0.85,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/toyota_corolla.tscn",
+      "source_path": "res://assets/cars/source/toyota_corolla.glb",
+      "optimized_path": "res://assets/cars/optimized/toyota_corolla.glb",
+      "default_color": "#9CA0B3",
+      "available_colors": [
+        "#9CA0B3",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#D9E7C8",
+      "traffic": true,
+      "class": "C",
+      "rarity": "common",
+      "min_level": 9,
+      "min_garage_rank": 2,
+      "race": {
+        "top_speed": 180,
+        "acceleration": 37,
+        "reaction": 64,
+        "grip": 68
+      },
+      "performance": {
+        "variant": "Tornado Hale 21",
+        "engine": "1.8 Hibrit",
+        "hp": 122,
+        "zero_100": 11.0,
+        "top_speed": 180,
+        "drivetrain": "FWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.63,
+        "width_m": 1.78,
+        "height_m": 1.435,
+        "wheelbase_m": 2.7
+      },
+      "model_scale": 1.08
+    },
+    {
+      "id": "cupra_formentor",
+      "brand": "IBERO",
+      "model": "FARO 20",
+      "display_name": "IBERO FARO 20",
+      "year": 2020,
+      "price": 120000,
+      "condition": 0.85,
+      "category": "hatchback",
+      "scene_path": "res://assets/cars/cupra_formentor.tscn",
+      "source_path": "res://assets/cars/source/cupra_formentor.glb",
+      "optimized_path": "res://assets/cars/optimized/cupra_formentor.glb",
+      "default_color": "#363E4C",
+      "available_colors": [
+        "#363E4C",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": true,
+      "class": "A",
+      "rarity": "epic",
+      "min_level": 22,
+      "min_garage_rank": 5,
+      "race": {
+        "top_speed": 250,
+        "acceleration": 82,
+        "reaction": 82,
+        "grip": 84
+      },
+      "performance": {
+        "variant": "Ibero Faro 20",
+        "engine": "2.0 TSI",
+        "hp": 310,
+        "zero_100": 4.9,
+        "top_speed": 250,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.45,
+        "width_m": 1.839,
+        "height_m": 1.511,
+        "wheelbase_m": 2.68
+      },
+      "model_scale": 1.1
+    },
+    {
+      "id": "ferrari_laferrari",
+      "brand": "FURIA",
+      "model": "ASSOLUTA 13",
+      "display_name": "FURIA ASSOLUTA 13",
+      "year": 2013,
+      "price": 650000,
+      "condition": 0.85,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/ferrari_laferrari.tscn",
+      "source_path": "res://assets/cars/source/ferrari_laferrari.glb",
+      "optimized_path": "res://assets/cars/optimized/ferrari_laferrari.glb",
+      "default_color": "#F9545D",
+      "available_colors": [
+        "#F9545D",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": false,
+      "exotic": true,
+      "class": "S",
+      "rarity": "legendary",
+      "min_level": 36,
+      "min_garage_rank": 10,
+      "race": {
+        "top_speed": 350,
+        "acceleration": 99,
+        "reaction": 94,
+        "grip": 96
+      },
+      "performance": {
+        "variant": "Furia Assoluta 13",
+        "engine": "6.3 V12 Hibrit",
+        "hp": 963,
+        "zero_100": 2.6,
+        "top_speed": 350,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.702,
+        "width_m": 1.992,
+        "height_m": 1.116,
+        "wheelbase_m": 2.65
+      },
+      "model_scale": 1.05
+    },
+    {
+      "id": "ford_transit",
+      "brand": "FORGE",
+      "model": "HAMAL 19",
+      "display_name": "FORGE HAMAL 19",
+      "year": 2019,
+      "price": 40000,
+      "condition": 0.85,
+      "category": "van",
+      "scene_path": "res://assets/cars/ford_transit.tscn",
+      "source_path": "res://assets/cars/source/ford_transit.glb",
+      "optimized_path": "res://assets/cars/optimized/ford_transit.glb",
+      "default_color": "#DCD8DC",
+      "available_colors": [
+        "#DCD8DC",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#F5BE4C",
+      "traffic": true,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 7,
+      "min_garage_rank": 2,
+      "race": {
+        "top_speed": 160,
+        "acceleration": 15,
+        "reaction": 56,
+        "grip": 58
+      },
+      "performance": {
+        "variant": "Forge Hamal 19",
+        "engine": "2.0 EcoBlue",
+        "hp": 170,
+        "zero_100": 14.0,
+        "top_speed": 160,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 5.75,
+        "width_m": 2.059,
+        "height_m": 2.25,
+        "wheelbase_m": 3.504
+      },
+      "model_scale": 1.42
+    },
+    {
+      "id": "renault_megane_4",
+      "brand": "ROMBO",
+      "model": "KAYRA 19",
+      "display_name": "ROMBO KAYRA 19",
+      "year": 2019,
+      "price": 62000,
+      "condition": 0.85,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/renault_megane_4.tscn",
+      "source_path": "res://assets/cars/source/renault_megane_4.glb",
+      "optimized_path": "res://assets/cars/optimized/renault_megane_4.glb",
+      "default_color": "#DFE0EA",
+      "available_colors": [
+        "#DFE0EA",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#F3E8CF",
+      "traffic": true,
+      "class": "C",
+      "rarity": "common",
+      "min_level": 12,
+      "min_garage_rank": 3,
+      "race": {
+        "top_speed": 205,
+        "acceleration": 47,
+        "reaction": 70,
+        "grip": 72
+      },
+      "performance": {
+        "variant": "Rombo Kayra 19",
+        "engine": "1.3 TCe",
+        "hp": 140,
+        "zero_100": 9.7,
+        "top_speed": 205,
+        "drivetrain": "FWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.632,
+        "width_m": 1.814,
+        "height_m": 1.443,
+        "wheelbase_m": 2.711
+      },
+      "model_scale": 1.078
+    },
+    {
+      "id": "mercedes_g",
+      "brand": "STERN",
+      "model": "FESTUNG 18",
+      "display_name": "STERN FESTUNG 18",
+      "year": 2018,
+      "price": 280000,
+      "condition": 0.85,
+      "category": "suv",
+      "scene_path": "res://assets/cars/mercedes_g.tscn",
+      "source_path": "res://assets/cars/source/mercedes_g.glb",
+      "optimized_path": "res://assets/cars/optimized/mercedes_g.glb",
+      "default_color": "#858DA1",
+      "available_colors": [
+        "#858DA1",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": true,
+      "class": "A",
+      "rarity": "legendary",
+      "min_level": 30,
+      "min_garage_rank": 8,
+      "race": {
+        "top_speed": 220,
+        "acceleration": 85,
+        "reaction": 80,
+        "grip": 80
+      },
+      "performance": {
+        "variant": "Stern Festung 18",
+        "engine": "4.0 V8 Biturbo",
+        "hp": 585,
+        "zero_100": 4.5,
+        "top_speed": 220,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.873,
+        "width_m": 1.984,
+        "height_m": 1.966,
+        "wheelbase_m": 2.89
+      },
+      "model_scale": 1.18
+    },
+    {
+      "id": "mercedes_sprinter",
+      "brand": "STERN",
+      "model": "DOLMUŞ 19",
+      "display_name": "STERN DOLMUŞ 19",
+      "year": 2019,
+      "price": 45000,
+      "condition": 0.85,
+      "category": "van",
+      "scene_path": "res://assets/cars/mercedes_sprinter.tscn",
+      "source_path": "res://assets/cars/source/mercedes_sprinter.glb",
+      "optimized_path": "res://assets/cars/optimized/mercedes_sprinter.glb",
+      "default_color": "#D9D5DF",
+      "available_colors": [
+        "#D9D5DF",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#D9E7C8",
+      "traffic": true,
+      "class": "D",
+      "rarity": "common",
+      "min_level": 10,
+      "min_garage_rank": 2,
+      "race": {
+        "top_speed": 150,
+        "acceleration": 0,
+        "reaction": 54,
+        "grip": 56
+      },
+      "performance": {
+        "variant": "Stern Dolmuş 19",
+        "engine": "2.1 CDI",
+        "hp": 163,
+        "zero_100": 19.0,
+        "top_speed": 150,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 6.967,
+        "width_m": 1.993,
+        "height_m": 2.65,
+        "wheelbase_m": 4.325
+      },
+      "model_scale": 1.67
+    },
+    {
+      "id": "vw_passat_b8",
+      "brand": "WULF",
+      "model": "KOMBI 16",
+      "display_name": "WULF KOMBI 16",
+      "year": 2016,
+      "price": 78000,
+      "condition": 0.85,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/vw_passat_b8.tscn",
+      "source_path": "res://assets/cars/source/vw_passat_b8.glb",
+      "optimized_path": "res://assets/cars/optimized/vw_passat_b8.glb",
+      "default_color": "#D7D8E2",
+      "available_colors": [
+        "#D7D8E2",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#83B24F",
+      "traffic": true,
+      "class": "B",
+      "rarity": "rare",
+      "min_level": 15,
+      "min_garage_rank": 4,
+      "race": {
+        "top_speed": 220,
+        "acceleration": 56,
+        "reaction": 74,
+        "grip": 76
+      },
+      "performance": {
+        "variant": "Wulf Kombi 16",
+        "engine": "1.4 TSI",
+        "hp": 150,
+        "zero_100": 8.4,
+        "top_speed": 220,
+        "drivetrain": "FWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.767,
+        "width_m": 1.832,
+        "height_m": 1.456,
+        "wheelbase_m": 2.791
+      },
+      "model_scale": 1.11
+    },
+    {
+      "id": "porsche_taycan",
+      "brand": "STALLION",
+      "model": "FOHLEN 20",
+      "display_name": "STALLION FOHLEN 20",
+      "year": 2020,
+      "price": 380000,
+      "condition": 0.85,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/porsche_taycan.tscn",
+      "source_path": "res://assets/cars/source/porsche_taycan.glb",
+      "optimized_path": "res://assets/cars/optimized/porsche_taycan.glb",
+      "default_color": "#D6D8E8",
+      "available_colors": [
+        "#D6D8E8",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#7FD3F5",
+      "traffic": true,
+      "class": "S",
+      "rarity": "epic",
+      "min_level": 32,
+      "min_garage_rank": 9,
+      "race": {
+        "top_speed": 260,
+        "acceleration": 95,
+        "reaction": 90,
+        "grip": 92
+      },
+      "performance": {
+        "variant": "Stallion Fohlen 20",
+        "engine": "Elektrik",
+        "hp": 680,
+        "zero_100": 3.2,
+        "top_speed": 260,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.963,
+        "width_m": 1.966,
+        "height_m": 1.378,
+        "wheelbase_m": 2.9
+      },
+      "model_scale": 1.11
+    },
+    {
+      "id": "skoda_superb",
+      "brand": "ARROW",
+      "model": "KANZLER 16",
+      "display_name": "ARROW KANZLER 16",
+      "year": 2016,
+      "price": 82000,
+      "condition": 0.85,
+      "category": "sedan",
+      "scene_path": "res://assets/cars/skoda_superb.tscn",
+      "source_path": "res://assets/cars/source/skoda_superb.glb",
+      "optimized_path": "res://assets/cars/optimized/skoda_superb.glb",
+      "default_color": "#2A3E4F",
+      "available_colors": [
+        "#2A3E4F",
+        "#C2C4CC",
+        "#F2F2EB",
+        "#1F1F21",
+        "#CC241F",
+        "#24468C"
+      ],
+      "world_node": "",
+      "plate_color": "#E8C58A",
+      "traffic": true,
+      "class": "B",
+      "rarity": "rare",
+      "min_level": 16,
+      "min_garage_rank": 4,
+      "race": {
+        "top_speed": 218,
+        "acceleration": 53,
+        "reaction": 74,
+        "grip": 78
+      },
+      "performance": {
+        "variant": "Arrow Kanzler 16",
+        "engine": "1.4 TSI",
+        "hp": 150,
+        "zero_100": 8.8,
+        "top_speed": 218,
+        "drivetrain": "FWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.861,
+        "width_m": 1.864,
+        "height_m": 1.468,
+        "wheelbase_m": 2.841
+      },
+      "model_scale": 1.16
     },
     {
       "id": "police_vito",

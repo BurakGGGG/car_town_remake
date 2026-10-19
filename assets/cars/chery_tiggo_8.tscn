@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://k5umoikr0a6m"]
+
+[ext_resource type="PackedScene" uid="uid://b0xnmgjolth0a" path="res://assets/cars/optimized/chery_tiggo_8.glb" id="1_chery"]
+
+[node name="chery_tiggo_8" instance=ExtResource("1_chery")]

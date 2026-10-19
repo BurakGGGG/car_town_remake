@@ -329,3 +329,85 @@ DEĞİL; kullanıcı 2026-10-17'de istemedi (mevcut hâli yeterli buldu). Uygula
   bildirim, arkadaşlar) telefonda denenmeli. Tahmini −4–6 MiB indirme.
 - *Müzik:* üç tema QOA (5,9 MiB). Vorbis'e çevirmek ~3 MiB kazandırır ama dikişsiz döngü yeniden
   doğrulanmalı (bkz. oyun müziği notları); değmez.
+
+
+---
+
+## Paket boyutu 3 (2026-10-19)
+
+İstek: "grafik kalitesini çok düşürmeden boyutu düşür". 74 araçla (8. parti dahil) araç mesh'i paketin en
+büyük kalemiydi: içe aktarılmış `.scn` toplamı **170,9 MiB**, AAB'nin ~%66'sı.
+
+| Kalem (AAB, MiB) | Önce (hesaplanan) | Sonra (ölçülen) | Not |
+|---|---|---|---|
+| Mesh (.glb → .scn) | ~173,7 / 179,4 | **133,6 / 138,0** | sadeleştirme −30,5 + zstd 19 −10,9 (açık) |
+| Araç dokuları | 37,4 / 49,3 | 37,4 / 49,3 | dokunulmadı (1024², bkz. "Paket boyutu 2") |
+| Motor, Java, diğer | 52,1 / 110,9 | 52,1 / 110,9 | dokunulmadı |
+| **Toplam** | **~263 / ~340** | **223,1 / 298,2** | sıkıştırılmış (≈ indirme) / açık (≈ kurulu) |
+
+"Sonra" debug anahtarıyla imzalı doğrulama AAB'si (`~/Projects/ct_builds/AutoYard_1.0.8_boyut3_dogrulama_debug_imzali.aab`).
+"Önce" aynı AAB'ye eski `.scn`'lerin farkı eklenerek hesaplandı (`.scn` zaten sıkıştırılmış, AAB'de ~1:1 durur).
+
+### Önce kayıpsız yollar ölçüldü
+
+`qa/size_audit/mesh_audit.gd` (BMW, ham 2,60 MB): vertex verisi %37, UV %12, taban indeks %27, LOD indeksleri %24.
+- Vertex sıkıştırma ZATEN açık (`ARRAY_FLAG_COMPRESS_ATTRIBUTES`: konum+normal 12 B, UV 4 B); §6'daki
+  "kapalı" notu eskimiş. İndeksler 16 bit, Godot vertex cache + fetch sıralamasını kendisi yapıyor.
+- `.scn` = RSCC: 4 KB bloklar hâlinde zstd. Aynı veri: zstd-3 (Godot varsayılanı) 2,17 MB, **zstd-19
+  1,99 MB (−%8,5)**, gzip-9 2,00, xz 1,62 (Godot okuyamaz). → `project.godot`
+  `compression/formats/zstd/compression_level=19`. Seviye yalnızca SIKIŞTIRMAYI etkiler (içe aktarma
+  bilgisayarda biraz yavaşlar); açma hızı aynı, oyun kodu çalışma anında zstd ile sıkıştırmıyor.
+  Ayar değişince içe aktarma kendiliğinden yenilenmez: `.godot/imported/<x>.md5` içinde `source_md5`
+  bozulup kaynak `touch`lanınca `--import` yeniden üretir (296 sahne böyle yenilendi).
+
+### Hata sınırlı ikinci sadeleştirme (`tools/resimplify_car.py`)
+
+`optimize_car.gd` sabit oranla (%12,5) sadeleştiriyor; düz panellerde gereğinden çok üçgen kalıyor. Araç,
+her parçayı Godot'nun kendi meshoptimizer'ıyla (1.1, `thirdparty/` derlenip ctypes) MUTLAK sapma sınırına
+kadar sadeleştirir: konum `0,0008` araç boyu (4,4 m araçta 3,5 mm; telefon tuvalinde en yakın showroom
+zoom'unda ~0,4 px), normal ve UV de hata hesabında, parça kenarları kilitli (komşu parçayla aralık açılmaz),
+UV dikişleri korunur. Dönen parçalar (`tools/wheel_parts.gd`: wheels / tires / rims + wheel_groups)
+hariç — 674 teker parçası bayt bayt aynı kaldı, `wheel_axes` geçerli. Düğüm adları / materyal / doku
+aynı → CarPartMap değişmez. Filoda üçgen 8,39 M → 6,72 M (−%20), `.scn` 170,9 → 140,4 MiB (zstd 19 ile 130,2).
+
+Godot'nun LOD1'ini taban yapmak (önceki açık seçenek) daha kaba: yarıya bölen basamak yüzünden teker hariç
+tümüne uygulanınca −%28, hata ≤ 2/1000 boy sınırıyla yalnız −%15 (`qa/size_audit/lod_audit.gd`).
+
+**Ayar seçimi** — `qa/size_audit/mesh_probe.gd` oyunun showroom'unu telefon tuvalinde (Xephyr 2400x1080,
+content_scale 1,35 → 1067x480) en yakın zoom'da yan ve arka 3/4'ten çizer; aynı kadraj eski / yeni
+içe aktarmayla iki kez çekilip `mesh_compare.py` ile kıyaslanır. Aynı karenin iki çalıştırması 62–71 dB
+(çizim deterministik). BMW + Ferrari + Getz:
+
+| konum / normal toleransı | `.scn` (3 araç) | PSNR | 2× büyütmede |
+|---|---|---|---|
+| önce | 6,92 MB | — | — |
+| 0,0008 / 0,04 | 4,52 (−%35) | 33,5–38,7 | BMW kapı altında üçgen gölge |
+| 0,0008 / 0,01 | 4,84 (−%30) | 35,9–42,6 | hâlâ seçiliyor |
+| 0,0008 / 0,005 | 5,13 (−%26) | 39,2–43,6 | bu üçünde temiz, AMA filo taramasında Sprinter kapı kolunda leke |
+| **0,0008 / 0,0025** | ~5,5 (−%20) | 41–50 | temiz |
+
+Asıl sınırı NORMAL toleransı belirliyor: Tripo normalleri gürültülü (komşu köşeler sık sık > 8° ayrışıyor);
+üçgen büyüyünce bu gürültü geniş lekeye dönüşüyor. Denenip bırakılanlar: kıvrım köşelerini kilitlemek
+(8°'de kazanç −%2'ye iniyor, 30°'de 0,0025 toleransından kötü).
+
+**Toros istisnası:** gövde TEK mesh ve başka kaynaktan %8'e inmiş; varsayılanla −%67 sadeleşip kapı altında
+kırışıklık bırakıyor → araca özel `TIGHT` (0,0003 / 0,001, −%32; 35 → 41 dB).
+
+**Filo doğrulaması** (74 araç × 2 açı, en yakın zoom, eski içe aktarmaya karşı): polisler hariç ortalama
+44,0 dB, en düşük 36,0 (Seat Leon — 2× büyütmede seçilmiyor). Polis araçlarındaki düşük değer (24–30 dB)
+tepe lambasının çekim anındaki fazı; gövde aynı. Kıyas görüntüleri `~/Projects/ct_shots/mesh_probe/`.
+Testler: car_thumbs / vehicle_wheel / vehicle_display / vehicle_asset / vehicle_scale 2.194 OK, 0 FAIL.
+`tools/vehicle_geometry_audit.gd`'deki 22 "PİVOT" FAIL'i önceden de var (yeni araçlar ölçülmüş `wheel_axes`
+kullanıyor; denetim yalnız teker geometrisine bakıyor, o değişmedi).
+
+**Yeni araç eklerken:** `strip_tangents.py`'den sonra `wheel_parts.gd` → `resimplify_car.py` (CarPartMap'te
+teker rolleri yazılmış olmalı) → `--import` → küçük resimler (`tools/make_car_thumbs.gd`). Aykırı sadeleşen
+araç (filonun gerisinden belirgin fazla, ör. > %40) varsa `mesh_probe.gd` ile bakılmalı. `tools/rebuild_cars.sh`
+adımı içeriyor. Geri alma: `git checkout assets/cars/optimized/*.glb` (8. partinin 15 aracı o gün git'te
+değildi; eskileri `~/Projects/ct_builds/glb_yedek_2026-10-19_sadelestirme_oncesi/`).
+
+### Bilerek yapılmayanlar
+- Daha gevşek ayar (0,0008 / 0,04): mesh'te ~12 MiB daha, ama en yakın zoom'da beyaz kaportada gölgelenme
+  fasetleri seçiliyor.
+- LOD1 kademesini atmak: görüntü aynı kalır (Godot o mesafede LOD0'ı çizer), ama şehirde orta mesafede
+  üçgen artar; telefonda kare hızı ölçülmeden yapılmamalı.

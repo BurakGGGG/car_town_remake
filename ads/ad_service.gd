@@ -10,7 +10,7 @@ extends Node
 ## kayıt zaten istenmiştir. Reklam ortasında uygulama kapanırsa ödül yoktur, kayıp yoktur.
 ##
 ## Teklif akışı (UI): `block_reason(kind) == &""` ve `is_ready()` ise "REKLAM İZLE" plakası gösterilir;
-## oyuncu plakaya basarsa `show_rewarded(kind)`. Reddetmek hiçbir şeyi engellemez (AdMob politikası).
+## oyuncu plakaya basarsa `show_rewarded(kind)`. Reddetmek hiçbir şeyi engellemez (AdMob / AppLovin politikası).
 
 ## Bir ödüllü reklam hak edildi. Dinleyici ödülü uygular.
 signal reward_earned(kind: StringName)
@@ -69,11 +69,31 @@ func show_privacy_options(on_done: Callable = func() -> void: pass) -> void:
 		on_done.call()
 
 
+## Kişiselleştirilmiş reklam AÇIK/KAPALI düğmesi gösterilsin mi (AppLovin)? AdMob'da Google formu kullanılır.
+func personalization_toggle() -> bool:
+	return _provider != null and _provider.personalization_toggle()
+
+
+func personalized_ads() -> bool:
+	return _provider != null and _provider.personalized_ads()
+
+
+func set_personalized_ads(on: bool) -> void:
+	if _provider:
+		_provider.set_personalized_ads(on)
+
+
+## Ağın eklentisi varsa gerçek sağlayıcı (kimlikler eksikse KAPALI); eklentisiz debug derleme = sahte sağlayıcı.
 static func _pick_provider() -> AdProvider:
-	if not GameFeatures.ADS or not AdConfig.any_slot_usable():
+	if not GameFeatures.ADS:
 		return AdProvider.new()   # kapalı: hiçbir şey yüklenmez, hiçbir teklif çıkmaz
-	if Engine.has_singleton("PoingGodotAdMob"):
-		return AdMobProvider.new()
+	match AdConfig.NETWORK:
+		AdConfig.Network.APPLOVIN:
+			if Engine.has_singleton(AppLovinProvider.SINGLETON):
+				return AppLovinProvider.new() if AdConfig.applovin_ready() else AdProvider.new()
+		AdConfig.Network.ADMOB:
+			if Engine.has_singleton("PoingGodotAdMob"):
+				return AdMobProvider.new() if AdConfig.any_slot_usable() else AdProvider.new()
 	if OS.is_debug_build():
 		return MockAdProvider.new()   # masaüstü geliştirme
 	return AdProvider.new()
@@ -195,8 +215,8 @@ func _load_slot(slot: StringName) -> void:
 	var info: Dictionary = _slots[slot]
 	if bool(info["loading"]):
 		return
-	var unit: String = AdConfig.rewarded_unit(slot)
-	if not AdConfig.unit_is_safe(unit):
+	var unit: String = _provider.unit_for(slot)
+	if unit == "":
 		return   # bu yuvanın birimi yok / bu derlemede güvensiz: yuva kapalı
 	info["loading"] = true
 	_provider.load_rewarded(slot, unit, func(ok: bool) -> void: _on_loaded(slot, ok))
@@ -233,7 +253,7 @@ func _schedule_expiry(slot: StringName) -> void:
 		if stamp == int(info["loaded_at"]) and not _busy and not bool(info["loading"]):
 			info["loaded_at"] = -1
 			info["loading"] = true
-			_provider.load_rewarded(slot, AdConfig.rewarded_unit(slot), func(ok: bool) -> void: _on_loaded(slot, ok)))
+			_provider.load_rewarded(slot, _provider.unit_for(slot), func(ok: bool) -> void: _on_loaded(slot, ok)))
 
 
 # --- Kayıt ------------------------------------------------------------------------

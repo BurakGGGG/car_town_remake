@@ -9,8 +9,9 @@ shader_type spatial;
 render_mode cull_disabled;
 
 #include "res://vehicles/police_beacon.gdshaderinc"
+#include "res://vehicles/car_texture.gdshaderinc"
 
-uniform sampler2D albedo_tex : source_color, hint_default_white, filter_linear_mipmap_anisotropic;
+uniform sampler2D albedo_tex : source_color, hint_default_white, filter_linear_mipmap;
 uniform vec4 side_plane = vec4(1.0, 0.0, 0.0, 0.0);   // dot(VERTEX, xyz) + w = araç uzayında x
 uniform float energy = 2.6;
 
@@ -21,7 +22,7 @@ void vertex() {
 }
 
 void fragment() {
-	vec3 t = texture(albedo_tex, UV).rgb;
+	vec3 t = car_texture(albedo_tex, UV).rgb;   // sınırlı mipmap (car_texture.gdshaderinc)
 	float hi = max(t.r, max(t.g, t.b));
 	float lo = min(t.r, min(t.g, t.b));
 	float sat = (hi - lo) / max(hi, 0.001);

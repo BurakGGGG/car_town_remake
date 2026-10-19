@@ -8,6 +8,10 @@ SOURCE GLB → optimize_car.gd → optimized GLB (+albedo) → sarmalayıcı .ts
    → CarPartMap (roller) → make_paint_mask.gd → cars.json → garaj / showroom / trafik / drag
 ```
 
+> 2026-10-19'dan beri optimize GLB'ye `strip_tangents.py`'den sonra `tools/resimplify_car.py` de uygulanır
+> (tekerler hariç, hata sınırlı ikinci sadeleştirme; araç mesh'i −%18). Yeni araçta: `wheel_parts.gd` →
+> `resimplify_car.py` → `--import` → küçük resimler. Ayrıntı: `docs/MESH_BUTCESI.md` "Paket boyutu 3".
+>
 > 2026-10-18'den beri araç adları kurgusaldır (gerçek marka / model adı yok): yeni araç eklerken
 > `docs/ARAC_ADLARI.md` kurallarına göre ad seç. Aşağıdaki gerçek adlar o tarihten önceki kayıttır.
 
@@ -471,3 +475,127 @@ hızlı, aradaki mesafe kapanır ("harita dışında yakalamış gibi"), polis g
   `PoliceSiren.build(kind).save_to_wav(...)`.
 - Test `tests/police_chase_test.gd` (pencereli, 35 kontrol); görsel QA `qa/police_chase_qa.gd` (şerit başına
   kontakt + polisin ekran ortasına en yakın tam kare).
+
+---
+
+# Sekizinci parti (2026-10-19), katalog 59 → 74
+
+Kaynaklar `eksik_dosyalar/yeni 17 araç/` (klasörde 15 GLB vardı; dosya adı ≠ id: `corolla` → `toyota_corolla`, `megane_4`
+→ `renault_megane_4`, `passat_b8` → `vw_passat_b8`). Aynı Tripo yapısı (tek materyal, 4096² JPEG, 31–102 parça, ~470–500K
+üçgen). Komut sırası altıncı partiyle aynı; ek adımlar: logo söküm (`tools/debadge`, `badges.json`'a 15 araç), bilboard afişi,
+boyut laboratuvarına `--add` ile ekleme. Araç adları kurgusal (docs/ARAC_ADLARI.md).
+
+| Oyundaki ad | Kimlik | GLB MB | Üçgen | Parça | Boya maskesi % | Fabrika rengi | 300 m | Sınıf |
+|---|---|---|---|---|---|---|---|---|
+| VIER SECHS 19 | `audi_a6` | 5,6 | 114.774 | 39 | 26,0 | #2F3C4E | 10,17 sn | A |
+| BAVARIA DREI 15 | `bmw_f30` | 5,7 | 125.574 | 61 | 9,6 | #EA525D | 10,83 sn | A |
+| OVALE TONNERRE 16 | `bugatti_chiron` | 5,7 | 110.474 | 76 | 16,3 | #0188F2 | 6,79 sn | S |
+| OVALE ÉCLAIR 05 | `bugatti_veyron` | 5,8 | 109.176 | 76 | 31,6 | #EAEBF6 | 6,92 sn | S |
+| KİRAZ KAPLAN 8 | `chery_tiggo_8` | 5,3 | 111.474 | 56 | 26,5 | #1F2529 | 12,17 sn | C |
+| TORNADO HALE 21 | `toyota_corolla` | 5,4 | 109.538 | 56 | 24,5 | #9CA0B3 | 12,59 sn | C |
+| IBERO FARO 20 | `cupra_formentor` | 5,7 | 118.674 | 68 | 23,6 | #363E4C | 9,40 sn | A |
+| FURIA ASSOLUTA 13 | `ferrari_laferrari` | 5,4 | 98.448 | 68 | 7,9 | #F9545D | 7,07 sn | S |
+| FORGE HAMAL 19 | `ford_transit` | 6,5 | 119.807 | 102 | 22,2 | #DCD8DC | 13,78 sn | D |
+| ROMBO KAYRA 19 | `renault_megane_4` | 5,2 | 97.267 | 31 | 16,2 | #DFE0EA | 12,06 sn | C |
+| STERN FESTUNG 18 | `mercedes_g` | 5,9 | 120.590 | 82 | 9,2 | #858DA1 | 9,08 sn | A |
+| STERN DOLMUŞ 19 | `mercedes_sprinter` | 5,2 | 112.435 | 56 | 33,6 | #D9D5DF | 15,58 sn | D |
+| WULF KOMBI 16 | `vw_passat_b8` | 5,6 | 112.438 | 62 | 22,3 | #D7D8E2 | 11,42 sn | B |
+| STALLION FOHLEN 20 | `porsche_taycan` | 5,4 | 109.986 | 60 | 23,0 | #D6D8E8 | 7,72 sn | S |
+| ARROW KANZLER 16 | `skoda_superb` | 5,5 | 108.633 | 51 | 18,0 | #2A3E4F | 11,61 sn | B |
+
+**Performans verisi** (fabrika; kaynaklar: üretici basın bültenleri, ADAC, auto-data): A6 C8 45 TFSI quattro (245 PS, 6,0 sn,
+250), 320i F30 LCI (184 PS, 7,3 sn, 235), Chiron (1.500 PS, 420 sınırlı), Veyron 16.4 (1.001 PS, 2,5 sn, 407), Corolla E210
+1.8 Hibrit (122 PS, 11,0 sn, 180 — modelin arkasında / yanında HYBRID rozeti vardı), Formentor VZ 2.0 TSI 4Drive (310 PS, 4,9 sn,
+250), LaFerrari (963 PS sistem, "<3 sn" → 2,6, ">350" → 350), Megane IV Sedan 1.3 TCe 140 EDC (9,7 sn, 205), AMG G 63 (585 PS,
+4,5 sn, 220), Passat B8 1.4 TSI ACT DSG (150 PS, 8,4 sn, 220), Taycan **Turbo** (680 PS overboost, 3,2 sn, 260), Superb III 1.4
+TSI ACT DSG (150 PS, 8,8 sn, 218). Ölçüler gerçek (genişlik aynasız).
+- **TAHMİN:** Tiggo 8 Pro 1.6 TGDI 183 PS'nin resmi 0-100'ü yok (197 PS sürüm 8,9 sn, 145 PS 10,6 sn) → 10,0 sn; 9,5 sn ile tam
+  modifiye C → A iki sınıf atlıyordu (Vito'daki emsal). Transit tek kabin kasalı (2.0 EcoBlue 170 PS, RWD) ve Sprinter uzun
+  minibüs (2.1 CDI 163 PS) için 0-100 / son hız yayımlanmıyor → 14,0 sn / 160 ve 19,0 sn / 150 tahmin.
+- **Kademe görünürlüğü:** performance_mod_test "her kademe ekranda bir değeri görünür iyileştirir" kuralı (300 m 1/120 sn adımlı,
+  ekranda 2 ondalık) üç araçta tutmadı → Chiron 0-100 2,4 yerine **2,42** (resmi değer "< 2,5 sn"), Taycan Turbo S (2,8 sn)
+  yerine **Turbo**, Formentor kategori `hatchback` (1,51 m boyuyla binek; `suv` +150 kg kütle demek).
+
+**Kasa ve set (GEÇİCİ — kullanıcıyla netleşecek):** ŞEHİR + Corolla, Transit (common) · AİLE + Megane, Tiggo, Sprinter (common),
+Passat B8, Superb (rare) · SPOR + 320i (rare), Formentor (epic) · PRESTİJ + A6 (rare), G 63 (legendary) · SÜPER + Taycan (epic),
+LaFerrari, Veyron, Chiron (legendary). Oranlar: ŞEHİR Getz %25,3 → %16,8; PRESTİJ E60 %1,57 → %1,34; SÜPER RS6 %53,8, her
+hiper araç %2,2. Yeni setler **HİPER** (Veyron, Chiron, LaFerrari) ve **TİCARİ** (Transit, Sprinter); WULF GRUBU + Passat B8 /
+Superb, AİLE SEDANI + Corolla / Megane, BAVYERA + 320i, PREMIUM + A6 / G, İTALYAN + LaFerrari, SÜPER SPOR + Taycan.
+Trafik: Chiron / Veyron / LaFerrari `exotic` (trafiğe kapalı, ara sıra geçer; W16 / V12 motor sesi en tiz profil — egzotik
+listesi 3 → 6), diğer 12 araç normal trafikte. Fiyat / seviye / rütbe kilitleri sınıf ve emsallere göre (GEÇİCİ).
+
+**Elle düzeltilenler:**
+- **Teker eksenleri:** wheel_fit'in yüzdelik ucu lastiğin yere basan ezik tabanına kayıyordu (Corolla 3 mm, Passat B8 1,6 mm,
+  Megane 4,6 mm) → wheel_blur'da çift çizgi. 9 araçta eksen lastiğin dış çember uydurmasıyla yazıldı (alt 120° hariç
+  sürümü: `~/Projects/ct_shots/yeni17/circle_fit2.gd`).
+- Tiggo sağ-arka teker gövdeye (0) kaynamış → silindir `extract` 55; 34/35 egzoz uçları "teker" sanılmıştı → `exhaust`.
+- Megane arka lastiklerin alt yayı kaynakta yok → `fill_arc` (152°–208°).
+- Grup başında yanlış parça: Formentor sağ-ön (39, kaliper), Corolla sol-arka (29), Transit sağ-arka (12 / 97 çamurluk içi) →
+  black_trim (eksen yarıçapı 0,10 ölçülüyordu).
+- Cam: A6, Chiron, Tiggo, Corolla, LaFerrari, Taycan, Superb'de sınıflandırıcı hiç cam bulamadı. Boya özelliği kapalı
+  (`GameFeatures.PAINT`) olduğu için ayıklanmadı; boya açılırsa paint_preview + rol düzeltmesi gerekir.
+
+**Logo söküm:** 15 aracın ızgara / bagaj armaları, model yazıları, jant göbekleri, yan rozetler (G 63 / F70 / HYBRID / M)
+silindi. Kalan: Chiron'un bagaj üstündeki "EB" kabartma (3B parça, doku değil); Megane ön elması siyah gövdesinin silüeti
+(ızgaranın biçimi); Formentor bir jant göbeğinde birkaç piksel bakır.
+
+**Trafik takip mesafesi:** stop / follow mesafeleri ~0,6 boylu araca göre ayarlıydı; 7 m'lik Sprinter (trafikte 0,95 birim)
+kuyrukta öndekinin içine giriyordu. `TrafficManager.distance_to_vehicle_ahead` artık iki aracın burun uzunluğu (`_front`)
+toplamının 0,6'yı aşan kısmını mesafeden düşer (kısa araçlar eskisi gibi).
+
+**Boyut laboratuvarı:** `tools/make_size_lab.gd -- --add` mevcut sahneyi açıp yalnızca eksik araçları sıradaki yerlere ekler
+(elle ayarlanmış ölçeklere dokunmaz). `model_scale` değerleri kullanıcının laboratuvarda elle ayarladığı ölçekler
+(2026-10-19; Sprinter 1,67, Transit 1,42, A6 1,21, Tiggo 1,15 …); aynı turda sahnede bekleyen 4 eski ayar da yazıldı:
+Passat B5.5 1,12 → 1,14, 488 1,10 → 1,07, Corsa 0,82 → 0,84, Model Y 1,24 → 1,14.
+İkinci ayar turu (2026-10-19 akşam, kullanıcı laboratuvarda 12 aracı yeniden ayarladı; `read_size_lab.gd` farkı → cars.json):
+Golf 7 1,00 → 1,02, A3 1,00 → 0,98, RS6 1,23 → 1,20, 488 1,07 → 1,05, Corsa 0,84 → 0,87, Model Y 1,14 → 1,085,
+T10F 1,07 → 1,10, Chiron 1,055 → 1,08, Veyron 1,06 → 1,10, Formentor 1,07 → 1,10, G 63 1,16 → 1,18, Superb 1,12 → 1,16.
+vehicle_scale 454, vehicle_asset 1637, vehicle_display 23, traffic_pool 28 — 0 FAIL.
+
+**Bilboard:** Chiron (aurora), LaFerrari (night_city), Taycan (neon_grid), Veyron (studio) afişleri; `CityBillboard.POSTERS`
+10 → 14 (süper araçlar araya dağıtıldı).
+
+Testler (hedefli): vehicle_wheel 75, car_thumbs 5, crate 109, performance_mod 102, vehicle_asset 1637, vehicle_scale 454,
+exotic_traffic 49, city_life 42, traffic_pool 28, customer_patience 19 — 0 FAIL. Güncellenen beklentiler: egzotik 3 → 6, E60
+4/298, tam modifiyede sınıf atlayan 22 → 29 araç; depo dışı ui_test (ŞEHİR Getz %16,8), vehicle_asset_test (son hız ≤ 450),
+vehicle_scale_test (uzunluk ≤ 7,5 m).
+
+---
+
+# Uzak zoom'da renk bozulması ve yanlış renkli parçalar (2026-10-19)
+
+Kullanıcı: "zoom out yapınca renkleri bozuluyor (Getz, Transit, Golf, Era); bazı parçalar yanlış renkte (Era camları,
+Transit kaputu); Leon ve Lambo'da da var". Bütün katalog oyun kamerasıyla (ortografik, trafik ölçeği, NPC LOD + birleştirme)
+en uzak zoom'da (5,0) ve açılış zoom'unda (3,2) tek tek çizildi.
+
+**1) Uzakta renk karışması — sebep mipmap, LOD değil.** Tripo dokusu yüzlerce küçük UV adasından oluşan tek atlas.
+Uzaklaşınca GPU derin mipmap kademesine iniyor; 1024² dokunun 64² / 32² kademesinde bir texel komşu adaları kapsıyor:
+beyaz araçta gri lekeler, kırmızıda pembe sis, stoplar beyazlıyor. Kanıt: aynı karede mipmapsız çizim temiz, zorlanmış
+en düşük geometri LOD'u (lod_bias 0,05) yakından temiz. Godot'nun içe aktarıcıdaki `mipmaps/limit` seçeneği etkisiz
+(mip sayısı yine 10), `Viewport.texture_mipmap_bias` Compatibility'de desteklenmiyor → sınır shader'da:
+`vehicles/car_texture.gdshaderinc` (`car_texture()`: türevden LOD, en çok 2 = 256²). Dokulu araç artık GLB'nin
+StandardMaterial3D'siyle değil `vehicles/car_textured.gdshader` örnekleriyle çizilir (CarRig `_textured` /
+`_fill_textured`; aynı görünüm, rol başına uniform). car_paint / wheel_split / police_lights da aynı fonksiyonla okur.
+Çizim çağrısı ve materyal sayısı değişmedi. En uzak zoom'da araç biraz daha keskin (hafif titreşim), renk doğru.
+
+**2) Yanlış renkli parçalar — sebep rol haritası.** Işıklar oyunda hiç açılmıyor; fark materyalden geliyor: far rolü
+mavimsi ton + metalik 0,45 + parlak, jant rolü metalik 0,25 (koyulaştırır), teker rolü wheel_split shader'ı, cam rolü
+(yeni) %70 koyulaşır. Rol render'ı (her rol düz renk) + ışınla parça seçimi (`~/Projects/ct_shots/uzak/pickray.gd`) +
+özellik taraması (`rolescan.py`) ile 74 araçta düzeltilen parçalar:
+- far → gövde: Transit 27/50 (kaputun iki yarısı), Era 43/47/48 (tampon + farın etrafındaki çamurluk), DB5 22 (kaput
+  burnu), Passat B8 16 (alt tampon).
+- jant / teker → gövde (hiçbir teker grubunda olmayan kaporta): A3 12/34, F30 10/13/27/28/54 (kapı ve çamurluk; 10/13
+  kapıya wheel_split takıyordu), M3 E30 27/30, Veyron 45/46, Corolla 16/30/45, LaFerrari 12/34, Taycan 49/51;
+  → siyah trim: T10X 29/34/37, RS200 25/31.
+- cam → gövde: E60 6 (tavan), Şahin 7 (arka kapı + camı tek parça), G 63 7 (kaput), RS200 5, Fiat 500 3/6/24;
+  → siyah trim (stepne): G 63 12, Land Rover 4, Willys 3.
+Bilinçli olarak dokunulmadı: kaliperler (jant rolü, grupsuz: RS6, 488, GT3, Golf, Bentley, Volvo), krom çıtalar far
+rolünde (Charger, Mini, Mustang, W123 — metalik krom gibi duruyor), büyük stop rolündeki gövde parçaları (yalnızca pürüz
+farkı), ayna rolündeki camlar (gövdeyle aynı materyal). Boya kapalı olduğu için boya maskeleri yeniden üretilmedi.
+
+**3) Cam:** dokulu camlar açık gri pişmiş (Era ortalama 0,6) ve 0,22 pürüzle güneşi yansıtınca beyaz kaportadan
+ayrılmıyordu → `CarRig.GLASS_SHADE` 0,7, `GLASS_ROUGHNESS` 0,3. Küçük resimler yeniden çizildi (74).
+
+QA: `qa/uzak_arac_qa.gd` (oyunun kendi kamerasıyla en uzak zoom, trafikteki her modeli ayrı PNG'ye kırpar). Ölçüm /
+teşhis betikleri `~/Projects/ct_shots/uzak/` (uzak_probe: varyantlar game / lod0 / nomip / clamp; roles2: rol render'ı).
+Testler: vehicle_display 23, vehicle_wheel 75, car_thumbs 5, police_lights 26, vehicle_asset 1637, exotic_traffic 49 — 0 FAIL.

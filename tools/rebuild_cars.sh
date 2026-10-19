@@ -28,6 +28,10 @@ while IFS='|' read -r id src out scene extra; do
 	python3 tools/strip_tangents.py "$out" | sed "s|^|  |"
 	echo "$id  ${line#cikis : }"
 done < /tmp/ct_cars.txt
+# Hata sınırlı ikinci sadeleştirme (tekerler hariç): araç mesh'i ~%18 küçülür, en yakın showroom
+# zoom'unda gözle fark yok. Ölçüm: docs/MESH_BUTCESI.md "Paket boyutu 3".
+"$GODOT" --headless --path . -s res://tools/wheel_parts.gd 2>/dev/null | grep '^WHEELS ' | cut -c8- > /tmp/ct_wheels.json
+python3 tools/resimplify_car.py --skip-json /tmp/ct_wheels.json assets/cars/optimized/*.glb | tail -1
 # Yeni dokular başsız import'ta sıkıştırılmadan geliyor (mode=0 → 16 MB VRAM); mode=2'ye çek.
 sed -i 's|^compress/mode=0|compress/mode=2|' assets/cars/optimized/*_albedo.jpg.import 2>/dev/null
 # Teğet ve ayrı gölge mesh'i üretilmesin: araç başına 5,3 → 2,7 MB, görsel fark yok (normal haritası

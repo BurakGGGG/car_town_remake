@@ -25,6 +25,10 @@ boot_splash/stretch_mode=4
 boot_splash/image="res://ui/loading/loading_bg.png"
 config/icon="res://assets/branding/icon_512.png"
 
+[compression]
+
+formats/zstd/compression_level=19
+
 [display]
 
 window/stretch/mode="canvas_items"

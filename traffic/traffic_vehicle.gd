@@ -115,7 +115,8 @@ var mode: Mode = Mode.TRAFFIC
 var race_lane: bool = false
 ## Bu aracın KATALOG kimliği — yarışta aynı model çıksın diye (yoldaki araç = rakip araç).
 var vehicle_id: StringName = &""
-## Burnun araç merkezine uzaklığı (CarHitbox kutusundan): dur çizgisine burun hizalanır.
+## Burnun araç merkezine uzaklığı (CarHitbox kutusundan): dur çizgisine burun hizalanır; takip mesafesi de
+## bunu kullanır (TrafficManager.distance_to_vehicle_ahead).
 var _front: float = 0.3
 ## Bu kavşak girişi için seçilen duruş: burnun dur çizgisini geçtiği mesafe (− = çizginin gerisinde).
 var _stop_entry: TrafficWaypoint

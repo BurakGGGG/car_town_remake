@@ -25,7 +25,7 @@ extends Node3D
 ## talep eder (runner_crossing) — karşı eksen yeşilde bile yeni araç sokamaz, bekletilen araç korna çalar; trafik ona
 ## kovalamacadaki gibi yol verir (chase_pressure). Kalkışta lastik sesi (TrafficSfx).
 ## EGZOTİK ARAÇ (2026-10-17, kullanıcı: "trafikte tek tük egzotik araç geçsin, 20'de 1"): rastgele doğan araçların
-## ortalama EXOTIC_EVERY'de biri trafiğe kapalı süper araçlardan (cars.json "exotic": GT3 / Huracán / 488 Pista) biridir;
+## ortalama EXOTIC_EVERY'de biri trafiğe kapalı süper araçlardan (cars.json "exotic": GT3 / Huracán / 488 Pista / iki Bugatti / LaFerrari) biridir;
 ## art arda gelmesin diye arada en az EXOTIC_MIN_GAP araç olur. Sıra gelince model hemen arka planda yüklenir (yarışa
 ## özel modellerin yanına), araç doğunca listeden düşer (sahnesini araç tutar). Egzotik yalnızca GEÇER: tamir müşterisi
 ## olmaz (RepairManager). Motor sesi CityAmbience'ta (ExoticEngine).
@@ -78,6 +78,8 @@ const RACE_MODEL_LIMIT: int = 2
 ## her doğumda 1 / (EXOTIC_EVERY − EXOTIC_MIN_GAP) şansla sıra gelir → ortalama aralık tam EXOTIC_EVERY.
 const EXOTIC_EVERY: int = 20
 const EXOTIC_MIN_GAP: int = 8
+## Takip mesafelerinin (TrafficVehicle.stop_distance / follow_distance) varsaydığı iki yarım boy: burun 0,3 + 0,3.
+const NOMINAL_LENGTH: float = 0.6
 
 var vehicles: Array[TrafficVehicle] = []
 var spawn_points: Array[TrafficWaypoint] = []
@@ -586,7 +588,9 @@ func distance_to_vehicle_ahead(vehicle: TrafficVehicle) -> float:
 		other_forward.y = 0.0
 		if other_forward.normalized().dot(forward) < 0.3:
 			continue  # karşıdan gelen
-		best = minf(best, along)
+		# stop / follow mesafeleri ~0,6 boylu araca göre ayarlı: uzun araç (minibüs, kamyonet) aynı tampon
+		# boşluğunu bıraksın diye fazla boy merkezden merkeze mesafeden düşülür (kısa araç yaklaşmaz)
+		best = minf(best, along - maxf(vehicle._front + other._front - NOMINAL_LENGTH, 0.0))
 	return best
 
 

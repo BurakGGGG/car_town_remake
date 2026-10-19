@@ -1,5 +1,5 @@
 extends SceneTree
-## PERFORMANS MODİFİYESİ TESTİ — model (59 araç × 6 kategori × 5 kademe: hiçbir parça 300 m'yi uzatmaz, sınıf en
+## PERFORMANS MODİFİYESİ TESTİ — model (74 araç × 6 kategori × 5 kademe: hiçbir parça 300 m'yi uzatmaz, sınıf en
 ## fazla bir basamak atlar, gösterge kötüleşmez, profil adları), yarış (oyuncu modifiyeli / rakip fabrika, rakip
 ## havuzu modifiyeli süreyle, GENEL tavansız), yönetici (seviye kilidi, para, tamir alanını kaplama, süre,
 ## HAZIR → takma, kayıt + yeniden yükleme, satışta silinme, bozuk kayıt, yeni oyun).
@@ -102,9 +102,9 @@ func _run() -> void:
 		# Fabrika aracın sınıfı kuralla aynı (bantlar ayrık)
 		if PerformanceMods.class_for(id, DragRaceSim.base_time(id)) != own:
 			check(false, "%s fabrika sınıfı kuralla aynı" % id)
-	check(worse_300 == 0, "59 araç × 30 kademe: hiçbir parça 300 m süresini uzatmıyor")
+	check(worse_300 == 0, "74 araç × 30 kademe: hiçbir parça 300 m süresini uzatmıyor")
 	check(two_step == 0, "full yükseltmeyle hiçbir araç iki sınıf atlamıyor")
-	check(jumps.size() == 22, "full yükseltmeyle 22 araç bir üst sınıfa çıkıyor (%d)" % jumps.size())
+	check(jumps.size() == 29, "full yükseltmeyle 29 araç bir üst sınıfa çıkıyor (%d)" % jumps.size())
 	check(price_bad == 0, "fiyatlar kademe kademe artıyor, 50 ₺'ye yuvarlı")
 	check(invisible == 0, "her araçta her kademe ekranda en az bir değeri görünür iyileştiriyor")
 	check(hp_missing == 0, "bütün araçların beygiri katalogda (gösterge)")

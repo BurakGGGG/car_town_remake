@@ -62,10 +62,12 @@ rengiyle dolduruldu: `tools/debadge/` (Blender'ın Python'u + numpy; ayrıntı `
 |---|---|---|
 | AGENT SPY 005 | `aston_martin_db5` | Aston Martin DB5 |
 | ARCLINE RANGE Y | `tesla_model_y` | Tesla Model Y Long Range AWD |
+| ARROW KANZLER 16 | `skoda_superb` | Skoda Superb III |
 | ARROW SUMMIT 20 | `skoda_kamiq` | Skoda Kamiq |
 | ASTA COMETA 74 | `lancia_stratos` | Lancia Stratos HF Stradale |
 | ASTA SEDICI 92 | `lancia_delta_integrale` | Lancia Delta HF Integrale Evoluzione |
 | BAVARIA CLUB 46 | `bmw_e46` | BMW E46 330i |
+| BAVARIA DREI 15 | `bmw_f30` | BMW 320i (F30) |
 | BAVARIA FÜNF 07 | `bmw_e60` | BMW E60 530i |
 | BAVARIA LEGEND 90 | `bmw_m3_e30` | BMW M3 E30 Evolution |
 | BLACKTOP BRUISER 70 | `dodge_charger_1970` | Dodge Charger R/T 440 |
@@ -81,41 +83,54 @@ rengiyle dolduruldu: `tools/debadge/` (Blender'ın Python'u + numpy; ayrıntı `
 | FITO PICCOLO 65 | `fiat_500_1965` | Fiat Nuova 500 D |
 | FORGE FOCAL 13 | `ford_focus` | Ford Focus |
 | FORGE GROUP B 200 | `ford_rs200` | Ford RS200 |
+| FORGE HAMAL 19 | `ford_transit` | Ford Transit tek kabin kamyonet |
 | FORGE RALLYE 72 | `ford_escort_rs1600` | Ford Escort RS1600 |
 | FORGE WILD PONY 67 | `ford_mustang_1967` | Ford Mustang Fastback GT 390 |
+| FURIA ASSOLUTA 13 | `ferrari_laferrari` | Ferrari LaFerrari |
 | FURIA CIRCUITO 19 | `ferrari_488_pista` | Ferrari 488 Pista |
+| HİTİT A-67 CLASSIC | `anadol_a1` | Anadol A1 |
 | HYPER CYAN 13 | `hyundai_accent_blue` | Hyundai Accent Blue |
 | HYPER KENT 07 | `hyundai_era` | Hyundai Accent Era |
 | HYPER POCKET Z | `hyundai_getz` | Hyundai Getz |
-| HİTİT A-67 CLASSIC | `anadol_a1` | Anadol A1 |
+| IBERO FARO 20 | `cupra_formentor` | Cupra Formentor VZ |
 | IBERO LINCE 16 | `seat_leon` | Seat Leon |
+| KİRAZ KAPLAN 8 | `chery_tiggo_8` | Chery Tiggo 8 Pro |
 | LION QUATRE 68 | `peugeot_404` | Peugeot 404 |
 | MICRO BULLDOG 65 | `mini_cooper_1965` | Mini Cooper 998 |
 | MONARCH PATROL GT | `police_bentley` | Bentley Continental GT W12 |
 | MOORLAND TREK III | `land_rover_series3` | Land Rover Series III 88 |
 | OCELOT CLASSIC 61 | `jaguar_e_type` | Jaguar E-Type 3.8 |
+| OVALE TONNERRE 16 | `bugatti_chiron` | Bugatti Chiron |
+| OVALE ÉCLAIR 05 | `bugatti_veyron` | Bugatti Veyron 16.4 |
 | ROMBO ERCİYES 94 | `renault_toros` | Renault Toros |
 | ROMBO FLOW 12 | `renault_fluence` | Renault Fluence |
+| ROMBO KAYRA 19 | `renault_megane_4` | Renault Megane IV Sedan |
 | SERPENTA LUSSO 08 | `alfa_romeo_159` | Alfa Romeo 159 |
 | SHIELD ARMOR 16 | `volvo_s60` | Volvo S60 |
+| STALLION FOHLEN 20 | `porsche_taycan` | Porsche Taycan Turbo |
 | STALLION RING 18 | `porsche_gt3` | Porsche 911 GT3 |
 | STALLION RS-73 | `porsche_911_1973` | Porsche 911 Carrera RS 2.7 |
 | STERN COUPÉ 350 | `mercedes_cls` | Mercedes CLS 350 |
+| STERN DOLMUŞ 19 | `mercedes_sprinter` | Mercedes-Benz Sprinter minibüs |
+| STERN FESTUNG 18 | `mercedes_g` | Mercedes-AMG G 63 |
 | STERN GULLWING 55 | `mercedes_300sl` | Mercedes-Benz 300 SL |
 | STERN KAISER S | `mercedes_s400` | Mercedes S400 |
 | STERN SQUAD VAN | `police_vito` | Mercedes-Benz Vito 119 CDI 4MATIC |
 | STERN TANK 123 | `mercedes_w123` | Mercedes-Benz 240 D |
+| ŞİMŞEK F-VOLT | `togg_t10f` | Togg T10F V2 RWD Uzun Menzil |
+| ŞİMŞEK X-VOLT | `togg_t10x` | Togg T10X V2 RWD Uzun Menzil |
+| TORNADO HALE 21 | `toyota_corolla` | Toyota Corolla 1.8 Hybrid (E210) |
 | TORNADO QUAD 93 | `toyota_celica_gt4` | Toyota Celica GT-Four ST185 |
 | TRIDIA RALLY VI | `mitsubishi_evo6` | Mitsubishi Lancer Evolution VI GSR |
 | VETERAN WW2 CLASSIC | `willys_jeep_mb` | Willys MB |
 | VIER KOMBI R 20 | `audi_rs6` | Audi RS6 |
 | VIER KOMPAKT 14 | `audi_a3` | Audi A3 |
+| VIER SECHS 19 | `audi_a6` | Audi A6 (C8) 45 TFSI |
 | VIER SPORT 85 | `audi_quattro_s1` | Audi Sport Quattro |
 | WULF BUG 67 | `vw_beetle_1967` | Volkswagen Beetle 1500 |
 | WULF FLOWER BUS 65 | `vw_t1_bus` | Volkswagen T1 1500 |
 | WULF KOMBI 04 | `vw_passat_b55` | VW Passat B5.5 |
+| WULF KOMBI 16 | `vw_passat_b8` | VW Passat B8 |
 | WULF MK7 HATCH | `vw_golf_7` | VW Golf 7 |
 | WULF TURBO BUG | `vw_beetle` | Volkswagen Beetle 2.0 TSI |
 | ZENITH REV 10 | `honda_civic` | Honda Civic VTEC |
-| ŞİMŞEK F-VOLT | `togg_t10f` | Togg T10F V2 RWD Uzun Menzil |
-| ŞİMŞEK X-VOLT | `togg_t10x` | Togg T10X V2 RWD Uzun Menzil |

@@ -546,6 +546,7 @@
  "Kayıt buluta yazılıyor, birazdan tekrar dene.": "Saving to the cloud, try again in a moment.",
  "Kazanınca para ve XP alırsın, kaybetsen de biraz XP kazanırsın. Her araçla kişisel rekorunu kır: üstteki çubukta eski rekorun hayalet olarak koşar.": "Win and you get money and XP; even if you lose, you still earn some XP. Beat your personal best with every car: your old record runs as a ghost on the bar at the top.",
  "Kişiselleştirilmiş reklam onayını değiştir.": "Change your consent for personalized ads.",
+ "KİŞİSELLEŞTİRİLMİŞ REKLAMLAR": "PERSONALIZED ADS",
  "Klasik yuvarlak atölye saati.": "Classic round workshop clock.",
  "Kod 6 karakter olmalı (ör. AY-7K2Q4M).": "The code must be 6 characters (e.g. AY-7K2Q4M).",
  "Kodun kopyalandı.": "Your code was copied.",
@@ -1984,5 +1985,7 @@
  "Yarışı kaybedersen aynı rakiple bir kez ücretsiz rövanş yapabilirsin.": "Lost a race? You get one free rematch against the same rival.",
  "Bekleyen müşterilerin sabrı sınırlı: onları çok bekletirsen vazgeçip giderler.": "Waiting customers have limited patience: keep them waiting too long and they drive off.",
  "Sen yokken de garajın çalışır: döndüğünde birikmiş kazancın seni bekler.": "Your garage keeps working while you're away: your earnings will be waiting when you return.",
- "Hurdalıkta yığınları arayıp parça topla, klasik araçları restore ederek garajına kat.": "Search the junkyard piles for parts and restore classic cars to add them to your garage."
+ "Hurdalıkta yığınları arayıp parça topla, klasik araçları restore ederek garajına kat.": "Search the junkyard piles for parts and restore classic cars to add them to your garage.",
+ "HİPER": "HYPERCARS",
+ "TİCARİ": "COMMERCIAL"
 }

@@ -14,8 +14,9 @@ extends Node3D
 
 ## Afiş sırası (gün numarasıyla döner). Yeni afiş: tools/billboard/ → buraya id eklenir.
 const POSTERS: PackedStringArray = [
-	"lambo_huracan", "ferrari_488_pista", "porsche_gt3", "audi_rs6", "chevrolet_camaro",
-	"mercedes_cls", "togg_t10x", "bmw_e46", "bmw_e60", "honda_civic",
+	"lambo_huracan", "ferrari_488_pista", "bugatti_chiron", "porsche_gt3", "audi_rs6", "ferrari_laferrari",
+	"chevrolet_camaro", "mercedes_cls", "porsche_taycan", "togg_t10x", "bmw_e46", "bugatti_veyron", "bmw_e60",
+	"honda_civic",
 ]
 const POSTER_DIR: String = "res://assets/world/billboard/"
 ## Meydandaki yeri (parsel x ≈ 10,5 m, y ≈ 4,6 m) ve panonun ölçüsü (2:1, afiş 1024×512).

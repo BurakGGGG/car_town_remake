@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://dfmgq4hdn2pos"]
+
+[ext_resource type="PackedScene" uid="uid://dklncf2dqp14i" path="res://assets/cars/optimized/mercedes_g.glb" id="1_merce"]
+
+[node name="mercedes_g" instance=ExtResource("1_merce")]

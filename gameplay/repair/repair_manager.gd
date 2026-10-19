@@ -10,7 +10,8 @@ extends Node
 ##    sınır doluysa yeni müşteri oluşmaz.
 ##    SABIR: bekleyen müşteri CUSTOMER_PATIENCE sn içinde tamire alınmazsa vazgeçip gider (korna, trafiğe
 ##    döner, customer_left). Son PATIENCE_WARN sn'de balonda geri sayım. Seçiliyken (plakası açık) ve eğitim
-##    sürerken sabır azalmaz.
+##    sürerken sabır azalmaz. İki müşteri ASLA aynı anda gitmez: geri sayımlar en az COUNTDOWN_GAP sn arayla
+##    başlar (sırası gelmeyen 0:20'de bekler), gidişler de aynı aralıkla.
 ## 2) TAMİRE AL: oyuncu bekleyen aracı seçip onaylayınca araç ANINDA boş bir CarSpot'a ışınlanır ve o
 ##    aracın ARIZASININ süresiyle sayaç başlar (REPAIR_BAY). Sürüş animasyonu yok. Kaç CarSpot'un aktif
 ##    olduğu GarageUpgradeManager'ın "repair_capacity" seviyesinden gelir (Lv1 = 1, Lv2 = 2, Lv3 = 3;
@@ -71,6 +72,9 @@ const BASE_WAITING: int = 2
 ## Müşterinin sabrı (sn, bekleme noktasına yerleşince rastgele) ve balonda geri sayımın başladığı kalan süre.
 const CUSTOMER_PATIENCE: Vector2 = Vector2(75.0, 110.0)
 const PATIENCE_WARN: float = 20.0
+## Geri sayım başlangıçları (ve gidişler) arasındaki en kısa süre. Kullanıcı (2026-10-19): aynı anda sıkılıp çıkan
+## iki müşteri kaldırımdan birlikte şeride kırıp birbirini ve trafiği kilitliyordu. Şeride katılma ~2,3 sn sürer.
+const COUNTDOWN_GAP: float = 5.0
 const SPOT_AHEAD_MIN: float = 0.5   # bekleme noktası aracın bu kadar önünde olmalı (yanaşma payı)
 const SPOT_AHEAD_MAX: float = 3.2   # aracın noktayı "görebildiği" pencere (1.8 iken adaylar çok seyrekti)
 const SPOT_SIDE_MAX: float = 0.6    # noktanın şeride yanal uzaklığı en çok (kaldırım kenarı ~0.36)
@@ -122,6 +126,9 @@ var _restore_time: float = 0.0
 var _target: Node3D
 var _progress_timer: float = 0.0
 var _customer_timer: float = 3.0
+var _patience_clock: float = 0.0          # sabır saati (eğitimde durur): aşağıdaki iki zaman bununla ölçülür
+var _last_countdown: float = -INF         # en son geri sayımın başladığı an
+var _last_departure: float = -INF         # en son sıkılıp giden müşterinin anı
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()  # müşteri kararı (trafik RNG'sinden bağımsız)
 var _traffic: TrafficManager
 
@@ -909,17 +916,33 @@ func _on_customer_stopped(vehicle: TrafficVehicle) -> void:
 
 ## SABIR: bekleyen müşterinin süresi azalır; son PATIENCE_WARN sn balonda geri sayım, bitince gider.
 ## Seçili müşteri (oyuncu plakasına bakıyor) ve eğitim sürerken azalmaz.
+## SIRA: geri sayıma girecek müşteri, bir öncekinin geri sayımı COUNTDOWN_GAP sn önce başlamadıysa tam PATIENCE_WARN'da
+## bekler (balonda sayı yok); sayım bitip gidecek müşteri de son gidişten COUNTDOWN_GAP sn geçmediyse 0:01'de bekler —
+## seçiliyken duran bir sayım sonradan başkasınınkiyle çakışabildiği için gidişte de denetlenir.
 func _tick_patience(delta: float) -> void:
 	if _tutorial_running():
 		return
+	_patience_clock += delta
 	for vehicle: TrafficVehicle in _traffic.vehicles.duplicate():
 		if not vehicle.is_waiting() or vehicle == _target:
 			continue
-		vehicle.patience -= delta
-		if vehicle.patience <= 0.0:
+		var left: float = vehicle.patience - delta
+		if vehicle.patience >= PATIENCE_WARN and left < PATIENCE_WARN:
+			if _patience_clock - _last_countdown < COUNTDOWN_GAP:
+				vehicle.patience = PATIENCE_WARN   # sırası gelmedi: geri sayım henüz başlamaz
+				continue
+			_last_countdown = _patience_clock
+		if left <= 0.0:
+			if _patience_clock - _last_departure < COUNTDOWN_GAP:
+				vehicle.patience = 0.01   # az önce biri gitti: o şeride katılana kadar 0:01'de bekler
+				vehicle.show_patience(1)
+				continue
+			_last_departure = _patience_clock
 			_dismiss_customer(vehicle)
-		elif vehicle.patience <= PATIENCE_WARN:
-			vehicle.show_patience(ceili(vehicle.patience))
+			continue
+		vehicle.patience = left
+		if left < PATIENCE_WARN:
+			vehicle.show_patience(ceili(left))
 
 
 ## Müşteri beklemekten sıkıldı: kaldırımdan çıkıp trafiğe döner (ekrandaysa korna çalar).

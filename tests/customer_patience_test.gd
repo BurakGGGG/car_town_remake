@@ -160,6 +160,34 @@ func _run() -> void:
 		check(worst == 0.0, "giden müşteri öndekilere binmedi (en derin %.3f)" % worst)
 		check(is_instance_valid(line[0]) and not line[0]._merging and line[0].global_position.z > 0.2,
 			"şeride çıktı ve şeritte sürüyor (z %.2f)" % (line[0].global_position.z if is_instance_valid(line[0]) else -1.0))
+
+		print("== SIRA: iki müşteri aynı anda sıkılıp gitmez ==")
+		# Kullanıcı bildirdi (2026-10-19): aynı anda çıkan iki müşteri birbirini ve trafiği kilitliyordu.
+		var pair: Array[TrafficVehicle] = [line[1], line[2]]
+		for v: TrafficVehicle in pair:
+			v.patience = RepairManager.PATIENCE_WARN + 0.05
+		rm._tick_patience(0.1)
+		var counting: Array = pair.filter(func(v: TrafficVehicle) -> bool: return v.patience < RepairManager.PATIENCE_WARN)
+		var held_back: Array = pair.filter(func(v: TrafficVehicle) -> bool: return is_equal_approx(v.patience, RepairManager.PATIENCE_WARN))
+		check(counting.size() == 1 and held_back.size() == 1, "aynı anda gelen iki geri sayımdan biri başladı, diğeri 0:20'de bekliyor")
+		var waited: float = 0.0
+		while held_back.size() == 1 and is_equal_approx((held_back[0] as TrafficVehicle).patience, RepairManager.PATIENCE_WARN) \
+				and waited < 10.0:
+			rm._tick_patience(0.5)
+			waited += 0.5
+		check(waited >= RepairManager.COUNTDOWN_GAP - 0.1 and waited <= RepairManager.COUNTDOWN_GAP + 0.6,
+			"ikinci geri sayım %.1f sn sonra başladı (en az %.0f)" % [waited, RepairManager.COUNTDOWN_GAP])
+		var gone: Array[Node3D] = []
+		rm.customer_left.connect(func(c: Node3D) -> void: gone.append(c))
+		for v: TrafficVehicle in pair:
+			v.patience = 0.05   # seçiliyken durmuş bir sayım öbürüyle aynı anda bitebilir: gidişte de sıra var
+		rm._tick_patience(0.1)
+		check(gone.size() == 1 and pair.filter(func(v: TrafficVehicle) -> bool: return v.is_waiting()).size() == 1,
+			"aynı anda biten iki sayımdan yalnızca biri gitti")
+		rm._tick_patience(RepairManager.COUNTDOWN_GAP - 0.5)
+		check(gone.size() == 1, "öteki son gidişten %.0f sn geçmeden gitmez" % RepairManager.COUNTDOWN_GAP)
+		rm._tick_patience(0.6)
+		check(gone.size() == 2, "aralık dolunca öteki de gitti")
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
 

@@ -53,14 +53,17 @@ func _initialize() -> void:
 func _run() -> void:
 	print("== katalog ==")
 	var exotics: Array[StringName] = CarCatalog.exotic_ids()
-	check(exotics.size() == 3 and exotics.has(&"porsche_gt3") and exotics.has(&"lambo_huracan")
-		and exotics.has(&"ferrari_488_pista"), "egzotikler GT3 / Huracán / 488 Pista (%s)" % [exotics])
+	check(exotics.size() == 6 and exotics.has(&"porsche_gt3") and exotics.has(&"lambo_huracan")
+		and exotics.has(&"ferrari_488_pista") and exotics.has(&"bugatti_chiron") and exotics.has(&"bugatti_veyron")
+		and exotics.has(&"ferrari_laferrari"), "egzotikler GT3 / Huracán / 488 Pista / iki Bugatti / LaFerrari (%s)" % [exotics])
 	for id: StringName in exotics:
 		check(not bool(CarCatalog.get_entry(id)["traffic"]), "%s normal trafiğe kapalı" % id)
 	check(not CarCatalog.is_exotic(&"chevrolet_camaro") and not CarCatalog.is_exotic(&"police_bentley"),
 		"Camaro / polis egzotik değil")
 	check(ExoticEngine.cylinders_of(&"lambo_huracan") == 10 and ExoticEngine.cylinders_of(&"ferrari_488_pista") == 8
-		and ExoticEngine.cylinders_of(&"porsche_gt3") == 6, "motor tınısı: Huracán V10, 488 V8, GT3 düz altı")
+		and ExoticEngine.cylinders_of(&"porsche_gt3") == 6 and ExoticEngine.cylinders_of(&"bugatti_chiron") == 10
+		and ExoticEngine.cylinders_of(&"ferrari_laferrari") == 10,
+		"motor tınısı: Huracán V10, 488 V8, GT3 düz altı, W16 / V12 en tiz profil")
 
 	print("== motor döngüsü ==")
 	for cylinders: int in [6, 8, 10]:

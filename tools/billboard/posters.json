@@ -10,6 +10,10 @@
     {"id": "togg_t10x", "style": "aurora", "bg_top": "#031418", "bg_bottom": "#0B3D3A", "accent": "#3DFFC5", "accent2": "#4D9BFF", "rim": "#3DFFC5", "rim2": "#7DB8FF", "az": 38, "elev": 10},
     {"id": "bmw_e46", "style": "neon_grid", "bg_top": "#030A1A", "bg_bottom": "#0D2B5E", "accent": "#00B7FF", "accent2": "#FF3B3B", "rim": "#3FB8FF", "rim2": "#FF4D4D", "az": 37, "elev": 8, "exposure": 0.82},
     {"id": "bmw_e60", "style": "night_city", "bg_top": "#07060B", "bg_bottom": "#2A1A3A", "accent": "#C77DFF", "accent2": "#FFD166", "rim": "#C77DFF", "rim2": "#FFD8A8", "az": 38, "elev": 9},
-    {"id": "honda_civic", "style": "speed", "bg_top": "#1A0505", "bg_bottom": "#5C0F14", "accent": "#FF2E3B", "accent2": "#FFFFFF", "rim": "#FF4A4A", "rim2": "#FFFFFF", "az": 40, "elev": 7, "exposure": 0.82}
+    {"id": "honda_civic", "style": "speed", "bg_top": "#1A0505", "bg_bottom": "#5C0F14", "accent": "#FF2E3B", "accent2": "#FFFFFF", "rim": "#FF4A4A", "rim2": "#FFFFFF", "az": 40, "elev": 7, "exposure": 0.82},
+    {"id": "bugatti_chiron", "style": "aurora", "bg_top": "#020818", "bg_bottom": "#0A2A6B", "accent": "#4DA3FF", "accent2": "#B07CFF", "rim": "#5AB0FF", "rim2": "#C7A4FF", "az": 37, "elev": 8},
+    {"id": "ferrari_laferrari", "style": "night_city", "bg_top": "#0A0204", "bg_bottom": "#3A0A12", "accent": "#FF2A2A", "accent2": "#FFB000", "rim": "#FF5A3D", "rim2": "#FFD27A", "az": 36, "elev": 8},
+    {"id": "porsche_taycan", "style": "neon_grid", "bg_top": "#02101A", "bg_bottom": "#06324A", "accent": "#00F0FF", "accent2": "#7CFFB2", "rim": "#3FE6FF", "rim2": "#9CFFCE", "az": 39, "elev": 8, "exposure": 0.82},
+    {"id": "bugatti_veyron", "style": "studio", "bg_top": "#0A0A0C", "bg_bottom": "#26232B", "accent": "#E9C46A", "accent2": "#FFFFFF", "rim": "#FFD98A", "rim2": "#A8C8FF", "az": 38, "elev": 9, "exposure": 0.82}
   ]
 }

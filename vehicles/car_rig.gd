@@ -23,6 +23,8 @@ extends RefCounted
 ## body_color'a çevrilir, dokunun gölge/parlama/panel detayı korunur. Gövde mesh'ine kaynamış cam, far ve
 ## trim (BMW/Getz ön camı, tek mesh Toros) maskede siyah olduğu için boya almaz. Maske yoksa boyama
 ## kapalıdır (doku aynen). rims / cam → doku × (renk / varsayılan renk) — varsayılanda doku aynen.
+## Dokulu modelde GLB'nin StandardMaterial3D'si de kullanılmaz: bütün parçalar car_textured.gdshader'ın örnekleriyle
+## çizilir (aynı görünüm, doku SINIRLI mipmap kademesiyle okunur — uzaktaki araçta UV adaları karışmasın).
 ## Tek mesh tekerler → wheel_split.gdshader doku modu (jant rengi body_color'dan bağımsız).
 ## Farlar / stoplar → doku + emisyon (headlights_enabled / taillights_enabled). Diğer roller GLB
 ## materyalinde kalır. Aynı CarAppearance API'si; dokusuz eski modeller için eski yol değişmeden çalışır.
@@ -38,6 +40,8 @@ const WHEEL_MEMBER_TOLERANCE: float = 1.25
 ## tekerleğin parçası değildir. Jant/göbek eş merkezlidir; kaliper/kemer değildir.
 const WHEEL_AXIS_TOLERANCE: float = 0.22
 const PAINT_SHADER: Shader = preload("res://vehicles/car_paint.gdshader")
+## Dokulu aracın ortak materyal shader'ı (gövde / trim / jant / cam / lamba): bkz. car_texture.gdshaderinc.
+const TEXTURED_SHADER: Shader = preload("res://vehicles/car_textured.gdshader")
 const PAINT_MATCH: float = 0.03  # body_color fabrika boyasına bu kadar yakınsa doku aynen (yeniden boyama yok)
 ## Boya shader'ının uygulandığı roller: kaporta + dokuda kaporta rengi olabilen parçalar (renkli tampon,
 ## ızgara çerçevesi, plaka yuvası...). Hangi TEXEL'in boyanacağına maske karar verir; maskede siyah olan
@@ -57,6 +61,11 @@ const RIM_ROUGHNESS: float = 0.4
 const HEADLIGHT_TINT: Color = Color(0.78, 0.83, 0.90)
 const HEADLIGHT_METALLIC: float = 0.45
 const HEADLIGHT_ROUGHNESS: float = 0.10
+## DOKULU CAM. Tripo dokularında camlar açık gri (pişmiş yansıma; Era'da ortalama 0,6) ve 0,22 pürüzle güneşi
+## yansıtınca beyaz kaportadan ayırt edilmiyordu (kullanıcı: "Era'nın camları yanlış renkte"). Doku bu oranla
+## koyulaşır, pürüz biraz artar: cam koyu füme okunur, dokudaki yansıma deseni kalır.
+const GLASS_SHADE: float = 0.7
+const GLASS_ROUGHNESS: float = 0.3
 ## Lamba rolündeki parça, aracın kutu hacminin bu oranını aşarsa lamba değildir — bkz. _filter_lamps().
 const LAMP_MAX_VOLUME: float = 0.0045
 
@@ -94,6 +103,7 @@ var _surface_parts: Dictionary = {}  # rol → Array[[MeshInstance3D, yüzey ind
 var _wheel_groups: Array[Dictionary] = []  # {front, pivot, meshes, bases}
 var _materials: Dictionary = {}   # rol → StandardMaterial3D (bu instance'a özel)
 var _paint_materials: Dictionary = {}  # rol → ShaderMaterial (dokulu model: body / mirrors)
+var _textured_materials: Dictionary = {}  # rol → ShaderMaterial (dokulu model, car_textured; "base" = GLB'nin yerine)
 var _wheel_dropped: PackedStringArray = PackedStringArray()  # gruptan elenen parçalar (denetim)
 var _wheel_materials: Array[ShaderMaterial] = []  # tek mesh tekerler için (bu instance'a özel)
 var _last_applied: CarAppearance
@@ -213,46 +223,40 @@ func _apply_textured(appearance: CarAppearance) -> void:
 	if paint:
 		paint.set_shader_parameter(&"tint", appearance.body_color)
 		paint.set_shader_parameter(&"recolor", 1.0)
+	var base: ShaderMaterial = _textured(&"base")   # GLB materyalinin değerleri (metalik 0, pürüz 0,5)
 	for role: StringName in PAINT_ROLES:
-		_assign(role, paint)
+		_assign(role, paint if paint else base)
 
 	var rim_tint: Color = _ratio_tint(appearance.wheel_color, CarAppearance.DEFAULT_RIM)
-	var rims: StandardMaterial3D = _material(&"rims")
-	rims.albedo_texture = _albedo
-	rims.albedo_color = rim_tint
-	rims.metallic = 0.25
-	rims.roughness = RIM_ROUGHNESS
+	var rims: ShaderMaterial = _textured(&"rims")
+	rims.set_shader_parameter(&"albedo_tint", rim_tint)
+	rims.set_shader_parameter(&"metallic", 0.25)
+	rims.set_shader_parameter(&"roughness", RIM_ROUGHNESS)
 	for wheel_mat: ShaderMaterial in _wheel_materials:
 		wheel_mat.set_shader_parameter(&"rim_tint", rim_tint)
 
-	var glass: StandardMaterial3D = _material(&"glass")
-	glass.albedo_texture = _albedo
-	glass.albedo_color = _ratio_tint(appearance.glass_color, CarAppearance.DEFAULT_GLASS)
-	glass.metallic = 0.0
-	glass.roughness = 0.22
-	glass.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+	var glass: ShaderMaterial = _textured(&"glass")
+	glass.set_shader_parameter(&"albedo_tint", _ratio_tint(appearance.glass_color, CarAppearance.DEFAULT_GLASS) * GLASS_SHADE)
+	glass.set_shader_parameter(&"roughness", GLASS_ROUGHNESS)
 
-	var head: StandardMaterial3D = _material(&"headlights")
-	head.albedo_texture = _albedo
-	head.albedo_color = HEADLIGHT_TINT        # beyaz kaportada kaybolmasın (bkz. sabitin açıklaması)
-	head.metallic = HEADLIGHT_METALLIC
-	head.roughness = HEADLIGHT_ROUGHNESS
-	head.emission_enabled = appearance.headlights_enabled
-	head.emission = Color(1.0, 0.96, 0.82)
-	head.emission_energy_multiplier = 2.0
+	var head: ShaderMaterial = _textured(&"headlights")
+	head.set_shader_parameter(&"albedo_tint", HEADLIGHT_TINT)   # beyaz kaportada kaybolmasın (bkz. sabitin açıklaması)
+	head.set_shader_parameter(&"metallic", HEADLIGHT_METALLIC)
+	head.set_shader_parameter(&"roughness", HEADLIGHT_ROUGHNESS)
+	head.set_shader_parameter(&"emission", Color(1.0, 0.96, 0.82))
+	head.set_shader_parameter(&"emission_energy", 2.0 if appearance.headlights_enabled else 0.0)
 
-	var tail: StandardMaterial3D = _material(&"taillights")
-	tail.albedo_texture = _albedo
-	tail.roughness = 0.3
-	tail.emission_enabled = appearance.taillights_enabled
-	tail.emission = Color(1.0, 0.12, 0.1)
-	tail.emission_energy_multiplier = 1.8
+	var tail: ShaderMaterial = _textured(&"taillights")
+	tail.set_shader_parameter(&"roughness", 0.3)
+	tail.set_shader_parameter(&"emission", Color(1.0, 0.12, 0.1))
+	tail.set_shader_parameter(&"emission_energy", 1.8 if appearance.taillights_enabled else 0.0)
 
 	_assign(&"rims", rims)
 	_assign(&"glass", glass)
 	_assign(&"headlights", head)
 	_assign(&"taillights", tail)
-	# tires, grille, black_trim, plate, fog_lights, exhaust, antenna: GLB'nin dokulu materyalinde kalır
+	# lastik, rolsüz parçalar, kendi materyali kalan tekerler: ortak dokulu materyal (dokusuz yüzeye dokunulmaz)
+	_fill_textured(base)
 	for mesh: MeshInstance3D in _parts.get(&"hidden", []):
 		mesh.visible = false
 	if _police:
@@ -277,6 +281,33 @@ func _mask() -> Texture2D:
 		if _albedo:
 			_paint_mask = _load_paint_mask(scene_path)
 	return _paint_mask
+
+
+## Dokulu model: rol başına car_textured örneği (bu rig'e özel; doku sabit, uniform'lar varsayılanla başlar —
+## GLB materyalinin değerleri: metalik 0, pürüz 0,5, ışık kapalı). Rig'ler arasında paylaşılmaz: önbellek
+## modelin dokusunu trafikten çıktıktan sonra da bellekte tutardı.
+func _textured(role: StringName) -> ShaderMaterial:
+	if not _textured_materials.has(role):
+		var mat: ShaderMaterial = ShaderMaterial.new()
+		mat.shader = TEXTURED_SHADER
+		mat.set_shader_parameter(&"albedo_tex", _albedo)
+		_textured_materials[role] = mat
+	return _textured_materials[role]
+
+
+## Rolün materyal atamadığı (override'ı boş) DOKULU yüzeylere ortak materyali takar: rolsüz parçalar, kendi
+## materyali kalan tekerler. Dokusuz yüzeyler (Toros'un Blender'da ayrılmış lastik / jant yüzeyleri) GLB
+## materyalinde kalır.
+func _fill_textured(base: ShaderMaterial) -> void:
+	for mesh: MeshInstance3D in _all_meshes:
+		if not is_instance_valid(mesh) or mesh.mesh == null or mesh == _merged:
+			continue
+		for surface: int in mesh.mesh.get_surface_count():
+			if mesh.get_surface_override_material(surface) != null:
+				continue
+			var source: BaseMaterial3D = mesh.mesh.surface_get_material(surface) as BaseMaterial3D
+			if source and source.albedo_texture:
+				mesh.set_surface_override_material(surface, base)
 
 
 ## Dokulu gövde boyası materyali (rol başına bir kez; doku ve fabrika boyası sabit).

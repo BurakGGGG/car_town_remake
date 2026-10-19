@@ -60,6 +60,8 @@ var _push_toggle: PlateButton
 var _push_caption: Label
 var _privacy_options: PlateButton
 var _privacy_row: Control
+var _personal_ads: PlateButton
+var _personal_ads_row: Control
 var _closing: bool = false
 
 
@@ -379,6 +381,12 @@ func _build_account() -> void:
 	_privacy_options.pressed.connect(func() -> void:
 		if _ads:
 			_ads.show_privacy_options())
+	# AppLovin: Google formu yok → kişiselleştirilmiş reklam AÇIK/KAPALI (AdPrivacy; AEA/BK/İsviçre'de varsayılan kapalı)
+	_personal_ads = _toggle_row(box, Loc.t("KİŞİSELLEŞTİRİLMİŞ REKLAMLAR"), Loc.t("Kişiselleştirilmiş reklam onayını değiştir."))
+	_personal_ads_row = _personal_ads.get_parent()
+	_personal_ads.pressed.connect(func() -> void:
+		if _ads:
+			_ads.set_personalized_ads(_personal_ads.button_pressed))
 	box.add_child(_rule())
 	# Akış kabı: uzun dillerde (DE / FR) iki bağlantı yan yana sığmazsa alt alta iner, sayfayı genişletmez
 	var links: HFlowContainer = HFlowContainer.new()
@@ -554,6 +562,11 @@ func _refresh() -> void:
 	var required: bool = _ads != null and _ads.privacy_options_required()
 	_privacy_options.visible = required
 	_privacy_row.visible = required
+	var toggle: bool = _ads != null and _ads.personalization_toggle()
+	_personal_ads_row.visible = toggle
+	if toggle:
+		_personal_ads.set_pressed_no_signal(_ads.personalized_ads())
+		_paint_toggle(_personal_ads, _ads.personalized_ads())
 
 
 ## YARIŞ BİLDİRİMLERİ satırı: açık / kapalı, girişsizken kilitli ve nedeni yazılı, son başarısız denemenin nedeni.

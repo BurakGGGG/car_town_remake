@@ -8,6 +8,17 @@ extends RefCounted
 ##   release derleme → yalnızca gerçek kimlik; boşsa o yuva KAPALI (test reklamı yayına çıkmaz)
 ##
 ## Uygulama kimliği (ca-app-pub-…~…) kodda DEĞİL, Proje Ayarları → admob/general/android/app_id içindedir.
+##
+## REKLAM AĞI (2026-10-19): AdMob hesabı reddedildi; AppLovin MAX'e geçiş hazırlandı ama AppLovin "şu an yeni
+## yayıncı hesabı kabul etmiyoruz" dedi → ağ yine ADMOB (hesap düzelirse yayındaki sürüm yeni derleme olmadan reklam
+## göstermeye başlar). AppLovin kodu beklemede: addons/applovin_max (editör eklentisi KAPALI → SDK APK'ya girmez),
+## ads/applovin_provider.gd, ads/ad_privacy.gd. Açmak: NETWORK = APPLOVIN + eklentiyi aç +
+## admob/general/android/enabled=false (bkz. docs/ads/APPLOVIN_KURULUM.md).
+## AppLovin'de herkese açık test birimi YOK: debug derlemede reklam yalnızca SDK "test modu" bildirirse gösterilir
+## (cihaz APPLOVIN_TEST_DEVICES'ta ya da MAX panelinde test cihazı) — AppLovinProvider zorunlu kılar.
+
+enum Network { ADMOB, APPLOVIN }
+const NETWORK: Network = Network.ADMOB
 
 ## Reklam YUVALARI: her yuvanın kendi AdMob birimi ve kendi önceden yüklenmiş reklamı vardır
 ## (AdMob raporlarında yarış / tamir ayrı görünür). Bir teklif türü AdPolicy.RULES'ta bir yuvaya bağlıdır.
@@ -50,3 +61,42 @@ static func any_slot_usable() -> bool:
 		if unit_is_safe(rewarded_unit(slot)):
 			return true
 	return false
+
+
+# --- AppLovin MAX -----------------------------------------------------------------
+
+## SDK anahtarı (MAX paneli → Account → General → Keys). Boşsa AppLovin hiç başlatılmaz.
+const APPLOVIN_SDK_KEY: String = ""
+
+## Ödüllü MAX reklam birimi (MAX paneli → Ad Units; 16 haneli onaltılık kimlik). Boşsa reklam kapalı.
+## AppLovin biçim başına TEK birim öneriyor → iki yuva aynı birimi paylaşır; MAX raporunda yuvalar yerleşim
+## (placement) adıyla ayrılır (AppLovinProvider.show_rewarded).
+const APPLOVIN_REWARDED_UNIT: String = ""
+
+## Test cihazlarının reklam kimlikleri (GAID; telefonda Ayarlar → Google → Reklamlar). Bu cihazlar release
+## derlemede de TEST reklamı görür: geliştiricinin kendi telefonunda gerçek gösterim = geçersiz trafik.
+const APPLOVIN_TEST_DEVICES: PackedStringArray = []
+
+
+static func applovin_unit(slot: StringName) -> String:
+	return APPLOVIN_REWARDED_UNIT.strip_edges() if slots().has(slot) else ""
+
+
+## AppLovin başlatılabilir mi: anahtar ve en az bir yuva birimi var.
+static func applovin_ready() -> bool:
+	if APPLOVIN_SDK_KEY.strip_edges() == "":
+		return false
+	for slot: StringName in slots():
+		if applovin_unit(slot) != "":
+			return true
+	return false
+
+
+## SDK'ya başlatmada verilen birim listesi (MAX önceden hazırlık için ister).
+static func applovin_units() -> PackedStringArray:
+	var out: PackedStringArray = []
+	for slot: StringName in slots():
+		var unit: String = applovin_unit(slot)
+		if unit != "" and not out.has(unit):
+			out.append(unit)
+	return out
