@@ -242,6 +242,17 @@ atmosfer**, bekleme otoparkı **çatı katı otopark**, önce MAHALLE + otopark 
   dibinde ya da arka yarıda.
 - Park etmiş araçların birleştirmesi (CarMeshMerger) kuyrukla oturur: ölçüm birkaç yüz kare sonra yapılmalı.
 
+### Paket boyutu (2026-10-20)
+- GARAJLARIM ilk hâliyle AAB indirme 223,1 → 252,8 MiB (+29,8), kurulu 298,2 → 374,2 (+76,0). Yükün çoğu 45 zemin
+  dokusu (indirme 24,5 / kurulu 59,0 MiB).
+- **Karar (kullanıcı): MAHALLE hariç zemin dokuları yarı çözünürlükte.** Kaynak PNG'ler tam kalır; `.import`'ta
+  `process/size_limit` = uzun kenarın yarısı (SANAYİ 720, NEON 1040, CAM SHOWROOM / UÇAK HANGARI 1024). MAHALLE'de
+  satranç karolar en yakın zoom'da yumuşuyordu (36 dB), öbürlerinde fark 40–54 dB. Karşılaştırma:
+  `~/Projects/ct_shots/garaj3d/zemin_karsilastirma/`, çekim `QA_FOCUS=… QA_ZOOM=0.42 qa/garaj3d_shot.gd`.
+- Zemin yeniden pişirilince `.import` korunur (sınır kalır). Sınır değişince Godot kendiliğinden yeniden içe
+  aktarmaz: `.godot/imported/<doku>.md5` source_md5 bozulur + kaynak `touch` + PENCERELİ `--import` (headless
+  sıkıştırmayı atlar).
+
 ### Çizim yükü (masaüstü ölçümü, birleştirme oturduktan sonra)
 Ortam 25–35 bin üçgen. Araç başına ~10 çizim çağrısı, ~64 bin üçgen (en kaba otomatik LOD bile 19–60 bin):
 MAHALLE 6 araç 86 çağrı / 396 bin, SANAYİ 10 araç 125 çağrı / 663 bin. 30 araçlı HANGAR ≈ 1,8 M üçgen.

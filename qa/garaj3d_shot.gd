@@ -4,6 +4,7 @@ extends SceneTree
 ## Çalıştırma (pencereli):
 ##   godot-4 --path . --display-driver x11 --resolution 1280x640 --script res://qa/garaj3d_shot.gd -- <garaj> <seviye> <çıktı.png>
 ##   garaj: mahalle | sanayi | … | waiting   seviye: 1-3 (her kalem aynı seviye; sv.3'te PARK YERİ en üstte)
+##   QA_FOCUS=<araç> odak · QA_ZOOM=0.42 en yakın zoom · QA_CARS virgüllü liste · QA_SETTLE birleştirme bekleme karesi
 
 const CARS: Array[StringName] = [&"tofas_sahin", &"bmw_e46", &"lambo_huracan", &"vw_golf_7", &"porsche_gt3", &"renault_toros",
 	&"hyundai_getz", &"vw_passat_b55", &"bmw_f30", &"toyota_corolla", &"audi_a6", &"mercedes_g", &"porsche_taycan",
@@ -53,6 +54,11 @@ func _run() -> void:
 	view.sync_cars(slots, tow)
 	if OS.get_environment("QA_FOCUS") != "":
 		view.focus(StringName(OS.get_environment("QA_FOCUS")), false)
+	if OS.get_environment("QA_ZOOM") != "":   # varsayılan uzaklığın oranı (GarageInteriorView.ZOOM_MIN = en yakın)
+		var dist: float = float(view.get("_dist0")) * float(OS.get_environment("QA_ZOOM"))
+		view.set("_goal_dist", dist)
+		view.set("_dist", dist)
+		view.call("_apply_camera")
 	for i: int in 30:
 		await process_frame
 	await RenderingServer.frame_post_draw
