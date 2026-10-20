@@ -1,6 +1,6 @@
 class_name GemShopButton
 extends Button
-## HUD'un sol üstündeki GEM AL düğmesi — para / gem sayacının hemen altında, dikkat çeken mavi hap:
+## HUD'un sol üstündeki MARKET düğmesi (eski adı GEM AL) — para / gem sayacının hemen altında, dikkat çeken mavi hap:
 ## solda zıplayan gem çizimi (GemPackArt.BUTTON), üstünden periyodik ışık süpürmesi, birkaç saniyede
 ## bir "nefes alma" büyümesi. Başlangıç paketi alınmadıysa sağ üstte kırmızı "!" rozeti.
 ## Kodla kurulur (Hud._setup_gem_store); basınca `pressed` → mağaza.
@@ -49,7 +49,7 @@ func _init() -> void:
 	_art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(_art)
 	var label: Label = Label.new()
-	label.text = Loc.t("GEM AL")
+	label.text = Loc.t("MARKET")
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.theme_type_variation = &"HudOutlined"
 	label.add_theme_font_size_override(&"font_size", 17)

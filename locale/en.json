@@ -363,12 +363,10 @@
  "GEM AL": "GET GEMS",
  "GEM HAZİNESİ": "GEM VAULT",
  "GEM KESESİ": "POUCH OF GEMS",
- "GEM MAĞAZASI": "GEM SHOP",
  "GEM SANDIĞI": "CHEST OF GEMS",
  "GEM YETERSİZ": "NOT ENOUGH GEMS",
  "GEM YETERSİZ\nGEM AL": "NOT ENOUGH GEMS\nGET GEMS",
  "GEM: GÜNLÜK GİRİŞ · GÖREVLER · SEVİYE · USTALIK": "GEMS: DAILY LOGIN · TASKS · LEVELS · MASTERY",
- "GEMLE ARAÇ KASASI VE ÖZEL BOYA ALINIR": "GEMS BUY VEHICLE CRATES AND SPECIAL PAINTS",
  "GENEL": "OVERALL",
  "GENEL  %d": "OVERALL  %d",
  "GENİŞLET": "EXPAND",
@@ -801,7 +799,6 @@
  "TEKRAR DENE": "TRY AGAIN",
  "TEPKİ": "REACTION",
  "TEST: +%s ₺": "TEST: +%s ₺",
- "TEŞEKKÜRLER! GEMLER HESABINA EKLENDİ": "THANK YOU! THE GEMS WERE ADDED TO YOUR ACCOUNT",
  "TOPLAM %d BAŞARIM YILDIZI": "%d ACHIEVEMENT STARS IN TOTAL",
  "TOPLAM %d ★   ·   HER YILDIZ: +%%%d XP, +%%%d ÖDÜL   ·   5★ İŞ: %d": "TOTAL %d ★   ·   EACH STAR: +%d%% XP, +%d%% REWARD   ·   5★ JOBS: %d",
  "TRAFİK KONİLERİ": "TRAFFIC CONES",
@@ -2079,5 +2076,9 @@
  "+%d RÜTBE DAHA|1": "+%d MORE RANK",
  "TAŞTAKİ ALTIN ANAHTAR": "GOLDEN WRENCH IN THE STONE",
  "Rıza Usta'nın ilk ustalara bıraktığı anahtar. Yalnızca kurucu ustalarda.": "The wrench Master Rıza left for the very first mechanics. Founders only.",
- "ÖN KAYIT ÖDÜLÜ!": "PRE-REGISTRATION REWARD!"
+ "ÖN KAYIT ÖDÜLÜ!": "PRE-REGISTRATION REWARD!",
+ "MARKET": "MARKET",
+ "PARAYA ÇEVİR": "CONVERT TO CASH",
+ "PARAYA ÇEVRİLDİ!": "CONVERTED TO CASH!",
+ "%s ₺ / GEM": "%s ₺ / GEM"
 }

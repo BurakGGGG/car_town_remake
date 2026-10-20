@@ -68,14 +68,14 @@
   "ui/hud/news_digest.gd:404"
  ],
  "%d GEM": [
-  "ui/hud/restoration_panel.gd:321",
   "ui/hud/mod_workshop.gd:619",
   "ui/hud/garage_edit_screen.gd:932",
   "ui/hud/showroom_screen.gd:1164",
   "ui/hud/showroom_screen.gd:1184",
   "ui/hud/profile_edit_screen.gd:392",
-  "ui/hud/gem_store_screen.gd:180",
-  "ui/hud/paint_panel.gd:192"
+  "ui/hud/paint_panel.gd:192",
+  "ui/hud/restoration_panel.gd:321",
+  "ui/hud/gem_store_screen.gd:253"
  ],
  "%d GEM\nGEM YETERSİZ": [
   "ui/hud/showroom_screen.gd:1178"
@@ -552,6 +552,9 @@
  ],
  "%s ₺\nSEVİYE %d\n%d ARAÇ\n%s": [
   "ui/hud/login_screen.gd:307"
+ ],
+ "%s ₺ / GEM": [
+  "ui/hud/gem_store_screen.gd:315"
  ],
  "%s ₺ / KARO": [
   "ui/hud/garage_edit_screen.gd:858"
@@ -1657,9 +1660,9 @@
   "gameplay/garage_decor.gd:207"
  ],
  "BİTİR": [
-  "ui/hud/restoration_panel.gd:165",
   "ui/hud/garage_edit_screen.gd:320",
-  "ui/tutorial/tutorial_director.gd:882"
+  "ui/tutorial/tutorial_director.gd:882",
+  "ui/hud/restoration_panel.gd:165"
  ],
  "BİTİR  %d": [
   "ui/hud/car_garages_screen.gd:267",
@@ -2201,7 +2204,7 @@
   "ui/hud/profile_card.gd:98"
  ],
  "EN İYİ DEĞER": [
-  "ui/hud/gem_store_screen.gd:190"
+  "ui/hud/gem_store_screen.gd:263"
  ],
  "ENDONEZYA": [
   "gameplay/social/profile_catalog.gd:50"
@@ -2549,17 +2552,13 @@
   "ui/hud/restoration_panel.gd:333"
  ],
  "GEM AL": [
-  "ui/hud/gem_shop_button.gd:52"
+  "ui/hud/gem_store_screen.gd:134"
  ],
  "GEM HAZİNESİ": [
   "gameplay/purchases/gem_products.gd:20"
  ],
  "GEM KESESİ": [
   "gameplay/purchases/gem_products.gd:18"
- ],
- "GEM MAĞAZASI": [
-  "ui/hud/restoration_panel.gd:372",
-  "ui/hud/gem_store_screen.gd:90"
  ],
  "GEM SANDIĞI": [
   "gameplay/purchases/gem_products.gd:19"
@@ -2576,14 +2575,11 @@
   "ui/hud/profile_edit_screen.gd:415"
  ],
  "GEM YETMİYOR\n%d GEM gerekiyor, %d GEM'in var.": [
-  "ui/hud/restoration_panel.gd:371",
-  "ui/hud/hud.gd:1015"
+  "ui/hud/hud.gd:1015",
+  "ui/hud/restoration_panel.gd:371"
  ],
  "GEM: GÜNLÜK GİRİŞ · GÖREVLER · SEVİYE · USTALIK": [
   "ui/hud/showroom_screen.gd:1162"
- ],
- "GEMLE ARAÇ KASASI VE ÖZEL BOYA ALINIR": [
-  "ui/hud/gem_store_screen.gd:146"
  ],
  "GENEL": [
   "ui/hud/mod_workshop.gd:337",
@@ -3354,7 +3350,6 @@
  "KAPAT": [
   "ui/hud/junkyard_screen.gd:335",
   "ui/hud/junkyard_screen.gd:370",
-  "ui/hud/restoration_panel.gd:178",
   "ui/hud/car_garages_screen.gd:154",
   "ui/hud/all_cars_screen.gd:187",
   "ui/hud/garage_screen.gd:963",
@@ -3364,14 +3359,15 @@
   "ui/hud/collection_screen.gd:124",
   "ui/hud/map_screen.gd:151",
   "ui/hud/profile_screen.gd:128",
-  "ui/hud/gem_store_screen.gd:123",
   "ui/hud/mastery_screen.gd:84",
   "ui/hud/invite_screen.gd:239",
   "ui/hud/login_screen.gd:388",
   "ui/hud/login_screen.gd:396",
   "ui/hud/login_screen.gd:400",
   "ui/hud/login_screen.gd:404",
-  "ui/hud/login_screen.gd:411"
+  "ui/hud/login_screen.gd:411",
+  "ui/hud/restoration_panel.gd:178",
+  "ui/hud/gem_store_screen.gd:154"
  ],
  "KAPIDA %d ARKADAŞLIK İSTEĞİ VAR": [
   "ui/hud/news_digest.gd:253"
@@ -3951,6 +3947,11 @@
  "MANGAL": [
   "decor/decorations.json:bbq.title"
  ],
+ "MARKET": [
+  "ui/hud/gem_shop_button.gd:52",
+  "ui/hud/gem_store_screen.gd:123",
+  "ui/hud/restoration_panel.gd:372"
+ ],
  "MART": [
   "ui/hud/news_digest.gd:462"
  ],
@@ -3983,7 +3984,7 @@
   "gameplay/quest_catalog.gd:32"
  ],
  "MAĞAZAYA ŞU AN ULAŞILAMIYOR\nİNTERNET BAĞLANTINI VE GOOGLE PLAY'İ KONTROL ET": [
-  "ui/hud/gem_store_screen.gd:139"
+  "ui/hud/gem_store_screen.gd:204"
  ],
  "MEKSİKA": [
   "gameplay/social/profile_catalog.gd:45"
@@ -4287,6 +4288,12 @@
  "PARANI TOPLA": [
   "ui/tutorial/tutorial_director.gd:697"
  ],
+ "PARAYA ÇEVRİLDİ!": [
+  "ui/hud/gem_store_screen.gd:357"
+ ],
+ "PARAYA ÇEVİR": [
+  "ui/hud/gem_store_screen.gd:134"
+ ],
  "PARK TABELASI": [
   "decor/decorations.json:parking_sign.title"
  ],
@@ -4312,8 +4319,8 @@
   "ui/hud/junkyard_screen.gd:234",
   "ui/hud/junkyard_screen.gd:360",
   "ui/hud/junkyard_screen.gd:667",
-  "ui/hud/restoration_panel.gd:134",
-  "ui/tutorial/tutorial_director.gd:615"
+  "ui/tutorial/tutorial_director.gd:615",
+  "ui/hud/restoration_panel.gd:134"
  ],
  "PARÇALAR (%d)": [
   "ui/hud/junkyard_screen.gd:667"
@@ -4693,16 +4700,16 @@
   "ui/hud/garage_edit_screen.gd:940"
  ],
  "SATIN ALMA TAMAMLANAMADI, TEKRAR DENE": [
-  "ui/hud/gem_store_screen.gd:228"
+  "ui/hud/gem_store_screen.gd:382"
  ],
  "SATIN ALMA TAMAMLANDI\n+%d GEM": [
   "ui/hud/hud.gd:1714"
  ],
  "SATIN ALMA TAMAMLANDI!": [
-  "ui/hud/gem_store_screen.gd:239"
+  "ui/hud/gem_store_screen.gd:389"
  ],
  "SATIN ALMA İPTAL EDİLDİ": [
-  "ui/hud/gem_store_screen.gd:226"
+  "ui/hud/gem_store_screen.gd:380"
  ],
  "SATIN ALMAK İÇİN TEKRAR DOKUN": [
   "ui/hud/garage_edit_screen.gd:835"
@@ -5077,8 +5084,8 @@
   "ui/hud/news_digest.gd:275"
  ],
  "TAK": [
-  "ui/hud/restoration_panel.gd:316",
-  "ui/hud/mod_workshop.gd:612"
+  "ui/hud/mod_workshop.gd:612",
+  "ui/hud/restoration_panel.gd:316"
  ],
  "TAKILDI: %s · %s": [
   "ui/hud/hud.gd:629"
@@ -5115,7 +5122,6 @@
   "decor/decorations.json:wall_calendar.title"
  ],
  "TAMAM": [
-  "ui/hud/restoration_panel.gd:304",
   "ui/hud/mod_workshop.gd:712",
   "ui/hud/push_prompt.gd:35",
   "ui/hud/showroom_screen.gd:1121",
@@ -5133,7 +5139,8 @@
   "ui/hud/crate_panel.gd:78",
   "ui/tutorial/tutorial_director.gd:161",
   "ui/tutorial/tutorial_director.gd:634",
-  "ui/tutorial/tutorial_director.gd:770"
+  "ui/tutorial/tutorial_director.gd:770",
+  "ui/hud/restoration_panel.gd:304"
  ],
  "TAMAMLANDI": [
   "ui/hud/restoration_result.gd:110",
@@ -5236,7 +5243,7 @@
   "ui/hud/garage_screen.gd:883"
  ],
  "TEK SEFERLİK TEKLİF": [
-  "ui/hud/gem_store_screen.gd:188"
+  "ui/hud/gem_store_screen.gd:261"
  ],
  "TEKER TAKOZLARI": [
   "decor/decorations.json:wheel_chocks.title"
@@ -5265,9 +5272,6 @@
  ],
  "TEST: +%s ₺": [
   "ui/hud/hud.gd:532"
- ],
- "TEŞEKKÜRLER! GEMLER HESABINA EKLENDİ": [
-  "ui/hud/gem_store_screen.gd:232"
  ],
  "TOP ŞİMŞİR": [
   "decor/decorations.json:topiary.title"
@@ -5543,7 +5547,6 @@
  ],
  "VAZGEÇ": [
   "ui/hud/race_challenge_screen.gd:104",
-  "ui/hud/restoration_panel.gd:220",
   "ui/hud/garage_edit_screen.gd:428",
   "ui/hud/email_code_panel.gd:189",
   "ui/hud/avatar_cropper.gd:117",
@@ -5557,7 +5560,8 @@
   "ui/hud/invite_screen.gd:231",
   "ui/hud/hud.gd:855",
   "ui/hud/login_screen.gd:364",
-  "ui/hud/crate_panel.gd:47"
+  "ui/hud/crate_panel.gd:47",
+  "ui/hud/restoration_panel.gd:220"
  ],
  "VE": [
   "gameplay/social/profile_catalog.gd:46",
@@ -6160,10 +6164,10 @@
   "gameplay/cloud_save_manager.gd:737"
  ],
  "ÖDEME BEKLENİYOR\nÖDEME TAMAMLANINCA GEMLER GELİR": [
-  "ui/hud/gem_store_screen.gd:230"
+  "ui/hud/gem_store_screen.gd:384"
  ],
  "ÖDEMESİ BEKLENEN BİR SATIN ALMAN VAR\nÖDEME TAMAMLANINCA GEMLER GELİR": [
-  "ui/hud/gem_store_screen.gd:144"
+  "ui/hud/gem_store_screen.gd:72"
  ],
  "ÖDÜL KAZANDIN!": [
   "ui/hud/reward_popup.gd:50"

@@ -1,11 +1,13 @@
 class_name GemPackArt
 extends Control
-## GEM PAKETİ ÇİZİMİ — mağaza kartlarının ve HUD'daki GEM AL düğmesinin hareketli görseli. Tamamen
+## GEM PAKETİ ÇİZİMİ — MARKET kartlarının ve HUD'daki MARKET düğmesinin hareketli görseli. Tamamen
 ## koddan çizilir (doku yok): yüzeyli gemler, ışık hüzmesi, parıltı, gölge. Paket büyüdükçe sahne
 ## zenginleşir: avuç → kese → sandık → kasa dairesi; başlangıç paketi hediye kutusudur.
+## PARAYA ÇEVİR kartları (CASH_1..4, GemExchange): gemden altın sikkeye — tek deste → iki → üç deste ve
+## saçılmış sikkeler → ₺ amblemli para kesesi.
 ## Ölçü kutunun kısa kenarına (s) göre: her boyutta aynı oranla çizilir.
 
-enum Kind { STARTER, HANDFUL, POUCH, CHEST, VAULT, BUTTON }
+enum Kind { STARTER, HANDFUL, POUCH, CHEST, VAULT, BUTTON, CASH_1, CASH_2, CASH_3, CASH_4 }
 
 const GEM_BLUE: Color = Color("6CCBF2")
 const GEM_CYAN: Color = Color("8FE3F5")
@@ -30,6 +32,10 @@ const BACKDROP: Dictionary = {
 	Kind.POUCH: Color("1C5E66"),
 	Kind.CHEST: Color("43306E"),
 	Kind.VAULT: Color("16243F"),
+	Kind.CASH_1: Color("1F5A3A"),
+	Kind.CASH_2: Color("21634A"),
+	Kind.CASH_3: Color("2A5A2A"),
+	Kind.CASH_4: Color("173A28"),
 }
 ## Mağaza kartları saniyede en çok bu kadar yeniden çizilir: hareketler yavaş (1,8–3 rad/sn), 30 Hz akıcı; kart
 ## çizimi ağır (yığın, ışın, gem) ve mağaza açıkken beş kart her karede baştan çiziliyordu (masaüstü ~3,8 ms/kare).
@@ -95,6 +101,10 @@ func _draw() -> void:
 			_draw_vault(c, s)
 		Kind.BUTTON:
 			_draw_button(c, s)
+		Kind.CASH_1, Kind.CASH_2, Kind.CASH_3:
+			_draw_cash(c, s)
+		Kind.CASH_4:
+			_draw_cash_bag(c, s)
 	if not badge_text.is_empty():
 		_draw_badge(Vector2(size.x - s * 0.2, s * 0.19), s * 0.17)
 
@@ -282,6 +292,101 @@ func _animate_button() -> void:
 # --- Yapı taşları -----------------------------------------------------------------------------
 
 ## Koyu, köşeleri yuvarlak vitrin zemini + üstten hafif aydınlık.
+## PARAYA ÇEVİR: küçük teklifte tek deste, büyüdükçe deste ve saçılmış sikke artar; sol üstte "çevrilen" gem.
+func _draw_cash(c: Vector2, s: float) -> void:
+	var step: int = kind - Kind.CASH_1   # 0, 1, 2
+	if step >= 2:
+		_rays(c + Vector2(0.0, -s * 0.05), s * 0.6, 10, Color(GOLD, 0.2), _t * 0.25)
+	_glow(c + Vector2(0.0, s * 0.02), s * 0.4, GOLD, 0.3 + 0.08 * step)
+	_shadow(c + Vector2(0.0, s * 0.36), s * (0.26 + 0.07 * step))
+	var r: float = s * 0.15
+	var base: Vector2 = c + Vector2(0.0, s * 0.33)
+	match step:
+		0:
+			_coin_stack(base + Vector2(s * 0.06, 0.0), r, 5)
+		1:
+			_coin_stack(base + Vector2(-s * 0.1, 0.0), r, 4)
+			_coin_stack(base + Vector2(s * 0.17, s * 0.02), r, 7)
+		_:
+			_coin_stack(base + Vector2(-s * 0.26, -s * 0.02), r * 0.9, 4)
+			_coin_stack(base + Vector2(s * 0.27, 0.0), r * 0.9, 5)
+			_coin_stack(base + Vector2(0.0, s * 0.03), r, 8)
+			_coin_flat(c + Vector2(-s * 0.12, s * 0.36), r * 0.8)
+			_coin_flat(c + Vector2(s * 0.14, s * 0.38), r * 0.75)
+	var bob: float = sin(_t * 2.2) * s * 0.015
+	_gem(c + Vector2(-s * 0.26, -s * 0.24 + bob), s * (0.2 + 0.02 * step), GEM_BLUE, -0.25)
+	_twinkles(c, s, [Vector2(0.3, -0.3), Vector2(-0.05, -0.36), Vector2(0.36, 0.05)])
+
+
+## En büyük çeviri: ağzından sikke taşan, ₺ amblemli para kesesi; arkada dönen hüzme.
+func _draw_cash_bag(c: Vector2, s: float) -> void:
+	_rays(c + Vector2(0.0, -s * 0.06), s * 0.62, 12, Color(GOLD, 0.24), _t * 0.25)
+	_glow(c + Vector2(0.0, -s * 0.02), s * 0.42, GOLD, 0.42)
+	_shadow(c + Vector2(0.0, s * 0.37), s * 0.42)
+	var body: Vector2 = c + Vector2(0.0, s * 0.12)
+	_ellipse(body + Vector2(0.0, s * 0.02), s * 0.31, s * 0.25, LEATHER_DARK)
+	_ellipse(body, s * 0.29, s * 0.23, LEATHER)
+	_ellipse(body + Vector2(-s * 0.13, -s * 0.08), s * 0.06, s * 0.09, LEATHER.lightened(0.25))
+	var neck: PackedVector2Array = PackedVector2Array([
+		body + Vector2(-s * 0.13, -s * 0.18), body + Vector2(s * 0.13, -s * 0.18),
+		body + Vector2(s * 0.2, -s * 0.3), body + Vector2(-s * 0.2, -s * 0.3)])
+	draw_colored_polygon(neck, LEATHER)
+	draw_line(body + Vector2(-s * 0.15, -s * 0.2), body + Vector2(s * 0.15, -s * 0.2), GOLD, s * 0.045, true)
+	# ₺ amblemi
+	_coin_face(body + Vector2(0.0, s * 0.03), s * 0.12)
+	var mouth: Vector2 = body + Vector2(0.0, -s * 0.3)
+	_ellipse(mouth, s * 0.2, s * 0.06, LEATHER_DARK.darkened(0.3))
+	var bob: float = sin(_t * 2.0) * s * 0.012
+	_coin_flat(mouth + Vector2(-s * 0.09, -s * 0.03), s * 0.08)
+	_coin_flat(mouth + Vector2(s * 0.1, -s * 0.02), s * 0.08)
+	_coin_flat(mouth + Vector2(0.0, -s * 0.08 + bob), s * 0.09)
+	# yanına dökülmüş deste ve sikke
+	_coin_stack(c + Vector2(s * 0.37, s * 0.36), s * 0.1, 4)
+	_coin_flat(c + Vector2(-s * 0.36, s * 0.34), s * 0.09)
+	_gem(c + Vector2(-s * 0.3, -s * 0.28 + bob), s * 0.2, GEM_BLUE, -0.25)
+	_twinkles(c, s, [Vector2(-0.32, -0.3), Vector2(0.3, -0.34), Vector2(-0.38, 0.12), Vector2(0.12, -0.42)])
+
+
+## Üst üste altın sikkeler: her sikke koyu kenar bandı + açık yüz; en üsttekinin yüzünde ₺.
+func _coin_stack(base: Vector2, r: float, count: int) -> void:
+	var h: float = r * 0.26
+	var ry: float = r * 0.42
+	for i: int in count:
+		var bottom: Vector2 = base - Vector2(0.0, h * float(i))
+		_ellipse(bottom, r, ry, GOLD_DARK)
+		draw_rect(Rect2(bottom.x - r, bottom.y - h, r * 2.0, h), GOLD_DARK)
+		_ellipse(bottom - Vector2(0.0, h), r, ry, GOLD if i % 2 == 0 else GOLD.darkened(0.06))
+	var top: Vector2 = base - Vector2(0.0, h * float(count))
+	_ellipse(top, r * 0.74, ry * 0.74, GOLD.lightened(0.16))
+	_lira(top, r * 0.8, ry / r)
+
+
+## Yere yatmış tek sikke.
+func _coin_flat(p: Vector2, r: float) -> void:
+	var ry: float = r * 0.42
+	_ellipse(p + Vector2(0.0, r * 0.12), r, ry, GOLD_DARK)
+	_ellipse(p, r, ry, GOLD)
+	_ellipse(p, r * 0.74, ry * 0.74, GOLD.lightened(0.16))
+
+
+## Dik duran sikke yüzü (kesedeki amblem): halka, iç daire, ₺.
+func _coin_face(p: Vector2, r: float) -> void:
+	draw_circle(p, r, GOLD_DARK, true, -1.0, true)
+	draw_circle(p, r * 0.86, GOLD, true, -1.0, true)
+	draw_circle(p, r * 0.66, GOLD.lightened(0.16), true, -1.0, true)
+	_lira(p, r * 1.1, 1.0)
+
+
+## "₺" işareti, `squash` dikey basıklık (yatık sikke yüzünde < 1).
+func _lira(p: Vector2, size_px: float, squash: float) -> void:
+	var font: Font = get_theme_default_font()
+	var font_size: int = maxi(int(size_px), 8)
+	var w: float = font.get_string_size("₺", HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+	draw_set_transform(p, 0.0, Vector2(1.0, squash))
+	draw_string(font, Vector2(-w * 0.5, font_size * 0.35), "₺", HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, GOLD_DARK)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
 func _backdrop(color: Color) -> void:
 	var sb: StyleBoxFlat = StyleBoxFlat.new()
 	sb.bg_color = color

@@ -369,7 +369,7 @@ func _can_pay(cost: int) -> bool:
 	if player and player.gems >= cost:
 		return true
 	_ask(Loc.t("GEM YETMİYOR\n%d GEM gerekiyor, %d GEM'in var.") % [cost, player.gems if player else 0],
-		Loc.t("GEM MAĞAZASI"), func() -> void: screen_requested.emit(&"gem_store"))
+		Loc.t("MARKET"), func() -> void: screen_requested.emit(&"gem_store"))
 	return false
 
 

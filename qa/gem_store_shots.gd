@@ -1,6 +1,6 @@
 extends SceneTree
-## GEM MAĞAZASI görsel QA — HUD'un sol üstü (mağaza düğmesi) ve mağaza ekranı. Telefon oranı (20:9)
-## için 1404x648. Masaüstünde sahte Play (MockBillingClient) fiyat verir.
+## MARKET görsel QA — HUD'un sol üstü (MARKET düğmesi), GEM AL ve PARAYA ÇEVİR sekmeleri, çeviri onayı.
+## Telefon oranı (20:9) için 1404x648. Masaüstünde sahte Play (MockBillingClient) fiyat verir.
 ## Kullanım: tools/qa_isolated.sh res://qa/gem_store_shots.gd --resolution 1404x648 -- <çıktı klasörü>
 var _out: String = "/home/burak/Projects/ct_shots/gem_store/"
 
@@ -38,4 +38,14 @@ func _run() -> void:
 	await shot("store")
 	await create_timer(0.7).timeout
 	await shot("store_b")
+	var screen: GemStoreScreen = hud.get("gem_store_screen")
+	screen._on_tab_pressed(GemStoreScreen.TAB_CASH)
+	await frames(30)
+	await shot("cash")
+	screen._on_cash_pressed(1)   # 50 GEM: ilk dokunuş onay ister
+	await frames(20)
+	await shot("cash_confirm")
+	screen._on_cash_pressed(1)
+	await frames(80)
+	await shot("cash_reward")
 	quit()
