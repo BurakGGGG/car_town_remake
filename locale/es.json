@@ -2076,5 +2076,8 @@
  "%d YER|1": "%d PLAZA",
  "1.–%d. RÜTBE": "RANGOS 1–%d",
  "+%d RÜTBE DAHA": "+%d RANGOS MÁS",
- "+%d RÜTBE DAHA|1": "+%d RANGO MÁS"
+ "+%d RÜTBE DAHA|1": "+%d RANGO MÁS",
+ "TAŞTAKİ ALTIN ANAHTAR": "LLAVE DE ORO EN LA PIEDRA",
+ "Rıza Usta'nın ilk ustalara bıraktığı anahtar. Yalnızca kurucu ustalarda.": "La llave que el maestro Rıza dejó a los primeros mecánicos. Solo para fundadores.",
+ "ÖN KAYIT ÖDÜLÜ!": "¡RECOMPENSA DE PRERREGISTRO!"
 }

@@ -164,8 +164,8 @@ func is_unlocked(id: StringName) -> bool:
 ## Satın alınabilir mi? Kaplama bir kez alınır; eşyadan birden çok kopya alınabilir.
 func can_purchase(id: StringName) -> bool:
 	if not GarageDecor.exists(id) or not is_unlocked(id) or GarageDecor.is_vehicle(id) \
-			or GarageDecor.is_pattern(id):
-		return false   # sergilenen araç satın alınmaz; karo deseni göz başına boyarken ödenir
+			or GarageDecor.is_pattern(id) or GarageDecor.is_exclusive(id):
+		return false   # sergilenen araç / kurucu eşya satın alınmaz; karo deseni göz başına boyarken ödenir
 	if GarageDecor.is_surface(id) and is_owned(id):
 		return false
 	if owned_of(id) >= MAX_COPIES:
@@ -218,6 +218,27 @@ func purchase(id: StringName) -> bool:
 	purchased.emit(id)
 	placement_changed.emit()
 	return true
+
+
+## KURUCU eşyasını verir (satılmaz; ör. ön kayıt ödülü, FounderReward). Tek kopya: zaten varsa false.
+## Para / elmas düşmez, `purchased` yayılmaz (görev sayaçları satın alma saymasın); kopya DEPOYA girer.
+func grant_exclusive(id: StringName) -> bool:
+	if not GarageDecor.is_exclusive(id) or owned_of(id) > 0:
+		return false
+	_owned[id] = 1
+	_value_cache = -1
+	_list_exclusives()
+	placement_changed.emit()
+	return true
+
+
+## Sahip olunan kurucu eşyalar paletde görünsün (sahibi olmayanda hiç görünmez).
+func _list_exclusives() -> void:
+	var ids: Array[StringName] = []
+	for id: StringName in _owned:
+		if GarageDecor.is_exclusive(id):
+			ids.append(id)
+	GarageDecor.set_listed_exclusives(ids)
 
 
 # --- Yerleşim --------------------------------------------------------------------------
@@ -650,7 +671,7 @@ func load_state(data: Dictionary) -> void:
 				continue
 			var n: int = clampi(SaveSafe.i((owned as Dictionary)[raw]), 0,
 				MAX_WALL_COPIES if GarageDecor.is_wall_piece(id) else MAX_COPIES)
-			if GarageDecor.is_surface(id):
+			if GarageDecor.is_surface(id) or GarageDecor.is_exclusive(id):
 				n = mini(n, 1)
 			if n > 0:
 				_owned[id] = n
@@ -675,6 +696,7 @@ func load_state(data: Dictionary) -> void:
 			_fill_all(LEGACY_FLOOR_PATTERN[legacy])
 		_surfaces.erase(SURFACE_FLOOR)
 	_walls_in(data.get("walls"))
+	_list_exclusives()
 	placement_changed.emit()
 	tiles_changed.emit()
 
@@ -687,6 +709,7 @@ func reset() -> void:
 	_tiles.clear()
 	_walls.clear()
 	_next_iid = 1
+	_list_exclusives()
 	placement_changed.emit()
 	tiles_changed.emit()
 

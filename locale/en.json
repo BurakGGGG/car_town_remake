@@ -2076,5 +2076,8 @@
  "%d YER|1": "%d SPOT",
  "1.–%d. RÜTBE": "RANKS 1–%d",
  "+%d RÜTBE DAHA": "+%d MORE RANKS",
- "+%d RÜTBE DAHA|1": "+%d MORE RANK"
+ "+%d RÜTBE DAHA|1": "+%d MORE RANK",
+ "TAŞTAKİ ALTIN ANAHTAR": "GOLDEN WRENCH IN THE STONE",
+ "Rıza Usta'nın ilk ustalara bıraktığı anahtar. Yalnızca kurucu ustalarda.": "The wrench Master Rıza left for the very first mechanics. Founders only.",
+ "ÖN KAYIT ÖDÜLÜ!": "PRE-REGISTRATION REWARD!"
 }

@@ -46,6 +46,9 @@ static var _items: Array[Dictionary] = []
 static var _by_id: Dictionary = {}
 static var _defaults: Dictionary = {}
 static var _loaded: bool = false
+## KURUCU (exclusive) eşyalar all()'da yoktur: satılmaz, sahibi olmayanın paletinde görünmez. Sahibinin paletinde
+## görünsün diye DecorManager sahip olunanları buraya bildirir (id → true); items_in / shop_order bunları ekler.
+static var _listed_exclusives: Dictionary = {}
 
 
 static func all() -> Array[Dictionary]:
@@ -100,6 +103,20 @@ static func _vehicle_item(id: StringName) -> Dictionary:
 
 static func exists(id: StringName) -> bool:
 	return not get_item(id).is_empty()
+
+
+# --- Kurucu eşyalar ----------------------------------------------------------------------
+## Satılmayan, yalnızca kodla verilen eşya (ön kayıt ödülü TAŞTAKİ ALTIN ANAHTAR). Bkz. FounderReward.
+static func is_exclusive(id: StringName) -> bool:
+	return bool(get_item(id).get("exclusive", false))
+
+
+## Paletteki kurucu eşyalar: DecorManager sahip olunanları verir (kayıt yüklenince / eşya verilince).
+static func set_listed_exclusives(ids: Array[StringName]) -> void:
+	_listed_exclusives.clear()
+	for id: StringName in ids:
+		if is_exclusive(id):
+			_listed_exclusives[id] = true
 
 
 ## Yerleşim türü: &"floor" | &"wall" | &"surface".
@@ -170,6 +187,10 @@ static func items_in(kind: int) -> Array[Dictionary]:
 	for item: Dictionary in all():
 		if int(item["kind"]) == kind:
 			out.append(item)
+	for id: StringName in _listed_exclusives:
+		var item: Dictionary = _by_id.get(id, {})
+		if not item.is_empty() and int(item["kind"]) == kind:
+			out.append(item)
 	return out
 
 
@@ -212,6 +233,7 @@ static func kind_title(kind: int) -> String:
 static func load_from(path: String = DATA_PATH) -> bool:
 	_items.clear()
 	_by_id.clear()
+	_listed_exclusives.clear()
 	_defaults = {}
 	_loaded = true
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
@@ -252,8 +274,8 @@ static func load_from(path: String = DATA_PATH) -> bool:
 		_by_id[entry["id"]] = entry
 		# "retired": mağazadan / paletten / kasa havuzundan kalkar; eskiden alınmış kopya kayıtta
 		# yüklenmeye ve garajda durmaya devam eder (ARAÇ LİFTİ: artık tamir alanının kendisi).
-		if bool(entry.get("retired", false)):
-			continue
+		if bool(entry.get("retired", false)) or bool(entry.get("exclusive", false)):
+			continue   # kurucu eşya: sahibinin paletine items_in ekler (set_listed_exclusives)
 		_items.append(entry)
 	return true
 

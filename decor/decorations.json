@@ -11,7 +11,8 @@
     "Boyut YAZILMAZ: yerleşim izi modelin gerçek sınırlarından ölçülür (elle yazılan boyut kayar).",
     "floor_pattern: price/value GÖZ BAŞINA (her boyanan karo ücretlidir, silmek ücretsiz). wall_piece: adet başına, depoya döner.",
     "retired: true → mağazada / paletten kalkar, eski kayıttaki kopya yüklenir (floor_surface → karolara taşındı).",
-    "price_gems: ELMAS fiyatı (LÜKS eşyalar; price 0). value yine ₺ (garaj değeri, elmas başına 300 ₺). luxury kayıtlarında placement açıkça yazılır (floor / wall)."
+    "price_gems: ELMAS fiyatı (LÜKS eşyalar; price 0). value yine ₺ (garaj değeri, elmas başına 300 ₺). luxury kayıtlarında placement açıkça yazılır (floor / wall).",
+    "exclusive: true → SATILMAZ (ön kayıt ödülü gibi yalnızca kodla verilir: DecorManager.grant_exclusive). Sahibi olmayanın paletinde hiç görünmez; sahibinde sergilenen araç gibi SERGİLE / SERGİLENİYOR. Lüks ışıltısı alır."
   ],
   "defaults": {
     "rotation_step": 45,
@@ -2379,6 +2380,17 @@
       "value": 30000,
       "min_rank": 1,
       "desc": "Altın çerçevede neon taç ve VIP yazısı."
+    },
+    {
+      "id": "founder_wrench",
+      "title": "TAŞTAKİ ALTIN ANAHTAR",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "value": 30000,
+      "min_rank": 1,
+      "exclusive": true,
+      "desc": "Rıza Usta'nın ilk ustalara bıraktığı anahtar. Yalnızca kurucu ustalarda."
     },
     {
       "id": "lux_trophy_wall",

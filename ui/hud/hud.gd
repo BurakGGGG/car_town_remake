@@ -1712,6 +1712,7 @@ func _setup_gem_store() -> void:
 	purchases.gems_purchased.connect(func(_id: StringName, gems: int) -> void:
 		if router.top() != &"gem_store":
 			_show_notice(Loc.t("SATIN ALMA TAMAMLANDI\n+%d GEM") % gems, HudPalette.GEM_DARK, 2.4))
+	add_child(FounderRewardNotice.new(self, purchases))   # ön kayıt ödülü: oyun sakinleşince ödül penceresi
 
 
 ## Showroom'dan kasa alındı: showroom kapanır, kamera garajın teslimat alanına, kasanın gelişine gider.

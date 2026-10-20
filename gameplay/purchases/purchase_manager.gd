@@ -1,7 +1,8 @@
 class_name PurchaseManager
 extends Node
 ## GERÇEK PARAYLA GEM SATIŞI — oyunun Google Play Billing'le konuştuğu TEK nokta ("purchases" grubu;
-## autoload yok, GarageSystem kodla kurar). Ürünler GemProducts'ta, hepsi tüketilebilir.
+## autoload yok, GarageSystem kodla kurar). Ürünler GemProducts'ta, hepsi tüketilebilir. ÖN KAYIT ÖDÜLÜ de
+## Play'den bir "satın alma" olarak gelir (FounderReward): satılmaz, aynı sözleşmeyle verilip tüketilir.
 ##
 ## ÖDEME SÖZLEŞMESİ (sıra bozulmaz):
 ##   Play "PURCHASED" der → gem eklenir + defterine yazılır → kayıt HEMEN diske yazılır → ancak o zaman
@@ -25,6 +26,8 @@ signal products_changed
 signal purchase_finished(product_id: StringName, status: StringName)
 ## Gem verildi (satın alma ya da yeniden başlatmada tamamlanan ödeme).
 signal gems_purchased(product_id: StringName, gems: int)
+## Ön kayıt ödülü hesaba geçti (RewardPopup özeti: FounderReward.grant). Oyun içinde duyurulmalı (Play şartı).
+signal founder_reward_granted(summary: Dictionary)
 
 ## Cihaz defteri: bu cihazda gem verilmiş satın almaların özetleri. Hesap değişince oyun kaydı sıfırlanır
 ## (SaveManager.new_game) ama Play'de tüketilmemiş kalan bir satın alma yeni oyuna İKİNCİ kez gem vermesin.
@@ -189,6 +192,8 @@ func carry_over(previous: Dictionary) -> int:
 		var entry: Dictionary = ((raw as Dictionary)[key] as Dictionary).duplicate(true)
 		_ledger[key] = entry
 		added += maxi(SaveSafe.i(entry.get("gems", 0)), 0)
+		if FounderReward.is_reward(StringName(String(entry.get("product", "")))):
+			FounderReward.grant(get_tree(), false)   # para + kurucu eşyası da geri gelsin (elması yukarıda)
 	if added > 0:
 		var progress: PlayerProgress = _progress()
 		if progress:
@@ -291,6 +296,8 @@ func _handle_purchase(p: Dictionary) -> StringName:
 		_client.consume_purchase(token)
 		return &"granted"
 	var product: StringName = _product_of(p)
+	if FounderReward.is_reward(product):
+		return _grant_founder(p, token, key)
 	var gems: int = GemProducts.gems_of(product) * maxi(int(p.get("quantity", 1)), 1)
 	if gems <= 0:
 		# Bu sürümün tanımadığı ürün: TÜKETİLMEZ — tanıyan bir sürüm gemini verir.
@@ -308,6 +315,24 @@ func _handle_purchase(p: Dictionary) -> StringName:
 		_client.consume_purchase(token)
 	# Yazılamadıysa tüketilmez: bir sonraki açılışta query_purchases yeniden getirir (cihaz defteri
 	# gemi ikinci kez vermez, yalnızca tüketir).
+	return &"granted"
+
+
+## ÖN KAYIT ÖDÜLÜ: para + elmas + kurucu eşyası verilir, sonra (kayıt yazılınca) tüketilir. Bir kayda bir kez:
+## defterde zaten varsa (başka bir belirteçle gelse bile) yalnızca tüketilir. Sipariş no'su boş gelebilir.
+func _grant_founder(p: Dictionary, token: String, key: String) -> StringName:
+	if was_bought(FounderReward.PRODUCT_ID):
+		_client.consume_purchase(token)
+		return &"granted"
+	var summary: Dictionary = FounderReward.grant(get_tree())
+	_ledger[key] = {"product": String(FounderReward.PRODUCT_ID), "gems": FounderReward.GEMS,
+		"time": int(Time.get_unix_time_from_system()), "order": String(p.get("order_id", "")), "token": token,
+		"consumed": false}
+	_device[key] = true
+	_write_device_ledger()
+	founder_reward_granted.emit(summary)
+	if _save_now():
+		_client.consume_purchase(token)
 	return &"granted"
 
 

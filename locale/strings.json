@@ -4623,6 +4623,9 @@
  "Rıza Usta'nın derslerini baştan izle: tamir, yarış, araçlar, dekorasyon.": [
   "ui/hud/settings_screen.gd:410"
  ],
+ "Rıza Usta'nın ilk ustalara bıraktığı anahtar. Yalnızca kurucu ustalarda.": [
+  "decor/decorations.json:founder_wrench.desc"
+ ],
  "SA": [
   "gameplay/social/profile_catalog.gd:50",
   "ui/hud/flag_icon.gd:224"
@@ -5222,6 +5225,9 @@
  ],
  "TAŞI": [
   "ui/hud/garage_screen.gd:1734"
+ ],
+ "TAŞTAKİ ALTIN ANAHTAR": [
+  "decor/decorations.json:founder_wrench.title"
  ],
  "TEHLİKE ŞERİDİ": [
   "decor/decorations.json:hazard.title"
@@ -6177,6 +6183,9 @@
  ],
  "ÖN / ARKA": [
   "ui/hud/camera_capture.gd:141"
+ ],
+ "ÖN KAYIT ÖDÜLÜ!": [
+  "gameplay/purchases/founder_reward.gd:37"
  ],
  "ÖNCE %s": [
   "ui/hud/mod_workshop.gd:624"

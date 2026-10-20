@@ -2073,5 +2073,8 @@
  "%d YER|1": "%d PLATZ",
  "1.–%d. RÜTBE": "RÄNGE 1–%d",
  "+%d RÜTBE DAHA": "+%d WEITERE RÄNGE",
- "+%d RÜTBE DAHA|1": "+%d WEITERER RANG"
+ "+%d RÜTBE DAHA|1": "+%d WEITERER RANG",
+ "TAŞTAKİ ALTIN ANAHTAR": "GOLDENER SCHLÜSSEL IM STEIN",
+ "Rıza Usta'nın ilk ustalara bıraktığı anahtar. Yalnızca kurucu ustalarda.": "Der Schlüssel, den Meister Rıza den allerersten Mechanikern hinterließ. Nur für Gründer.",
+ "ÖN KAYIT ÖDÜLÜ!": "VORREGISTRIERUNGS-BONUS!"
 }

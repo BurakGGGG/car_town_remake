@@ -2073,5 +2073,8 @@
  "%d YER|1": "%d PLACE",
  "1.–%d. RÜTBE": "RANGS 1–%d",
  "+%d RÜTBE DAHA": "+%d RANGS DE PLUS",
- "+%d RÜTBE DAHA|1": "+%d RANG DE PLUS"
+ "+%d RÜTBE DAHA|1": "+%d RANG DE PLUS",
+ "TAŞTAKİ ALTIN ANAHTAR": "CLÉ EN OR DANS LA PIERRE",
+ "Rıza Usta'nın ilk ustalara bıraktığı anahtar. Yalnızca kurucu ustalarda.": "La clé que Maître Rıza a laissée aux tout premiers mécaniciens. Réservée aux fondateurs.",
+ "ÖN KAYIT ÖDÜLÜ!": "RÉCOMPENSE DE PRÉINSCRIPTION !"
 }

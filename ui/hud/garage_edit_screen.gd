@@ -682,12 +682,15 @@ func _draw_card(card: PlateButton, id: StringName) -> void:
 	var area: Rect2 = Rect2(Vector2((card.size.x - THUMB_AREA.x) * 0.5, THUMB_TOP), THUMB_AREA)
 	if GarageDecor.is_gem_item(id):
 		_draw_luxury_frame(card, area)
+	elif GarageDecor.is_exclusive(id):   # kurucu eşya elmasla satılmaz: köşede elmas yerine altın anahtar
+		_draw_luxury_frame(card, area, HudIcon.Kind.WRENCH, LUXURY_GOLD)
 	_draw_thumb(card, id, area)
 	_draw_badges(card, id, area)
 
 
 ## LÜKS kart: koyu vitrin zemini, altın çerçeve ve köşede elmas (elmasla satıldığı ilk bakışta okunsun).
-func _draw_luxury_frame(card: PlateButton, area: Rect2) -> void:
+func _draw_luxury_frame(card: PlateButton, area: Rect2, icon: HudIcon.Kind = HudIcon.Kind.GEM,
+		icon_color: Color = HudPalette.GEM) -> void:
 	var back: StyleBoxFlat = StyleBoxFlat.new()
 	back.bg_color = LUXURY_BACK
 	back.set_corner_radius_all(8)
@@ -700,13 +703,13 @@ func _draw_luxury_frame(card: PlateButton, area: Rect2) -> void:
 	rim.set_corner_radius_all(9)
 	rim.anti_aliasing = true
 	card.draw_style_box(rim, Rect2(Vector2(3.0, 3.0), card.size - Vector2(6.0, 6.0)))
-	HudIcon.draw_icon(card, HudIcon.Kind.GEM, area.position + Vector2(12.0, 12.0), 18.0, HudPalette.GEM, LUXURY_BACK)
+	HudIcon.draw_icon(card, icon, area.position + Vector2(12.0, 12.0), 18.0, icon_color, LUXURY_BACK)
 
 
 ## Kart rozetleri: kilitliyse küçük resmin ortasında kilit; depoda kopya varsa sağ üstte yeşil "×N"
 ## (eskiden yalnızca alt satırdaki "DEPODA 1" yazısı söylüyordu, şeritte göze çarpmıyordu).
 func _draw_badges(card: PlateButton, id: StringName, area: Rect2) -> void:
-	if _decor == null or id == &"" or GarageDecor.is_vehicle(id):
+	if _decor == null or id == &"" or GarageDecor.is_vehicle(id) or GarageDecor.is_exclusive(id):
 		return
 	if not _decor.is_unlocked(id):
 		var center: Vector2 = area.get_center()
@@ -797,7 +800,7 @@ func _on_card_pressed(id: StringName) -> void:
 			_editor.apply_surface(slot, id)
 		_refresh_cards()
 		return
-	if GarageDecor.is_vehicle(id):
+	if GarageDecor.is_vehicle(id) or GarageDecor.is_exclusive(id):   # kurucu eşya da satılmaz: tek kopya sergilenir
 		if _decor.available_of(id) > 0:
 			_editor.begin_place(id)
 		else:
@@ -887,7 +890,7 @@ func _refresh_cards() -> void:
 				and _editor.tool == GarageEditor.Tool.FINISH and _editor.finish_id == id)
 			card.queue_redraw()
 			continue
-		if GarageDecor.is_vehicle(id):
+		if GarageDecor.is_vehicle(id) or GarageDecor.is_exclusive(id):
 			card.text = "%s\n%s" % [title, Loc.t("SERGİLE") if _decor.available_of(id) > 0 else Loc.t("SERGİLENİYOR")]
 			_fit_card(card)
 			card.disabled = false

@@ -244,15 +244,16 @@ func refresh() -> void:
 	area_changed.emit()
 
 
-## Işıltılar elmasla alınmış eşyaların güncel kutularına dağılır. Düzenlerken gizli: eşya sürüklenirken
-## yerinde kalan yıldızlar yanlış yeri gösterirdi.
+## Işıltılar elmasla alınmış ve KURUCU eşyaların güncel kutularına dağılır. Düzenlerken gizli: eşya
+## sürüklenirken yerinde kalan yıldızlar yanlış yeri gösterirdi.
 func _place_sparkles() -> void:
 	if _sparkles == null:
 		return
 	var boxes: Array[AABB] = []
 	if not _editing:
 		for inst: Dictionary in _decor.instances():
-			if GarageDecor.is_gem_item(StringName(inst["item"])):
+			var item: StringName = StringName(inst["item"])
+			if GarageDecor.is_gem_item(item) or GarageDecor.is_exclusive(item):
 				var body: Node3D = body_of(String(inst["iid"]))
 				if body:
 					boxes.append(_tree_box(body))
@@ -409,6 +410,31 @@ func _wall_valid(item: StringName, pos: Vector3, yaw: float, ignore: String) -> 
 
 ## Zemindeki işaret noktasından eşyanın konumu (ve duvar eşyasında yönü).
 ## Zemin eşyası: ızgara açıksa ızgaraya oturur, yön değişmez. Duvar eşyası: en yakın duvara asılır.
+## Depodaki bir kopyayı oyuncu dokunmadan garaja koyar (ödül olarak gelen KURUCU eşyası): arka duvar
+## şeridinin ortasına en yakın geçerli yer, önü kameraya dönük. Dönüş: örnek kimliği, yer yoksa "" (depoda kalır).
+func place_free(item: StringName) -> String:
+	if _decor == null or _decor.available_of(item) <= 0 or GarageDecor.placement(item) != GarageDecor.PLACE_FLOOR:
+		return ""
+	var r: Rect2 = _area.floor_rect
+	var size: Vector2 = footprint_size(item)
+	var target: Vector2 = Vector2(r.get_center().x, r.position.y + size.y * 0.5)
+	var best: Vector3 = Vector3.INF
+	var best_d: float = INF
+	var step: float = DecorGrid.CELL * 0.5
+	var x: float = r.position.x
+	while x <= r.end.x:
+		var z: float = r.position.y
+		while z <= r.end.y:
+			var d: float = Vector2(x, z).distance_to(target)
+			var pos: Vector3 = Vector3(x, _area.floor_y, z)
+			if d < best_d and is_valid(item, pos, 0.0):
+				best = pos
+				best_d = d
+			z += step
+		x += step
+	return "" if best == Vector3.INF else _decor.add_instance(item, best, 0.0)
+
+
 func place_point(item: StringName, ground: Vector2, yaw: float, snap_step: float) -> Dictionary:
 	if GarageDecor.placement(item) == GarageDecor.PLACE_WALL:
 		var mount: Dictionary = _area.wall_mount(ground, wall_width(item))
