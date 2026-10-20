@@ -593,6 +593,22 @@ func request_repair(spot: Node3D, job: RepairType, severity: float = 1.0) -> voi
 	_sync_bubble_shape()
 
 
+## Yanaşmayı beklemeden bekleme noktasına IŞINLANIR ve bekleyen müşteri olur (eğitimin ilk müşterisi: oyuncu
+## aracın yoldan gelmesini beklemesin). Tamire alırken enter_bay de böyle ışınlar; efekt yok.
+func arrive_now() -> void:
+	if mode != Mode.REPAIR_REQUESTED or _spot == null:
+		return
+	global_position = Vector3(_spot.global_position.x, global_position.y, _spot.global_position.z)
+	global_rotation.y = _spot.global_rotation.y
+	speed = 0.0
+	if _in_intersection:
+		_in_intersection = false
+		manager.finish_crossing(self)
+	_arrived = true
+	mode = Mode.REPAIR_WAITING
+	customer_stopped.emit(self)
+
+
 ## Sabrı azalan müşteri: balonda geri sayım ("0:15"); `seconds` < 0 ise yalnızca anahtar (eski görünüm).
 func show_patience(seconds: int) -> void:
 	if seconds == _patience_shown or mode != Mode.REPAIR_WAITING:

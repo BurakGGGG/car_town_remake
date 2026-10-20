@@ -477,6 +477,12 @@ func _frame(node: Node3D, span: float = 2.6) -> void:
 	camera.frame_box(AABB(Vector3(c.x - span * 0.5, 0.0, c.z - span * 0.5), Vector3(span, 0.5, span)), 0.14, 0.86)
 
 
+## İlk tamir dersi: müşteriyi bekleme noktasına ışınlatır (RepairManager.summon_customer). Bekleyen müşteri varsa true.
+func _summon_customer() -> bool:
+	var vehicle: TrafficVehicle = _repair.summon_customer() if _repair else null
+	return vehicle != null and vehicle.is_waiting()
+
+
 ## Yol kenarında bekleyen (ya da yanaşmakta olan) müşteri; bekleyen önceliklidir.
 func _customer() -> TrafficVehicle:
 	if _traffic == null:
@@ -671,10 +677,12 @@ func _basics_steps() -> Array[Dictionary]:
 				return hud.crate_panel.find_child("CrateAction", true, false) as Control if hud.crate_panel.mode() == &"result" else null,
 			"dim": false, "block": false,
 			"done": func() -> bool: return _flags.has(&"reveal_finished") or (not hud.crate_panel.visible and not _delivery.is_revealing())},
+		# İlk müşteri yolu beklemez: araç bekleme noktasına ışınlanır, adım görünmeden geçer. Uygun araç yoksa
+		# (trafik boş) bu yazı çıkar ve her denetimde yeniden çağrılır.
 		{"title": Loc.t("MÜŞTERİ YOLDA"),
 			"text": Loc.t("Şehirde arızalanan araçlar garajının önüne yanaşır. Biraz bekle, ilk müşterin geliyor..."),
-			"skip_if": func() -> bool: return _customer() != null and _customer().is_waiting(),
-			"done": func() -> bool: return _customer() != null and _customer().is_waiting(),
+			"skip_if": _summon_customer,
+			"done": _summon_customer,
 			"dim": false, "block": false},
 		{"title": Loc.t("İLK MÜŞTERİN"),
 			"text": Loc.t("Üstünde anahtar balonu olan araç tamir istiyor. Araca dokun!"),
@@ -765,7 +773,7 @@ func _race_steps() -> Array[Dictionary]:
 			"done": func() -> bool: return _top() == &"race_result",
 			"fail": func() -> bool: return _place() != &"drag_race"},
 		{"title": Loc.t("YARIŞ BİTTİ!"),
-			"text": Loc.t("Kazanınca para ve XP alırsın, kaybetsen de biraz XP kazanırsın. Her araçla kişisel rekorunu kır: üstteki çubukta eski rekorun hayalet olarak koşar."),
+			"text": Loc.t("Kazanınca para ve XP alırsın, kaybetsen de biraz XP kazanırsın. Kişisel rekorunu kır: üstteki çubukta eski rekorun hayalet olarak koşar."),
 			"target": func() -> Control: return hud.race_result_screen.tutorial_anchor(&"column"),
 			"hand": false, "button": Loc.t("TAMAM"), "card": &"top",
 			"skip_if": func() -> bool: return _top() != &"race_result"},
@@ -836,7 +844,7 @@ func _vehicle_steps() -> Array[Dictionary]:
 			"hand": false, "button": Loc.t("İLERİ"),
 			"skip_if": func() -> bool: return _place() != &"garage"},
 		{"title": Loc.t("YENİ ARAÇLAR"),
-			"text": Loc.t("Yeni kasalar MAĞAZA'da: kasalar GEM ile alınır. Gem; seviye atlayınca, görevlerden ve günlük girişten gelir."),
+			"text": Loc.t("Yeni kasalar SHOWROOM'da: kasalar GEM ile alınır. Gem; seviye atlayınca, görevlerden ve günlük girişten gelir."),
 			"enter": func() -> void:
 				if hud.router.top() != &"":
 					hud.router.close_all(),

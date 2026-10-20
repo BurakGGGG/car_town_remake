@@ -19,7 +19,7 @@ extends CanvasLayer
 ## ekranına da (application/boot_splash/image) verilir: dokunuştan oyuna tek, kesintisiz ekran.
 ## Ekran açık kaldıkça (giriş seçenekleri dahil) SLIDES sırayla, yumuşak geçişle gelir; sonuncudan sonra
 ## yeniden LOADING_IMAGE. Slaytlar tools/make_loading_scenes.gd ile çizilir (aynı yerleşim), bellekte en
-## çok iki görsel durur, sıradaki arka planda yüklenir.
+## çok iki görsel durur, sıradaki KENDİ iş parçacığında yüklenir (bkz. _rotate_slide).
 ##
 ## Sahne dosyası elle yazılmaz: tools/make_loading_scene.gd üretir.
 
@@ -62,7 +62,7 @@ const TIPS: Array[String] = [
 	"Kasalardan hangi aracın hangi oranla çıktığını kasa plakasında görebilirsin.",
 	"Arkadaş kodunla arkadaşlarının garajlarını ziyaret edebilirsin.",
 	"Garaj değerin araçlarından, geliştirmelerden ve tamir alanlarından oluşur; rütbeni belirler.",
-	"Her araçla kişisel rekorunu kır: ilerleme çubuğundaki halka rekor temponu gösterir.",
+	"Kişisel rekorunu kır: ilerleme çubuğundaki halka rekor temponu gösterir.",
 	"Yarışı kaybedersen aynı rakiple bir kez ücretsiz rövanş yapabilirsin.",
 	"Bekleyen müşterilerin sabrı sınırlı: onları çok bekletirsen vazgeçip giderler.",
 	"Sen yokken de garajın çalışır: döndüğünde birikmiş kazancın seni bekler.",
@@ -88,7 +88,8 @@ var _slides: Array[String] = []  # LOADING_IMAGE + var olan SLIDES
 var _slide_index: int = 0
 var _slide_timer: float = 0.0
 var _slide_fading: bool = false
-var _requested: Array[String] = []   # arka planda istenip henüz alınmamış slaytlar
+var _next_texture: Texture2D     # sıradaki slayt: beklemenin yarısında yüklenir, sonunda belirir
+var _slide_loader: Thread        # sıradaki slaydı yükleyen iş parçacığı (yalnız yükleme sürerken var)
 
 
 func _ready() -> void:
@@ -208,21 +209,31 @@ func _rotate_tip(delta: float) -> void:
 	tween.tween_property(_tip, "modulate:a", 1.0, TIP_FADE)
 
 
-## Slayt: görsel SLIDE_HOLD durur; yarısında sıradaki arka planda yüklenmeye başlar, hazırsa üstünde belirir.
-## Hazır değilse görünen görsel biraz daha bekler (yükleme oyunun sahnesiyle aynı iş parçacıklarını paylaşır).
+## Slayt: görsel SLIDE_HOLD durur; yarısında sıradaki KENDİ iş parçacığımızda yüklenmeye başlar, hazırsa sonunda
+## üstünde belirir. ResourceLoader.load_threaded_request KULLANILMAZ: oyunun sahnesiyle aynı düşük öncelikli iş havuzunu
+## paylaşır (4 çekirdekli telefonda tek iş parçacığı), sahne yüklenirken sıradaki görsel hiç hazır olmuyor, slaytlar
+## ancak yükleme bitince (giriş ekranında) dönüyordu — yavaş cihazda oyuncu yükleme boyunca aynı görsele bakıyordu
+## (kullanıcı 2026-10-20). Ana iş parçacığında yüklemek de olmazdı: görsel başına ~25 ms (masaüstü), telefonda çubuk takılır.
 func _rotate_slide(delta: float) -> void:
 	if _slides.size() < 2 or _slide_fading:
 		return
 	_slide_timer += delta
-	if _slide_timer >= SLIDE_HOLD * 0.5:
-		_request_slide(_next_slide())
-	if _slide_timer < SLIDE_HOLD:
-		return
-	var texture: Texture2D = _take_slide(_next_slide())
-	if texture == null:
+	if _slide_timer >= SLIDE_HOLD * 0.5 and _next_texture == null and _slide_loader == null:
+		_slide_loader = Thread.new()
+		_slide_loader.start(_load_slide.bind(_next_slide()))
+	if _slide_loader != null and not _slide_loader.is_alive():
+		var path: String = _next_slide()
+		_next_texture = _slide_loader.wait_to_finish() as Texture2D
+		_slide_loader = null
+		if _next_texture == null:
+			push_warning("LoadingScreen: slayt yüklenemedi, atlanıyor: %s" % path)
+			_slides.erase(path)
+			return
+	if _slide_timer < SLIDE_HOLD or _next_texture == null:
 		return
 	_slide_fading = true
-	_art_next.texture = texture
+	_art_next.texture = _next_texture
+	_next_texture = null
 	_art_next.modulate.a = 0.0
 	var tween: Tween = create_tween()
 	tween.tween_property(_art_next, "modulate:a", 1.0, SLIDE_FADE).set_trans(Tween.TRANS_SINE)
@@ -242,38 +253,16 @@ func _next_slide() -> String:
 	return _slides[(_slide_index + 1) % _slides.size()]
 
 
-func _request_slide(path: String) -> void:
-	if path in _requested or ResourceLoader.has_cached(path):
-		return
-	if ResourceLoader.load_threaded_request(path) == OK:
-		_requested.append(path)
+## İş parçacığında çalışır: yalnızca görseli yükler (sahneye dokunmaz).
+static func _load_slide(path: String) -> Texture2D:
+	return ResourceLoader.load(path) as Texture2D
 
 
-## Yüklenmiş slayt; henüz hazır değilse null. Yüklenemeyen slayt listeden çıkar.
-func _take_slide(path: String) -> Texture2D:
-	if not path in _requested:
-		if ResourceLoader.has_cached(path):
-			return load(path) as Texture2D
-		_request_slide(path)
-		return null
-	match ResourceLoader.load_threaded_get_status(path):
-		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
-			return null
-		ResourceLoader.THREAD_LOAD_LOADED:
-			_requested.erase(path)
-			return ResourceLoader.load_threaded_get(path) as Texture2D
-	push_warning("LoadingScreen: slayt yüklenemedi, atlanıyor: %s" % path)
-	_requested.erase(path)
-	_slides.erase(path)
-	return null
-
-
-## Alınmamış arka plan yüklemesi yükleyicide görsele referans tutar (ekran kapandıktan sonra da ~10 MB
-## bellekte kalırdı): çıkışta alınıp bırakılır.
+## Ekran kapanırken süren slayt yüklemesi beklenir (iş parçacığı yarıda bırakılamaz).
 func _exit_tree() -> void:
-	for path: String in _requested:
-		ResourceLoader.load_threaded_get(path)
-	_requested.clear()
+	if _slide_loader != null:
+		_slide_loader.wait_to_finish()
+		_slide_loader = null
 
 
 # --- Kurulum ---------------------------------------------------------------------------

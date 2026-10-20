@@ -274,8 +274,8 @@ func open() -> void:
 	_player_electric = DragRaceSim.is_electric(_player_id)
 	_rival_electric = DragRaceSim.is_electric(_rival_id)
 	_audio.set_character(_player_perf, _rival_perf, _player_electric, _rival_electric)
-	_best_time = race.best_time(_player_id) if race else -1.0
-	_best_trace = race.best_trace(_player_id) if race else PackedFloat32Array()
+	_best_time = race.best_time() if race else -1.0   # tek rekor: hangi araçla kırıldıysa
+	_best_trace = race.best_trace() if race else PackedFloat32Array()
 	_trace = PackedFloat32Array()
 	_record_new = false
 	_record_submitted = false

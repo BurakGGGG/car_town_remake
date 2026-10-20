@@ -791,9 +791,12 @@ func _build_overlay() -> void:
 	_list_group.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_list_group.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	middle.add_child(_list_group)
+	# Başlık listenin DIŞINDA: kasalar kayarken yerinde durur (kullanıcı 2026-10-20). Liste başlık kadar kısaldı,
+	# sütunun toplam boyu aynı kaldı.
+	_list_group.add_child(_section_label(Loc.t("ARAÇ KASALARI")))
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.name = "List"
-	scroll.custom_minimum_size = Vector2(LIST_WIDTH, 316.0)
+	scroll.custom_minimum_size = Vector2(LIST_WIDTH, 290.0)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
 	TouchScroll.attach(scroll)
@@ -904,7 +907,6 @@ func _rebuild_list() -> void:
 			pending_plate.toggled.connect(func(pressed: bool) -> void:
 				if pressed:
 					_show_pending(uid))
-	_list_box.add_child(_section_label(Loc.t("ARAÇ KASALARI")))
 	for crate: Dictionary in CrateCatalog.all():
 		var id: StringName = crate["id"]
 		var plate: PlateButton = _list_plate("crate:%s" % id, Loc.t("%s\n%d GEM") % [Loc.t(String(crate["display_name"])), crate["price_gems"]], HudIcon.Kind.GEM)

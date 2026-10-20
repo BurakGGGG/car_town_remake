@@ -29,7 +29,7 @@ const ENTRIES: Array[Dictionary] = [
 	{"id": &"fast_hands", "title": "HIZLI ELLER", "text": "TAMİR HIZI'nı 2. seviyeye çıkar", "type": Type.UPGRADE_LEVEL, "upgrade": &"repair_speed", "target": 2, "xp": 40, "money": 750},
 	# Gem → kasa → garaj ilişkisini öğretir (ayrı tutorial sistemi yok; görev zinciri öğretir).
 	# Ödül yalnızca XP: gem ekonomisi simülasyonu değişmesin.
-	{"id": &"crate_order", "title": "KASA SİPARİŞİ", "text": "MAĞAZA'dan gemle bir araç kasası sipariş et", "type": Type.CRATES_BOUGHT, "target": 1, "xp": 30},
+	{"id": &"crate_order", "title": "KASA SİPARİŞİ", "text": "SHOWROOM'dan gemle bir araç kasası sipariş et", "type": Type.CRATES_BOUGHT, "target": 1, "xp": 30},
 	# --- 10-40 DAKİKA: garajı büyüt, ikinci alanı aç ---
 	{"id": &"first_earnings", "title": "İLK KAZANÇ", "text": "Tamirlerden 3.000 ₺ kazan", "type": Type.REPAIR_MONEY, "target": 3000, "xp": 40, "money": 1000},
 	{"id": &"bigger_garage", "title": "BÜYÜK GARAJ", "text": "Garajı 2. seviyeye genişlet", "type": Type.UPGRADE_LEVEL, "upgrade": &"garage_level", "target": 2, "xp": 60, "gems": 10, "money": 2000},

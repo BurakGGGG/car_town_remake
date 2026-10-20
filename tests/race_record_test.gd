@@ -1,5 +1,5 @@
 extends SceneTree
-## KİŞİSEL YARIŞ REKORU + HIZ SINIFI ÖLÇEĞİ — RaceManager rekor kuralları, kayıt turu (SaveManager
+## KİŞİSEL YARIŞ REKORU (TEK rekor, araçtan araca tutulmaz) + HIZ SINIFI ÖLÇEĞİ — RaceManager rekor kuralları, kayıt turu (SaveManager
 ## "race" bölümü), bozuk kayıt reddi, eski kayıt (bölümsüz) uyumu ve pistin araca göre ölçeği.
 ## Çalıştırma: tools/run_tests.sh race_record_test
 var fails: int = 0
@@ -35,37 +35,41 @@ func _run() -> void:
 	var race: RaceManager = RaceManager.new()
 	var changes: Array[int] = [0]
 	race.records_changed.connect(func() -> void: changes[0] += 1)
-	check(race.best_time(&"tofas_sahin") < 0.0, "rekor yokken -1")
+	check(race.best_time() < 0.0, "rekor yokken -1")
 	check(race.submit_time(&"tofas_sahin", 12.4, _trace(12.4)), "ilk koşu rekordur")
-	check(is_equal_approx(race.best_time(&"tofas_sahin"), 12.4), "rekor saklandı")
+	check(is_equal_approx(race.best_time(), 12.4), "rekor saklandı")
 	check(not race.submit_time(&"tofas_sahin", 12.9, _trace(12.9)), "daha yavaş koşu rekor değil")
 	check(not race.submit_time(&"tofas_sahin", 12.4, _trace(12.4)), "eşit süre rekor değil")
 	check(race.submit_time(&"tofas_sahin", 12.1, _trace(12.1)), "daha hızlı koşu yeni rekor")
-	check(is_equal_approx(race.best_time(&"tofas_sahin"), 12.1), "rekor güncellendi")
-	check(race.best_time(&"lambo_huracan") < 0.0, "rekor ARAÇ BAŞINA (başka araç etkilenmez)")
+	check(is_equal_approx(race.best_time(), 12.1), "rekor güncellendi")
+	check(not race.submit_time(&"lambo_huracan", 12.3, _trace(12.3)), "TEK rekor: başka araçla daha yavaş koşu rekor değil")
+	check(race.submit_time(&"lambo_huracan", 10.9, _trace(10.9)) and race.best_vehicle() == &"lambo_huracan",
+		"başka araçla daha hızlı koşu rekoru alır")
+	check(is_equal_approx(race.best_time(), 10.9) and race.state()["best"].size() == 1, "kayıtta tek rekor")
 	check(not race.submit_time(&"tofas_sahin", 1.0, _trace(1.0)), "imkânsız süre reddedilir")
-	check(changes[0] == 2, "yalnızca rekorlar kayıt sinyali verir (%d)" % changes[0])
-	check(race.best_trace(&"tofas_sahin").size() > 10, "hayalet izi saklandı")
+	check(changes[0] == 3, "yalnızca rekorlar kayıt sinyali verir (%d)" % changes[0])
+	check(race.best_trace().size() > 10, "hayalet izi saklandı")
 
 	print("== 2) Kayıt turu ve bozuk veri ==")
 	var state: Dictionary = JSON.parse_string(JSON.stringify(race.state()))
 	var copy: RaceManager = RaceManager.new()
 	copy.load_state(state)
-	check(absf(copy.best_time(&"tofas_sahin") - 12.1) < 0.001, "JSON turundan sonra rekor aynı")
-	check(copy.best_trace(&"tofas_sahin").size() == race.best_trace(&"tofas_sahin").size(), "JSON turundan sonra iz aynı uzunlukta")
+	check(absf(copy.best_time() - 10.9) < 0.001 and copy.best_vehicle() == &"lambo_huracan", "JSON turundan sonra rekor aynı")
+	check(copy.best_trace().size() == race.best_trace().size(), "JSON turundan sonra iz aynı uzunlukta")
 	copy.load_state({"best": {
 		"tofas_sahin": {"time": "abc", "trace": [1, 2]},
-		"yok_boyle_arac": {"time": 11.0, "trace": []},
+		"yok_boyle_arac": {"time": 9.0, "trace": []},
 		"lambo_huracan": {"time": 10.5, "trace": [0, 50, 9999, "x"]},
+		"porsche_gt3": {"time": 11.2, "trace": [0, 40]},
 		"bmw_e46": "bozuk",
 	}})
-	check(copy.best_time(&"tofas_sahin") < 0.0, "sayı olmayan süre yok sayılır")
-	check(copy.best_time(&"yok_boyle_arac") < 0.0, "katalogda olmayan araç yok sayılır")
-	check(is_equal_approx(copy.best_time(&"lambo_huracan"), 10.5), "geçerli kayıt yüklenir")
-	var lambo_trace: PackedFloat32Array = copy.best_trace(&"lambo_huracan")
+	check(is_equal_approx(copy.best_time(), 10.5) and copy.best_vehicle() == &"lambo_huracan",
+		"eski kayıt (araç başına): geçerlilerin en hızlısı tek rekor olur; sayı olmayan / katalogda olmayan yok sayılır")
+	check(copy.state()["best"].size() == 1, "yüklenince tek rekor kalır")
+	var lambo_trace: PackedFloat32Array = copy.best_trace()
 	check(lambo_trace.size() == 4 and lambo_trace[2] <= DragRaceSim.DISTANCE, "iz değerleri pist sınırında kırpılır")
 	copy.load_state({"best": "bozuk"})
-	check(copy.best_time(&"lambo_huracan") < 0.0, "bozuk bölüm → rekorsuz")
+	check(copy.best_time() < 0.0, "bozuk bölüm → rekorsuz")
 	race.free()
 	copy.free()
 
@@ -78,18 +82,18 @@ func _run() -> void:
 	var live: RaceManager = get_first_node_in_group("race") as RaceManager
 	save.new_game()
 	await frames(2)
-	check(live.best_time(&"tofas_sahin") < 0.0, "yeni oyunda rekor yok")
+	check(live.best_time() < 0.0, "yeni oyunda rekor yok")
 	live.submit_time(&"tofas_sahin", 11.8, _trace(11.8))
 	check(save.snapshot().has("race"), "kayıtta 'race' bölümü var")
 	save.save_game()
 	live.reset()
-	check(live.best_time(&"tofas_sahin") < 0.0, "sıfırlandı")
+	check(live.best_time() < 0.0, "sıfırlandı")
 	save.load_game()
-	check(absf(live.best_time(&"tofas_sahin") - 11.8) < 0.001, "kayıttan rekor geri geldi")
+	check(absf(live.best_time() - 11.8) < 0.001, "kayıttan rekor geri geldi")
 	var legacy: Dictionary = save.snapshot()
 	legacy.erase("race")
 	check(save.apply_snapshot(legacy), "eski kayıt (race bölümü yok) yüklenir")
-	check(live.best_time(&"tofas_sahin") < 0.0, "eski kayıtta rekorsuz başlanır")
+	check(live.best_time() < 0.0, "eski kayıtta rekorsuz başlanır")
 	save.new_game()
 
 	print("== 4) Hız sınıfı ölçeği ==")

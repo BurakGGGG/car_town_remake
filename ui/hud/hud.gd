@@ -1795,7 +1795,7 @@ func _on_crate_blocked(uid: int) -> void:
 		_blocked_notified[uid] = true
 		return
 	_blocked_notified[uid] = true
-	_show_notice(Loc.t("KASA YOLDA: GARAJDA YER YOK\nMAĞAZADAN AÇABİLİRSİN"), HudPalette.INK, 2.6)
+	_show_notice(Loc.t("KASA YOLDA: GARAJDA YER YOK\nSHOWROOM'DAN AÇABİLİRSİN"), HudPalette.INK, 2.6)
 
 
 func _refresh_shop_badge() -> void:

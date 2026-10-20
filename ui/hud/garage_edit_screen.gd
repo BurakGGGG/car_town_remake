@@ -43,6 +43,9 @@ const LUXURY_GOLD: Color = Color("E8B53A")
 const MODES: Array[StringName] = [&"items", &"floor", &"wall", &"vehicles"]
 ## Denetim / araç çubuğu için kamera bandında ayrılan yükseklik (plaka satırı + aralık).
 const BAR_RESERVE: float = 58.0
+## Düzenleme arayüzünün ölçeği (kullanıcı 2026-10-20: "dekorasyonda HUD çok büyük"): dört grup (bakiye, başlık,
+## köşe düğmeleri, alt şerit) kendi köşesinden küçülür; oyuncunun HUD BOYUTU ayarıyla çarpılır.
+const UI_SCALE: float = 0.75
 
 var _editor: GarageEditor
 var _decor: DecorManager
@@ -103,6 +106,8 @@ func _ready() -> void:
 	add_child(_thumbs)
 	_thumbs.ready_for.connect(_on_thumb_ready)
 	_build()
+	resized.connect(_apply_ui_scale, CONNECT_DEFERRED)
+	_apply_ui_scale.call_deferred()
 	_top.minimum_size_changed.connect(_fit_top, CONNECT_DEFERRED)
 	_corner.minimum_size_changed.connect(_fit_top, CONNECT_DEFERRED)
 	_money_plate.minimum_size_changed.connect(_fit_top, CONNECT_DEFERRED)
@@ -115,6 +120,7 @@ func _ready() -> void:
 func open() -> void:
 	_bind()
 	visible = true
+	_apply_ui_scale()   # HUD BOYUTU ayarı değişmiş olabilir
 	_refresh_money()
 	var grab: Dictionary = _pending_grab
 	_pending_grab = {}
@@ -1036,8 +1042,9 @@ func _on_tool_mode(mode: StringName) -> void:
 func _fit_top() -> void:
 	if _title_plate == null:
 		return
+	var k: float = _ui_scale()   # ekranda kaplanan yer ölçekli; plakanın kendi ölçüleri ölçeksiz
 	var view_w: float = get_viewport_rect().size.x
-	var right: float = view_w - MARGIN - _corner.get_combined_minimum_size().x - 8.0
+	var right: float = view_w - MARGIN - _corner.get_combined_minimum_size().x * k - 8.0
 	var style: StyleBox = _title_plate.get_theme_stylebox(&"panel")
 	var padding: float = style.get_minimum_size().x if style else 0.0
 	var font: Font = _info.get_theme_font(&"font")
@@ -1051,16 +1058,16 @@ func _fit_top() -> void:
 	var row_b: Vector2 = (rows[1] as Control).get_combined_minimum_size()
 	var plate_pad: float = _money_plate.get_combined_minimum_size().x - _money_box.get_combined_minimum_size().x
 	var wide: float = row_a.x + row_b.x + float(_money_box.get_theme_constant(&"separation")) + plate_pad
-	var stacked: bool = right - (MARGIN + wide + 8.0) - padding < text_width
+	var stacked: bool = right - (MARGIN + wide * k + 8.0) - padding * k < text_width * k
 	if _money_box.vertical != stacked:
 		_money_box.vertical = stacked
 	var money_w: float = (maxf(row_a.x, row_b.x) + plate_pad) if stacked else wide
-	var left: float = MARGIN + money_w + 8.0
-	var room: float = maxf(right - left - padding, 140.0)
+	var left: float = MARGIN + money_w * k + 8.0
+	var room: float = maxf((right - left) / k - padding, 140.0)
 	var wanted: float = ceilf(minf(text_width + 1.0, room))
 	if not is_equal_approx(_info.custom_minimum_size.x, wanted):
 		_info.custom_minimum_size.x = wanted
-	var plate_width: float = _title_plate.get_combined_minimum_size().x
+	var plate_width: float = _title_plate.get_combined_minimum_size().x * k
 	var center: float = clampf(view_w * 0.5, left + plate_width * 0.5, maxf(right - plate_width * 0.5, left + plate_width * 0.5))
 	var width: float = _top.get_combined_minimum_size().x
 	_top.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
@@ -1075,15 +1082,40 @@ func _fit_top() -> void:
 ## sekmeler garajın ön köşesindeki eşyanın üstüne binmez (telefon oranında 0.64 sabiti çubuğun
 ## altına düşüyordu). Çubuk açılışta gizli olduğu için yüksekliği ayrıca eklenir.
 func _view_band() -> Vector2:
+	var k: float = _ui_scale()
 	var height: float = maxf(get_viewport_rect().size.y, 1.0)
-	var top: float = _top.get_combined_minimum_size().y + MARGIN
-	var bottom: float = _bottom.get_combined_minimum_size().y + MARGIN
+	var top: float = _top.get_combined_minimum_size().y * k + MARGIN
+	var bottom: float = _bottom.get_combined_minimum_size().y * k + MARGIN
 	if not _bar.visible:
 		# Çubuk açılışta gizli ve düğmeleri de gizli olduğu için ölçüsü ~0 çıkıyordu: araç çubuğu açılınca
 		# garajın ön köşesinin üstüne biniyor, oradaki dokunuşlar düğmelere gidiyordu (telefonda boyama
 		# hiç yapılamadı). Bir plaka satırı kadar yer her zaman ayrılır.
-		bottom += maxf(_bar.get_combined_minimum_size().y, BAR_RESERVE)
+		bottom += maxf(_bar.get_combined_minimum_size().y, BAR_RESERVE) * k
 	return Vector2(top / height, 1.0 - bottom / height)
+
+
+func _ui_scale() -> float:
+	var settings: GameSettings = get_tree().get_first_node_in_group("settings") as GameSettings if is_inside_tree() else null
+	return UI_SCALE * (settings.hud_scale() if settings else 1.0)
+
+
+## Dört grup kendi köşesinden küçülür (Hud.set_hud_scale gibi). Alt şerit görünürde yine kenardan kenara: mantıksal
+## genişliği 1/ölçek kadar büyütülür. Ölçek KAP çocuğuna verilemez (Container sıfırlar); bu grupların ebeveyni ekran.
+## Dokunuş seçimi dönüşümü izler; rehber ışığı Hud.screen_rect ile ölçekli dikdörtgeni bulur.
+func _apply_ui_scale() -> void:
+	if _bottom == null:
+		return
+	var k: float = _ui_scale()
+	_money_plate.pivot_offset_ratio = Vector2(0.0, 0.0)
+	_corner.pivot_offset_ratio = Vector2(1.0, 0.0)
+	_top.pivot_offset_ratio = Vector2(0.5, 0.0)
+	_bottom.pivot_offset_ratio = Vector2(0.5, 1.0)
+	for cluster: Control in [_money_plate, _corner, _top, _bottom]:
+		cluster.scale = Vector2(k, k)
+	var extra: float = maxf(size.x - MARGIN * 2.0, 0.0) * (1.0 / k - 1.0) * 0.5
+	_bottom.offset_left = MARGIN - extra
+	_bottom.offset_right = -MARGIN + extra
+	_fit_top()
 
 
 func _show_notice(text: String) -> void:

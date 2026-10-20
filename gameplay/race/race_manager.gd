@@ -41,9 +41,10 @@ extends Node
 ## arkadaş başına günde bir kez. Emre / Elif'e karşı da kendi yönüm sayılır (haber / bonus yok).
 ##
 ## Sahnede World/Gameplay/RaceManager olarak durur, "race" grubundan bulunur (autoload yok).
-## Kayıt: KİŞİSEL REKORLAR + profil kartındaki yarış / galibiyet sayıları ("wins", "races"; eski kayıtta 0). Rekorlar (araç başına en iyi 300 m süresi + rekor koşunun
-## mesafe izi, ilerleme çubuğundaki "hayalet" için). SaveManager "race" bölümü olarak okur/yazar;
-## eski kayıtta bölüm yoktur → rekorsuz başlanır (sürüm atlamaz).
+## Kayıt: KİŞİSEL REKOR + profil kartındaki yarış / galibiyet sayıları ("wins", "races"; eski kayıtta 0). Rekor TEKTİR
+## (kullanıcı 2026-10-20: araçtan araca tutulmaz): hangi araçla olursa olsun en iyi 300 m süresi + o koşunun mesafe izi
+## (ilerleme çubuğundaki "hayalet"). SaveManager "race" bölümü olarak okur/yazar ("best": {araç id: {...}}, tek kayıt;
+## eski kayıttaki araç başına rekorlardan en hızlısı alınır); bölüm yoksa rekorsuz başlanır (sürüm atlamaz).
 
 ## Yoldan gelen rakip durdu ve davet açık (HUD balonu/plakası için).
 signal challenger_ready(vehicle: Node3D)
@@ -140,7 +141,8 @@ var _rematches: int = 0
 ## Oyuncu kazandı: kaybeden rakip oyuncu dünyaya dönünce yola çıkar; `_loser_flees` ise kaçarak (zar yarış bitince atılır).
 var _loser_waiting: bool = false
 var _loser_flees: bool = false
-## KİŞİSEL REKORLAR: araç id → {"time": sn, "trace": PackedFloat32Array (her TRACE_STEP'te metre)}.
+## KİŞİSEL REKOR: rekoru kıran araç id → {"time": sn, "trace": PackedFloat32Array (her TRACE_STEP'te metre)}.
+## En çok BİR kayıt: daha hızlı koşu (hangi araçla olursa) öncekinin yerine geçer.
 var _records: Dictionary = {}
 ## Profil kartı: biten yarış (rövanş dahil) ve galibiyet sayısı.
 var _races: int = 0
@@ -606,26 +608,34 @@ func overall_best() -> Dictionary:
 	return out
 
 
-## Bu aracın rekoru (sn); yoksa -1.
-func best_time(vehicle_id: StringName) -> float:
-	var record: Dictionary = _records.get(vehicle_id, {})
-	return float(record.get("time", -1.0))
+## Rekor (sn; hangi araçla kırıldıysa); yoksa -1.
+func best_time() -> float:
+	return float(_record().get("time", -1.0))
 
 
 ## Rekor koşunun mesafe izi (metre, her TRACE_STEP saniyede bir); yoksa boş.
-func best_trace(vehicle_id: StringName) -> PackedFloat32Array:
-	var record: Dictionary = _records.get(vehicle_id, {})
-	return record.get("trace", PackedFloat32Array())
+func best_trace() -> PackedFloat32Array:
+	return _record().get("trace", PackedFloat32Array())
 
 
-## Bitmiş bir koşuyu bildirir. Rekoru geçtiyse kaydeder ve true döner (ilk koşu da rekordur).
+## Rekoru kıran araç (yoksa &"").
+func best_vehicle() -> StringName:
+	return _records.keys()[0] if not _records.is_empty() else &""
+
+
+func _record() -> Dictionary:
+	return _records.values()[0] if not _records.is_empty() else {}
+
+
+## Bitmiş bir koşuyu bildirir. Rekoru (hangi araçla kırılmış olursa) geçtiyse onun yerine geçer ve true döner;
+## ilk koşu da rekordur.
 func submit_time(vehicle_id: StringName, time: float, trace: PackedFloat32Array) -> bool:
 	if vehicle_id == &"" or time < RECORD_MIN or time > RECORD_MAX:
 		return false
-	var previous: float = best_time(vehicle_id)
+	var previous: float = best_time()
 	if previous > 0.0 and time >= previous:
 		return false
-	_records[vehicle_id] = {"time": time, "trace": trace.slice(0, TRACE_MAX)}
+	_records = {vehicle_id: {"time": time, "trace": trace.slice(0, TRACE_MAX)}}
 	records_changed.emit()
 	return true
 
@@ -689,12 +699,14 @@ func load_state(data: Dictionary) -> void:
 		var time: float = SaveSafe.f((raw as Dictionary).get("time", 0.0))
 		if time < RECORD_MIN or time > RECORD_MAX:
 			continue
+		if not _records.is_empty() and time >= best_time():
+			continue   # tek rekor: eski kayıttaki araç başına rekorlardan en hızlısı kalır
 		var trace: PackedFloat32Array = PackedFloat32Array()
 		var raw_trace: Variant = (raw as Dictionary).get("trace", [])
 		if raw_trace is Array:
 			for value: Variant in (raw_trace as Array).slice(0, TRACE_MAX):
 				trace.append(clampf(SaveSafe.f(value), 0.0, DragRaceSim.DISTANCE))
-		_records[id] = {"time": time, "trace": trace}
+		_records = {id: {"time": time, "trace": trace}}
 
 
 func reset() -> void:

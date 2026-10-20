@@ -3133,9 +3133,6 @@
  "Henüz aracın yok. İlk aracın hoş geldin kutusunda!": [
   "ui/hud/profile_edit_screen.gd:452"
  ],
- "Her araçla kişisel rekorunu kır: ilerleme çubuğundaki halka rekor temponu gösterir.": [
-  "ui/loading/loading_screen.gd:65"
- ],
  "Her gece yarısı sahaya yeni arabalar gelir. Tamir işlerinden de arada parça çıkar. Hadi kolay gelsin evlat!": [
   "ui/tutorial/tutorial_director.gd:633"
  ],
@@ -3419,8 +3416,8 @@
  "KASA YOLDA": [
   "ui/tutorial/tutorial_director.gd:804"
  ],
- "KASA YOLDA: GARAJDA YER YOK\nMAĞAZADAN AÇABİLİRSİN": [
-  "ui/hud/hud.gd:1797"
+ "KASA YOLDA: GARAJDA YER YOK\nSHOWROOM'DAN AÇABİLİRSİN": [
+  "ui/hud/hud.gd:1798"
  ],
  "KASA ŞU AN AÇILAMIYOR": [
   "ui/hud/hud.gd:1777"
@@ -3718,14 +3715,17 @@
   "ui/hud/friend_card_screen.gd:227",
   "ui/hud/friends_screen.gd:576"
  ],
- "Kazanınca para ve XP alırsın, kaybetsen de biraz XP kazanırsın. Her araçla kişisel rekorunu kır: üstteki çubukta eski rekorun hayalet olarak koşar.": [
-  "ui/tutorial/tutorial_director.gd:768"
+ "Kazanınca para ve XP alırsın, kaybetsen de biraz XP kazanırsın. Kişisel rekorunu kır: üstteki çubukta eski rekorun hayalet olarak koşar.": [
+  "ui/tutorial/tutorial_director.gd:776"
  ],
  "Kendi fotoğrafını kullanıyorsun.": [
   "ui/hud/profile_edit_screen.gd:278"
  ],
  "Kiremit rengi iri karo.": [
   "decor/decorations.json:terracotta.desc"
+ ],
+ "Kişisel rekorunu kır: ilerleme çubuğundaki halka rekor temponu gösterir.": [
+  "ui/loading/loading_screen.gd:65"
  ],
  "Kişiselleştirilmiş reklam onayını değiştir.": [
   "ui/hud/settings_screen.gd:379",
@@ -3979,9 +3979,6 @@
  "MAĞAZA": [
   "ui/hud/hud.tscn:306",
   "ui/hud/showroom_screen.gd:42"
- ],
- "MAĞAZA'dan gemle bir araç kasası sipariş et": [
-  "gameplay/quest_catalog.gd:32"
  ],
  "MAĞAZAYA ŞU AN ULAŞILAMIYOR\nİNTERNET BAĞLANTINI VE GOOGLE PLAY'İ KONTROL ET": [
   "ui/hud/gem_store_screen.gd:204"
@@ -4811,6 +4808,9 @@
  "SHOWROOM": [
   "world/world_dressing.gd:236",
   "world/world_dressing.gd:237"
+ ],
+ "SHOWROOM'dan gemle bir araç kasası sipariş et": [
+  "gameplay/quest_catalog.gd:32"
  ],
  "SICAK KOMPAKT": [
   "vehicles/crates.json:set.sicak_kompakt"
@@ -5884,8 +5884,8 @@
  "Yedi yapraklı palmiye.": [
   "decor/decorations.json:tree_palm.desc"
  ],
- "Yeni kasalar MAĞAZA'da: kasalar GEM ile alınır. Gem; seviye atlayınca, görevlerden ve günlük girişten gelir.": [
-  "ui/tutorial/tutorial_director.gd:839"
+ "Yeni kasalar SHOWROOM'da: kasalar GEM ile alınır. Gem; seviye atlayınca, görevlerden ve günlük girişten gelir.": [
+  "ui/tutorial/tutorial_director.gd:847"
  ],
  "Yeni kod gönderildi.": [
   "ui/hud/email_code_panel.gd:282"

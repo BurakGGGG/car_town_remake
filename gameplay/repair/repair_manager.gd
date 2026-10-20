@@ -841,6 +841,40 @@ func _tick_customers(delta: float) -> void:
 	customer_marked.emit(vehicle)
 
 
+## EĞİTİM: ilk müşteri yoldan gelmesin, hemen orada olsun. Bekleyen müşteri varsa o; yanaşmakta olan varsa yerine
+## ışınlanır; yoksa trafikteki uygun bir araç müşteri yapılıp boş bir bekleme noktasına ışınlanır (TrafficVehicle.
+## arrive_now). Uygun araç / boş nokta yoksa null (çağıran sonra yeniden dener).
+func summon_customer() -> TrafficVehicle:
+	if _traffic == null:
+		return null
+	for v: TrafficVehicle in _traffic.vehicles:
+		if v.is_waiting():
+			return v
+	for v: TrafficVehicle in _traffic.vehicles:
+		if v.mode == TrafficVehicle.Mode.REPAIR_REQUESTED:
+			v.arrive_now()
+			return v
+	var spot: Node3D = null
+	for s: Node3D in active_wait_spots():
+		if _spot_free(s):
+			spot = s
+			break
+	var job: RepairType = _pick_fault(unlocked_types(_player_level()))
+	if spot == null or job == null:
+		return null
+	for v: TrafficVehicle in _traffic.vehicles:
+		if v.mode != TrafficVehicle.Mode.TRAFFIC or v.repair_status != TrafficVehicle.RepairStatus.NORMAL \
+				or v.busy_after_race() or CarCatalog.is_exotic(v.vehicle_id):
+			continue
+		v.request_repair(spot, job, _rng.randf_range(job.severity_min, job.severity_max))
+		if not v.customer_stopped.is_connected(_on_customer_stopped):
+			v.customer_stopped.connect(_on_customer_stopped)
+		customer_marked.emit(v)
+		v.arrive_now()
+		return v
+	return null
+
+
 ## Trafikteki SAĞLAM araç + önünde (SPOT_AHEAD_MIN..MAX), aynı yöne bakan, çevresi boş bekleme noktası
 ## çiftleri. Kavşak içinde / kavşağa giriş bekleyen araç seçilmez; nokta sıradaki waypoint'ten önce olmalı;
 ## yanaşma yolu üzerinde (araç ile nokta arasında, yakınında) duran başka araç olmamalı.
