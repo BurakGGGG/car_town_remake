@@ -251,7 +251,7 @@ func _play() -> void:
 	await create_timer(0.4).timeout
 	hud.garage_screen._race_button.pressed.emit()
 	await frames(2)
-	check(race.player_vehicle_id() == first_car and hud.garage_screen._race_button.text.contains("✔"), "garajdan yarış aracı seçildi: %s" % first_car)
+	check(race.player_vehicle_id() == first_car and hud.garage_screen._race_button.highlight, "garajdan yarış aracı seçildi: %s" % first_car)
 	await shot("06_yaris_araci")
 	router.close_all()
 	await create_timer(0.4).timeout

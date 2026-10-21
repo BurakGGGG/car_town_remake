@@ -230,6 +230,13 @@ func _open_editor() -> void:
 	check(16, screen != null and screen.mouse_filter == Control.MOUSE_FILTER_IGNORE,
 		"düzenleme ekranı dünyaya gelen dokunuşu yutmuyor (yalnızca plakalar)")
 	check(16, view.is_editing() and view.get_node_or_null("BlockedZones") != null, "ızgara ve yasak alanlar görünür")
+	var build_grid: Node3D = garage.get_node_or_null("BuildGrid/BuildGrid")
+	check(16, build_grid != null and build_grid.visible, "düzenlemede ızgara çizgileri görünür")
+	editor.set_snap(false)
+	check(16, build_grid != null and not build_grid.visible and editor.snap_step() == 0.0,
+		"IZGARA kapalı: çizgiler gizli, yerleştirme serbest")
+	editor.set_snap(true)
+	check(16, build_grid != null and build_grid.visible and editor.snap_step() > 0.0, "IZGARA açık: çizgiler ve oturtma geri geldi")
 	var camera: WorldCamera = get_root().get_camera_3d() as WorldCamera
 	check(16, camera != null and camera.cull_mask & WorldCamera.LAYER_WORLD_UI == 0,
 		"araç balonları / alan plakaları katmanı kamerada kapalı")

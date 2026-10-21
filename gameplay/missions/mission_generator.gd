@@ -12,7 +12,8 @@ extends RefCounted
 ##   difficulty: float         DDA çarpanı (0,65–1,35)
 ##   used: Dictionary          Cat → son 7 günde kullanıldı mı
 ##   income_per_min, repair_xp : float
-##   race_ok, crate_waiting, min_crate_price, decor_ready, paint_ready, growth_ready, display_ready
+##   race_ok, crate_waiting, min_crate_price, decor_ready, paint_ready, growth_ready, display_ready,
+##   junk_ready, mods_ready, interior_ready, record_ready : bool (2026-10-20 genişletme)
 
 const Cat = MissionCatalog.Cat
 const Tier = MissionCatalog.Tier
@@ -209,6 +210,10 @@ static func _requirement_ok(req: StringName, profile: Dictionary) -> bool:
 		&"display": return bool(profile.get("display_ready", false))
 		&"growth": return bool(profile.get("growth_ready", false))
 		&"spend": return int(profile.get("level", 1)) >= 6
+		&"junk": return bool(profile.get("junk_ready", false))
+		&"mods": return bool(profile.get("mods_ready", false))
+		&"interior": return bool(profile.get("interior_ready", false))
+		&"record": return bool(profile.get("record_ready", false))
 	return true
 
 

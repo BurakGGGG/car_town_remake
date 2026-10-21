@@ -99,7 +99,7 @@ func _run() -> void:
 	var eco: EconomyManager = get_first_node_in_group("economy") as EconomyManager
 	eco.set_money(77777)
 	(get_first_node_in_group("save_manager") as SaveManager).save_game()
-	await until(func() -> bool: return not cloud.is_busy() and SaveSafe.s(fb.store.get("players/alice", {}).get("save_json", "")).contains("77777"))
+	await until(func() -> bool: return not cloud.is_busy() and CloudPack.unpack(SaveSafe.s(fb.store.get("players/alice", {}).get("save_json", ""))).contains("77777"))
 	var own_level: int = int((get_first_node_in_group("garage_upgrades") as GarageUpgradeManager).levels().get(GarageUpgradeManager.GARAGE_ID, 1))
 	var camera: Camera3D = get_root().get_camera_3d()
 	var camera_pos: Vector3 = camera.global_position

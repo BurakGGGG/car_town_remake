@@ -11,6 +11,8 @@ extends Control
 ## araç, restorasyon) varsa başlamaz: o dokunuş aracındır. Ziyarette HUD olmadığı için hiç kurulmaz.
 
 signal held(iid: String, at: Vector2)
+## Kısa dokunuş (basılı tutma dolmadan, kaydırmadan bırakıldı): HUD sergideki araca dokunulduysa SERGİ PLAKASI'nı açar.
+signal tapped(iid: String, at: Vector2)
 
 const HOLD_TIME: float = 0.55
 ## Kısa dokunuşta halka hiç görünmesin (tıklama gibi basışlar ~0,1 sn).
@@ -55,7 +57,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		if mb.pressed:
 			_start(mb.position)
 		else:
+			var iid: String = _iid
+			var at: Vector2 = _at
 			_cancel()
+			if iid != "":
+				tapped.emit(iid, at)
 	elif event is InputEventMouseMotion and _iid != "":
 		if (event as InputEventMouseMotion).position.distance_to(_at) > MOVE_SLOP:
 			_cancel()   # kamera kaydırılıyor

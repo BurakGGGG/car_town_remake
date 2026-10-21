@@ -45,6 +45,10 @@ enum Kind {
 	FILM,      ## klaket (sinema modu)
 	TARGET,    ## nişangâh (kamerayı ortala)
 	HEART,     ## kırmızı kalp (garaj beğenisi; COIN / GEM gibi kendi rengiyle) — sona eklendi
+	# ARAÇLAR ekranı ikonları — sona eklendi
+	FLAG,      ## dama bayrak (yarış aracı)
+	TROPHY,    ## kupa (koleksiyon)
+	MORE,      ## üç nokta (diğer eylemler)
 }
 
 const HEART_RED: Color = Color("D7342A")
@@ -164,6 +168,12 @@ static func draw_icon(ci: CanvasItem, kind: Kind, c: Vector2, s: float, ink: Col
 			_target(ci, c, s, ink, w)
 		Kind.HEART:
 			_heart(ci, c, s)
+		Kind.FLAG:
+			_flag(ci, c, s, ink, cutout, w)
+		Kind.TROPHY:
+			_trophy(ci, c, s, ink, cutout, w)
+		Kind.MORE:
+			_more(ci, c, s, ink)
 		_:
 			pass
 
@@ -333,6 +343,43 @@ static func _film(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Colo
 	for k: float in [0.16, 0.40, 0.64]:
 		var a: Vector2 = pivot + along * k * s
 		ci.draw_colored_polygon(PackedVector2Array([a, a + along * 0.10 * s, a + (along * 0.18 + up * 0.13) * s, a + (along * 0.08 + up * 0.13) * s]), cutout)
+
+
+## Dama bayrak: solda direk, sağında hafif dalgalı 4 × 3 damalı bez.
+static func _flag(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+	ci.draw_line(c + Vector2(-0.36, -0.46) * s, c + Vector2(-0.36, 0.48) * s, ink, w * 1.2, true)
+	var cols: int = 4
+	var rows: int = 3
+	var left: float = -0.33
+	var cell: Vector2 = Vector2(0.19, 0.15)
+	for i: int in cols:
+		for j: int in rows:
+			var wave: float = 0.03 * sin(float(i) * 1.6)   # bez sağa doğru hafif iner-kalkar
+			var p: Vector2 = Vector2(left + i * cell.x, -0.42 + j * cell.y + wave)
+			var color: Color = ink if (i + j) % 2 == 0 else cutout
+			_poly(ci, c, s, PackedVector2Array([p, p + Vector2(cell.x, 0.0), p + cell, p + Vector2(0.0, cell.y)]), color)
+	# Bezin çevresi: açık karelerin zemine karışmaması için ince kontur
+	var top: Vector2 = Vector2(left, -0.42)
+	ci.draw_polyline(_pts(c, s, PackedVector2Array([top, top + Vector2(cols * cell.x, 0.03 * sin(1.6 * (cols - 1))),
+		top + Vector2(cols * cell.x, rows * cell.y + 0.03 * sin(1.6 * (cols - 1))), top + Vector2(0.0, rows * cell.y), top])),
+		ink, w * 0.7, true)
+
+
+## Kupa: kâse + iki kulp, kısa ayak ve kaide; kâsede parlama.
+static func _trophy(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+	ci.draw_arc(c + Vector2(-0.30, -0.22) * s, s * 0.13, PI * 0.5, PI * 1.5, 12, ink, w * 1.1, true)   # sol kulp
+	ci.draw_arc(c + Vector2(0.30, -0.22) * s, s * 0.13, -PI * 0.5, PI * 0.5, 12, ink, w * 1.1, true)   # sağ kulp
+	_poly(ci, c, s, PackedVector2Array([Vector2(-0.32, -0.42), Vector2(0.32, -0.42), Vector2(0.28, -0.14),
+		Vector2(0.15, 0.02), Vector2(0.0, 0.06), Vector2(-0.15, 0.02), Vector2(-0.28, -0.14)]), ink)
+	_rect(ci, c, s, Vector2(-0.18, -0.34), Vector2(0.07, 0.20), cutout)   # parlama
+	_rect(ci, c, s, Vector2(-0.06, 0.04), Vector2(0.12, 0.20), ink)       # ayak
+	_round_rect(ci, c, s, Vector2(-0.26, 0.24), Vector2(0.52, 0.16), 0.04, ink)
+
+
+## Üç nokta: yatay sıra.
+static func _more(ci: CanvasItem, c: Vector2, s: float, ink: Color) -> void:
+	for x: float in [-0.30, 0.0, 0.30]:
+		ci.draw_circle(c + Vector2(x, 0.0) * s, s * 0.10, ink, true, -1.0, true)
 
 
 ## Nişangâh: halka, ortada nokta ve dört yöne kısa çentik.

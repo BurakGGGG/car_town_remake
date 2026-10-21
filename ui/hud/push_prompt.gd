@@ -1,7 +1,8 @@
 class_name PushPrompt
 extends Control
-## YARIŞ BİLDİRİMİ ÖNERİSİ (2026-10-17, kullanıcı kararı): telefonun bildirim izni oyun açılışında DEĞİL, İLK YARIŞTAN
-## SONRA istenir ve önce bu pencere neden istendiğini anlatır. TAMAM → PushService.enable() (Android 13+ izin penceresi
+## BİLDİRİM ÖNERİSİ (2026-10-17, kullanıcı kararı): telefonun bildirim izni oyun açılışında DEĞİL, İLK YARIŞTAN
+## SONRA istenir ve önce bu pencere neden istendiğini anlatır. 2026-10-21'den beri GENEL bildirim: hediye, yarış ve
+## duyuru (misafir de açar; hesaba bağlı türler girişten sonra gelir). TAMAM → PushService.enable() (Android 13+ izin penceresi
 ## + jeton); ŞİMDİ DEĞİL → kapanır. İki durumda da bu cihazda bir daha sorulmaz; oyuncu AYARLAR → SES VE BİLDİRİMLER'den
 ## açıp kapatabilir. HUD açar (UiRouter MODAL "push_prompt", Hud._tick_push_prompt). Ekran TAMAMEN KODLA kurulur.
 
@@ -67,7 +68,7 @@ func _build() -> void:
 	var sign: PlatePanel = PlatePanel.new()
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var title: Label = _label(&"HudSignTitle", Loc.t("YARIŞ HABERLERİ"))
+	var title: Label = _label(&"HudSignTitle", Loc.t("BİLDİRİMLER"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sign.add_child(title)
 	_root.add_child(sign)
@@ -79,8 +80,8 @@ func _build() -> void:
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_theme_constant_override(&"separation", 6)
 	info.add_child(box)
-	box.add_child(_label(&"HudPlateTitle", Loc.t("Seni kim yendi, ilk sen duy!")))
-	box.add_child(_wrapped(Loc.t("Bir arkadaşın aracını yarışta geçtiğinde telefonuna kısa bir haber gelsin. Dokununca intikam yarışı hemen açılır.")))
+	box.add_child(_label(&"HudPlateTitle", Loc.t("Hiçbir şeyi kaçırma!")))
+	box.add_child(_wrapped(Loc.t("Garajına hediye geldiğinde, bir arkadaşın seni yarışta yendiğinde ve yeni etkinlikler başladığında telefonuna kısa bir haber gelsin.")))
 	var hint: Label = _wrapped(Loc.t("İstediğin zaman AYARLAR > SES VE BİLDİRİMLER'den kapatabilirsin."))
 	hint.modulate.a = 0.7
 	box.add_child(hint)

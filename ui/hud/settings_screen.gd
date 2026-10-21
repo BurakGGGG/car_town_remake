@@ -2,7 +2,7 @@ class_name SettingsScreen
 extends Control
 ## AYARLAR — tam ekran: üstte başlık çubuğu (GERİ · AYARLAR · sürüm), solda kategori menüsü, sağda seçili
 ## kategorinin içeriği. Kategoriler: DİL · GRAFİK VE PERFORMANS (kalite, pil tasarrufu, HUD boyutu) · SES VE
-## BİLDİRİMLER (müzik, efekt, YARIŞ BİLDİRİMLERİ — PushService) · HESAP VE GİZLİLİK · DESTEK VE HAKKINDA.
+## BİLDİRİMLER (müzik, efekt, BİLDİRİMLER: yarış / hediye / duyuru — PushService) · HESAP VE GİZLİLİK · DESTEK VE HAKKINDA.
 ## Uzun tek sütun yerine kategori başına bir sayfa: telefonda (480 birim) hiçbir sayfa kaydırma gerektirmez,
 ## gerekirse içerik tut-çek kaydırılır (TouchScroll).
 ##
@@ -18,8 +18,9 @@ signal screen_requested(id: StringName)
 
 enum Page { LANGUAGE, GRAPHICS, AUDIO, ACCOUNT, ABOUT }
 
-## Sürüm adı: export_presets.cfg "version/name" ile AYNI tutulmalı (dışa aktarımda proje ayarına girmiyor).
-const VERSION: String = "1.0.8"
+## Sürüm adı: export_presets.cfg "version/name" ile AYNI tutulmalı (dışa aktarımda proje ayarına girmiyor). Yalnızca
+## editörde / masaüstünde gösterilir; dışa aktarılmış pakette sürüm AppInfo'dan gelir (version_label).
+const VERSION: String = "1.0.9"
 ## "Dil" sözcüğü her dilin kendi yazımıyla (çevrilmez: language_title'da İngilizcesiyle yan yana durur).
 const LANGUAGE_WORDS: Dictionary = {"tr": "DİL", "es": "IDIOMA", "de": "SPRACHE", "fr": "LANGUE"}
 const VOLUME_STEP: float = 0.1
@@ -52,12 +53,14 @@ var _hud_group: ButtonGroup = ButtonGroup.new()
 var _music_label: Label
 var _sfx_label: Label
 var _mute: PlateButton
-## YARIŞ BİLDİRİMLERİ (telefon bildirimi): bu cihazda olmuyorsa (PC / eklenti yok) satır gizli; girişsizken kilitli.
+## BİLDİRİMLER (telefon bildirimi): bu cihazda olmuyorsa (PC / eklenti yok) satır gizli. Açıkken altında üç tür
+## (YARIŞ / HEDİYE / DUYURU); hesaba bağlı ikisi misafirde kilitli.
 var _push: PushService
 var _push_row: HBoxContainer
 var _push_rule: ColorRect
 var _push_toggle: PlateButton
 var _push_caption: Label
+var _push_kinds: Dictionary = {}   # PushService türü → AÇIK / KAPALI düğmesi
 var _privacy_options: PlateButton
 var _privacy_row: Control
 var _personal_ads: PlateButton
@@ -179,7 +182,7 @@ func _build_header() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sign.add_child(title)
 	center.add_child(sign)
-	var version: Label = _label(&"HudOutlined", "AUTO YARD  ·  v%s" % VERSION)
+	var version: Label = _label(&"HudOutlined", "AUTO YARD  ·  v%s" % version_label())
 	version.custom_minimum_size = Vector2(NAV_WIDTH, 0.0)
 	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	version.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -365,11 +368,21 @@ func _build_audio() -> void:
 			_settings.set_muted(_mute.button_pressed))
 	_push_rule = _rule()
 	box.add_child(_push_rule)
-	_push_toggle = _toggle_row(box, Loc.t("YARIŞ BİLDİRİMLERİ"), " ")
+	_push_toggle = _toggle_row(box, Loc.t("BİLDİRİMLER"), " ")
 	_push_toggle.name = "PushToggle"
 	_push_row = _push_toggle.get_parent() as HBoxContainer
 	_push_caption = _push_row.get_child(0).get_child(1) as Label   # _text_block: başlık, açıklama
 	_push_toggle.pressed.connect(_on_push_toggled)
+	for entry: Array in [[PushService.RACE, Loc.t("YARIŞ HABERLERİ"), "PushRace"], [PushService.GIFT, Loc.t("HEDİYELER"), "PushGift"],
+			[PushService.NEWS, Loc.t("DUYURULAR"), "PushNews"]]:
+		var kind: StringName = entry[0]
+		var toggle: PlateButton = _toggle_row(box, entry[1], " ")
+		toggle.name = entry[2]
+		toggle.pressed.connect(func() -> void:
+			if _push:
+				await _push.set_pref(kind, toggle.button_pressed)
+			_refresh())
+		_push_kinds[kind] = toggle
 
 
 func _build_account() -> void:
@@ -417,7 +430,7 @@ func _build_about() -> void:
 			router.close_all()
 		director.restart())
 	box.add_child(_rule())
-	var info: Label = _caption(Loc.t("AUTO YARD  ·  SÜRÜM %s\n%s") % [VERSION, Loc.SITE_HOST])
+	var info: Label = _caption(Loc.t("AUTO YARD  ·  SÜRÜM %s\n%s") % [version_label(), Loc.SITE_HOST])
 	box.add_child(info)
 
 
@@ -569,23 +582,38 @@ func _refresh() -> void:
 		_paint_toggle(_personal_ads, _ads.personalized_ads())
 
 
-## YARIŞ BİLDİRİMLERİ satırı: açık / kapalı, girişsizken kilitli ve nedeni yazılı, son başarısız denemenin nedeni.
+## BİLDİRİMLER satırı: açık / kapalı, son başarısız denemenin nedeni; açıkken türler (misafirde hesaba bağlı ikisi kilitli).
 func _refresh_push() -> void:
 	var reason: String = _push.unavailable_reason() if _push else "platform"
 	_push_row.visible = reason != "platform"
 	_push_rule.visible = _push_row.visible
+	var on: bool = _push_row.visible and _push.is_enabled()
+	for kind: StringName in _push_kinds:
+		(_push_kinds[kind] as PlateButton).get_parent().visible = on
 	if not _push_row.visible:
 		return
-	var on: bool = _push.is_enabled()
 	_push_toggle.set_pressed_no_signal(on)
 	_paint_toggle(_push_toggle, on)
-	_push_toggle.disabled = reason == "signin" or _push.is_busy()
-	if reason == "signin":
-		_push_caption.text = Loc.t("Arkadaş yarışı haberleri için önce giriş yap (HESAP VE GİZLİLİK).")
-	elif not on and not _push.last_failure.is_empty():
+	_push_toggle.disabled = _push.is_busy()
+	if not on and not _push.last_failure.is_empty():
 		_push_caption.text = _push.last_failure
 	else:
-		_push_caption.text = Loc.t("Bir arkadaşın seni yarışta yenince telefonuna haber gelir.")
+		_push_caption.text = Loc.t("Hediye gelince, bir arkadaşın seni yarışta yenince ve yeni etkinliklerde telefonuna haber gelir.")
+	var account: bool = _push.has_account()
+	var captions: Dictionary = {
+		PushService.RACE: Loc.t("Bir arkadaşın seni yarışta yenince."),
+		PushService.GIFT: Loc.t("Postana hediye gelince."),
+		PushService.NEWS: Loc.t("Etkinlikler ve yeni sürümler."),
+	}
+	for kind: StringName in _push_kinds:
+		var toggle: PlateButton = _push_kinds[kind]
+		var needs_account: bool = kind != PushService.NEWS and not account
+		var kind_on: bool = _push.pref(kind) and not needs_account
+		toggle.set_pressed_no_signal(kind_on)
+		_paint_toggle(toggle, kind_on)
+		toggle.disabled = needs_account or _push.is_busy()
+		var caption: Label = toggle.get_parent().get_child(0).get_child(1) as Label
+		caption.text = Loc.t("Hesabınla giriş yapınca açılır.") if needs_account else captions[kind]
 
 
 ## Açmak telefonun bildirim iznini ister (Android 13+); sonuç PushService.changed ile satıra yansır.
@@ -597,6 +625,14 @@ func _on_push_toggled() -> void:
 	else:
 		await _push.enable()
 	_refresh()
+
+
+## Gösterilen sürüm: pakette "1.0.10 (11)" — sürüm kodu, pakete gömülen bilgiden (AppInfo); zorunlu güncelleme bu koda
+## bakar, telefonda buradan doğrulanır. Editörde VERSION.
+static func version_label() -> String:
+	if AppInfo.is_dev_build():
+		return VERSION
+	return "%s (%d)" % [AppInfo.version_name(), AppInfo.version_code()]
 
 
 ## Zemindeki soluk şerit çizgileri (yol dili): altta kesikli amber çizgi.

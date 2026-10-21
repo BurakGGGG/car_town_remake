@@ -65,6 +65,7 @@ var _decor: DecorManager
 var _crates: CrateManager
 var _gem_rewards: GemRewards
 var _purchases: PurchaseManager
+var _mail: MailService
 var _missions: MissionManager
 var _ads: AdService
 var _race: RaceManager
@@ -104,6 +105,7 @@ func _setup() -> void:
 	_missions = get_tree().get_first_node_in_group("missions") as MissionManager
 	_ads = get_tree().get_first_node_in_group("ads") as AdService
 	_purchases = get_tree().get_first_node_in_group("purchases") as PurchaseManager
+	_mail = get_tree().get_first_node_in_group("mail") as MailService
 	_race = get_tree().get_first_node_in_group("race") as RaceManager
 	_tutorial = get_tree().get_first_node_in_group("tutorial") as TutorialManager
 	_junkyard = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
@@ -225,6 +227,8 @@ func new_game() -> void:
 		_ads.reset()
 	if _purchases:
 		_purchases.reset()
+	if _mail:
+		_mail.reset()
 	if _race:
 		_race.reset()
 	if _tutorial:
@@ -276,10 +280,13 @@ func _progress_json() -> String:
 	data.erase("tutorial")   # ders atlamak / izlemek bulut kaydını "ilerlemiş" göstermesin
 	data.erase("away")   # son görülme saati her yazımda değişir; kasa zamanla dolar
 	data.erase("repairs")   # süren tamirler geçicidir
-	# GARAJLARIM: park yerleri / bekleyenler sahipliğin yansımasıdır (araçlar "vehicles"ta sayılır); ilerleme yalnız
-	# alınan garaj, seviye, inşaat ve iştir. Yoksa HOŞ GELDİN KUTUSU'ndan çıkan araç MAHALLE'ye girince "ilerleme" olurdu.
+	# DEPOLARIM: park yerleri / otopark sahipliğin yansımasıdır (araçlar "vehicles"ta sayılır); ilerleme yalnız alınan
+	# depo, seviye, inşaat ve iştir. Yoksa HOŞ GELDİN KUTUSU'ndan çıkan araç otoparka girince "ilerleme" olurdu. Ücret
+	# dönemi saatle kayar, faturalar da onun sonucudur.
 	var car_garages: Dictionary = data.get("car_garages", {})
 	car_garages.erase("waiting")
+	car_garages.erase("fee_since")
+	car_garages.erase("fees")
 	for garage: Variant in car_garages.get("garages", {}):
 		(car_garages["garages"][garage] as Dictionary).erase("slots")
 	_ignore_welcome(data)
@@ -379,6 +386,8 @@ func _collect() -> Dictionary:
 		# GEM SATIN ALMA DEFTERİ: Play satın alması başına (token özeti) verilen gem. Aynı satın alma iki
 		# kez gem vermesin, bulut kaydı parayla alınan gemi silmesin. Eski kayıtta yoktur: boş defter.
 		"purchases": _purchases.state() if _purchases else {},
+		# POSTA KUTUSU: alınmış posta kimlikleri (yönetim panelinin hediyesi iki kez verilmesin). Eski kayıtta yoktur.
+		"mail": _mail.state() if _mail else {},
 		# KİŞİSEL YARIŞ REKORLARI: araç başına en iyi süre + hayalet izi. Eski kayıtta yoktur: rekorsuz başlanır.
 		"race": _race.state() if _race else {},
 		# EĞİTİM: biten ustalık dersleri. Eski kayıtta yoktur: seviye 2+ oyuncu dersleri bitmiş sayar.
@@ -523,6 +532,9 @@ func _apply(data: Dictionary) -> void:
 	if _purchases:
 		var purchase_data: Variant = data.get("purchases", {})
 		_purchases.load_state(purchase_data if purchase_data is Dictionary else {})
+	if _mail:
+		var mail_data: Variant = data.get("mail", {})
+		_mail.load_state(mail_data if mail_data is Dictionary else {})
 	if _race:
 		var race_data: Variant = data.get("race", {})
 		_race.load_state(race_data if race_data is Dictionary else {})

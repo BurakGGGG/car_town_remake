@@ -412,9 +412,11 @@ func start_repair(car: Node3D, type: RepairType = null) -> bool:
 	var upgrades: GarageUpgradeManager = _upgrades()
 	if upgrades:
 		state.duration_scale = upgrades.repair_speed_multiplier()  # hız geliştirmesi: süre × çarpan
-	# Ödül çarpanı iş BAŞLARKEN sabitlenir: garaj seviyesi (müşteri değeri) × iş ustalığı
+	# Ödül çarpanı iş BAŞLARKEN sabitlenir: garaj seviyesi (müşteri değeri) × iş ustalığı × canlı etkinlik (çifte para:
+	# etkinlikte başlayan iş etkinlik bitse de çift öder, balondaki tutar hep doğru)
 	var mastery_start: JobMastery = _mastery()
-	state.reward_scale = reward_multiplier() * (mastery_start.reward_multiplier(type.id) if mastery_start else 1.0)
+	state.reward_scale = reward_multiplier() * (mastery_start.reward_multiplier(type.id) if mastery_start else 1.0) \
+		* AppConfig.money_multiplier(get_tree())
 	state.start()
 	_occupy_bay(vehicle, state)
 	repair_progress.emit(vehicle, 0.0)
@@ -685,7 +687,7 @@ func settle_finished() -> Array[Dictionary]:
 ## Biten işin gazete kaydı: ödül işin başındaki çarpanla, XP ustalık çarpanıyla (ustalık sayacı ödeme anında işler).
 func _settled(type: RepairType, reward: int) -> Dictionary:
 	var mastery: JobMastery = _mastery()
-	var xp: int = int(round(float(type.xp) * (mastery.xp_multiplier(type.id) if mastery else 1.0)))
+	var xp: int = int(round(float(type.xp) * (mastery.xp_multiplier(type.id) if mastery else 1.0) * AppConfig.xp_multiplier(get_tree())))
 	return {"type": String(type.id), "reward": reward, "xp": xp}
 
 
@@ -736,6 +738,7 @@ func collect(car: Node3D) -> bool:
 	var xp_gain: int = state.repair_xp
 	if mastery:
 		xp_gain = int(round(float(xp_gain) * mastery.xp_multiplier(state.repair_type.id)))
+	xp_gain = int(round(float(xp_gain) * AppConfig.xp_multiplier(get_tree())))   # canlı etkinlik (çifte XP)
 	var player: PlayerProgress = _player()
 	if player:
 		player.add_xp(xp_gain)

@@ -292,8 +292,11 @@ func reframe(band: Vector2) -> void:
 		_frame_garage(band, true)
 
 
+## IZGARA: yarım kareye oturtma + zemindeki ızgara çizgileri birlikte (kapalıyken serbest yerleştirme, çizgi yok).
 func set_snap(on: bool) -> void:
 	snap_enabled = on
+	if _bind():
+		_view.set_grid_visible(on)
 	state_changed.emit()
 
 

@@ -11,8 +11,15 @@ extends Node3D
 ##   KORNA   — HORN_GAP'te bir, ekrandaki (yoksa yakındaki) yoldaki bir araçtan kısa korna (dıt / dıt-dıt / uzun /
 ##             kamyon / sabırsız); araç ekranda yoksa uzaktan.
 ##   CIYAK   — SQUEAL_GAP'te bir, ekran dışındaki bir yoldan uzak lastik cıyaklaması.
-##   MOTOR   — yalnızca EGZOTİK araçlarda (CarCatalog.is_exotic, şehirden ara sıra geçen süper araç): ExoticEngine,
-##             hızla vites / devir / gaz; 2026-10-17 kullanıcı: "bu egzotik araçlara trafikte motor uğultusu ekle".
+##   MOTOR   — EGZOTİK araçlarda ExoticEngine (2026-10-17); diğer her trafik aracında tipine göre TrafficEngine
+##             (2026-10-20, kullanıcı: "araç seslerini çeşitlendir ve daha da güzel olsun": küçük / büyük benzinli,
+##             altı, V8, dizel, kamyonet, eski karbüratörlü, elektrikli). Aynı anda dinleyiciye en yakın ENGINE_VOICES
+##             aracın motoru duyulur. Lastik sesi de araç boyuna göre üç çeşit (küçük / orta / iri).
+##   KALKIŞ CIYAĞI — süper araç ışıktan gaza basınca (TrafficManager.vehicle_launched) aracın lastiklerinden kısa cıyak
+##             (motorun tam gazını ExoticEngine ivmeden kendisi çalar).
+##   BAĞLAMLI KORNA — dörtlü yakıp duran aracın arkasındaki araç kısa süre sonra, uzun sıkışan araç ara sıra korna
+##             çalar (2026-10-20, kullanıcı: "sokakta trafikte bazen korna sesleri olsun"); her aracın kornası tipine
+##             göre (TrafficEngine.horn_kind: ince tek ton, klasik çift ton, kalın, kamyonet, eski "mıık", elektrikli).
 ## "Kafa ağrıtmasın": hepsi kısık ve seyrek; aynı anda en çok bir korna, bir cıyak, iki kuş; tekrar hissi olmasın diye
 ## her olayda perde ve konum değişir.
 ##
@@ -34,11 +41,12 @@ const TIRE_DB: float = -19.0
 const BIRD_DB: float = -15.0
 const HORN_DB: float = -14.0
 const SQUEAL_DB: float = -14.0
+const CHIRP_DB: float = -13.0
 
 ## Seyreklik (sn aralıkları): kuş öbekleri arası, bir kuşun cümleleri arası, korna, uzak cıyaklama.
 const BIRD_GAP: Vector2 = Vector2(6.0, 16.0)
 const PHRASE_GAP: Vector2 = Vector2(0.5, 1.8)
-const HORN_GAP: Vector2 = Vector2(22.0, 55.0)
+const HORN_GAP: Vector2 = Vector2(28.0, 65.0)   # rastgele korna (bağlamlı kornalar ayrıca)
 const SQUEAL_GAP: Vector2 = Vector2(60.0, 140.0)
 
 ## 3B ses: dinleyici zemin odağının LISTENER_HEIGHT üstünde (tam altından geçen ses birden patlamasın).
@@ -51,6 +59,22 @@ const BIRD_RANGE: float = 7.0
 ## Lastik: bu hızda (birim/sn) tam düzey; normal trafik 0,55–0,9, kovalamaca ~2,5 (en çok TIRE_MAX katı).
 const TIRE_REF_SPEED: float = 0.8
 const TIRE_MAX: float = 1.8
+## Motor: aynı anda en çok bu kadar aracın motoru duyulur (dinleyiciye en yakınlar); seçim bu aralıkla tazelenir.
+const ENGINE_VOICES: int = 6
+const VOICE_REFRESH: float = 0.25
+## Lastik çeşidi araç boyundan (gerçek uzunluk, m): kısa → küçük, uzun / kamyonet → iri.
+const TIRE_SMALL_LENGTH: float = 4.1
+const TIRE_BIG_LENGTH: float = 5.0
+## Bağlamlı korna: önündeki dörtlü yakmış araç yüzünden duran araç sıkışma süresi HAZARD_HONK_AFTER'ı geçince
+## HAZARD_HONK_CHANCE ile; başka sebeple (müşteri yanaşıyor, kuyruk) sıkışan JAM_HONK_AFTER'da JAM_HONK_CHANCE ile.
+## Her duruşta en çok bir kez; kornalar arası en az HONK_SPACING sn (kakofoni olmasın).
+const HAZARD_HONK_AFTER: Vector2 = Vector2(1.0, 2.2)
+const HAZARD_HONK_CHANCE: float = 0.65
+const JAM_HONK_AFTER: Vector2 = Vector2(4.5, 8.0)
+const JAM_HONK_CHANCE: float = 0.3
+const HONK_SPACING: float = 1.6
+## Rastgele kornada basış desenlerinin ağırlığı (TrafficEngine.HORN_PATTERNS sırası: dıt, dıt-dıt, uzun, sabırsız).
+const HORN_PATTERN_WEIGHTS: Array[float] = [0.35, 0.35, 0.2, 0.1]
 ## Uzak cıyaklama dinleyiciden bu uzaklıkta, bir yolun üstünde.
 const SQUEAL_DISTANCE: Vector2 = Vector2(8.0, 12.0)
 ## Yolların orta çizgileri (doğu-batı yolu z = 0,6, kuzey-güney yolu x = 0,6).
@@ -61,8 +85,9 @@ enum Bird { SPARROW, TIT, TRILL, BLACKBIRD, PIGEON }
 const BIRD_WEIGHTS: Array[float] = [0.34, 0.2, 0.14, 0.2, 0.12]
 const VARIANTS: int = 3
 
-## Arka planda üretilen ses bankası: "hum", "tire" (döngü), "birds" (tür → varyantlar), "horns", "squeals",
-## "engines" (silindir sayısı → egzotik motor döngüsü).
+## Arka planda üretilen ses bankası: "hum", "tire" / "tire_small" / "tire_big" (döngü), "birds" (tür → varyantlar),
+## "horns" (uzak korna), "car_horns" (TrafficEngine.Horn → 4 basış deseni), "squeals", "engines" (silindir sayısı →
+## egzotik motor döngüsü), "traffic_engines" (TrafficEngine.Kind → döngü).
 static var _bank: Dictionary = {}
 
 var _manager: TrafficManager
@@ -75,10 +100,19 @@ var _bus_db: float = SILENT_DB
 var _listener: AudioListener3D
 var _hum: AudioStreamPlayer
 var _birds: Array[AudioStreamPlayer3D] = []
-var _horn: AudioStreamPlayer3D
+var _horns: Array[AudioStreamPlayer3D] = []
+var _horn_targets: Array[Node3D] = [null, null]
+var _last_honk: float = -100.0
+var _clock: float = 0.0
 var _squeal: AudioStreamPlayer3D
-var _tires: Dictionary = {}       # araç → {"player", "last", "speed", "pitch", "engine" (egzotikte ExoticEngine)}
-var _horn_target: Node3D
+var _chirp: AudioStreamPlayer3D
+var _chirp_target: Node3D
+## araç → {"player", "last", "speed", "pitch", "engine" (egzotikte ExoticEngine), "motor" (diğerlerinde TrafficEngine),
+## "audible", "honk_at" (bu duruşta korna eşiği; korna çalındıysa / çalınmayacaksa INF)}
+var _tires: Dictionary = {}
+var _voice_timer: float = 0.0
+## Duyulan motor sınırı (QA motorsuz ölçüm için 0 yapar).
+var engine_voices: int = ENGINE_VOICES
 var _bird_timer: float = 0.0
 var _bird_phrases: int = 0
 var _bird_kind: int = 0
@@ -106,8 +140,12 @@ func _ready() -> void:
 	add_child(_hum)
 	for i: int in 2:
 		_birds.append(_player("Bird%d" % i, BIRD_DB))
-	_horn = _player("Horn", HORN_DB)
+	for i: int in 2:
+		_horns.append(_player("Horn%d" % i, HORN_DB))
 	_squeal = _player("Squeal", SQUEAL_DB)
+	_chirp = _player("Chirp", CHIRP_DB)
+	if _manager:
+		_manager.vehicle_launched.connect(_on_launched)
 	_bird_timer = _rng.randf_range(2.0, 5.0)   # ilk kuş erken: şehir açılışta canlı
 	_horn_timer = _rng.randf_range(HORN_GAP.x, HORN_GAP.y) * 0.5
 	_squeal_timer = _rng.randf_range(SQUEAL_GAP.x, SQUEAL_GAP.y)
@@ -166,6 +204,7 @@ func rolling_count() -> int:
 
 
 func _process(delta: float) -> void:
+	_clock += delta
 	if not _started:
 		if not _ready_bank():
 			return
@@ -196,8 +235,13 @@ func _physics_process(delta: float) -> void:
 	if not _started or delta <= 0.0:
 		return
 	_update_tires(delta)
-	if _horn.playing and is_instance_valid(_horn_target):
-		_horn.global_position = _horn_target.global_position + Vector3.UP * 0.1
+	if _chirp.playing and is_instance_valid(_chirp_target):
+		_chirp.global_position = _chirp_target.global_position + Vector3.UP * 0.03
+	for i: int in _horns.size():
+		if _horns[i].playing and is_instance_valid(_horn_targets[i]):
+			_horns[i].global_position = (_horn_targets[i] as Node3D).global_position + Vector3.UP * 0.1
+	if _goal_db() > SILENT_DB:
+		_context_honks()
 
 
 ## Bus hedefi: dünyayı örten YER ekranı → sessiz; pano → kısık; yoksa tam.
@@ -231,18 +275,24 @@ func _start() -> void:
 
 # --- Lastik ---------------------------------------------------------------------------------
 
-## Yoldaki (ve kovalamacadaki) her araca bir lastik sesi: konumu araçla gider, düzeyi ve perdesi hızıyla.
-## Hız konum farkından ölçülür (her kip için aynı: trafik, kovalamaca, yarış daveti); durunca ses duraklar.
+## Yoldaki (ve kovalamacadaki) her araca bir lastik sesi (boyuna göre çeşit) ve motor: konumu araçla gider, düzeyi ve
+## perdesi hızıyla. Hız konum farkından ölçülür (her kip için aynı: trafik, kovalamaca, yarış daveti); durunca lastik
+## duraklar, motor rölantiye iner. Motorlar yalnız dinleyiciye en yakın ENGINE_VOICES araçta duyulur.
 func _update_tires(delta: float) -> void:
 	var alive: Dictionary = {}
+	_voice_timer -= delta
+	var refresh: bool = _voice_timer <= 0.0
+	if refresh:
+		_voice_timer = VOICE_REFRESH
 	for vehicle: Node3D in _vehicles():
 		alive[vehicle] = true
 		var entry: Dictionary = _tires.get(vehicle, {})
 		var at: Vector3 = vehicle.global_position
 		if entry.is_empty():
-			entry = {"player": _tire_player(), "last": at, "speed": 0.0, "pitch": _rng.randf_range(0.9, 1.1),
-				"engine": _engine_for(vehicle)}
+			entry = {"player": _tire_player(vehicle), "last": at, "speed": 0.0, "pitch": _rng.randf_range(0.92, 1.08),
+				"engine": _engine_for(vehicle), "motor": _motor_for(vehicle), "audible": false, "honk_at": INF}
 			_tires[vehicle] = entry
+			refresh = true
 		var moved: float = (at - (entry["last"] as Vector3)).length() / delta
 		entry["last"] = at
 		var speed: float = lerpf(float(entry["speed"]), moved, 1.0 - exp(-6.0 * delta))
@@ -260,20 +310,103 @@ func _update_tires(delta: float) -> void:
 		if engine:
 			engine.global_position = at + Vector3.UP * 0.1
 			engine.drive(speed, delta)
+		var motor: TrafficEngine = entry["motor"]
+		if motor:
+			motor.global_position = at + Vector3.UP * 0.08
+			motor.drive(speed, delta, _engine_running(vehicle), bool(entry["audible"]))
 	for key: Variant in _tires.keys():   # silinmiş araç anahtarı tipli değişkene atanamaz
 		if not alive.has(key):
-			(_tires[key]["player"] as Node).queue_free()
-			if _tires[key]["engine"]:
-				(_tires[key]["engine"] as Node).queue_free()
+			for part: String in ["player", "engine", "motor"]:
+				if _tires[key][part]:
+					(_tires[key][part] as Node).queue_free()
 			_tires.erase(key)
+	if refresh:
+		_pick_engine_voices()
 
 
-func _tire_player() -> AudioStreamPlayer3D:
+## Motoru duyulacak araçlar: dinleyiciye en yakın ENGINE_VOICES (motoru olan) araç, MAX_DISTANCE içinde.
+func _pick_engine_voices() -> void:
+	var ranked: Array[Array] = []
+	var ear: Vector3 = _listener.global_position
+	for key: Variant in _tires:
+		var entry: Dictionary = _tires[key]
+		entry["audible"] = false
+		if entry["motor"] and is_instance_valid(key):
+			var d: float = ((key as Node3D).global_position - ear).length()
+			if d < MAX_DISTANCE:
+				ranked.append([d, entry])
+	ranked.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) < float(b[0]))
+	for i: int in mini(ranked.size(), engine_voices):
+		(ranked[i][1] as Dictionary)["audible"] = true
+
+
+## Kontak açık mı: yolda / kovalamacada / yol kenarına yanaşırken evet; kenarda bekleyen müşteri, tamirdeki araç hayır.
+static func _engine_running(vehicle: Node3D) -> bool:
+	var traffic_vehicle: TrafficVehicle = vehicle as TrafficVehicle
+	if traffic_vehicle == null:
+		return true
+	return traffic_vehicle.mode in [TrafficVehicle.Mode.TRAFFIC, TrafficVehicle.Mode.CHASE,
+		TrafficVehicle.Mode.REPAIR_REQUESTED, TrafficVehicle.Mode.RACE_CHALLENGE]
+
+
+func _tire_player(vehicle: Node3D) -> AudioStreamPlayer3D:
+	var stream: AudioStreamWAV = _bank[_tire_key(vehicle)]
 	var player: AudioStreamPlayer3D = _player("Tire", TIRE_DB)
-	player.stream = _bank["tire"]
-	player.play(_rng.randf() * (_bank["tire"] as AudioStreamWAV).get_length())   # araçlar aynı fazda uğuldamasın
+	player.stream = stream
+	player.play(_rng.randf() * stream.get_length())   # araçlar aynı fazda uğuldamasın
 	player.stream_paused = true
 	return player
+
+
+## Lastik çeşidi: gerçek boy (cars.json real_dimensions) kısa → küçük, uzun ya da kamyonet → iri.
+static func _tire_key(vehicle: Node3D) -> String:
+	var traffic_vehicle: TrafficVehicle = vehicle as TrafficVehicle
+	if traffic_vehicle == null:
+		return "tire"
+	var entry: Dictionary = CarCatalog.get_entry(traffic_vehicle.vehicle_id)
+	var dims: Variant = entry.get("real_dimensions", {})
+	var length: float = float((dims as Dictionary).get("length_m", 4.5)) if dims is Dictionary else 4.5
+	if String(entry.get("category", "")) == "van" or length >= TIRE_BIG_LENGTH:
+		return "tire_big"
+	return "tire_small" if length < TIRE_SMALL_LENGTH else "tire"
+
+
+## Egzotik olmayan trafik aracının motoru (polis aracına yok: sireni var). Döngü farklı yerden başlar, küçük perde farkı.
+func _motor_for(vehicle: Node3D) -> TrafficEngine:
+	var traffic_vehicle: TrafficVehicle = vehicle as TrafficVehicle
+	if traffic_vehicle == null or traffic_vehicle.vehicle_id == &"" or CarCatalog.is_exotic(traffic_vehicle.vehicle_id) \
+			or String(traffic_vehicle.vehicle_id).begins_with("police"):
+		return null
+	var kind: TrafficEngine.Kind = TrafficEngine.kind_of(traffic_vehicle.vehicle_id)
+	var stream: AudioStreamWAV = (_bank["traffic_engines"] as Dictionary).get(kind)
+	if stream == null:
+		return null
+	var motor: TrafficEngine = TrafficEngine.new()
+	motor.setup(stream, kind, _rng.randf_range(0.95, 1.05), BUS)
+	motor.attenuation_filter_cutoff_hz = AIR_CUTOFF
+	add_child(motor)
+	motor.global_position = vehicle.global_position
+	motor.play(_rng.randf() * stream.get_length())
+	motor.stream_paused = true
+	return motor
+
+
+## Yoldaki trafik araçlarının motorları (QA / test).
+func traffic_engines() -> Array[TrafficEngine]:
+	var out: Array[TrafficEngine] = []
+	for entry: Dictionary in _tires.values():
+		if entry["motor"]:
+			out.append(entry["motor"])
+	return out
+
+
+## Şu an duyulan (sessiz olmayan) trafik motoru sayısı (QA / test).
+func audible_engine_count() -> int:
+	var n: int = 0
+	for motor: TrafficEngine in traffic_engines():
+		if motor.playing and not motor.stream_paused:
+			n += 1
+	return n
 
 
 ## Egzotik araca motor sesi (diğerlerine null). Döngü farklı yerden başlar, araç başına küçük perde farkı.
@@ -376,7 +509,7 @@ func _pick_tree(camera: Camera3D) -> Vector3:
 
 # --- Korna ve uzak cıyaklama ------------------------------------------------------------------
 
-## Yoldaki, mümkünse ekranda görünen hareketli bir araçtan kısa korna; yoksa uzaktan bir yoldan.
+## Yoldaki, mümkünse ekranda görünen hareketli bir araçtan kısa korna (aracın kendi kornası); yoksa uzaktan bir yoldan.
 func _honk(camera: Camera3D) -> void:
 	var seen: Array[Node3D] = []
 	var moving: Array[Node3D] = []
@@ -388,16 +521,92 @@ func _honk(camera: Camera3D) -> void:
 		if camera and camera.is_position_in_frustum(vehicle.global_position):
 			seen.append(vehicle)
 	var pool: Array[Node3D] = seen if not seen.is_empty() else moving
-	var horns: Array = _bank["horns"]
-	_horn.stream = horns[_rng.randi() % horns.size()]
-	_horn.pitch_scale = _rng.randf_range(0.94, 1.07)
 	if pool.is_empty():
-		_horn_target = null
-		_horn.global_position = _road_point(camera, _rng.randf_range(SQUEAL_DISTANCE.x, SQUEAL_DISTANCE.y))
-	else:
-		_horn_target = pool[_rng.randi() % pool.size()]
-		_horn.global_position = _horn_target.global_position + Vector3.UP * 0.1
-	_horn.play()
+		var horns: Array = _bank["horns"]
+		var player: AudioStreamPlayer3D = _free_horn(null)
+		player.stream = horns[_rng.randi() % horns.size()]
+		player.pitch_scale = _rng.randf_range(0.94, 1.07)
+		player.global_position = _road_point(camera, _rng.randf_range(SQUEAL_DISTANCE.x, SQUEAL_DISTANCE.y))
+		player.play()
+		_last_honk = _clock
+		return
+	honk_from(pool[_rng.randi() % pool.size()], _pick_pattern())
+
+
+## Aracın kendi kornası (TrafficEngine.horn_kind; egzotik / polis: klasik çift ton), `pattern` HORN_PATTERNS sırası.
+## Kornalar arası HONK_SPACING'den kısaysa çalmaz (false).
+func honk_from(vehicle: Node3D, pattern: int) -> bool:
+	if not _started or _clock - _last_honk < HONK_SPACING or not is_instance_valid(vehicle):
+		return false
+	var horn: TrafficEngine.Horn = TrafficEngine.Horn.CLASSIC_DUAL
+	var traffic_vehicle: TrafficVehicle = vehicle as TrafficVehicle
+	if traffic_vehicle and traffic_vehicle.vehicle_id != &"" and not CarCatalog.is_exotic(traffic_vehicle.vehicle_id):
+		horn = TrafficEngine.horn_kind(TrafficEngine.kind_of(traffic_vehicle.vehicle_id))
+	var streams: Array = (_bank["car_horns"] as Dictionary)[horn]
+	var player: AudioStreamPlayer3D = _free_horn(vehicle)
+	player.stream = streams[clampi(pattern, 0, streams.size() - 1)]
+	player.pitch_scale = _rng.randf_range(0.97, 1.03)
+	player.global_position = vehicle.global_position + Vector3.UP * 0.1
+	player.play()
+	_last_honk = _clock
+	return true
+
+
+## Boş korna kanalı (ikisi de çalıyorsa önce başlayan); hedefi kaydedilir (ses araçla gider).
+func _free_horn(target: Node3D) -> AudioStreamPlayer3D:
+	var index: int = 0
+	for i: int in _horns.size():
+		if not _horns[i].playing:
+			index = i
+			break
+		if _horns[i].get_playback_position() > _horns[index].get_playback_position():
+			index = i
+	_horn_targets[index] = target
+	return _horns[index]
+
+
+func _pick_pattern() -> int:
+	var roll: float = _rng.randf()
+	for i: int in HORN_PATTERN_WEIGHTS.size():
+		roll -= HORN_PATTERN_WEIGHTS[i]
+		if roll <= 0.0:
+			return i
+	return TrafficEngine.HORN_TAP
+
+
+## Bağlamlı korna: önündeki araç yüzünden duran (kırmızı değil) araç, duruşun başında bir eşik seçer; eşik geçilince bir
+## kez, şansına göre korna çalar. Öndeki dörtlü yakmışsa çabuk ve çoğunlukla (dıt / dıt-dıt), değilse geç ve seyrek
+## (uzun / sabırsız).
+func _context_honks() -> void:
+	for key: Variant in _tires:
+		var vehicle: TrafficVehicle = key as TrafficVehicle if is_instance_valid(key) else null
+		if vehicle == null:
+			continue
+		var entry: Dictionary = _tires[key]
+		if vehicle.stuck_time <= 0.0:
+			entry["honk_at"] = -1.0   # yürüyor: sonraki duruşta yeni eşik
+			continue
+		var hazard: bool = vehicle.leader != null and is_instance_valid(vehicle.leader) and vehicle.leader.is_hazard_stopped()
+		if float(entry["honk_at"]) < 0.0:
+			var window: Vector2 = HAZARD_HONK_AFTER if hazard else JAM_HONK_AFTER
+			var chance: float = HAZARD_HONK_CHANCE if hazard else JAM_HONK_CHANCE
+			entry["honk_at"] = _rng.randf_range(window.x, window.y) if _rng.randf() < chance else INF
+		if vehicle.stuck_time >= float(entry["honk_at"]):
+			var pattern: int = (TrafficEngine.HORN_TAP if _rng.randf() < 0.5 else TrafficEngine.HORN_DOUBLE) if hazard \
+				else (TrafficEngine.HORN_LONG if _rng.randf() < 0.5 else TrafficEngine.HORN_ANGRY)
+			if honk_from(vehicle, pattern):
+				entry["honk_at"] = INF
+
+
+## Süper araç kalkışı: arka lastiklerden kısa cıyak (araçla birlikte gider).
+func _on_launched(vehicle: TrafficVehicle) -> void:
+	if not _started or _goal_db() <= SILENT_DB or not is_instance_valid(vehicle):
+		return
+	_chirp.stream = _bank["chirp"]
+	_chirp.pitch_scale = _rng.randf_range(1.02, 1.12)
+	_chirp_target = vehicle
+	_chirp.global_position = vehicle.global_position + Vector3.UP * 0.03
+	_chirp.play()
 
 
 func _far_squeal() -> void:
@@ -431,6 +640,8 @@ static func _synthesize() -> void:
 	var bank: Dictionary = {
 		"hum": _to_wav(_make_hum(12.0, rng), 0.7, true),
 		"tire": _to_wav(_make_tire(3.0, rng), 0.7, true),
+		"tire_small": _to_wav(_make_tire(3.0, rng, 1.25, 0.7, 1.2), 0.62, true),
+		"tire_big": _to_wav(_make_tire(3.0, rng, 0.72, 1.6, 0.8), 0.8, true),
 		"birds": birds,
 		"horns": [
 			TrafficSfx.horn_stream([[0.0, 0.12]], 440.0, 554.0),                                  # kısa "dıt"
@@ -440,8 +651,15 @@ static func _synthesize() -> void:
 			TrafficSfx.horn_stream([[0.0, 0.08], [0.13, 0.08], [0.26, 0.2]], 466.0, 587.0),      # sabırsız
 		],
 		"squeals": [TrafficSfx.squeal_stream(0.7, 11), TrafficSfx.squeal_stream(1.0, 23)],
+		"chirp": TrafficSfx.squeal_stream(0.45, 41),
 		"engines": {6: ExoticEngine.make_stream(6), 8: ExoticEngine.make_stream(8), 10: ExoticEngine.make_stream(10)},
+		"traffic_engines": {},
+		"car_horns": {},
 	}
+	for kind: int in TrafficEngine.Kind.values():
+		(bank["traffic_engines"] as Dictionary)[kind] = TrafficEngine.make_stream(kind as TrafficEngine.Kind)
+	for horn: int in TrafficEngine.Horn.values():
+		(bank["car_horns"] as Dictionary)[horn] = TrafficEngine.horn_streams(horn as TrafficEngine.Horn)
 	_bank = bank   # tek atama: ana iş parçacığı yalnızca görev bitince okur
 
 
@@ -467,19 +685,23 @@ static func _make_hum(seconds: float, rng: RandomNumberGenerator) -> PackedFloat
 
 
 ## LASTİK / YOL SESİ: asfaltta yuvarlanan lastik — 220–1600 Hz bandında gürültü + hafif gövde uğultusu, diş deseni
-## gibi küçük titreşim (döngüde tam tur).
-static func _make_tire(seconds: float, rng: RandomNumberGenerator) -> PackedFloat32Array:
+## gibi küçük titreşim (döngüde tam tur). `band` bandı kaydırır (küçük araç tiz, iri araç pes), `rumble` gövde
+## uğultusunun payı, `tread` diş deseninin sıklığı.
+static func _make_tire(seconds: float, rng: RandomNumberGenerator, band: float = 1.0, rumble_gain: float = 1.0,
+		tread_rate: float = 1.0) -> PackedFloat32Array:
 	var count: int = int(seconds * MIX_RATE)
 	var white: PackedFloat32Array = _noise(count, rng)
-	var band_top: PackedFloat32Array = _low_pass(_low_pass(white, 1600.0), 1600.0)
-	var band_bottom: PackedFloat32Array = _low_pass(white, 220.0)
-	var rumble: PackedFloat32Array = _low_pass(_low_pass(white, 110.0), 110.0)
+	var band_top: PackedFloat32Array = _low_pass(_low_pass(white, 1600.0 * band), 1600.0 * band)
+	var band_bottom: PackedFloat32Array = _low_pass(white, 220.0 * band)
+	var rumble: PackedFloat32Array = _low_pass(_low_pass(white, 110.0 * band), 110.0 * band)
+	var slow: float = round(63.0 * tread_rate)
+	var fast: float = round(97.0 * tread_rate)
 	var out: PackedFloat32Array = PackedFloat32Array()
 	out.resize(count)
 	for i: int in count:
 		var u: float = float(i) / float(count)
-		var tread: float = 1.0 + 0.08 * sin(TAU * 63.0 * u) + 0.05 * sin(TAU * 97.0 * u)
-		out[i] = ((band_top[i] - band_bottom[i]) * 1.4 + rumble[i] * 4.0) * tread
+		var tread: float = 1.0 + 0.08 * sin(TAU * slow * u) + 0.05 * sin(TAU * fast * u)
+		out[i] = ((band_top[i] - band_bottom[i]) * 1.4 + rumble[i] * 4.0 * rumble_gain) * tread
 	return out
 
 

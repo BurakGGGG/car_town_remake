@@ -11,6 +11,8 @@ extends Node
 ##   GARAJINI SÜSLE   seviye 3'te — GARAJ → DÜZENLE → eşya seç → yerleştir → BİTİR
 ##   HURDALIK         ilk hurdalık ziyaretinde (Necati + Cemo) — yığın ara → PARÇALAR → araç → RESTORE ET
 ##                    Rıza Usta'nın dört dersinden ayrı sayılır (TutorialManager.EXTRA).
+##   DEPOLARIM        otoparkta araç varken — ARAÇLAR → aracın yeri → DEPOLARIM → OTOPARK ücreti → sıradaki depo →
+##                    SATIN AL → İÇ YÜKSELTMELER → GARAJIM sergisi. Bu da EXTRA.
 ## Ders yalnızca oyuncu boştayken açılır (açık ekran, kasa açılışı yokken) ve dersler arasında nefes
 ## payı bırakılır. Her ders kartında SONRA (bir süre sonra yeniden sorulur), her adımda DERSİ GEÇ var.
 ##
@@ -44,7 +46,7 @@ const TRIGGER_INTERVAL: float = 0.5
 const DECOR_LEVEL: int = 3
 ## Gösterim sırası: koşulu aynı anda oluşan derslerden önce gelen.
 const ORDER: Array[StringName] = [TutorialManager.BASICS, TutorialManager.VEHICLES, TutorialManager.RACE,
-	TutorialManager.DECOR, TutorialManager.JUNKYARD]
+	TutorialManager.DECOR, TutorialManager.JUNKYARD, TutorialManager.GARAGES]
 
 ## Tek seferlik konuşma (say) kapandı.
 signal said
@@ -180,7 +182,7 @@ static func disabled_by_env() -> bool:
 func _try_start() -> void:
 	if _manager == null or GarageVisit.is_visiting() or disabled_by_env():
 		return
-	if _manager.all_done() and _manager.is_done(TutorialManager.JUNKYARD):
+	if _manager.all_done() and TutorialManager.EXTRA.all(func(id: StringName) -> bool: return _manager.is_done(id)):
 		return
 	if get_tree().root.get_node_or_null("LoadingScreen") != null:
 		_ready_at = -1.0
@@ -230,6 +232,8 @@ func _can_start(id: StringName) -> bool:
 			return _player != null and _player.level >= DECOR_LEVEL
 		TutorialManager.JUNKYARD:
 			return hud.junkyard_screen != null and hud.junkyard_screen.world() != null
+		TutorialManager.GARAGES:
+			return _lot_has_cars() or (_garage_full_vehicle() != &"" and hud.car_garages_screen != null)
 	return false
 
 
@@ -498,6 +502,33 @@ func _customer() -> TrafficVehicle:
 	return approaching
 
 
+## Otoparkta ücret ödeyen araç var (DEPO DERSİ).
+func _lot_has_cars() -> bool:
+	var garages: CarGarageManager = _garage_manager()
+	return garages != null and hud.car_garages_screen != null and not garages.waiting_ids().is_empty()
+
+
+## GARAJIM'a sığmayan yeni araç (HUD işaretler; hâlâ oyuncunun ve sergide değilse). DEPO DERSİ "GARAJIN DOLDU!" ile açılır.
+func _garage_full_vehicle() -> StringName:
+	var vehicle: StringName = hud.garage_full_vehicle if hud else &""
+	var garages: CarGarageManager = _garage_manager()
+	if vehicle == &"" or garages == null or _ownership == null or not _ownership.is_owned(vehicle) \
+			or garages.garage_of(vehicle) == CarGarageManager.HOME:
+		return &""
+	return vehicle
+
+
+## İLK TAMİR dersinde garaja konan ilk araç sergide mi.
+func _first_car_home() -> bool:
+	var vehicle: StringName = _ctx.get("first_car", &"")
+	var garages: CarGarageManager = _garage_manager()
+	return vehicle != &"" and garages != null and garages.garage_of(vehicle) == CarGarageManager.HOME
+
+
+func _garage_manager() -> CarGarageManager:
+	return get_tree().get_first_node_in_group("car_garages") as CarGarageManager
+
+
 func _first_crate_claimable() -> bool:
 	return _quests != null and _quests.is_active(&"first_crate") and _quests.is_complete(&"first_crate") \
 		and not _quests.is_claimed(&"first_crate")
@@ -552,6 +583,8 @@ func _chapter_title(id: StringName) -> String:
 			return Loc.t("GARAJINI SÜSLE")
 		TutorialManager.JUNKYARD:
 			return Loc.t("HURDALIK")
+		TutorialManager.GARAGES:
+			return Loc.t("DEPOLARIM")
 	return ""
 
 
@@ -582,6 +615,14 @@ func _intro_info(id: StringName) -> Dictionary:
 			return {"caption": Loc.t("HURDALIK DERSİ"), "icon": ChapterCard.Icon.WRENCH, "title": Loc.t("HURDACI NECATİ"),
 				"subtitle": Loc.t("Hoş geldin evlat! Ben Necati, bu hurdalık benim. Çırağım Cemo sana sahayı gösterecek."),
 				"primary": Loc.t("BAŞLA"), "secondary": Loc.t("SONRA")}
+		TutorialManager.GARAGES:
+			if _garage_full_vehicle() != &"":
+				return {"caption": Loc.t("DEPO DERSİ"), "icon": ChapterCard.Icon.CAR, "title": Loc.t("GARAJIN DOLDU!"),
+					"subtitle": Loc.t("Yeni aracına garajında yer kalmadı. Üzülme: araçlarını depolarda saklayabilirsin. Gel göstereyim!"),
+					"primary": Loc.t("BAŞLA"), "secondary": Loc.t("SONRA")}
+			return {"caption": Loc.t("DEPO DERSİ"), "icon": ChapterCard.Icon.CAR, "title": Loc.t("OTOPARK ÜCRETLİ!"),
+				"subtitle": Loc.t("Araçların otoparkta ve her biri için her gün ücret ödüyorsun. Bundan kurtulmanın yolunu göstereyim."),
+				"primary": Loc.t("BAŞLA"), "secondary": Loc.t("SONRA")}
 	return {}
 
 
@@ -597,7 +638,99 @@ func _build_steps(id: StringName) -> Array[Dictionary]:
 			return _decor_steps()
 		TutorialManager.JUNKYARD:
 			return _junkyard_steps()
+		TutorialManager.GARAGES:
+			return _garage_steps()
 	return []
+
+
+## DEPOLARIM (otoparkta araç varken): ARAÇLAR → aracın yeri (DEPOLARIM açılır) → OTOPARK ücreti → ilk / sıradaki depo →
+## SATIN AL → (alınmış depo varsa) İÇ YÜKSELTMELER → GARAJIM sergisi → garaj değeri. Satın almaya zorlamaz (para / seviye
+## yetmeyebilir): SATIN AL adımı İLERİ ile geçer. Pano kapanırsa yer adımına dönülür; ARAÇLAR'dan çıkılırsa ders sonraya
+## kalır. Kurallar: docs/GARAJLAR_TASARIM.md §10.
+func _garage_steps() -> Array[Dictionary]:
+	var screen: GarageScreen = hud.garage_screen
+	var board: CarGaragesScreen = hud.car_garages_screen
+	var in_garage: Callable = func() -> bool: return _place() == &"garage"
+	var on_board: Callable = func() -> bool: return _top() == &"car_garages"
+	var left_board: Callable = func() -> bool: return in_garage.call() and not on_board.call()
+	var no_next: Callable = func() -> bool: return board.next_garage() == &""
+	var left_garage: Callable = func() -> bool: return not in_garage.call()
+	# SATIN AL kartı sıradaki deponun durumuna göre (ders başlarken): yeni oyuncuda çoğu zaman alınabilir (MAHALLE sv.1)
+	var buy_text: String = Loc.t("Fiyatı ve inşaat süresi burada. SATIN AL'a basınca inşaat başlar; bitince otoparktaki araçlar kendiliğinden depoya geçer. Acelen varsa elmasla bitirirsin.")
+	var manager: CarGarageManager = _garage_manager()
+	if manager:
+		for garage: StringName in CarGarageCatalog.ids():
+			var status: CarGarageManager.Status = manager.status(garage)
+			if status == CarGarageManager.Status.OWNED:
+				continue
+			if status == CarGarageManager.Status.NEEDS_LEVEL:
+				buy_text = Loc.t("Bu depo SEVİYE %d'de açılır. Seviye atlayınca buradan SATIN AL: inşaat bitince otoparktaki araçlar kendiliğinden depoya geçer.") \
+					% CarGarageCatalog.required_level(garage)
+			elif status == CarGarageManager.Status.TOO_EXPENSIVE:
+				buy_text = Loc.t("Fiyatı ve inşaat süresi burada. Paran yetince SATIN AL: inşaat bitince otoparktaki araçlar kendiliğinden depoya geçer. Tamirlerle para biriktir!")
+			break   # sıradaki (alınmamış ilk) depo
+	# Garaja sığmayan yeni araçla başladıysa ilk adım o aracı anlatır; ARAÇLAR onunla açılır
+	var full: StringName = _garage_full_vehicle()
+	var first_title: String = Loc.t("OTOPARKTASIN")
+	var first_text: String = Loc.t("Araçların otoparkta duruyor ve her gün ücret ödüyorsun. Önce ARAÇLAR'a dokun.")
+	if full != &"" and manager:
+		first_title = Loc.t("YENİ ARACIN NEREDE?")
+		first_text = Loc.t("Garajına sığmayan yeni aracın otoparkta; otoparkta her gün ücret ödenir. ARAÇLAR'a dokun.") \
+			if manager.garage_of(full) == CarGarageManager.WAITING \
+			else Loc.t("Garajına sığmayan yeni aracın şimdilik burada: %s. ARAÇLAR'a dokun.") % CarGarageCatalog.display_name(manager.garage_of(full))
+	return [
+		{"title": first_title,
+			"text": first_text,
+			"enter": func() -> void:
+				if full != &"":
+					screen.open_on_vehicle(full),
+			"target": func() -> Control: return hud.cars_button,
+			"skip_if": in_garage,
+			"done": in_garage},
+		{"title": Loc.t("NEREDE DURUYOR?"),
+			"text": Loc.t("Üstte aracın nerede durduğu yazar. Ona dokun: DEPOLARIM açılır."),
+			"target": func() -> Control: return screen.tutorial_anchor(&"title"),
+			"done": on_board,
+			"fail": left_garage},
+		{"title": Loc.t("OTOPARK"),
+			"text": Loc.t("En altta OTOPARK: sınırsızdır ama orada duran her araç için her gün değerinin yüzde 5'i ödenir."),
+			"target": func() -> Control: return board.tutorial_anchor(&"waiting"),
+			"hand": false, "button": Loc.t("İLERİ"),
+			"back": left_board, "fail": left_garage},
+		{"title": Loc.t("DEPOLAR"),
+			"text": Loc.t("Üstünde beş depo var; her biri daha büyük ve gösterişli. Depodaki araç ücret ödemez. Sıradaki depoya dokun."),
+			"target": func() -> Control: return board.tutorial_anchor(&"next"),
+			"skip_if": no_next,
+			"done": func() -> bool: return board.selected() == board.next_garage(),
+			"back": left_board, "fail": left_garage},
+		{"title": Loc.t("SATIN AL"),
+			"text": buy_text,
+			"target": func() -> Control: return board.tutorial_anchor(&"main"),
+			"skip_if": no_next,
+			"hand": false, "button": Loc.t("İLERİ"),
+			"back": left_board, "fail": left_garage},
+		{"title": Loc.t("PARK YERİ EKLE"),
+			"text": Loc.t("Deponu büyütmek için İÇ YÜKSELTMELER'den PARK YERİ eklersin. Zemin, ışık ve duvar da garaj değerini artırır."),
+			"enter": func() -> void:
+				var here: StringName = screen.current_garage()
+				var garages: CarGarageManager = _garage_manager()
+				if garages and not garages.owned_garages().is_empty():
+					board.select(here if CarGarageCatalog.has(here) and garages.is_owned(here) else garages.owned_garages()[0]),
+			"skip_if": func() -> bool:
+				var garages: CarGarageManager = _garage_manager()
+				return garages == null or garages.owned_garages().is_empty(),
+			"target": func() -> Control: return board.tutorial_anchor(&"upgrades"),
+			"hand": false, "button": Loc.t("İLERİ"),
+			"back": left_board, "fail": left_garage},
+		{"title": Loc.t("GARAJIM"),
+			"text": Loc.t("Bir yol daha: araçlarını ana garajında sergile, ücret yok. GARAJ'dan garajını genişletirsen sergine daha çok araç sığar."),
+			"target": func() -> Control: return board.tutorial_anchor(&"home"),
+			"hand": false, "button": Loc.t("İLERİ"),
+			"back": left_board, "fail": left_garage},
+		{"title": Loc.t("GARAJ DEĞERİ"),
+			"text": Loc.t("Her depo ve yükseltme GARAJ DEĞERİ'ni artırır; değer büyüdükçe rütben yükselir. Kolay gelsin usta!"),
+			"button": Loc.t("TAMAM")},
+	]
 
 
 ## HURDALIK (Necati + Cemo): hoş geldin → sarı halkalı yığını ara → PARÇALAR → günün aracı → RESTORE ET → kapanış.
@@ -677,6 +810,25 @@ func _basics_steps() -> Array[Dictionary]:
 				return hud.crate_panel.find_child("CrateAction", true, false) as Control if hud.crate_panel.mode() == &"result" else null,
 			"dim": false, "block": false,
 			"done": func() -> bool: return _flags.has(&"reveal_finished") or (not hud.crate_panel.visible and not _delivery.is_revealing())},
+		# İlk araç YERLEŞTİR sorulmadan garaja konur (kullanıcı kararı 2026-10-20): düzenleme kipi araç parmakta açılır.
+		# Oyuncu koymadan çıkarsa ders sürer; araç otoparkta kalır, ders bitince YERLEŞTİR sorulur.
+		{"title": Loc.t("GARAJINA KOY"),
+			"text": Loc.t("İlk araban garajında sergilensin! Aracı parmağınla istediğin yere sürükle ve YERLEŞTİR'e bas."),
+			"skip_if": func() -> bool: return not hud.has_first_car(),
+			"enter": func() -> void:
+				_ctx["first_car"] = hud.first_car
+				hud.place_first_car(),
+			"target": func() -> Control: return hud.garage_edit_screen.tutorial_anchor(&"place"),
+			"dim": false, "block": false, "card": &"top",
+			"done": func() -> bool:
+				if _place() == &"garage_edit":
+					_ctx["first_edit"] = true
+				return _first_car_home() or (_ctx.has("first_edit") and _place() != &"garage_edit")},
+		{"title": Loc.t("BİTİR"),
+			"text": Loc.t("Araban garajında! Garajını istediğin zaman GARAJ → DÜZENLE'den yeniden düzenlersin. Şimdi BİTİR'e bas."),
+			"skip_if": func() -> bool: return _place() != &"garage_edit",
+			"target": func() -> Control: return hud.garage_edit_screen.tutorial_anchor(&"done"),
+			"done": func() -> bool: return _place() != &"garage_edit"},
 		# İlk müşteri yolu beklemez: araç bekleme noktasına ışınlanır, adım görünmeden geçer. Uygun araç yoksa
 		# (trafik boş) bu yazı çıkar ve her denetimde yeniden çağrılır.
 		{"title": Loc.t("MÜŞTERİ YOLDA"),
@@ -839,7 +991,7 @@ func _vehicle_steps() -> Array[Dictionary]:
 			"done": func() -> bool: return _place() == &"garage",
 			"skip_if": func() -> bool: return _ownership == null or _ownership.owned_count() < 2},
 		{"title": Loc.t("YARIŞ ARACI"),
-			"text": Loc.t("Araçlarını buradan incelersin. Beğendiğin aracı seçip YARIŞ ARACI YAP dersen drag yarışlarına o çıkar."),
+			"text": Loc.t("Araçlarını buradan incelersin. Beğendiğin aracı seçip bayraklı YARIŞA SEÇ tabelasına basarsan drag yarışlarına o çıkar."),
 			"target": func() -> Control: return hud.garage_screen.find_child("RacePickButton", true, false) as Control,
 			"hand": false, "button": Loc.t("İLERİ"),
 			"skip_if": func() -> bool: return _place() != &"garage"},

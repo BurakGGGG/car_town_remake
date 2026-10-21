@@ -78,9 +78,18 @@ class FakeFB extends Object:
 			r = {"status": false, "docID": id, "error": "Document does not exist"}
 		call_deferred("emit_signal", "firestore_get_task_completed", r)
 
-	func firestoreSetDocument(_c: String, id: String, data: Dictionary, _merge: bool) -> void:
+	## Koleksiyon listesi (posta kutusu vb.): bu testte hep boş. Sonuç kimliksizdir (gerçek eklenti gibi).
+	func firestoreGetDocumentsInCollection(_c: String) -> void:
+		var r: Dictionary = {"status": true, "data": {}} if online else {"status": false, "error": "offline"}
+		call_deferred("emit_signal", "firestore_get_task_completed", r)
+
+	func firestoreSetDocument(c: String, id: String, data: Dictionary, _merge: bool) -> void:
 		if not online:
 			call_deferred("emit_signal", "firestore_write_task_completed", {"status": false, "docID": id, "error": "offline"})
+			return
+		if c != "players":
+			# kayıt geçmişi (players/{uid}/history) vb.: oyuncu belgelerine karışmasın (docs = yalnız bulut kayıtları)
+			call_deferred("emit_signal", "firestore_write_task_completed", {"status": true, "docID": id})
 			return
 		writes += 1
 		docs[id] = data.duplicate(true)

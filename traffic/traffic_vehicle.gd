@@ -88,6 +88,23 @@ const FLAIR_PITCH: float = 0.02
 const FLAIR_PITCH_MAX: float = 0.05
 ## Kovalamacada savrulurken arka kayar (hafif drift görüntüsü): yön, hareket yönünden yan hızla bu kadar sapar (rad).
 const CHASE_SLIP: float = 0.1
+## DÖRTLÜ (TrafficManager seyrek seçer): şeridinde yumuşak frenle durur, dörtlüleri yanar, birkaç saniye sonra devam eder.
+const HAZARD_BRAKING: float = 0.75
+## SÜPER ARAÇ KALKIŞI (2026-10-20, kullanıcı: "süper araçlar önleri boş olunca ışıktan çıkarken dümdüz hızlıca basıp
+## gitsinler, çok nadir olmasın 4'te 1 falan"): egzotik araç kırmızıda en önde dururken (önü LAUNCH_CLEAR kadar boş)
+## yeşil yanınca LAUNCH_CHANCE ile gaza basar: kavşaktan DÜZ geçer, LAUNCH_DISTANCE boyunca hızlı gider, sonra normal
+## hıza süzülür. Önüne araç çıkarsa (LAUNCH_ABORT), sonraki kavşağa yaklaşırsa ya da kovalamaca gelirse erken biter.
+## Gövde gazda arkaya oturur (_drive_flair), ExoticEngine ivmeden tam gazı ve vites atışlarını kendisi çalar.
+const LAUNCH_CHANCE: float = 0.25
+const LAUNCH_CLEAR: float = 3.5
+const LAUNCH_SPEED: float = 2.0
+const LAUNCH_ACCEL: float = 2.0
+const LAUNCH_BRAKING: float = 2.6
+const LAUNCH_COAST: float = 0.9      # kalkış bitince normal hıza süzülme (birim/sn²)
+const LAUNCH_DISTANCE: float = 7.0
+const LAUNCH_ABORT: float = 2.6
+## Kavşak çıkışından en az bu kadar uzaklaşmadan durmaz: arkadaki araç kavşağın içinde beklemesin (karşı yönü tıkardı).
+const HAZARD_EXIT_CLEAR: float = 1.2
 
 @export var max_speed: float = 0.8        # birim/sn
 @export var acceleration: float = 0.6     # birim/sn²
@@ -158,11 +175,26 @@ var _chase_points: PackedVector3Array = PackedVector3Array()
 var _chase_lengths: PackedFloat32Array = PackedFloat32Array()   # her noktaya kadarki toplam uzunluk
 var chase_distance: float = 0.0   # yol çizgisi üzerindeki konum (PoliceChase sürer)
 var chase_offset: float = 0.0     # sola (orta çizgiye) kayma
+## Öndeki araç (TrafficManager.distance_to_vehicle_ahead her ölçümde yazar; yoksa null).
+var leader: TrafficVehicle
+## Önündeki araç yüzünden duruyor (kırmızı / kavşak sırası değil) — saniye; yürüyünce 0. CityAmbience korna için okur.
+var stuck_time: float = 0.0
+## Bu karede kırmızıda / kavşak sırasında bekliyor (ya da öndeki öyle bekleyen kuyruğun içinde).
+var waiting_light: bool = false
+var _hazard_left: float = 0.0
+var _last_exit: Vector3 = Vector3.INF   # son geçilen kavşak çıkışı
+var _light_stop: bool = false            # kırmızıda en önde duruyor (önü boş): yeşilde kalkış zarı atılır
+var _launch_from: Vector3 = Vector3.INF  # süper araç kalkışının başladığı yer (INF: kalkış yok)
+## Kalkış olasılığı (QA gerçek akışı görmek için 1 yapar).
+var launch_chance: float = LAUNCH_CHANCE
+var _hazards: HazardLights
+var _scene_path: String = ""
 
 
 func setup(traffic_manager: TrafficManager, scene: PackedScene, look: CarAppearance, start: TrafficWaypoint, model_scale: float) -> void:
 	manager = traffic_manager
 	appearance = look
+	_scene_path = scene.resource_path
 	model = scene.instantiate() as Node3D
 	# Bağlam çarpanı × aracın GERÇEK boyutundan türeyen ölçek: Getz gerçekten küçük, E60 gerçekten
 	# uzun görünür (CarCatalog.model_scale; cars.json "real_dimensions"dan türetilmiştir).
@@ -180,6 +212,8 @@ func setup(traffic_manager: TrafficManager, scene: PackedScene, look: CarAppeara
 
 
 func _physics_process(delta: float) -> void:
+	if _hazard_left > 0.0 and mode != Mode.TRAFFIC:
+		_end_hazard()   # müşteri / rakip / kovalamaca oldu
 	match mode:
 		Mode.REPAIR_REQUESTED, Mode.RACE_CHALLENGE:
 			_pull_over(delta)
@@ -297,13 +331,42 @@ func _physics_process(delta: float) -> void:
 		if to_entry < stop_at + 0.02:
 			desired = 0.0
 	desired *= 1.0 - (1.0 - YIELD_SLOW) * pressure
+	waiting_light = hold or (ahead < follow_distance and leader != null and leader.waiting_light)
+	if _hazard_left > 0.0:
+		if pressure > 0.0 or fleeing:
+			_end_hazard()   # kovalamaca yaklaşıyor: yol açılır
+		else:
+			desired = 0.0
+			if speed < 0.02:
+				_hazard_left -= delta
+				if _hazard_left <= 0.0:
+					_end_hazard()
 	if merge_aim != Vector3.INF:
 		# Açı hedefe dönmeden ilerlemez (yerinde kırar), döndükçe yavaşça çıkar
 		desired = minf(desired, MERGE_SPEED * clampf(1.0 - absf(merge_error) / 0.6, 0.1, 1.0))
+	# Süper araç kalkışı: kırmızıda en önde (önü boş) duran egzotik, yeşilde zar atar
+	if hold and speed < 0.03 and ahead > LAUNCH_CLEAR:
+		_light_stop = true
+	elif _light_stop and not hold:
+		_light_stop = false
+		if ahead > LAUNCH_CLEAR and not fleeing and pressure <= 0.0 and roll_launch():
+			start_launch()
+	if _launch_from != Vector3.INF:
+		var gone: float = _flat(global_position - _launch_from).length()
+		if gone > LAUNCH_DISTANCE or ahead < LAUNCH_ABORT or pressure > 0.0 or fleeing or hold \
+				or (gone > 2.0 and entry != null and to_entry < light_lookahead):
+			_launch_from = Vector3.INF
+		else:
+			desired = LAUNCH_SPEED if target.speed_limit <= 0.0 else minf(LAUNCH_SPEED, target.speed_limit)
+	var rate_up: float = LAUNCH_ACCEL if _launch_from != Vector3.INF else acceleration
+	var rate_down: float = HAZARD_BRAKING if _hazard_left > 0.0 else braking
+	if speed > max_speed + 0.01:   # kalkıştan dönüş: önünde araç / ışık varsa sert, yoksa süzülerek
+		rate_down = LAUNCH_BRAKING if ahead < follow_distance * 2.5 or hold else LAUNCH_COAST
 	if desired > speed:
-		speed = minf(speed + acceleration * delta, desired)
+		speed = minf(speed + rate_up * delta, desired)
 	else:
-		speed = maxf(speed - braking * delta, desired)
+		speed = maxf(speed - rate_down * delta, desired)
+	stuck_time = stuck_time + delta if speed < 0.03 and ahead < stop_distance + 0.05 and not waiting_light else 0.0
 
 	global_position += forward * speed * delta
 
@@ -313,6 +376,49 @@ func _physics_process(delta: float) -> void:
 	if fleeing:
 		var lateral_now: float = float(_lane_frame()["lateral"]) if target else lateral_before
 		_drive_flair(-(lateral_now - lateral_before) / maxf(delta, 0.001), delta)
+	elif _launch_from != Vector3.INF or absf(_flair_pitch) > 0.001:
+		_drive_flair(0.0, delta)   # kalkışta gövde arkaya oturur, bitince düzelir
+
+
+## DÖRTLÜ için uygun mu: trafikte, kaçmıyor / şeride çıkmıyor, kavşakta ya da kavşağa yaklaşırken değil (kavşağı
+## tıkamasın), yolda ilerliyor.
+func can_hazard_stop() -> bool:
+	if mode != Mode.TRAFFIC or fleeing or _merging or race_lane or _hazard_left > 0.0 or _in_intersection or is_launching() \
+			or target == null or target.intersection_entry or speed < 0.35:
+		return false
+	if _last_exit != Vector3.INF and _flat(global_position - _last_exit).length() < HAZARD_EXIT_CLEAR:
+		return false
+	for next: TrafficWaypoint in target.get_next():
+		if next.intersection_entry:
+			return false
+	return true
+
+
+## Dörtlüyü yakar ve `seconds` saniye durur (durduktan sonra sayılır), sonra dörtlüyü söndürüp devam eder.
+func hazard_stop(seconds: float) -> bool:
+	if not can_hazard_stop():
+		return false
+	_hazard_left = seconds
+	if _hazards == null and model:
+		_hazards = HazardLights.attach(model, rig, _scene_path)
+	if _hazards:
+		_hazards.set_on(true)
+	return true
+
+
+## Dörtlü yakmış ve durmuş (arkadaki araç korna çalabilir).
+func is_hazard_stopped() -> bool:
+	return _hazard_left > 0.0 and speed < 0.05
+
+
+func hazards_on() -> bool:
+	return _hazards != null and _hazards.is_on()
+
+
+func _end_hazard() -> void:
+	_hazard_left = 0.0
+	if _hazards:
+		_hazards.set_on(false)
 
 
 ## Bekleme yeri: aracın merkezinin giriş noktasına mesafesi. Dur çizgisi yoksa eski yer (giriş noktası). Her kavşak
@@ -382,6 +488,8 @@ func _arrive(point: TrafficWaypoint) -> void:
 	_segment_from = point.global_position
 	if point.intersection_entry:
 		_in_intersection = true
+	if point.intersection_exit:
+		_last_exit = point.global_position
 	if point.intersection_exit and _in_intersection:
 		_in_intersection = false
 		manager.finish_crossing(self)
@@ -391,7 +499,38 @@ func _arrive(point: TrafficWaypoint) -> void:
 		target = null
 		reached_despawn.emit(self)
 		return
-	target = point.pick_next()
+	target = _straightest(point) if _launch_from != Vector3.INF else point.pick_next()
+
+
+## Kalkışta kavşaktan düz geçilir: yönü aracın burnuna en yakın sonraki nokta.
+func _straightest(point: TrafficWaypoint) -> TrafficWaypoint:
+	var best: TrafficWaypoint = null
+	var best_dot: float = -2.0
+	var forward: Vector3 = _forward()
+	for next: TrafficWaypoint in point.get_next():
+		var dir: Vector3 = _flat(next.global_position - point.global_position)
+		var dot: float = forward.dot(dir.normalized()) if dir.length() > 0.001 else -1.0
+		if dot > best_dot:
+			best_dot = dot
+			best = next
+	return best
+
+
+## Kalkış zarı: yalnız egzotik araç, LAUNCH_CHANCE ile.
+func roll_launch() -> bool:
+	return CarCatalog.is_exotic(vehicle_id) and randf() < launch_chance
+
+
+## Süper araç kalkışını başlatır (yeşilde zar tutunca; test / QA doğrudan da çağırır).
+func start_launch() -> void:
+	_launch_from = global_position
+	_flair_speed = speed
+	if manager:
+		manager.vehicle_launched.emit(self)
+
+
+func is_launching() -> bool:
+	return _launch_from != Vector3.INF
 
 
 func is_in_intersection() -> bool:

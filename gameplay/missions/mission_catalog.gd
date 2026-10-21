@@ -6,11 +6,16 @@ class_name MissionCatalog
 ## Görev = (metrik, hedef). Metrikler MissionManager'ın sayaçlarından gelir (docs §3):
 ##   repairs, repair_money, job_<id>, long_jobs, races, race_wins, crates_opened, crates_bought, paints,
 ##   growth_buys, decor_placed, cars_displayed, decor_bought, money_spent, levels, days_played,
-##   daily_done, daily_all, weekly_done, weekly_all.
+##   daily_done, daily_all, weekly_done, weekly_all,
+##   (2026-10-20 genişletme) junk_searches, junk_parts, restorations, mods_installed, interior_ups, depot_builds,
+##   friend_races, friend_wins, revenges, records, photos, luxury_bought, cars_bought.
+## Durum metrikleri (anlık): cars_discovered, cars_on_display, garage_level, bays, garage_rank, job_stars, player_level,
+##   best_streak, ach_stars, legend, depots_owned, cars_owned, legendary_cars.
 
 enum Tier { EASY, MEDIUM, HARD }
 ## Kategori: günlük listede çeşitlilik ve "nudge" (kullanılmayan özelliğe yönlendirme) için.
-enum Cat { REPAIR, EARN, JOB, RACE, GROWTH, COLLECT, STYLE }
+## Yeni kategori SONA eklenir: görev kaydı kategoriyi sayı olarak tutar.
+enum Cat { REPAIR, EARN, JOB, RACE, GROWTH, COLLECT, STYLE, JUNK, TUNE, SOCIAL }
 
 ## Günlük slot düzeni: 2 kolay, 2 orta, 1 zor.
 const DAILY_SLOTS: Array[int] = [Tier.EASY, Tier.EASY, Tier.MEDIUM, Tier.MEDIUM, Tier.HARD]
@@ -58,6 +63,14 @@ const DAILY: Array[Dictionary] = [
 	{"id": &"paint_m", "cat": Cat.STYLE, "tier": Tier.MEDIUM, "metric": &"paints", "text": "BİR ARACI BOYA", "weight": 5.0, "base": &"paints", "lo": 1, "hi": 1, "step": &"one", "req": &"paint"},
 	{"id": &"decor_e", "cat": Cat.STYLE, "tier": Tier.EASY, "metric": &"decor_placed", "text": "%s EŞYA YERLEŞTİR", "weight": 6.0, "base": &"decor_placed", "lo": 1, "hi": 6, "step": &"one", "req": &"decor"},
 	{"id": &"display_e", "cat": Cat.STYLE, "tier": Tier.EASY, "metric": &"cars_displayed", "text": "BİR ARACINI GARAJDA SERGİLE", "weight": 5.0, "base": &"cars_displayed", "lo": 1, "hi": 1, "step": &"one", "req": &"display"},
+	# 2026-10-20 genişletme (kullanıcı: "görevleri epey bir genişlet"): sonradan gelen özellikler görevlere girdi
+	{"id": &"photo_e", "cat": Cat.STYLE, "tier": Tier.EASY, "metric": &"photos", "text": "GARAJININ FOTOĞRAFINI ÇEK", "weight": 4.0, "base": &"photos", "lo": 1, "hi": 1, "step": &"one"},
+	{"id": &"junk_e", "cat": Cat.JUNK, "tier": Tier.EASY, "metric": &"junk_searches", "text": "HURDALIKTA %s YIĞIN ARA", "weight": 7.0, "base": &"junk_searches", "lo": 1, "hi": 6, "step": &"one", "req": &"junk"},
+	{"id": &"junk_m", "cat": Cat.JUNK, "tier": Tier.MEDIUM, "metric": &"junk_parts", "text": "HURDALIKTAN %s PARÇA TOPLA", "weight": 6.0, "base": &"junk_parts", "lo": 3, "hi": 30, "step": &"one", "req": &"junk"},
+	{"id": &"mod_m", "cat": Cat.TUNE, "tier": Tier.MEDIUM, "metric": &"mods_installed", "text": "BİR ARACINA MODİFİYE TAK", "weight": 6.0, "base": &"mods_installed", "lo": 1, "hi": 1, "step": &"one", "req": &"mods"},
+	{"id": &"friend_e", "cat": Cat.SOCIAL, "tier": Tier.EASY, "metric": &"friend_races", "text": "%s ARKADAŞ YARIŞINA KATIL", "weight": 6.0, "base": &"friend_races", "lo": 1, "hi": 3, "step": &"one", "req": &"race"},
+	{"id": &"friend_win_m", "cat": Cat.SOCIAL, "tier": Tier.MEDIUM, "metric": &"friend_wins", "text": "%s ARKADAŞINI YARIŞTA YEN", "weight": 5.0, "base": &"friend_wins", "lo": 1, "hi": 3, "step": &"one", "req": &"race"},
+	{"id": &"interior_m", "cat": Cat.GROWTH, "tier": Tier.MEDIUM, "metric": &"interior_ups", "text": "BİR DEPODA İÇ YÜKSELTME YAP", "weight": 5.0, "base": &"interior_ups", "lo": 1, "hi": 1, "step": &"one", "req": &"interior"},
 ]
 
 ## --- HAFTALIK ŞABLONLAR ----------------------------------------------------------------------
@@ -78,6 +91,15 @@ const WEEKLY_POOL: Array[Dictionary] = [
 	{"id": &"w_growth", "cat": Cat.GROWTH, "metric": &"growth_buys", "text": "2 GARAJ GELİŞTİRMESİ AL", "weight": 4.0, "base": &"growth_buys", "lo": 2, "hi": 2, "step": &"one", "req": &"growth"},
 	{"id": &"w_days", "cat": Cat.GROWTH, "metric": &"days_played", "text": "5 FARKLI GÜN OYNA", "weight": 5.0, "base": &"", "lo": 5, "hi": 5, "step": &"one"},
 	{"id": &"w_perfect", "cat": Cat.GROWTH, "metric": &"daily_all", "text": "%s GÜNÜN TÜM GÖREVLERİNİ BİTİR", "weight": 5.0, "base": &"", "lo": 2, "hi": 3, "step": &"one"},
+	# 2026-10-20 genişletme
+	{"id": &"w_junk", "cat": Cat.JUNK, "metric": &"junk_searches", "text": "HURDALIKTA %s YIĞIN ARA", "weight": 6.0, "base": &"junk_searches", "lo": 5, "hi": 30, "step": &"one", "req": &"junk"},
+	{"id": &"w_parts", "cat": Cat.JUNK, "metric": &"junk_parts", "text": "HURDALIKTAN %s PARÇA TOPLA", "weight": 5.0, "base": &"junk_parts", "lo": 15, "hi": 150, "step": &"count", "req": &"junk"},
+	{"id": &"w_restore", "cat": Cat.JUNK, "metric": &"restorations", "text": "BİR KLASİĞİ RESTORE ET", "weight": 5.0, "base": &"restorations", "lo": 1, "hi": 1, "step": &"one", "req": &"junk"},
+	{"id": &"w_mods", "cat": Cat.TUNE, "metric": &"mods_installed", "text": "%s MODİFİYE TAK", "weight": 6.0, "base": &"mods_installed", "lo": 2, "hi": 8, "step": &"one", "req": &"mods"},
+	{"id": &"w_friend_wins", "cat": Cat.SOCIAL, "metric": &"friend_wins", "text": "%s ARKADAŞ YARIŞI KAZAN", "weight": 6.0, "base": &"friend_wins", "lo": 2, "hi": 8, "step": &"one", "req": &"race"},
+	{"id": &"w_record", "cat": Cat.RACE, "metric": &"records", "text": "DRAG REKORUNU KIR", "weight": 4.0, "base": &"records", "lo": 1, "hi": 1, "step": &"one", "req": &"record"},
+	{"id": &"w_interior", "cat": Cat.GROWTH, "metric": &"interior_ups", "text": "%s İÇ YÜKSELTME YAP", "weight": 5.0, "base": &"interior_ups", "lo": 2, "hi": 6, "step": &"one", "req": &"interior"},
+	{"id": &"w_photos", "cat": Cat.STYLE, "metric": &"photos", "text": "3 FOTOĞRAF ÇEK", "weight": 3.0, "base": &"photos", "lo": 3, "hi": 3, "step": &"one"},
 ]
 
 ## --- BAŞARIM ÇİZGİLERİ -----------------------------------------------------------------------
@@ -104,6 +126,23 @@ const ACHIEVEMENTS: Array[Dictionary] = [
 	{"id": &"a_bays", "title": "ALAN SAHİBİ", "text": "%s tamir alanına sahip ol", "metric": &"bays", "kind": &"state", "tiers": [2, 3], "mult": 0.8},
 	{"id": &"a_rank", "title": "DEĞERLİ GARAJ", "text": "Garaj değerinde %s. rütbeye ulaş", "metric": &"garage_rank", "kind": &"state", "tiers": [3, 5, 7, 10], "mult": 1.2},
 	{"id": &"a_stars", "title": "USTA", "text": "İşlerden toplam %s ustalık yıldızı topla", "metric": &"job_stars", "kind": &"state", "tiers": [5, 12, 20, 28, 35], "mult": 1.0},
+	# 2026-10-20 genişletme: hurdalık, modifiye, depolar, arkadaş yarışları, rekor, fotoğraf, lüks dekor, filo
+	{"id": &"a_long", "title": "SABIRLI USTA", "text": "%s uzun iş tamamla", "metric": &"long_jobs", "kind": &"counter", "tiers": [10, 50, 200, 600], "mult": 0.9},
+	{"id": &"a_junk", "title": "HURDACI", "text": "Hurdalıkta %s yığın ara", "metric": &"junk_searches", "kind": &"counter", "tiers": [5, 25, 100, 300], "mult": 0.8},
+	{"id": &"a_parts", "title": "PARÇA AVCISI", "text": "Hurdalıktan toplam %s parça topla", "metric": &"junk_parts", "kind": &"counter", "tiers": [25, 150, 600, 2000], "mult": 0.8},
+	{"id": &"a_restore", "title": "RESTORATÖR", "text": "%s klasik aracı restore et", "metric": &"restorations", "kind": &"counter", "tiers": [1, 3, 6, 12, 24], "mult": 1.3},
+	{"id": &"a_mods", "title": "MODİFİYECİ", "text": "%s modifiye tak", "metric": &"mods_installed", "kind": &"counter", "tiers": [1, 10, 30, 80], "mult": 1.0},
+	{"id": &"a_depots", "title": "DEPO SAHİBİ", "text": "%s depoya sahip ol", "metric": &"depots_owned", "kind": &"state", "tiers": [1, 2, 3, 4, 5], "mult": 1.2},
+	{"id": &"a_interior", "title": "İÇ MİMAR", "text": "Depolarda %s iç yükseltme tamamla", "metric": &"interior_ups", "kind": &"counter", "tiers": [1, 5, 15, 35], "mult": 0.9},
+	{"id": &"a_fleet", "title": "FİLO SAHİBİ", "text": "Aynı anda %s araca sahip ol", "metric": &"cars_owned", "kind": &"state", "tiers": [5, 15, 30, 50, 70], "mult": 1.2},
+	{"id": &"a_legendary", "title": "EFSANE AVCISI", "text": "%s efsane araç keşfet", "metric": &"legendary_cars", "kind": &"state", "tiers": [1, 3, 5, 7], "mult": 1.5},
+	{"id": &"a_bought", "title": "ALICI", "text": "Showroom'dan %s araç satın al", "metric": &"cars_bought", "kind": &"counter", "tiers": [1, 5, 15], "mult": 0.8},
+	{"id": &"a_friend_races", "title": "DOSTLUK YARIŞI", "text": "%s arkadaş yarışına katıl", "metric": &"friend_races", "kind": &"counter", "tiers": [1, 10, 50, 150], "mult": 0.7},
+	{"id": &"a_friend_wins", "title": "SOKAK KRALI", "text": "%s arkadaşını yarışta yen", "metric": &"friend_wins", "kind": &"counter", "tiers": [1, 10, 40, 120], "mult": 1.0},
+	{"id": &"a_revenge", "title": "İNTİKAMCI", "text": "%s intikam yarışı kazan", "metric": &"revenges", "kind": &"counter", "tiers": [1, 5, 20], "mult": 0.9},
+	{"id": &"a_records", "title": "REKORTMEN", "text": "Drag rekorunu %s kez kır", "metric": &"records", "kind": &"counter", "tiers": [1, 5, 15, 40], "mult": 1.0},
+	{"id": &"a_photos", "title": "FOTOĞRAFÇI", "text": "%s fotoğraf çek", "metric": &"photos", "kind": &"counter", "tiers": [1, 10, 50], "mult": 0.5},
+	{"id": &"a_luxury", "title": "LÜKS SEVER", "text": "%s lüks eşya al", "metric": &"luxury_bought", "kind": &"counter", "tiers": [1, 5, 15], "mult": 1.0},
 	{"id": &"a_level", "title": "SEVİYE", "text": "%s. seviyeye ulaş", "metric": &"player_level", "kind": &"state", "tiers": [5, 10, 20, 30, 50], "mult": 1.0},
 	{"id": &"a_days", "title": "SADAKAT", "text": "Toplam %s gün oyna", "metric": &"days_played", "kind": &"counter", "tiers": [3, 7, 30, 100, 365], "mult": 1.0},
 	{"id": &"a_streak", "title": "SERİ", "text": "%s gün üst üste giriş yap", "metric": &"best_streak", "kind": &"state", "tiers": [3, 7, 14, 30], "mult": 0.9},
@@ -124,9 +163,12 @@ const CAT_METRICS: Dictionary = {
 	Cat.EARN: [&"repair_money"],
 	Cat.JOB: [&"long_jobs"],
 	Cat.RACE: [&"races", &"race_wins"],
-	Cat.GROWTH: [&"money_spent", &"growth_buys"],
+	Cat.GROWTH: [&"money_spent", &"growth_buys", &"interior_ups"],
 	Cat.COLLECT: [&"crates_opened", &"crates_bought"],
-	Cat.STYLE: [&"paints", &"decor_placed", &"cars_displayed"],
+	Cat.STYLE: [&"paints", &"decor_placed", &"cars_displayed", &"photos"],
+	Cat.JUNK: [&"junk_searches", &"junk_parts", &"restorations"],
+	Cat.TUNE: [&"mods_installed"],
+	Cat.SOCIAL: [&"friend_races", &"friend_wins"],
 }
 
 

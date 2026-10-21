@@ -73,6 +73,7 @@ var _mode_buttons: Dictionary = {}  # mod → PlateButton
 var _mode_kind: Dictionary = {}     # mod → o modda en son açılan kategori
 var _notice_plate: PlatePanel
 var _pending_grab: Dictionary = {}  # {"iid", "at"}: basılı tutarak açılış
+var _pending_place: StringName = &""  # YERLEŞTİR → GARAJIMA KOY: açılışta yerleştirilecek araç sergisi
 var _frame_after_grab: bool = false  # basılı tutarak girildi: eşya bırakılınca garaj kadraja alınır
 var _strip_panel: PlatePanel
 var _strip: HBoxContainer
@@ -131,6 +132,10 @@ func open() -> void:
 		var kind: int = int(GarageDecor.get_item(item).get("kind", -1))
 		if _tab_buttons.has(kind):
 			_kind = kind
+	var place: StringName = _pending_place
+	_pending_place = &""
+	if place != &"" and _tab_buttons.has(GarageDecor.Kind.VEHICLE):
+		_kind = GarageDecor.Kind.VEHICLE   # şeritte araçlar: oyuncu vazgeçip başka aracı da seçebilir
 	if _kind < 0 or not _tab_buttons.has(_kind):
 		_kind = _first_useful_kind()
 	_select_tab(_kind)   # önce şerit dolsun: bandın alt sınırı kartların yüksekliğine bağlı
@@ -142,7 +147,14 @@ func open() -> void:
 		_frame_after_grab = not grab.is_empty()
 		if not grab.is_empty():
 			_editor.grab(String(grab["iid"]), grab["at"])
+		elif place != &"":
+			_editor.begin_place(place)
 	_refresh()
+
+
+## YERLEŞTİR → GARAJIMA KOY: bir sonraki open() bu eşyayı (araç sergisi "car:<id>") yerleştirmeye başlar.
+func place_on_open(item: StringName) -> void:
+	_pending_place = item
 
 
 ## Eşyaya basılı tutarak girilecek (DecorHoldGesture): bir sonraki open() eşyayı parmağın altında tutar.
@@ -715,7 +727,10 @@ func _draw_luxury_frame(card: PlateButton, area: Rect2, icon: HudIcon.Kind = Hud
 ## Kart rozetleri: kilitliyse küçük resmin ortasında kilit; depoda kopya varsa sağ üstte yeşil "×N"
 ## (eskiden yalnızca alt satırdaki "DEPODA 1" yazısı söylüyordu, şeritte göze çarpmıyordu).
 func _draw_badges(card: PlateButton, id: StringName, area: Rect2) -> void:
-	if _decor == null or id == &"" or GarageDecor.is_vehicle(id) or GarageDecor.is_exclusive(id):
+	if _decor != null and GarageDecor.is_vehicle(id):
+		_draw_place_badge(card, id, area)
+		return
+	if _decor == null or id == &"" or GarageDecor.is_exclusive(id):
 		return
 	if not _decor.is_unlocked(id):
 		var center: Vector2 = area.get_center()
@@ -740,6 +755,28 @@ func _draw_badges(card: PlateButton, id: StringName, area: Rect2) -> void:
 	card.draw_style_box(style, badge)
 	card.draw_string(font, Vector2(badge.position.x, badge.position.y + 16.0), text, HORIZONTAL_ALIGNMENT_CENTER,
 		badge.size.x, font_size, HudPalette.TEXT_LIGHT)
+
+
+## Araç kartı: sol üstte yerin türü (alt satırdaki yer adı, aracın adının devamı gibi okunuyordu):
+## yeşil garaj = sergide, kutu = depoda, kırmızı araba = otoparkta (günlük ücret).
+func _draw_place_badge(card: PlateButton, id: StringName, area: Rect2) -> void:
+	var kind: HudIcon.Kind = HudIcon.Kind.GARAGE
+	var color: Color = HudPalette.GRASS.darkened(0.2)
+	if _decor.available_of(id) > 0:
+		var garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
+		var place: StringName = garages.garage_of(GarageDecor.vehicle_of(id)) if garages else &""
+		if place == CarGarageManager.WAITING:
+			kind = HudIcon.Kind.CAR
+			color = HudPalette.DANGER
+		elif CarGarageCatalog.has(place):
+			kind = HudIcon.Kind.BOX
+			color = HudPalette.INK_SOFT
+		else:
+			return
+	var center: Vector2 = area.position + Vector2(7.0, 7.0)
+	card.draw_circle(center, 12.0, color, true, -1.0, true)
+	card.draw_arc(center, 12.0, 0.0, TAU, 24, HudPalette.TEXT_LIGHT, 2.0, true)
+	HudIcon.draw_icon(card, kind, center, 14.0, HudPalette.TEXT_LIGHT, color)
 
 
 func _draw_thumb(card: PlateButton, id: StringName, area: Rect2) -> void:
@@ -820,6 +857,21 @@ func _on_card_pressed(id: StringName) -> void:
 	_refresh_cards()
 
 
+## ARAÇLAR sekmesi kartının alt satırı: aracın şu an nerede durduğu (docs/GARAJLAR_TASARIM.md §10) — GARAJDA (sergide),
+## depo adı ya da OTOPARK ve günlük ücreti (karta basınca araç garaja yerleştirilir; otoparktan kurtulur).
+func _vehicle_place(item: StringName) -> String:
+	if _decor.available_of(item) <= 0:
+		return Loc.t("GARAJDA")
+	var vehicle: StringName = GarageDecor.vehicle_of(item)
+	var garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
+	var place: StringName = garages.garage_of(vehicle) if garages else &""
+	if place == CarGarageManager.WAITING:
+		return Loc.t("OTOPARK · %s ₺/GÜN") % Hud.format_thousands(CarGarageManager.fee_of(vehicle))
+	if CarGarageCatalog.has(place):
+		return CarGarageCatalog.display_name(place)
+	return Loc.t("SERGİLE")
+
+
 ## İki dokunuşlu satın alma: ilk dokunuş kartı "SATIN AL?" durumuna getirir, ikincisi alır.
 ## (Tek dokunuşta alım, 120.000 ₺'lik bayrak direğini kazayla aldırıyordu.)
 func _buy(id: StringName) -> bool:
@@ -896,7 +948,13 @@ func _refresh_cards() -> void:
 				and _editor.tool == GarageEditor.Tool.FINISH and _editor.finish_id == id)
 			card.queue_redraw()
 			continue
-		if GarageDecor.is_vehicle(id) or GarageDecor.is_exclusive(id):
+		if GarageDecor.is_vehicle(id):
+			card.text = "%s\n%s" % [title, _vehicle_place(id)]
+			_fit_card(card)
+			card.disabled = false
+			card.queue_redraw()
+			continue
+		if GarageDecor.is_exclusive(id):
 			card.text = "%s\n%s" % [title, Loc.t("SERGİLE") if _decor.available_of(id) > 0 else Loc.t("SERGİLENİYOR")]
 			_fit_card(card)
 			card.disabled = false

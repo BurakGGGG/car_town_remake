@@ -60,6 +60,10 @@ extends Node3D
 
 ## Yeni NPC sahneye eklendi ve kuruldu (tamir sistemi müşteri kararını bununla verir).
 signal vehicle_spawned(vehicle: TrafficVehicle)
+## Bir araç dörtlü yakıp durdu (start_hazard).
+signal hazard_started(vehicle: TrafficVehicle)
+## Süper araç ışıktan gaza basıp kalktı (TrafficVehicle.start_launch): CityAmbience lastik cıyağı çalar.
+signal vehicle_launched(vehicle: TrafficVehicle)
 
 ## Yol ucu dünyanın kenarına taşınmış (WorldDressing) doğma / kaybolma noktasının ESKİ konumu.
 ## Böyle bir noktada araç, eski konumdan başlayıp dışarı doğru kameranın görmediği İLK yerde doğar;
@@ -80,6 +84,12 @@ const EXOTIC_EVERY: int = 20
 const EXOTIC_MIN_GAP: int = 8
 ## Takip mesafelerinin (TrafficVehicle.stop_distance / follow_distance) varsaydığı iki yarım boy: burun 0,3 + 0,3.
 const NOMINAL_LENGTH: float = 0.6
+## DÖRTLÜ (2026-10-20, kullanıcı: "araçlar bazı yerlerde durup dörtlü yaksınlar, 3–5 saniye sonra devam etsinler,
+## nadir olarak"): HAZARD_GAP'te bir, ekranda görünen uygun bir araç HAZARD_TIME saniye durur. Görünen uygun araç
+## yoksa HAZARD_RETRY sonra yeniden bakılır (ekran dışında durması boşa olur).
+const HAZARD_GAP: Vector2 = Vector2(50.0, 110.0)
+const HAZARD_TIME: Vector2 = Vector2(3.0, 5.0)
+const HAZARD_RETRY: float = 6.0
 
 var vehicles: Array[TrafficVehicle] = []
 var spawn_points: Array[TrafficWaypoint] = []
@@ -115,6 +125,7 @@ var _honked: Dictionary = {}   # araç → korna çaldığı kaçak
 var sfx: TrafficSfx
 ## Şehir çevre sesleri (uğultu, araç lastikleri, kuşlar, ara sıra korna / uzak cıyaklama).
 var ambience: CityAmbience
+var _hazard_timer: float = 0.0
 ## Kaçak kavşakta takılırsa (beklenmedik engel) talep bu kadar sonra düşer: karşı eksen sonsuza dek beklemesin.
 const RUNNER_CLAIM_MAX: float = 8.0
 
@@ -137,11 +148,15 @@ func _ready() -> void:
 		_request_model(_candidates[i])
 	_rotate_timer = pool_rotate_interval
 	_spawn_timer = 0.3
+	_hazard_timer = _rng.randf_range(HAZARD_GAP.x, HAZARD_GAP.y) * 0.6
 
 
 func _physics_process(delta: float) -> void:
 	_poll_pending()
 	_rotate_pool(delta)
+	_hazard_timer -= delta
+	if _hazard_timer <= 0.0:
+		_hazard_timer = _rng.randf_range(HAZARD_GAP.x, HAZARD_GAP.y) if start_hazard() else HAZARD_RETRY
 	_spawn_timer -= delta
 	if _spawn_timer <= 0.0 and city_vehicle_count() < max_vehicles:
 		if _try_spawn():
@@ -571,6 +586,7 @@ func distance_to_vehicle_ahead(vehicle: TrafficVehicle) -> float:
 	forward.y = 0.0
 	forward = forward.normalized()
 	var best: float = INF
+	var nearest: TrafficVehicle = null
 	# Kaçan araç orta çizgide gider: kendi şeridindeki (0,3 yanındaki) yavaş aracı engel saymaz, yanından geçer
 	var lane_half: float = 0.18 if vehicle.fleeing else 0.35
 	for other: TrafficVehicle in vehicles:
@@ -590,8 +606,33 @@ func distance_to_vehicle_ahead(vehicle: TrafficVehicle) -> float:
 			continue  # karşıdan gelen
 		# stop / follow mesafeleri ~0,6 boylu araca göre ayarlı: uzun araç (minibüs, kamyonet) aynı tampon
 		# boşluğunu bıraksın diye fazla boy merkezden merkeze mesafeden düşülür (kısa araç yaklaşmaz)
-		best = minf(best, along - maxf(vehicle._front + other._front - NOMINAL_LENGTH, 0.0))
+		var gap: float = along - maxf(vehicle._front + other._front - NOMINAL_LENGTH, 0.0)
+		if gap < best:
+			best = gap
+			nearest = other
+	vehicle.leader = nearest
 	return best
+
+
+## DÖRTLÜ: `vehicle` verilmezse ekranda görünen uygun bir araç seçilir; kovalamaca sürerken olmaz. Duran araç (yoksa null).
+func start_hazard(vehicle: TrafficVehicle = null) -> TrafficVehicle:
+	if chase and chase.is_active():
+		return null
+	if vehicle == null:
+		var router: UiRouter = get_tree().get_first_node_in_group("ui_router") as UiRouter
+		if router and Hud.WORLD_COVERING_PLACES.has(router.current_place()):
+			return null   # dünya örtülü (garaj, mağaza, yarış…): kimse görmez
+		var seen: Array[TrafficVehicle] = []
+		for candidate: TrafficVehicle in vehicles:
+			if is_instance_valid(candidate) and candidate.can_hazard_stop() and not is_hidden(candidate.global_position):
+				seen.append(candidate)
+		if seen.is_empty():
+			return null
+		vehicle = seen[_rng.randi() % seen.size()]
+	if not vehicle.hazard_stop(_rng.randf_range(HAZARD_TIME.x, HAZARD_TIME.y)):
+		return null
+	hazard_started.emit(vehicle)
+	return vehicle
 
 
 # --- Kavşak geçiş sırası (eksen bazlı) ------------------------------------------

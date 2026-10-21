@@ -1,5 +1,8 @@
 // AUTO YARD Cloud Functions (car-town-remake).
 //   raceNewsPush    yarış haberi yazılınca alıcıya telefon bildirimi (mantık news.js)
+//   mailPush        yönetim paneli postaya hediye bırakınca alıcıya "hediyen var" bildirimi (mantık mail.js)
+//   promoRedeem     oyuncu kupon kodu girince doğrular, ödülü postaya bırakır (mantık promo.js)
+//   dailyStats      her gece günlük sayılar stats_daily/{gün}: hesaplı oyuncu, aktif 1/7/30 gün, bildirim, yeni hesap (stats.js)
 //   cleanupExpired  saatte bir süresi dolan davet / bildirim kaydı / şikâyet / e-posta kodu silinir (mantık cleanup.js)
 //   emailCodeSend   E-POSTA İLE GİRİŞ: 6 haneli kodu oyuncunun e-postasına yollar (mantık email_code.js, gönderim Resend)
 //   emailCodeVerify kodu doğrular, Firebase özel jetonu döner (oyun signInWithCustomToken ile girer)
@@ -7,7 +10,7 @@
 // Test: npm test. Bölge europe-west4: Firestore eur3 (europe-west1 / europe-west4) ile aynı yer.
 // Gönderim: firebase/ klasöründen `firebase deploy --only functions --project car-town-remake` (Blaze planı gerekir).
 
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onDocumentWritten, onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
@@ -16,6 +19,9 @@ const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { handleRaceNews } = require("./news");
+const { handleMailCreated } = require("./mail");
+const { handleRedeem } = require("./promo");
+const { writeDailyStats } = require("./stats");
 const { cleanupExpired } = require("./cleanup");
 const { sendCode, verifyCode, CodeError, clientIp } = require("./email_code");
 const { cleanupAccount } = require("./account_cleanup");
@@ -110,6 +116,28 @@ exports.raceNewsPush = onDocumentWritten(
   },
 );
 
+// Herkese gönderilen hediyede panel her oyuncuya bir belge yazar: aynı anda çok sayıda tetikleme (örnek başına 80 eşzamanlı).
+exports.mailPush = onDocumentCreated(
+  { document: "users/{uid}/mail/{mailId}", region: "europe-west4", maxInstances: 10 },
+  async (event) => {
+    const result = await handleMailCreated({
+      db: getFirestore(),
+      messaging: messaging(),
+      uid: event.params.uid,
+      mail: event.data ? event.data.data() : null,
+    });
+    console.log(`mailPush: ${result}`);
+  },
+);
+
+exports.promoRedeem = onDocumentCreated(
+  { document: "users/{uid}/redeem/{code}", region: "europe-west4", maxInstances: 5 },
+  async (event) => {
+    const result = await handleRedeem({ db: getFirestore(), uid: event.params.uid, code: event.params.code, now: Date.now() });
+    console.log(`promoRedeem: ${result}`);   // kod / UID günlüğe yazılmaz
+  },
+);
+
 // Auth "kullanıcı silindi" olayı yalnızca 1. nesilde var (2. nesil Auth olaylarını desteklemiyor, ikisi aynı dosyada
 // yan yana çalışır). 1. nesil europe-west4'ü desteklemiyor → europe-west1 (Firestore eur3 bu bölgeyi de kapsar).
 exports.accountCleanup = functionsV1.region("europe-west1").runWith({ timeoutSeconds: 300, memory: "512MB" })
@@ -117,6 +145,14 @@ exports.accountCleanup = functionsV1.region("europe-west1").runWith({ timeoutSec
     const deleted = await cleanupAccount({ db: getFirestore(), uid: user.uid });
     console.log(`accountCleanup: ${JSON.stringify(deleted)}`);   // yalnızca sayılar
   });
+
+exports.dailyStats = onSchedule(
+  { schedule: "10 3 * * *", region: "europe-west4", timeZone: "Europe/Istanbul", maxInstances: 1 },
+  async () => {
+    const { day, stats } = await writeDailyStats({ db: getFirestore(), auth: getAuth(), now: Date.now() });
+    console.log(`dailyStats ${day}: ${JSON.stringify(stats)}`);   // yalnızca sayılar
+  },
+);
 
 exports.cleanupExpired = onSchedule(
   { schedule: "every 60 minutes", region: "europe-west4", timeZone: "Europe/Istanbul", maxInstances: 1 },

@@ -97,6 +97,8 @@ func _ready() -> void:
 	_apply_language()
 	FontFallback.install()   # ipuçlarında ₺ / → (bkz. sınıf)
 	_build()
+	# UZAKTAN AYAR: zorunlu güncelleme / bakım kapısı yükleme sürerken de açılabilsin (kökte kalır, sahneden bağımsız)
+	AppConfig.ensure(get_tree())
 	# AdMob eklentisinin sınıfları yüklenirken `static var _plugin := _get_plugin(...)` çalışır;
 	# masaüstü / düzenleyicide sahte reklam düğümünü KÖKE ekler — arka plan iş parçacığında bu
 	# reddediliyordu (sahte reklamlar bozulurdu; Android'de get_singleton, sorun yok). Bu küçük zincir

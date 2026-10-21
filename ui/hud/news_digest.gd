@@ -14,7 +14,8 @@ extends RefCounted
 ##   ASK                   people, part (istediği parça)
 ##   PILES                 count (dolan yığın) · MOD_READY  car, category · MISSIONS  daily, weekly (bool)
 ##   GARAGE_BUILT          garage (sen yokken inşaatı biten araç garajı) · GARAGE_UPGRADED  garage, item (biten iç yükseltme)
-##   FRIEND_GARAGE         people, garage (arkadaşın aldığı lüks garaj: CAM SHOWROOM / UÇAK HANGARI)
+##   FRIEND_GARAGE         people, garage (arkadaşın aldığı lüks depo: VİTRİN / HANGAR DEPOSU)
+##   PARKING_FEE           money (sen yokken kesilen otopark faturası), count (gün), cars (otoparktaki araç)
 ## Kişi: {uid, name, av, frame, flag} (AvatarView / ProfileCard.avatar_for ile çizilir).
 
 const RACE_LOST: StringName = &"race_lost"
@@ -31,6 +32,7 @@ const MISSIONS: StringName = &"missions"
 const GARAGE_BUILT: StringName = &"garage_built"
 const GARAGE_UPGRADED: StringName = &"garage_upgraded"
 const FRIEND_GARAGE: StringName = &"friend_garage"
+const PARKING_FEE: StringName = &"parking_fee"
 
 ## Küçük işler sütuna çıkmaz, doğrudan KISA KISA şeridine iner (manşet olabilirler: gazetede başka haber yoksa).
 const BRIEF_KINDS: Array[StringName] = [PILES, MOD_READY, MISSIONS, GARAGE_UPGRADED]
@@ -81,7 +83,7 @@ static func _merge_group(kind: StringName, list: Array) -> Dictionary:
 	var out: Dictionary = {"kind": kind, "people": [], "count": 0, "money": 0, "jobs": 0, "minutes": 0, "full": false,
 		"finished": 0, "finished_money": 0, "finished_xp": 0,
 		"parts": {}, "likes": 0, "mods": [], "daily": false, "weekly": false, "car": &"", "part": &"", "garage": &"",
-		"item": &""}
+		"item": &"", "cars": 0}
 	var per_person: Dictionary = {}   # uid → [kişi, sayı, araç / parça]
 	for item: Dictionary in list:
 		var count: int = maxi(int(item.get("count", 1)), 1)
@@ -93,6 +95,7 @@ static func _merge_group(kind: StringName, list: Array) -> Dictionary:
 		for key: String in ["finished", "finished_money", "finished_xp"]:
 			out[key] = int(out[key]) + maxi(int(item.get(key, 0)), 0)
 		out["likes"] = int(out["likes"]) + maxi(int(item.get("likes", 0)), 0)
+		out["cars"] = maxi(int(out["cars"]), int(item.get("cars", 0)))
 		out["daily"] = bool(out["daily"]) or bool(item.get("daily", false))
 		out["weekly"] = bool(out["weekly"]) or bool(item.get("weekly", false))
 		var parts: Dictionary = item.get("parts", {}) if item.get("parts") is Dictionary else {}
@@ -168,6 +171,8 @@ static func weight(item: Dictionary) -> float:
 			return 29.0
 		GARAGE_UPGRADED:
 			return 24.0
+		PARKING_FEE:
+			return 27.0
 	return 0.0
 
 
@@ -200,6 +205,8 @@ static func section(item: Dictionary) -> String:
 			return Loc.t("EMLAK")
 		FRIEND_GARAGE:
 			return Loc.t("MAGAZİN")
+		PARKING_FEE:
+			return Loc.t("EKONOMİ")
 	return ""
 
 
@@ -267,9 +274,9 @@ static func title(item: Dictionary, seed: int) -> String:
 			return Loc.t("YENİ GÖREVLER MASADA!")
 		GARAGE_BUILT:
 			if count > 1:
-				return Loc.t("İNŞAAT SEZONU: %d GARAJ AÇILDI!") % count
+				return Loc.t("İNŞAAT SEZONU: %d DEPO AÇILDI!") % count
 			var garage: String = _garage(item.get("garage", &""))
-			return _pick(seed, [Loc.t("KURDELE KESİLDİ: %s AÇILDI!") % garage, Loc.t("YENİ GARAJ HAZIR: %s") % garage])
+			return _pick(seed, [Loc.t("KURDELE KESİLDİ: %s AÇILDI!") % garage, Loc.t("YENİ DEPO HAZIR: %s") % garage])
 		GARAGE_UPGRADED:
 			if count > 1:
 				return Loc.t("TADİLAT TAMAM: %d YÜKSELTME BİTTİ") % count
@@ -277,11 +284,14 @@ static func title(item: Dictionary, seed: int) -> String:
 				CarGarageCatalog.item_name(StringName(item.get("item", &"")))]
 		FRIEND_GARAGE:
 			if many:
-				return Loc.t("ZENGİNLER KULÜBÜ: %s LÜKS GARAJ AÇTI") % who
+				return Loc.t("ZENGİNLER KULÜBÜ: %s LÜKS DEPO AÇTI") % who
 			if count > 1:
-				return Loc.t("%s DURMUYOR: %d LÜKS GARAJ!") % [first, count]
+				return Loc.t("%s DURMUYOR: %d LÜKS DEPO!") % [first, count]
 			var bought: String = _garage(item.get("garage", &""))
 			return _pick(seed, [Loc.t("LÜKS HAMLE: %s, %s ALDI!") % [first, bought], Loc.t("%s ARTIK %s SAHİBİ!") % [first, bought]])
+		PARKING_FEE:
+			var bill: String = money_text(int(item.get("money", 0)))
+			return _pick(seed, [Loc.t("OTOPARKÇI KAPIDA: %s FATURA!") % bill, Loc.t("OTOPARK SAYACI DÖNDÜ: −%s") % bill])
 	return ""
 
 
@@ -352,13 +362,16 @@ static func deck(item: Dictionary) -> String:
 		MISSIONS:
 			return Loc.t("Ödüller seni bekliyor, GÖREVLER'e göz at.")
 		GARAGE_BUILT:
-			return Loc.t("Ustalar işini bitirdi, yeni garajın araçlarını bekliyor. GARAJLARIM'dan bir göz at.")
+			return Loc.t("Ustalar işini bitirdi, yeni deponda yer hazır: otoparktaki araçlar oraya geçti. DEPOLARIM'dan bir göz at.")
 		GARAGE_UPGRADED:
-			return Loc.t("İç yükseltmeler hazır: garajın artık daha değerli.")
+			return Loc.t("İç yükseltmeler hazır: deposun artık daha değerli.")
 		FRIEND_GARAGE:
 			if many:
-				return Loc.t("%s lüks garaj açtı. Mahallede rekabet kızışıyor!") % _who(people, false)
-			return Loc.t("%s yeni garajıyla mahallenin dilinde. Sıra sende: GARAJLARIM'a göz at.") % first
+				return Loc.t("%s lüks depo açtı. Mahallede rekabet kızışıyor!") % _who(people, false)
+			return Loc.t("%s yeni deposuyla mahallenin dilinde. Sıra sende: DEPOLARIM'a göz at.") % first
+		PARKING_FEE:
+			return Loc.tn("Otoparkta %d aracın var, her gün değerlerinin yüzde 5'i kesiliyor. Bir depo al, otoparkçıya para kaptırma!",
+				int(item.get("cars", 0))) % int(item.get("cars", 0))
 	return ""
 
 
@@ -399,14 +412,16 @@ static func brief(item: Dictionary) -> String:
 				return Loc.t("HAFTALIK GÖREVLER YENİLENDİ")
 			return Loc.t("GÜNLÜK GÖREVLER YENİLENDİ")
 		GARAGE_BUILT:
-			return Loc.t("%d GARAJ AÇILDI") % count if count > 1 else Loc.t("%s AÇILDI") % _garage(item.get("garage", &""))
+			return Loc.t("%d DEPO AÇILDI") % count if count > 1 else Loc.t("%s AÇILDI") % _garage(item.get("garage", &""))
 		GARAGE_UPGRADED:
-			return Loc.t("%d GARAJ YÜKSELTMESİ BİTTİ") % count if count > 1 \
+			return Loc.t("%d DEPO YÜKSELTMESİ BİTTİ") % count if count > 1 \
 				else Loc.t("%s YENİLENDİ") % _garage(item.get("garage", &""))
 		FRIEND_GARAGE:
 			if people.size() > 1:
-				return Loc.t("%s LÜKS GARAJ AÇTI") % who
+				return Loc.t("%s LÜKS DEPO AÇTI") % who
 			return Loc.t("%s %s ALDI") % [who, _garage(item.get("garage", &""))]
+		PARKING_FEE:
+			return Loc.t("OTOPARK FATURASI −%s") % money_text(int(item.get("money", 0)))
 	return ""
 
 
@@ -433,6 +448,8 @@ static func caption(item: Dictionary) -> String:
 			return Loc.t("Foto: açılış töreni")
 		FRIEND_GARAGE:
 			return Loc.t("Foto: %s") % _who(people)
+		PARKING_FEE:
+			return Loc.t("Foto: otopark gişesi")
 	return ""
 
 

@@ -187,7 +187,7 @@ static func garage_text(summary: Dictionary) -> String:
 	var top: StringName = StringName(SaveSafe.s(own[own.size() - 1]))
 	var cap: int = SaveSafe.i(summary.get("cap", 0))
 	return " · ".join(PackedStringArray([Loc.upper(CarGarageCatalog.display_name(top)),
-		Loc.tn("%d GARAJ", own.size()) % own.size(), Loc.tn("%d YER", cap) % cap]))
+		Loc.tn("%d DEPO", own.size()) % own.size(), Loc.tn("%d YER", cap) % cap]))
 
 
 ## Avatar resmi: kendi kartım PlayerProfile'dan, öne çıkanlar oyunla gelen portreden, diğerleri SocialManager

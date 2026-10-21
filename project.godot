@@ -41,7 +41,7 @@ project/assembly_name="CarTownRemake"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/GodotFirebaseAndroid/plugin.cfg", "res://addons/admob/plugin.cfg", "res://addons/GodotGooglePlayBilling/plugin.cfg")
+enabled=PackedStringArray("res://addons/GodotFirebaseAndroid/plugin.cfg", "res://addons/admob/plugin.cfg", "res://addons/GodotGooglePlayBilling/plugin.cfg", "res://addons/autoyard_android/plugin.cfg")
 
 [physics]
 

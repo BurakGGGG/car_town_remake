@@ -143,7 +143,8 @@ func _refresh() -> void:
 	_breakdown.add_child(_row(Loc.t("GELİŞTİRMELER"), GarageValue.upgrades_value(tree), false))
 	_breakdown.add_child(_row(Loc.t("TAMİR ALANLARI"), GarageValue.bays_value(tree), false))
 	_breakdown.add_child(_row(Loc.t("BOYA"), GarageValue.paint_value(tree), false))
-	_breakdown.add_child(_row(Loc.t("ARAÇ GARAJLARI"), GarageValue.garages_value(tree), false))
+	_breakdown.add_child(_row(Loc.t("ARAÇ DEPOLARI"), GarageValue.garages_value(tree), false))
+	_breakdown.add_child(_row(Loc.t("DEPO VİTRİNİ"), GarageValue.showcase_value(tree), false))
 
 	for child: Node in _ladder.get_children():
 		_ladder.remove_child(child)

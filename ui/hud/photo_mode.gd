@@ -146,6 +146,9 @@ func capture() -> void:
 	var result: Dictionary = GallerySaver.save_jpeg(bytes, _next_file_name())
 	if bool(result.get("ok", false)):
 		print("PhotoMode: fotoğraf kaydedildi → %s" % result.get("where", ""))
+		var missions: MissionManager = get_tree().get_first_node_in_group("missions") as MissionManager
+		if missions:
+			missions.count(&"photos")   # GÖREVLER: fotoğraf görevleri, FOTOĞRAFÇI başarımı
 		_show_toast(Loc.t("GALERİYE KAYDEDİLDİ"), HudPalette.INK)
 		if out.size() > 1 and out[1] is Image:
 			_show_thumb(out[1])

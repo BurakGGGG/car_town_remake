@@ -92,6 +92,14 @@ test("jetonu olmayan alıcı: gönderilmez, hakkı tüketmez (bildirimi sonra a�
   assert.equal(await handleRaceNews({ db, messaging: m, recipient: "B", sender: "A", before: win({ at: 1 }), after: win({ at: 2 }), now: H }), "sent");
 });
 
+test("YARIŞ HABERLERİ kapalı (prefs.race false): gönderilmez, hak tüketmez", async () => {
+  const db = fakeDb({ "push/p_B": { token: "tokB", lang: "tr", prefs: { race: false, gift: true } } });
+  const m = fakeMessaging();
+  assert.equal(await handleRaceNews({ db, messaging: m, recipient: "B", sender: "A", before: null, after: win(), now: 1 }), "muted");
+  assert.equal(m.sent.length, 0);
+  assert.equal("push_log/l_B_A" in db.store, false);
+});
+
 test("geçersiz jeton silinir, hak geri verilir", async () => {
   const db = fakeDb({ "push/p_B": { token: "old", lang: "es" } });
   const r = await handleRaceNews({ db, messaging: fakeMessaging("messaging/registration-token-not-registered"), recipient: "B", sender: "A", before: null, after: win(), now: 1 });

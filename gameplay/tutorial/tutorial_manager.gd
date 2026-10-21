@@ -19,11 +19,14 @@ const DECOR: StringName = &"decor"
 ## Hurdacı Necati'nin dersi (ilk hurdalık ziyareti). Rıza Usta'nın dört ustalık dersinden AYRI sayılır:
 ## "DERS x/4" numaraları ve all_done() onları kapsar; eski kayıt kuralı bu dersi bitmiş saymaz (yeni içerik).
 const JUNKYARD: StringName = &"junkyard"
-const EXTRA: Array[StringName] = [JUNKYARD]
+## DEPO DERSİ (otoparkta ücret ödeyen araç varken): OTOPARK ücreti, depo alma, park yeri, GARAJIM sergisi. Hurdalık
+## dersi gibi ustalık derslerinden ayrı; eski kayıt kuralı bitmiş saymaz.
+const GARAGES: StringName = &"garages"
+const EXTRA: Array[StringName] = [JUNKYARD, GARAGES]
 ## Ders sırası yalnızca numara için (DERS 2/4): dersler oyunda koşulu oluşunca başlar.
 const ALL: Array[StringName] = [BASICS, RACE, VEHICLES, DECOR]
 ## Ders bitince verilen ödül (₺). Atlanan ders ödül vermez.
-const REWARD: Dictionary = {BASICS: 500, RACE: 750, VEHICLES: 750, DECOR: 1000, JUNKYARD: 750}
+const REWARD: Dictionary = {BASICS: 500, RACE: 750, VEHICLES: 750, DECOR: 1000, JUNKYARD: 750, GARAGES: 1000}
 ## Eski kayıtta bu seviyeye ulaşmış oyuncu oyunu biliyor sayılır.
 const LEGACY_LEVEL: int = 2
 

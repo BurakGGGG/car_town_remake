@@ -210,6 +210,16 @@ func restore_photo(bytes: PackedByteArray) -> bool:
 	return _photo_tex != null
 
 
+## Yönetici fotoğrafı kaldırdı (moderation.photo_reset): kask olur, Google fotoğrafı da kullanılmaz. Oyuncu sonra yeni
+## bir avatar / fotoğraf seçebilir.
+func clear_photo_by_moderator() -> void:
+	if avatar.is_empty() and not use_google:
+		return
+	avatar = ""
+	use_google = false
+	_changed(true)
+
+
 ## Otomatik (Google ya da kask): elle seçilen avatar / fotoğraf bırakılır.
 func set_auto() -> void:
 	if avatar.is_empty():

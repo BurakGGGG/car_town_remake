@@ -232,6 +232,20 @@ func grant_exclusive(id: StringName) -> bool:
 	return true
 
 
+## HEDİYE kopyaları (POSTA, MailService): para / elmas düşmez, `purchased` yayılmaz (görev sayaçları satın alma
+## saymasın), rütbe kilidine bakılmaz; kopyalar DEPOYA girer. Kurucu eşya tek kopyadır (grant_exclusive). Yalnızca
+## garaja konan eşya (zemin / duvar); kaplama, karo deseni, duvar parçası ve araç verilmez.
+func grant(id: StringName, count: int = 1) -> bool:
+	if count <= 0 or not GarageDecor.exists(id) or GarageDecor.is_vehicle(id) or not GarageDecor.is_placeable(id):
+		return false
+	if GarageDecor.is_exclusive(id):
+		return grant_exclusive(id)
+	_owned[id] = owned_of(id) + count
+	_value_cache = -1
+	placement_changed.emit()
+	return true
+
+
 ## Sahip olunan kurucu eşyalar paletde görünsün (sahibi olmayanda hiç görünmez).
 func _list_exclusives() -> void:
 	var ids: Array[StringName] = []

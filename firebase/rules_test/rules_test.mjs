@@ -30,9 +30,18 @@ const garage = (over = {}) => ({
 });
 const req = (over = {}) => ({ name: "Usta Ali", code: "ABC234", at: 1, ...over });
 
-console.log("== players (değişmedi) ==");
+console.log("== players ==");
 await check("sahibi kaydını yazar", assertSucceeds(setDoc(doc(alice, "players/alice"), { save_version: 10, save_json: "{}", updated_at: 1 })));
 await check("başkası kaydı okuyamaz", assertFails(getDoc(doc(bob, "players/alice"))));
+const stats = (over = {}) => ({ money: 5000, gems: 40, level: 3, cars: 2, build: 11, ...over });
+const player = (over = {}) => ({ save_version: 10, save_json: "gz1:H4sI", stats: stats(), updated_at: 1, ...over });
+await check("özetli (stats) kayıt yazılır", assertSucceeds(setDoc(doc(alice, "players/alice"), player())));
+await check("stats'ta ek alan reddedilir", assertFails(setDoc(doc(alice, "players/alice"), player({ stats: stats({ admin: 1 }) }))));
+await check("stats metin değer reddedilir", assertFails(setDoc(doc(alice, "players/alice"), player({ stats: stats({ gems: "9" }) }))));
+await check("stats.lang (oyun dili) kabul", assertSucceeds(setDoc(doc(alice, "players/alice"), player({ stats: stats({ lang: "de" }) }))));
+await check("bilinmeyen dil reddedilir", assertFails(setDoc(doc(alice, "players/alice"), player({ stats: stats({ lang: "xx" }) }))));
+await check("60 KB kayıt kabul (eski 20 KB sınırı kalktı)", assertSucceeds(setDoc(doc(alice, "players/alice"), player({ save_json: "x".repeat(60000) }))));
+await check("100 KB kayıt reddedilir", assertFails(setDoc(doc(alice, "players/alice"), player({ save_json: "x".repeat(100000) }))));
 
 console.log("== garages ==");
 await check("sahibi g_uid yazar", assertSucceeds(setDoc(doc(alice, "garages/g_alice"), garage())));
@@ -259,9 +268,82 @@ await check("Almanca kabul edilir", assertSucceeds(setDoc(doc(bob, "push/p_bob")
 await check("Fransızca kabul edilir", assertSucceeds(setDoc(doc(bob, "push/p_bob"), tok({ lang: "fr" }))));
 await check("kısa jeton reddedilir", assertFails(setDoc(doc(bob, "push/p_bob"), tok({ token: "abc" }))));
 await check("ek alan reddedilir", assertFails(setDoc(doc(bob, "push/p_bob"), tok({ uid: "bob" }))));
+await check("bildirim türleri (prefs) yazılır", assertSucceeds(setDoc(doc(bob, "push/p_bob"), tok({ prefs: { race: false, gift: true } }))));
+await check("bilinmeyen tür reddedilir", assertFails(setDoc(doc(bob, "push/p_bob"), tok({ prefs: { spam: true } }))));
+await check("tür değeri bool olmalı", assertFails(setDoc(doc(bob, "push/p_bob"), tok({ prefs: { gift: 1 } }))));
 await check("sahibi siler", assertSucceeds(deleteDoc(doc(bob, "push/p_bob"))));
 await check("bildirim sınırı (push_log) istemciye kapalı: yazılamaz", assertFails(setDoc(doc(bob, "push_log/l_alice_bob"), { at: 0 })));
 await check("bildirim sınırı okunamaz", assertFails(getDoc(doc(alice, "push_log/l_alice_bob"))));
+
+console.log("== kayıt geçmişi (history) ==");
+const hist = (over = {}) => ({ save_json: "gz1:H4sI", stats: stats(), updated_at: 5, ...over });
+await check("saat dilimi yazılır (h05)", assertSucceeds(setDoc(doc(alice, "players/alice/history/h05"), hist())));
+await check("gün dilimi yazılır (d3)", assertSucceeds(setDoc(doc(alice, "players/alice/history/d3"), hist())));
+await check("dilimin üzerine yazılır", assertSucceeds(setDoc(doc(alice, "players/alice/history/h05"), hist({ updated_at: 9 }))));
+await check("geçersiz dilim (h24) reddedilir", assertFails(setDoc(doc(alice, "players/alice/history/h24"), hist())));
+await check("geçersiz dilim (keyfi kimlik) reddedilir", assertFails(setDoc(doc(alice, "players/alice/history/x1"), hist())));
+await check("başkasının geçmişine yazılamaz", assertFails(setDoc(doc(bob, "players/alice/history/h06"), hist())));
+await check("ek alan reddedilir", assertFails(setDoc(doc(alice, "players/alice/history/h07"), hist({ gems: 999 }))));
+await check("istemci geçmişi okuyamaz", assertFails(getDoc(doc(alice, "players/alice/history/h05"))));
+
+console.log("== uzaktan ayar (config) ==");
+await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "config/app"), { min_code: 10, latest_code: 11 }));
+await check("misafir (oturumsuz) okur", assertSucceeds(getDoc(doc(anon, "config/app"))));
+await check("giriş yapmış okur", assertSucceeds(getDoc(doc(alice, "config/app"))));
+await check("istemci yazamaz", assertFails(setDoc(doc(alice, "config/app"), { min_code: 0 })));
+await check("misafir yazamaz", assertFails(setDoc(doc(anon, "config/app"), { min_code: 0 })));
+await check("silinemez", assertFails(deleteDoc(doc(alice, "config/app"))));
+await check("listelenemez", assertFails(getDocs(collection(anon, "config"))));
+
+console.log("== posta kutusu (mail) ==");
+await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "users/alice/mail/m1"), { gems: 50, at: 1 }));
+await check("sahibi listeler", assertSucceeds(getDocs(collection(alice, "users/alice/mail"))));
+await check("başkası listeleyemez", assertFails(getDocs(collection(bob, "users/alice/mail"))));
+await check("başkası okuyamaz", assertFails(getDoc(doc(bob, "users/alice/mail/m1"))));
+await check("sahibi kendine hediye yazamaz", assertFails(setDoc(doc(alice, "users/alice/mail/m2"), { gems: 9999, at: 1 })));
+await check("sahibi hediyeyi değiştiremez", assertFails(setDoc(doc(alice, "users/alice/mail/m1"), { gems: 9999, at: 1 })));
+await check("başkası hediye yazamaz", assertFails(setDoc(doc(bob, "users/alice/mail/m3"), { gems: 1, at: 1 })));
+await check("başkası silemez", assertFails(deleteDoc(doc(bob, "users/alice/mail/m1"))));
+await check("sahibi alınca siler", assertSucceeds(deleteDoc(doc(alice, "users/alice/mail/m1"))));
+
+console.log("== kupon kodu (redeem) ==");
+const nowS = Math.floor(Date.now() / 1000);
+await check("oyuncu kod denemesi yazar", assertSucceeds(setDoc(doc(alice, "users/alice/redeem/REELS50"), { at: nowS })));
+await check("aynı kod ikinci kez yazılamaz", assertFails(setDoc(doc(alice, "users/alice/redeem/REELS50"), { at: nowS })));
+await check("sonucu okur", assertSucceeds(getDoc(doc(alice, "users/alice/redeem/REELS50"))));
+await check("başkası adına deneme yazılamaz", assertFails(setDoc(doc(bob, "users/alice/redeem/BOBCODE"), { at: nowS })));
+await check("biçimsiz kod (küçük harf) reddedilir", assertFails(setDoc(doc(alice, "users/alice/redeem/reels50"), { at: nowS })));
+await check("sonuç alanını istemci yazamaz", assertFails(setDoc(doc(alice, "users/alice/redeem/FAKEOK"), { at: nowS, status: "ok" })));
+await check("geçmiş tarihli deneme reddedilir (saat sınırı atlatılamaz)", assertFails(setDoc(doc(alice, "users/alice/redeem/OLDTRY"), { at: nowS - 7200 })));
+await check("kupon belgesi istemciye kapalı", assertFails(getDoc(doc(alice, "promo/REELS50"))));
+
+console.log("== moderasyon / yasak ==");
+const now = Math.floor(Date.now() / 1000);
+const banDb = (id, ban) => env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), `moderation/m_${id}`), ban ? { ban } : {}));
+const mallory = db("mallory"), trent = db("trent");
+await check("kendi moderasyon belgesini okur (yoksa da)", assertSucceeds(getDoc(doc(mallory, "moderation/m_mallory"))));
+await check("başkasınınkini okuyamaz", assertFails(getDoc(doc(bob, "moderation/m_mallory"))));
+await check("istemci kendi belgesini yazamaz (yasağı kaldıramaz)", assertFails(setDoc(doc(mallory, "moderation/m_mallory"), {})));
+await banDb("mallory", { kind: "social", reason: "name", until: now + 3600, at: now });
+await check("sosyal yasak: açık garaj yazılamaz", assertFails(setDoc(doc(mallory, "garages/g_mallory"), garage({ code: "MLR234" }))));
+await check("sosyal yasak: arkadaşlık isteği gönderilemez", assertFails(setDoc(doc(mallory, "users/bob/inbox/r_mallory"), req({ name: "Mallory", code: "MLR234" }))));
+await check("sosyal yasak: kod alınamaz", assertFails(setDoc(doc(mallory, "codes/MLR234"), { uid: "mallory" })));
+await check("sosyal yasak: fotoğraf yüklenemez", assertFails(setDoc(doc(mallory, "avatars/a_mallory"), { img: "x", hash: "0011aabb", at: 1 })));
+await check("sosyal yasak: bulut kaydı YAZILIR (oynamaya devam)", assertSucceeds(setDoc(doc(mallory, "players/mallory"), { save_version: 10, save_json: "{}", updated_at: 1 })));
+await check("sosyal yasak: bildirim jetonu yazılır", assertSucceeds(setDoc(doc(mallory, "push/p_mallory"), { token: "m".repeat(150), lang: "tr", at: 1 })));
+await check("sosyal yasak: kendi garajını silebilir (temizlik)", assertSucceeds(deleteDoc(doc(mallory, "garages/g_mallory"))));
+await check("yasaksız oyuncu etkilenmez", assertSucceeds(setDoc(doc(trent, "garages/g_trent"), garage({ code: "TRN234" }))));
+await banDb("mallory", { kind: "full", reason: "cheat", until: 0, at: now });
+await check("tam yasak (kalıcı): bulut kaydı yazılamaz", assertFails(setDoc(doc(mallory, "players/mallory"), { save_version: 10, save_json: "{}", updated_at: 2 })));
+await check("tam yasak: bildirim jetonu yazılamaz", assertFails(setDoc(doc(mallory, "push/p_mallory"), { token: "m".repeat(150), lang: "tr", at: 2 })));
+await check("tam yasak: sosyal de kapalı", assertFails(setDoc(doc(mallory, "garages/g_mallory"), garage({ code: "MLR234" }))));
+await check("tam yasak: kendi kaydını okuyabilir", assertSucceeds(getDoc(doc(mallory, "players/mallory"))));
+await check("tam yasak: kayıt geçmişi yazılamaz", assertFails(setDoc(doc(mallory, "players/mallory/history/h01"), { save_json: "{}", updated_at: 1 })));
+await banDb("mallory", { kind: "full", reason: "cheat", until: now - 60, at: now - 7200 });
+await check("süresi dolan yasak: kayıt yine yazılır", assertSucceeds(setDoc(doc(mallory, "players/mallory"), { save_version: 10, save_json: "{}", updated_at: 3 })));
+await check("süresi dolan yasak: garaj yine yazılır", assertSucceeds(setDoc(doc(mallory, "garages/g_mallory"), garage({ code: "MLR234" }))));
+await banDb("mallory", null);
+await check("yasak kaldırılınca (ban alanı yok) her şey açık", assertSucceeds(setDoc(doc(mallory, "users/bob/inbox/r_mallory"), req({ name: "Mallory", code: "MLR234" }))));
 
 console.log("== başka yollar ==");
 await check("bilinmeyen koleksiyon kapalı", assertFails(setDoc(doc(alice, "other/x"), { a: 1 })));

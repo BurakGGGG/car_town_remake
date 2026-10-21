@@ -65,6 +65,16 @@ func spend_money(amount: int) -> bool:
 	return true
 
 
+## Zorunlu ücret (OTOPARK faturası): bakiyenin yettiği kadarı düşer, bakiye sıfırın altına inmez. Harcama SAYILMAZ
+## (money_spent yok): görev sayaçları oyuncunun seçmediği gideri saymasın. Kesilen tutarı döndürür.
+func charge(amount: int) -> int:
+	var paid: int = clampi(amount, 0, _money)
+	if paid > 0:
+		_money -= paid
+		money_changed.emit(_money)
+	return paid
+
+
 ## Bakiyeyi doğrudan ayarlar (kayıttan yükleme / test). Negatif değer 0'a çekilir.
 func set_money(amount: int) -> void:
 	var value: int = maxi(amount, 0)

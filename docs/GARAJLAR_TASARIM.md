@@ -10,6 +10,10 @@ Durum: 2026-10-19. Kullanıcıyla soru-cevapla kararlaştırıldı.
 (`ui/hud/garage_screen.gd`): bugün tek bir garaj odası var ve içinde yalnızca lifteki araç duruyor.
 Bu belge ekranın arama/sıralama özelliğini ve 5 garajlık koleksiyon sistemini anlatır.
 
+> **2026-10-20 YENİDEN ÇERÇEVELEME → §10 DEPOLAR.** Ana dünyadaki garaj oyuncunun "evi" oldu; 5 garaj
+> **depo**ya, bekleme otoparkı ücretli **OTOPARK**'a dönüştü. §2–§6'daki "garaj" ve "bekleme" kuralları §10
+> ile çelişirse **§10 geçerlidir**.
+
 **Kayıt notu:** Oyun üretime çıkmadı. Üretime çıkınca bütün hesaplar silinecek, herkes sıfırdan
 başlayacak. Bu yüzden eski kayıtlar için göç yazılmıyor, kayıt biçimi serbestçe değişebilir.
 
@@ -305,3 +309,107 @@ Uzaktaki araçlarda gözle görülür bozulma yok. Telefonda denenmedi.
 - Yeni araç partileri gelince toplam kapasite yetecek mi?
 - Garaj ekranının sağ sütununda artık 7 plaka var (TAŞI eklendi); telefonda şerit sütunun solunda bitiyor.
   TAMİR plakasının sinyalini hiçbir yer dinlemiyor (bugün de işlevsiz): kaldırılırsa yer açılır.
+
+## 10. DEPOLAR (2026-10-20, kullanıcı kararları)
+
+Sorun: ana dünyadaki GARAJ (tamirhane, dekor, araç sergisi) ile GARAJLARIM'daki 5 garaj ve BEKLEYENLER üç ayrı
+"araç yeri" gibi duruyordu; bir araç hem sergide hem bir garajın park yerinde olabiliyordu.
+
+### Yeni model
+- **GARAJIM = ana dünyadaki garaj.** Oyuncunun evi. Araç sergisinde **sınır yok**: zemine ne kadar sığarsa.
+  Sergide duran araç başka hiçbir yerde yer kaplamaz.
+- **OTOPARK = ilk basamak** (eski bekleme otoparkı, çatı katı sahnesi). Sınırsız. Orada duran **her araç için her
+  gün araç değerinin %5'i** ödenir.
+- **DEPOLAR** (eski 5 garaj; toplu adı **DEPOLARIM**): bir kez alınır, ücret yoktur, kapasitesi vardır.
+
+| # | Depo | Fiyat | İnşaat | Seviye | Park yeri |
+|---|---|---|---|---|---|
+| 0 | OTOPARK | — | — | — | sınırsız, günlük %5 |
+| 1 | MAHALLE DEPOSU | 50.000 ₺ | 30 dk | sv. 1 | 4 → 6 |
+| 2 | SANAYİ DEPOSU | 150.000 ₺ | 1 sa | sv. 5 | 6 → 10 |
+| 3 | YERALTI DEPOSU | 900.000 ₺ | 4 sa | sv. 12 | 8 → 14 |
+| 4 | VİTRİN DEPOSU | 3.000.000 ₺ | 12 sa | sv. 20 | 10 → 18 |
+| 5 | HANGAR DEPOSU | 8.000.000 ₺ | 24 sa | sv. 30 | 18 → 30 |
+
+Yeni oyuncunun hiç deposu yoktur (MAHALLE artık ücretsiz başlangıç değil).
+
+### Araç gelince: YERLEŞTİR
+- Kasa açılınca, galeriden alınınca, restorasyon bitince **YERLEŞTİR** panosu çıkar: **GARAJIMA KOY** (düzenleme
+  kipi, araç parmakta), boş yeri olan **depolar**, **OTOPARK** (günlük ücretiyle).
+- Pano açılmadan / kapatılırsa araç **varsayılan yerde** kalır: boş yeri olan en üst depo, yoksa OTOPARK.
+- Sergiden kaldırılan araç ("depoya kaldır") da varsayılan yere gider.
+- Depoda yer açılınca otoparktaki araçlar geliş sırasıyla kendiliğinden depoya geçer (ücretten kurtulur).
+- TAŞI her yöne: depo ↔ depo ↔ OTOPARK; GARAJIM'a taşımak düzenleme kipinde yerleştirmektir.
+
+### Otopark ücreti
+- Dönem 24 saattir; otopark boşken sayaç işlemez (boş otoparka giren ilk araçla başlar).
+- Her dolan dönemde o an otoparktaki araçların ücreti (her biri değerinin %5'i, katalog fiyatı) kesilir.
+- Oyuncu uzun süre girmezse kaçırılan dönemlerin **en çok 3'ü** kesilir; para **asla sıfırın altına düşmez**.
+- Kesilen ücret OTO MANŞET'te "OTOPARK FATURASI" olarak görünür; HUD bildirim gösterir.
+
+### Kullanım
+- Bütün araçlar her yerden yarışır, modifiye ve boya görür, satılır ("bekleyen yarışamaz" kuralı kalktı).
+
+### Uygulama (2026-10-20, commit yok)
+- **Kurallar:** `CarGarageManager` HOME (sergi = `DecorManager` "car:<id>" örnekleri; `home_ids`, `_unhome`), OTOPARK
+  ücreti (`fee_of`, `daily_fee`, `next_fee_in`, `fees_between`, `fee_charged`; kayıtta `fee_since` + `fees`),
+  başlangıç deposu yok. `move_targets` otoparkı yalnız depolarda boş yer yokken verir (yer varken uzlaştırma aracı
+  ücretsiz depoya geri alırdı). `EconomyManager.charge`: bakiyenin yettiği kadar keser, `money_spent` yaymaz (görev
+  sayacı saymaz). `VehicleOwnership.vehicle_added` (galeri / kasa / hurdalık / ödül; kayıt yüklemesi değil), her
+  yerden yarış. `SaveManager._progress_json` ücret dönemini ve faturaları saymaz.
+- **YERLEŞTİR:** `ui/hud/car_placement_screen.gd` (UiRouter `car_placement`, MODAL). HUD kuyruğu `_queue_placement` /
+  `_try_placement`: ekran boşken (yalnız bir YER açık, ders / kasa açılışı / tören yok) açılır. GARAJIMA KOY →
+  `GarageEditScreen.place_on_open` + `GarageEditor.begin_place`. Testler `CT_NO_TUTORIAL=1` ile soruları kapatır,
+  panoyu sınayan test `hud.placement_prompts = true` verir.
+- **Ekranlar:** ARAÇLAR'da GARAJIM (lift odası) / OTOPARK (çatı katı, ücret notu) / depolar; TAŞI'da GARAJIMA KOY ve
+  (depolar doluyken) OTOPARK. DEPOLARIM merdiveninin ilk basamağı OTOPARK ("P", araç sayısı · günlük ücret · sıradaki
+  fatura), başlığın solunda GARAJIM düğmesi. Otopark kartı `assets/garages/rooftop/card.png` (`make_garage_cards.gd`).
+- **OTO MANŞET:** `NewsDigest.PARKING_FEE` (EKONOMİ) — sen yokken kesilen faturalar.
+- **Ders:** DEPO DERSİ (`TutorialManager.GARAGES`): otoparkta araç varken; ARAÇLAR → aracın yeri → OTOPARK → sıradaki
+  depo → SATIN AL (metin duruma göre) → İÇ YÜKSELTMELER (depo varsa) → GARAJIM → garaj değeri.
+- **Açık:** yeni oyuncunun hoş geldin aracı otoparkta kalırsa ilk günden 750 ₺/gün öder (karar gereği); ekonomi
+  simülasyonunda MAHALLE'ye (50.000 ₺) ne zaman yetiştiği ölçülmeli. Arkadaş ziyaretinde YERLEŞTİR yok.
+
+### Tur 2: GARAJIM yeri kalktı, depo isteği (2026-10-20, kullanıcı kararları, commit yok)
+- **ARAÇLAR'da "GARAJIM" yeri yok.** Ana garaj ARAÇLAR ekranının ‹ › döngüsünde değil; sekme aracı olan ilk depoyu /
+  otoparkı açar (`GarageScreen.has_browsable_cars` / `open_on`), hiçbiri yoksa DEPOLARIM'ı.
+- **DÜZENLE → ARAÇLAR kartları yeri yazar:** "GARAJDA" (sergide), depo adı ya da "OTOPARK · %s ₺/GÜN"
+  (`GarageEditScreen._vehicle_place`); küçük resmin sol üstünde yer rozeti (yeşil garaj / kutu / kırmızı araba),
+  çünkü alt satırdaki yer adı aracın adının devamı gibi okunuyordu.
+- **Sergideki araca dokun → dünyaya dön + yakınlaş + SERGİ PLAKASI** (`ui/hud/exhibit_plate.gd`, `ExhibitPlate`):
+  YARIŞA SEÇ, MODİFİYE (geçici lift görünümünde açılır, GERİ sergiye döner: `GarageScreen.open_home_mods`), DEPOYA TAŞI
+  (hedef listesi), SAT (iki dokunuş: ONAYLA: +%s ₺). Uzun basış düzenleme hareketi (`DecorHoldGesture.tapped`) kısa
+  dokunuşu ayırır. Dokunuş TÜM ARAÇLAR / DEPOLARIM'dan sergideki araca da gelir (`home_vehicle_chosen`).
+- **Depo isteği (oyuncu daha çok depo istesin):**
+  - **Otopark sayacı** HUD'da ARKADAŞLAR'ın altında, kırmızı "OTOPARK %d · −%s ₺/GÜN"; yalnız otoparkta araç varken;
+    basınca DEPOLARIM açılır ve OTOPARK seçilir.
+  - **DEPO VİTRİNİ prestiji:** depolarda duran araçların değerinin %10'u garaj değerine eklenir
+    (`GarageValue.showcase_value`, `SHOWCASE_RATE`); garaj değeri ekranında ayrı satır. Otopark saymaz.
+  - **Arkadaş ziyaretinde depolar:** açık garaj kaydı depoların yerleşimini taşır (`car_garages.garages.<id>.levels /
+    slots`, `PublicGarage.depot_layout`); ziyaret çubuğunda DEPOLARI → `VisitDepotsScreen` (salt okunur pişmiş iç
+    mekân, ‹ › depolar arası, araca dokun → adı). JSON sınırı aşılırsa yerleşim düşürülür (`without_depots`).
+- **Açık:** sergi plakası açılırken günlük giriş ödülü gibi geçici bildirim plakalarıyla üst üste binebiliyor
+  (tarama çakışma raporu); telefonda denenmedi.
+
+### Tur 3: ilk araç garaja, garaj dolunca depo yolu (2026-10-20, kullanıcı kararları, commit yok)
+- **İlk araç (hoş geldin kutusu) YERLEŞTİR sorulmadan garaja:** İLK TAMİR dersinde "AL, İLK ARACIN!" adımından sonra
+  düzenleme kipi araç parmakta açılır (GARAJINA KOY → BİTİR adımları); ders yoksa HUD aynısını yapar
+  (`Hud.first_car`, `place_first_car`). Böylece yeni oyuncunun ilk aracı otoparkta ücret ödemez. Sonraki araçlar
+  garajda yer varken YERLEŞTİR panosunu görür (kullanıcı seçimi: yalnız ilk araç doğrudan).
+- **Garaj dolu = yeni aracın izi ana garajın zeminine hiçbir yerde (dik / yan) sığmıyor** (`GarageDecorView.has_room_for`,
+  `Hud.fits_home`). O zaman YERLEŞTİR sorulmaz, araç varsayılan yerinde kalır (boş yeri olan depo, yoksa otopark):
+  - DEPO DERSİ yapılmadıysa ders başlar: kart "GARAJIN DOLDU!" → "YENİ ARACIN NEREDE?" (ARAÇLAR o araçla açılır,
+    `GarageScreen.open_on_vehicle`) → derse olağan adımlarla devam (`Hud.garage_full_vehicle`).
+  - Ders yapıldıysa kısa, basılabilir bildirim: "<ARAÇ> → <YER> / GARAJINDA YER YOK · GÖRMEK İÇİN DOKUN"; dokununca
+    ARAÇLAR o araçla açılır (`_show_notice(..., action)`).
+- **Ana garaj kapasitesi (geçici ölçüm betiği, `place_free` ile sıkı dizilim, 1 tamir alanı, dekorsuz):** sv. 1 zemin 2,1 × 1,6 →
+  karışık 4 araç (küçük 5, büyük 2); sv. 2 (3,7 × 2,3) → 22; sv. 3 (4,7 × 3,0) → 40; sv. 4 (5,6 × 3,7) → ~70. Yani
+  garaj pratikte yalnız sv. 1'de ya da zemin dekorla doluyken dolar.
+- **Yeni oyuncu simülasyonu (sim_progress'teki iyi oyuncu, 120 dk, ilk araç ve sonrakiler garaja):** 0. dk 2 araç
+  (hoş geldin + başlangıç gemiyle kasa), 14. dk 3., 72. dk 4.; hepsi GARAJIM'a sığdı, otopark hiç kullanılmadı (ücret 0).
+  Garaj sv. 2'ye ~60. dk'da çıkar. Toplam tamir kazancı 50.000 ₺'ye 60. dk'da ulaşır; yükseltmelere harcayan oyuncunun
+  bakiyesi MAHALLE'ye 90. dk'da yeter. Günlük giriş / görev gemleri simülasyonda yok (araç sayısı gerçekte biraz fazla).
+- **Açık karar:** sergi zemin kadar (sınırsız) kaldıkça garaj ilk saatlerde dolmuyor; depo isteği ancak zemin dekorla
+  dolunca ya da oyuncu otoparkı seçince doğar. Depoyu öne çıkarmak için sergiye seviyeye bağlı araç sınırı
+  düşünülebilir (kullanıcıya soruldu).
+

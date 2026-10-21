@@ -11,9 +11,11 @@ extends Node
 ## SaveManager'ındır; bu node yalnızca onu buluta taşır.
 ##
 ## Firestore dokümanı: players/{uid} = {profile: {display_name, email, photo_url}, save_version,
-## save_json, updated_at}. Kayıt tek bir JSON string'i olarak durur: plugin Godot dizilerini Firestore'un
+## save_json, stats, updated_at}. Kayıt tek bir JSON string'i olarak durur: plugin Godot dizilerini Firestore'un
 ## kabul etmediği Java dizisi olarak gönderdiği için iç içe alan yazılamaz; format da böylece birebir
-## local dosyayla aynı kalır. Token / şifre / credential hiçbir yere yazılmaz (Firebase Auth yönetir).
+## local dosyayla aynı kalır. Metin gzip + base64 olarak yazılır (CloudPack, 2026-10-21: dekorlu kayıt 20 KB kural
+## sınırını aşıyordu); karşılaştırmalar ve cloud_sync.json hep AÇIK JSON'la yapılır. stats_of = yönetim paneli için
+## okunur özet (para / elmas / seviye / araç / sürüm). Token / şifre / credential hiçbir yere yazılmaz (Firebase Auth yönetir).
 ##
 ## HESAP MODELİ: misafir = Firebase oturumu YOK (anonim hesap açılmaz; bulut kaydı zaten yalnızca
 ## hesap UID'sine yazılır). Hesap = Firebase UID'si (Google ya da Facebook ile girilir; Firebase'de "e-posta
@@ -100,6 +102,10 @@ const CarHitboxScript: GDScript = preload("res://car_hitbox.gd")
 
 const PLUGIN_NAME: String = "GodotFirebaseAndroid"
 const COLLECTION: String = "players"
+## KAYIT GEÇMİŞİ (2026-10-21, destek: "ilerlemem gitti"): players/{uid}/history/{dilim}. Başarılı bulut yazmasından sonra
+## saatte bir h00–h23 (saatin dilimi), günde bir d0–d6 (günün dilimi) üzerine yazılır: son 24 saat + son 7 gün, silme gerekmez.
+## Yönetim paneli listeler, seçileni POSTA ile geri yükler (restore_snapshot).
+const HISTORY: String = "history"
 ## Plugin'in "doküman yok" hata metni (Firestore.kt getDocument).
 const NOT_FOUND_ERROR: String = "Document does not exist"
 ## Bulut kaydındaki profil alanları — firestore.rules isValidProfile ile AYNI olmalı (fazlası reddedilir).
@@ -152,6 +158,7 @@ var _uploading_json: String = ""
 var _dirty: bool = false            # buluta gitmemiş local değişiklik var
 var _applying: bool = false         # buluttan yükleme sırasındaki local kayıt tekrar yüklenmesin
 var _signing_out: bool = false
+var _force_signout: bool = false   # TAM YASAK: süren yazma başarısız olsa da çıkılır
 var _signout_resets_local: bool = true   # false: veriler zaten silindi (hesap silme sonrası çıkış)
 var _delete_uid: String = ""        # silinmekte olan hesabın UID'i (yeniden girişte aynı hesap mı)
 var _email_http: HTTPRequest
@@ -479,18 +486,21 @@ func _email_error_text(result: Dictionary) -> String:
 
 ## ÇIKIŞ YAP: bekleyen değişiklik önce buluta yazılır; yazılamıyorsa çıkış YAPILMAZ (ilerleme
 ## kaybolmasın). Çıkınca bu cihaz yeni misafir oyununa döner, eski kayıt yedeklenir.
-func sign_out() -> void:
+## force (TAM YASAK, ModerationWatch): kayıt buluta yazılamaz (kural reddeder) — beklemeden çıkılır; cihazdaki ilerleme
+## her çıkışta olduğu gibi SIGNOUT_BACKUP_PATH'e yedeklenir.
+func sign_out(force: bool = false) -> void:
 	if _fb == null or not is_authenticated() or _signing_out:
 		return
-	if _state == State.CONFLICT:
+	if _state == State.CONFLICT and not force:
 		notice.emit(Loc.t("Önce hangi kaydı kullanacağını seçmelisin."))
 		return
 	if _op not in [Op.NONE, Op.SET]:
 		return
 	_upload_timer.stop()
 	_signing_out = true
+	_force_signout = force
 	# ERROR'da bulut daha yeni bir sürümden: üzerine yazılmaz, local yedeklenip çıkılır
-	if _state != State.ERROR and _local_differs_from_synced():
+	if _state != State.ERROR and not force and _local_differs_from_synced():
 		if _op == Op.NONE:
 			_upload_now()   # bitince _on_write_completed devam eder / vazgeçer
 		return
@@ -708,6 +718,7 @@ func _on_sign_out_result(success: bool) -> void:
 		return
 	_op = Op.NONE
 	_signing_out = false
+	_force_signout = false
 	if not success:
 		notice.emit(Loc.t("Çıkış yapılamadı"))
 		if _state == State.DELETING:
@@ -837,7 +848,10 @@ func _on_get_completed(result: Dictionary) -> void:
 	if bool(result.get("status", false)):
 		var data: Variant = result.get("data")
 		var doc: Dictionary = data if data is Dictionary else {}
-		_decide(_str(doc.get("save_json")))
+		var raw: String = _str(doc.get("save_json"))
+		var cloud_json: String = CloudPack.unpack(raw)
+		# Açılamayan sıkışık kayıt "bulut yok" sayılmaz (üzerine yazılırdı): ham metin okunamaz kayıt olarak ERROR'a gider
+		_decide(cloud_json if not cloud_json.is_empty() else raw)
 	elif _str(result.get("error")) == NOT_FOUND_ERROR:
 		_decide("")
 	else:
@@ -965,9 +979,27 @@ func _upload_now() -> void:
 	_fb.firestoreSetDocument(COLLECTION, get_uid(), {
 		"profile": profile,
 		"save_version": SaveManager.SAVE_VERSION,
-		"save_json": _uploading_json,
+		"save_json": CloudPack.pack(_uploading_json),
+		"stats": stats_of(_save.snapshot()),
 		"updated_at": int(Time.get_unix_time_from_system()),
 	}, false)
+
+
+## Belgenin okunur özeti (players.stats): kayıt sıkışık durduğu için yönetim paneli oyuncunun parasını / elmasını /
+## seviyesini buradan görür ve arar. Yalnızca gösterim: oyun bu alanı hiç okumaz, gerçek değer kayıttadır.
+static func stats_of(data: Dictionary) -> Dictionary:
+	var economy: Dictionary = data.get("economy", {}) if data.get("economy") is Dictionary else {}
+	var progress: Dictionary = data.get("progress", {}) if data.get("progress") is Dictionary else {}
+	var vehicles: Dictionary = data.get("vehicles", {}) if data.get("vehicles") is Dictionary else {}
+	var owned: Variant = vehicles.get("owned", [])
+	return {
+		"money": SaveSafe.i(economy.get("money", 0)),
+		"gems": SaveSafe.i(progress.get("gems", 0)),
+		"level": maxi(SaveSafe.i(progress.get("level", 1)), 1),
+		"cars": (owned as Array).size() if owned is Array else 0,
+		"build": AppInfo.version_code(),
+		"lang": Loc.current(),   # hedefli gönderim (panel dile göre süzer); kural yalnızca 5 dili kabul eder
+	}
 
 
 func _on_write_completed(result: Dictionary) -> void:
@@ -977,6 +1009,7 @@ func _on_write_completed(result: Dictionary) -> void:
 	_op_timer.stop()
 	if bool(result.get("status", false)):
 		_mark_synced(_uploading_json)
+		_write_history(_uploading_json)
 		if _signing_out:
 			# Yazma sürerken yeni değişiklik gelmiş olabilir: hepsi bulutta olmadan çıkılmaz
 			if _local_differs_from_synced():
@@ -985,8 +1018,53 @@ func _on_write_completed(result: Dictionary) -> void:
 				_finish_sign_out()
 		elif _dirty:
 			_request_upload()
+	elif _signing_out and _force_signout:
+		_finish_sign_out()   # tam yasak: yazma reddedildi, beklenmeden çıkılır
 	else:
 		_go_offline(_str(result.get("error")))
+
+
+## Saatin / günün dilimine henüz yazılmadıysa geçmişe yazar (sonucu beklenmez: dilim kimliği UID değil, yazma sonucu
+## bu düğümün işlemiyle karışmaz). Hangi saatte / günde yazıldığı cloud_sync.json'da hesap başına tutulur.
+func _write_history(json: String) -> void:
+	var now: int = int(Time.get_unix_time_from_system())
+	var hour: int = now / 3600
+	var day: int = now / 86400
+	if _str(_meta.get("history_uid")) != get_uid():
+		_meta["history_uid"] = get_uid()
+		_meta.erase("history_hour")
+		_meta.erase("history_day")
+	var slots: Array[String] = []
+	if SaveSafe.i(_meta.get("history_hour", -1)) != hour:
+		slots.append("h%02d" % (hour % 24))
+		_meta["history_hour"] = hour
+	if SaveSafe.i(_meta.get("history_day", -1)) != day:
+		slots.append("d%d" % (day % 7))
+		_meta["history_day"] = day
+	if slots.is_empty():
+		return
+	_write_json(META_PATH, _meta)
+	var doc: Dictionary = {"save_json": CloudPack.pack(json), "stats": stats_of(_save.snapshot()), "updated_at": now}
+	for slot: String in slots:
+		_fb.firestoreSetDocument("%s/%s/%s" % [COLLECTION, get_uid(), HISTORY], slot, doc, false)
+
+
+## GERİ YÜKLEME (yönetim paneli → POSTA → AL, MailService): kayıt bu JSON'a döner. Şimdiki kayıt LOCAL_BACKUP_PATH'e
+## yedeklenir, dünya yeniden kurulur; yeni sahnenin açılış senkronu geri yüklenen kaydı buluta yazar (yalnızca bu cihaz
+## değişti). Oyun açıkken de güvenli: çakışma penceresi çıkmaz. Kayıt okunamıyorsa hiçbir şey değişmez.
+func restore_snapshot(json: String) -> bool:
+	var data: Dictionary = _parse_cloud(json)
+	if data.is_empty():
+		return false
+	_write_text(LOCAL_BACKUP_PATH, _save.snapshot_json())
+	_applying = true
+	var ok: bool = _save.apply_snapshot(data)
+	_applying = false
+	if not ok:
+		return false
+	_save.save_game()
+	_reload_world(Loc.t("Kaydın geri yüklendi."))
+	return true
 
 
 func _local_differs_from_synced() -> bool:

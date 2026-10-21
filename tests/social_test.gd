@@ -407,7 +407,8 @@ func _run() -> void:
 	check(SocialNames.is_valid_code(alice_code) and fb.store.get("codes/" + alice_code, {}).get("uid") == "alice", "kod sunucuda: %s" % alice_code)
 	var gdoc: Dictionary = garage_doc("alice")
 	check(gdoc.get("name") == "Usta Ali" and gdoc.get("code") == alice_code, "açık garaj yazıldı")
-	check(not SaveSafe.s(gdoc.get("garage_json", "")).contains("money"), "açık garajda para yok")
+	check(SaveSafe.s(gdoc.get("garage_json", "")).begins_with(CloudPack.PREFIX), "açık garaj sıkışık yazılır")
+	check(not CloudPack.unpack(SaveSafe.s(gdoc.get("garage_json", ""))).contains("money"), "açık garajda para yok")
 	check(not fb.store.has("garages/alice") and not fb.store.has("codes/alice"), "çıplak UID kimlikli belge yok")
 
 	print("== 3) Yayın: kayıttan sonra açık garaj güncellenir, bulut kaydıyla karışmaz ==")
@@ -415,11 +416,11 @@ func _run() -> void:
 	(w["eco"] as EconomyManager).set_money(12345)
 	(w["save"] as SaveManager).save_game()
 	var published: bool = await until(func() -> bool:
-		return SaveSafe.s(garage_doc("alice").get("garage_json", "")).contains("hyundai_getz"), 5.0)
+		return CloudPack.unpack(SaveSafe.s(garage_doc("alice").get("garage_json", ""))).contains("hyundai_getz"), 5.0)
 	check(published, "yeni araç açık garajda")
 	await until(func() -> bool: return not cloud().is_busy() and cloud().get_state() == CloudSaveManager.State.SYNCED, 5.0)
 	var cloud_ok: bool = await until(func() -> bool:
-		return SaveSafe.s(fb.store.get("players/alice", {}).get("save_json", "")).contains("12345"), 5.0)
+		return CloudPack.unpack(SaveSafe.s(fb.store.get("players/alice", {}).get("save_json", ""))).contains("12345"), 5.0)
 	check(cloud_ok, "bulut kaydı da güncel (iki sistem aynı sinyalleri paylaşıyor)")
 	check(cloud().get_state() == CloudSaveManager.State.SYNCED, "bulut SYNCED kaldı")
 	var writes_before: int = fb.calls.filter(func(c: String) -> bool: return c.begins_with("set garages")).size()

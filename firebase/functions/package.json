@@ -7,7 +7,7 @@
     "node": "22"
   },
   "scripts": {
-    "test": "node --test test/news.test.js test/cleanup.test.js test/email_code.test.js test/account_cleanup.test.js",
+    "test": "node --test test/news.test.js test/mail.test.js test/promo.test.js test/stats.test.js test/cleanup.test.js test/email_code.test.js test/account_cleanup.test.js",
     "cleanup-e2e": "cd .. && firebase emulators:exec --only firestore --project demo-cartown \"node functions/test/cleanup_e2e.mjs\"",
     "e2e": "cd .. && firebase emulators:exec --only firestore,functions --project demo-cartown \"node functions/test/e2e.mjs\"",
     "email-e2e": "cd .. && firebase emulators:exec --only auth,firestore,functions --project demo-cartown \"node functions/test/email_e2e.mjs\"",

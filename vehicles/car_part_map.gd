@@ -31,6 +31,8 @@ class_name CarPartMap
 ## extract: kaynakta başka parçaya kaynamış teker; tools/optimize_car.gd silindir bölgesini yeni parçaya ayırır
 ##   ({part, new_part, center, radius, half_width}); çalışma zamanında ek bir şey gerekmez. Silindir yerine
 ##   {box_min, box_max} kutusu da verilebilir (tavan rayına kaynamış ışık çubuğu yarısı).
+## hazards: dörtlü halelerinin yeri (HazardLights.corners) lamba parçası yok ya da eksikse — {front: [x, y], rear: [x, y]}
+##   araç uzayında, x aynalanır, z gövdenin ön / arka yüzü; yalnız gereken uç yazılır (öbürü lamba parçasından).
 ## beacons: police_lights'ın parlama haleleri — [{pos: [x, y, z], color, side}] (araç uzayı; side -1 sol / +1 sağ,
 ##   aynı yarının texel'leriyle aynı anda çakar). Konumlar ışık parçalarının ölçülmüş kutusundan.
 
@@ -63,6 +65,7 @@ const MAPS: Dictionary = {
 		"wheel_axes": {"fl": [0.0796, 0.3355, 0.0777], "fr": [0.0789, 0.3357, 0.0775], "rl": [0.0768, -0.2813, 0.0768], "rr": [0.0773, -0.2815, 0.0765]},
 	},
 	"res://assets/cars/hyundai_era.tscn": {
+		"hazards": {"front": [0.16, 0.182]},  # dörtlü: far rolü tampondaki sis lambası (qa/dortlu_konum_qa.gd -- yakin)
 		"default_paint": Color(0.918, 0.910, 0.918),  # dokunun baskın kaporta rengi (#EAE8EA); paint mask ile aynı olmalı
 		"body": [0, 1, 2, 7, 14, 15, 16, 17, 20, 21, 22, 26, 27, 31, 40, 43, 47, 48, 53, 60, 62, 64, 65, 66, 70, 72, 73, 74],
 		"mirrors": [34, 35],
@@ -195,6 +198,7 @@ const MAPS: Dictionary = {
 		"wheel_axes": {"fl": [0.0741, 0.3149, 0.0754], "fr": [0.0755, 0.3149, 0.0754], "rl": [0.0765, -0.2843, 0.0763], "rr": [0.0751, -0.2844, 0.0763]},
 	},
 	"res://assets/cars/ford_focus.tscn": {
+		"hazards": {"rear": [0.15, 0.215]},  # dörtlü: stop rolü lambanın iç ucu (qa/dortlu_konum_qa.gd -- yakin)
 		"default_paint": Color(0.886, 0.910, 0.933),  # boya maskesi aracının ölçtüğü fabrika rengi (#E2E8EE)
 		"body": [0, 4, 8, 9, 10, 11, 12, 15, 16, 17, 19, 20, 30, 32, 39, 43, 48, 51, 54, 55],
 		"mirrors": [34, 36, 38],
@@ -209,6 +213,7 @@ const MAPS: Dictionary = {
 		"wheel_axes": {"fl": [0.0853, 0.3000, 0.0806], "fr": [0.0852, 0.2999, 0.0815], "rl": [0.0853, -0.2971, 0.0802], "rr": [0.0859, -0.2979, 0.0806]},
 	},
 	"res://assets/cars/honda_civic.tscn": {
+		"hazards": {"rear": [0.16, 0.2]},  # dörtlü: lamba parçası yok / eksik, qa/dortlu_konum_qa.gd -- yakin ile ölçüldü
 		"default_paint": Color(0.820, 0.824, 0.831),  # boya maskesi aracının ölçtüğü fabrika rengi (#D1D2D4)
 		"body": [0, 3, 4, 9, 17, 18, 26, 40],
 		"mirrors": [21, 22],
@@ -223,6 +228,7 @@ const MAPS: Dictionary = {
 		"wheel_axes": {"fl": [0.0804, 0.3164, 0.0805], "fr": [0.0803, 0.3161, 0.0807], "rl": [0.0784, -0.2808, 0.0817], "rr": [0.0779, -0.2809, 0.0813]},
 	},
 	"res://assets/cars/hyundai_accent_blue.tscn": {
+		"hazards": {"front": [0.16, 0.18]},  # dörtlü: haritadaki far rolü sis lambası (qa/dortlu_konum_qa.gd -- yakin)
 		"default_paint": Color(0.922, 0.929, 0.925),  # boya maskesi aracının ölçtüğü fabrika rengi (#EBEDEC)
 		"body": [0, 10, 13, 14, 15, 17, 20, 22, 23, 24, 25, 26, 27, 32, 37, 39, 46, 52],
 		"mirrors": [28, 30, 33, 34],
@@ -238,6 +244,7 @@ const MAPS: Dictionary = {
 		"wheel_axes": {"fl": [0.0873, 0.2948, 0.0909], "fr": [0.0884, 0.2952, 0.0905], "rl": [0.0894, -0.3026, 0.0909], "rr": [0.0895, -0.3023, 0.0905]},
 	},
 	"res://assets/cars/seat_leon.tscn": {
+		"hazards": {"front": [0.155, 0.178], "rear": [0.15, 0.216]},  # dörtlü: lamba rolleri farın / stobun iç ucu (qa/dortlu_konum_qa.gd -- yakin)
 		"default_paint": Color(0.890, 0.902, 0.922),  # boya maskesi aracının ölçtüğü fabrika rengi (#E3E6EB)
 		"body": [0, 6, 9, 10, 13, 14, 15, 19, 21, 27, 30, 43, 45],
 		"mirrors": [23, 24, 31, 35],
@@ -287,6 +294,7 @@ const MAPS: Dictionary = {
 		"wheel_axes": {"fl": [0.0835, 0.2987, 0.0827], "fr": [0.0853, 0.2985, 0.0824], "rl": [0.0872, -0.3044, 0.0818], "rr": [0.0873, -0.3048, 0.0809]},
 	},
 	"res://assets/cars/vw_golf_7.tscn": {
+		"hazards": {"front": [0.157, 0.178], "rear": [0.15, 0.23]},  # dörtlü: far rolü tampon lambası, stop rolü cam üstü (qa/dortlu_konum_qa.gd -- yakin)
 		"default_paint": Color(0.784, 0.024, 0.102),  # boya maskesi aracının ölçtüğü fabrika rengi (#C8061A)
 		"body": [1, 6, 7, 8, 15, 17, 19, 25, 26, 32, 40],
 		"mirrors": [13, 16],
@@ -304,6 +312,7 @@ const MAPS: Dictionary = {
 	# --- 2026-10-04 üçüncü parti (6 araç): roller tools/classify_roles.py ile (ikinci partiyle aynı
 	# sınıflandırıcı; özellikler tools/part_features.gd). Boya rengi make_paint_mask.gd ölçümüyle eşitlenir.
 	"res://assets/cars/alfa_romeo_159.tscn": {
+		"hazards": {"rear": [0.16, 0.2]},  # dörtlü: lamba parçası yok / eksik, qa/dortlu_konum_qa.gd -- yakin ile ölçüldü
 		"default_paint": Color(0.847, 0.835, 0.843),  # boya maskesi aracının ölçtüğü fabrika rengi (#D8D5D7)
 		"body": [0, 1, 8, 9, 10, 14, 24, 28, 29, 30, 32, 34, 35, 38, 41, 42],
 		"mirrors": [11, 12],
@@ -411,6 +420,7 @@ const MAPS: Dictionary = {
 	# --- 2026-10-11 dördüncü parti (4 araç): Camaro, S400, Corsa, Model Y — roller otomatik sınıflandırıcıdan,
 	# --- teker grupları/eksenleri tools/wheel_fit.gd ile ölçüldü.
 	"res://assets/cars/chevrolet_camaro.tscn": {
+		"hazards": {"front": [0.155, 0.15]},  # dörtlü: lamba parçası yok / eksik, qa/dortlu_konum_qa.gd -- yakin ile ölçüldü
 		"default_paint": Color(0.969, 0.820, 0.133),  # boya maskesi aracının ölçtüğü fabrika rengi (#F7D122); cars.json default_color ile aynı olmalı
 		"body": [0, 3, 6, 8, 9, 10, 11, 12, 14, 16, 17, 19, 20, 22, 23, 25, 26, 27, 30, 41, 44, 45, 46, 47, 48, 49],
 		"mirrors": [21],
@@ -440,6 +450,7 @@ const MAPS: Dictionary = {
 		"wheel_axes": {"fl": [0.0773, 0.3191, 0.0714], "fr": [0.0768, 0.3189, 0.0716], "rl": [0.0764, -0.2787, 0.0720], "rr": [0.0757, -0.2782, 0.0730]},
 	},
 	"res://assets/cars/opel_corsa.tscn": {
+		"hazards": {"rear": [0.188, 0.295]},  # dörtlü: lamba parçası yok / eksik, qa/dortlu_konum_qa.gd -- yakin ile ölçüldü
 		"default_paint": Color(0.902, 0.894, 0.910),  # boya maskesi aracının ölçtüğü fabrika rengi (#E6E4E8); cars.json default_color ile aynı olmalı
 		"body": [1, 7, 10, 15, 26, 27, 28, 33, 36, 37, 39, 42, 43],
 		"mirrors": [8, 9, 31, 34],
@@ -869,6 +880,7 @@ const MAPS: Dictionary = {
 	# → glass; 5 koyu tavan, 45 marşpiyel, 53/54/56/62 direkler → black_trim; 16 çamurluk iç kaplaması "jant"
 	# sanılmış, teker eksenini kaydırıyordu → black_trim
 	"res://assets/cars/togg_t10x.tscn": {
+		"hazards": {"front": [0.17, 0.2]},  # dörtlü: far rolü alttaki sis lambası (qa/dortlu_konum_qa.gd -- yakin)
 		"default_paint": Color(0.012, 0.314, 0.376),  # boya maskesi aracının ölçtüğü fabrika rengi #035060
 		"body": [0, 8, 10, 17, 18, 26, 27, 28, 42, 55, 60, 63, 65, 66, 68, 70, 75, 80, 81, 82],
 		"mirrors": [43, 44, 47, 67],
@@ -1030,6 +1042,7 @@ const MAPS: Dictionary = {
 		"extract": [{"part": 0, "new_part": 55, "center": [-0.1843, 0.0871, -0.2842], "radius": 0.083, "half_width": 0.033}],
 	},
 	"res://assets/cars/cupra_formentor.tscn": {
+		"hazards": {"rear": [0.175, 0.245]},  # dörtlü: lamba parçası yok / eksik, qa/dortlu_konum_qa.gd -- yakin ile ölçüldü
 		"default_paint": Color(0.212, 0.243, 0.298),  # boya maskesi aracının ölçtüğü fabrika rengi #363E4C
 		"body": [3, 6, 8, 9, 10, 11, 16, 18, 19, 21, 22, 26, 31, 32, 33, 34, 36, 37, 38, 41, 43, 45, 46, 49, 50, 53, 54, 57, 58, 61, 62, 63, 65],
 		"mirrors": [12, 17, 20, 67],
@@ -1056,6 +1069,7 @@ const MAPS: Dictionary = {
 	},
 	# Tek kabin kasalı kamyonet; 12/35/97 çamurluk içi ve aks parçaları "teker" sanılmıştı → black_trim
 	"res://assets/cars/ford_transit.tscn": {
+		"hazards": {"rear": [0.137, 0.11]},  # dörtlü: lamba parçası yok / eksik, qa/dortlu_konum_qa.gd -- yakin ile ölçüldü
 		"default_paint": Color(0.863, 0.847, 0.863),  # boya maskesi aracının ölçtüğü fabrika rengi #DCD8DC
 		"body": [0, 1, 9, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23, 24, 25, 26, 27, 28, 29, 30, 32, 33, 36, 37, 38, 39, 40, 42, 43, 44, 47, 48, 50, 51, 54, 56, 57, 59, 60, 61, 66, 67, 71, 76, 77, 78, 79, 80, 81, 82, 84, 85, 88, 91, 92, 94, 95, 96, 98],
 		"mirrors": [49, 53, 101],
@@ -1083,6 +1097,7 @@ const MAPS: Dictionary = {
 		"wheel_axes": {"fl": [0.0847, 0.3118, 0.0802], "fr": [0.0846, 0.3108, 0.0838], "rl": [0.0852, -0.2913, 0.0797], "rr": [0.0844, -0.2917, 0.0780]},
 	},
 	"res://assets/cars/mercedes_sprinter.tscn": {
+		"hazards": {"front": [0.132, 0.161]},  # dörtlü: lamba parçası yok / eksik, qa/dortlu_konum_qa.gd -- yakin ile ölçüldü
 		"default_paint": Color(0.851, 0.835, 0.875),  # boya maskesi aracının ölçtüğü fabrika rengi #D9D5DF
 		"body": [1, 2, 7, 8, 9, 12, 13, 17, 21, 25, 30, 34, 36, 38, 39, 40, 41, 42, 44, 46, 47, 48, 53],
 		"mirrors": [14, 15, 23, 27, 54],

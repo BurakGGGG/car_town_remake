@@ -220,7 +220,7 @@ func _refresh_rows() -> void:
 				main.text = Loc.t("PARA YETERSİZ") + "\n" + cost_line
 				main.disabled = true
 			CarGarageManager.ItemStatus.NOT_OWNED:
-				main.text = Loc.t("GARAJ HENÜZ YOK")
+				main.text = Loc.t("DEPO HENÜZ YOK")
 				main.disabled = true
 			_:
 				main.text = Loc.t("YÜKSELT") + "\n" + cost_line

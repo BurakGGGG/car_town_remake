@@ -59,6 +59,8 @@ static func run(tree: SceneTree) -> void:
 	root.add_child(coin)
 	for node: Node3D in PoliceLights.prewarm_nodes():   # ilk polis aracı trafiğe girerken shader derlenmesin
 		root.add_child(node)
+	for node: Node3D in HazardLights.prewarm_nodes():   # ilk dörtlüde de
+		root.add_child(node)
 	for i: int in FRAMES:
 		await tree.process_frame
 	if is_instance_valid(root):

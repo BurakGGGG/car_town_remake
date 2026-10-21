@@ -534,7 +534,7 @@ func _photo(item: Dictionary, area: Vector2, large: bool) -> Control:
 					_corner(stack, avatar, 6.0 * _scale)
 				else:
 					_centered(stack, avatar)
-		NewsDigest.GARAGE_BUILT, NewsDigest.GARAGE_UPGRADED, NewsDigest.FRIEND_GARAGE:
+		NewsDigest.GARAGE_BUILT, NewsDigest.GARAGE_UPGRADED, NewsDigest.FRIEND_GARAGE, NewsDigest.PARKING_FEE:
 			if large or people.is_empty():
 				var garage_icon: HudIcon = HudIcon.new()
 				garage_icon.kind = HudIcon.Kind.GARAGE

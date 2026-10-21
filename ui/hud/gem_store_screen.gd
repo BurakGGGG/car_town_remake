@@ -1,7 +1,7 @@
 class_name GemStoreScreen
 extends Control
-## MARKET (eski adıyla GEM MAĞAZASI) — iki sekme: GEM AL (gerçek parayla gem paketleri) ve PARAYA ÇEVİR
-## (gem → ₺, tek yön; GemExchange). Sol üstteki gem sayacına / MARKET düğmesine dokununca ya da "GEM YETERSİZ"
+## MARKET (eski adıyla GEM MAĞAZASI) — üç sekme: GEM AL (gerçek parayla gem paketleri), PARAYA ÇEVİR
+## (gem → ₺, tek yön; GemExchange) ve KOD GİR (kupon kodu, PromoService; kullanıcı kararı 2026-10-21). Sol üstteki gem sayacına / MARKET düğmesine dokununca ya da "GEM YETERSİZ"
 ## plakalarından açılır (MODAL, UiRouter id &"gem_store"). Her açılışta GEM AL sekmesiyle başlar. Kodla
 ## kurulur (.tscn yok).
 ##
@@ -26,6 +26,9 @@ const MAX_CARDS: int = 5
 const FILL: Vector2 = Vector2(0.86, 0.80)
 const TAB_GEMS: StringName = &"gems"
 const TAB_CASH: StringName = &"cash"
+const TAB_CODE: StringName = &"code"
+## Kupon kodu kabul edildi metninin rengi (taslaktaki yeşil; HUD paletinde yeşil yok).
+const OK_COLOR: Color = Color("2E7D4F")
 ## Çeviri iki dokunuşla onaylanır (geri alınamaz); ilk dokunuştan sonra bu süre içinde ikinci dokunuş gerekir.
 const CONFIRM_TIME: float = 3.0
 ## Bildirimin ekranda kalma süresi (sn).
@@ -48,6 +51,8 @@ var _notice_tween: Tween
 var _closing: bool = false
 var _tab: StringName = TAB_GEMS
 var _tab_buttons: Dictionary = {}   # sekme → PlateButton
+## Kart sırasının en yüksek boyu: KOD GİR panosu da bu boyda durur (sekme değişince pano boyu oynamaz).
+var _list_min_h: float = 0.0
 ## Onay bekleyen çeviri teklifinin sırası (-1: yok) ve onayın verildiği an (msn).
 var _confirm_offer: int = -1
 var _confirm_at: int = 0
@@ -136,7 +141,7 @@ func _build() -> void:
 	tabs.alignment = BoxContainer.ALIGNMENT_CENTER
 	tabs.add_theme_constant_override(&"separation", 8)
 	column.add_child(tabs)
-	for entry: Array in [[TAB_GEMS, Loc.t("GEM AL")], [TAB_CASH, Loc.t("PARAYA ÇEVİR")]]:
+	for entry: Array in [[TAB_GEMS, Loc.t("GEM AL")], [TAB_CASH, Loc.t("PARAYA ÇEVİR")], [TAB_CODE, Loc.t("KOD GİR")]]:
 		var tab: PlateButton = PlateButton.new()
 		tab.theme_type_variation = &"HudPlateSmall"
 		tab.text = entry[1]
@@ -214,6 +219,9 @@ func _refresh() -> void:
 	for child: Node in _list.get_children():
 		_list.remove_child(child)
 		child.queue_free()
+	if _tab == TAB_CODE:
+		_list.add_child(_code_panel())
+		return
 	if _tab == TAB_CASH:
 		var player: PlayerProgress = _player()
 		for i: int in GemExchange.OFFERS.size():
@@ -227,6 +235,95 @@ func _refresh() -> void:
 	var card_w: float = (_list.get_child(0) as Control).get_combined_minimum_size().x if _list.get_child_count() > 0 \
 		else CARD_WIDTH
 	_list.custom_minimum_size.x = card_w * MAX_CARDS + CARD_GAP * (MAX_CARDS - 1)
+	_list_min_h = maxf(_list_min_h, _list.get_combined_minimum_size().y)
+
+
+## KOD GİR: kupon kodu kutusu + KULLAN. Misafirde kutu kilitli ve neden yazılı (kod hesaba bir kez geçer).
+func _code_panel() -> PlatePanel:
+	var panel: PlatePanel = PlatePanel.new()
+	panel.name = "CodePanel"
+	panel.theme_type_variation = &"HudCarPlate"
+	panel.custom_minimum_size = Vector2(600.0, _list_min_h if _list_min_h > 0.0 else 300.0)
+	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var box: VBoxContainer = VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override(&"separation", 12)
+	panel.add_child(box)
+	box.add_child(_label(&"HudPlateTitle", Loc.t("Kupon kodun mu var?")))
+	var caption: Label = _label(&"HudInkCaption",
+		Loc.t("Instagram ve YouTube'da paylaştığımız kodu yaz. Her kod hesabına bir kez geçer, ödül postana düşer."))
+	caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	caption.custom_minimum_size = Vector2(560.0, 0.0)
+	box.add_child(caption)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override(&"separation", 10)
+	box.add_child(row)
+	var edit: LineEdit = LineEdit.new()
+	edit.name = "CodeEdit"
+	edit.placeholder_text = Loc.t("KOD")
+	edit.max_length = 16
+	edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	edit.custom_minimum_size = Vector2(0.0, 56.0)
+	edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	edit.add_theme_color_override(&"font_color", HudPalette.INK)
+	edit.add_theme_color_override(&"font_placeholder_color", HudPalette.INK_SOFT)
+	edit.add_theme_color_override(&"caret_color", HudPalette.INK)
+	edit.add_theme_font_size_override(&"font_size", 26)
+	for style_name: StringName in [&"normal", &"focus", &"read_only"]:
+		var style: StyleBoxFlat = StyleBoxFlat.new()
+		style.bg_color = HudPalette.PLATE_HOVER
+		style.border_color = HudPalette.PLATE_SELECTED_EDGE if style_name == &"focus" else HudPalette.INK
+		style.set_border_width_all(3)
+		style.set_corner_radius_all(8)
+		style.content_margin_left = 12.0
+		style.content_margin_right = 12.0
+		edit.add_theme_stylebox_override(style_name, style)
+	row.add_child(edit)
+	var use: PlateButton = PlateButton.new()
+	use.name = "UseButton"
+	use.theme_type_variation = &"HudPlate"
+	use.text = Loc.t("KULLAN")
+	use.highlight = true
+	use.focus_mode = Control.FOCUS_NONE
+	use.custom_minimum_size = Vector2(160.0, 56.0)
+	row.add_child(use)
+	var result: Label = _label(&"HudInkCaption", "")
+	result.name = "CodeResult"
+	result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	result.custom_minimum_size = Vector2(560.0, 0.0)
+	box.add_child(result)
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
+	if social == null or social.uid().is_empty():
+		edit.editable = false
+		use.disabled = true
+		result.text = PromoService.status_text("signin")
+	edit.text_changed.connect(func(text: String) -> void:
+		var code: String = PromoService.normalize(text)
+		if code != text:
+			edit.text = code
+			edit.caret_column = code.length())
+	var submit: Callable = func() -> void:
+		if use.disabled:
+			return
+		use.disabled = true
+		edit.editable = false
+		result.remove_theme_color_override(&"font_color")
+		result.text = Loc.t("Kod kontrol ediliyor…")
+		var outcome: Dictionary = await PromoService.redeem(get_tree(), edit.text)
+		if not is_instance_valid(result):
+			return   # sekme değişti / pano kapandı
+		var status: String = SaveSafe.s(outcome.get("status", ""))
+		result.text = PromoService.status_text(status)
+		result.add_theme_color_override(&"font_color", OK_COLOR if status == "ok" else HudPalette.DANGER)
+		use.disabled = false
+		edit.editable = true
+		if status == "ok":
+			edit.text = ""
+	use.pressed.connect(submit)
+	edit.text_submitted.connect(func(_t: String) -> void: submit.call())
+	return panel
 
 
 ## Paket kartı: hareketli çizim (rozetli), miktar, ad, fiyat plakası. Başlangıç paketi amber kart.

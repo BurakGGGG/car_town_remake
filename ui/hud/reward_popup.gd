@@ -43,8 +43,8 @@ func _ready() -> void:
 	_build()
 
 
-## summary: money, gems, xp (int), crates (Array: kasa adları), count (alınan ödül sayısı),
-## title (isteğe bağlı başlık, ör. gem satın alma).
+## summary: money, gems, xp (int), crates (Array: kasa adları, her biri "+1 ad"), items (Array: hazır satır metni,
+## ör. "+2 TAKIM DOLABI"), count (alınan ödül sayısı), title (isteğe bağlı başlık, ör. gem satın alma).
 func show_rewards(summary: Dictionary) -> void:
 	var count: int = int(summary.get("count", 1))
 	_title.text = Loc.t("ÖDÜLLER TOPLANDI!") if count > 1 else Loc.t("ÖDÜL KAZANDIN!")
@@ -71,6 +71,8 @@ func show_rewards(summary: Dictionary) -> void:
 			func(v: int) -> String: return xp_format % v, HudPalette.INK))
 	for crate_name: Variant in summary.get("crates", []):
 		rows.append(_text_row("+1 %s" % String(crate_name)))
+	for item: Variant in summary.get("items", []):
+		rows.append(_text_row(String(item)))
 	if rows.is_empty():
 		return
 	for row: Control in rows:

@@ -152,7 +152,7 @@ func _build() -> void:
 	_here_button = _query_button("HereButton", func() -> void:
 		_this_garage = _here_button.button_pressed
 		_rebuild())
-	_here_button.text = Loc.t("BU GARAJ")
+	_here_button.text = Loc.t("BURADAKİLER")
 	_here_button.toggle_mode = true
 	for button: PlateButton in [_class_button, _rarity_button, _sort_button, _here_button]:
 		row.add_child(button)
@@ -335,9 +335,10 @@ func _card(id: StringName, race: RaceManager, current: bool, racer: bool, garage
 		var info: Label = _label(&"HudInkCaption", "  ·  ".join(lines))
 		info.name = "Metric"
 		box.add_child(_wrap(info))
-	if garage != &"":   # garaj rozeti: aracın durduğu garaj, bekleme otoparkındaysa BEKLİYOR
-		var badge: Label = _label(&"HudInkCaption", Loc.t("BEKLİYOR") if garage == CarGarageManager.WAITING
-			else CarGarageCatalog.display_name(garage))
+	if garage != &"":   # yer rozeti: aracın durduğu depo, OTOPARK (ücretli: kırmızı) ya da GARAJIM (sergide)
+		var place: String = Loc.t("OTOPARK") if garage == CarGarageManager.WAITING \
+			else (Loc.t("GARAJIM") if garage == CarGarageManager.HOME else CarGarageCatalog.display_name(garage))
+		var badge: Label = _label(&"HudInkCaption", place)
 		badge.name = "GarageBadge"
 		badge.add_theme_color_override(&"font_color", HudPalette.DANGER if garage == CarGarageManager.WAITING
 			else HudPalette.INK_SOFT)

@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AUTO YARD Yönetim</title>
+<style>
+  :root {
+    --bg: #1d2127; --panel: #f4e9d4; --ink: #2d2a26; --muted: #7a7064; --amber: #f5be4c; --amber-dark: #c98f1c;
+    --line: rgba(45, 42, 38, 0.14); --red: #c0392b; --green: #2e7d4f; --blue: #2f7fb3;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 16px; padding: 14px 20px; color: #fff; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: 0.06em; }
+  header .meta { color: #aab; font-size: 13px; }
+  nav { display: flex; gap: 6px; padding: 0 20px; flex-wrap: wrap; }
+  nav button { background: #2b3038; color: #dde; border: 0; padding: 9px 14px; border-radius: 8px 8px 0 0; font-weight: 600; cursor: pointer; }
+  nav button.on { background: var(--panel); color: var(--ink); }
+  main { background: var(--panel); margin: 0 20px 20px; padding: 20px; border-radius: 0 10px 10px 10px; min-height: 70vh; }
+  section { display: none; max-width: 980px; }
+  section.on { display: block; }
+  h2 { margin: 0 0 4px; font-size: 18px; }
+  h3 { margin: 20px 0 8px; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+  p.hint { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .card { background: #fffaf0; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .card b { display: block; font-size: 22px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
+  input, textarea, select { width: 100%; padding: 8px 10px; border: 1px solid #cdbf9f; border-radius: 7px; background: #fff; font: inherit; color: var(--ink); }
+  textarea { min-height: 64px; resize: vertical; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 700px) { .row, .row3 { grid-template-columns: 1fr; } }
+  .check { display: flex; align-items: center; gap: 8px; font-weight: 600; margin: 12px 0; }
+  .check input { width: auto; }
+  button.act { background: var(--amber); border: 0; border-bottom: 3px solid var(--amber-dark); color: var(--ink); font-weight: 700; padding: 10px 18px; border-radius: 8px; cursor: pointer; margin-top: 14px; }
+  button.act:disabled { opacity: 0.5; cursor: default; }
+  button.ghost { background: transparent; border: 1px solid #cdbf9f; padding: 6px 12px; border-radius: 7px; cursor: pointer; font-weight: 600; }
+  button.danger { background: var(--red); color: #fff; border-bottom-color: #8e2a1f; }
+  details { margin-top: 8px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  .items { display: grid; grid-template-columns: 1fr 90px 34px; gap: 6px; align-items: center; margin-top: 6px; }
+  .status { margin-top: 12px; padding: 10px 12px; border-radius: 8px; display: none; white-space: pre-wrap; }
+  .status.ok { display: block; background: #e2f2e7; color: var(--green); }
+  .status.err { display: block; background: #f8e1de; color: var(--red); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  pre { background: #fffaf0; border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow: auto; max-height: 420px; font-size: 12px; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 99px; background: #e8dcc2; font-size: 12px; margin-right: 4px; }
+  .report { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: start; }
+  .report img, .report .noimg { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: #e8dcc2; }
+  .report .acts { display: flex; flex-direction: column; gap: 6px; }
+  .pill.red { background: #f3c9c3; color: var(--red); }
+  .warn { background: #fff3cd; border: 1px solid #f0d58a; padding: 10px 12px; border-radius: 8px; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AUTO YARD · YÖNETİM</h1>
+  <span class="meta" id="meta">bağlanıyor…</span>
+</header>
+<nav id="tabs">
+  <button data-tab="overview" class="on">Özet</button>
+  <button data-tab="config">Sürüm ve bakım</button>
+  <button data-tab="mail">Hediye gönder</button>
+  <button data-tab="news">Duyuru bildirimi</button>
+  <button data-tab="player">Oyuncu</button>
+  <button data-tab="reports">Şikâyetler</button>
+  <button data-tab="promo">Kuponlar</button>
+  <button data-tab="stats">İstatistik</button>
+</nav>
+<main>
+  <section id="overview" class="on">
+    <h2>Özet</h2>
+    <p class="hint" id="o-project">Bu panel yalnızca bu bilgisayarda çalışır.</p>
+    <div class="grid">
+      <div class="card">Bulut kaydı olan oyuncu<b id="o-players">–</b></div>
+      <div class="card">Son derleme (export_presets)<b id="o-build">–</b></div>
+      <div class="card">Zorunlu güncelleme (min_code)<b id="o-min">–</b></div>
+      <div class="card">Bakım<b id="o-maint">–</b></div>
+    </div>
+    <h3>Sürüm dağılımı</h3>
+    <p class="hint">Oyuncu sayısı kadar okuma yapar; gerektiğinde hesapla.</p>
+    <button class="ghost" id="o-builds-btn">Hesapla</button>
+    <div id="o-builds"></div>
+    <h3>Son işlemler</h3>
+    <table id="o-log"><tr><td>yükleniyor…</td></tr></table>
+  </section>
+
+  <section id="config">
+    <h2>Sürüm ve bakım</h2>
+    <p class="hint">Oyun bu ayarları açılışta, öne gelince ve 15 dakikada bir okur (misafir de). Geliştirme sürümü (editör) etkilenmez.</p>
+    <div class="row">
+      <div><label>En düşük sürüm kodu (min_code)</label><input id="c-min" type="number" min="0">
+        <p class="hint">Bunun ALTINDAKİ sürümler oynayamaz: kapanmayan GÜNCELLEME GEREKLİ ekranı.</p></div>
+      <div><label>Son sürüm kodu (latest_code)</label><input id="c-latest" type="number" min="0">
+        <p class="hint">Altındakilere bir kez kapatılabilir YENİ SÜRÜM VAR penceresi.</p></div>
+    </div>
+    <label>Güncelleme metni (isteğe bağlı)</label>
+    <div data-langs="c-upd" data-kind="textarea"></div>
+    <h3>Bakım</h3>
+    <div class="check"><input id="c-maint" type="checkbox"><label for="c-maint" style="margin:0">Bakım modu AÇIK: herkes BAKIMDAYIZ ekranında bekler</label></div>
+    <div class="row">
+      <div><label>Tahmini bitiş (isteğe bağlı)</label><input id="c-until" type="datetime-local"></div>
+    </div>
+    <label>Bakım metni (isteğe bağlı)</label>
+    <div data-langs="c-mtext" data-kind="textarea"></div>
+    <h3>Oyun içi duyuru</h3>
+    <p class="hint">Oyun sakinken bir kez açılan pencere. Metni değiştirince yeni duyuru sayılır (herkese yeniden gösterilir). Metni boşaltmak duyuruyu kaldırır.</p>
+    <label>Başlık</label><div data-langs="c-ntitle" data-kind="input"></div>
+    <label>Metin</label><div data-langs="c-ntext" data-kind="textarea"></div>
+    <div class="row"><div><label>Bitiş (isteğe bağlı)</label><input id="c-nuntil" type="datetime-local"></div>
+      <div><label>Duyuru kimliği</label><input id="c-nid" readonly></div></div>
+    <h3>Canlı etkinlik</h3>
+    <p class="hint">Süresince tamir ve yarış ödülleri çarpılır (1–3). Oyunda üst ortada geri sayımlı tabela çıkar. Tamir işi başlarken çarpan sabitlenir: etkinlikte başlayan iş bitişten sonra da çift öder. Çarpanları 1 bırakmak etkinliği kaldırır.</p>
+    <div class="row3">
+      <div><label>Para çarpanı</label><input id="e-money" type="number" min="1" max="3" step="0.25" value="1"></div>
+      <div><label>XP çarpanı</label><input id="e-xp" type="number" min="1" max="3" step="0.25" value="1"></div>
+      <div><label>Etkinlik kimliği</label><input id="e-id" readonly></div>
+    </div>
+    <div class="row"><div><label>Başlangıç</label><input id="e-start" type="datetime-local"></div><div><label>Bitiş</label><input id="e-end" type="datetime-local"></div></div>
+    <label>Tabela başlığı (ör. HAFTA SONU ETKİNLİĞİ)</label><div data-langs="e-title" data-kind="input"></div>
+    <button class="act" id="c-save">Kaydet ve yayınla</button>
+    <div class="status" id="c-status"></div>
+  </section>
+
+  <section id="mail">
+    <h2>Hediye gönder</h2>
+    <p class="hint">Postaya düşer; oyuncu oyunu açınca POSTA penceresinde AL der. Yalnızca hesapla giriş yapan oyunculara gider.</p>
+    <div class="row">
+      <div><label>Alıcı</label>
+        <select id="m-target"><option value="one">Tek oyuncu</option><option value="segment">Filtreli (seviye / son giriş / dil / sürüm)</option><option value="all">HERKES (bütün hesaplar)</option></select></div>
+      <div id="m-query-box"><label>Arkadaş kodu, e-posta ya da UID</label><input id="m-query" placeholder="ör. ABC234"></div>
+    </div>
+    <div id="m-seg-box" style="display:none"><div data-segment="m-seg"></div></div>
+    <label>Başlık</label><div data-langs="m-title" data-kind="input"></div>
+    <label>Mesaj</label><div data-langs="m-text" data-kind="textarea"></div>
+    <div class="row3">
+      <div><label>₺ para</label><input id="m-money" type="number" min="0" value="0"></div>
+      <div><label>Elmas</label><input id="m-gems" type="number" min="0" value="0"></div>
+      <div><label>Geçerlilik (gün, 0 = süresiz)</label><input id="m-days" type="number" min="0" value="30"></div>
+    </div>
+    <label>Kasa</label><div id="m-crates"></div><button class="ghost" id="m-add-crate" style="margin-top:6px">+ kasa ekle</button>
+    <label>Dekor eşyası</label><div id="m-decor"></div><button class="ghost" id="m-add-decor" style="margin-top:6px">+ eşya ekle</button>
+    <div class="row"><div><label>Gönderen adı</label><input id="m-from" value="AUTO YARD" maxlength="24"></div></div>
+    <div class="check"><input id="m-notify" type="checkbox" checked><label for="m-notify" style="margin:0">Telefona "Hediyen var" bildirimi de gönder</label></div>
+    <button class="act" id="m-send">Gönder</button>
+    <div class="status" id="m-status"></div>
+  </section>
+
+  <section id="news">
+    <h2>Duyuru bildirimi</h2>
+    <p class="hint">Bildirimleri açmış herkesin telefonuna gider (misafirler dahil), oyuncunun diline göre. Dili boş bırakılan oyuncuya İngilizce, o da yoksa Türkçe metin gider. Önce kendine dene.</p>
+    <div class="row"><div><label>Kime</label><select id="n-target"><option value="all">Bildirimleri açmış herkes (misafir dahil)</option><option value="segment">Filtreli hesaplar (misafir hariç)</option></select></div></div>
+    <div id="n-seg-box" style="display:none"><div data-segment="n-seg"></div></div>
+    <label>Başlık (boşsa AUTO YARD)</label><div data-langs="n-title" data-kind="input"></div>
+    <label>Metin</label><div data-langs="n-body" data-kind="textarea"></div>
+    <div class="row"><div><label>Deneme alıcısı (arkadaş kodu / e-posta)</label><input id="n-test"></div></div>
+    <button class="ghost" id="n-test-btn" style="margin-top:10px">Yalnız bu oyuncuya dene</button>
+    <button class="act danger" id="n-send">HERKESE gönder</button>
+    <div class="status" id="n-status"></div>
+  </section>
+
+  <section id="reports">
+    <h2>Şikâyetler</h2>
+    <p class="hint">Oyuncuların ad / fotoğraf / garaj şikâyetleri, en çok şikâyet edilen önce. İşlem yapınca o oyuncunun şikâyetleri kapanır (180 günde kendiliğinden de silinir).</p>
+    <button class="ghost" id="r-load">Yenile</button>
+    <div class="status" id="r-status"></div>
+    <div id="r-list"></div>
+  </section>
+
+  <section id="promo">
+    <h2>Kupon kodları</h2>
+    <p class="hint">Oyuncu MARKET › KOD GİR'den yazar; sunucu doğrular, ödül postaya düşer. Her hesap bir kodu bir kez kullanır. Yalnız hesaplı oyuncular.</p>
+    <div class="card">
+      <div class="row3">
+        <div><label>Kod (4–16 büyük harf / rakam)</label><input id="k-code" maxlength="16" placeholder="REELS50" style="text-transform:uppercase"></div>
+        <div><label>Kullanım sınırı (0 = sınırsız)</label><input id="k-max" type="number" min="0" value="0"></div>
+        <div><label>Bitiş (boş = süresiz)</label><input id="k-until" type="datetime-local"></div>
+      </div>
+      <label>Ödül başlığı (posta)</label><div data-langs="k-title" data-kind="input"></div>
+      <div class="row3">
+        <div><label>₺ para</label><input id="k-money" type="number" min="0" value="0"></div>
+        <div><label>Elmas</label><input id="k-gems" type="number" min="0" value="0"></div>
+        <div></div>
+      </div>
+      <label>Kasa</label><div id="k-crates"></div><button class="ghost" id="k-add-crate" style="margin-top:6px">+ kasa ekle</button>
+      <label>Dekor eşyası</label><div id="k-decor"></div><button class="ghost" id="k-add-decor" style="margin-top:6px">+ eşya ekle</button>
+      <button class="act" id="k-save">Kodu kaydet</button>
+    </div>
+    <div class="status" id="k-status"></div>
+    <h3>Kodlar</h3>
+    <div id="k-list"></div>
+  </section>
+
+  <section id="stats">
+    <h2>İstatistik</h2>
+    <p class="hint">Yalnız hesapla giriş yapan oyuncular (misafirler Firebase'e yazmaz). "Aktif" = son bulut kaydı. Gecelik kayıt her gün 03:10'da alınır.</p>
+    <button class="ghost" id="s-load">Yenile</button>
+    <div id="s-live" class="grid" style="margin-top:12px"></div>
+    <h3>Son 30 gün</h3>
+    <div id="s-days"></div>
+    <div class="row">
+      <div><h3>Dil</h3><div id="s-langs"></div></div>
+      <div><h3>Seviye</h3><div id="s-levels"></div></div>
+    </div>
+  </section>
+
+  <section id="player">
+    <h2>Oyuncu</h2>
+    <div class="row"><div><label>Arkadaş kodu, e-posta ya da UID</label><input id="p-query"></div></div>
+    <button class="act" id="p-find">Bul</button>
+    <div class="status" id="p-status"></div>
+    <div id="p-result"></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const LANGS = ["tr", "en", "es", "de", "fr"];
+const NAMES = { tr: "Türkçe", en: "English", es: "Español", de: "Deutsch", fr: "Français" };
+const key = (() => {
+  const m = /k=([A-Za-z0-9_-]+)/.exec(location.hash);
+  if (m) { sessionStorage.setItem("k", m[1]); history.replaceState(null, "", "/" + location.hash.replace(/k=[A-Za-z0-9_-]+&?/, "")); return m[1]; }
+  return sessionStorage.getItem("k") || "";
+})();
+let info = null;
+let config = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function api(method, path, body) {
+  const res = await fetch(path, {
+    method, headers: { "x-admin-key": key, ...(body ? { "content-type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({ error: "yanıt okunamadı" }));
+  if (!res.ok) throw new Error(data.error || res.status);
+  return data;
+}
+
+function status(id, text, ok) {
+  const el = $(id);
+  el.className = "status " + (ok ? "ok" : "err");
+  el.textContent = text;
+}
+
+// Dil alanları: TR + EN görünür, diğerleri "Diğer diller" altında.
+for (const box of document.querySelectorAll("[data-langs]")) {
+  const base = box.dataset.langs;
+  const tag = box.dataset.kind === "textarea" ? "textarea" : "input";
+  const field = (lang) => `<div><label style="font-weight:500">${NAMES[lang]}</label><${tag} id="${base}-${lang}"></${tag}></div>`;
+  box.innerHTML = `<div class="row">${field("tr")}${field("en")}</div>` +
+    `<details><summary>Diğer diller (boşsa İngilizce gösterilir)</summary><div class="row3">${field("es")}${field("de")}${field("fr")}</div></details>`;
+}
+const readLangs = (base) => Object.fromEntries(LANGS.map((l) => [l, $(`${base}-${l}`).value.trim()]).filter(([, v]) => v));
+const writeLangs = (base, map) => { for (const l of LANGS) $(`${base}-${l}`).value = (map && map[l]) || ""; };
+const toLocal = (sec) => {
+  if (!sec) return "";
+  const d = new Date(sec * 1000);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+const fromLocal = (v) => (v ? Math.floor(new Date(v).getTime() / 1000) : 0);
+const when = (sec) => (sec ? new Date(sec * 1000).toLocaleString("tr-TR") : "–");
+
+// Sekmeler
+for (const b of document.querySelectorAll("#tabs button")) {
+  b.onclick = () => {
+    for (const x of document.querySelectorAll("#tabs button")) x.classList.toggle("on", x === b);
+    for (const s of document.querySelectorAll("section")) s.classList.toggle("on", s.id === b.dataset.tab);
+  };
+}
+
+// --- Özet ---
+async function loadOverview() {
+  info = await api("GET", "/api/info");
+  $("meta").textContent = `proje ${info.project} · son derleme ${info.build.code} (${info.build.name})`;
+  $("o-project").textContent = (info.project === "car-town-remake" ? "CANLI proje car-town-remake" : `TEST projesi ${info.project} (emülatör)`) +
+    ". Bu panel yalnızca bu bilgisayarda çalışır.";
+  $("o-players").textContent = info.players;
+  $("o-build").textContent = `${info.build.code} · ${info.build.name}`;
+  const c = (await api("GET", "/api/config")).config;
+  config = c;
+  $("o-min").textContent = c && c.min_code ? c.min_code : "yok";
+  $("o-maint").textContent = c && c.maintenance ? "AÇIK" : "kapalı";
+  fillConfig(c || {});
+  fillCatalogRows();
+  const log = (await api("GET", "/api/log")).log;
+  $("o-log").innerHTML = log.length ? log.map((e) => `<tr><td>${esc(e.at.slice(0, 16).replace("T", " "))}</td><td>${esc(e.kind)}</td>` +
+    `<td>${esc(describe(e))}</td></tr>`).join("") : "<tr><td>henüz işlem yok</td></tr>";
+}
+function describe(e) {
+  if (e.kind === "mail_all") return `HERKESE posta (${e.count} kişi) ${e.title || ""} · ${e.money}₺ ${e.gems} elmas`;
+  if (e.kind === "mail_one") return `posta → ${e.uid} ${e.title || ""} · ${e.money}₺ ${e.gems} elmas`;
+  if (e.kind === "news") return `duyuru: ${e.body}`;
+  if (e.kind === "config") return `min ${e.min_code} · son ${e.latest_code} · bakım ${e.maintenance ? "AÇIK" : "kapalı"}${e.notice ? " · duyuru " + e.notice : ""}`;
+  if (e.kind === "mail_delete") return `posta silindi ${e.uid}/${e.id}`;
+  if (e.kind === "ban") return `YASAK (${e.ban_kind === "full" ? "tam" : "sosyal"}, ${e.until ? "bitiş " + when(e.until) : "kalıcı"}) ${e.uid} · ${e.reason}`;
+  if (e.kind === "unban") return `yasak kaldırıldı ${e.uid}`;
+  if (e.kind === "reset_name") return `ad sıfırlandı ${e.uid}: ${e.old || "?"} → ${e.name}`;
+  if (e.kind === "reset_photo") return `fotoğraf kaldırıldı ${e.uid}`;
+  if (e.kind === "mail_segment") return `FİLTRELİ posta (${e.count} kişi) ${e.title || ""} · ${e.money}₺ ${e.gems} elmas`;
+  if (e.kind === "news_segment") return `filtreli duyuru (${e.sent} telefon): ${e.body}`;
+  if (e.kind === "promo_create" || e.kind === "promo_update") return `kupon ${e.code} ${e.kind === "promo_create" ? "oluşturuldu" : "güncellendi"}`;
+  if (e.kind === "promo_toggle") return `kupon ${e.code} ${e.active ? "açıldı" : "kapatıldı"}`;
+  if (e.kind === "adjust") return `bakiye düzeltme ${e.uid}: ${e.money}₺ ${e.gems} elmas ${e.text ? "· " + e.text : ""}`;
+  if (e.kind === "restore") return `kayıt geri yükleme ${e.uid}: ${e.slot} (${when(e.save_at)})`;
+  if (e.kind === "reports_closed") return `${e.count} şikâyet kapatıldı ${e.uid}${e.action ? " (" + e.action + ")" : ""}`;
+  return JSON.stringify(e);
+}
+$("o-builds-btn").onclick = async () => {
+  $("o-builds").textContent = "hesaplanıyor…";
+  try {
+    const r = await api("GET", "/api/builds");
+    $("o-builds").innerHTML = `<table>${Object.entries(r.builds).sort().map(([b, n]) => `<tr><td>sürüm kodu ${esc(b)}</td><td>${n} oyuncu</td></tr>`).join("")}</table>`;
+  } catch (e) { $("o-builds").textContent = e.message; }
+};
+
+// --- Sürüm ve bakım ---
+function fillConfig(c) {
+  $("c-min").value = c.min_code || 0;
+  $("c-latest").value = c.latest_code || 0;
+  writeLangs("c-upd", c.update_text);
+  $("c-maint").checked = !!c.maintenance;
+  $("c-until").value = toLocal(c.maintenance_until);
+  writeLangs("c-mtext", c.maintenance_text);
+  writeLangs("c-ntitle", c.notice && c.notice.title);
+  writeLangs("c-ntext", c.notice && c.notice.text);
+  $("c-nuntil").value = toLocal(c.notice && c.notice.until);
+  $("c-nid").value = (c.notice && c.notice.id) || "";
+  const ev = c.event || {};
+  $("e-money").value = ev.money_mult || 1;
+  $("e-xp").value = ev.xp_mult || 1;
+  $("e-id").value = ev.id || "";
+  $("e-start").value = toLocal(ev.start);
+  $("e-end").value = toLocal(ev.end);
+  writeLangs("e-title", ev.title);
+}
+$("c-save").onclick = async () => {
+  const noticeText = readLangs("c-ntext");
+  const old = config && config.notice;
+  const changed = !old || JSON.stringify(old.text || {}) !== JSON.stringify(noticeText) || JSON.stringify(old.title || {}) !== JSON.stringify(readLangs("c-ntitle"));
+  const notice = Object.keys(noticeText).length ? {
+    id: changed ? "n_" + Date.now().toString(36) : old.id, title: readLangs("c-ntitle"), text: noticeText, until: fromLocal($("c-nuntil").value),
+  } : null;
+  const body = {
+    min_code: Number($("c-min").value || 0), latest_code: Number($("c-latest").value || 0), update_text: readLangs("c-upd"),
+    maintenance: $("c-maint").checked, maintenance_text: readLangs("c-mtext"), maintenance_until: fromLocal($("c-until").value), notice,
+    event: (Number($("e-money").value) > 1 || Number($("e-xp").value) > 1) ? {
+      id: $("e-id").value || "e_" + Date.now().toString(36), money_mult: Number($("e-money").value), xp_mult: Number($("e-xp").value),
+      start: fromLocal($("e-start").value), end: fromLocal($("e-end").value), title: readLangs("e-title"),
+    } : null,
+  };
+  const build = info ? info.build.code : 0;
+  const warnings = [];
+  if (body.min_code > build) warnings.push(`min_code ${body.min_code} son derlemeden (${build}) BÜYÜK: Play'deki sürüm de oynayamaz!`);
+  if (body.maintenance) warnings.push("Bakım modu AÇIK: bütün oyuncular oyundan çıkarılır.");
+  if (warnings.length && !confirm(warnings.join("\n") + "\n\nYine de yayınlansın mı?")) return;
+  try {
+    config = (await api("POST", "/api/config", body)).config;
+    fillConfig(config);
+    status("c-status", "Yayınlandı. Oyuncular en geç 15 dakika içinde (açılışta hemen) görür.", true);
+    loadOverview();
+  } catch (e) { status("c-status", e.message, false); }
+};
+
+// --- Hediye ---
+function catalogRow(container, list, kind) {
+  const row = document.createElement("div");
+  row.className = "items";
+  row.innerHTML = `<select>${list.map((x) => `<option value="${esc(x.id)}">${esc(x.name)}${x.exclusive ? " (kurucu)" : ""} · ${esc(x.id)}</option>`).join("")}</select>` +
+    `<input type="number" min="1" max="20" value="1"><button class="ghost" title="kaldır">✕</button>`;
+  row.querySelector("button").onclick = () => row.remove();
+  row.dataset.kind = kind;
+  container.appendChild(row);
+}
+function fillCatalogRows() {
+  $("m-add-crate").onclick = () => catalogRow($("m-crates"), info.catalog.crates, "crate");
+  $("m-add-decor").onclick = () => catalogRow($("m-decor"), info.catalog.decor, "decor");
+  $("k-add-crate").onclick = () => catalogRow($("k-crates"), info.catalog.crates, "crate");
+  $("k-add-decor").onclick = () => catalogRow($("k-decor"), info.catalog.decor, "decor");
+}
+const readItems = (container) => {
+  const out = {};
+  for (const row of container.querySelectorAll(".items")) {
+    const id = row.querySelector("select").value;
+    out[id] = (out[id] || 0) + Number(row.querySelector("input").value || 0);
+  }
+  return out;
+};
+$("m-target").onchange = () => {
+  $("m-query-box").style.visibility = $("m-target").value === "one" ? "visible" : "hidden";
+  $("m-seg-box").style.display = $("m-target").value === "segment" ? "block" : "none";
+};
+$("m-send").onclick = async () => {
+  const mail = {
+    title: readLangs("m-title"), text: readLangs("m-text"), from: $("m-from").value, money: Number($("m-money").value || 0),
+    gems: Number($("m-gems").value || 0), crates: readItems($("m-crates")), decor: readItems($("m-decor")),
+    expires_days: Number($("m-days").value || 0), notify: $("m-notify").checked,
+  };
+  const target = $("m-target").value;
+  const body = { target, query: $("m-query").value, mail, segment: target === "segment" ? readSegment("m-seg") : undefined };
+  try {
+    const dry = await api("POST", "/api/mail/send", { ...body, dry: true });
+    const parts = [mail.money ? `${mail.money.toLocaleString("tr-TR")} ₺` : "", mail.gems ? `${mail.gems} elmas` : "",
+      ...Object.entries(mail.crates).map(([k, n]) => `${n}× ${k}`), ...Object.entries(mail.decor).map(([k, n]) => `${n}× ${k}`)].filter(Boolean);
+    const who = target === "all" ? `HERKESE (${dry.count} hesap)` : target === "segment" ? `süzgece uyan ${dry.count} hesaba` : `tek oyuncuya (${dry.uid})`;
+    if (target === "segment" && !dry.count) { status("m-status", "Süzgece uyan oyuncu yok.", false); return; }
+    if (!confirm(`${who} gönderilsin mi?\n\nÖdül: ${parts.join(", ") || "yok (yalnız mesaj)"}\nBildirim: ${mail.notify ? "evet" : "hayır"}`)) return;
+    const r = await api("POST", "/api/mail/send", body);
+    status("m-status", `Gönderildi: ${r.count} posta (kimlik ${r.id}).`, true);
+    loadOverview();
+  } catch (e) { status("m-status", e.message, false); }
+};
+
+// --- Duyuru bildirimi ---
+const newsBody = () => ({ title: readLangs("n-title"), body: readLangs("n-body") });
+$("n-test-btn").onclick = async () => {
+  try {
+    await api("POST", "/api/news/send", { ...newsBody(), test_query: $("n-test").value });
+    status("n-status", "Deneme bildirimi gönderildi.", true);
+  } catch (e) { status("n-status", e.message, false); }
+};
+$("n-send").onclick = async () => {
+  const b = newsBody();
+  const seg = $("n-target").value === "segment";
+  try {
+    if (seg) {
+      b.segment = readSegment("n-seg");
+      const dry = await api("POST", "/api/news/send", { ...b, dry: true });
+      if (!dry.tokens) { status("n-status", `Süzgece uyan ${dry.players} hesaptan hiçbirinde bildirim açık değil.`, false); return; }
+      if (!confirm(`Süzgece uyan ${dry.players} hesaptan bildirimi açık ${dry.tokens} telefona gönderilsin mi?\n\n${b.body.tr || b.body.en || ""}`)) return;
+    } else if (!confirm(`Bildirimleri açmış HERKESE gönderilsin mi?\n\n${b.body.tr || b.body.en || ""}`)) return;
+    const r = await api("POST", "/api/news/send", b);
+    status("n-status", seg ? `Gönderildi: ${r.sent} telefon.` : `Gönderildi (${r.sent} dil konusu).`, true);
+    loadOverview();
+  } catch (e) { status("n-status", e.message, false); }
+};
+
+// --- Oyuncu ---
+$("p-find").onclick = async () => {
+  $("p-result").innerHTML = "";
+  try {
+    const p = await api("POST", "/api/player", { query: $("p-query").value });
+    $("p-status").className = "status";
+    const s = p.stats || {};
+    $("p-result").innerHTML = `
+      <div class="grid" style="margin-top:14px">
+        <div class="card">₺ para<b>${s.money?.toLocaleString("tr-TR") ?? "–"}</b></div>
+        <div class="card">Elmas<b>${s.gems ?? "–"}</b></div>
+        <div class="card">Seviye<b>${s.level ?? "–"}</b></div>
+        <div class="card">Araç<b>${s.cars ?? "–"}</b></div>
+      </div>
+      <table style="margin-top:14px">
+        <tr><th>UID</th><td>${esc(p.uid)}</td></tr>
+        <tr><th>Ad / e-posta</th><td>${esc(p.name)} · ${esc(p.email)}</td></tr>
+        <tr><th>Giriş yolları</th><td>${p.providers.map((x) => `<span class="pill">${esc(x)}</span>`).join("") || "–"}${p.disabled ? ' <span class="pill">DEVRE DIŞI</span>' : ""}</td></tr>
+        <tr><th>Hesap</th><td>açıldı ${esc(p.created)} · son giriş ${esc(p.last_sign_in)}</td></tr>
+        <tr><th>Bulut kaydı</th><td>${p.has_save ? `son yazma ${when(p.save_updated_at)} · ${p.save_size} karakter · ` +
+          (p.stats_from === "save" ? "eski sürümle yazılmış (değerler kayıttan hesaplandı; sürüm kodu bilinmiyor)" : `sürüm kodu ${s.build ?? "?"}`) : "YOK"}</td></tr>
+        <tr><th>Garaj</th><td>${p.garage ? `${esc(p.garage.name)} · kod ${esc(p.garage.code)} · seviye ${p.garage.level}` : "açık garaj yok"}</td></tr>
+        <tr><th>Bildirim</th><td>${p.push ? `açık · dil ${esc(p.push.lang)} · yarış ${p.push.prefs.race !== false ? "✓" : "✗"} · hediye ${p.push.prefs.gift !== false ? "✓" : "✗"}` : "kapalı"}</td></tr>
+      </table>
+      <h3>Bekleyen posta (${p.mail.length})</h3>
+      <table>${p.mail.map((m) => `<tr><td>${esc(m.id)}</td><td>${esc((m.title && (m.title.tr || m.title.en)) || "")}</td>` +
+        `<td>${m.money || 0}₺ · ${m.gems || 0} elmas</td><td>${when(m.at)}</td><td><button class="ghost" data-del="${esc(m.id)}">sil</button></td></tr>`).join("") || "<tr><td>yok</td></tr>"}</table>
+      <h3>Moderasyon ${p.reports ? `· <span class="pill red">${p.reports} şikâyet</span>` : ""}</h3>
+      <div class="card">
+        <div>${banLine(p.moderation)}</div>
+        <div class="row3">
+          <div><label>Tür</label><select id="b-kind"><option value="social">Sosyal yasak (oynar, arkadaşlık/yarış/ziyaret yok)</option><option value="full">Tam yasak (oturum kapanır, misafir)</option></select></div>
+          <div><label>Süre</label><select id="b-days"><option value="1">1 gün</option><option value="3">3 gün</option><option value="7" selected>7 gün</option><option value="30">30 gün</option><option value="0">Kalıcı</option></select></div>
+          <div><label>Sebep (oyuncu görür)</label><select id="b-reason">${Object.entries(REASONS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select></div>
+        </div>
+        <label>Açıklama (isteğe bağlı, oyuncu görür)</label><input id="b-text" maxlength="200">
+        <button class="act danger" id="b-ban">Yasakla</button>
+        ${p.moderation && p.moderation.ban_active ? '<button class="act" id="b-unban">Yasağı kaldır</button>' : ""}
+        <button class="ghost" id="b-name" style="margin-left:8px">Adı sıfırla</button>
+        <button class="ghost" id="b-photo">Fotoğrafı kaldır</button>
+      </div>
+      <h3>Destek</h3>
+      <div class="card">
+        <b style="font-size:14px">Bakiye düzeltme</b>
+        <p class="hint" style="margin:2px 0 0">Eksi de olabilir (oyun 0'ın altına indirmez). Oyuncu açınca POSTA'da açıklamayla görür.</p>
+        <div class="row3">
+          <div><label>₺ (+ / −)</label><input id="a-money" type="number" value="0"></div>
+          <div><label>Elmas (+ / −)</label><input id="a-gems" type="number" value="0"></div>
+          <div><label>Açıklama (oyuncu görür)</label><input id="a-text" maxlength="500" placeholder="ör. hatalı satın alma iadesi"></div>
+        </div>
+        <button class="act" id="a-send">Düzeltmeyi gönder</button>
+        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+        <b style="font-size:14px">Kayıt geçmişi</b>
+        <p class="hint" style="margin:2px 0 6px">Son 24 saat saat başına, son 7 gün gün başına. Seçilen kayıt posta olarak gider; oyuncu AL deyince oyun o kayda döner (şimdiki kaydı cihazında yedeklenir).</p>
+        <button class="ghost" id="h-load">Geçmişi göster</button>
+        <div id="h-list"></div>
+      </div>
+      <h3>Not (yalnız sen görürsün)</h3>
+      <textarea id="p-note" maxlength="2000">${esc(p.note ? p.note.text : "")}</textarea>
+      <button class="ghost" id="p-note-save" style="margin-top:6px">Notu kaydet</button>${p.note ? ` <span class="hint">son: ${when(p.note.updated_at)}</span>` : ""}
+      <button class="ghost" id="p-save-btn" style="margin-top:12px;display:block">Kaydın tamamını göster</button><pre id="p-save" style="display:none"></pre>`;
+    const mod = async (path, body, text) => {
+      try { await api("POST", path, { uid: p.uid, ...body }); status("p-status", text, true); $("p-find").click(); }
+      catch (e) { status("p-status", e.message, false); }
+    };
+    $("b-ban").onclick = () => {
+      const days = Number($("b-days").value);
+      const kind = $("b-kind").value;
+      if (!confirm(`${kind === "full" ? "TAM" : "SOSYAL"} yasak, ${days ? days + " gün" : "KALICI"}: ${p.name || p.uid}\n\nAçık garajı ve fotoğrafı hemen gizlenir.`)) return;
+      mod("/api/mod/ban", { kind, days, reason: $("b-reason").value, text: $("b-text").value }, "Yasaklandı. Oyuncu bir sonraki kontrolde (en geç 30 dk, açılışta hemen) görür.");
+    };
+    if ($("b-unban")) $("b-unban").onclick = () => mod("/api/mod/unban", {}, "Yasak kaldırıldı. Garajı oyunda yeniden yayınlanır.");
+    $("b-name").onclick = () => confirm("Takma ad UstaNNNN olsun mu?") && mod("/api/mod/reset-name", {}, "Ad sıfırlandı.");
+    $("b-photo").onclick = () => confirm("Profil fotoğrafı kaldırılsın mı?") && mod("/api/mod/reset-photo", {}, "Fotoğraf kaldırıldı.");
+    $("p-note-save").onclick = () => mod("/api/notes", { text: $("p-note").value }, "Not kaydedildi.");
+    $("a-send").onclick = () => {
+      const money = Number($("a-money").value || 0);
+      const gems = Number($("a-gems").value || 0);
+      if (!confirm(`Düzeltme: ${money >= 0 ? "+" : ""}${money.toLocaleString("tr-TR")} ₺, ${gems >= 0 ? "+" : ""}${gems} elmas → ${p.name || p.uid}`)) return;
+      mod("/api/adjust", { money, gems, text: { tr: $("a-text").value } }, "Düzeltme postaya bırakıldı.");
+    };
+    $("h-load").onclick = async () => {
+      $("h-list").textContent = "yükleniyor…";
+      try {
+        const h = await api("POST", "/api/history", { uid: p.uid });
+        $("h-list").innerHTML = h.items.length ? `<table><tr><th>Zaman</th><th>₺</th><th>Elmas</th><th>Seviye</th><th>Araç</th><th></th></tr>` +
+          h.items.map((it) => `<tr><td>${when(it.updated_at)} <span class="pill">${esc(it.slot)}</span></td><td>${it.stats?.money?.toLocaleString("tr-TR") ?? "–"}</td>` +
+            `<td>${it.stats?.gems ?? "–"}</td><td>${it.stats?.level ?? "–"}</td><td>${it.stats?.cars ?? "–"}</td>` +
+            `<td><button class="ghost" data-restore="${esc(it.slot)}" data-when="${esc(when(it.updated_at))}">Bu kayda dön</button></td></tr>`).join("") + "</table>"
+          : "<p class='hint'>Geçmiş yok (oyuncu bu özelliği içeren sürümü henüz kullanmadı).</p>";
+        for (const b of document.querySelectorAll("[data-restore]")) {
+          b.onclick = () => confirm(`${b.dataset.when} kaydına dönülsün mü?\n\nOyuncu POSTA'da AL deyince uygulanır.`)
+            && mod("/api/history/restore", { slot: b.dataset.restore }, "Geri yükleme postaya bırakıldı.");
+        }
+      } catch (e) { $("h-list").textContent = e.message; }
+    };
+    for (const b of document.querySelectorAll("[data-del]")) {
+      b.onclick = async () => {
+        if (!confirm("Bu posta silinsin mi? (oyuncu henüz almadıysa hiç alamaz)")) return;
+        await api("POST", "/api/mail/delete", { uid: p.uid, id: b.dataset.del });
+        $("p-find").click();
+      };
+    }
+    $("p-save-btn").onclick = async () => {
+      const r = await api("POST", "/api/player/save", { query: p.uid });
+      $("p-save").style.display = "block";
+      $("p-save").textContent = JSON.stringify(r.save, null, 2);
+    };
+  } catch (e) { status("p-status", e.message, false); }
+};
+
+// --- Hedefli gönderim süzgeci (aynı alanlar hediye ve duyuruda) ---
+for (const box of document.querySelectorAll("[data-segment]")) {
+  const b = box.dataset.segment;
+  box.innerHTML = `<div class="card" style="margin-top:10px"><b style="font-size:14px">Süzgeç</b>
+    <p class="hint" style="margin:2px 0 0">Boş alan süzmez. Özeti olmayan (eski sürümle yazılmış) kayıtlar yalnız zaman süzgeçlerine uyar.</p>
+    <div class="row3">
+      <div><label>Seviye en az</label><input id="${b}-lmin" type="number" min="1" max="99"></div>
+      <div><label>Seviye en çok</label><input id="${b}-lmax" type="number" min="1" max="99"></div>
+      <div><label>Dil</label><select id="${b}-lang"><option value="">hepsi</option>${LANGS.map((l) => `<option value="${l}">${NAMES[l]}</option>`).join("")}</select></div>
+      <div><label>Son kaç günde oynamış</label><input id="${b}-act" type="number" min="1" placeholder="ör. 7"></div>
+      <div><label>Kaç gündür oynamıyor</label><input id="${b}-inact" type="number" min="1" placeholder="ör. 14 (geri dön hediyesi)"></div>
+      <div><label>Sürüm kodu en çok</label><input id="${b}-build" type="number" min="0" placeholder="eski sürümdekiler"></div>
+    </div></div>`;
+}
+const readSegment = (b) => ({ level_min: $(`${b}-lmin`).value, level_max: $(`${b}-lmax`).value, lang: $(`${b}-lang`).value,
+  active_days: $(`${b}-act`).value, inactive_days: $(`${b}-inact`).value, build_max: $(`${b}-build`).value });
+$("n-target").onchange = () => { $("n-seg-box").style.display = $("n-target").value === "segment" ? "block" : "none"; };
+
+// --- Kuponlar ---
+async function loadPromos() {
+  $("k-list").textContent = "yükleniyor…";
+  try {
+    const r = await api("GET", "/api/promo");
+    $("k-list").innerHTML = r.codes.length ? `<table><tr><th>Kod</th><th>Ödül</th><th>Kullanım</th><th>Bitiş</th><th>Durum</th><th></th></tr>` +
+      r.codes.map((c) => `<tr><td><b>${esc(c.code)}</b><div class="hint">${esc((c.title && (c.title.tr || c.title.en)) || "")}</div></td>` +
+        `<td>${[c.reward.money ? c.reward.money.toLocaleString("tr-TR") + " ₺" : "", c.reward.gems ? c.reward.gems + " elmas" : "",
+          ...Object.entries(c.reward.crates || {}).map(([k, n]) => n + "× " + k), ...Object.entries(c.reward.decor || {}).map(([k, n]) => n + "× " + k)].filter(Boolean).map(esc).join(", ")}</td>` +
+        `<td>${c.uses || 0}${c.max_uses ? " / " + c.max_uses : ""}</td><td>${c.until ? when(c.until) : "süresiz"}</td>` +
+        `<td>${c.active === false ? '<span class="pill red">kapalı</span>' : '<span class="pill">açık</span>'}</td>` +
+        `<td><button class="ghost" data-toggle="${esc(c.code)}" data-active="${c.active === false ? "1" : "0"}">${c.active === false ? "Aç" : "Kapat"}</button></td></tr>`).join("") + "</table>"
+      : "<p class='hint'>Henüz kod yok.</p>";
+    for (const b of document.querySelectorAll("[data-toggle]")) {
+      b.onclick = async () => {
+        try { await api("POST", "/api/promo/toggle", { code: b.dataset.toggle, active: b.dataset.active === "1" }); loadPromos(); }
+        catch (e) { status("k-status", e.message, false); }
+      };
+    }
+  } catch (e) { $("k-list").textContent = e.message; }
+}
+document.querySelector('#tabs button[data-tab="promo"]').addEventListener("click", loadPromos);
+$("k-save").onclick = async () => {
+  const body = { create: true, code: $("k-code").value, title: readLangs("k-title"), money: Number($("k-money").value || 0),
+    gems: Number($("k-gems").value || 0), crates: readItems($("k-crates")), decor: readItems($("k-decor")),
+    max_uses: Number($("k-max").value || 0), until: fromLocal($("k-until").value) };
+  try {
+    const r = await api("POST", "/api/promo", body);
+    status("k-status", `${r.code} kaydedildi. Oyuncular hemen kullanabilir.`, true);
+    loadPromos();
+  } catch (e) { status("k-status", e.message, false); }
+};
+
+// --- İstatistik ---
+const bars = (map, total) => `<table>${Object.entries(map).sort((a, b) => b[1] - a[1]).map(([k, n]) =>
+  `<tr><td style="width:90px">${esc(k)}</td><td><div style="background:var(--amber);height:14px;border-radius:4px;width:${Math.max(2, Math.round(n / Math.max(total, 1) * 100))}%"></div></td><td style="width:60px">${n}</td></tr>`).join("")}</table>`;
+async function loadStats() {
+  $("s-live").textContent = "hesaplanıyor…";
+  try {
+    const r = await api("GET", "/api/stats");
+    const l = r.live;
+    const pct = (n) => (l.players ? Math.round(n / l.players * 100) + "%" : "–");
+    $("s-live").innerHTML = [["Hesaplı oyuncu", l.players], ["Aktif · 24 saat", l.active_1d], ["Aktif · 7 gün", l.active_7d],
+      ["Aktif · 30 gün", l.active_30d], ["Yeni hesap · 24 saat", l.new_1d], ["Bildirimi açık", `${l.push} (${pct(l.push)})`]]
+      .map(([k, v]) => `<div class="card">${esc(k)}<b>${esc(v)}</b></div>`).join("");
+    const max = Math.max(1, ...r.days.map((d) => d.active_1d || 0));
+    $("s-days").innerHTML = r.days.length ? `<div style="display:flex;align-items:flex-end;gap:4px;height:140px;border-bottom:1px solid var(--line)">` +
+      r.days.map((d) => `<div title="${esc(d.day)}: ${d.active_1d} aktif, ${d.new_1d} yeni" style="flex:1;background:var(--amber);border-radius:4px 4px 0 0;height:${Math.max(2, Math.round((d.active_1d || 0) / max * 130))}px"></div>`).join("") +
+      `</div><div class="hint" style="display:flex;justify-content:space-between"><span>${esc(r.days[0].day)}</span><span>günlük aktif (çubuk) · üstüne gel: yeni hesap</span><span>${esc(r.days[r.days.length - 1].day)}</span></div>`
+      : "<p class='hint'>Henüz gecelik kayıt yok (ilk kayıt bu gece 03:10'da).</p>";
+    const total = Object.values(r.langs).reduce((a, b) => a + b, 0);
+    $("s-langs").innerHTML = bars(r.langs, total);
+    $("s-levels").innerHTML = bars(r.levels, total);
+  } catch (e) { $("s-live").textContent = e.message; }
+}
+$("s-load").onclick = loadStats;
+document.querySelector('#tabs button[data-tab="stats"]').addEventListener("click", loadStats);
+
+// --- Moderasyon yardımcıları ---
+let REASONS = { name: "Uygunsuz takma ad", photo: "Uygunsuz profil fotoğrafı", cheat: "Hile", harassment: "Taciz ya da hakaret", spam: "Spam", other: "Kural ihlali" };
+function banLine(m) {
+  const b = m && m.ban;
+  if (!b || !m.ban_active) return b ? `Süresi dolmuş yasak (${b.kind === "full" ? "tam" : "sosyal"}, bitti ${when(b.until)})` : "Yasak yok.";
+  return `<span class="pill red">YASAKLI · ${b.kind === "full" ? "TAM" : "SOSYAL"}</span> ${b.until ? "bitiş " + when(b.until) : "kalıcı"} · ${esc(REASONS[b.reason] || b.reason)}${b.text ? " · " + esc(b.text) : ""}`;
+}
+const REPORT_REASONS = { photo: "fotoğraf", name: "ad", garage: "garaj" };
+async function loadReports() {
+  $("r-list").textContent = "yükleniyor…";
+  try {
+    const r = await api("GET", "/api/reports");
+    REASONS = r.reasons || REASONS;
+    $("r-list").innerHTML = r.groups.length ? r.groups.map((g) => `
+      <div class="card report" style="margin-top:10px">
+        ${g.img ? `<img alt="" src="data:image/jpeg;base64,${g.img}">` : '<div class="noimg"></div>'}
+        <div><b style="font-size:16px">${esc(g.name || "(ad yok)")}</b> ${g.banned ? '<span class="pill red">YASAKLI</span>' : ""}
+          <div class="hint" style="margin:2px 0">${esc(g.target)} · son şikâyet ${when(g.last_at)}</div>
+          <span class="pill red">${g.count} şikâyet</span>${Object.entries(g.reasons).map(([k, n]) => `<span class="pill">${esc(REPORT_REASONS[k] || k)} ×${n}</span>`).join("")}</div>
+        <div class="acts">
+          <button class="ghost" data-open="${esc(g.target)}">Oyuncuyu aç</button>
+          <button class="ghost" data-act="reset-name" data-t="${esc(g.target)}">Adı sıfırla</button>
+          <button class="ghost" data-act="reset-photo" data-t="${esc(g.target)}">Fotoğrafı kaldır</button>
+          <button class="ghost" data-act="close" data-t="${esc(g.target)}">Kapat (sorun yok)</button>
+        </div>
+      </div>`).join("") : "<p class='hint'>Bekleyen şikâyet yok.</p>";
+    for (const b of document.querySelectorAll("[data-open]")) {
+      b.onclick = () => { document.querySelector('#tabs button[data-tab="player"]').click(); $("p-query").value = b.dataset.open; $("p-find").click(); };
+    }
+    for (const b of document.querySelectorAll("[data-act]")) {
+      b.onclick = async () => {
+        const t = b.dataset.t;
+        const act = b.dataset.act;
+        if (!confirm(act === "close" ? "Şikâyetler işlem yapılmadan kapatılsın mı?" : (act === "reset-name" ? "Ad sıfırlansın ve şikâyetler kapansın mı?" : "Fotoğraf kaldırılsın ve şikâyetler kapansın mı?"))) return;
+        try {
+          if (act !== "close") await api("POST", `/api/mod/${act}`, { uid: t });
+          const c = await api("POST", "/api/reports/close", { target: t, action: act });
+          status("r-status", `${c.closed} şikâyet kapatıldı.`, true);
+          loadReports();
+        } catch (e) { status("r-status", e.message, false); }
+      };
+    }
+  } catch (e) { $("r-list").textContent = e.message; }
+}
+$("r-load").onclick = loadReports;
+document.querySelector('#tabs button[data-tab="reports"]').addEventListener("click", loadReports);
+
+// #tab=… ile açılış sekmesi (bağlantı paylaşmak / ekran görüntüsü için)
+const startTab = /tab=([a-z]+)/.exec(location.hash);
+if (startTab) document.querySelector(`#tabs button[data-tab="${startTab[1]}"]`)?.click();
+const startQuery = /q=([^&]+)/.exec(location.hash);   // #tab=player&q=ABC234: oyuncuyu doğrudan aç
+if (startQuery && key) { $("p-query").value = decodeURIComponent(startQuery[1]); setTimeout(() => $("p-find").click(), 0); }
+if (!key) {
+  $("meta").textContent = "anahtar yok: paneli terminaldeki bağlantıyla aç";
+} else {
+  loadOverview().catch((e) => { $("meta").textContent = "bağlanamadı: " + e.message; });
+}
+</script>
+</body>
+</html>

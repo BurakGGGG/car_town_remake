@@ -56,6 +56,8 @@ signal race_finished(won: bool, money: int, xp: int)
 signal challenge_clicked(vehicle: Node3D)
 ## Kişisel rekor değişti (otomatik kayıt için).
 signal records_changed
+## Önceki rekor GEÇİLDİ (ilk koşu sayılmaz; görev / başarım sayacı).
+signal record_broken(vehicle_id: StringName, time: float)
 ## Oyuncu kaybettiği yarışın rövanşını başlattı (aynı rakip yeniden pistte).
 signal rematch_started(count: int)
 ## Arkadaşın (gerçek ya da Emre / Elif) aracıyla yarış bitti: haber + skor (SocialManager dinler).
@@ -459,13 +461,15 @@ static func _today() -> int:
 	return floori(Time.get_unix_time_from_system() / 86400.0)
 
 
-## Bir yarışın ödülü (₺, XP) — kazanan/kaybedene göre. UI de bunu kullanır (hardcode yok).
+## Bir yarışın ödülü (₺, XP) — kazanan/kaybedene göre. UI de bunu kullanır (hardcode yok). Canlı etkinlik çarpanı dahil.
 func reward_for(rival: StringName, won: bool) -> Dictionary:
 	var rival_class: String = String(CarCatalog.get_entry(rival).get("class", "D"))
 	var base: Dictionary = WIN_REWARD.get(rival_class, WIN_REWARD["D"])
+	var money_mult: float = AppConfig.money_multiplier(get_tree()) if is_inside_tree() else 1.0
+	var xp_mult: float = AppConfig.xp_multiplier(get_tree()) if is_inside_tree() else 1.0
 	if won:
-		return {"money": int(base["money"]), "xp": int(base["xp"])}
-	return {"money": 0, "xp": int(round(float(base["xp"]) * LOSS_XP_RATIO))}
+		return {"money": int(round(float(base["money"]) * money_mult)), "xp": int(round(float(base["xp"]) * xp_mult))}
+	return {"money": 0, "xp": int(round(float(base["xp"]) * LOSS_XP_RATIO * xp_mult))}
 
 
 ## Yarış bitti: ödül BİR KEZ verilir (aynı yarış iki kez ödül vermez). Kazanınca rakip yola döner; kaybedince
@@ -637,6 +641,8 @@ func submit_time(vehicle_id: StringName, time: float, trace: PackedFloat32Array)
 		return false
 	_records = {vehicle_id: {"time": time, "trace": trace.slice(0, TRACE_MAX)}}
 	records_changed.emit()
+	if previous > 0.0:
+		record_broken.emit(vehicle_id, time)
 	return true
 
 

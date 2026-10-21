@@ -1,0 +1,4 @@
+node_modules/
+# Hizmet hesabı anahtarı: depo HERKESE AÇIK, anahtar asla commit'lenmez (server.mjs izleniyorsa açılmaz)
+service-account*.json
+*.key.json

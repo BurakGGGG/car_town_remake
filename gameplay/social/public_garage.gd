@@ -8,15 +8,18 @@ extends RefCounted
 ## OLMAYANLAR: para, XP, gem, kasalar, görevler, reklam sayaçları, ustalık. Bunlar başkasına gösterilmez.
 ## YARIŞ (2026-10-16): araç başına takılı performans kademeleri ("performance.builds") — arkadaşın aracı yarışa
 ## onun modifiyeleriyle gelir (RaceManager). Takma işleri ve gösterge tabanı taşınmaz.
-## GARAJLARIM (2026-10-19): yalnız ÖZET ("car_garage_summary": alınmış garajlar + toplam park yeri) — profil rozeti ve
-## arkadaşın lüks garajı haberi için. Yerleşim, iç kalemler ve süren işler taşınmaz (ziyarette garajlar yok: kullanıcı
-## kararı). Belge alanı değil garaj JSON'unun içinde: Firestore kuralı değişmeden taşınır.
+## DEPOLARIM: ÖZET ("car_garage_summary": alınmış depolar + toplam park yeri) — profil rozeti ve arkadaşın lüks deposu
+## haberi için. 2026-10-20'den beri ziyarette depolar da gezilir (kullanıcı kararı): "car_garages" = {"garages": {id:
+## {"levels", "slots"}}} — yalnız iç kalem seviyeleri ve park yerlerindeki araçlar. Süren işler, inşaat, otopark ve
+## faturalar taşınmaz. Belge alanı değil garaj JSON'unun içinde: Firestore kuralı değişmeden taşınır; JSON sınırı
+## aşılırsa yerleşim düşürülür, özet kalır (without_depots).
 ##
 ## Biçim kayıt sözlüğüyle aynıdır (SaveManager.validate / _apply olduğu gibi okur); ikinci bir model yok.
 
 ## Kaydın içinden alınan alanlar. "progress" ve "vehicles" ayrıca süzülür (aşağıda).
 const COPIED_KEYS: Array[String] = ["garage_upgrades", "repair_bays", "decor"]
-## Firestore kuralıyla aynı sınır (garages.garage_json.size() < 20000).
+## Belgeye yazılan (CloudPack ile SIKIŞMIŞ) metnin sınırı: Firestore kuralıyla aynı (garages.garage_json.size() < 20000).
+## Açık JSON çok daha büyük olabilir (sıkışınca ~1/6); okurken açık metnin sınırı CloudPack.MAX_PLAIN.
 const MAX_JSON: int = 19000
 const SUMMARY_KEY: String = "car_garage_summary"
 
@@ -42,6 +45,43 @@ static func from_snapshot(snapshot: Dictionary) -> Dictionary:
 	var summary: Dictionary = car_garage_summary(snapshot)
 	if not summary.is_empty():
 		out[SUMMARY_KEY] = summary
+	var depots: Dictionary = depot_layout(snapshot)
+	if not depots.is_empty():
+		out["car_garages"] = {"garages": depots}
+	return out
+
+
+## Depoların görünür yerleşimi {id: {"levels": {kalem: seviye}, "slots": [araç id | ""]}} — kayıttan ya da sunucudan gelen
+## açık garajdan; bilinmeyen depo / kalem / araç atılır, seviye ve park yeri sayısı katalog sınırlarına çekilir.
+static func depot_layout(garage: Dictionary) -> Dictionary:
+	var out: Dictionary = {}
+	var section: Variant = garage.get("car_garages", {})
+	var rows: Variant = (section as Dictionary).get("garages", {}) if section is Dictionary else {}
+	if not rows is Dictionary:
+		return out
+	for id: StringName in CarGarageCatalog.ids():
+		var row: Variant = (rows as Dictionary).get(String(id))
+		if not row is Dictionary:
+			continue
+		var levels: Dictionary = {}
+		var raw_levels: Variant = (row as Dictionary).get("levels", {})
+		for item: StringName in CarGarageCatalog.ITEMS:
+			var level: int = SaveSafe.i((raw_levels as Dictionary).get(String(item), 1)) if raw_levels is Dictionary else 1
+			levels[String(item)] = clampi(level, 1, CarGarageCatalog.max_level(id, item))
+		var size: int = CarGarageCatalog.capacity_at(id, int(levels[String(CarGarageCatalog.PARK)]))
+		var slots: Array = []
+		var raw_slots: Variant = (row as Dictionary).get("slots", [])
+		for i: int in size:
+			var car: String = SaveSafe.s((raw_slots as Array)[i]) if raw_slots is Array and i < (raw_slots as Array).size() else ""
+			slots.append(car if not car.is_empty() and not CarCatalog.get_entry(StringName(car)).is_empty() else "")
+		out[String(id)] = {"levels": levels, "slots": slots}
+	return out
+
+
+## JSON sınırı aşılınca: depo yerleşimi düşürülmüş kopya (özet kalır).
+static func without_depots(garage: Dictionary) -> Dictionary:
+	var out: Dictionary = garage.duplicate()
+	out.erase("car_garages")
 	return out
 
 
@@ -113,11 +153,12 @@ static func to_json(garage: Dictionary) -> String:
 	return JSON.stringify(garage, "", true)
 
 
-## Sunucudan gelen JSON'u okur. Geçersizse ya da sürümü desteklenmiyorsa boş sözlük.
-## `max_len`: oyunla gelen öne çıkan garajlar sunucudan geçmez, Firestore sınırına bağlı değildir.
+## Sunucudan gelen JSON'u okur (sıkışık ya da düz). Geçersizse ya da sürümü desteklenmiyorsa boş sözlük.
+## `max_len`: açılmış metnin sınırı (oyunla gelen öne çıkan garajlar kendi sınırını verir).
 ## Yalnızca AÇIK bölümler döner (from_snapshot süzgeci): belgeyi oyunu atlayıp elle yazan biri tamir işi, ekonomi,
 ## ilerleme gibi bölümler eklerse ziyaret modunda SaveManager._apply onları da yüklüyordu.
-static func parse(json: String, max_len: int = MAX_JSON) -> Dictionary:
+static func parse(text: String, max_len: int = CloudPack.MAX_PLAIN) -> Dictionary:
+	var json: String = CloudPack.unpack(text)
 	if json.is_empty() or json.length() > max_len:
 		return {}
 	var raw: Variant = JSON.parse_string(json)

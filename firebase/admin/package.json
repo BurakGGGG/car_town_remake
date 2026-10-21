@@ -1,0 +1,18 @@
+{
+  "name": "autoyard-admin",
+  "private": true,
+  "description": "AUTO YARD yerel yönetim paneli: zorunlu güncelleme / bakım / duyuru (config/app), hediye postası, duyuru bildirimi, oyuncu arama",
+  "type": "module",
+  "main": "server.mjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/lib.test.mjs",
+    "e2e": "cd .. && firebase emulators:exec --only firestore,auth --project demo-cartown \"node admin/test/panel_e2e.mjs\""
+  },
+  "dependencies": {
+    "firebase-admin": "^13.10.0"
+  }
+}

@@ -131,6 +131,7 @@ func _connect() -> void:
 	var mastery: JobMastery = get_tree().get_first_node_in_group("job_mastery") as JobMastery
 	if mastery:
 		mastery.mastery_up.connect(func(_id: StringName, _stars: int) -> void: scan_achievements())
+	_connect_expansion()
 	var gem: GemRewards = _gem()
 	if gem:
 		gem.day_changed.connect(func(_day: int) -> void: ensure_current())
@@ -155,6 +156,46 @@ func _until_in_tree() -> void:
 		return
 	await tree_entered
 	await get_tree().process_frame
+
+
+## 2026-10-20 genişletme: sonradan gelen özelliklerin sayaçları (hurdalık, modifiye, depolar, arkadaş yarışı, rekor,
+## lüks dekor, showroom alımı). Fotoğraf sayacını PhotoMode kendisi artırır (HUD'da, burada aranamaz).
+func _connect_expansion() -> void:
+	var junkyard: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
+	if junkyard:
+		junkyard.pile_searched.connect(func(_index: int, _parts: Dictionary) -> void: count(&"junk_searches", 1))
+		junkyard.parts_gained.connect(func(_part: StringName, amount: int, _source: StringName) -> void:
+			count(&"junk_parts", amount))
+		junkyard.project_completed.connect(func(_vehicle: StringName) -> void: count(&"restorations", 1))
+	var mods: PerformanceModManager = get_tree().get_first_node_in_group("performance_mods") as PerformanceModManager
+	if mods:
+		mods.install_completed.connect(func(_vehicle: StringName, _category: StringName, _stage: int, _old: String,
+				_new: String) -> void: count(&"mods_installed", 1))
+	var garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
+	if garages:
+		garages.build_finished.connect(func(_garage: StringName) -> void:
+			count(&"depot_builds", 1)
+			scan_achievements())
+		garages.upgrade_finished.connect(func(_garage: StringName, _item: StringName, _level: int) -> void:
+			count(&"interior_ups", 1))
+	var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager
+	if race:
+		race.friend_race_finished.connect(func(_owner: Dictionary, won: bool, _mine: StringName, _theirs: StringName,
+				revenge: bool) -> void:
+			count(&"friend_races", 1)
+			if won:
+				count(&"friend_wins", 1)
+				if revenge:
+					count(&"revenges", 1))
+		race.record_broken.connect(func(_vehicle: StringName, _time: float) -> void: count(&"records", 1))
+	var decor: DecorManager = get_tree().get_first_node_in_group("decor") as DecorManager
+	if decor:
+		decor.purchased.connect(func(id: StringName) -> void:
+			if GarageDecor.is_gem_item(id):
+				count(&"luxury_bought", 1))
+	var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+	if ownership:
+		ownership.vehicle_purchased.connect(func(_id: StringName) -> void: count(&"cars_bought", 1))
 
 
 func _on_job_collected(job_id: StringName, _reward: int) -> void:
@@ -391,6 +432,20 @@ func value_of(metric: StringName) -> int:
 			return maxi(_best_streak, gem.streak() if gem else 0)
 		&"ach_stars":
 			return _reached_stars_total()
+		&"depots_owned":
+			var garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
+			return garages.owned_garages().size() if garages else 0
+		&"cars_owned":
+			var owned: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+			return owned.owned_count() if owned else 0
+		&"legendary_cars":
+			var found: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+			var n: int = 0
+			if found:
+				for id: StringName in found.discovered_ids():
+					if StringName(CarCatalog.get_entry(id).get("rarity", &"common")) == &"legendary":
+						n += 1
+			return n
 		&"legend":
 			return 1 if _legend_done() else 0
 	return int(_life.get(metric, 0))
@@ -836,6 +891,9 @@ func build_profile() -> Dictionary:
 	var repair: RepairManager = tree.get_first_node_in_group("repair_manager") as RepairManager
 	var crates: CrateManager = tree.get_first_node_in_group("crates") as CrateManager
 	var decor: DecorManager = tree.get_first_node_in_group("decor") as DecorManager
+	var junkyard: JunkyardManager = tree.get_first_node_in_group("junkyard") as JunkyardManager
+	var garages: CarGarageManager = tree.get_first_node_in_group("car_garages") as CarGarageManager
+	var race: RaceManager = tree.get_first_node_in_group("race") as RaceManager
 	var level: int = player.level if player else 1
 	var garage: int = upgrades.garage_level() if upgrades else 1
 	var bay_count: int = bays.unlocked_count() if bays else 1
@@ -872,6 +930,10 @@ func build_profile() -> Dictionary:
 		"paint_ready": GameFeatures.PAINT and gems >= 15,
 		"growth_ready": growth_cost > 0 and money + int(typical.get(&"repair_money", 0.0)) >= growth_cost,
 		"display_ready": level >= 4 and (ownership.owned_count() if ownership else 1) >= 2,
+		"junk_ready": junkyard != null and junkyard.is_open(),
+		"mods_ready": (ownership.owned_count() if ownership else 0) >= 1 and level >= PerformanceMods.required_level(1),
+		"interior_ready": garages != null and not garages.owned_garages().is_empty(),
+		"record_ready": level >= MissionCatalog.MIN_LEVEL and race != null and race.best_time() > 0.0,
 	}
 
 
@@ -928,6 +990,9 @@ static func prior_typical(level: int, jobs: Array[Dictionary], avg_reward: float
 		&"crates_opened": 1.0, &"crates_bought": 1.0, &"money_spent": repairs * avg_reward * 0.35,
 		&"decor_placed": 2.0, &"cars_displayed": 1.0, &"paints": 1.0, &"growth_buys": 1.0,
 		&"long_jobs": repairs * long_weight / maxf(weight_sum, 0.001),
+		# 2026-10-20 genişletme (geçmiş birikince yerini medyan alır)
+		&"junk_searches": 2.0, &"junk_parts": 8.0, &"restorations": 0.2, &"mods_installed": 1.0, &"interior_ups": 1.0,
+		&"friend_races": 1.0, &"friend_wins": 1.0, &"records": 0.3, &"photos": 1.0,
 	}
 	for job: Dictionary in jobs:
 		out[StringName("job_%s" % job["id"])] = repairs * float(job["weight"]) / maxf(weight_sum, 0.001)

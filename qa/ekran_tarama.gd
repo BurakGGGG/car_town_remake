@@ -362,6 +362,13 @@ func _garage_states() -> void:
 		_router.open(&"car_garages")
 		await wait(0.7)
 		await _report("garajlar_pano_ilk", _router.screen(&"car_garages"))
+	if _want("garajlar_pano_satilik"):   # alınmamış garaj seçili: fiyat, SATIN AL / PARA YETERSİZ / SEVİYE
+		await open_garage.call(CarGarageCatalog.MAHALLE)
+		_router.open(&"car_garages")
+		await wait(0.5)
+		(_router.screen(&"car_garages") as CarGaragesScreen).main_button(CarGarageCatalog.NEON)
+		await wait(0.3)
+		await _report("garajlar_pano_satilik", _router.screen(&"car_garages"))
 	var progress: PlayerProgress = get_first_node_in_group("player_progress") as PlayerProgress
 	var economy: EconomyManager = get_first_node_in_group("economy") as EconomyManager
 	progress.load_state(30, 0, progress.gems)
@@ -390,6 +397,20 @@ func _garage_states() -> void:
 		_router.open(&"car_garages")
 		await wait(0.7)
 		await _report("garajlar_pano", _router.screen(&"car_garages"))
+	if _want("garajlar_pano_insaat"):   # inşaattaki garaj seçili: şerit, geri sayım, ELMASLA BİTİR
+		await open_garage.call(CarGarageCatalog.NEON)
+		_router.open(&"car_garages")
+		await wait(0.5)
+		(_router.screen(&"car_garages") as CarGaragesScreen).main_button(CarGarageCatalog.SHOWROOM)
+		await wait(0.3)
+		await _report("garajlar_pano_insaat", _router.screen(&"car_garages"))
+	if _want("garajlar_yerlestir"):   # bütün depolar alınmışken YERLEŞTİR: boş yeri olan depolar listelenir
+		_router.close_all()
+		await wait(0.35)
+		_hud.car_placement_screen.vehicle_id = manager.cars_in(CarGarageCatalog.NEON)[0]
+		_router.open(&"car_placement")
+		await wait(0.7)
+		await _report("garajlar_yerlestir", _router.screen(&"car_placement"))
 	if _want("garajlar_ic"):
 		await open_garage.call(CarGarageCatalog.MAHALLE)
 		_router.open(&"car_garages")
@@ -549,8 +570,26 @@ func _run() -> void:
 
 	# --- Yerler ve panolar ---
 	await _screen(&"garage", "garaj")
-	await _screen(&"garage", "garaj_detay", func() -> void:
-		(_router.screen(&"garage") as GarageScreen).call("_open_detail"))
+	if _want("yerlestir"):   # YERLEŞTİR: yeni aracın yeri (GARAJIMA KOY / depo / otopark)
+		_router.close_all()
+		await wait(0.35)
+		_hud.car_placement_screen.vehicle_id = (get_first_node_in_group("vehicle_ownership") as VehicleOwnership) \
+			.owned_vehicle_ids()[0]
+		_router.open(&"car_placement")
+		await wait(0.7)
+		await _report("yerlestir", _router.screen(&"car_placement"))
+	if _want("yerlestir_garaj"):   # GARAJIMA KOY: düzenleme kipi araç parmakta
+		_router.close_all()
+		await wait(0.35)
+		_hud.car_placement_screen.vehicle_id = (get_first_node_in_group("vehicle_ownership") as VehicleOwnership) \
+			.owned_vehicle_ids()[0]
+		_router.open(&"car_placement")
+		await wait(0.7)
+		_hud.car_placement_screen.option(CarGarageManager.HOME).pressed.emit()
+		await wait(1.2)
+		await _report("yerlestir_garaj", _router.screen(&"garage_edit"))
+	await _screen(&"garage", "garaj_diger", func() -> void:
+		(_router.screen(&"garage") as GarageScreen).call("_toggle_more"))
 	if GameFeatures.PAINT:
 		await _screen(&"garage", "garaj_boya", func() -> void:
 			(_router.screen(&"garage") as GarageScreen).call("_open_paint"))
@@ -639,6 +678,27 @@ func _run() -> void:
 	await _screen(&"friends", "arkadaslar")
 	await _screen(&"gem_store", "elmas_magazasi")
 	await _screen(&"garage_edit", "dekor")
+	await _screen(&"garage_edit", "dekor_araclar", func() -> void:   # kartlarda aracın yeri (GARAJDA / depo / OTOPARK)
+		(_router.screen(&"garage_edit") as GarageEditScreen).call("_select_tab", GarageDecor.Kind.VEHICLE))
+	# SERGİ PLAKASI: ana garajdaki araca dokununca kamera yaklaşır, plaka açılır (docs/GARAJLAR_TASARIM.md §10)
+	var garages_qa: CarGarageManager = get_first_node_in_group("car_garages") as CarGarageManager
+	var shown: Array[StringName] = garages_qa.cars_in(CarGarageManager.HOME) if garages_qa else ([] as Array[StringName])
+	if not shown.is_empty():
+		await _world("sergi_plaka", func() -> void:
+			_hud.show_exhibit(shown[0])
+			await wait(0.9))
+		await _world("sergi_tasi", func() -> void:
+			_hud.show_exhibit(shown[0])
+			await wait(0.6)
+			_hud.exhibit_plate.call("_show_targets"))
+		_hud.exhibit_plate.hide_plate()
+		if _want("sergi_modifiye"):
+			_router.close_all()
+			await wait(0.35)
+			_hud.garage_screen.open_home_mods(shown[0])
+			_router.open(&"garage")
+			await wait(1.2)
+			await _report("sergi_modifiye", _router.screen(&"garage"))
 	await _screen(&"race_challenge", "yaris_davet")
 	# ARKADAŞ RAKİP: davet başlığı / rakip plakasında fotoğraf + ad, sonuçta "… YENDİN!"
 	var race_mgr: RaceManager = get_first_node_in_group("race") as RaceManager

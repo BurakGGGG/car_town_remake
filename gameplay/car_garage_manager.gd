@@ -1,13 +1,15 @@
 class_name CarGarageManager
 extends Node
-## GARAJLARIM — oyuncunun ARAÇ garajları: alınmış / inşaattaki garajlar, iç yükseltme seviyeleri ve süren işler,
-## araçların hangi garajın hangi park yerinde durduğu ve BEKLEME OTOPARKI. Veri CarGarageCatalog'da.
-## Kararlar: docs/GARAJLAR_TASARIM.md §2–4.
+## DEPOLARIM — oyuncunun ARAÇ DEPOLARI (iç kimlikte hâlâ "garaj"): alınmış / inşaattaki depolar, iç yükseltme
+## seviyeleri ve süren işler, araçların hangi deponun hangi park yerinde durduğu ve ücretli OTOPARK (WAITING).
+## Veri CarGarageCatalog'da. Kararlar: docs/GARAJLAR_TASARIM.md §10 (2026-10-20) — §2–4'ün yerine geçer.
 ##
-## SAHİPLİK VehicleOwnership'tedir; burası yalnızca YERLEŞİMİ tutar ve her sahiplik değişiminde uzlaştırır
-## (reconcile): satılan araç yerinden çıkar, yeni araç (galeri, kasa, hediye, hurdalık) boş yeri olan EN ÜST garaja
-## park eder, yer yoksa BEKLER — kaybolmaz. Yer açılınca (satış, PARK YERİ, inşaat bitişi) bekleyenler geliş sırasıyla
-## kendiliğinden park eder. Bekleyen araç yarışa / modifiyeye / boyaya giremez, satılabilir.
+## Araç üç yerden birindedir: GARAJIM (HOME — ana dünyadaki garajın sergisi, DecorManager "car:<id>"; sınır yok),
+## bir DEPO (kapasiteli) ya da OTOPARK (sınırsız, araç başına her gün değerinin %5'i).
+## SAHİPLİK VehicleOwnership'tedir; burası YERLEŞİMİ tutar ve her sahiplik / sergi değişiminde uzlaştırır (reconcile):
+## satılan araç yerinden çıkar, sergiye konan araç depodan / otoparktan çıkar, yeni araç (ve sergiden kaldırılan) boş
+## yeri olan EN ÜST depoya, yer yoksa OTOPARKA gider — kaybolmaz. Depoda yer açılınca (satış, PARK YERİ, inşaat
+## bitişi) otoparktakiler geliş sırasıyla kendiliğinden depoya geçer. Oyuncunun seçimi YERLEŞTİR panosundadır (HUD).
 ##
 ## Süreler gerçek saatle (unix) işler: oyun kapalıyken de dolar; süre dolunca iş kendiliğinden biter.
 ## Garaj başına aynı anda TEK iç yükseltme işi. Para hemen düşer.
@@ -19,10 +21,12 @@ extends Node
 signal layout_changed
 ## Satın alma, inşaat, iç yükseltme (seviye ya da süren iş) değişti.
 signal garages_changed
-## Yer yok: araç bekleme otoparkına girdi.
+## Depolarda yer yok: araç OTOPARKA girdi.
 signal vehicle_waiting(vehicle_id: StringName)
-## Bekleyen araçlar garaja girdi (geliş sırasıyla).
+## Otoparktaki araçlar depoya geçti (geliş sırasıyla).
 signal waiting_parked(vehicle_ids: Array[StringName])
+## OTOPARK ücreti kesildi: ödenen ₺ (bakiye yettiği kadar), o an otoparktaki araç, kesilen dönem.
+signal fee_charged(amount: int, cars: int, periods: int)
 signal build_finished(garage: StringName)
 signal upgrade_finished(garage: StringName, item: StringName, level: int)
 ## ELMASLA BİTİR: elmas harcandı (HUD sesi).
@@ -46,8 +50,17 @@ enum ItemStatus {
 	TOO_EXPENSIVE,
 }
 
-## GarageScreen ve TÜM ARAÇLAR panosunun sözde garajı: bekleme otoparkı.
+## Sözde konum: OTOPARK (eski bekleme otoparkı; çatı katı sahnesi). Sınırsız, ücretli.
 const WAITING: StringName = &"waiting"
+## Sözde konum: GARAJIM — ana dünyadaki garajın araç sergisi (depo değil, yer sınırı yok).
+const HOME: StringName = &"home"
+## OTOPARK ücreti: araç başına, her dönemde araç değerinin (katalog fiyatı) bu payı (kullanıcı kararı: %5 / gün).
+const FEE_RATE: float = 0.05
+const FEE_PERIOD: float = 86400.0
+## Oyuncu yokken kaçırılan dönemlerden en çok bu kadarı kesilir (kullanıcı kararı); bakiye sıfırın altına inmez.
+const FEE_MAX_PERIODS: int = 3
+## Kesilen ücretler günlüğü (OTO MANŞET): en çok bu kadar kayıt.
+const FEES_KEEP: int = 20
 ## Biten işlere bakma aralığı (sn).
 const POLL: float = 0.5
 ## Biten işler günlüğü (OTO MANŞET): en çok bu kadar kayıt, en çok bu kadar eski (sn).
@@ -63,8 +76,12 @@ var _garages: Dictionary = {}
 var _building: Dictionary = {}
 ## İç yükseltme işleri: garaj id → {"item", "level", "end"}.
 var _jobs: Dictionary = {}
-## Bekleme otoparkı, geliş sırasıyla.
+## OTOPARK, geliş sırasıyla.
 var _waiting: Array[StringName] = []
+## Ücret döneminin başladığı an (unix sn). Otopark boşken "şimdi"de tutulur: boş otoparka giren ilk araçla başlar.
+var _fee_since: float = 0.0
+## Kesilen ücretler: {"at" (dönemin bittiği an), "amount", "cars", "periods"}.
+var _fees: Array[Dictionary] = []
 ## Biten inşaat / iç yükseltme işleri: {"garage", "item" (inşaatta &""), "level", "at"}. `at` işin PLANLANAN bitişi:
 ## oyun kapalıyken dolan iş açılışta kapanır ama OTO MANŞET'in "sen yokken" penceresine doğru düşer.
 var _done: Array[Dictionary] = []
@@ -73,7 +90,7 @@ var _poll: float = 0.0
 
 func _ready() -> void:
 	add_to_group("car_garages")
-	_ensure_starter()
+	_fee_since = now()
 	_connect.call_deferred()
 
 
@@ -81,6 +98,9 @@ func _connect() -> void:
 	var ownership: VehicleOwnership = _ownership()
 	if ownership and not ownership.ownership_changed.is_connected(reconcile):
 		ownership.ownership_changed.connect(reconcile)
+	var decor: DecorManager = _decor()
+	if decor and not decor.placement_changed.is_connected(reconcile):
+		decor.placement_changed.connect(reconcile)   # sergiye konan / kaldırılan araç
 	reconcile()
 
 
@@ -255,6 +275,14 @@ func capacity(garage: StringName) -> int:
 	return (_garages[garage]["slots"] as Array).size() if _garages.has(garage) else 0
 
 
+## Depolardaki boş yer (otopark ve sergi hariç).
+func free_slots() -> int:
+	var free: int = 0
+	for id: StringName in _garages:
+		free += (_garages[id]["slots"] as Array).count(&"")
+	return free
+
+
 func used(garage: StringName) -> int:
 	return cars_in(garage).size()
 
@@ -266,10 +294,12 @@ func total_capacity() -> int:
 	return total
 
 
-## Garajdaki araçlar, park yeri sırasıyla (WAITING: bekleyenler, geliş sırasıyla).
+## Depodaki araçlar, park yeri sırasıyla (WAITING: otopark, geliş sırasıyla; HOME: sergidekiler).
 func cars_in(garage: StringName) -> Array[StringName]:
 	if garage == WAITING:
 		return _waiting.duplicate()
+	if garage == HOME:
+		return home_ids()
 	var out: Array[StringName] = []
 	if _garages.has(garage):
 		for id: StringName in _garages[garage]["slots"]:
@@ -286,8 +316,10 @@ func slots_of(garage: StringName) -> Array[StringName]:
 	return out
 
 
-## Aracın garajı; bekliyorsa WAITING, yerleşimde yoksa &"".
+## Aracın yeri: depo id'si, OTOPARK'taysa WAITING, sergideyse HOME; yerleşimde yoksa &"".
 func garage_of(vehicle_id: StringName) -> StringName:
+	if is_home(vehicle_id):
+		return HOME
 	for id: StringName in _garages:
 		if (_garages[id]["slots"] as Array).has(vehicle_id):
 			return id
@@ -302,27 +334,116 @@ func waiting_ids() -> Array[StringName]:
 	return _waiting.duplicate()
 
 
-## Aracın gidebileceği garajlar (kendi garajı hariç, boş yeri olan alınmış garajlar).
+## Aracın gidebileceği yerler: kendi yeri hariç boş yeri olan alınmış depolar; depolar doluysa OTOPARK (depoda yer
+## varken otopark seçilemez: uzlaştırma aracı ücretsiz depoya geri alırdı). GARAJIM'a taşımak düzenleme kipinde
+## yerleştirmektir (UI), burada değil.
 func move_targets(vehicle_id: StringName) -> Array[StringName]:
 	var out: Array[StringName] = []
 	var current: StringName = garage_of(vehicle_id)
 	for id: StringName in owned_garages():
 		if id != current and used(id) < capacity(id):
 			out.append(id)
+	if current != WAITING and free_slots() == 0:
+		out.append(WAITING)
 	return out
 
 
-## TAŞI: araç hedef garajın ilk boş yerine geçer. Hedef doluysa ya da araç sahipte değilse false.
+## TAŞI: araç hedef deponun ilk boş yerine (ya da otoparka) geçer; sergideyse sergiden kalkar. Hedef doluysa ya da
+## araç sahipte değilse false.
 func move(vehicle_id: StringName, garage: StringName) -> bool:
 	var ownership: VehicleOwnership = _ownership()
 	if (ownership and not ownership.is_owned(vehicle_id)) or not move_targets(vehicle_id).has(garage):
 		return false
+	_unhome(vehicle_id)
 	_remove(vehicle_id)
-	_put(garage, vehicle_id)
+	if garage == WAITING:
+		_waiting.append(vehicle_id)
+	else:
+		_put(garage, vehicle_id)
 	layout_changed.emit()
-	reconcile()   # araç bekleme otoparkından çıktıysa yeri olan başka bekleyen yok; yine de tutarlı kalsın
+	reconcile()
 	_request_save()
 	return true
+
+
+# --- GARAJIM (ana garajın sergisi) ---------------------------------------------------------
+
+## Ana garajda sergilenen araçlar (DecorManager "car:<id>" örnekleri; sahip olunmayan atılır).
+func home_ids() -> Array[StringName]:
+	var out: Array[StringName] = []
+	var decor: DecorManager = _decor()
+	var ownership: VehicleOwnership = _ownership()
+	if decor == null:
+		return out
+	for inst: Dictionary in decor.instances():
+		var id: StringName = GarageDecor.vehicle_of(inst["item"])
+		if id != &"" and not out.has(id) and (ownership == null or ownership.is_owned(id)):
+			out.append(id)
+	return out
+
+
+func is_home(vehicle_id: StringName) -> bool:
+	return home_ids().has(vehicle_id)
+
+
+## Aracı sergiden kaldırır (dekor örneği silinir); sergide değilse bir şey yapmaz.
+func _unhome(vehicle_id: StringName) -> void:
+	var decor: DecorManager = _decor()
+	if decor == null:
+		return
+	var item: StringName = GarageDecor.vehicle_item_id(vehicle_id)
+	for inst: Dictionary in decor.instances():
+		if inst["item"] == item:
+			decor.remove_instance(String(inst["iid"]))
+
+
+# --- OTOPARK ücreti -----------------------------------------------------------------------------
+
+## Aracın bir dönemlik (günlük) otopark ücreti (₺).
+static func fee_of(vehicle_id: StringName) -> int:
+	return ceili(float(CarCatalog.get_entry(vehicle_id).get("price", 0)) * FEE_RATE)
+
+
+## Otoparktaki araçların bir dönemlik ücreti.
+func daily_fee() -> int:
+	var total: int = 0
+	for id: StringName in _waiting:
+		total += fee_of(id)
+	return total
+
+
+## Sıradaki ücrete kalan süre (sn); otopark boşsa 0.
+func next_fee_in() -> float:
+	return maxf(_fee_since + FEE_PERIOD - now(), 0.0) if not _waiting.is_empty() else 0.0
+
+
+## Pencerede (from, to] kesilen ücretler (OTO MANŞET).
+func fees_between(from: float, to: float) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for entry: Dictionary in _fees:
+		if float(entry["at"]) > from and float(entry["at"]) <= to:
+			out.append(entry.duplicate())
+	return out
+
+
+## Dolan dönemlerin ücretini keser (en çok FEE_MAX_PERIODS dönem; bakiye yettiği kadar). Ücret, kesildiği an
+## otoparkta duran araçlarla hesaplanır.
+func _check_fee() -> void:
+	if _waiting.is_empty():
+		_fee_since = now()
+		return
+	var periods: int = floori((now() - _fee_since) / FEE_PERIOD)
+	if periods < 1:
+		return
+	_fee_since += float(periods) * FEE_PERIOD
+	var charged: int = mini(periods, FEE_MAX_PERIODS)
+	var economy: EconomyManager = _economy()
+	var paid: int = economy.charge(daily_fee() * charged) if economy else 0
+	_fees.append({"at": _fee_since, "amount": paid, "cars": _waiting.size(), "periods": charged})
+	while _fees.size() > FEES_KEEP:
+		_fees.pop_front()
+	fee_charged.emit(paid, _waiting.size(), charged)
+	_request_save()
 
 
 ## Sahiplikle uzlaştırır: satılan araç çıkar, yeni araç en üst boş garaja (yoksa beklemeye), bekleyenler boş yerlere.
@@ -336,8 +457,10 @@ func reconcile() -> void:
 	for id: StringName in owned:
 		keep[id] = true
 	var changed: bool = false
-	# 1) Gidenler (ve aynı aracın ikinci kopyası: bozuk kayıt)
+	# 1) Gidenler (ve aynı aracın ikinci kopyası: bozuk kayıt). Sergideki araç depoda / otoparkta yer kaplamaz.
 	var seen: Dictionary = {}
+	for id: StringName in home_ids():
+		seen[id] = true
 	for garage: StringName in _garages:
 		var slots: Array = _garages[garage]["slots"]
 		for i: int in slots.size():
@@ -353,7 +476,7 @@ func reconcile() -> void:
 			changed = true
 	for id: StringName in _waiting:
 		seen[id] = true
-	# 2) Gelenler: en üst boş garaja, yer yoksa beklemeye
+	# 2) Gelenler (ve sergiden kalkanlar): en üst boş depoya, yer yoksa otoparka
 	var arrived_waiting: Array[StringName] = []
 	for id: StringName in owned:
 		if seen.has(id):
@@ -365,7 +488,7 @@ func reconcile() -> void:
 			_waiting.append(id)
 			arrived_waiting.append(id)
 		changed = true
-	# 3) Bekleyenler yer açıldıkça girer
+	# 3) Otoparktakiler depoda yer açıldıkça geçer (ücretten kurtulur)
 	var parked: Array[StringName] = []
 	while not _waiting.is_empty():
 		var target: StringName = _best_free()
@@ -440,18 +563,24 @@ func state() -> Dictionary:
 	for entry: Dictionary in _done:
 		done.append({"garage": String(entry["garage"]), "item": String(entry["item"]), "level": int(entry["level"]),
 			"at": float(entry["at"])})
-	return {"garages": garages, "building": building, "jobs": jobs, "waiting": waiting, "done": done}
+	var fees: Array = []
+	for entry: Dictionary in _fees:
+		fees.append({"at": float(entry["at"]), "amount": int(entry["amount"]), "cars": int(entry["cars"]),
+			"periods": int(entry["periods"])})
+	return {"garages": garages, "building": building, "jobs": jobs, "waiting": waiting, "done": done,
+		"fee_since": _fee_since, "fees": fees}
 
 
 ## Kayıttan: bilinmeyen garaj / kalem / araç atılır, seviyeler sınırlanır, park yerleri kapasiteye göre kesilir ya da
 ## uzatılır. Saat geri alınmışsa süre kısalmaz ama adımın süresinden uzun da kalmaz. Uzlaştırma YAPMAZ: sahiplik
-## henüz yüklenmemiş olabilir (SaveManager sahiplikten sonra reconcile çağırır). Eski kayıtta yoktur: yalnız MAHALLE.
+## henüz yüklenmemiş olabilir (SaveManager sahiplikten sonra reconcile çağırır). Bölüm yoksa: hiç depo yok.
 func load_state(data: Dictionary) -> void:
 	_garages.clear()
 	_building.clear()
 	_jobs.clear()
 	_waiting.clear()
 	_done.clear()
+	_fees.clear()
 	var seen: Dictionary = {}
 	var garages: Variant = data.get("garages", {})
 	if garages is Dictionary:
@@ -514,23 +643,28 @@ func load_state(data: Dictionary) -> void:
 				_done.append({"garage": id, "item": item, "level": SaveSafe.i((raw as Dictionary).get("level", 1)),
 					"at": SaveSafe.f((raw as Dictionary).get("at", 0.0))})
 		_trim_done()
-	_ensure_starter()
+	# Ücret dönemi: saat geri alınmışsa ileriye kayamaz (bir dönemden uzun beklemez)
+	_fee_since = clampf(SaveSafe.f(data.get("fee_since", now())), now() - FEE_PERIOD * float(FEE_MAX_PERIODS + 1), now())
+	var fees: Variant = data.get("fees", [])
+	if fees is Array:
+		for raw: Variant in fees:
+			if raw is Dictionary:
+				_fees.append({"at": SaveSafe.f((raw as Dictionary).get("at", 0.0)),
+					"amount": maxi(SaveSafe.i((raw as Dictionary).get("amount", 0)), 0),
+					"cars": maxi(SaveSafe.i((raw as Dictionary).get("cars", 0)), 0),
+					"periods": maxi(SaveSafe.i((raw as Dictionary).get("periods", 1)), 1)})
+		while _fees.size() > FEES_KEEP:
+			_fees.pop_front()
 	garages_changed.emit()
 	layout_changed.emit()
 
 
-## Yeni oyun: yalnız MAHALLE GARAJI, boş.
+## Yeni oyun: hiç depo yok, otopark boş.
 func reset() -> void:
 	load_state({})
 
 
 # --- İç ----------------------------------------------------------------------------------
-
-## Başlangıç garajı (ücretsiz) her zaman vardır.
-func _ensure_starter() -> void:
-	if not _garages.has(CarGarageCatalog.MAHALLE):
-		_garages[CarGarageCatalog.MAHALLE] = _new_garage(CarGarageCatalog.MAHALLE)
-
 
 func _new_garage(garage: StringName) -> Dictionary:
 	var levels: Dictionary = {}
@@ -552,6 +686,7 @@ func _open_garage(garage: StringName) -> void:
 
 
 func _check_timers() -> void:
+	_check_fee()
 	var t: float = now()
 	for id: StringName in _building.keys():
 		if float(_building[id]) <= t:
@@ -626,6 +761,10 @@ func _player_level() -> int:
 
 func _ownership() -> VehicleOwnership:
 	return get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership if is_inside_tree() else null
+
+
+func _decor() -> DecorManager:
+	return get_tree().get_first_node_in_group("decor") as DecorManager if is_inside_tree() else null
 
 
 func _economy() -> EconomyManager:

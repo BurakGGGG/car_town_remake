@@ -9,6 +9,8 @@ extends HBoxContainer
 ##   Mode.SHOP  — kataloğun tamamı + "125.000 ₺ / SATIN AL" plakası. Araç satın alma ARABA
 ##                GALERİSİ'ne (ShowroomScreen) taşındığı için şu anda kullanılmıyor; kip yerinde
 ##                duruyor ama HUD hiçbir galeriyi bu kiple açmıyor.
+## `compact` (ARAÇLAR ekranının koyu rafı): plaka yalnız küçük resimdir — ad üstteki bilgi bloğunda yazar; sol
+## üst köşede nadirlik noktası, yarış aracının sağ üst köşesinde dama bayrak.
 ##
 ## Seçim artık dünyadaki park etmiş araçlara bağlı DEĞİLDİR (satın alınmamış araçlar dünyada
 ## durmaz): plakaya basılınca vehicle_selected(id) yayılır, garaj önizlemesini o sinyal sürer.
@@ -32,6 +34,9 @@ enum Mode {
 }
 
 const PLATE_WIDTH: float = 124.0
+## Kompakt plaka: küçük resim + kenar payları (yükseklik resmin oranından).
+const COMPACT_WIDTH: float = 96.0
+const COMPACT_HEIGHT: float = 64.0
 const THUMB_TOP: float = 4.0
 const THUMB_SIZE: Vector2i = Vector2i(176, 110)  # render çözünürlüğü (plakada 112x70'e çizilir)
 const LIFT: float = 3.0  # HudGalleryPlate basılı stilindeki expand_margin_top ile aynı
@@ -56,6 +61,8 @@ var mode: Mode = Mode.SHOP
 ## OWNED kipinde listelenecek araç id'leri (Array[StringName] döner); boşsa sahip olunan bütün araçlar.
 ## Garaj ekranı içinde bulunulan garajın (GARAJLARIM) araçlarını verir.
 var source: Callable = Callable()
+## Yazısız, küçük plakalar (bkz. üstteki açıklama). Ebeveyn _ready'sinde kurar.
+var compact: bool = false
 
 var _plates: Array[PlateButton] = []
 var _columns: Array[VBoxContainer] = []
@@ -123,6 +130,9 @@ func _connect_managers() -> void:
 	_economy = get_tree().get_first_node_in_group("economy") as EconomyManager
 	if _ownership:
 		_ownership.ownership_changed.connect(_on_ownership_changed)
+		_ownership.race_vehicle_changed.connect(func(_id: StringName) -> void:
+			for plate: PlateButton in _plates:
+				plate.queue_redraw())   # yarış aracı bayrağı yer değiştirir
 	if _economy:
 		_economy.money_changed.connect(func(_m: int) -> void: _refresh_actions())
 
@@ -174,7 +184,7 @@ func _build_column(entry: Dictionary) -> void:
 	var column: VBoxContainer = VBoxContainer.new()
 	column.name = String(id)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
+	column.custom_minimum_size = Vector2(COMPACT_WIDTH if compact else PLATE_WIDTH, 0.0)
 	column.add_theme_constant_override(&"separation", 3)
 
 	var plate: PlateButton = PlateButton.new()
@@ -187,6 +197,16 @@ func _build_column(entry: Dictionary) -> void:
 	plate.button_group = _group
 	plate.theme_type_variation = &"HudGalleryPlate"
 	plate.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
+	if compact:
+		# HudGalleryPlate yazı için resmin altında yer ayırıyor (üst pay 72); yazısız plakada HudPlate'in seçili amber
+		# hâli aynı, payları küçük
+		plate.text = ""
+		plate.theme_type_variation = &"HudPlate"
+		plate.custom_minimum_size = Vector2(COMPACT_WIDTH, COMPACT_HEIGHT)
+		# Seçili plaka yukarı kalkar (LIFT + stilin üst taşması): sütun biraz uzun, plaka dibinde — kaydırma kabı
+		# kalkan kenarı kırpmasın
+		column.alignment = BoxContainer.ALIGNMENT_END
+		column.custom_minimum_size.y = COMPACT_HEIGHT + LIFT * 2.0
 	plate.focus_mode = Control.FOCUS_NONE
 	plate.set_meta(&"vehicle_id", id)
 	plate.draw.connect(_draw_preview.bind(plate, entry))
@@ -496,8 +516,10 @@ func _draw_preview(plate: PlateButton, entry: Dictionary) -> void:
 	var w: float = plate.size.x
 
 	var bolt: Color = Color(ink, 0.45)
-	plate.draw_circle(Vector2(7.0, 7.0 - lift), 1.7, bolt, true, -1.0, true)
-	plate.draw_circle(Vector2(w - 7.0, 7.0 - lift), 1.7, bolt, true, -1.0, true)
+	var id: StringName = entry["id"]
+	if not compact:   # kompakt plakanın köşe rozetleri resmin ÜSTÜNE, en sonda çizilir
+		plate.draw_circle(Vector2(7.0, 7.0 - lift), 1.7, bolt, true, -1.0, true)
+		plate.draw_circle(Vector2(w - 7.0, 7.0 - lift), 1.7, bolt, true, -1.0, true)
 
 	var area: Rect2 = Rect2(6.0, THUMB_TOP - lift, w - 12.0, (w - 12.0) * THUMB_SIZE.y / THUMB_SIZE.x)
 
@@ -507,7 +529,6 @@ func _draw_preview(plate: PlateButton, entry: Dictionary) -> void:
 	plate.draw_circle(Vector2.ZERO, area.size.x * 0.36, Color(ink, 0.2), true, -1.0, true)
 	plate.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-	var id: StringName = entry["id"]
 	var thumbnail: Texture2D = _thumbnails.get(id)
 	if thumbnail == null and _use_baked(id):
 		thumbnail = _thumbnails.get(id)   # önceden çizilmiş resim: bu karede çizilir
@@ -517,3 +538,12 @@ func _draw_preview(plate: PlateButton, entry: Dictionary) -> void:
 		# Render henüz yoksa (veya headless) araç silueti; görünür plaka render'ını ister
 		HudIcon.draw_icon(plate, HudIcon.Kind.CAR, area.get_center(), 40.0, entry["plate_color"], Color(0.0, 0.0, 0.0, 0.0))
 		_request_thumbnail(id)
+	if compact:
+		# Sol üst: nadirlik noktası (koyu halkalı); sağ üst: yarış aracıysa dama bayrak, değilse cıvata
+		plate.draw_circle(Vector2(9.0, 9.0 - lift), 4.6, Color(ink, 0.7), true, -1.0, true)
+		plate.draw_circle(Vector2(9.0, 9.0 - lift), 3.4, CrateCatalog.rarity_color(CrateCatalog.rarity_of(id)), true, -1.0, true)
+		if _ownership and _ownership.race_vehicle_id() == id:
+			plate.draw_circle(Vector2(w - 11.0, 11.0 - lift), 9.0, ink, true, -1.0, true)
+			HudIcon.draw_icon(plate, HudIcon.Kind.FLAG, Vector2(w - 11.0, 11.0 - lift), 11.0, HudPalette.PLATE, ink)
+		else:
+			plate.draw_circle(Vector2(w - 7.0, 7.0 - lift), 1.7, bolt, true, -1.0, true)

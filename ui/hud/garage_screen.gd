@@ -2,8 +2,11 @@ class_name GarageScreen
 extends Control
 ## Tam ekran GARAJ görünümü — "yol mobilyası / plaka" dili.
 ## Kendi 3D garaj dünyası (SubViewport, tam ekran): asfalt zemin, güvenlik şeritleri, iki duvar,
-## lift platformu ve ortada seçili aracın gerçek modeli. Üstünde plakalar: tabela, sol bilgi plakaları,
-## sağ aksiyon plakaları, alt park yeri listesi, sol alt çıkış.
+## lift platformu ve ortada seçili aracın gerçek modeli. Üstünde: tabela (garaj seçici), sol üstte plakasız
+## KAHRAMAN bilgi bloğu (konturlu ad, sınıf · nadirlik · yıl, değer · durum, koyu stat rafı), sağ üstte yuvarlak
+## tabelalar (TÜM ARAÇLAR, KOLEKSİYON), altta koyu raf (küçük resim şeridi + YARIŞ / DİĞER tabelaları + amber
+## MODİFİYE), sol alt çıkış. Seyrek eylemler (TAŞI, SAT) DİĞER panosunda; panolar sağ ortada açılır.
+## (B tasarımı, 2026-10-20: eskiden 16 eşit krem plakaydı; TAMİR işlevsizdi, DETAY statları artık hep görünür.)
 ## Bu ekran ARAÇLAR sekmesidir: yalnızca araçlar. Garaj seviyesi / tamir hızı / düzenleme / detay /
 ## ustalık ana görünümün alt panelindedir (GaragePanel).
 ## Alt listede (CarGallery, OWNED kipi) YALNIZCA oyuncunun SAHİP OLDUĞU araçlar durur
@@ -31,6 +34,11 @@ extends Control
 signal action_selected(action: StringName, car: StringName)
 ## Bir pano isteniyor (&"garage_value" / &"mastery"): ekranı UiRouter açar, garaj altta açık kalır.
 signal screen_requested(id: StringName)
+## TAŞI → GARAJIMA KOY: HUD düzenleme kipini aracı parmakta açar.
+signal home_requested(vehicle_id: StringName)
+## TÜM ARAÇLAR'dan ana garajda sergilenen bir araç seçildi: HUD ekranı kapatıp dünyada SERGİ PLAKASI'nı açar
+## (GARAJIM ayrı bir yer olarak gösterilmez, docs/GARAJLAR_TASARIM.md §10).
+signal home_vehicle_chosen(vehicle_id: StringName)
 ## MODİFİYE kipinde YÜKSELT: satın alma ve ana dünyadaki sinematik HUD'dadır.
 signal mod_upgrade_requested(vehicle_id: StringName, category: StringName)
 signal closed
@@ -46,7 +54,9 @@ const EXIT_RESERVE: float = 96.0
 const EXIT_GAP: float = 8.0
 ## Sol sütunun kadraj üstünden payı.
 const COLUMN_TOP: float = 16.0
-const INFO_WIDTH: float = 196.0
+## Kahraman bilgi bloğunun genişliği: 16:9 telefonda (853 birim) başlık tabelası ~251'de başlıyor, ona değmesin.
+const HERO_WIDTH: float = 214.0
+const NAME_FONT: int = 30
 ## Yan sütunlar ile alt şerit arasında bırakılan dikey boşluk.
 const SIDE_GAP: float = 6.0
 
@@ -66,16 +76,28 @@ func _fix_car_list_layout() -> void:
 	var index: int = car_list.get_index()
 	bottom_group.remove_child(car_list)
 	scroll.add_child(car_list)
-	# Şeridin solunda TÜM ARAÇLAR plakası (filtre / sıralama panosu): ikisi bir satırda, modifiye kipinde birlikte gizlenir
+	# Koyu raf (modifiye rafıyla aynı dil): solda küçük resim şeridi, sağda YARIŞ / DİĞER tabelaları ve MODİFİYE
+	# (_build_race_pick / _build_more / _build_performance_button doldurur). Modifiye kipinde birlikte gizlenir.
+	var tray: PanelContainer = PanelContainer.new()
+	tray.name = "StripRow"
+	tray.mouse_filter = Control.MOUSE_FILTER_PASS   # raf boşluğuna dokunmak arkadaki araca gitmesin
+	tray.add_theme_stylebox_override(&"panel", _tray_style(14))
 	var row: HBoxContainer = HBoxContainer.new()
-	row.name = "StripRow"
+	row.name = "StripBox"
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_theme_constant_override(&"separation", 6)
-	row.add_child(_build_all_cars_button())
+	row.add_theme_constant_override(&"separation", 14)
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(scroll)
-	bottom_group.add_child(row)
-	bottom_group.move_child(row, index)
+	_tray_actions = HBoxContainer.new()
+	_tray_actions.name = "TrayActions"
+	_tray_actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tray_actions.add_theme_constant_override(&"separation", 10)
+	row.add_child(_tray_actions)
+	tray.add_child(row)
+	bottom_group.add_child(tray)
+	bottom_group.move_child(tray, index)
+	car_list.compact = true   # yazısız küçük plakalar: ad kahraman bloğunda büyük yazıyor
 	car_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL   # az araçta kabı doldurur
 	car_list.alignment = BoxContainer.ALIGNMENT_CENTER          # ... ve ortalanır
 	# Şerit yüksekliği plakalar kurulduktan SONRA belli olur: her minimum boy değişiminde
@@ -107,11 +129,12 @@ func _place_car_list() -> void:
 	# Böylece sütun kadrajın altına kadar inebilir (değer plakası kırpılmaz) ve şerit hiçbir
 	# şeyin üstüne binmez; sığmayan araçlar zaten yatay kaydırma ile geliyor.
 	var strip_top: float = area.y - height
+	_strip_top = strip_top
 	var left_inset: float = 0.0
 	for group: Control in [exit_group, left_group]:
-		if group == left_group and is_modding() and COLUMN_TOP + _workshop.left_panel() \
-				.get_combined_minimum_size().y <= strip_top - SIDE_GAP:
-			continue   # modifiye: değer plakası rafın üstünde bitiyor, raf sola kadar uzayabilir
+		if group == left_group and (not is_modding() or COLUMN_TOP + _workshop.left_panel() \
+				.get_combined_minimum_size().y <= strip_top - SIDE_GAP):
+			continue   # bilgi bloğu (ve modifiyede değer plakası) rafın üstünde bitiyor: raf sola kadar uzanır
 		if group and group.is_visible_in_tree():
 			left_inset = maxf(left_inset, maxf(group.size.x, group.get_combined_minimum_size().x))
 	if left_inset > 0.0:
@@ -146,10 +169,11 @@ func _place_right_column(area: Vector2, strip_top: float) -> float:
 	var size: Vector2 = right_group.get_combined_minimum_size()
 	var top: float = COLUMN_TOP
 	if not is_modding():
-		top = (area.y - size.y) * 0.5
+		var ceiling: float = _signs_bottom()   # sağ üst tabelaların altı
+		top = maxf((area.y - size.y) * 0.5, ceiling)
 		var lowest: float = strip_top - SIDE_GAP - size.y   # şeridin üstünde biten en alçak yer
 		if top > lowest:
-			top = maxf(lowest, COLUMN_TOP)
+			top = maxf(lowest, ceiling)
 		right_group.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
 		right_group.offset_left = area.x - size.x
 		right_group.offset_top = top
@@ -217,7 +241,32 @@ const CAM_SHIFT_AT: float = 2.0
 
 ## Kısa ekran kipi (telefon tuvali): ayrıntı satırları gizli.
 var _compact: bool = false
+var _density: int = 0
 var _info_scroll: ScrollContainer
+## Alt rafın üst kenarı (overlay birimi; _place_car_list yazar). Bilgi bloğu bunun üstünde biter.
+var _strip_top: float = 0.0
+## Kahraman bilgi bloğu (_build_hero): marka, sınıf rozeti, nadirlik, stat rafı.
+var _hero_brand: Label
+var _class_badge: Label
+var _rarity_label: Label
+var _stat_overall: Label
+var _stat_max: Label
+var _stat_specs: Label
+var _stat_rows: Array[Control] = []
+var _stat_lanes: Dictionary = {}
+var _stat_values: Dictionary = {}
+## Alt rafın sağı: YARIŞ / DİĞER tabelaları + MODİFİYE.
+var _tray_actions: HBoxContainer
+var _race_slot: Control
+var _race_caption: Label
+var _modify_button: PlateButton
+var _more_slot: Control
+var _more_panel: PlatePanel
+var _more_list: VBoxContainer
+## Sağ üst yuvarlak tabelalar (TÜM ARAÇLAR, KOLEKSİYON).
+var _top_right: MarginContainer
+var _top_signs: HBoxContainer
+var _covered: bool = false
 
 var _actions: ButtonGroup = ButtonGroup.new()
 ## Gösterilen araç: CarCatalog id'si (dünya node adı değil).
@@ -264,6 +313,10 @@ func _ready() -> void:
 		button.button_group = _actions
 		button.toggled.connect(_on_action_toggled.bind(actions[button]))
 	exit_button.pressed.connect(_on_exit_pressed)
+	# DETAY'ın statları kahraman bloğunda hep görünür; TAMİR'i kimse dinlemiyordu (tamir dünyada). Düğümler durur
+	# (eski QA betikleri DETAY panosunu onlarla açıyor), görünmez.
+	detail_button.hide()
+	repair_button.hide()
 	# Bu ekran ARAÇLAR sekmesidir; garajın kendisi (seviye, düzenleme, detay) ana görünümün alt
 	# panelindedir (GaragePanel). Sahne dosyasındaki "GARAJ" yazıları burada değiştirilir.
 	exit_button.text = Loc.t("GERİ")
@@ -283,13 +336,12 @@ func _ready() -> void:
 	car_list.mode = CarGallery.Mode.OWNED   # garaj listesi: yalnızca sahip olunan araçlar
 	car_list.vehicle_selected.connect(_on_vehicle_selected)
 	_fix_car_list_layout()
-	# Sol sütun artık "ne alıyorum" satırlarını da taşıyor: aralık biraz daraltıldı, böylece
-	# sütunun altı GARAJDAN ÇIK plakasına değmiyor (ölçüm: 611 → 597 px, buton üstü 607).
 	info_column.add_theme_constant_override(&"separation", 4)
+	_build_top_signs()
 	_build_paint()
 	_build_race_pick()
+	_build_more()
 	_build_performance_button()
-	_build_collection_button()
 	_build_move()
 	_build_waiting_note()
 	_build_sell()
@@ -302,6 +354,7 @@ func _ready() -> void:
 	_interior_view.car_tapped.connect(_on_interior_car_tapped)
 	view.gui_input.connect(_on_view_gui_input)
 	_build_detail()
+	_build_hero()
 	_wrap_info_column()
 	_workshop = ModWorkshop.new()
 	add_child(_workshop)
@@ -341,12 +394,11 @@ func _wrap_info_column() -> void:
 	host.add_child(_info_scroll)
 
 
-## Sol sütunun yoğunluğu İÇERİĞE göre seçilir: GARAJDAN ÇIK'ın üstünde biten İLK kademe.
+## Bilgi bloğunun yoğunluğu İÇERİĞE göre seçilir: alt rafın üstünde biten İLK kademe.
 ##   0 — tam
-##   1 — "ne alıyorum" özetleri ve alan ipucu gizli, aralık sık (bölüm başlıkları durur)
-##   2 — bölüm başlıkları da gizli
-## Hiçbiri sığmazsa sütun kaydırılır (son çare). Gizlenen ayrıntılar dünyadaki satın alma
-## plakasında tam hâliyle yazıyor.
+##   1 — fabrika verisi satırları (motor · çekiş / 0-100 · son hız) gizli, aralık sık
+##   2 — dört stat satırı da gizli (stat rafında yalnız GENEL)
+## Hiçbiri sığmazsa blok kaydırılır (son çare).
 ##
 ## Eskiden kademe ekran yüksekliğine göre seçiliyordu (< 560), ama canvas_items + expand dikey
 ## tabanı her cihazda 648'de tuttuğu için hiç tetiklenmiyordu. Dokunma tabanıyla
@@ -356,20 +408,27 @@ func _apply_responsive_layout() -> void:
 	if _info_scroll == null:
 		return
 	var view_height: float = get_viewport_rect().size.y
-	var available: float = maxf(view_height - COLUMN_TOP - _exit_reserve(), 120.0)
+	# Raf yerleşmeden önce (ilk kare) GERİ plakasının payı
+	var bottom: float = _strip_top - SIDE_GAP if _strip_top > 0.0 else view_height - _exit_reserve()
+	var available: float = maxf(bottom - COLUMN_TOP, 120.0)
 	var wanted: float = 0.0
 	for level: int in 3:
 		_set_density(level)
 		wanted = info_column.get_combined_minimum_size().y
 		if wanted <= available:
 			break
-	_info_scroll.custom_minimum_size = Vector2(INFO_WIDTH, minf(wanted, available))
+	_info_scroll.custom_minimum_size = Vector2(HERO_WIDTH, minf(wanted, available))
 	_place_left_column()
 
 
 func _set_density(level: int) -> void:
+	_density = level
 	_compact = level >= 1
 	info_column.add_theme_constant_override(&"separation", 2 if _compact else 4)
+	if _stat_specs:
+		_stat_specs.visible = level < 1 and _stat_specs.text != ""
+	for row: Control in _stat_rows:
+		row.visible = level < 2
 
 
 ## GARAJDAN ÇIK plakasının kadrajdaki yüksekliği (kenar payı dahil) + araya bırakılan boşluk.
@@ -420,6 +479,13 @@ func open() -> void:
 	# Gösterilecek araç: listede seçili olan, yoksa içinde bulunulan garajın ilk aracı (garaj boşsa boş garaj)
 	var target: StringName = car_list.selected_vehicle()
 	var here: Array[StringName] = _list_source()
+	if _pending_mods != &"":
+		target = _pending_mods
+		_pending_mods = &""
+		_open_mods_after_enter.call_deferred()
+	elif _pending_vehicle != &"":
+		target = _pending_vehicle
+	_pending_vehicle = &""
 	if target == &"" or not here.has(target):
 		target = here[0] if not here.is_empty() else (&"" if _garage != &"" else _first_owned())
 	_shown_vehicle = &""
@@ -446,6 +512,13 @@ func close() -> void:
 	tween.tween_property(car_slot, "scale", Vector3.ONE * 0.9, 0.15)
 	_tweens.append(tween)
 	tween.finished.connect(_finish_close)
+
+
+## Sergideki aracın modifiyesi: ekran açılır açılmaz modifiye kipine geçilir (lift görünümü yalnız bunun için).
+func _open_mods_after_enter() -> void:
+	await get_tree().process_frame
+	if visible and not _closing and _home_mods:
+		open_mods()
 
 
 ## İLK AÇILIŞ TAKILMASINI ÖNLER (drag / showroom'daki gibi): garaj sahnesi görünmeden bir kez küçük boyutta
@@ -477,8 +550,10 @@ func _finish_close() -> void:
 	_sell_panel.hide()
 	_detail_panel.hide()
 	_move_panel.hide()
+	_more_panel.hide()
 	action_column.show()
 	_paint_panel.close()   # önizleme bırakılır; yeniden açılışta aksiyon plakaları görünür
+	_home_mods = false
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_release_render_target()
 	car_list.close()
@@ -515,6 +590,7 @@ func _enter_animation() -> void:
 		[right_group, Vector2(SLIDE, 0.0)],
 		[bottom_group, Vector2(0.0, SLIDE)],
 		[exit_group, Vector2(0.0, SLIDE)],
+		[_top_right, Vector2(0.0, -SLIDE)],
 	]
 	_group_targets.clear()
 	for i: int in groups.size():
@@ -540,7 +616,7 @@ func _kill_tweens() -> void:
 			tween.kill()
 	_tweens.clear()
 	view.modulate.a = 1.0
-	for group: Control in [top_group, left_group, right_group, bottom_group, exit_group]:
+	for group: Control in [top_group, left_group, right_group, bottom_group, exit_group, _top_right]:
 		group.modulate.a = 1.0
 		if _group_targets.has(group):
 			group.position = _group_targets[group]
@@ -591,7 +667,15 @@ func _show_vehicle(vehicle_id: StringName, animated: bool) -> void:
 
 func _apply(entry: Dictionary) -> void:
 	_leave_empty()
-	car_name_label.text = String(entry["display_name"]).to_upper()
+	# MARKA küçük amber satırda, MODEL büyük (marka yoksa tam ad)
+	var brand: String = String(entry.get("brand", "")).to_upper()
+	var model: String = String(entry.get("model", "")).to_upper()
+	_hero_brand.text = brand if model != "" else ""
+	_hero_brand.visible = _hero_brand.text != ""
+	car_name_label.text = model if _hero_brand.visible else String(entry["display_name"]).to_upper()
+	var rarity: StringName = CrateCatalog.rarity_of(_shown_vehicle)
+	_rarity_label.text = CrateCatalog.rarity_label(rarity)
+	_rarity_label.add_theme_color_override(&"font_color", CrateCatalog.rarity_color(rarity).lightened(0.3))
 	year_label.text = str(entry["year"])
 	condition_gauge.ratio = entry["condition"]
 	condition_label.text = "%d%%" % roundi(float(entry["condition"]) * 100.0)
@@ -599,6 +683,7 @@ func _apply(entry: Dictionary) -> void:
 	if not _focus_interior(_shown_vehicle):
 		_load_preview(entry["scene_path"])
 	_refresh_detail()
+	_refresh_stats()
 	_actions_clear()
 	_refresh_race_pick()
 	# Restorasyon araçları boyanamaz (VehicleOwnership.is_paintable): BOYA plakası gizlenir, açık pano kapanır
@@ -610,6 +695,8 @@ func _apply(entry: Dictionary) -> void:
 		else:
 			_paint_panel.close()   # closed sinyali aksiyon plakalarını geri getirir
 	_move_panel.hide()
+	if _more_panel.visible:
+		_close_more()
 	_refresh_garage_actions()
 
 
@@ -689,7 +776,6 @@ func _refresh_collection() -> void:
 	var ownership: VehicleOwnership = _owner_node()
 	var owned: Array[StringName] = ownership.owned_vehicle_ids() if ownership else ([_shown_vehicle] as Array[StringName])
 	_listed = owned
-	_refresh_all_cars_button(owned.size())
 	if not SHOW_PARKED_CARS:
 		_clear_collection()
 		_fit_camera(1)   # kadraj tek araca göre: lift ortada, kamera yakın
@@ -887,6 +973,7 @@ func _open_sell() -> void:
 		_sell_confirm.disabled = false
 	_paint_panel.close()
 	_move_panel.hide()
+	_more_panel.hide()
 	action_column.hide()
 	_sell_panel.show()
 
@@ -1031,6 +1118,7 @@ func _open_detail() -> void:
 	_paint_panel.close()
 	_sell_panel.hide()
 	_move_panel.hide()
+	_more_panel.hide()
 	action_column.hide()
 	_detail_panel.show()
 
@@ -1039,6 +1127,172 @@ func _close_detail() -> void:
 	_detail_panel.hide()
 	action_column.show()
 	_actions_clear()
+
+
+# --- Kahraman bilgi bloğu --------------------------------------------------------
+
+## Sol üst KAHRAMAN bloğu (B tasarımı): üç bilgi plakasının yerine 3B garajın üstünde konturlu yazı (para sayacı ve
+## yolcu yazılarıyla aynı HudOutlined dili) — amber MARKA, büyük MODEL, sınıf rozeti · nadirlik · yıl, değer · durum,
+## altında koyu stat rafı (GENEL + fabrika verisi + dört stat; eskiden DETAY plakasının arkasındaydı). Sahnedeki
+## etiketler (ad, yıl, değer, durum) buraya taşınır, boşalan plakalar gizlenir.
+func _build_hero() -> void:
+	_hero_brand = _outlined(13)
+	_hero_brand.add_theme_color_override(&"font_color", HudPalette.COIN)
+	info_column.add_child(_hero_brand)
+
+	_move_into(car_name_label, info_column)
+	car_name_label.theme_type_variation = &"HudOutlined"
+	car_name_label.add_theme_font_size_override(&"font_size", NAME_FONT)
+	car_name_label.add_theme_constant_override(&"outline_size", 8)
+	car_name_label.add_theme_constant_override(&"line_spacing", -6)
+	car_name_label.custom_minimum_size = Vector2(HERO_WIDTH, 0.0)
+
+	# Sınıf rozeti · SINIF · nadirlik · yıl
+	var tags: HBoxContainer = HBoxContainer.new()
+	tags.name = "HeroTags"
+	tags.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tags.add_theme_constant_override(&"separation", 6)
+	var badge: PanelContainer = PanelContainer.new()
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var badge_style: StyleBoxFlat = StyleBoxFlat.new()
+	badge_style.bg_color = HudPalette.PLATE_SELECTED
+	badge_style.border_color = HudPalette.PLATE_SELECTED_EDGE
+	badge_style.border_width_bottom = 2
+	badge_style.set_corner_radius_all(5)
+	badge_style.content_margin_left = 6.0
+	badge_style.content_margin_right = 6.0
+	badge.add_theme_stylebox_override(&"panel", badge_style)
+	_class_badge = Label.new()
+	_class_badge.theme_type_variation = &"HudInkValue"
+	_class_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_class_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_class_badge.custom_minimum_size = Vector2(12.0, 0.0)
+	badge.add_child(_class_badge)
+	tags.add_child(badge)
+	var class_caption: Label = _outlined(11)
+	class_caption.text = Loc.t("SINIF")
+	tags.add_child(class_caption)
+	tags.add_child(_dot())
+	_rarity_label = _outlined(11)
+	tags.add_child(_rarity_label)
+	tags.add_child(_dot())
+	_move_into(year_label, tags)
+	year_label.theme_type_variation = &"HudOutlined"
+	year_label.add_theme_font_size_override(&"font_size", 11)
+	info_column.add_child(tags)
+
+	# Değer (para simgesiyle) · DURUM
+	var money: HBoxContainer = HBoxContainer.new()
+	money.name = "HeroValue"
+	money.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	money.add_theme_constant_override(&"separation", 6)
+	_move_into(value_label.get_parent(), money)   # ValueRow: para simgesi + değer
+	value_label.theme_type_variation = &"HudOutlinedLarge"
+	var spacer: Control = Control.new()
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	money.add_child(spacer)
+	var condition_caption: Label = _outlined(11)
+	condition_caption.text = Loc.t("DURUM")
+	money.add_child(condition_caption)
+	_move_into(condition_label, money)
+	condition_label.theme_type_variation = &"HudOutlinedLarge"
+	info_column.add_child(money)
+
+	for plate_name: String in ["NamePlate", "ConditionPlate", "ValuePlate"]:
+		var plate: Control = info_column.get_node_or_null(plate_name) as Control
+		if plate:
+			plate.hide()   # durum şeridi (ConditionGauge) eski plakada kalır: değer satırında yalnız yüzde
+
+	# Stat rafı: GENEL ve dört stat (DragRaceSim), fabrika verisi satırı
+	var tray: PanelContainer = PanelContainer.new()
+	tray.name = "StatTray"
+	tray.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tray.add_theme_stylebox_override(&"panel", _tray_style(10))
+	var box: VBoxContainer = VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override(&"separation", 3)
+	var head: HBoxContainer = HBoxContainer.new()
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_theme_constant_override(&"separation", 4)
+	var overall_caption: Label = _light_caption(Loc.t("GENEL"), 0.75)
+	overall_caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	overall_caption.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(overall_caption)
+	_stat_overall = _outlined(20)
+	_stat_overall.add_theme_color_override(&"font_color", HudPalette.COIN)
+	head.add_child(_stat_overall)
+	_stat_max = _light_caption("", 0.6)
+	_stat_max.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(_stat_max)
+	box.add_child(head)
+	_stat_specs = _light_caption("", 0.7)
+	_stat_specs.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_stat_specs.custom_minimum_size = Vector2(HERO_WIDTH - 24.0, 0.0)
+	box.add_child(_stat_specs)
+	for row: Array in DETAIL_ROWS:
+		var key: String = row[0]
+		var line: HBoxContainer = HBoxContainer.new()
+		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		line.add_theme_constant_override(&"separation", 6)
+		var title: Label = _light_caption(Loc.t(String(row[1])), 0.75)
+		title.custom_minimum_size = Vector2(64.0, 0.0)
+		var lane: XpLane = XpLane.new()
+		lane.segments = 10
+		lane.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		lane.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var value: Label = _light_caption("", 0.95)
+		value.custom_minimum_size = Vector2(22.0, 0.0)
+		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		line.add_child(title)
+		line.add_child(lane)
+		line.add_child(value)
+		box.add_child(line)
+		_stat_rows.append(line)
+		_stat_lanes[key] = lane
+		_stat_values[key] = value
+	tray.add_child(box)
+	info_column.add_child(tray)
+
+
+## GENEL (0-1000, kusursuz 300 m süresinden), fabrika verisi ve dört stat çubuğu — DETAY panosuyla aynı veri.
+func _refresh_stats() -> void:
+	if _stat_overall == null or _shown_vehicle == &"":
+		return
+	var entry: Dictionary = CarCatalog.get_entry(_shown_vehicle)
+	var stats: Dictionary = DragRaceSim.stats_of(_shown_vehicle)
+	_stat_overall.text = str(PerformanceMods.overall(_shown_vehicle))
+	_stat_max.text = "/ %d" % DragRaceSim.OVERALL_MAX
+	_stat_specs.text = spec_text(entry)
+	_stat_specs.visible = _density < 1 and _stat_specs.text != ""
+	for row: Array in DETAIL_ROWS:
+		var key: String = row[0]
+		var ratio: float = DragRaceSim.stat_ratio(key, float(stats.get(key, 0)))
+		(_stat_lanes[key] as XpLane).ratio = ratio
+		(_stat_values[key] as Label).text = str(roundi(ratio * 100.0))
+	_class_badge.text = PerformanceMods.class_of(_shown_vehicle)   # modifiye sınıfı yükseltebilir
+
+
+## 3B sahnenin üstünde okunur yazı: sıcak beyaz, mürekkep konturlu (HudOutlined).
+func _outlined(font_size: int) -> Label:
+	var label: Label = Label.new()
+	label.theme_type_variation = &"HudOutlined"
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override(&"font_size", font_size)
+	return label
+
+
+func _dot() -> Label:
+	var dot: Label = _outlined(11)
+	dot.text = "·"
+	dot.modulate.a = 0.7
+	return dot
+
+
+## Sahnedeki düğümü başka kaba taşır (sahne dosyası değişmez).
+static func _move_into(node: Node, parent: Node) -> void:
+	node.get_parent().remove_child(node)
+	parent.add_child(node)
 
 
 # --- Boya atölyesi -------------------------------------------------------------
@@ -1063,24 +1317,20 @@ func _build_paint() -> void:
 	_paint_panel.closed.connect(func() -> void: action_column.show())
 
 
-## Sağ sütuna YARIŞ ARACI plakası: lifteki aracı yarışa çıkan araç yapar (RaceManager
-## VehicleOwnership.race_vehicle_id'yi okur). Zaten yarış aracıysa plaka pasif ve işaretli.
+## Raftaki YARIŞ tabelası (dama bayrak): lifteki aracı yarışa çıkan araç yapar (RaceManager
+## VehicleOwnership.race_vehicle_id'yi okur). Zaten yarış aracıysa tabela amber, altında YARIŞ ARACI yazar.
 var _race_button: PlateButton
 
 
 func _build_race_pick() -> void:
-	_race_button = PlateButton.new()
-	_race_button.name = "RacePickButton"
-	_race_button.theme_type_variation = &"HudPlate"
-	_race_button.kind = HudIcon.Kind.CAR
-	_race_button.text = Loc.t("YARIŞ ARACI YAP")
-	_race_button.custom_minimum_size = Vector2(86.0, 0.0)
-	_race_button.focus_mode = Control.FOCUS_NONE
+	_race_button = _sign("RacePickButton", HudIcon.Kind.FLAG)
 	_race_button.pressed.connect(func() -> void:
 		var ownership: VehicleOwnership = _owner_node()
 		if ownership and ownership.set_race_vehicle(_shown_vehicle):
 			_refresh_race_pick())
-	action_column.add_child(_race_button)
+	_race_caption = _light_caption("", 0.85)
+	_race_slot = _tray_slot(_race_button, _race_caption)
+	_tray_actions.add_child(_race_slot)
 
 
 func _refresh_race_pick() -> void:
@@ -1088,37 +1338,42 @@ func _refresh_race_pick() -> void:
 		return
 	var ownership: VehicleOwnership = _owner_node()
 	var is_racer: bool = ownership != null and ownership.race_vehicle_id() == _shown_vehicle
-	_race_button.text = Loc.t("YARIŞ ARACI ✔") if is_racer else Loc.t("YARIŞ ARACI YAP")
-	_race_button.disabled = is_racer or ownership == null
+	_race_button.highlight = is_racer
+	_race_caption.text = Loc.t("YARIŞ ARACI") if is_racer else Loc.t("YARIŞA SEÇ")
+	_race_button.disabled = ownership == null
 
 
-## Sağ sütuna MODİFİYE plakası: lifteki aracın performans modifiyesi (ModWorkshop) — alttaki araç şeridinin
-## yerine parça kartları gelir, sağda seçilen parçanın plakası ve YÜKSELT. GERİ araç listesine döner.
+## Rafın sağındaki MODİFİYE plakası (ekranın tek amber düğmesi): lifteki aracın performans modifiyesi
+## (ModWorkshop) — raf yerine parça kartları gelir, sağda seçilen parçanın plakası ve YÜKSELT. GERİ araç listesine döner.
 func _build_performance_button() -> void:
-	var button: PlateButton = PlateButton.new()
-	button.name = "ModifyButton"
-	button.theme_type_variation = &"HudPlate"
-	button.kind = HudIcon.Kind.WRENCH
-	button.text = Loc.t("MODİFİYE")
-	button.custom_minimum_size = Vector2(86.0, 0.0)
-	button.focus_mode = Control.FOCUS_NONE
-	button.pressed.connect(open_mods)
-	action_column.add_child(button)
+	_modify_button = PlateButton.new()
+	_modify_button.name = "ModifyButton"
+	_modify_button.theme_type_variation = &"HudPlate"
+	_modify_button.kind = HudIcon.Kind.WRENCH
+	_modify_button.icon_left = true
+	_modify_button.highlight = true
+	_modify_button.text = Loc.t("MODİFİYE")
+	_modify_button.add_theme_font_size_override(&"font_size", 16)
+	_modify_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_modify_button.focus_mode = Control.FOCUS_NONE
+	_modify_button.pressed.connect(open_mods)
+	_tray_actions.add_child(_modify_button)
 
 
 ## MODİFİYE kipine geçer (lifteki araç sahip olunan bir araçsa).
 func open_mods() -> void:
-	if _shown_vehicle == &"" or not _is_owned(_shown_vehicle) or _workshop.is_active() \
-			or _garage == CarGarageManager.WAITING:
-		return   # bekleyen araç modifiyeye giremez (garajlar dolu)
+	if _shown_vehicle == &"" or not _is_owned(_shown_vehicle) or _workshop.is_active():
+		return
 	_kill_tweens()
 	_set_selector_visible(false)   # giriş animasyonu sürerken eski hedef konum genişleyen sağ plakayı ekrandan iterdi
 	_actions_clear()
 	_paint_panel.close()
 	_sell_panel.hide()
 	_detail_panel.hide()
+	_more_panel.hide()
 	action_column.hide()
 	_info_scroll.hide()
+	_top_right.hide()   # modifiyenin parça plakası sağ üstte
 	var strip: Control = bottom_group.get_node_or_null("StripRow") as Control
 	if strip:
 		strip.hide()
@@ -1143,6 +1398,8 @@ func _close_mods() -> void:
 	_right_layout = {}
 	action_column.show()
 	_info_scroll.show()
+	_top_right.show()
+	_refresh_stats()   # yükseltme GENEL'i ve statları değiştirmiş olabilir
 	var strip: Control = bottom_group.get_node_or_null("StripRow") as Control
 	if strip:
 		strip.show()
@@ -1159,10 +1416,10 @@ func is_modding() -> bool:
 func _on_exit_pressed() -> void:
 	if is_modding() and _workshop.in_category():
 		_workshop.show_overview()
-	elif is_modding():
+	elif is_modding() and not _home_mods:
 		_close_mods()
 	else:
-		close()
+		close()   # sergideki aracın modifiyesinden GERİ: dünyaya dönülür
 
 
 ## Sol sütun modifiye kipinde değer plakasının boyunda.
@@ -1195,47 +1452,112 @@ func _set_title(text: String) -> void:
 		title.text = text
 
 
-## Sağ sütuna KOLEKSİYON plakası (koleksiyon panosu UiRouter'dadır).
-func _build_collection_button() -> void:
-	var button: PlateButton = PlateButton.new()
-	button.name = "CollectionButton"
-	button.theme_type_variation = &"HudPlate"
-	button.kind = HudIcon.Kind.CAR
-	button.text = Loc.t("KOLEKSİYON")
-	button.custom_minimum_size = Vector2(86.0, 0.0)
-	button.focus_mode = Control.FOCUS_NONE
-	button.pressed.connect(func() -> void:
-		_actions_clear()
-		screen_requested.emit(&"collection"))
-	action_column.add_child(button)
-
-
-## Alt şeridin solundaki TÜM ARAÇLAR plakası: sınıf / nadirlik süzgeçli, sıralanabilir ızgara (AllCarsScreen, UiRouter).
-var _all_cars_button: PlateButton
-
-
-func _build_all_cars_button() -> PlateButton:
-	_all_cars_button = PlateButton.new()
-	_all_cars_button.name = "AllCarsButton"
-	_all_cars_button.theme_type_variation = &"HudPlate"
-	_all_cars_button.kind = HudIcon.Kind.GRID
-	_all_cars_button.text = Loc.t("TÜM ARAÇLAR")
-	_all_cars_button.custom_minimum_size = Vector2(96.0, 0.0)
-	_all_cars_button.focus_mode = Control.FOCUS_NONE
-	_all_cars_button.pressed.connect(func() -> void:
+## Sağ üstte yuvarlak tabelalar — dünyadaki kamera / ayarlar tabelalarının yeri ve dili: TÜM ARAÇLAR (sınıf / nadirlik
+## süzgeçli, sıralanabilir ızgara, AllCarsScreen) ve KOLEKSİYON (panolar UiRouter'dadır).
+func _build_top_signs() -> void:
+	_top_right = MarginContainer.new()
+	_top_right.name = "TopRight"
+	_top_right.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_top_right.add_theme_constant_override(&"margin_right", 16)
+	_top_right.add_theme_constant_override(&"margin_top", 14)
+	_top_right.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	overlay.add_child(_top_right)
+	_top_right.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_top_signs = HBoxContainer.new()
+	_top_signs.name = "TopSigns"
+	_top_signs.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_top_signs.add_theme_constant_override(&"separation", 8)
+	_top_right.add_child(_top_signs)
+	var all_cars: PlateButton = _sign("AllCarsButton", HudIcon.Kind.GRID)
+	all_cars.pressed.connect(func() -> void:
 		_actions_clear()
 		screen_requested.emit(&"all_cars"))
-	return _all_cars_button
+	_top_signs.add_child(all_cars)
+	var collection: PlateButton = _sign("CollectionButton", HudIcon.Kind.TROPHY)
+	collection.pressed.connect(func() -> void:
+		_actions_clear()
+		screen_requested.emit(&"collection"))
+	_top_signs.add_child(collection)
 
 
-func _refresh_all_cars_button(count: int) -> void:
-	if _all_cars_button:
-		_all_cars_button.text = Loc.t("TÜM ARAÇLAR\n%d") % count
+## Üstünde pano açık (GARAJLARIM, TÜM ARAÇLAR, KOLEKSİYON …): başlık seçici ve sağ üst tabelalar görünmez — karartmanın
+## altında basılamıyorlar, panonun başlığına karışıyorlardı (dünyadaki HUD'un sağ üst sütunu gibi, Hud._sync_modal_hud).
+## Görünürlük değil saydamlık: yerleşim (sağ sütun tavanı, açılış animasyonu hedefleri) değişmesin.
+func set_covered(covered: bool) -> void:
+	if covered == _covered:
+		return   # açılışta da çağrılır: giriş animasyonunun saydamlığına dokunmasın
+	_covered = covered
+	top_group.modulate.a = 0.0 if covered else 1.0
+	if _top_right:
+		_top_right.modulate.a = 0.0 if covered else 1.0
+
+
+## Sağ üst tabelaların alt kenarı (sağ sütun bunun altında başlar). Tabelalar gizliyse sütun payı.
+func _signs_bottom() -> float:
+	if _top_right == null or not _top_right.visible:
+		return COLUMN_TOP
+	return _top_right.get_combined_minimum_size().y + SIDE_GAP
+
+
+## Yuvarlak tabela (HudSign; dünyadaki kamera tabelasıyla aynı ölçü: 32 → taban 48).
+func _sign(node_name: String, kind: HudIcon.Kind) -> PlateButton:
+	var button: PlateButton = PlateButton.new()
+	button.name = node_name
+	button.theme_type_variation = &"HudSign"
+	button.shape = PlateButton.Shape.ROUND
+	button.kind = kind
+	button.icon_size = 18.0
+	button.custom_minimum_size = Vector2(32.0, 32.0)
+	button.bolts = false
+	button.lift_when_pressed = 0.0
+	button.focus_mode = Control.FOCUS_NONE
+	return button
+
+
+## Raftaki tabela + altında açık renkli kısa yazı (modifiye rafının başlık yazılarıyla aynı).
+func _tray_slot(button: PlateButton, caption: Label) -> VBoxContainer:
+	var slot: VBoxContainer = VBoxContainer.new()
+	slot.name = String(button.name).replace("Button", "Slot")
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	slot.alignment = BoxContainer.ALIGNMENT_CENTER
+	slot.add_theme_constant_override(&"separation", 2)
+	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caption.custom_minimum_size = Vector2(72.0, 0.0)   # YARIŞA SEÇ ↔ YARIŞ ARACI değişince raf oynamasın
+	slot.add_child(button)
+	slot.add_child(caption)
+	return slot
+
+
+func _light_caption(text: String, alpha: float) -> Label:
+	var label: Label = Label.new()
+	label.theme_type_variation = &"HudInkCaption"
+	label.text = text
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_color_override(&"font_color", Color(HudPalette.TEXT_LIGHT, alpha))
+	return label
+
+
+## Koyu raf zemini (modifiye rafıyla aynı renk; ModWorkshop.TRAY_COLOR).
+static func _tray_style(radius: int) -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = ModWorkshop.TRAY_COLOR
+	style.set_corner_radius_all(radius)
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 8.0
+	style.content_margin_bottom = 9.0
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.25)
+	style.shadow_size = 6
+	return style
 
 
 ## TÜM ARAÇLAR panosundan seçildi: araç lifte çıkar, alt şerit onun plakasına kayar.
 func show_vehicle(vehicle_id: StringName) -> void:
 	if not visible or _closing or not _is_owned(vehicle_id):
+		return
+	if _garages() and _garages().garage_of(vehicle_id) == CarGarageManager.HOME:
+		home_vehicle_chosen.emit(vehicle_id)
 		return
 	var home: StringName = _garages().garage_of(vehicle_id) if _garages() and _garage != &"" else &""
 	if home != &"" and home != _garage:
@@ -1251,10 +1573,11 @@ func show_vehicle(vehicle_id: StringName) -> void:
 func _open_paint() -> void:
 	if not GameFeatures.PAINT:
 		return   # özellik kapalı: pano hiçbir yoldan açılmaz (plaka zaten gizli)
-	if _shown_vehicle == &"" or not VehicleOwnership.is_paintable(_shown_vehicle) or _garage == CarGarageManager.WAITING:
+	if _shown_vehicle == &"" or not VehicleOwnership.is_paintable(_shown_vehicle):
 		return
 	_actions_clear()
 	_move_panel.hide()
+	_more_panel.hide()
 	action_column.hide()
 	_paint_panel.open(_shown_vehicle)
 
@@ -1309,9 +1632,16 @@ func _actions_clear() -> void:
 ## yoksa (arkadaş garajı ziyareti) &"": eski tek garaj görünümü, alt şeritte bütün araçlar.
 var _garage: StringName = &""
 var _garage_manager: CarGarageManager
-var _prev_garage: PlateButton
-var _next_garage: PlateButton
 var _title_hit: Button
+var _title_icon: HudIcon
+## Bir sonraki açılışta bakılacak yer (DEPOLARIM'dan dünyadayken GİT).
+var _pending_garage: StringName = &""
+## Bir sonraki açılışta modifiye kipinde açılacak sergideki araç (SERGİ PLAKASI → MODİFİYE).
+var _pending_mods: StringName = &""
+## Bir sonraki açılışta lifte çıkacak araç (open_on_vehicle).
+var _pending_vehicle: StringName = &""
+## Sergideki aracın modifiyesi: lift görünümü geçicidir, GERİ ekranı tamamen kapatır (dünyaya dönülür).
+var _home_mods: bool = false
 var _move_button: PlateButton
 var _move_panel: PlatePanel
 var _move_list: VBoxContainer
@@ -1353,30 +1683,72 @@ func _list_source() -> Array[StringName]:
 	return manager.cars_in(_garage)
 
 
-## Oklarla gezilen sıra: alınmış garajlar (merdiven sırasıyla) + bekleyen varsa BEKLEYENLER.
+## Bakılabilecek yerler: alınmış depolar (merdiven sırasıyla) ve araç varsa OTOPARK. Ana garajın sergisi burada YOK:
+## sergideki araç dünyada kendi yerinde gösterilir (SERGİ PLAKASI); yalnız modifiyesi geçici lift görünümündedir.
 func _garage_cycle() -> Array[StringName]:
 	var out: Array[StringName] = []
 	var manager: CarGarageManager = _garages()
 	if manager == null:
 		return out
-	out = manager.owned_garages()
+	out.append_array(manager.owned_garages())
 	if not manager.waiting_ids().is_empty():
 		out.append(CarGarageManager.WAITING)
 	return out
 
 
-## Açılışta: listede seçili aracın garajı; o yoksa son bakılan garaj (hâlâ geçerliyse); yoksa MAHALLE.
+## Depolarda ya da otoparkta gösterilecek araç var mı (yoksa ARAÇLAR sekmesi DEPOLARIM'ı açar).
+func has_browsable_cars() -> bool:
+	var manager: CarGarageManager = _garages()
+	if manager == null:
+		return true   # ziyaret / yöneticisiz: eski tek garaj görünümü
+	for place: StringName in _garage_cycle():
+		if not manager.cars_in(place).is_empty():
+			return true
+	return false
+
+
+## Bir sonraki açılış bu yerde (DEPOLARIM'dan dünyadayken GİT).
+func open_on(garage: StringName) -> void:
+	_pending_garage = garage
+
+
+## Bir sonraki açılış bu aracın yeri, araç lifte (garaj dolu bildirimi: araç depoya / otoparka gitti).
+func open_on_vehicle(vehicle_id: StringName) -> void:
+	_pending_garage = _garages().garage_of(vehicle_id) if _garages() else &""
+	_pending_vehicle = vehicle_id
+
+
+## Bir sonraki açılış sergideki bu aracın modifiyesi (geçici lift görünümü; GERİ dünyaya döner).
+func open_home_mods(vehicle_id: StringName) -> void:
+	_pending_mods = vehicle_id
+
+
+## Açılışta: bekleyen istek (modifiye / yer); yoksa listede seçili aracın yeri; o yoksa son bakılan yer (hâlâ geçerli ve
+## araçlıysa); yoksa aracı olan ilk yer.
 func _pick_garage_on_open() -> void:
 	var manager: CarGarageManager = _garages()
 	if manager == null:
 		_garage = &""
 		return
+	if _pending_mods != &"":
+		_garage = CarGarageManager.HOME
+		_home_mods = true
+		return
 	var cycle: Array[StringName] = _garage_cycle()
+	if _pending_garage != &"" and (cycle.has(_pending_garage) or CarGarageCatalog.has(_pending_garage)):
+		_garage = _pending_garage
+		_pending_garage = &""
+		return
+	_pending_garage = &""
 	var home: StringName = manager.garage_of(car_list.selected_vehicle()) if car_list.selected_vehicle() != &"" else &""
-	if home != &"":
+	if home != &"" and cycle.has(home):
 		_garage = home
-	elif not cycle.has(_garage):
-		_garage = CarGarageCatalog.MAHALLE
+	elif not cycle.has(_garage) or manager.cars_in(_garage).is_empty():
+		_garage = cycle[0] if not cycle.is_empty() else CarGarageCatalog.MAHALLE
+		for place: StringName in cycle:
+			if not manager.cars_in(place).is_empty():
+				_garage = place
+				break
 
 
 ## Başka garaja geçer; `focus` o garajdaysa lifte o çıkar, yoksa garajın ilk aracı (garaj boşsa boş garaj).
@@ -1385,6 +1757,8 @@ func _switch_garage(garage: StringName, focus: StringName = &"") -> void:
 	_sell_panel.hide()
 	_detail_panel.hide()
 	_move_panel.hide()
+	if _more_panel.visible:
+		_close_more()
 	_paint_panel.close()
 	_actions_clear()
 	car_list.refresh()
@@ -1402,13 +1776,6 @@ func _switch_garage(garage: StringName, focus: StringName = &"") -> void:
 		_show_vehicle(target, true)
 	_refresh_title()
 	_place_car_list.call_deferred()
-
-
-func _step_garage(step: int) -> void:
-	var cycle: Array[StringName] = _garage_cycle()
-	if cycle.size() < 2 or is_modding():
-		return
-	_switch_garage(cycle[posmod(cycle.find(_garage) + step, cycle.size())])
 
 
 ## Yerleşim değişti (araç geldi / satıldı / taşındı, bekleyen garaja girdi, yer açıldı).
@@ -1439,28 +1806,30 @@ func _on_layout_changed() -> void:
 	_refresh_title()
 
 
-# --- Başlık: ‹ GARAJ ADI  dolu/kapasite › ---------------------------------------------------------------
+# --- Başlık: [garaj] GARAJ ADI  dolu/kapasite ------------------------------------------------------------
 
-## Sahnedeki başlık plakası iki ok plakasının arasına alınır; plakanın kendisine basınca GARAJLARIM panosu açılır.
+## Başlık plakasına basınca GARAJLARIM panosu açılır; garajlar arası geçiş oradan (GİT). Eskiden plakanın iki yanında
+## ‹ › okları vardı (kullanıcı kararı 2026-10-20: kaldırıldı). Garaj ikonu plakanın basılabildiğini söyler.
 func _build_garage_selector() -> void:
 	var sign: Control = get_node_or_null("%TitleSign") as Control
 	if sign == null:
 		return
-	var host: Node = sign.get_parent()
-	var index: int = sign.get_index()
+	var title: Label = sign.find_child("TitleLabel", true, false) as Label
 	var row: HBoxContainer = HBoxContainer.new()
-	row.name = "GarageSelector"
+	row.name = "TitleRow"
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override(&"separation", 6)
-	host.remove_child(sign)
-	_prev_garage = _arrow_button("PrevGarage", "‹", -1)
-	_next_garage = _arrow_button("NextGarage", "›", 1)
-	row.add_child(_prev_garage)
-	row.add_child(sign)
-	row.add_child(_next_garage)
-	host.add_child(row)
-	host.move_child(row, index)
+	row.add_theme_constant_override(&"separation", 8)
+	_title_icon = HudIcon.new()
+	_title_icon.kind = HudIcon.Kind.GARAGE
+	_title_icon.icon_size = 18.0
+	_title_icon.color = HudPalette.INK
+	_title_icon.cutout = HudPalette.PLATE
+	_title_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_title_icon)
+	if title:
+		_move_into(title, row)
+	sign.add_child(row)
 	_title_hit = Button.new()
 	_title_hit.name = "GaragesHit"
 	_title_hit.flat = true
@@ -1475,26 +1844,19 @@ func _build_garage_selector() -> void:
 	_set_selector_visible(false)
 
 
-func _arrow_button(node_name: String, glyph: String, step: int) -> PlateButton:
-	var button: PlateButton = PlateButton.new()
-	button.name = node_name
-	button.theme_type_variation = &"HudPlateSmall"
-	button.bolts = false
-	button.text = glyph
-	button.add_theme_font_size_override(&"font_size", 22)
-	button.custom_minimum_size = Vector2(PlateButton.MIN_PLATE_HEIGHT, 0.0)
-	button.focus_mode = Control.FOCUS_NONE
-	button.pressed.connect(_step_garage.bind(step))
-	return button
-
-
 func _set_selector_visible(on: bool) -> void:
-	var cycle_size: int = _garage_cycle().size() if on else 0
-	if _prev_garage:
-		_prev_garage.visible = cycle_size > 1
-		_next_garage.visible = cycle_size > 1
 	if _title_hit:
 		_title_hit.visible = on and _garages() != null
+	if _title_icon:
+		_title_icon.visible = on and _garages() != null   # MODİFİYE / ziyaret başlığında ikon yok
+
+
+## Eğitim (GARAJ DERSİ) için çapa: &"title" = garaj adı plakası (GARAJLARIM'ı açar).
+func tutorial_anchor(what: StringName) -> Control:
+	match what:
+		&"title":
+			return get_node_or_null("%TitleSign") as Control
+	return null
 
 
 func _refresh_title() -> void:
@@ -1505,7 +1867,9 @@ func _refresh_title() -> void:
 	if manager == null or _garage == &"":
 		_set_title(Loc.t("ARAÇLAR"))
 	elif _garage == CarGarageManager.WAITING:
-		_set_title(Loc.t("BEKLEYENLER   %d") % manager.waiting_ids().size())
+		_set_title(Loc.t("OTOPARK   %d") % manager.waiting_ids().size())
+	elif _garage == CarGarageManager.HOME:
+		_set_title(Loc.t("GARAJIM   %d") % manager.cars_in(CarGarageManager.HOME).size())
 	else:
 		_set_title("%s   %d/%d" % [CarGarageCatalog.display_name(_garage), manager.used(_garage), manager.capacity(_garage)])
 
@@ -1626,7 +1990,9 @@ func _apply_garage_look() -> void:
 			_tinted[key] = copy
 		mesh.material_override = _tinted[key]
 	if _garage == CarGarageManager.WAITING:
-		_set_wall_sign(Loc.t("BEKLEYENLER"))
+		_set_wall_sign(Loc.t("OTOPARK"))
+	elif _garage == CarGarageManager.HOME:
+		_set_wall_sign(Loc.t("GARAJIM"))
 	elif CarGarageCatalog.has(_garage):
 		_set_wall_sign(CarGarageCatalog.display_name(_garage))
 	else:
@@ -1635,32 +2001,32 @@ func _apply_garage_look() -> void:
 
 # --- Aksiyonlar: bekleyen araç, TAŞI, boş garaj ---------------------------------------------------------
 
-## Bekleyen araç yarışa / modifiyeye / boyaya giremez, taşınamaz (yer yok): yalnız DETAY, SAT, KOLEKSİYON.
+## Araç nerede durursa dursun yarışır, modifiye / boya görür (docs/GARAJLAR_TASARIM.md §10). TAŞI yalnız gidecek yer
+## varken. Otoparkta ücret notu. Boş yerde raf gizli (gösterilecek araç yok).
 func _refresh_garage_actions() -> void:
 	var manager: CarGarageManager = _garages()
 	var waiting: bool = manager != null and _garage == CarGarageManager.WAITING
 	_waiting_note.visible = waiting and not _empty
-	_race_button.visible = not waiting
-	repair_button.visible = not waiting
-	var modify: Control = action_column.get_node_or_null("ModifyButton") as Control
-	if modify:
-		modify.visible = not waiting
-	_paint_button.visible = GameFeatures.PAINT and VehicleOwnership.is_paintable(_shown_vehicle) and not waiting
-	_move_button.visible = manager != null and not waiting and manager.owned_garages().size() > 1
+	_race_slot.visible = not _empty
+	_modify_button.visible = not _empty
+	_more_slot.visible = not _empty
+	_paint_button.visible = GameFeatures.PAINT and VehicleOwnership.is_paintable(_shown_vehicle)
+	_move_button.visible = manager != null and _shown_vehicle != &"" and not manager.move_targets(_shown_vehicle).is_empty()
 
 
 func _build_waiting_note() -> void:
-	_waiting_note = _note_panel("WaitingNote", Loc.t("BEKLİYOR"),
-		Loc.t("GARAJLAR DOLU. YER AÇILINCA KENDİLİĞİNDEN GİRER."), Loc.t("GARAJLARIM"))
+	_waiting_note = _note_panel("WaitingNote", Loc.t("OTOPARK ÜCRETLİ"),
+		Loc.t("OTOPARKTAKİ HER ARAÇ İÇİN HER GÜN DEĞERİNİN YÜZDE 5'İ ÖDENİR. DEPOLARDA YER AÇILINCA ARAÇLAR KENDİLİĞİNDEN GEÇER."),
+		Loc.t("DEPOLARIM"))
 	_waiting_note.visible = false
 	action_column.add_child(_waiting_note)
 	action_column.move_child(_waiting_note, 0)
 
 
 func _build_empty_panel() -> void:
-	_empty_panel = _note_panel("EmptyPanel", Loc.t("GARAJ BOŞ"),
-		Loc.t("YENİ ARAÇLAR BOŞ YERİ OLAN EN ÜST GARAJA PARK EDER. BAŞKA GARAJDAN TAŞI İLE DE GETİREBİLİRSİN."),
-		Loc.t("GARAJLARIM"))
+	_empty_panel = _note_panel("EmptyPanel", Loc.t("BURASI BOŞ"),
+		Loc.t("YENİ ARACIN YERİNİ GELDİĞİNDE SEÇERSİN. BAŞKA YERDEN TAŞI İLE DE GETİREBİLİRSİN."),
+		Loc.t("DEPOLARIM"))
 	_empty_panel.visible = false
 	right_group.add_child(_empty_panel)
 
@@ -1712,8 +2078,13 @@ func _show_empty() -> void:
 	_sell_panel.hide()
 	_detail_panel.hide()
 	_move_panel.hide()
+	_more_panel.hide()
 	_waiting_note.hide()
 	_empty_panel.show()
+	_refresh_garage_actions()
+	var strip: Control = bottom_group.get_node_or_null("StripRow") as Control
+	if strip:
+		strip.hide()   # raf boş kalırdı (araç yok, tabelalar gizli)
 
 
 func _leave_empty() -> void:
@@ -1723,20 +2094,19 @@ func _leave_empty() -> void:
 	_empty_panel.hide()
 	_info_scroll.show()
 	action_column.show()
+	var strip: Control = bottom_group.get_node_or_null("StripRow") as Control
+	if strip and not is_modding():
+		strip.show()
+	_refresh_garage_actions()
 	_apply_responsive_layout()
 
 
 func _build_move() -> void:
-	_move_button = PlateButton.new()
-	_move_button.name = "MoveButton"
-	_move_button.theme_type_variation = &"HudPlate"
-	_move_button.kind = HudIcon.Kind.BOX
-	_move_button.text = Loc.t("TAŞI")
-	_move_button.custom_minimum_size = Vector2(86.0, 0.0)
-	_move_button.focus_mode = Control.FOCUS_NONE
+	_move_button = _menu_plate("MoveButton", HudIcon.Kind.BOX, Loc.t("TAŞI"))
 	_move_button.visible = false
 	_move_button.pressed.connect(_open_move)
-	action_column.add_child(_move_button)
+	_more_list.add_child(_move_button)
+	_more_list.move_child(_move_button, 0)   # TAŞI üstte, geri alınamayan SAT altta
 	_move_panel = PlatePanel.new()
 	_move_panel.name = "MovePanel"
 	_move_panel.theme_type_variation = &"HudCarPlate"
@@ -1748,7 +2118,7 @@ func _build_move() -> void:
 	box.add_theme_constant_override(&"separation", 4)
 	var title: Label = Label.new()
 	title.theme_type_variation = &"HudPlateTitle"
-	title.text = Loc.t("BAŞKA GARAJA TAŞI")
+	title.text = Loc.t("NEREYE TAŞINSIN?")
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(title)
 	_move_list = VBoxContainer.new()
@@ -1766,7 +2136,79 @@ func _build_move() -> void:
 	right_group.add_child(_move_panel)
 
 
-## Hedefler: öteki alınmış garajlar, doluluklarıyla. Dolu garaj basılamaz.
+## Raftaki DİĞER tabelası (üç nokta) ve açtığı pano: seyrek eylemler — TAŞI (birden çok garaj varsa) ve geri
+## alınamayan SAT (sahnedeki SAT plakası buraya taşınır; basınca onay plakası açılır).
+var _more_button: PlateButton
+
+
+func _build_more() -> void:
+	_more_button = _sign("MoreButton", HudIcon.Kind.MORE)
+	_more_button.pressed.connect(_toggle_more)
+	_more_slot = _tray_slot(_more_button, _light_caption(Loc.t("DİĞER"), 0.85))
+	_tray_actions.add_child(_more_slot)
+	_more_panel = PlatePanel.new()
+	_more_panel.name = "MorePanel"
+	_more_panel.theme_type_variation = &"HudCarPlate"
+	_more_panel.custom_minimum_size = Vector2(170.0, 0.0)
+	_more_panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_more_panel.visible = false
+	var box: VBoxContainer = VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override(&"separation", 6)
+	_more_list = VBoxContainer.new()
+	_more_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_more_list.add_theme_constant_override(&"separation", 6)
+	box.add_child(_more_list)
+	sell_button.get_parent().remove_child(sell_button)
+	_more_list.add_child(sell_button)
+	var cancel: PlateButton = PlateButton.new()
+	cancel.theme_type_variation = &"HudPlateSmall"
+	cancel.text = Loc.t("VAZGEÇ")
+	cancel.bolts = false
+	cancel.focus_mode = Control.FOCUS_NONE
+	cancel.pressed.connect(_close_more)
+	box.add_child(cancel)
+	_more_panel.add_child(box)
+	right_group.add_child(_more_panel)
+	# Ağaca döndükten SONRA: PlateButton stilini yalnız ağaçtayken yeniden kurar (_ready bir kez koştu)
+	sell_button.theme_type_variation = &"HudPlateSmall"
+	sell_button.bolts = false
+	sell_button.icon_left = true
+
+
+## Menü satırı: solda ikon, küçük plaka.
+func _menu_plate(node_name: String, kind: HudIcon.Kind, text: String) -> PlateButton:
+	var button: PlateButton = PlateButton.new()
+	button.name = node_name
+	button.theme_type_variation = &"HudPlateSmall"
+	button.kind = kind
+	button.icon_left = true
+	button.bolts = false
+	button.text = text
+	button.focus_mode = Control.FOCUS_NONE
+	return button
+
+
+func _toggle_more() -> void:
+	if _more_panel.visible:
+		_close_more()
+		return
+	_actions_clear()
+	_paint_panel.close()
+	_sell_panel.hide()
+	_detail_panel.hide()
+	_move_panel.hide()
+	action_column.hide()
+	_more_panel.show()
+
+
+func _close_more() -> void:
+	_more_panel.hide()
+	action_column.show()
+
+
+## Hedefler: GARAJIMA KOY (sergide değilse), öteki alınmış depolar doluluklarıyla (dolu depo basılamaz), depolar
+## doluyken OTOPARK (günlük ücretiyle).
 func _open_move() -> void:
 	var manager: CarGarageManager = _garages()
 	if manager == null or _shown_vehicle == &"":
@@ -1774,6 +2216,18 @@ func _open_move() -> void:
 	for child: Node in _move_list.get_children():
 		_move_list.remove_child(child)
 		child.queue_free()
+	if _garage != CarGarageManager.HOME:
+		var home: PlateButton = _menu_plate("MoveTo_%s" % CarGarageManager.HOME, HudIcon.Kind.GARAGE, Loc.t("GARAJIMA KOY"))
+		var car: StringName = _shown_vehicle
+		home.pressed.connect(func() -> void:
+			_close_move()
+			home_requested.emit(car))
+		_move_list.add_child(home)
+	if manager.move_targets(_shown_vehicle).has(CarGarageManager.WAITING):
+		var lot: PlateButton = _menu_plate("MoveTo_%s" % CarGarageManager.WAITING, HudIcon.Kind.CAR,
+			Loc.t("OTOPARK\nGÜNLÜK %s ₺") % Hud.format_thousands(CarGarageManager.fee_of(_shown_vehicle)))
+		lot.pressed.connect(_on_move_picked.bind(CarGarageManager.WAITING))
+		_move_list.add_child(lot)
 	for garage: StringName in manager.owned_garages():
 		if garage == _garage:
 			continue
@@ -1792,6 +2246,7 @@ func _open_move() -> void:
 	_paint_panel.close()
 	_sell_panel.hide()
 	_detail_panel.hide()
+	_more_panel.hide()
 	action_column.hide()
 	_move_panel.show()
 

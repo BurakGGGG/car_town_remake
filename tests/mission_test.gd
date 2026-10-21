@@ -211,6 +211,53 @@ func _generator_tests() -> void:
 	var casual_week: Array[Dictionary] = MissionGenerator.weekly(casual, 1, [])
 	check(int(casual_week[0]["target"]) < wrep, "az oynayana haftalık hedef düşük (%d < %d)" % [casual_week[0]["target"], wrep])
 
+	print("== ÜRETİCİ: genişletme (2026-10-20: hurdalık, modifiye, depolar, arkadaş yarışı, rekor, fotoğraf) ==")
+	var ids: Dictionary = {}
+	var unique: bool = true
+	for list: Array in [MissionCatalog.DAILY, MissionCatalog.WEEKLY_CORE, MissionCatalog.WEEKLY_POOL, MissionCatalog.ACHIEVEMENTS]:
+		for entry: Dictionary in list:
+			unique = unique and not ids.has(entry["id"])
+			ids[entry["id"]] = true
+	check(unique, "görev / başarım kimlikleri benzersiz (%d)" % ids.size())
+	check(MissionCatalog.ACHIEVEMENTS.size() >= 38, "başarım çizgisi %d (22'den)" % MissionCatalog.ACHIEVEMENTS.size())
+	var gated: Array[StringName] = [&"junk_e", &"junk_m", &"mod_m", &"interior_m"]
+	var closed: Dictionary = _profile(12, 3, 3, 5, false)
+	var leaked: bool = false
+	for s: int in 120:
+		for t: Dictionary in MissionGenerator.daily(closed, s * 131 + 7, []):
+			leaked = leaked or gated.has(t["id"])
+	check(not leaked, "özellik kapalıyken hurdalık / modifiye / iç yükseltme görevi çıkmaz")
+	var open: Dictionary = _profile(12, 3, 3, 5, false)
+	for key: String in ["junk_ready", "mods_ready", "interior_ready", "record_ready"]:
+		open[key] = true
+	var seen_daily: Dictionary = {}
+	var seen_weekly: Dictionary = {}
+	var in_range: bool = true
+	for s: int in 400:
+		for t: Dictionary in MissionGenerator.daily(open, s * 131 + 7, []):
+			seen_daily[t["id"]] = true
+			var tpl: Dictionary = MissionCatalog.daily_template(t["id"])
+			if not tpl.is_empty() and (int(t["target"]) < int(tpl["lo"]) or int(t["target"]) > int(tpl["hi"])):
+				in_range = false
+		for t: Dictionary in MissionGenerator.weekly(open, s * 977 + 3, []):
+			seen_weekly[t["id"]] = true
+	var missing_daily: Array = []
+	for id: StringName in [&"photo_e", &"junk_e", &"junk_m", &"mod_m", &"friend_e", &"friend_win_m", &"interior_m"]:
+		if not seen_daily.has(id):
+			missing_daily.append(id)
+	check(missing_daily.is_empty(), "yeni günlük şablonların hepsi çıkabiliyor (eksik: %s)" % [missing_daily])
+	var missing_weekly: Array = []
+	for id: StringName in [&"w_junk", &"w_parts", &"w_restore", &"w_mods", &"w_friend_wins", &"w_record", &"w_interior", &"w_photos"]:
+		if not seen_weekly.has(id):
+			missing_weekly.append(id)
+	check(missing_weekly.is_empty(), "yeni haftalık şablonların hepsi çıkabiliyor (eksik: %s)" % [missing_weekly])
+	check(in_range, "yeni günlük hedefler sınırların içinde")
+	var texts_ok: bool = true
+	for id: StringName in seen_daily:
+		if not String(id).begins_with("job:"):
+			texts_ok = texts_ok and not MissionCatalog.text_of(id, 3).contains("%")
+	check(texts_ok, "görev metinleri hedefle doluyor (%% kalmıyor)")
+
 
 # --- Sahne: yönetici ----------------------------------------------------------------------------
 
@@ -263,6 +310,45 @@ func _scene_tests() -> void:
 		race.race_finished.emit(true, 450, 25)
 		race.race_finished.emit(false, 0, 7)
 		check(mm.value_of(&"races") == 2 and mm.value_of(&"race_wins") == 1, "yarış: katılım 2, zafer 1")
+		race.friend_race_finished.emit({"uid": "x"}, true, &"tofas_sahin", &"bmw_e46", true)
+		race.friend_race_finished.emit({"uid": "x"}, false, &"tofas_sahin", &"bmw_e46", false)
+		check(mm.value_of(&"friend_races") == 2 and mm.value_of(&"friend_wins") == 1 and mm.value_of(&"revenges") == 1,
+			"arkadaş yarışı: katılım 2, zafer 1, intikam 1")
+		race.reset()
+		race.submit_time(&"tofas_sahin", 12.5, PackedFloat32Array([0.0, 300.0]))
+		check(mm.value_of(&"records") == 0, "ilk koşu rekor KIRMA sayılmaz")
+		race.submit_time(&"tofas_sahin", 12.1, PackedFloat32Array([0.0, 300.0]))
+		check(mm.value_of(&"records") == 1, "önceki rekoru geçmek: records 1")
+
+	print("== SAYAÇLAR: genişletme ==")
+	var junk: JunkyardManager = get_first_node_in_group("junkyard")
+	if junk:
+		junk.pile_searched.emit(0, {})
+		junk.parts_gained.emit(&"engine_block", 3, &"pile")
+		junk.project_completed.emit(&"anadol_a1")
+		check(mm.value_of(&"junk_searches") == 1 and mm.value_of(&"junk_parts") == 3 and mm.value_of(&"restorations") == 1,
+			"hurdalık: yığın 1, parça 3, restorasyon 1")
+	var mods: PerformanceModManager = get_first_node_in_group("performance_mods")
+	if mods:
+		mods.install_completed.emit(&"tofas_sahin", &"engine", 1, "D", "C")
+		check(mm.value_of(&"mods_installed") == 1, "modifiye takıldı: mods_installed 1")
+	var depots: CarGarageManager = get_first_node_in_group("car_garages")
+	if depots:
+		depots.upgrade_finished.emit(&"sanayi", &"floor", 2)
+		depots.build_finished.emit(&"sanayi")
+		check(mm.value_of(&"interior_ups") == 1 and mm.value_of(&"depot_builds") == 1, "depo: iç yükseltme 1, inşaat 1")
+		check(mm.value_of(&"depots_owned") == depots.owned_garages().size(), "depots_owned = sahip olunan depo")
+	decor.purchased.emit(&"lux_neon_crown")
+	decor.purchased.emit(&"deck_chair")
+	check(mm.value_of(&"luxury_bought") == 1, "yalnız LÜKS eşya alımı sayılır (luxury_bought 1)")
+	own.vehicle_purchased.emit(&"bmw_e46")
+	check(mm.value_of(&"cars_bought") == 1, "showroom'dan araç: cars_bought 1")
+	check(mm.value_of(&"cars_owned") == own.owned_count(), "cars_owned = sahip olunan araç")
+	var legends: int = 0
+	for id: StringName in own.discovered_ids():
+		if StringName(CarCatalog.get_entry(id).get("rarity", &"common")) == &"legendary":
+			legends += 1
+	check(mm.value_of(&"legendary_cars") == legends, "legendary_cars = keşfedilen efsane araç (%d)" % legends)
 
 	print("== GÜNLÜK: ilerleme ve ödül ==")
 	var tasks: Array[Dictionary] = mm.daily_tasks()

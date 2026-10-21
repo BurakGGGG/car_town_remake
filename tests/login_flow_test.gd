@@ -197,7 +197,7 @@ class FakeFB extends Object:
 	func firestoreSetDocument(_c: String, id: String, data: Dictionary, _merge: bool) -> void:
 		# firestore.rules isValidPlayer / isValidProfile: fazladan alan → PERMISSION_DENIED
 		var profile: Variant = data.get("profile", {})
-		if not data.keys().all(func(k: String) -> bool: return k in ["profile", "save_version", "save_json", "updated_at"]) \
+		if not data.keys().all(func(k: String) -> bool: return k in ["profile", "save_version", "save_json", "stats", "updated_at"]) \
 				or not (profile is Dictionary and (profile as Dictionary).keys().all(func(k: String) -> bool: return k in ["display_name", "email", "photo_url"])):
 			rule_denials += 1
 			call_deferred("emit_signal", "firestore_write_task_completed", {"status": false, "docID": id, "error": "PERMISSION_DENIED: Missing or insufficient permissions."})
@@ -438,8 +438,8 @@ func _run() -> void:
 	check(fb.docs.has(erik) and conflicts.is_empty(), "Erik'in kaydı oluştu, çakışma yok")
 	eco().set_money(1234)
 	await seconds(2.2)
-	check(String(fb.docs[erik]["save_json"]).contains("1234"), "Erik'in ilerlemesi Erik'in dokümanına yazıldı")
-	check(String(fb.docs[dana]["save_json"]).contains("20000"), "Dana'nın dokümanı değişmedi")
+	check(CloudPack.unpack(String(fb.docs[erik]["save_json"])).contains("1234"), "Erik'in ilerlemesi Erik'in dokümanına yazıldı")
+	check(CloudPack.unpack(String(fb.docs[dana]["save_json"])).contains("20000"), "Dana'nın dokümanı değişmedi")
 	cloud().sign_out()
 	await frames(8)
 
@@ -473,7 +473,11 @@ func _run() -> void:
 	check(cloud().get_state() == CloudSaveManager.State.CONFLICT, "yine çakışma")
 	cloud().resolve_conflict(false)
 	await frames(8)
-	check(eco().money == 777 and String(fb.docs[dana]["save_json"]).contains("777"), "cihaz seçildi: 777 buluta yazıldı")
+	check(eco().money == 777 and CloudPack.unpack(String(fb.docs[dana]["save_json"])).contains("777"), "cihaz seçildi: 777 buluta yazıldı")
+	check(String(fb.docs[dana]["save_json"]).begins_with(CloudPack.PREFIX), "kayıt buluta sıkışık yazılır (20 KB kural sınırı)")
+	var dana_stats: Dictionary = fb.docs[dana].get("stats", {})
+	check(int(dana_stats.get("money", -1)) == 777 and int(dana_stats.get("level", 0)) >= 1 and dana_stats.has("gems"),
+		"okunur özet (stats): para / seviye / elmas")
 	check(int(get_json("cloud_backup.json").get("economy", {}).get("money", -1)) == 20000, "ezilen bulut kaydı yedeklendi")
 
 	print("Çevrimdışıyken eşitlenmemiş değişiklik varsa çıkış reddedilir")
@@ -489,11 +493,11 @@ func _run() -> void:
 	fb.online = true
 	cloud()._on_retry_timeout()
 	await frames(8)
-	check(cloud().get_state() == CloudSaveManager.State.SYNCED and String(fb.docs[dana]["save_json"]).contains("999"), "internet gelince eşitlendi")
+	check(cloud().get_state() == CloudSaveManager.State.SYNCED and CloudPack.unpack(String(fb.docs[dana]["save_json"])).contains("999"), "internet gelince eşitlendi")
 	cloud().sign_out()
 	await frames(8)
 	check(not cloud().is_authenticated() and eco().money == 5000, "şimdi çıkış yapıldı, yeni misafir oyunu")
-	check(String(fb.docs[dana]["save_json"]).contains("999"), "ilerleme kaybolmadı, bulutta")
+	check(CloudPack.unpack(String(fb.docs[dana]["save_json"])).contains("999"), "ilerleme kaybolmadı, bulutta")
 
 	print("Hesap seçiciden vazgeçme")
 	fb.cancel_next = true
@@ -529,8 +533,18 @@ func _run() -> void:
 	await make_world()
 	await frames(4)
 	check(eco().money == 999 and fb.writes == writes_before, "bulut geri geldi, başlangıç kaydı buluta yazılmadı")
-	check(String(fb.docs[dana]["save_json"]).contains("999"), "bulut kaydı sağlam")
+	check(CloudPack.unpack(String(fb.docs[dana]["save_json"])).contains("999"), "bulut kaydı sağlam")
 	await close_app()
+
+	print("Sıkışık bulut kaydı açılamıyor → 'bulut yok' sayılmaz, üzerine yazılmaz")
+	var dana_good: String = String(fb.docs[dana]["save_json"])
+	fb.docs[dana]["save_json"] = "gz1:bozuk-veri"
+	await make_world()
+	await frames(4)
+	check(cloud().get_state() == CloudSaveManager.State.ERROR and fb.docs[dana]["save_json"] == "gz1:bozuk-veri",
+		"açılamayan sıkışık kayıt ERROR, bulut korunur")
+	await close_app()
+	fb.docs[dana]["save_json"] = dana_good
 
 	print("Bulut kaydı bu sürümden yeni / bozuk → bulut ve local korunur")
 	fb.docs[dana]["save_json"] = "{\"version\": 99}"
@@ -572,7 +586,7 @@ func _run() -> void:
 	cloud().sign_in()
 	await frames(10)
 	var hank: String = cloud().get_uid()
-	check(hank.begins_with("g_hank") and String(fb.docs[hank]["save_json"]).contains("7100"), "Hank Google'la girdi, 7100 bulutta")
+	check(hank.begins_with("g_hank") and CloudPack.unpack(String(fb.docs[hank]["save_json"])).contains("7100"), "Hank Google'la girdi, 7100 bulutta")
 	cloud().sign_out()
 	await frames(8)
 	check(eco().money == 5000, "çıkış: cihaz misafir (5000)")
@@ -646,7 +660,7 @@ func _run() -> void:
 	check(not cloud().can_link(CloudSaveManager.PROVIDER_FACEBOOK), "artık bağlanacak yol yok")
 	eco().set_money(6200)
 	await seconds(2.2)
-	check(String(fb.docs[kate]["save_json"]).contains("6200"), "bağlamadan sonra kayıt buluta yazılmaya devam ediyor")
+	check(CloudPack.unpack(String(fb.docs[kate]["save_json"])).contains("6200"), "bağlamadan sonra kayıt buluta yazılmaya devam ediyor")
 	cloud().sign_out()
 	await frames(8)
 	cloud().sign_in_facebook()
@@ -679,7 +693,7 @@ func _run() -> void:
 	check(fiona.begins_with("f_") and cloud().get_state() == CloudSaveManager.State.SYNCED, "Facebook hesabı SYNCED")
 	check(cloud().get_provider() == CloudSaveManager.PROVIDER_FACEBOOK and cloud().get_profile().get("provider") == "facebook.com",
 		"sağlayıcı facebook.com")
-	check(fb.docs.has(fiona) and String(fb.docs[fiona]["save_json"]).contains("4321"), "misafir ilerlemesi Facebook hesabına yazıldı")
+	check(fb.docs.has(fiona) and CloudPack.unpack(String(fb.docs[fiona]["save_json"])).contains("4321"), "misafir ilerlemesi Facebook hesabına yazıldı")
 	fb.fresh = false
 	google_before = fb.google_calls
 	var facebook_before: int = fb.facebook_calls
@@ -756,7 +770,7 @@ func _email_scenarios() -> void:
 	check(cloud().get_provider() == CloudSaveManager.PROVIDER_EMAIL and cloud().get_providers().is_empty()
 		and cloud().get_profile().get("provider") == CloudSaveManager.PROVIDER_EMAIL, "giriş yolu e-posta, bağlı Google / Facebook yok")
 	check(cloud().can_link(CloudSaveManager.PROVIDER_GOOGLE), "e-posta hesabına Google bağlanabilir")
-	check(fb.docs.has(eda) and String(fb.docs[eda]["save_json"]).contains("3300"), "misafir ilerlemesi e-posta hesabına yazıldı")
+	check(fb.docs.has(eda) and CloudPack.unpack(String(fb.docs[eda]["save_json"])).contains("3300"), "misafir ilerlemesi e-posta hesabına yazıldı")
 	check(get_json("cloud_sync.json").get("provider") == CloudSaveManager.PROVIDER_EMAIL, "bu cihazın giriş yolu kaydedildi (e-posta)")
 	var server_before: int = code_server.calls
 	cloud().request_email_code("eda@example.com")

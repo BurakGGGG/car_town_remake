@@ -126,10 +126,9 @@ func _run() -> void:
 	hud.router.open(&"garage")
 	await frames(20)
 	var button: PlateButton = garage.find_child("AllCarsButton", true, false)
-	check(button != null and button.is_visible_in_tree(), "TÜM ARAÇLAR plakası şeridin yanında")
-	check(button != null and button.text.ends_with(str(owned.size())), "plakada araç sayısı (%s)" % (button.text if button else ""))
+	check(button != null and button.is_visible_in_tree(), "TÜM ARAÇLAR tabelası sağ üstte")
 	var strip: Control = garage.find_child("StripRow", true, false)
-	check(strip != null and strip.is_ancestor_of(garage.car_list), "şerit ve plaka aynı satırda")
+	check(strip != null and strip.is_ancestor_of(garage.car_list), "araç şeridi alt rafta")
 	button.pressed.emit()
 	await frames(20)
 	var board: AllCarsScreen = hud.all_cars_screen

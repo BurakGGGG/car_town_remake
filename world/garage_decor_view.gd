@@ -34,6 +34,8 @@ var _root: Node3D
 var _bodies: Dictionary = {}   # iid → Node3D
 var _area: DecorArea = DecorArea.new()
 var _editing: bool = false
+## Düzenleyicinin IZGARA düğmesi: kapalıyken ızgara çizgileri de görünmez (yerleştirme serbest). Bkz. set_grid_visible.
+var _grid_wanted: bool = true
 ## Zemin boyama odağı: eşyalar ve tamir alanları soluk, yasak alan örtüsü gizli.
 var _floor_focus: bool = false
 var _ghost_mat: StandardMaterial3D
@@ -435,6 +437,25 @@ func place_free(item: StringName) -> String:
 	return "" if best == Vector3.INF else _decor.add_instance(item, best, 0.0)
 
 
+## Zeminde bu eşyaya (dik ya da yan) yer var mı: yeni araç GARAJIM sergisine sığıyor mu (sığmıyorsa HUD depo
+## yolunu gösterir). Bütün zemin taranır, ilk geçerli yerde durur; araç gelince bir kez sorulur.
+func has_room_for(item: StringName) -> bool:
+	if _decor == null or _area == null or GarageDecor.placement(item) != GarageDecor.PLACE_FLOOR:
+		return false
+	var r: Rect2 = _area.floor_rect
+	var step: float = DecorGrid.CELL * 0.5
+	for yaw: float in [0.0, PI * 0.5]:
+		var x: float = r.position.x
+		while x <= r.end.x:
+			var z: float = r.position.y
+			while z <= r.end.y:
+				if is_valid(item, Vector3(x, _area.floor_y, z), yaw):
+					return true
+				z += step
+			x += step
+	return false
+
+
 func place_point(item: StringName, ground: Vector2, yaw: float, snap_step: float) -> Dictionary:
 	if GarageDecor.placement(item) == GarageDecor.PLACE_WALL:
 		var mount: Dictionary = _area.wall_mount(ground, wall_width(item))
@@ -520,11 +541,25 @@ func set_editing(value: bool) -> void:
 		_place_sparkles()
 	if _garage == null:
 		return
+	_apply_grid()
+	_draw_blocked()
+
+
+## IZGARA düğmesi (GarageEditor.set_snap): ızgara çizgileri yerleşime oturtmayla birlikte açılıp kapanır. Önceden
+## düğme yalnız yarım kareye oturtmayı değiştiriyordu; kenara yaslama yüzünden fark parmakta hissedilmiyor, çizgiler
+## hep göründüğü için oyuncu "ızgara düğmesi bir işe yaramıyor" diyordu (kullanıcı 2026-10-20).
+func set_grid_visible(on: bool) -> void:
+	_grid_wanted = on
+	_apply_grid()
+
+
+func _apply_grid() -> void:
+	if _garage == null:
+		return
 	for path: String in ["BuildGrid/BuildGrid", "BuildGrid/BuildGrid/GridPreview"]:
 		var node: Node = _garage.get_node_or_null(path)
 		if node is Node3D:
-			(node as Node3D).visible = value
-	_draw_blocked()
+			(node as Node3D).visible = _editing and _grid_wanted
 
 
 ## Eşya konamayan alanlar (tamir alanları, tabela izi): zeminde soluk kiremit rengi dikdörtgenler.

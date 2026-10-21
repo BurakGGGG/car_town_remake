@@ -90,8 +90,10 @@ const GARAGES: String = "garages"
 const CODES: String = "codes"
 const AVATARS: String = "avatars"
 const REPORTS: String = "reports"
-## Telefon bildirimi jetonu: push/p_{uid} = {token, lang, at} (PushService yazar; sunucu okur).
+## Telefon bildirimi jetonu: push/p_{uid} = {token, lang, at, prefs} (PushService yazar; sunucu okur).
 const PUSH: String = "push"
+## MODERASYON: moderation/m_{uid} (yalnızca yönetim paneli yazar; ModerationWatch okur).
+const MODERATION: String = "moderation"
 ## ARKADAŞ DAVETİ: koleksiyon, ömür (sn; kural aynı süreyi sunucu saatiyle uygular) ve paylaşılan linkin başı. Web
 ## sayfası (auto_yard_website /d/<jeton>) oyunu autoyard://davet/<jeton> ile açar; oyun yüklü değilse mağazaya yollar.
 const INVITES: String = "invites"
@@ -132,6 +134,11 @@ var _meta: Dictionary = {}
 var _op_busy: bool = false
 var _current: Dictionary = {}         # {kind, id} — yanıtı beklenen istek
 var _busy: int = 0                    # oyuncunun başlattığı süren işlem sayısı (butonlar kilitlenir)
+## SOSYAL YASAK (ModerationWatch yazar): sosyal yazmalar sunucuya hiç gitmez (kural zaten reddeder); oyuncunun işlemi
+## başarısız olunca genel hata ("internet bağlantını kontrol et") yerine yasağın metni söylenir, 10 sn'de en çok bir kez.
+## Bildirim jetonu ve silmeler etkilenmez.
+var restricted_text: String = ""
+var _restricted_said_ms: int = -100000
 var _refreshed_at: float = -1000.0
 var _op_timer: Timer
 var _publish_timer: Timer
@@ -210,16 +217,91 @@ func uid() -> String:
 	return _uid
 
 
-## Telefon bildirimi jetonunu yazar (PushService). Başarılıysa true.
-func write_push_token(token: String, lang: String) -> bool:
-	if not is_ready() or token.is_empty():
+## Telefon bildirimi jetonunu yazar (PushService). prefs: {race, gift} (kapatılan tür sunucudan gönderilmez).
+## Oturum yeterli (takma ad şart değil: hediye bildirimi profilsiz hesaba da gider). Başarılıysa true.
+func write_push_token(token: String, lang: String, prefs: Dictionary = {}) -> bool:
+	if _uid.is_empty() or _fb == null or token.is_empty():
 		return false
-	return _ok(await _call(&"set", PUSH, "p_" + _uid, {"token": token, "lang": lang, "at": _now()}))
+	var doc: Dictionary = {"token": token, "lang": lang, "at": _now()}
+	if not prefs.is_empty():
+		doc["prefs"] = prefs
+	return _ok(await _call(&"set", PUSH, "p_" + _uid, doc))
 
 
 func delete_push_token() -> void:
 	if not _uid.is_empty() and _fb != null:
 		await _call(&"delete", PUSH, "p_" + _uid)
+
+
+## POSTA KUTUSU (MailService): users/{uid}/mail — yalnızca sunucu yazar. Oturum açıksa listelenir (takma ad / garaj şart
+## değil). Kuyruktan geçer: eklenti koleksiyon sonucunu kimliksiz bildirir, başka bir listeyle karışmasın.
+## Dönüş: {"ok": bool, "docs": {kimlik: belge}}.
+func list_mail() -> Dictionary:
+	if _uid.is_empty() or _fb == null:
+		return {"ok": false, "docs": {}}
+	var result: Dictionary = await _call(&"list", _mail_of(_uid))
+	var data: Variant = result.get("data", {})
+	return {"ok": _ok(result), "docs": data if data is Dictionary else {}}
+
+
+## MODERASYON belgesi (ModerationWatch): moderation/m_{uid}. Sosyal oturum beklenmez — tam yasaklı hesabın kaydı buluta
+## yazılamadığı için senkron hiç bitmeyebilir; oturum (giriş) yeter. Belge yoksa ok + boş. Dönüş: {"ok", "doc"}.
+func read_moderation(uid: String) -> Dictionary:
+	if uid.is_empty() or _fb == null:
+		return {"ok": false, "doc": {}}
+	var result: Dictionary = await _call(&"get", MODERATION, "m_" + uid)
+	if _not_found(result):
+		return {"ok": true, "doc": {}}
+	var data: Variant = result.get("data", {})
+	return {"ok": _ok(result), "doc": data if data is Dictionary else {}}
+
+
+## Yönetici adı sıfırladı (moderation.name): cihazdaki ad o olur, açık garaj yeniden yazılır (panel belgeyi zaten
+## düzeltti; yazılmasa da sorun değil). Profil yoksa yalnızca hatırlanır.
+func adopt_moderated_name(name: String) -> void:
+	if not SocialNames.is_valid_name(name) or name == my_name():
+		return
+	_meta["name"] = name
+	_write_meta()
+	_meta.erase("published")   # bir sonraki yayın yeni adla gider
+	_request_publish()
+	changed.emit()
+
+
+## Yasak bitti: açık garaj (panel yasakta sildi) yeniden yayınlanır.
+func force_republish() -> void:
+	_meta.erase("published")
+	_meta.erase("published_profile")
+	_request_publish()
+
+
+## KUPON KODU (PromoService): users/{uid}/redeem/{KOD} = {at}. Kod başına bir kez yazılabilir (kural); sonucu sunucu
+## (functions/promo.js) aynı belgeye yazar. Sosyal yasak etkilemez (kural yalnızca tam yasakta reddeder).
+func write_redeem(code: String) -> Dictionary:
+	if _uid.is_empty() or _fb == null:
+		return {"status": false, "error": "unavailable"}
+	return await _call(&"set", _redeem_of(_uid), code, {"at": _now()})
+
+
+## Kod denemesinin belgesi: {"ok", "doc"} (sonuç gelene kadar doc'ta status yoktur).
+func read_redeem(code: String) -> Dictionary:
+	if _uid.is_empty() or _fb == null:
+		return {"ok": false, "doc": {}}
+	var result: Dictionary = await _call(&"get", _redeem_of(_uid), code)
+	var data: Variant = result.get("data", {})
+	return {"ok": _ok(result), "doc": data if data is Dictionary else {}}
+
+
+static func _redeem_of(uid: String) -> String:
+	return "users/%s/redeem" % uid
+
+
+## Alınan postayı siler (zaten yoksa da başarı sayılır).
+func delete_mail(id: String) -> bool:
+	if _uid.is_empty() or _fb == null:
+		return false
+	var result: Dictionary = await _call(&"delete", _mail_of(_uid), id)
+	return _ok(result) or _not_found(result)
 
 
 ## Oyun açıkken yarış haberleri (yeni haber → race_news → HUD bildirimi). Oyuncunun işlemi sürüyorsa beklenir.
@@ -268,7 +350,7 @@ func create_profile(raw_name: String) -> bool:
 		notice.emit(Loc.t("Profilin hazır! Kodunu arkadaşlarınla paylaş."))
 	else:
 		_set_state(State.NO_PROFILE)
-		notice.emit(Loc.t("Profil oluşturulamadı. İnternet bağlantını kontrol edip tekrar dene."))
+		_write_failed(Loc.t("Profil oluşturulamadı. İnternet bağlantını kontrol edip tekrar dene."))
 	return ok
 
 
@@ -288,7 +370,7 @@ func rename(raw_name: String) -> bool:
 		_write_meta()
 		notice.emit(Loc.t("Takma adın değişti."))
 	else:
-		notice.emit(Loc.t("Takma ad değiştirilemedi. Tekrar dene."))
+		_write_failed(Loc.t("Takma ad değiştirilemedi. Tekrar dene."))
 	changed.emit()
 	return ok
 
@@ -719,7 +801,7 @@ func _start_session() -> void:
 	if _ok(result):
 		var doc: Dictionary = result.get("data", {}) if result.get("data") is Dictionary else {}
 		_meta = {"uid": _uid, "name": SaveSafe.s(doc.get("name", "")), "code": SaveSafe.s(doc.get("code", "")),
-			"published": SaveSafe.s(doc.get("garage_json", ""))}
+			"published": CloudPack.unpack(SaveSafe.s(doc.get("garage_json", "")))}
 		_write_meta()
 		_set_state(State.READY)
 		await _restore_own_photo()
@@ -779,8 +861,9 @@ func _publish(name: String) -> bool:
 	if _save == null:
 		return false
 	var garage_json: String = _garage_json()
-	if garage_json.length() > PublicGarage.MAX_JSON:
-		push_warning("SocialManager: açık garaj çok büyük (%d), yayınlanmadı" % garage_json.length())
+	var packed: String = CloudPack.pack(garage_json)
+	if packed.length() > PublicGarage.MAX_JSON:
+		push_warning("SocialManager: açık garaj çok büyük (%d sıkışık), yayınlanmadı" % packed.length())
 		return false
 	var garage: Dictionary = JSON.parse_string(garage_json)
 	var doc: Dictionary = {
@@ -788,7 +871,7 @@ func _publish(name: String) -> bool:
 		"code": my_code(),
 		"level": PublicGarage.level_of(garage),
 		"value": GarageValue.compute(get_tree()),
-		"garage_json": garage_json,
+		"garage_json": packed,
 		"updated_at": _now(),
 	}
 	var ask: Dictionary = _current_ask()
@@ -929,7 +1012,7 @@ func send_gift(uid: String) -> bool:
 	elif stale:
 		notice.emit(Loc.t("Arkadaşının isteği değişti."))
 	else:
-		notice.emit(Loc.t("Hediye gönderilemedi. İnternet bağlantını kontrol et."))
+		_write_failed(Loc.t("Hediye gönderilemedi. İnternet bağlantını kontrol et."))
 	changed.emit()
 	return ok
 
@@ -1003,7 +1086,13 @@ static func _clock_text(seconds: int) -> String:
 
 
 func _garage_json() -> String:
-	return PublicGarage.to_json(PublicGarage.from_snapshot(_save.snapshot())) if _save else ""
+	if _save == null:
+		return ""
+	var garage: Dictionary = PublicGarage.from_snapshot(_save.snapshot())
+	var json: String = PublicGarage.to_json(garage)
+	if CloudPack.pack(json).length() > PublicGarage.MAX_JSON:
+		json = PublicGarage.to_json(PublicGarage.without_depots(garage))   # büyük dekor: depolar ziyarette görünmez, özet kalır
+	return json
 
 
 ## Boşta bir kod bulup alır (codes/{KOD} = {uid}). Alınamazsa boş.
@@ -1052,7 +1141,7 @@ func _send_request(code: String) -> bool:
 	var mine: Dictionary = {"name": my_name(), "code": my_code(), "at": at}
 	var theirs: Dictionary = {"name": their_name(their.get("name", ""), uid), "code": code, "at": at}
 	if not _ok(await _call(&"set", _inbox_of(uid), "r_" + _uid, mine)):
-		notice.emit(Loc.t("İstek gönderilemedi. İnternet bağlantını kontrol et."))
+		_write_failed(Loc.t("İstek gönderilemedi. İnternet bağlantını kontrol et."))
 		return false
 	await _call(&"set", _outbox_of(_uid), "o_" + uid, theirs)   # yalnızca bekleyen listesi için
 	var entry: Dictionary = theirs.duplicate()
@@ -1069,7 +1158,7 @@ func _accept(uid: String) -> bool:
 	var ok: bool = _ok(await _call(&"set", _friends_of(_uid), "f_" + uid, since)) \
 		and _ok(await _call(&"set", _friends_of(uid), "f_" + _uid, since))
 	if not ok:
-		notice.emit(Loc.t("İstek kabul edilemedi. Tekrar dene."))
+		_write_failed(Loc.t("İstek kabul edilemedi. Tekrar dene."))
 		return false
 	await _call(&"delete", _inbox_of(_uid), "r_" + uid)
 	await _call(&"delete", _outbox_of(uid), "o_" + _uid)   # karşı tarafın bekleyen listesi
@@ -1667,6 +1756,9 @@ func unblock(uid: String) -> void:
 func _call(kind: StringName, collection: String, id: String = "", data: Dictionary = {}) -> Dictionary:
 	if _fb == null:
 		return {"status": false, "error": "unavailable"}
+	if kind == &"set" and not restricted_text.is_empty() and collection != PUSH and not collection.ends_with("/redeem"):
+		_restricted_notice()
+		return {"status": false, "error": "PERMISSION_DENIED: restricted"}
 	while _op_busy:
 		await _op_slot_free
 	_op_busy = true
@@ -1722,6 +1814,22 @@ func _finish(result: Dictionary) -> void:
 
 # --- Yardımcılar -----------------------------------------------------------------
 
+## Sosyal yasakta yasağın metni (10 sn'de bir), değilse verilen hata.
+func _write_failed(text: String) -> void:
+	if restricted_text.is_empty():
+		notice.emit(text)
+	else:
+		_restricted_notice()
+
+
+func _restricted_notice() -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _restricted_said_ms < 10000:
+		return
+	_restricted_said_ms = now
+	notice.emit(restricted_text)
+
+
 func _check_name(name: String) -> bool:
 	if name.length() < SocialNames.NAME_MIN or name.length() > SocialNames.NAME_MAX:
 		notice.emit(Loc.t("Takma ad %d–%d karakter olmalı.") % [SocialNames.NAME_MIN, SocialNames.NAME_MAX])
@@ -1753,6 +1861,10 @@ static func _outbox_of(uid: String) -> String:
 
 static func _gifts_of(uid: String) -> String:
 	return "users/%s/gifts" % uid
+
+
+static func _mail_of(uid: String) -> String:
+	return "users/%s/mail" % uid
 
 
 static func _races_of(uid: String) -> String:

@@ -9,6 +9,8 @@ const PANEL_WIDTH: float = 360.0
 
 var _back: PlateButton
 var _like: PlateButton
+## DEPOLARI: arkadaşın depolarını gezdiren ekran (açık garajda depo yerleşimi varsa).
+var _depots: VisitDepotsScreen
 
 
 func _ready() -> void:
@@ -70,6 +72,23 @@ func _ready() -> void:
 		_like.pressed.connect(_on_like)
 		row.add_child(_like)
 		_show_like()
+	if VisitDepotsScreen.available():
+		_depots = VisitDepotsScreen.new()
+		root.add_child(_depots)
+		root.move_child(_depots, 0)   # tabela üstte kalsın
+		var see: PlateButton = PlateButton.new()
+		see.name = "DepotsButton"
+		see.theme_type_variation = &"HudPlate"
+		see.kind = HudIcon.Kind.BOX
+		see.text = Loc.t("DEPOLARI")
+		see.focus_mode = Control.FOCUS_NONE
+		see.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		see.pressed.connect(func() -> void:
+			if _depots.visible:
+				_depots.close()
+			else:
+				_depots.open())
+		row.add_child(see)
 	row.add_child(_back)
 	_frame_garage.call_deferred()
 
@@ -106,6 +125,9 @@ func _show_like() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		if _depots and _depots.visible:
+			_depots.close()   # Android geri: önce depolar kapanır
+			return
 		_go_home()
 
 

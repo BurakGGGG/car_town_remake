@@ -30,6 +30,8 @@ extends Node
 
 ## Araç satın alındı (para düşmüş, sahiplik eklenmiş).
 signal vehicle_purchased(vehicle_id: StringName)
+## Oyuncu yeni bir araç edindi (galeri, kasa, hurdalık, ödül; kayıttan yükleme DEĞİL): HUD YERLEŞTİR panosunu açar.
+signal vehicle_added(vehicle_id: StringName)
 ## Satın alma olmadı: zaten sahip, katalogda yok ya da bakiye yetersiz (UI uyarısı için).
 signal purchase_failed(vehicle_id: StringName, price: int)
 ## Sahip olunan araç listesi değişti (satın alma, ekleme, çıkarma, kayıttan yükleme).
@@ -151,6 +153,7 @@ func purchase_vehicle(vehicle_id: StringName) -> bool:
 	_discover(vehicle_id)
 	vehicle_purchased.emit(vehicle_id)
 	ownership_changed.emit()
+	vehicle_added.emit(vehicle_id)   # uzlaştırmadan SONRA: araç varsayılan yerine (depo / otopark) oturmuş olur
 	_request_save()
 	return true
 
@@ -165,6 +168,7 @@ func add_vehicle(vehicle_id: StringName) -> bool:
 	_owned.append(vehicle_id)
 	_discover(vehicle_id)
 	ownership_changed.emit()
+	vehicle_added.emit(vehicle_id)
 	_request_save()
 	return true
 
@@ -355,21 +359,18 @@ func load_collection(data: Dictionary) -> void:
 
 # --- Yarış aracı ---------------------------------------------------------------------
 
-## Yarışa çıkan araç: seçili araç sahipteyse o; değilse başlangıç aracı, o da yoksa ilk araç.
-## BEKLEME OTOPARKINDAKİ araç (GARAJLARIM: garajlar dolu) yarışa çıkamaz: sıradaki park etmiş araca düşülür.
+## Yarışa çıkan araç: seçili araç sahipteyse o; değilse başlangıç aracı, o da yoksa ilk araç. Araç nerede durursa
+## dursun (garaj, depo, otopark) yarışır (docs/GARAJLAR_TASARIM.md §10).
 func race_vehicle_id() -> StringName:
-	if _race_vehicle != &"" and is_owned(_race_vehicle) and not _is_waiting(_race_vehicle):
+	if _race_vehicle != &"" and is_owned(_race_vehicle):
 		return _race_vehicle
-	if is_owned(starting_vehicle_id) and not _is_waiting(starting_vehicle_id):
+	if is_owned(starting_vehicle_id):
 		return starting_vehicle_id
-	for id: StringName in _owned:
-		if not _is_waiting(id):
-			return id
 	return _owned[0] if not _owned.is_empty() else &""
 
 
 func set_race_vehicle(vehicle_id: StringName) -> bool:
-	if not is_owned(vehicle_id) or _is_waiting(vehicle_id):
+	if not is_owned(vehicle_id):
 		return false
 	if _race_vehicle == vehicle_id:
 		return true
@@ -500,13 +501,6 @@ func _pay(entry: Dictionary) -> bool:
 
 func _progress() -> PlayerProgress:
 	return get_tree().get_first_node_in_group("player_progress") as PlayerProgress
-
-
-## GARAJLARIM: araç bekleme otoparkında mı (garaj yöneticisi yoksa — ziyaret, test — hiçbir araç beklemez).
-func _is_waiting(vehicle_id: StringName) -> bool:
-	var garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager \
-		if is_inside_tree() else null
-	return garages != null and garages.is_waiting(vehicle_id)
 
 
 func _grant_starting() -> void:

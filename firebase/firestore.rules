@@ -12,7 +12,34 @@ service cloud.firestore {
 
     match /players/{userId} {
       allow read, delete: if isOwner(userId);
-      allow create, update: if isOwner(userId) && isValidPlayer(request.resource.data);
+      allow create, update: if isOwner(userId) && isValidPlayer(request.resource.data) && saveAllowed();
+
+      // KAYIT GEÇMİŞİ (2026-10-21): players/{uid}/history/{dilim} — son 24 saat saat başına (h00–h23), son 7 gün gün başına
+      // (d0–d6); dilimin üzerine yazılır (silme gerekmez, depolama sınırlı). Oyun başarılı bulut yazmasından sonra yazar,
+      // yönetim paneli listeler ve seçileni posta olarak geri yükler. İstemci okumaz. Tam yasakta yazılamaz.
+      match /history/{slot} {
+        allow create, update: if isOwner(userId) && slot.matches('^(h([01][0-9]|2[0-3])|d[0-6])$')
+          && request.resource.data.keys().hasOnly(['save_json', 'stats', 'updated_at'])
+          && request.resource.data.save_json is string && request.resource.data.save_json.size() < 100000
+          && request.resource.data.updated_at is int
+          && (!('stats' in request.resource.data) || isValidPlayerStats(request.resource.data.stats))
+          && saveAllowed();
+      }
+    }
+
+    // UZAKTAN AYAR (2026-10-21): config/app = {min_code, latest_code, maintenance, notice…}. Oyun açılışta OTURUMSUZ
+    // okur (misafir de: zorunlu güncelleme / bakım herkesi kapsar; firebase/admin paneli yazar, yönetici SDK'sı kurallardan
+    // bağımsızdır). Gizli bir şey yoktur; yalnızca kimlikle okunur, istemci hiçbir zaman yazamaz.
+    match /config/{configId} {
+      allow get: if true;
+    }
+
+    // MODERASYON (2026-10-21): moderation/m_{uid} = {ban: {kind: 'social' | 'full', reason, text, until (unix sn, 0 =
+    // kalıcı), at}, name, name_reset, photo_reset}. YALNIZCA yönetim paneli yazar; sahibi okur (oyun yasağı sebep ve
+    // bitişiyle gösterir, sıfırlanan adı / fotoğrafı uygular). Yasak SUNUCUDA zorlanır: socialAllowed / saveAllowed.
+    // Kimlik çıplak UID değil (m_ öneki): bulut kaydı kimlik == UID sonucunu kendi belgesi sanar.
+    match /moderation/{modId} {
+      allow get: if signedIn() && modId == 'm_' + request.auth.uid;
     }
 
     // HERKESE AÇIK GARAJ: yalnızca görsel veri (para / gem / kasa yok). Giriş yapmış herkes okur
@@ -22,7 +49,7 @@ service cloud.firestore {
     match /garages/{garageId} {
       allow get: if signedIn();
       allow create, update: if signedIn() && garageId == 'g_' + request.auth.uid
-        && isValidGarage(request.resource.data);
+        && isValidGarage(request.resource.data) && socialAllowed();
       allow delete: if signedIn() && garageId == 'g_' + request.auth.uid;
     }
 
@@ -31,7 +58,7 @@ service cloud.firestore {
     // gösterir, arkadaş hash değişmedikçe yeniden indirmez.
     match /avatars/{avatarId} {
       allow get: if signedIn();
-      allow create, update: if signedIn() && avatarId == 'a_' + request.auth.uid
+      allow create, update: if signedIn() && avatarId == 'a_' + request.auth.uid && socialAllowed()
         && request.resource.data.keys().hasOnly(['img', 'hash', 'at'])
         && request.resource.data.img is string && request.resource.data.img.size() > 0
         && request.resource.data.img.size() <= 40000
@@ -46,7 +73,7 @@ service cloud.firestore {
     // Hedefin açık garajı olmalı (şikâyet edilen ad / fotoğraf / garaj oradan görünür): uydurma hedeflerle sınırsız
     // belge yazılamaz, bir hesap en çok gerçek oyuncu sayısı kadar şikâyet bırakabilir.
     match /reports/{reportId} {
-      allow create, update: if signedIn()
+      allow create, update: if signedIn() && socialAllowed()
         && request.resource.data.keys().hasOnly(['target', 'reason', 'av', 'img', 'name', 'at'])
         && request.resource.data.target is string && request.resource.data.target != request.auth.uid
         && reportId == 'x_' + request.auth.uid + '_' + request.resource.data.target
@@ -60,14 +87,17 @@ service cloud.firestore {
       allow read, delete: if false;
     }
 
-    // TELEFON BİLDİRİMİ JETONU: push/p_{uid} = {token, lang, at}. Oyuncu ARKADAŞLAR → YARIŞ BİLDİRİMLERİ: AÇ ile yazar;
-    // Cloud Function (functions/news.js, yönetici yetkisi) okur. Yalnızca sahibi yazar / okur / siler.
+    // TELEFON BİLDİRİMİ JETONU: push/p_{uid} = {token, lang, at, prefs}. Oyuncu bildirimleri açınca yazar; Cloud Function
+    // (functions/news.js yarış, functions/mail.js hediye; yönetici yetkisi) okur. prefs = {race, gift}: AYARLAR'da kapatılan
+    // tür gönderilmez. DUYURULAR jetonla değil FCM konusuyla gider (news_<dil>, misafir de abone olur). Yalnızca sahibi
+    // yazar / okur / siler.
     // push_log/l_{alıcı}_{gönderen} (6 saatlik bildirim sınırı) YALNIZCA sunucunundur: istemciye kapalı (aşağıdaki
     // "başka her yol kapalı" kuralı; yönetici SDK'sı kurallardan bağımsızdır).
     match /push/{pushId} {
       allow read, delete: if signedIn() && pushId == 'p_' + request.auth.uid;
-      allow create, update: if signedIn() && pushId == 'p_' + request.auth.uid
-        && request.resource.data.keys().hasOnly(['token', 'lang', 'at'])
+      allow create, update: if signedIn() && pushId == 'p_' + request.auth.uid && saveAllowed()
+        && request.resource.data.keys().hasOnly(['token', 'lang', 'at', 'prefs'])
+        && (!('prefs' in request.resource.data) || isValidPushPrefs(request.resource.data.prefs))
         && request.resource.data.token is string && request.resource.data.token.size() > 20
         && request.resource.data.token.size() <= 4096
         && request.resource.data.lang in ['tr', 'en', 'es', 'de', 'fr']
@@ -77,7 +107,7 @@ service cloud.firestore {
     // ARKADAŞ KODU → UID. Kod bir kez alınır (üzerine yazılamaz), yalnızca sahibi siler.
     match /codes/{code} {
       allow get: if signedIn();
-      allow create: if signedIn() && code.matches('^[A-HJ-NP-Z2-9]{6}$')
+      allow create: if signedIn() && socialAllowed() && code.matches('^[A-HJ-NP-Z2-9]{6}$')
         && request.resource.data.keys().hasOnly(['uid'])
         && request.resource.data.uid == request.auth.uid;
       allow delete: if signedIn() && resource.data.uid == request.auth.uid;
@@ -89,7 +119,7 @@ service cloud.firestore {
     // iki arkadaşlık belgesini de yazabilir (gönderen onaylamaz — linki kendisi gönderdi). Bkz. friends.
     match /invites/{token} {
       allow get: if signedIn();
-      allow create: if signedIn() && token.matches('^[A-HJ-NP-Z2-9]{12}$')
+      allow create: if signedIn() && socialAllowed() && token.matches('^[A-HJ-NP-Z2-9]{12}$')
         && request.resource.data.keys().hasOnly(['uid', 'name', 'code', 'at'])
         && request.resource.data.uid == request.auth.uid
         && isValidName(request.resource.data.name)
@@ -101,12 +131,31 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
+      // POSTA KUTUSU (2026-10-21): users/{uid}/mail/{id} = yönetim panelinin gönderdiği hediye / mesaj. YALNIZCA SUNUCU
+      // yazar (firebase/admin, yönetici SDK'sı); sahibi listeler, okur ve ödülü kaydına geçirdikten sonra siler. Aynı
+      // hediye iki kez alınamaz: belge silinir, alınan kimlik kayıtta da tutulur (silme başarısız olsa bile).
+      match /mail/{mailId} {
+        allow read, delete: if isOwner(uid);
+      }
+
+      // KUPON KODU (2026-10-21): users/{uid}/redeem/{KOD} = {at}. Oyuncu kodu girince yazar (kod başına bir kez: tekrar
+      // yazılamaz), sunucu (functions/promo.js) doğrular ve sonucu {status, title} olarak aynı belgeye yazar; ödül posta ile
+      // gelir. `at` sunucu saatine ±10 dk (saatlik deneme sınırı buna bakar). Tam yasakta yazılamaz.
+      match /redeem/{code} {
+        allow get: if isOwner(uid);
+        allow create: if isOwner(uid) && code.matches('^[A-Z0-9]{4,16}$')
+          && request.resource.data.keys().hasOnly(['at']) && request.resource.data.at is int
+          && request.resource.data.at * 1000 > request.time.toMillis() - 600000
+          && request.resource.data.at * 1000 < request.time.toMillis() + 600000
+          && saveAllowed();
+      }
+
       // GELEN İSTEK: users/{alıcı}/inbox/r_{gönderen}. Gönderen yazar; alıcı ve gönderen okur / siler.
       match /inbox/{reqId} {
         allow read, delete: if signedIn()
           && (request.auth.uid == uid || reqId == 'r_' + request.auth.uid);
         allow create, update: if signedIn() && reqId == 'r_' + request.auth.uid
-          && uid != request.auth.uid && isValidRequest(request.resource.data);
+          && uid != request.auth.uid && isValidRequest(request.resource.data) && socialAllowed();
       }
 
       // GİDEN İSTEK (gönderenin bekleyen listesi): users/{gönderen}/outbox/o_{alıcı}.
@@ -114,7 +163,7 @@ service cloud.firestore {
       match /outbox/{outId} {
         allow read: if isOwner(uid);
         allow create, update: if isOwner(uid) && outId.matches('^o_.+')
-          && outId != 'o_' + uid && isValidRequest(request.resource.data);
+          && outId != 'o_' + uid && isValidRequest(request.resource.data) && socialAllowed();
         allow delete: if isOwner(uid) || (signedIn() && outId == 'o_' + request.auth.uid);
       }
 
@@ -129,7 +178,7 @@ service cloud.firestore {
         allow read: if isOwner(uid);
         allow delete: if isOwner(uid) && (resource.data.day < today()
           || !exists(/databases/$(database)/documents/garages/$('g_' + uid)));
-        allow create: if signedIn() && uid != request.auth.uid
+        allow create: if signedIn() && uid != request.auth.uid && socialAllowed()
           && request.resource.data.keys().hasOnly(['part', 'name', 'at', 'day'])
           && request.resource.data.day == today()
           && giftId == 'p_' + request.auth.uid + '_' + string(today())
@@ -147,7 +196,7 @@ service cloud.firestore {
       match /races/{eventId} {
         allow read: if isOwner(uid);
         allow delete: if isOwner(uid) || (signedIn() && eventId == 'e_' + request.auth.uid);
-        allow create, update: if signedIn() && uid != request.auth.uid && eventId == 'e_' + request.auth.uid
+        allow create, update: if signedIn() && uid != request.auth.uid && eventId == 'e_' + request.auth.uid && socialAllowed()
           && exists(/databases/$(database)/documents/users/$(uid)/friends/$('f_' + request.auth.uid))
           && isValidRaceEvent(request.resource.data);
       }
@@ -159,7 +208,7 @@ service cloud.firestore {
       match /visits/{visitId} {
         allow read: if isOwner(uid);
         allow delete: if isOwner(uid) || (signedIn() && visitId == 'v_' + request.auth.uid);
-        allow create, update: if signedIn() && uid != request.auth.uid && visitId == 'v_' + request.auth.uid
+        allow create, update: if signedIn() && uid != request.auth.uid && visitId == 'v_' + request.auth.uid && socialAllowed()
           && exists(/databases/$(database)/documents/users/$(uid)/friends/$('f_' + request.auth.uid))
           && request.resource.data.keys().hasOnly(['name', 'at', 'day', 'liked'])
           && isValidName(request.resource.data.name)
@@ -178,7 +227,7 @@ service cloud.firestore {
       // Kendini arkadaş ekleme yok. Silme (arkadaşlıktan çıkarma): iki taraf da iki belgeyi silebilir.
       match /friends/{friendId} {
         allow read: if isOwner(uid);
-        allow create, update: if signedIn() && friendId.matches('^f_.+') && friendId != 'f_' + uid
+        allow create, update: if signedIn() && friendId.matches('^f_.+') && friendId != 'f_' + uid && socialAllowed()
           && request.resource.data.keys().hasOnly(['since', 'inv'])
           && request.resource.data.since is int
           && (
@@ -212,14 +261,47 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Yalnızca oyunun yazdığı alanlar; token / şifre gibi ek alanlar reddedilir.
+    // Etkin yasak: moderation/m_{ben}.ban türü listede ve süresi dolmamış (until 0 = kalıcı). Belge yoksa yasak yok.
+    function activeBan(kinds) {
+      let path = /databases/$(database)/documents/moderation/$('m_' + request.auth.uid);
+      return exists(path) && ('ban' in get(path).data) && get(path).data.ban.kind in kinds
+        && (get(path).data.ban.until == 0 || get(path).data.ban.until * 1000 > request.time.toMillis());
+    }
+
+    // SOSYAL YASAK (ya da tam): arkadaşlık, yarış haberi, ziyaret, hediye, şikâyet, açık garaj / fotoğraf yazılamaz.
+    function socialAllowed() {
+      return !activeBan(['social', 'full']);
+    }
+
+    // TAM YASAK: bulut kaydı ve bildirim jetonu da yazılamaz (oyun oturumu kapatır, misafir olarak oynanır).
+    function saveAllowed() {
+      return !activeBan(['full']);
+    }
+
+    // Yalnızca oyunun yazdığı alanlar; token / şifre gibi ek alanlar reddedilir. save_json SIKIŞIK (CloudPack, gz1:
+    // + base64): dekorlu kayıt ~3–6 KB; eski düz biçim de okunur. Sınır 100 KB (belge sınırı 1 MiB).
     function isValidPlayer(data) {
-      return data.keys().hasOnly(['profile', 'save_version', 'save_json', 'updated_at'])
+      return data.keys().hasOnly(['profile', 'save_version', 'save_json', 'stats', 'updated_at'])
         && data.save_version is int
         && data.save_json is string
-        && data.save_json.size() < 20000
+        && data.save_json.size() < 100000
         && data.updated_at is int
-        && (!('profile' in data) || isValidProfile(data.profile));
+        && (!('profile' in data) || isValidProfile(data.profile))
+        && (!('stats' in data) || isValidPlayerStats(data.stats));
+    }
+
+    // Kaydın okunur özeti (yönetim paneli görür; oyun okumaz): para, elmas, seviye, araç sayısı, sürüm kodu, oyun dili
+    // (hedefli gönderim: dile göre süzme).
+    function isValidPlayerStats(s) {
+      return s is map && s.keys().hasOnly(['money', 'gems', 'level', 'cars', 'build', 'lang'])
+        && s.money is int && s.gems is int && s.level is int && s.cars is int && s.build is int
+        && (!('lang' in s) || s.lang in ['tr', 'en', 'es', 'de', 'fr']);
+    }
+
+    // Bildirim türleri (AYARLAR → BİLDİRİMLER): sunucu kişiye özel bildirimi gönderirken bakar. Yazılmayan tür açık sayılır.
+    function isValidPushPrefs(p) {
+      return p is map && p.keys().hasOnly(['race', 'gift'])
+        && (!('race' in p) || p.race is bool) && (!('gift' in p) || p.gift is bool);
     }
 
     function isValidProfile(p) {

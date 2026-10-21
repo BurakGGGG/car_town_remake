@@ -4,7 +4,8 @@
 // telefonuna bildirim gider — YALNIZCA gönderen kazandıysa ("A, B'nin aracını yendi"). Kullanıcı kuralı (2026-10-17):
 // aynı gönderen → aynı alıcı çiftine 6 saatte EN ÇOK BİR bildirim. A→B (gider) · A→B tekrar (gitmez) · A→C (gider) ·
 // C→B (gider). Sınır sunucuda (push_log/l_{alıcı}_{gönderen}, istemciye kapalı): uygulamayı değiştiren aşamaz.
-// Cihaz jetonu ve dil: push/p_{alıcı} = {token, lang, at} (oyun ARKADAŞLAR → YARIŞ BİLDİRİMLERİ: AÇ ile yazar).
+// Cihaz jetonu ve dil: push/p_{alıcı} = {token, lang, at, prefs} (oyun AYARLAR → BİLDİRİMLER: AÇ ile yazar). prefs.race
+// false ise gönderilmez ("muted").
 
 const PAIR_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
@@ -36,7 +37,7 @@ function messageFor(lang, name, revenge) {
 }
 
 /**
- * Tek haber yazmasını işler. Dönüş: "skip" | "throttled" | "no-token" | "sent" | "stale".
+ * Tek haber yazmasını işler. Dönüş: "skip" | "throttled" | "no-token" | "muted" | "sent" | "stale".
  * db: Firestore (yönetici) benzeri {doc(path) → {get, set, delete}, runTransaction(fn)}; messaging: {send(msg)}.
  * 6 saatlik hak YALNIZCA gönderilen bildirimle tükenir (2026-10-17 düzeltmesi): jetonu olmayan alıcı (bildirimi henüz
  * açmamış) ya da FCM'nin reddettiği gönderim hakkı yemez — yoksa oyuncu bildirimi açtıktan sonraki ilk yenilgiyi kaçırır.
@@ -45,8 +46,9 @@ async function handleRaceNews({ db, messaging, recipient, sender, before, after,
   if (!shouldNotify(before, after) || !recipient || !sender || recipient === sender) return "skip";
   const tokenRef = db.doc(`push/p_${recipient}`);
   const tokenSnap = await tokenRef.get();
-  const { token, lang } = tokenSnap.exists ? tokenSnap.data() : {};
+  const { token, lang, prefs } = tokenSnap.exists ? tokenSnap.data() : {};
   if (!token) return "no-token";
+  if (prefs && prefs.race === false) return "muted";   // oyuncu AYARLAR'da YARIŞ HABERLERİ'ni kapattı (hak tüketmez)
   const logRef = db.doc(`push_log/l_${recipient}_${sender}`);
   const reserved = await db.runTransaction(async (t) => {
     const snap = await t.get(logRef);

@@ -164,6 +164,16 @@ func _ensure_social() -> void:
 		var social: SocialManager = SocialManager.new()
 		social.name = "SocialManager"
 		add_child(social)
+	# POSTA KUTUSU (MailService, "mail"): yönetim panelinin hediyeleri; alınanlar kayıtta (SaveManager'dan ÖNCE hazır)
+	if get_tree().get_first_node_in_group("mail") == null:
+		var mail: MailService = MailService.new()
+		mail.name = "MailService"
+		add_child(mail)
+	# MODERASYON (ModerationWatch, "moderation"): yönetim panelinin yasak / ad / fotoğraf kararları
+	if get_tree().get_first_node_in_group("moderation") == null:
+		var moderation: ModerationWatch = ModerationWatch.new()
+		moderation.name = "ModerationWatch"
+		add_child(moderation)
 
 
 ## Avludaki dekorasyon görünümü de kodla kurulur (sahne dosyası elle düzenlenmiyor).

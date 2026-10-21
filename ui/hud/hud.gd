@@ -95,6 +95,8 @@ var quest_button: PlateButton
 ## Kodla kurulan ARKADAŞLAR tabelası ve onu açan plaka (GÖREVLER'in altında).
 var friends_screen: FriendsScreen
 var friends_button: PlateButton
+## OTOPARK SAYACI: otoparkta araç varken sağ üst sütunda kırmızı plaka (docs/GARAJLAR_TASARIM.md §10, depo isteği).
+var lot_button: ParkingBadge
 ## PROFİL (2026-10-16): sol üstte kendi avatarın; arkadaş kartı, profil düzenleme, fotoğraf kırpma, kamera alt panoları.
 var avatar_button: AvatarButton
 const AVATAR_BUTTON_SIZE: float = 76.0
@@ -141,6 +143,7 @@ var _repair_target: Node3D
 var _notice_plate: PlatePanel
 var _notice_label: Label
 var _notice_tween: Tween
+var _notice_action: Callable = Callable()
 
 # Tamir alanı satın alma plakası (dünyadaki kilitli alana tıklanınca)
 var _bays: RepairBayManager
@@ -175,6 +178,10 @@ var collection_screen: CollectionScreen
 var all_cars_screen: AllCarsScreen
 ## GARAJLARIM panosu (garaj ekranının başlığından) ve garajın İÇ YÜKSELTMELER alt panosu.
 var car_garages_screen: CarGaragesScreen
+## YERLEŞTİR: yeni aracın yeri (GARAJIMA KOY / depo / otopark). Sıra _queue_placement'ta.
+var car_placement_screen: CarPlacementScreen
+var _placement_queue: Array[StringName] = []
+var _placement_timer: Timer
 var car_garage_upgrade_screen: CarGarageUpgradeScreen
 var junkyard_screen: JunkyardScreen
 var restoration_panel: RestorationPanel
@@ -186,6 +193,8 @@ var crate_panel: CratePanel
 var restoration_result: RestorationResult
 ## Garajdaki eşyaya basılı tutmak düzenleyiciyi o eşya tutulmuş açar.
 var decor_hold: DecorHoldGesture
+## SERGİ PLAKASI: ana garajda sergilenen araca dokununca (docs/GARAJLAR_TASARIM.md §10).
+var exhibit_plate: ExhibitPlate
 ## RÖVANŞ: sonuç panosu pisti yeniden açmak için kapanıyor (closed → _on_race_exit çıkış yapmasın).
 var _rematch_pending: bool = false
 var _new_tiers: Array[StringName] = []   # teslim töreni sürerken açılan restorasyon sınıfları
@@ -236,6 +245,7 @@ func _ready() -> void:
 	_build_camera_menu()
 	_build_quests()
 	_build_friends()
+	_build_lot_counter.call_deferred()   # depo yöneticisi kodla kuruluyor (GarageSystem): bir kare sonra
 	_build_progress_screens()
 	_build_profile_screens()
 	_build_race_screens()
@@ -419,6 +429,8 @@ func select_nav_tab(id: StringName) -> void:
 
 ## Araç plakasını kısa bir "yerine oturma" animasyonuyla açar (car_info_enabled false ise hiçbir şey göstermez).
 func show_car_info(car_name: String) -> void:
+	if exhibit_plate:
+		exhibit_plate.hide_plate()   # dünyada tek plaka: müşteri / tamir aracı plakası sergi plakasını kapatır
 	car_name_label.text = car_name
 	if not car_info_enabled:
 		return
@@ -603,16 +615,18 @@ func _connect_gameplay() -> void:
 		restoration_bays.finale_finished.connect(func(id: StringName) -> void:
 			if restoration_result.visible and restoration_result.vehicle_id == id:
 				restoration_result.hide_panel())   # tören atlandı (kayıt değişti)
-	# GARAJLARIM: araç bekliyor (garajlar dolu) / garaja girdi, inşaat ve iç yükseltme bitti
+	# DEPOLARIM: otoparktan depoya geçen araçlar, otopark faturası, inşaat ve iç yükseltme bitti. Otoparka giren yeni
+	# aracın yerini YERLEŞTİR sorar (bildirim yok)
 	var car_garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
 	if car_garages:
 		car_garages.gem_finished.connect(func(_garage: StringName) -> void: _sfx.gem_skip())
-		car_garages.vehicle_waiting.connect(func(id: StringName) -> void:
-			_show_notice(Loc.t("GARAJLAR DOLU: %s BEKLİYOR\nYER AÇ YA DA YENİ GARAJ AL") % _car_name(id), HudPalette.DANGER, 2.6))
 		car_garages.waiting_parked.connect(func(ids: Array[StringName]) -> void:
-			var text: String = Loc.t("%s GARAJA GİRDİ") % _car_name(ids[0]) if ids.size() == 1 \
-				else Loc.t("%d ARAÇ GARAJA GİRDİ") % ids.size()
+			var text: String = Loc.t("%s OTOPARKTAN DEPOYA GEÇTİ") % _car_name(ids[0]) if ids.size() == 1 \
+				else Loc.t("%d ARAÇ OTOPARKTAN DEPOYA GEÇTİ") % ids.size()
 			_show_notice(text, HudPalette.COIN_DARK, 2.2))
+		car_garages.fee_charged.connect(func(amount: int, cars: int, _periods: int) -> void:
+			_show_notice(Loc.t("OTOPARK FATURASI: %d ARAÇ · −%s ₺") % [cars, Hud.format_thousands(amount)],
+				HudPalette.DANGER, 2.8))
 		car_garages.build_finished.connect(func(garage: StringName) -> void:
 			_show_notice(Loc.t("%s HAZIR!") % CarGarageCatalog.display_name(garage), HudPalette.COIN_DARK, 2.4))
 		car_garages.upgrade_finished.connect(func(garage: StringName, item: StringName, level: int) -> void:
@@ -667,8 +681,23 @@ func _connect_gameplay() -> void:
 				return
 			hide_bay_plate()
 			hide_car_info()
+			exhibit_plate.hide_plate(false)
 			garage_edit_screen.grab_on_open(iid, at)
 			router.open(&"garage_edit"))
+		# Sergideki araca kısa dokunuş: kamera yaklaşır, SERGİ PLAKASI açılır (başka eşyaya dokunuş plakayı kapatır)
+		decor_hold.tapped.connect(func(iid: String, _at: Vector2) -> void:
+			var decor: DecorManager = get_tree().get_first_node_in_group("decor") as DecorManager
+			var item: StringName = StringName(decor.instance(iid).get("item", &"")) if decor else &""
+			if GarageDecor.is_vehicle(item):
+				show_exhibit(GarageDecor.vehicle_of(item))
+			else:
+				exhibit_plate.hide_plate())
+	exhibit_plate = ExhibitPlate.new()
+	get_node("Root").add_child(exhibit_plate)
+	exhibit_plate.notice_requested.connect(func(text: String, color: Color) -> void: _show_notice(text, color, 2.4))
+	exhibit_plate.mods_requested.connect(func(id: StringName) -> void:
+		garage_screen.open_home_mods(id)
+		router.open(&"garage"))
 	var junkyard: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
 	if junkyard:
 		junkyard.parts_gained.connect(func(part_id: StringName, amount: int, source: StringName) -> void:
@@ -698,6 +727,7 @@ func _connect_gameplay() -> void:
 	_ownership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 	if _ownership:
 		_ownership.ownership_changed.connect(_check_garage_rank)
+		_ownership.vehicle_added.connect(_queue_placement)
 		_ownership.paint_changed.connect(func(_id: StringName, _c: Color) -> void: _check_garage_rank())
 	if _upgrades:
 		_upgrades.levels_changed.connect(_check_garage_rank)
@@ -810,6 +840,7 @@ func _build_notice_plate() -> void:
 	_notice_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_notice_plate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_notice_plate.visible = false
+	_notice_plate.gui_input.connect(_on_notice_input)
 	var margin: MarginContainer = MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_theme_constant_override(&"margin_left", 18)
@@ -866,6 +897,8 @@ func _build_bay_plate() -> void:
 
 ## GARAJ panelindeki TAMİR ALANI düğmesi: plaka alanın durumuna göre açılır.
 func show_bay_plate(index: int) -> void:
+	if exhibit_plate:
+		exhibit_plate.hide_plate()
 	if _bays == null:
 		return
 	_bay_index = index
@@ -1023,10 +1056,11 @@ func _car_name(vehicle_id: StringName) -> String:
 
 ## Bildirim plakası SIRAYLA gösterir: ödül toplamak seviye atlatabilir, seviye ustalık kademesi
 ## açabilir — aynı karede gelen bildirimler birbirini silmesin diye kuyruğa girer.
-func _show_notice(text: String, color: Color, hold: float = 1.6) -> void:
+## `action` verilirse plaka görünürken basılabilir: dokunuş eylemi çalıştırır, plaka hemen kapanır.
+func _show_notice(text: String, color: Color, hold: float = 1.6, action: Callable = Callable()) -> void:
 	if _notice_plate == null:
 		return
-	_notice_queue.append({"text": text, "color": color, "hold": hold})
+	_notice_queue.append({"text": text, "color": color, "hold": hold, "action": action})
 	if _notice_queue.size() > NOTICE_QUEUE_MAX:
 		_notice_queue.pop_front()   # taşarsa en eskisi düşer (oyuncu güncel olanı görsün)
 	if not _notice_busy:
@@ -1037,11 +1071,13 @@ func _drain_notices() -> void:
 	_notice_busy = true
 	while not _notice_queue.is_empty():
 		var notice: Dictionary = _notice_queue.pop_front()
-		await _play_notice(String(notice["text"]), notice["color"], float(notice["hold"]))
+		await _play_notice(String(notice["text"]), notice["color"], float(notice["hold"]), notice["action"])
 	_notice_busy = false
 
 
-func _play_notice(text: String, color: Color, hold: float) -> void:
+func _play_notice(text: String, color: Color, hold: float, action: Callable = Callable()) -> void:
+	_notice_action = action
+	_notice_plate.mouse_filter = Control.MOUSE_FILTER_STOP if action.is_valid() else Control.MOUSE_FILTER_IGNORE
 	_notice_label.text = text
 	_notice_label.add_theme_color_override(&"font_color", color)
 	_notice_plate.modulate.a = 0.0
@@ -1058,6 +1094,24 @@ func _play_notice(text: String, color: Color, hold: float) -> void:
 	_notice_tween.tween_property(_notice_plate, "modulate:a", 0.0, 0.25)
 	_notice_tween.tween_callback(_notice_plate.hide)
 	await _notice_tween.finished
+	_notice_action = Callable()
+	_notice_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+## Basılabilir bildirim: eylemi bir kez çalıştırır; tween sona sarılır (kuyruk finished'ı bekliyor, kill takardı).
+func _on_notice_input(event: InputEvent) -> void:
+	var press: bool = (event is InputEventMouseButton and (event as InputEventMouseButton).pressed \
+		and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT) \
+		or (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed)
+	if not press or not _notice_action.is_valid():
+		return
+	_notice_plate.accept_event()
+	var action: Callable = _notice_action
+	_notice_action = Callable()
+	_notice_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _notice_tween and _notice_tween.is_valid():
+		_notice_tween.custom_step(60.0)
+	action.call()
 
 
 ## Seviye atlandı: para ödülü ve (varsa) açılan içerik plakada duyurulur.
@@ -1287,6 +1341,9 @@ func _on_nav_pressed(button: PlateButton) -> void:
 	if router.is_open(id) and router.top() == id:
 		router.back()
 		return
+	if button == cars_button and id == &"garage" and not garage_screen.has_browsable_cars():
+		router.open(&"car_garages")   # araçların hepsi ana garajda: depo / otopark yok → DEPOLARIM (depo alma isteği)
+		return
 	router.open(id)
 	if button == cars_button and id == &"garage":
 		garage_screen.focus_cars()   # ARAÇLAR sekmesi: garajdaki araç listesini öne çıkarır
@@ -1363,15 +1420,23 @@ func _build_progress_screens() -> void:
 	host.add_child(all_cars_screen)
 	all_cars_screen.vehicle_chosen.connect(garage_screen.show_vehicle)
 	car_garages_screen = CarGaragesScreen.new()
-	car_garages_screen.current_garage = garage_screen.current_garage
+	# Dünyadan açılan panoda BURADASIN yok (ARAÇLAR kapalıyken eski "bakılan yer" geçersiz)
+	car_garages_screen.current_garage = func() -> StringName:
+		return garage_screen.current_garage() if garage_screen.visible else &""
 	host.add_child(car_garages_screen)
 	car_garage_upgrade_screen = CarGarageUpgradeScreen.new()
 	host.add_child(car_garage_upgrade_screen)
-	car_garages_screen.garage_chosen.connect(garage_screen.go_to_garage)
+	car_garages_screen.garage_chosen.connect(_on_garage_chosen)
+	garage_screen.home_vehicle_chosen.connect(func(id: StringName) -> void:
+		router.close_all()
+		get_tree().create_timer(0.3).timeout.connect(show_exhibit.bind(id)))   # ekran kapanış geçişinden sonra
 	car_garages_screen.upgrades_requested.connect(func(garage: StringName) -> void:
 		car_garage_upgrade_screen.garage = garage
 		router.open(&"car_garage_upgrades"))
 	car_garages_screen.gem_store_requested.connect(func() -> void: router.open(&"gem_store"))
+	car_placement_screen = CarPlacementScreen.new()
+	host.add_child(car_placement_screen)
+	car_placement_screen.home_requested.connect(_place_at_home)
 	car_garage_upgrade_screen.gem_store_requested.connect(func() -> void: router.open(&"gem_store"))
 	gem_store_screen = GemStoreScreen.new()
 	gem_store_screen.hud = self
@@ -1380,6 +1445,7 @@ func _build_progress_screens() -> void:
 	garage_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
 	garage_edit_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))   # LÜKS: elmas yetmedi
 	garage_screen.mod_upgrade_requested.connect(_on_mod_upgrade)
+	garage_screen.home_requested.connect(_place_at_home)
 
 
 ## YARIŞ: davet panosu (MODAL) → pist (PLACE) → sonuç panosu (MODAL). Ekranlar kendi navigasyonunu
@@ -1499,6 +1565,7 @@ func _register_screens() -> void:
 	router.register(&"collection", collection_screen, UiRouter.Kind.MODAL)
 	router.register(&"all_cars", all_cars_screen, UiRouter.Kind.MODAL)
 	router.register(&"car_garages", car_garages_screen, UiRouter.Kind.MODAL)
+	router.register(&"car_placement", car_placement_screen, UiRouter.Kind.MODAL)
 	router.register(&"car_garage_upgrades", car_garage_upgrade_screen, UiRouter.Kind.SUB)
 	router.register(&"friends", friends_screen, UiRouter.Kind.MODAL)
 	router.register(&"gem_store", gem_store_screen, UiRouter.Kind.MODAL)
@@ -1523,6 +1590,9 @@ func _register_screens() -> void:
 ## (görevler, ustalık, rütbe, profil, hesap) HUD'un üstünde durur.
 func _on_ui_stack_changed(top: StringName, place_open: bool) -> void:
 	_set_gameplay_hud_visible(not place_open)
+	if top != &"" and exhibit_plate:
+		exhibit_plate.hide_plate()
+	garage_screen.set_covered(router.current_place() == &"garage" and top != &"garage")
 	_sync_modal_hud()
 	_sync_world_rendering()
 	if place_open:
@@ -1713,6 +1783,14 @@ func _setup_gem_store() -> void:
 		if router.top() != &"gem_store":
 			_show_notice(Loc.t("SATIN ALMA TAMAMLANDI\n+%d GEM") % gems, HudPalette.GEM_DARK, 2.4))
 	add_child(FounderRewardNotice.new(self, purchases))   # ön kayıt ödülü: oyun sakinleşince ödül penceresi
+	# CANLI ETKİNLİK tabelası (üst orta): POSTA / yasak pencerelerinden ÖNCE eklenir, onlar üstünde kalsın
+	garage_screen.get_parent().add_child(EventBanner.new(self))
+	var mail: MailService = get_tree().get_first_node_in_group("mail") as MailService
+	if mail:
+		garage_screen.get_parent().add_child(MailNotice.new(self, mail))   # yönetim panelinin hediyeleri (temalı kök)
+	var moderation: ModerationWatch = get_tree().get_first_node_in_group("moderation") as ModerationWatch
+	if moderation:
+		garage_screen.get_parent().add_child(BanNotice.new(self, moderation))   # yasak: sebep + bitiş penceresi
 
 
 ## Showroom'dan kasa alındı: showroom kapanır, kamera garajın teslimat alanına, kasanın gelişine gider.
@@ -1741,6 +1819,147 @@ func _announce_quest_crate(uid: int) -> void:
 	if _delivery:
 		_delivery.focus_on_arrival(uid)
 	_show_notice(Loc.t("İLK ARAÇ KASAN GARAJINA GELDİ\nKASAYA DOKUN VE AÇ"), HudPalette.COIN_DARK, 3.0)
+
+
+## DEPOLARIM → GİT / GARAJIM: ARAÇLAR açıksa o yere geçer; dünyadan açılmışsa ARAÇLAR o yerde açılır. GARAJIM = dünyaya dön.
+func _on_garage_chosen(garage: StringName) -> void:
+	if garage == CarGarageManager.HOME:
+		router.close_all()
+		return
+	if router.current_place() == &"garage":
+		garage_screen.go_to_garage(garage)
+		return
+	garage_screen.open_on(garage)
+	router.open(&"garage")
+
+
+## SERGİ PLAKASI'nı açar (yalnız dünyada; araç sergide değilse açılmaz).
+func show_exhibit(vehicle_id: StringName) -> void:
+	if router.top() != &"" or exhibit_plate == null:
+		return
+	hide_bay_plate()
+	hide_car_info()
+	exhibit_plate.show_for(vehicle_id)
+
+
+## YERLEŞTİR sırası (docs/GARAJLAR_TASARIM.md §10): yeni araç (kasa, galeri, hurdalık, ödül) ekran boşken tek tek
+## sorulur. Beklerken araç varsayılan yerindedir (boş yeri olan en üst depo, yoksa otopark): hiçbir şey kaybolmaz.
+## Arayüzü kodla süren testler (CT_NO_TUTORIAL=1, tools/run_tests.sh) soruları kapatır: koddan eklenen araçlar
+## panoyu açıp ekranın üstüne çıkmasın. Panoyu sınayan test `placement_prompts = true` verir.
+var placement_prompts: bool = not TutorialDirector.disabled_by_env()
+## Oyuncunun İLK aracı (hoş geldin kutusu): YERLEŞTİR sorulmaz, düzenleme kipi araç parmakta açılır (kullanıcı kararı
+## 2026-10-20). İLK TAMİR dersi bunu kendi adımında açar (place_first_car); ders yoksa _try_placement.
+var first_car: StringName = &""
+## GARAJIM sergisine sığmayan yeni araç, DEPO DERSİ henüz yapılmadıysa: ders bununla başlar ("GARAJIN DOLDU!").
+var garage_full_vehicle: StringName = &""
+
+
+func _queue_placement(vehicle_id: StringName) -> void:
+	if not placement_prompts or GarageVisit.is_visiting() or car_placement_screen == null \
+			or get_tree().get_first_node_in_group("car_garages") == null:
+		return
+	if _ownership.owned_count() == 1:
+		first_car = vehicle_id
+	if not _placement_queue.has(vehicle_id):
+		_placement_queue.append(vehicle_id)
+	if _placement_timer == null:
+		_placement_timer = Timer.new()
+		_placement_timer.name = "PlacementTimer"
+		_placement_timer.wait_time = 0.4
+		_placement_timer.timeout.connect(_try_placement)
+		add_child(_placement_timer)
+	if _placement_timer.is_stopped():
+		_placement_timer.start()
+
+
+## Boştayken açar: yalnız bir YER (ya da hiçbir şey) açık; pano, kasa / araç açılışı, ders, restorasyon töreni yok.
+func _try_placement() -> void:
+	var garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
+	_placement_queue = _placement_queue.filter(func(id: StringName) -> bool:   # beklerken satılan / sergilenen atılır
+		return _ownership != null and _ownership.is_owned(id) \
+			and (garages == null or garages.garage_of(id) != CarGarageManager.HOME))
+	if _placement_queue.is_empty():
+		_placement_timer.stop()
+		return
+	var top: StringName = router.top()
+	if (top != &"" and top != router.current_place()) or crate_panel.visible or (_delivery and _delivery.is_revealing()) \
+			or (showroom and showroom.visible and showroom.is_revealing()) or (tutorial and tutorial.is_running()) \
+			or get_tree().root.get_node_or_null("LoadingScreen") != null:
+		return
+	var restoration: RestorationBays = get_tree().get_first_node_in_group("restoration_bays") as RestorationBays
+	if restoration and restoration.is_celebrating():
+		return
+	var vehicle: StringName = _placement_queue.pop_front()
+	if vehicle == first_car and place_first_car():
+		return
+	if not fits_home(vehicle):
+		_on_garage_full(vehicle)
+		return
+	car_placement_screen.vehicle_id = vehicle
+	router.open(&"car_placement")
+
+
+## GARAJIMA KOY: düzenleme kipi aracı parmakta açar (vazgeçerse araç varsayılan yerinde kalır).
+func _place_at_home(vehicle_id: StringName) -> void:
+	garage_edit_screen.place_on_open(GarageDecor.vehicle_item_id(vehicle_id))
+	router.open(&"garage_edit")
+
+
+## İlk aracı garaja koydurur (düzenleme kipi, araç parmakta). Bekleyen ilk araç yoksa / sergideyse / sığmıyorsa false.
+func place_first_car() -> bool:
+	if not has_first_car():
+		first_car = &""
+		return false
+	var vehicle: StringName = first_car
+	first_car = &""
+	_placement_queue.erase(vehicle)
+	_place_at_home(vehicle)
+	return true
+
+
+func has_first_car() -> bool:
+	var garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
+	return first_car != &"" and _ownership != null and _ownership.is_owned(first_car) and garages != null \
+		and garages.garage_of(first_car) != CarGarageManager.HOME and fits_home(first_car)
+
+
+## Araç GARAJIM sergisine (ana garajın zemini) sığıyor mu. Görünüm yoksa sorun sayılmaz (YERLEŞTİR karar verir).
+func fits_home(vehicle_id: StringName) -> bool:
+	var view: GarageDecorView = get_tree().get_first_node_in_group("garage_decor_view") as GarageDecorView
+	return view == null or view.has_room_for(GarageDecor.vehicle_item_id(vehicle_id))
+
+
+## Yeni araç GARAJIM'a sığmadı (kullanıcı kararı 2026-10-20): YERLEŞTİR sorulmaz, araç varsayılan yerinde kalır (boş
+## yeri olan depo, yoksa otopark). DEPO DERSİ yapılmadıysa ders başlar (Rıza Usta → ARAÇLAR → depolar); yapıldıysa
+## kısa bildirim, dokununca ARAÇLAR o araçla açılır.
+func _on_garage_full(vehicle_id: StringName) -> void:
+	var lessons: TutorialManager = get_tree().get_first_node_in_group("tutorial") as TutorialManager
+	if tutorial and lessons and not lessons.is_done(TutorialManager.GARAGES):
+		garage_full_vehicle = vehicle_id
+		return
+	var garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
+	var place: StringName = garages.garage_of(vehicle_id) if garages else CarGarageManager.WAITING
+	var where: String = CarGarageCatalog.display_name(place) if CarGarageCatalog.has(place) else Loc.t("OTOPARK")
+	var title: String = String(CarCatalog.get_entry(vehicle_id).get("display_name", vehicle_id)).to_upper()
+	_show_notice("%s → %s\n%s" % [title, where, Loc.t("GARAJINDA YER YOK · GÖRMEK İÇİN DOKUN")],
+		HudPalette.DANGER if place == CarGarageManager.WAITING else HudPalette.INK, 4.0, _open_cars_on.bind(vehicle_id))
+
+
+## ARAÇLAR'ı bu araçla açar (aracın deposu / otoparkı, araç lifte).
+func _open_cars_on(vehicle_id: StringName) -> void:
+	if _ownership == null or not _ownership.is_owned(vehicle_id):
+		return
+	var place: StringName = router.current_place()
+	if router.top() != place:
+		return   # üstte pano var
+	if place == &"garage":
+		garage_screen.show_vehicle(vehicle_id)
+		return
+	if place != &"":
+		return   # düzenleme / yarış / hurdalık: oyuncunun işi bölünmez
+	garage_screen.open_on_vehicle(vehicle_id)
+	router.open(&"garage")
+	garage_screen.focus_cars()
 
 
 ## HOŞ GELDİN KUTUSU hatırlatması: kutuyu eğitim göstermiyorsa (ders atlandı / kapalı / bitti) oyuncu boştayken
@@ -2003,6 +2222,34 @@ func _build_friends() -> void:
 		if friend_card_screen.show_for(uid):
 			router.open(&"friend_card"))
 	friends_screen.revenge_requested.connect(_start_revenge)
+
+
+## OTOPARK SAYACI: ARKADAŞLAR'ın altında ParkingBadge (P tabelası, OTOPARK, günlük ücret, araç sayısı balonda); dokununca DEPOLARIM OTOPARK basamağıyla
+## açılır. Otopark boşken ve ziyarette görünmez.
+func _build_lot_counter() -> void:
+	var garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
+	if garages == null or friends_button == null:
+		return
+	lot_button = ParkingBadge.new()   # mavi P tabelası + OTOPARK + günlük ücret, araç sayısı köşe balonunda
+	lot_button.name = "LotButton"
+	lot_button.pressed.connect(func() -> void:
+		router.open(&"car_garages")
+		car_garages_screen.select(CarGarageManager.WAITING))
+	var column: Node = friends_button.get_parent()
+	column.add_child(lot_button)
+	column.move_child(lot_button, friends_button.get_index() + 1)
+	garages.layout_changed.connect(_refresh_lot_counter)
+	garages.garages_changed.connect(_refresh_lot_counter)
+	_refresh_lot_counter()
+
+
+func _refresh_lot_counter() -> void:
+	var garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
+	if lot_button == null or garages == null:
+		return
+	var cars: int = garages.waiting_ids().size()
+	lot_button.visible = cars > 0 and not GarageVisit.is_visiting()
+	lot_button.set_state(cars, garages.daily_fee())
 
 
 ## İNTİKAM AL (yarış haberi): arkadaşın senin aracını yendiği aracına karşı pist doğrudan açılır. Haber kullanılınca

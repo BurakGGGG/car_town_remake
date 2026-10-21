@@ -64,7 +64,23 @@ const PAINT_VALUE: int = 2000
 ## Garajın toplam değeri (₺).
 static func compute(tree: SceneTree) -> int:
 	return vehicles_value(tree) + upgrades_value(tree) + bays_value(tree) + paint_value(tree) \
-		+ decor_value(tree) + garages_value(tree)
+		+ decor_value(tree) + garages_value(tree) + showcase_value(tree)
+
+
+## DEPO VİTRİNİ: depoda duran (otoparkta ya da ana garajda değil) her araç, değerinin bu payı kadar ek prestij katar
+## (kullanıcı kararı 2026-10-20: depo alma isteği; oran ayar).
+const SHOWCASE_RATE: float = 0.10
+
+
+static func showcase_value(tree: SceneTree) -> int:
+	var garages: CarGarageManager = tree.get_first_node_in_group("car_garages") as CarGarageManager
+	if garages == null:
+		return 0
+	var total: int = 0
+	for garage: StringName in garages.owned_garages():
+		for id: StringName in garages.cars_in(garage):
+			total += ceili(float(CarCatalog.get_entry(id).get("price", 0)) * SHOWCASE_RATE)
+	return total
 
 
 ## ARAÇ GARAJLARINA (GARAJLARIM) ödenen: garajlar + iç yükseltmeler (inşaattaki ve süren iş dahil: para düştü).

@@ -1,8 +1,9 @@
 class_name CarGarageCatalog
 extends RefCounted
-## ARAÇ GARAJLARI (GARAJLARIM) kataloğu — garajların ve iç yükseltme kalemlerinin TEK kaynağı. Yalnızca veri;
-## durum CarGarageManager'da. Kararlar: docs/GARAJLAR_TASARIM.md §2–3. Fiyat / süre / seviye şartı taslaktır,
-## ayar burada yapılır.
+## ARAÇ DEPOLARI (DEPOLARIM) kataloğu — depoların ve iç yükseltme kalemlerinin TEK kaynağı. Yalnızca veri;
+## durum CarGarageManager'da. Kararlar: docs/GARAJLAR_TASARIM.md §2–3, §10 (2026-10-20: 5 "garaj" depoya döndü,
+## kimlikler aynı kaldı). Fiyat / süre / seviye şartı taslaktır, ayar burada yapılır. Depoların altında ücretli
+## OTOPARK durur (CarGarageManager.WAITING; katalogda değil).
 ##
 ## Ana dünyadaki "GARAJ SEVİYESİ" (GarageUpgrade, tamirhanenin büyüklüğü) bundan AYRIDIR.
 ##
@@ -27,19 +28,19 @@ const VISUAL_LEVELS: int = 3
 
 ## Ucuzdan pahalıya. `tint`: Faz 3'ün Blender garajları gelene kadar geçici kutu garajın duvar rengi.
 const GARAGES: Array[Dictionary] = [
-	{"id": MAHALLE, "name": "MAHALLE GARAJI", "price": 0, "build": 0, "level": 1, "slots": 4,
+	{"id": MAHALLE, "name": "MAHALLE DEPOSU", "price": 50000, "build": 1800, "level": 1, "slots": 4,
 		"park": [[1, 20000, 300], [1, 40000, 600]],
 		"visual": [[10000, 300], [20000, 600]], "tint": Color("E9DFC8")},
-	{"id": SANAYI, "name": "SANAYİ ATÖLYESİ", "price": 150000, "build": 3600, "level": 5, "slots": 6,
+	{"id": SANAYI, "name": "SANAYİ DEPOSU", "price": 150000, "build": 3600, "level": 5, "slots": 6,
 		"park": [[2, 100000, 600], [2, 200000, 1200]],
 		"visual": [[40000, 600], [80000, 1200]], "tint": Color("C98B6B")},
-	{"id": NEON, "name": "NEON YERALTI", "price": 900000, "build": 14400, "level": 12, "slots": 8,
+	{"id": NEON, "name": "YERALTI DEPOSU", "price": 900000, "build": 14400, "level": 12, "slots": 8,
 		"park": [[2, 200000, 1200], [2, 300000, 1800], [2, 450000, 2700]],
 		"visual": [[100000, 1200], [200000, 2700]], "tint": Color("6E6A86")},
-	{"id": SHOWROOM, "name": "CAM SHOWROOM", "price": 3000000, "build": 43200, "level": 20, "slots": 10,
+	{"id": SHOWROOM, "name": "VİTRİN DEPOSU", "price": 3000000, "build": 43200, "level": 20, "slots": 10,
 		"park": [[2, 250000, 1800], [2, 350000, 2700], [2, 500000, 3600], [2, 700000, 5400]],
 		"visual": [[150000, 1800], [300000, 5400]], "tint": Color("BFD8E2")},
-	{"id": HANGAR, "name": "UÇAK HANGARI", "price": 8000000, "build": 86400, "level": 30, "slots": 18,
+	{"id": HANGAR, "name": "HANGAR DEPOSU", "price": 8000000, "build": 86400, "level": 30, "slots": 18,
 		"park": [[3, 500000, 2700], [3, 750000, 4500], [3, 1000000, 5400], [3, 1500000, 7200]],
 		"visual": [[250000, 2700], [450000, 7200]], "tint": Color("9DA7A0")},
 ]

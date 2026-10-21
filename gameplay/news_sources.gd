@@ -1,6 +1,7 @@
 class_name NewsSources
 ## OTO MANŞET — oyunun kendi (arkadaşsız) haberleri: sen yokken (OfflineEarnings.window_from … window_to) dolan hurda
-## yığınları, biten modifiyeler, yenilenen günlük / haftalık görevler, biten garaj inşaatları ve iç yükseltmeler. NewsDigest ham haberleri döner; durum tutmaz.
+## yığınları, biten modifiyeler, yenilenen günlük / haftalık görevler, biten depo inşaatları ve iç yükseltmeler, kesilen
+## OTOPARK faturaları. NewsDigest ham haberleri döner; durum tutmaz.
 ## Arkadaş haberleri SocialManager.news_items'tan, kazanç OfflineEarnings.news_items'tan gelir (NewsFlow birleştirir).
 
 
@@ -32,6 +33,10 @@ static func local(tree: SceneTree, from: int, to: int) -> Array[Dictionary]:
 			else:
 				out.append({"kind": NewsDigest.GARAGE_UPGRADED, "garage": StringName(done["garage"]),
 					"item": StringName(done["item"])})
+		for fee: Dictionary in garages.fees_between(float(from), float(to)):
+			if int(fee["amount"]) > 0:   # bakiye sıfırken kesilemeyen fatura haber olmaz
+				out.append({"kind": NewsDigest.PARKING_FEE, "money": int(fee["amount"]), "count": int(fee["periods"]),
+					"cars": int(fee["cars"])})
 	var gem: GemRewards = tree.get_first_node_in_group("gem_rewards") as GemRewards
 	var player: PlayerProgress = tree.get_first_node_in_group("player_progress") as PlayerProgress
 	if gem and tree.get_first_node_in_group("missions") != null and (player == null or player.level >= MissionCatalog.MIN_LEVEL):
