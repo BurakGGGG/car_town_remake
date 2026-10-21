@@ -32,6 +32,8 @@ signal upgrade_finished(garage: StringName, item: StringName, level: int)
 ## ELMASLA BİTİR: elmas harcandı (HUD sesi).
 signal gem_finished(garage: StringName)
 signal purchase_failed(garage: StringName, status: int)
+## İSİM TABELASI değişti (depo id ya da WAITING).
+signal sign_changed(garage: StringName)
 
 enum Status {
 	OWNED,          ## garaj alınmış
@@ -85,6 +87,8 @@ var _fees: Array[Dictionary] = []
 ## Biten inşaat / iç yükseltme işleri: {"garage", "item" (inşaatta &""), "level", "at"}. `at` işin PLANLANAN bitişi:
 ## oyun kapalıyken dolan iş açılışta kapanır ama OTO MANŞET'in "sen yokken" penceresine doğru düşer.
 var _done: Array[Dictionary] = []
+## İSİM TABELALARI: yer (depo id / WAITING) → NameSign verisi {"t", "s", "c"}; yazısız tabela saklanmaz.
+var _signs: Dictionary = {}
 var _poll: float = 0.0
 
 
@@ -538,6 +542,34 @@ func public_summary() -> Dictionary:
 	return {"own": own, "cap": total_capacity()}
 
 
+# --- İsim tabelası (NameSign) -----------------------------------------------------------------
+
+## Yerin tabelası (yoksa yazısız boş veri).
+func sign_of(garage: StringName) -> Dictionary:
+	return (_signs[garage] as Dictionary).duplicate() if _signs.has(garage) else NameSign.empty_data()
+
+
+## Tabelayı yazar. Yazı süzgeçten geçmezse (küfür / izinsiz karakter) false ve değişmez; boş yazı tabelayı kaldırır.
+## Otopark her zaman, depo yalnız alınmışsa.
+func set_sign(garage: StringName, data: Dictionary) -> bool:
+	if garage != WAITING and not is_owned(garage):
+		return false
+	var clean: Dictionary = NameSign.sanitize(data)
+	if String(clean["t"]).is_empty() and not SocialNames.clean_name(SaveSafe.s(data.get("t", ""))).is_empty():
+		return false
+	if String(clean["t"]).is_empty():
+		if not _signs.has(garage):
+			return true
+		_signs.erase(garage)
+	elif _signs.get(garage, {}) == clean:
+		return true
+	else:
+		_signs[garage] = clean
+	sign_changed.emit(garage)
+	_request_save()
+	return true
+
+
 # --- Kayıt -------------------------------------------------------------------------------
 
 func state() -> Dictionary:
@@ -567,8 +599,14 @@ func state() -> Dictionary:
 	for entry: Dictionary in _fees:
 		fees.append({"at": float(entry["at"]), "amount": int(entry["amount"]), "cars": int(entry["cars"]),
 			"periods": int(entry["periods"])})
-	return {"garages": garages, "building": building, "jobs": jobs, "waiting": waiting, "done": done,
+	var out: Dictionary = {"garages": garages, "building": building, "jobs": jobs, "waiting": waiting, "done": done,
 		"fee_since": _fee_since, "fees": fees}
+	if not _signs.is_empty():   # tabelasız kayıt eski biçimle birebir aynı kalsın (bulut karşılaştırması)
+		var signs: Dictionary = {}
+		for id: StringName in _signs:
+			signs[String(id)] = (_signs[id] as Dictionary).duplicate()
+		out["signs"] = signs
+	return out
 
 
 ## Kayıttan: bilinmeyen garaj / kalem / araç atılır, seviyeler sınırlanır, park yerleri kapasiteye göre kesilir ya da
@@ -581,6 +619,7 @@ func load_state(data: Dictionary) -> void:
 	_waiting.clear()
 	_done.clear()
 	_fees.clear()
+	_signs.clear()
 	var seen: Dictionary = {}
 	var garages: Variant = data.get("garages", {})
 	if garages is Dictionary:
@@ -655,6 +694,13 @@ func load_state(data: Dictionary) -> void:
 					"periods": maxi(SaveSafe.i((raw as Dictionary).get("periods", 1)), 1)})
 		while _fees.size() > FEES_KEEP:
 			_fees.pop_front()
+	var signs: Variant = data.get("signs", {})
+	if signs is Dictionary:
+		for raw: Variant in signs:
+			var id: StringName = StringName(SaveSafe.s(raw))
+			var clean: Dictionary = NameSign.sanitize((signs as Dictionary)[raw])
+			if (id == WAITING or CarGarageCatalog.has(id)) and not String(clean["t"]).is_empty():
+				_signs[id] = clean
 	garages_changed.emit()
 	layout_changed.emit()
 

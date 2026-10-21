@@ -1895,7 +1895,11 @@ func _try_placement() -> void:
 
 
 ## GARAJIMA KOY: düzenleme kipi aracı parmakta açar (vazgeçerse araç varsayılan yerinde kalır).
+## Garaja sığmıyorsa (ARAÇLAR → SERGİLE) düzenleme açılmaz: araç parmakta kalıp hiçbir yere konamazdı.
 func _place_at_home(vehicle_id: StringName) -> void:
+	if not fits_home(vehicle_id):
+		_show_notice(Loc.t("GARAJINDA YER YOK\nEŞYALARI TAŞI YA DA GARAJI BÜYÜT"), HudPalette.DANGER, 2.6)
+		return
 	garage_edit_screen.place_on_open(GarageDecor.vehicle_item_id(vehicle_id))
 	router.open(&"garage_edit")
 

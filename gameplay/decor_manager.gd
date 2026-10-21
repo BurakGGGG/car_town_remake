@@ -321,6 +321,29 @@ func set_transform(iid: String, pos: Vector3, yaw: float) -> bool:
 	return true
 
 
+## İSİM TABELASI örneğinin yazısı (NameSign verisi; yazılmadıysa boş — gövde "GARAJIM" gösterir).
+func instance_sign(iid: String) -> Dictionary:
+	var i: int = _index_of(iid)
+	return (_instances[i].get("sign", NameSign.empty_data()) as Dictionary).duplicate() if i >= 0 else NameSign.empty_data()
+
+
+## Tabelanın yazısını değiştirir. Yalnız İSİM TABELASI örneğinde; yazı süzgeçten geçmezse (küfür / izinsiz karakter)
+## false ve değişmez. Boş yazı varsayılana döner.
+func set_instance_sign(iid: String, data: Dictionary) -> bool:
+	var i: int = _index_of(iid)
+	if i < 0 or StringName(_instances[i]["item"]) != GarageDecor.NAME_SIGN:
+		return false
+	var clean: Dictionary = NameSign.sanitize(data)
+	if String(clean["t"]).is_empty() and not SocialNames.clean_name(SaveSafe.s(data.get("t", ""))).is_empty():
+		return false
+	if String(clean["t"]).is_empty():
+		_instances[i].erase("sign")
+	else:
+		_instances[i]["sign"] = clean
+	placement_changed.emit()
+	return true
+
+
 ## Örneği garajdan kaldırır: kopya DEPOYA döner (sahiplik değişmez). Silinen kaydı döndürür.
 func remove_instance(iid: String) -> Dictionary:
 	var i: int = _index_of(iid)
@@ -651,13 +674,16 @@ func state() -> Dictionary:
 		owned[String(id)] = int(_owned[id])
 	var list: Array = []
 	for inst: Dictionary in _instances:
-		list.append({
+		var rec: Dictionary = {
 			"instance_id": inst["iid"],
 			"catalog_id": String(inst["item"]),
 			"position": _vec_out(inst["pos"]),
 			"rotation": _vec_out(inst["rot"]),
 			"scale": _vec_out(inst["scale"]),
-		})
+		}
+		if inst.has("sign"):
+			rec["sign"] = (inst["sign"] as Dictionary).duplicate()   # İSİM TABELASI yazısı (açık garajla arkadaşa da gider)
+		list.append(rec)
 	var surfaces: Dictionary = {}
 	for slot: StringName in _surfaces:
 		surfaces[String(slot)] = String(_surfaces[slot])
@@ -749,8 +775,13 @@ func _load_instance(raw: Variant) -> void:
 	# Oyun ölçeği hiç değiştirmez (hep ONE) ve eşyalar avlunun içindedir. Arkadaşın garajını elle yazan biri ölçeği
 	# 1e6 / 0 / eksi, konumu ±1e30 yazabiliyordu: ziyaret görüntüsü dev bir eşyayla örtülüyor, dönüşüm bozuluyordu.
 	pos = pos.clamp(Vector3.ONE * -POS_LIMIT, Vector3.ONE * POS_LIMIT)
-	_instances.append({"iid": iid, "item": item, "pos": pos, "rot": Vector3(0.0, _wrap(rot.y), 0.0),
-		"scale": Vector3.ONE})
+	var loaded: Dictionary = {"iid": iid, "item": item, "pos": pos, "rot": Vector3(0.0, _wrap(rot.y), 0.0),
+		"scale": Vector3.ONE}
+	if item == GarageDecor.NAME_SIGN:
+		var sign_data: Dictionary = NameSign.sanitize(rec.get("sign"))   # arkadaşın kaydı da buradan geçer
+		if not String(sign_data["t"]).is_empty():
+			loaded["sign"] = sign_data
+	_instances.append(loaded)
 
 
 ## v8 → v9: sahiplik dizisi → adetler; "yuva → eşya" → gerçek konumlu örnekler. Yalnızca O ANKİ

@@ -1213,6 +1213,16 @@
       "desc": "Pembe-krem dikey çizgili tapet."
     },
     {
+      "id": "name_sign",
+      "title": "İSİM TABELASI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 2500,
+      "value": 1000,
+      "min_level": 1,
+      "desc": "Harf harf dizilen, yazısı sana ait duvar tabelası."
+    },
+    {
       "id": "sign_oil",
       "title": "YAĞ TABELASI",
       "kind": "wall_item",

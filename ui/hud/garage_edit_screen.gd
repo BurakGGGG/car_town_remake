@@ -94,6 +94,11 @@ var _rot_right: PlateButton
 var _delete_button: PlateButton
 var _place_button: PlateButton
 var _cancel_button: PlateButton
+## İSİM TABELASI: seçili tabelanın YAZI düğmesi ve panosu (ARAÇLAR'daki otopark / depo tabelasıyla aynı pano).
+var _text_button: PlateButton
+var _sign_panel: NameSignPanel
+var _sign_iid: String = ""
+var _sign_on_select: bool = false   # yeni konan tabela seçilince pano kendiliğinden açılır
 ## Araç çubuğu düğmeleri: kip → PlateButton (zemin ve duvar kipleri).
 var _tool_buttons: Dictionary = {}
 
@@ -172,6 +177,7 @@ func _refresh_money() -> void:
 func close() -> void:
 	if not visible:
 		return
+	_close_sign(true)
 	if _editor:
 		_editor.deactivate()
 	visible = false
@@ -191,13 +197,22 @@ func _bind() -> void:
 					_frame_after_grab = false
 					_editor.reframe(_view_band()))
 			_editor.tool_changed.connect(_refresh_cards)
-			_editor.selection_changed.connect(func(_iid: String) -> void: _refresh())
+			_editor.selection_changed.connect(func(iid: String) -> void:
+				if _sign_panel and _sign_panel.visible and iid != _sign_iid:
+					_close_sign(true)
+				if _sign_on_select and iid != "" and _decor \
+						and StringName(_decor.instance(iid).get("item", &"")) == GarageDecor.NAME_SIGN:
+					_sign_on_select = false
+					_open_sign.call_deferred(iid)   # yeni konan tabela: yazısını hemen sor
+				_refresh())
 			_editor.placing_changed.connect(func(_item: StringName) -> void: _refresh())
 			_editor.notice.connect(_show_notice)
 	if _decor == null:
 		_decor = get_tree().get_first_node_in_group("decor") as DecorManager
 		if _decor:
 			_decor.placement_changed.connect(_refresh_cards)
+			_decor.instance_added.connect(func(item: StringName) -> void:
+				_sign_on_select = visible and item == GarageDecor.NAME_SIGN)
 			_decor.purchase_failed.connect(func(id: StringName, _p: int) -> void:
 				_show_notice(Loc.t("GEM YETERSİZ") if GarageDecor.is_gem_item(id) else Loc.t("PARA YETERSİZ")))
 	if _economy == null:
@@ -447,6 +462,11 @@ func _build() -> void:
 	_cancel_button.pressed.connect(func() -> void:
 		if _editor:
 			_editor.cancel_ghost())
+	_text_button = _icon_plate(_bar, Loc.t("YAZI"), HudIcon.Kind.LETTERS, &"HudPlateSmall")
+	_text_button.highlight = true
+	_text_button.pressed.connect(func() -> void:
+		if _editor and _editor.selected() != "":
+			_open_sign(_editor.selected()))
 	_delete_button = _icon_plate(_bar, Loc.t("DEPOYA KALDIR"), HudIcon.Kind.BOX, &"HudPlateSmall")
 	_delete_button.pressed.connect(func() -> void:
 		if _editor:
@@ -461,6 +481,64 @@ func _build() -> void:
 		button.toggle_mode = true
 		button.pressed.connect(_on_tool_mode.bind(mode))
 		_tool_buttons[mode] = button
+
+
+# --- İSİM TABELASI -------------------------------------------------------------------------
+
+func _build_sign_panel() -> void:
+	_sign_panel = NameSignPanel.new()
+	_sign_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	_sign_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_sign_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	add_child(_sign_panel)
+	_sign_panel.previewed.connect(func(data: Dictionary) -> void:
+		var view: GarageDecorView = _decor_view()
+		if view:
+			view.preview_sign(_sign_iid, data))
+	_sign_panel.save_requested.connect(func(data: Dictionary) -> void:
+		if _decor == null or not _decor.set_instance_sign(_sign_iid, data):
+			_sign_panel.show_error()
+			return
+		_close_sign(false))
+	_sign_panel.cancelled.connect(_close_sign.bind(true))
+
+
+func _decor_view() -> GarageDecorView:
+	return get_tree().get_first_node_in_group("garage_decor_view") as GarageDecorView
+
+
+## Pano sağ ortada, HUD BOYUTU ölçeğinde (düzenleme kipinin 0,75 küçültmesi yazı kutusunu telefonda ufaltırdı); alt şerit
+## (palet) açıkken gizli: pano telefonda boyunu dolduruyor.
+func _open_sign(iid: String) -> void:
+	if _decor == null or StringName(_decor.instance(iid).get("item", &"")) != GarageDecor.NAME_SIGN:
+		return
+	if _sign_panel == null:
+		_build_sign_panel()
+	_sign_iid = iid
+	var k: float = _ui_scale() / UI_SCALE
+	_sign_panel.scale = Vector2(k, k)
+	_bottom.visible = false
+	var profile: PlayerProfile = get_tree().get_first_node_in_group("player_profile") as PlayerProfile
+	_sign_panel.open(_decor.instance_sign(iid), profile.title if profile else "")
+	await get_tree().process_frame   # boy belli olsun
+	var size_now: Vector2 = _sign_panel.get_combined_minimum_size()
+	_sign_panel.pivot_offset = Vector2(size_now.x, size_now.y * 0.5)
+	_sign_panel.offset_left = -size_now.x - MARGIN
+	_sign_panel.offset_right = -MARGIN
+	_sign_panel.offset_top = -size_now.y * 0.5
+	_sign_panel.offset_bottom = size_now.y * 0.5
+
+
+## `restore`: önizleme bırakılır, kayıttaki yazı geri konur.
+func _close_sign(restore: bool) -> void:
+	if _sign_panel == null or not _sign_panel.visible:
+		return
+	_sign_panel.hide()
+	_bottom.visible = true
+	var view: GarageDecorView = _decor_view()
+	if restore and view and _decor:
+		view.preview_sign(_sign_iid, _decor.instance_sign(_sign_iid))
+	_sign_iid = ""
 
 
 func _label(variation: StringName, text: String) -> Label:
@@ -1042,13 +1120,15 @@ func _refresh() -> void:
 	_place_button.visible = placing
 	_cancel_button.visible = placing
 	_delete_button.visible = not placing and selected != "" and not _editor.selected_is_bay()
+	_text_button.visible = not placing and selected != "" and not _editor.selected_is_bay() and _decor \
+		and StringName(_decor.instance(selected).get("item", &"")) == GarageDecor.NAME_SIGN
 	_bar.visible = placing or selected != ""
 	_refresh_cards()
 
 
 ## Araç açıkken: bilgi satırı ve araç çubuğu (eşya düğmeleri gizli).
 func _refresh_tool() -> void:
-	for button: PlateButton in [_rot_left, _rot_right, _place_button, _cancel_button, _delete_button]:
+	for button: PlateButton in [_rot_left, _rot_right, _place_button, _cancel_button, _delete_button, _text_button]:
 		button.visible = false
 	var paint: bool = _editor.tool == GarageEditor.Tool.PAINT
 	var wall: bool = _editor.tool == GarageEditor.Tool.WALL

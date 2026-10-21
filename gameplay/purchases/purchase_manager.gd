@@ -161,12 +161,12 @@ func load_state(data: Dictionary) -> void:
 				continue
 			var entry: Dictionary = e
 			_ledger[key] = {
-				"product": String(entry.get("product", "")),
+				"product": SaveSafe.s(entry.get("product", "")),   # bozuk kayıtta String() / bool() yüklemeyi kesiyordu
 				"gems": maxi(SaveSafe.i(entry.get("gems", 0)), 0),
 				"time": SaveSafe.i(entry.get("time", 0)),
-				"order": String(entry.get("order", "")),
-				"token": String(entry.get("token", "")),
-				"consumed": bool(entry.get("consumed", false)),
+				"order": SaveSafe.s(entry.get("order", "")),
+				"token": SaveSafe.s(entry.get("token", "")),
+				"consumed": SaveSafe.b(entry.get("consumed", false)),
 			}
 	products_changed.emit()
 	if _connected:

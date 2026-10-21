@@ -64,10 +64,12 @@ signal rematch_started(count: int)
 signal friend_race_finished(owner: Dictionary, won: bool, player_vehicle: StringName, rival_vehicle: StringName, revenge: bool)
 
 ## Bir rakip gittikten sonra yenisi ne kadar sonra gelir (sn).
-@export var challenge_interval_min: float = 5.0
-@export var challenge_interval_max: float = 10.0
+## 2026-10-21 zorluk turu: 5–10 sn idi (ardı ardına yarış tamirden çok kazandırıyordu) → 25–45 sn denendi, kullanıcı
+## 10–15 sn istedi; para kısıntısı ödülde (WIN_REWARD).
+@export var challenge_interval_min: float = 10.0
+@export var challenge_interval_max: float = 15.0
 ## Yarıştan sonra yeni rakip için beklenen en az süre.
-@export var cooldown: float = 12.0
+@export var cooldown: float = 10.0   # yarış sonrası da 10–15 sn (12 idi; zorluk turunda 30)
 ## Rakibin durduğu nokta: yarış şeridindeki bu yol noktası. Yön bir sonraki noktadan türetilir,
 ## yani sahnede ayrı bir işaret (Marker3D) gerekmez. Garaja yakın şerit (x = 0,3) kuzeyden
 ## gelir, kavşağın hemen öncesinde durur; kabul edilmezse dümdüz devam edip güneyden çıkar.
@@ -79,11 +81,11 @@ signal friend_race_finished(owner: Dictionary, won: bool, player_vehicle: String
 ## KAZANMA ÖDÜLLERİ — rakibin sınıfına göre (₺, XP). Kaybetmek para KAYBETTİRMEZ: yalnızca
 ## teselli XP'si verilir, böylece yarış ekonomide geriye götürmez (yakıt/ücret de yoktur).
 const WIN_REWARD: Dictionary = {
-	"D": {"money": 450, "xp": 25},
-	"C": {"money": 700, "xp": 35},
-	"B": {"money": 1000, "xp": 50},
-	"A": {"money": 1400, "xp": 70},
-	"S": {"money": 2000, "xp": 100},   # süper sporlar (GT3, Huracán, 488 Pista, RS6)
+	"D": {"money": 300, "xp": 25},   # 2026-10-21 zorluk turu: 450 / 700 / 1000 / 1400 / 2000 idi
+	"C": {"money": 480, "xp": 35},
+	"B": {"money": 700, "xp": 50},
+	"A": {"money": 1000, "xp": 70},
+	"S": {"money": 1400, "xp": 100},   # süper sporlar (GT3, Huracán, 488 Pista, RS6)
 }
 ## Sahiplik düğümü yoksa (test sahnesi) yarışa çıkan araç.
 const FALLBACK_VEHICLE: StringName = &"tofas_sahin"

@@ -2278,5 +2278,16 @@
  "YENİ MÜŞTERİ": "CLIENTE NUEVO",
  "GARAJ SV.%d + %d ALAN GEREKİR": "REQUIERE TALLER NV.%d + %d BAHÍAS",
  "%s ÇERÇEVE": "MARCO %s",
- "PROFİLİNDE KULLANABİLİRSİN": "ÚSALO EN TU PERFIL"
+ "PROFİLİNDE KULLANABİLİRSİN": "ÚSALO EN TU PERFIL",
+ "AHŞAP": "MADERA",
+ "BU YAZI KULLANILAMAZ": "ESTE TEXTO NO SE PUEDE USAR",
+ "GARAJINDA YER YOK\nEŞYALARI TAŞI YA DA GARAJI BÜYÜT": "NO CABE EN TU GARAJE\nMUEVE OBJETOS O AMPLÍA EL GARAJE",
+ "HARF RENGİ": "COLOR DE LETRA",
+ "KLASİK": "CLÁSICO",
+ "METAL": "METAL",
+ "STİL": "ESTILO",
+ "YAZINI YAZ": "ESCRIBE TU TEXTO",
+ "İSİM TABELASI": "LETRERO",
+ "Harf harf dizilen, yazısı sana ait duvar tabelası.": "Un letrero de pared letra a letra, con tu propio texto.",
+ "YAZI": "TEXTO"
 }

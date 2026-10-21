@@ -179,6 +179,7 @@ func _show_depot() -> void:
 		return
 	_view.set_levels(levels)
 	_view.sync_cars(slots)
+	_view.set_sign(row.get("sign", {}) as Dictionary)   # arkadaşın isim tabelası (süzgeçten geçmiş)
 	_view.overview(false)
 	var used: int = slots.filter(func(car: StringName) -> bool: return car != &"").size()
 	_title.text = "%s   %d/%d" % [CarGarageCatalog.display_name(id), used, slots.size()]

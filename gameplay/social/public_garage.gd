@@ -10,7 +10,7 @@ extends RefCounted
 ## onun modifiyeleriyle gelir (RaceManager). Takma işleri ve gösterge tabanı taşınmaz.
 ## DEPOLARIM: ÖZET ("car_garage_summary": alınmış depolar + toplam park yeri) — profil rozeti ve arkadaşın lüks deposu
 ## haberi için. 2026-10-20'den beri ziyarette depolar da gezilir (kullanıcı kararı): "car_garages" = {"garages": {id:
-## {"levels", "slots"}}} — yalnız iç kalem seviyeleri ve park yerlerindeki araçlar. Süren işler, inşaat, otopark ve
+## {"levels", "slots", "sign"?}}} — yalnız iç kalem seviyeleri, park yerlerindeki araçlar ve isim tabelası. Süren işler, inşaat, otopark ve
 ## faturalar taşınmaz. Belge alanı değil garaj JSON'unun içinde: Firestore kuralı değişmeden taşınır; JSON sınırı
 ## aşılırsa yerleşim düşürülür, özet kalır (without_depots).
 ##
@@ -75,6 +75,14 @@ static func depot_layout(garage: Dictionary) -> Dictionary:
 			var car: String = SaveSafe.s((raw_slots as Array)[i]) if raw_slots is Array and i < (raw_slots as Array).size() else ""
 			slots.append(car if not car.is_empty() and not CarCatalog.get_entry(StringName(car)).is_empty() else "")
 		out[String(id)] = {"levels": levels, "slots": slots}
+		# İSİM TABELASI: kayıtta "signs" bölümünde, açık garajda deponun satırında (NameSign verisi, süzgeçten geçer)
+		var raw_sign: Variant = (row as Dictionary).get("sign")
+		var signs: Variant = (section as Dictionary).get("signs", {}) if section is Dictionary else {}
+		if raw_sign == null and signs is Dictionary:
+			raw_sign = (signs as Dictionary).get(String(id))
+		var sign_data: Dictionary = NameSign.sanitize(raw_sign)
+		if not String(sign_data["t"]).is_empty():
+			out[String(id)]["sign"] = sign_data
 	return out
 
 

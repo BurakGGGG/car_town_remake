@@ -223,6 +223,8 @@ func refresh() -> void:
 			_bodies[iid] = body
 		body.transform = transform_for(inst["item"], inst["pos"], float((inst["rot"] as Vector3).y),
 			(inst["scale"] as Vector3).x)
+		if StringName(inst["item"]) == GarageDecor.NAME_SIGN:
+			_apply_sign(body, inst.get("sign", NameSign.empty_data()))
 	for iid: String in _bodies.keys():
 		if not alive.has(iid):
 			var body: Node3D = _bodies[iid]
@@ -267,6 +269,25 @@ func _place_sparkles() -> void:
 func content_top() -> float:
 	var ghost: Node3D = get_node_or_null("DecorGhost") as Node3D
 	return maxf(_content_top, _tree_box(ghost).end.y) if ghost else _content_top
+
+
+## İSİM TABELASI gövdesine yazıyı koyar; aynı yazıysa yeniden kurmaz (refresh her yerleşim değişiminde koşar).
+func _apply_sign(body: Node3D, data: Dictionary) -> void:
+	var name_sign: NameSign = NameSign.find_in(body)
+	if name_sign == null:
+		return
+	var key: String = JSON.stringify(data)
+	if String(name_sign.get_meta(&"sign_key", "")) == key:
+		return
+	name_sign.set_meta(&"sign_key", key)
+	name_sign.build_decor(data)
+
+
+## Düzenlemede yazı önizlemesi (kaydetmez; VAZGEÇ'te kayıttaki yazıyla yeniden çağrılır).
+func preview_sign(iid: String, data: Dictionary) -> void:
+	var body: Node3D = body_of(iid)
+	if body:
+		_apply_sign(body, data)
 
 
 func body_of(iid: String) -> Node3D:

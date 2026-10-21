@@ -27,7 +27,7 @@ signal no_room(index: int)
 signal layout_changed
 
 ## Alan ücretleri (1., 2., 3. alan). İlk alan ücretsizdir. Fiyatın tek tanımlandığı yer burasıdır.
-const BAY_PRICES: Array[int] = [0, 5000, 12000]
+const BAY_PRICES: Array[int] = [0, 15000, 40000]   # 2026-10-21 zorluk turu: 5 b / 12 b idi
 
 ## Tamir alanının zemin izi (x, z; yön 0°'de) — CarSpot ve kilitli alan görseli bu ölçüdedir.
 const BAY_SIZE: Vector2 = Vector2(0.5, 0.7)

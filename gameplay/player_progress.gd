@@ -18,7 +18,9 @@ signal level_up(level: int)
 ## Bu seviyede biriken XP.
 @export var xp: int = 35
 ## 1 → 2 için gereken XP; her seviyede %25 artar.
-@export var xp_base: int = 100
+## 2026-10-21 zorluk turu: 100 × 1,25^(sv-1) idi (sv.16 ~2 saatte) → 130 × 1,27^(sv-1) (sv.10 +%42, sv.20 +%63 XP).
+@export var xp_base: int = 130
+const XP_GROWTH: float = 1.27
 
 ## SEVİYE ÖDÜLLERİ — Car Town prensibi: her seviye somut bir şey versin, belirli seviyeler
 ## yeni içerik AÇSIN. "text" yalnızca bildirim yazısıdır; gerçek kilit ilgili sistemdedir
@@ -41,7 +43,7 @@ const LEVEL_REWARDS: Dictionary = {
 const LEVEL_REWARD_STEP: int = 250
 ## Seviye gemi (kasa ekonomisi, docs/vehicle_crate_design_v2.md §3.2): her seviyede bu kadar,
 ## her 5. seviyede ek LEVEL_GEM_MILESTONE.
-const LEVEL_GEMS: int = 2
+const LEVEL_GEMS: int = 1   # 2026-10-21 zorluk turu: 2 idi
 const LEVEL_GEM_MILESTONE: int = 10
 
 var _default_level: int = 1
@@ -126,7 +128,7 @@ func _pay_level_reward(p_level: int) -> void:
 
 ## Bir sonraki seviye için gereken toplam XP.
 func xp_to_next() -> int:
-	return int(round(xp_base * pow(1.25, level - 1)))
+	return int(round(xp_base * pow(XP_GROWTH, level - 1)))
 
 
 ## 0.0 – 1.0: mevcut seviyedeki ilerleme (HUD şerit göstergesi).

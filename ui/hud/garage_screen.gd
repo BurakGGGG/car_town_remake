@@ -340,9 +340,11 @@ func _ready() -> void:
 	_build_top_signs()
 	_build_paint()
 	_build_race_pick()
+	_build_exhibit()
 	_build_more()
 	_build_performance_button()
 	_build_move()
+	_build_name_sign()
 	_build_waiting_note()
 	_build_sell()
 	_build_empty_panel()
@@ -546,6 +548,7 @@ func _claim_render_target() -> void:
 
 func _finish_close() -> void:
 	_close_mods()
+	_close_name_sign(true)
 	_interior_view.exit()   # iç mekân ve park etmiş araçlar bellekte kalmasın
 	_sell_panel.hide()
 	_detail_panel.hide()
@@ -1343,6 +1346,23 @@ func _refresh_race_pick() -> void:
 	_race_button.disabled = ownership == null
 
 
+## Raftaki SERGİLE tabelası (garaj): depodaki / otoparktaki aracı ana garaja çıkarır — TAŞI → GARAJIMA KOY'un kısa yolu
+## (kullanıcı 2026-10-21: "otopark ve depoda sergile butonu yok, aracımı nasıl çıkaracağım"). Sergideki araçta yok.
+var _exhibit_button: PlateButton
+var _exhibit_slot: Control
+
+
+func _build_exhibit() -> void:
+	_exhibit_button = _sign("ExhibitButton", HudIcon.Kind.GARAGE)
+	_exhibit_button.pressed.connect(func() -> void:
+		if _shown_vehicle != &"" and _is_owned(_shown_vehicle):
+			_actions_clear()
+			home_requested.emit(_shown_vehicle))
+	_exhibit_slot = _tray_slot(_exhibit_button, _light_caption(Loc.t("SERGİLE"), 0.85))
+	_exhibit_slot.visible = false
+	_tray_actions.add_child(_exhibit_slot)
+
+
 ## Rafın sağındaki MODİFİYE plakası (ekranın tek amber düğmesi): lifteki aracın performans modifiyesi
 ## (ModWorkshop) — raf yerine parça kartları gelir, sağda seçilen parçanın plakası ve YÜKSELT. GERİ araç listesine döner.
 func _build_performance_button() -> void:
@@ -1452,6 +1472,10 @@ func _set_title(text: String) -> void:
 		title.text = text
 
 
+var _name_sign_button: PlateButton
+var _name_sign_panel: NameSignPanel
+
+
 ## Sağ üstte yuvarlak tabelalar — dünyadaki kamera / ayarlar tabelalarının yeri ve dili: TÜM ARAÇLAR (sınıf / nadirlik
 ## süzgeçli, sıralanabilir ızgara, AllCarsScreen) ve KOLEKSİYON (panolar UiRouter'dadır).
 func _build_top_signs() -> void:
@@ -1478,6 +1502,12 @@ func _build_top_signs() -> void:
 		_actions_clear()
 		screen_requested.emit(&"collection"))
 	_top_signs.add_child(collection)
+	# İSİM TABELASI: yalnız otopark / depo iç mekânındayken (tabela yeri olan sahne)
+	_name_sign_button = _sign("NameSignButton", HudIcon.Kind.LETTERS)
+	_name_sign_button.visible = false
+	_name_sign_button.pressed.connect(_open_name_sign)
+	_top_signs.add_child(_name_sign_button)
+	_top_signs.move_child(_name_sign_button, 0)
 
 
 ## Üstünde pano açık (GARAJLARIM, TÜM ARAÇLAR, KOLEKSİYON …): başlık seçici ve sağ üst tabelalar görünmez — karartmanın
@@ -1753,6 +1783,7 @@ func _pick_garage_on_open() -> void:
 
 ## Başka garaja geçer; `focus` o garajdaysa lifte o çıkar, yoksa garajın ilk aracı (garaj boşsa boş garaj).
 func _switch_garage(garage: StringName, focus: StringName = &"") -> void:
+	_close_name_sign(false)
 	_garage = garage
 	_sell_panel.hide()
 	_detail_panel.hide()
@@ -1902,6 +1933,7 @@ func _apply_interior() -> bool:
 	var id: StringName = _interior_id(_garage) if _garage != &"" else &""
 	if id == &"" or not visible:
 		_interior_view.exit()
+		_refresh_name_sign_button()
 		return false
 	var hide: Array[Node3D] = [car_slot]
 	var room: Node3D = car_viewport.get_node_or_null("Environment") as Node3D
@@ -1912,6 +1944,10 @@ func _apply_interior() -> bool:
 		return false
 	_refresh_interior_levels()
 	_sync_interior_cars()
+	var manager: CarGarageManager = _garages()
+	if manager:
+		_interior_view.set_sign(manager.sign_of(_garage))
+	_refresh_name_sign_button()
 	return true
 
 
@@ -1953,8 +1989,8 @@ func _focus_interior(vehicle_id: StringName) -> bool:
 
 
 func _on_interior_car_tapped(vehicle_id: StringName) -> void:
-	if is_modding() or _closing:
-		return
+	if is_modding() or _closing or (_name_sign_panel and _name_sign_panel.visible):
+		return   # tabela düzenlenirken araç seçilmez (aksiyon plakaları panonun üstüne açılırdı)
 	car_list.select(vehicle_id)   # vehicle_selected → _show_vehicle (alt şerit de eşlenir)
 	if _shown_vehicle != vehicle_id:
 		_show_vehicle(vehicle_id, true)
@@ -2010,8 +2046,86 @@ func _refresh_garage_actions() -> void:
 	_race_slot.visible = not _empty
 	_modify_button.visible = not _empty
 	_more_slot.visible = not _empty
+	_exhibit_slot.visible = not _empty and manager != null and _shown_vehicle != &"" and _garage != &"" \
+		and manager.garage_of(_shown_vehicle) != CarGarageManager.HOME
 	_paint_button.visible = GameFeatures.PAINT and VehicleOwnership.is_paintable(_shown_vehicle)
+	_refresh_name_sign_button()
 	_move_button.visible = manager != null and _shown_vehicle != &"" and not manager.move_targets(_shown_vehicle).is_empty()
+
+
+# --- İSİM TABELASI (NameSign, kullanıcı isteği 2026-10-21) ---------------------------------------------------
+
+func _build_name_sign() -> void:
+	_name_sign_panel = NameSignPanel.new()
+	_name_sign_panel.previewed.connect(func(data: Dictionary) -> void: _interior_view.set_sign(data))
+	_name_sign_panel.save_requested.connect(_on_name_sign_save)
+	_name_sign_panel.cancelled.connect(_close_name_sign.bind(true))
+	right_group.add_child(_name_sign_panel)
+
+
+## TABELA tabelası: iç mekânda tabela yeri varsa ve yer oyuncunun (otopark ya da alınmış depo). Modifiyede gizli.
+func _refresh_name_sign_button() -> void:
+	if _name_sign_button == null:
+		return
+	var manager: CarGarageManager = _garages()
+	_name_sign_button.visible = manager != null and _interior_view != null and _interior_view.active \
+		and not _interior_view.interior.sign_anchor().is_empty() and not is_modding() \
+		and (_garage == CarGarageManager.WAITING or manager.is_owned(_garage))
+
+
+func _open_name_sign() -> void:
+	var manager: CarGarageManager = _garages()
+	if manager == null or not _interior_view.active:
+		return
+	if _name_sign_panel.visible:
+		_close_name_sign(true)
+		return
+	_actions_clear()
+	_paint_panel.close()
+	_sell_panel.hide()
+	_detail_panel.hide()
+	_move_panel.hide()
+	_more_panel.hide()
+	_waiting_note.hide()
+	_empty_panel.hide()
+	action_column.hide()
+	var strip: Control = bottom_group.get_node_or_null("StripRow") as Control
+	if strip:
+		strip.hide()   # pano uzun: telefonda alt rafla çakışmasın
+	var profile: PlayerProfile = get_tree().get_first_node_in_group("player_profile") as PlayerProfile
+	_name_sign_panel.open(manager.sign_of(_garage), profile.title if profile else "")
+	if _interior_view.name_sign():
+		_interior_view.overview()   # tabela duvarda: genel görünüm
+
+
+## Pano kapanır; `restore` ise önizleme bırakılıp kayıtlı tabela geri konur.
+func _close_name_sign(restore: bool) -> void:
+	if _name_sign_panel == null or not _name_sign_panel.visible:
+		return
+	_name_sign_panel.hide()
+	var manager: CarGarageManager = _garages()
+	if restore and manager and _interior_view.active:
+		_interior_view.set_sign(manager.sign_of(_garage))
+	if _empty:
+		_empty_panel.show()
+	else:
+		action_column.show()
+		_refresh_garage_actions()
+		var strip: Control = bottom_group.get_node_or_null("StripRow") as Control
+		if strip and not is_modding():
+			strip.show()
+		if _shown_vehicle != &"":
+			_focus_interior(_shown_vehicle)
+
+
+func _on_name_sign_save(data: Dictionary) -> void:
+	var manager: CarGarageManager = _garages()
+	if manager == null:
+		return
+	if not manager.set_sign(_garage, data):
+		_name_sign_panel.show_error()
+		return
+	_close_name_sign(true)
 
 
 func _build_waiting_note() -> void:

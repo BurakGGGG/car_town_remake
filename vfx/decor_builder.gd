@@ -200,6 +200,8 @@ static func build(id: StringName) -> Node3D:
 		return _vehicle(id)
 	if GarageDecor.is_wall_piece(id):
 		return InteriorWalls.build_piece_preview(id)   # kart küçük resmi: tek göz boyunda segment
+	if id == GarageDecor.NAME_SIGN:
+		return _name_sign()
 	if has_model(id):
 		return _load_model(id)
 	var root: Node3D = Node3D.new()
@@ -233,6 +235,19 @@ static func build(id: StringName) -> Node3D:
 	for child: Node in root.get_children():
 		(child as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	return root
+
+
+## İSİM TABELASI: varsayılan yazıyla pano + harf karoları (metre → garaj-içi ölçek). Örneğin kendi yazısını yerleştiren
+## taraf koyar (GarageDecorView._apply_sign); pano sabit boyda olduğu için ölçü yazıdan bağımsız.
+static func _name_sign() -> Node3D:
+	var holder: Node3D = Node3D.new()
+	holder.name = String(GarageDecor.NAME_SIGN)
+	var name_sign: NameSign = NameSign.new()
+	name_sign.name = "NameSign"
+	name_sign.scale = Vector3.ONE * (METER / PLACER_SCALE)
+	name_sign.build_decor(NameSign.empty_data())
+	holder.add_child(name_sign)
+	return holder
 
 
 # --- ATÖLYE -------------------------------------------------------------------------

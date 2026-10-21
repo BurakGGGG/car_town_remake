@@ -93,6 +93,21 @@ const SETUP: Dictionary = {
 	},
 }
 
+## İSİM TABELASININ yeri (NameSign, kullanıcı isteği 2026-10-21): Blender metresinde kök noktası (karoların alt ortası),
+## yüzün yönü (0 = güneye / kameraya, 90 = doğuya), en çok genişlik, karo boyu, direk boyu (çatı katında tabela korkuluğun
+## üstüne basar). Kök duvardan ~0,11 × boy önde: karoların arkası duvara değer. Pişmiş pencere / saat / ışıkların altında.
+const SIGN_ANCHORS: Dictionary = {
+	&"waiting": {"pos": Vector3(11.0, 15.92, 1.46), "yaw": 0.0, "width": 12.0, "height": 1.25, "posts": 0.35},
+	&"mahalle": {"pos": Vector3(6.6, 9.9, 1.86), "yaw": 0.0, "width": 8.6, "height": 0.62},
+	# kolonlar (x 6 / 12) arasında, piktogramların altında
+	&"sanayi": {"pos": Vector3(8.95, 13.82, 2.4), "yaw": 0.0, "width": 5.0, "height": 0.7},
+	# önde serbest duran kolonlar duvara sola kayarak izdüşüyor (x 9,4 → ~6,6, 17,8 → ~16,6): aralarında
+	&"neon": {"pos": Vector3(11.4, 14.84, 2.0), "yaw": 0.0, "width": 6.6, "height": 0.72},
+	&"showroom": {"pos": Vector3(13.0, 15.82, 3.12), "yaw": 0.0, "width": 8.0, "height": 0.66},
+	# asılı uçak (x ~20) sağ yarıyı örtüyor: sol yarıda
+	&"hangar": {"pos": Vector3(8.5, 21.78, 5.9), "yaw": 0.0, "width": 10.0, "height": 1.0},
+}
+
 var garage: StringName = &""
 var _model: Node3D
 var _base: StandardMaterial3D        # köşe renkli ışıksız (IŞIKLAR çarpanı albedo_color'da)
@@ -173,6 +188,11 @@ func tow_transform() -> Transform3D:
 
 func setup() -> Dictionary:
 	return SETUP.get(garage, SETUP[&"mahalle"])
+
+
+## İsim tabelasının yeri (SIGN_ANCHORS); bu iç mekânda tabela yeri yoksa boş.
+func sign_anchor() -> Dictionary:
+	return SIGN_ANCHORS.get(garage, {})
 
 
 ## Blender metresindeki noktayı (X doğu, Y kuzey, Z yukarı) bu iç mekânın dünya konumuna çevirir.

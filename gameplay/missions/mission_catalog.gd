@@ -107,49 +107,51 @@ const WEEKLY_POOL: Array[Dictionary] = [
 ## mult (değer zorluk çarpanı), value (verilirse yıldız başına değer listesi: eski tamir kilometre taşları).
 ## Yıldız başına taban DEĞER: 5 · 15 · 30 · 60 · 100; ₺ ve XP değerle orantılı (§6.3). Gem değerin
 ## ACH_GEM_SHARE'idir (2026-10-11 elmas ekonomisi: gem kısıldı, ₺ / XP aynı kaldı).
-const ACH_VALUE: Array[int] = [5, 15, 30, 60, 100]
-const ACH_GEM_SHARE: float = 0.2
-const ACH_MONEY_PER_VALUE: int = 60
-const ACH_XP_PER_VALUE: int = 6
+## 2026-10-21 zorluk turu (kullanıcı: "başarımlar çok kolay, hemen ödüle boğuluyorum"): eşikler yükseldi (ilk yıldızı 1 olan
+## çizgiler 2–3'ten başlar), değer 5/15/30/60/100 → 3/9/20/40/70, ₺ 60 → 40 / değer, XP 6 → 5, gem payı 0,2 → 0,12.
+const ACH_VALUE: Array[int] = [3, 9, 20, 40, 70]
+const ACH_GEM_SHARE: float = 0.12
+const ACH_MONEY_PER_VALUE: int = 40
+const ACH_XP_PER_VALUE: int = 5
 const ACHIEVEMENTS: Array[Dictionary] = [
-	{"id": &"a_repairs", "title": "TAMİRCİ", "text": "%s tamir tamamla", "metric": &"repairs", "kind": &"counter", "tiers": [50, 250, 1000, 2500, 5000], "value": [10, 20, 30, 50, 75]},
-	{"id": &"a_earn", "title": "KAZANÇLI", "text": "Tamirlerden toplam %s ₺ kazan", "metric": &"repair_money", "kind": &"counter", "tiers": [10000, 100000, 1000000, 5000000], "mult": 1.0},
-	{"id": &"a_spend", "title": "HARCAMACI", "text": "Toplam %s ₺ harca", "metric": &"money_spent", "kind": &"counter", "tiers": [20000, 200000, 1000000, 5000000], "mult": 0.8},
-	{"id": &"a_race_wins", "title": "YARIŞÇI", "text": "%s yarış kazan", "metric": &"race_wins", "kind": &"counter", "tiers": [3, 15, 50, 150], "mult": 1.0},
-	{"id": &"a_races", "title": "ARENA", "text": "%s yarışa katıl", "metric": &"races", "kind": &"counter", "tiers": [10, 50, 200], "mult": 0.6},
-	{"id": &"a_crates", "title": "KASA AVCISI", "text": "%s kasa aç", "metric": &"crates_opened", "kind": &"counter", "tiers": [3, 15, 50, 150], "mult": 0.9},
-	{"id": &"a_cars", "title": "KOLEKSİYONCU", "text": "%s farklı araç keşfet", "metric": &"cars_discovered", "kind": &"state", "tiers": [3, 6, 10, 18, 26], "mult": 1.5},
-	{"id": &"a_paints", "title": "BOYACI", "text": "%s boya satın al", "metric": &"paints", "kind": &"counter", "tiers": [1, 5, 20], "mult": 0.7, "feature": &"paint"},
-	{"id": &"a_decor", "title": "DEKORATÖR", "text": "Garaja toplam %s eşya yerleştir", "metric": &"decor_placed", "kind": &"counter", "tiers": [5, 20, 50, 100], "mult": 0.7},
-	{"id": &"a_display", "title": "SERGİCİ", "text": "Garajda aynı anda %s araç sergile", "metric": &"cars_on_display", "kind": &"state", "tiers": [1, 3, 6, 10], "mult": 0.8},
+	{"id": &"a_repairs", "title": "TAMİRCİ", "text": "%s tamir tamamla", "metric": &"repairs", "kind": &"counter", "tiers": [100, 500, 1500, 4000, 10000], "value": [6, 12, 20, 35, 55]},
+	{"id": &"a_earn", "title": "KAZANÇLI", "text": "Tamirlerden toplam %s ₺ kazan", "metric": &"repair_money", "kind": &"counter", "tiers": [50000, 500000, 3000000, 15000000], "mult": 1.0},
+	{"id": &"a_spend", "title": "HARCAMACI", "text": "Toplam %s ₺ harca", "metric": &"money_spent", "kind": &"counter", "tiers": [75000, 600000, 3000000, 15000000], "mult": 0.8},
+	{"id": &"a_race_wins", "title": "YARIŞÇI", "text": "%s yarış kazan", "metric": &"race_wins", "kind": &"counter", "tiers": [10, 40, 120, 300], "mult": 1.0},
+	{"id": &"a_races", "title": "ARENA", "text": "%s yarışa katıl", "metric": &"races", "kind": &"counter", "tiers": [25, 100, 400], "mult": 0.6},
+	{"id": &"a_crates", "title": "KASA AVCISI", "text": "%s kasa aç", "metric": &"crates_opened", "kind": &"counter", "tiers": [5, 20, 60, 150], "mult": 0.9},
+	{"id": &"a_cars", "title": "KOLEKSİYONCU", "text": "%s farklı araç keşfet", "metric": &"cars_discovered", "kind": &"state", "tiers": [5, 10, 18, 28, 40], "mult": 1.5},
+	{"id": &"a_paints", "title": "BOYACI", "text": "%s boya satın al", "metric": &"paints", "kind": &"counter", "tiers": [3, 10, 30], "mult": 0.7, "feature": &"paint"},
+	{"id": &"a_decor", "title": "DEKORATÖR", "text": "Garaja toplam %s eşya yerleştir", "metric": &"decor_placed", "kind": &"counter", "tiers": [15, 40, 100, 200], "mult": 0.7},
+	{"id": &"a_display", "title": "SERGİCİ", "text": "Garajda aynı anda %s araç sergile", "metric": &"cars_on_display", "kind": &"state", "tiers": [3, 6, 10, 16], "mult": 0.8},
 	{"id": &"a_garage", "title": "GARAJ USTASI", "text": "Garajı %s. seviyeye genişlet", "metric": &"garage_level", "kind": &"state", "tiers": [2, 3, 4], "mult": 1.0},
 	{"id": &"a_bays", "title": "ALAN SAHİBİ", "text": "%s tamir alanına sahip ol", "metric": &"bays", "kind": &"state", "tiers": [2, 3], "mult": 0.8},
-	{"id": &"a_rank", "title": "DEĞERLİ GARAJ", "text": "Garaj değerinde %s. rütbeye ulaş", "metric": &"garage_rank", "kind": &"state", "tiers": [3, 5, 7, 10], "mult": 1.2},
-	{"id": &"a_stars", "title": "USTA", "text": "İşlerden toplam %s ustalık yıldızı topla", "metric": &"job_stars", "kind": &"state", "tiers": [5, 12, 20, 28, 35], "mult": 1.0},
+	{"id": &"a_rank", "title": "DEĞERLİ GARAJ", "text": "Garaj değerinde %s. rütbeye ulaş", "metric": &"garage_rank", "kind": &"state", "tiers": [4, 6, 8, 10], "mult": 1.2},
+	{"id": &"a_stars", "title": "USTA", "text": "İşlerden toplam %s ustalık yıldızı topla", "metric": &"job_stars", "kind": &"state", "tiers": [8, 15, 22, 30, 35], "mult": 1.0},
 	# 2026-10-20 genişletme: hurdalık, modifiye, depolar, arkadaş yarışları, rekor, fotoğraf, lüks dekor, filo
-	{"id": &"a_long", "title": "SABIRLI USTA", "text": "%s uzun iş tamamla", "metric": &"long_jobs", "kind": &"counter", "tiers": [10, 50, 200, 600], "mult": 0.9},
-	{"id": &"a_junk", "title": "HURDACI", "text": "Hurdalıkta %s yığın ara", "metric": &"junk_searches", "kind": &"counter", "tiers": [5, 25, 100, 300], "mult": 0.8},
-	{"id": &"a_parts", "title": "PARÇA AVCISI", "text": "Hurdalıktan toplam %s parça topla", "metric": &"junk_parts", "kind": &"counter", "tiers": [25, 150, 600, 2000], "mult": 0.8},
-	{"id": &"a_restore", "title": "RESTORATÖR", "text": "%s klasik aracı restore et", "metric": &"restorations", "kind": &"counter", "tiers": [1, 3, 6, 12, 24], "mult": 1.3},
-	{"id": &"a_mods", "title": "MODİFİYECİ", "text": "%s modifiye tak", "metric": &"mods_installed", "kind": &"counter", "tiers": [1, 10, 30, 80], "mult": 1.0},
+	{"id": &"a_long", "title": "SABIRLI USTA", "text": "%s uzun iş tamamla", "metric": &"long_jobs", "kind": &"counter", "tiers": [20, 100, 300, 800], "mult": 0.9},
+	{"id": &"a_junk", "title": "HURDACI", "text": "Hurdalıkta %s yığın ara", "metric": &"junk_searches", "kind": &"counter", "tiers": [10, 40, 150, 400], "mult": 0.8},
+	{"id": &"a_parts", "title": "PARÇA AVCISI", "text": "Hurdalıktan toplam %s parça topla", "metric": &"junk_parts", "kind": &"counter", "tiers": [50, 250, 900, 2500], "mult": 0.8},
+	{"id": &"a_restore", "title": "RESTORATÖR", "text": "%s klasik aracı restore et", "metric": &"restorations", "kind": &"counter", "tiers": [2, 5, 10, 16, 24], "mult": 1.3},
+	{"id": &"a_mods", "title": "MODİFİYECİ", "text": "%s modifiye tak", "metric": &"mods_installed", "kind": &"counter", "tiers": [3, 15, 40, 100], "mult": 1.0},
 	{"id": &"a_depots", "title": "DEPO SAHİBİ", "text": "%s depoya sahip ol", "metric": &"depots_owned", "kind": &"state", "tiers": [1, 2, 3, 4, 5], "mult": 1.2},
-	{"id": &"a_interior", "title": "İÇ MİMAR", "text": "Depolarda %s iç yükseltme tamamla", "metric": &"interior_ups", "kind": &"counter", "tiers": [1, 5, 15, 35], "mult": 0.9},
-	{"id": &"a_fleet", "title": "FİLO SAHİBİ", "text": "Aynı anda %s araca sahip ol", "metric": &"cars_owned", "kind": &"state", "tiers": [5, 15, 30, 50, 70], "mult": 1.2},
+	{"id": &"a_interior", "title": "İÇ MİMAR", "text": "Depolarda %s iç yükseltme tamamla", "metric": &"interior_ups", "kind": &"counter", "tiers": [3, 10, 25, 45], "mult": 0.9},
+	{"id": &"a_fleet", "title": "FİLO SAHİBİ", "text": "Aynı anda %s araca sahip ol", "metric": &"cars_owned", "kind": &"state", "tiers": [8, 20, 35, 55, 70], "mult": 1.2},
 	{"id": &"a_legendary", "title": "EFSANE AVCISI", "text": "%s efsane araç keşfet", "metric": &"legendary_cars", "kind": &"state", "tiers": [1, 3, 5, 7], "mult": 1.5},
-	{"id": &"a_bought", "title": "ALICI", "text": "Showroom'dan %s araç satın al", "metric": &"cars_bought", "kind": &"counter", "tiers": [1, 5, 15], "mult": 0.8},
-	{"id": &"a_friend_races", "title": "DOSTLUK YARIŞI", "text": "%s arkadaş yarışına katıl", "metric": &"friend_races", "kind": &"counter", "tiers": [1, 10, 50, 150], "mult": 0.7},
-	{"id": &"a_friend_wins", "title": "SOKAK KRALI", "text": "%s arkadaşını yarışta yen", "metric": &"friend_wins", "kind": &"counter", "tiers": [1, 10, 40, 120], "mult": 1.0},
-	{"id": &"a_revenge", "title": "İNTİKAMCI", "text": "%s intikam yarışı kazan", "metric": &"revenges", "kind": &"counter", "tiers": [1, 5, 20], "mult": 0.9},
-	{"id": &"a_records", "title": "REKORTMEN", "text": "Drag rekorunu %s kez kır", "metric": &"records", "kind": &"counter", "tiers": [1, 5, 15, 40], "mult": 1.0},
-	{"id": &"a_photos", "title": "FOTOĞRAFÇI", "text": "%s fotoğraf çek", "metric": &"photos", "kind": &"counter", "tiers": [1, 10, 50], "mult": 0.5},
-	{"id": &"a_luxury", "title": "LÜKS SEVER", "text": "%s lüks eşya al", "metric": &"luxury_bought", "kind": &"counter", "tiers": [1, 5, 15], "mult": 1.0},
-	{"id": &"a_level", "title": "SEVİYE", "text": "%s. seviyeye ulaş", "metric": &"player_level", "kind": &"state", "tiers": [5, 10, 20, 30, 50], "mult": 1.0},
+	{"id": &"a_bought", "title": "ALICI", "text": "Showroom'dan %s araç satın al", "metric": &"cars_bought", "kind": &"counter", "tiers": [2, 8, 20], "mult": 0.8},
+	{"id": &"a_friend_races", "title": "DOSTLUK YARIŞI", "text": "%s arkadaş yarışına katıl", "metric": &"friend_races", "kind": &"counter", "tiers": [3, 20, 75, 200], "mult": 0.7},
+	{"id": &"a_friend_wins", "title": "SOKAK KRALI", "text": "%s arkadaşını yarışta yen", "metric": &"friend_wins", "kind": &"counter", "tiers": [3, 15, 60, 150], "mult": 1.0},
+	{"id": &"a_revenge", "title": "İNTİKAMCI", "text": "%s intikam yarışı kazan", "metric": &"revenges", "kind": &"counter", "tiers": [2, 10, 30], "mult": 0.9},
+	{"id": &"a_records", "title": "REKORTMEN", "text": "Drag rekorunu %s kez kır", "metric": &"records", "kind": &"counter", "tiers": [3, 10, 25, 60], "mult": 1.0},
+	{"id": &"a_photos", "title": "FOTOĞRAFÇI", "text": "%s fotoğraf çek", "metric": &"photos", "kind": &"counter", "tiers": [3, 15, 60], "mult": 0.5},
+	{"id": &"a_luxury", "title": "LÜKS SEVER", "text": "%s lüks eşya al", "metric": &"luxury_bought", "kind": &"counter", "tiers": [2, 6, 15], "mult": 1.0},
+	{"id": &"a_level", "title": "SEVİYE", "text": "%s. seviyeye ulaş", "metric": &"player_level", "kind": &"state", "tiers": [8, 15, 25, 35, 50], "mult": 1.0},
 	{"id": &"a_days", "title": "SADAKAT", "text": "Toplam %s gün oyna", "metric": &"days_played", "kind": &"counter", "tiers": [3, 7, 30, 100, 365], "mult": 1.0},
 	{"id": &"a_streak", "title": "SERİ", "text": "%s gün üst üste giriş yap", "metric": &"best_streak", "kind": &"state", "tiers": [3, 7, 14, 30], "mult": 0.9},
-	{"id": &"a_daily", "title": "GÖREV AVCISI", "text": "%s günlük görev tamamla", "metric": &"daily_done", "kind": &"counter", "tiers": [10, 50, 200, 600], "mult": 0.8},
-	{"id": &"a_perfect", "title": "MÜKEMMEL GÜN", "text": "%s günün tüm görevlerini bitir", "metric": &"daily_all", "kind": &"counter", "tiers": [3, 15, 50, 150], "mult": 1.0},
-	{"id": &"a_weekly", "title": "HAFTA YILDIZI", "text": "%s haftanın tüm görevlerini bitir", "metric": &"weekly_all", "kind": &"counter", "tiers": [1, 4, 12, 26], "mult": 1.2},
-	{"id": &"a_meta", "title": "YILDIZ TOPLAYICI", "text": "Toplam %s başarım yıldızı topla", "metric": &"ach_stars", "kind": &"state", "tiers": [10, 25, 50, 80], "mult": 1.0},
+	{"id": &"a_daily", "title": "GÖREV AVCISI", "text": "%s günlük görev tamamla", "metric": &"daily_done", "kind": &"counter", "tiers": [20, 80, 250, 700], "mult": 0.8},
+	{"id": &"a_perfect", "title": "MÜKEMMEL GÜN", "text": "%s günün tüm görevlerini bitir", "metric": &"daily_all", "kind": &"counter", "tiers": [5, 20, 60, 150], "mult": 1.0},
+	{"id": &"a_weekly", "title": "HAFTA YILDIZI", "text": "%s haftanın tüm görevlerini bitir", "metric": &"weekly_all", "kind": &"counter", "tiers": [2, 6, 15, 30], "mult": 1.2},
+	{"id": &"a_meta", "title": "YILDIZ TOPLAYICI", "text": "Toplam %s başarım yıldızı topla", "metric": &"ach_stars", "kind": &"state", "tiers": [15, 35, 60, 90], "mult": 1.0},
 	{"id": &"a_legend", "title": "EFSANE GARAJ SAHİBİ", "text": "Tüm araçlar, garaj Sv.4, 3 alan, 10. rütbe ve 35 ustalık yıldızı", "metric": &"legend", "kind": &"state", "tiers": [1], "value": [500]},
 ]
 ## Dönem anahtarları (kayıt).

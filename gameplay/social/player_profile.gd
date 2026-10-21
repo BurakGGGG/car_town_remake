@@ -76,7 +76,7 @@ func load_state(data: Dictionary) -> void:
 	photo_hash = SaveSafe.s(data.get("photo_hash", ""))
 	if not ProfileCatalog.is_hash(photo_hash):
 		photo_hash = ""
-	use_google = bool(data.get("google_photo", false))
+	use_google = SaveSafe.b(data.get("google_photo", false))   # bozuk kayıtta bool("…") yüklemeyi yarıda kesiyordu
 	var owned: Variant = data.get("frames", [])
 	if owned is Array:
 		for id: Variant in owned:

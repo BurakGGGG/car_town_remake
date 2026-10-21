@@ -183,12 +183,12 @@ func _run() -> void:
 	check(garages.item_level(mahalle, CarGarageCatalog.PARK) == 1, "PARK YERİ seviye 1")
 	var money_before: int = economy.money
 	check(garages.upgrade_item(mahalle, CarGarageCatalog.PARK), "PARK YERİ yükseltmesi başladı")
-	check(economy.money == money_before - 20000, "20.000 ₺ düştü")
+	check(economy.money == money_before - 40000, "40.000 ₺ düştü")
 	check(garages.item_status(mahalle, CarGarageCatalog.FLOOR) == CarGarageManager.ItemStatus.BUSY, "aynı depoda ikinci iş yok")
 	check(garages.item_status(CarGarageCatalog.SANAYI, CarGarageCatalog.FLOOR) == CarGarageManager.ItemStatus.BUYABLE,
 		"başka depoda iş başlatılabilir")
 	check(garages.capacity(mahalle) == 4, "süre dolmadan kapasite aynı")
-	garages.clock_offset += 301.0
+	garages.clock_offset += 601.0
 	garages._check_timers()
 	check(garages.item_level(mahalle, CarGarageCatalog.PARK) == 2 and garages.capacity(mahalle) == 5, "süre doldu: 5 yer")
 	garages.upgrade_item(mahalle, CarGarageCatalog.LIGHTS)
@@ -212,7 +212,7 @@ func _run() -> void:
 	print("== 6) Kayıt turu ==")
 	garages.upgrade_item(CarGarageCatalog.SANAYI, CarGarageCatalog.WALLS)
 	var spent: int = garages.spent_total()
-	check(spent == 50000 + 150000 + 900000 + 20000 + 10000 + 20000 + 40000, "harcanan toplam (%d)" % spent)
+	check(spent == 50000 + 150000 + 900000 + 40000 + 10000 + 20000 + 40000, "harcanan toplam (%d)" % spent)
 	var before: Dictionary = JSON.parse_string(JSON.stringify(garages.state()))
 	save.save_game()
 	garages.reset()
@@ -320,6 +320,51 @@ func _run() -> void:
 	await frames(10)
 	check(garages.garage_of(mover) == CarGarageCatalog.SANAYI and screen.current_garage() == CarGarageCatalog.SANAYI
 		and screen.shown_vehicle() == mover, "taşındı, ekran aracı izledi")
+	# SERGİLE (2026-10-21): depodaki aracın rafında; basınca HUD düzenleme kipini aracı parmakta açar (burada yalnız sinyal)
+	var exhibit_sign: PlateButton = screen.find_child("ExhibitButton", true, false) as PlateButton
+	check(exhibit_sign != null and exhibit_sign.is_visible_in_tree(), "depodaki araçta SERGİLE")
+	var homed: Array[StringName] = []
+	var place_at_home: Callable = Callable(hud, &"_place_at_home")
+	screen.home_requested.disconnect(place_at_home)
+	screen.home_requested.connect(func(id: StringName) -> void: homed.append(id))
+	exhibit_sign.pressed.emit()
+	check(same(homed, [mover]), "SERGİLE → GARAJIMA KOY isteği (%s)" % [homed])
+	screen.home_requested.connect(place_at_home)
+	# İSİM TABELASI (2026-10-21): TABELA → pano önizler, KAYDET yazar; süzgeç, kayıt, açık garaj
+	var sanayi: StringName = CarGarageCatalog.SANAYI
+	var sign_button: PlateButton = screen.find_child("NameSignButton", true, false) as PlateButton
+	check(sign_button != null and sign_button.is_visible_in_tree(), "depo iç mekânında TABELA tabelası")
+	sign_button.pressed.emit()
+	await frames(3)
+	var sign_panel: NameSignPanel = screen.find_child("NameSignPanel", true, false) as NameSignPanel
+	check(sign_panel != null and sign_panel.visible, "TABELA → İSİM TABELASI panosu")
+	var sign_edit: LineEdit = sign_panel.find_child("SignText", true, false) as LineEdit
+	sign_edit.text = "Burak Garaj"
+	sign_edit.text_changed.emit(sign_edit.text)
+	(sign_panel.find_child("Style_1", true, false) as PlateButton).pressed.emit()
+	await frames(2)
+	var interior_view: GarageInteriorView = screen.find_child("InteriorView", true, false) as GarageInteriorView
+	check(interior_view.name_sign() != null and interior_view.name_sign().tile_count() == 10,
+		"önizleme: harf başına bir karo, boşluk karosuz (%d)" % (interior_view.name_sign().tile_count() if interior_view.name_sign() else -1))
+	check(String(garages.sign_of(sanayi)["t"]).is_empty(), "önizleme kaydetmez")
+	(sign_panel.find_child("SaveButton", true, false) as PlateButton).pressed.emit()
+	await frames(2)
+	check(not sign_panel.visible and garages.sign_of(sanayi) == {"t": "Burak Garaj", "s": 1, "c": 0}, "KAYDET yazdı (%s)" % garages.sign_of(sanayi))
+	check(not garages.set_sign(sanayi, {"t": "amk garaj"}) and garages.sign_of(sanayi)["t"] == "Burak Garaj", "küfür reddedilir")
+	check(not garages.set_sign(CarGarageCatalog.HANGAR, {"t": "Hangar"}), "alınmamış depoya tabela yazılmaz")
+	check(garages.set_sign(CarGarageManager.WAITING, {"t": "otopark 1", "s": 9, "c": 99})
+		and garages.sign_of(CarGarageManager.WAITING) == {"t": "otopark 1", "s": NameSign.STYLES.size() - 1, "c": NameSign.COLORS.size() - 1},
+		"otoparka tabela; stil / renk sınırlanır")
+	check(NameSign.clean_text("  çok    uzun bir garaj adı burada  ").length() <= NameSign.MAX_CHARS, "yazı en çok %d harf" % NameSign.MAX_CHARS)
+	var sign_state: Dictionary = garages.state()
+	garages.load_state(JSON.parse_string(JSON.stringify(sign_state)))
+	check(garages.sign_of(sanayi)["t"] == "Burak Garaj" and garages.sign_of(CarGarageManager.WAITING)["t"] == "otopark 1",
+		"tabelalar kayıttan geri gelir")
+	var sign_layout: Dictionary = PublicGarage.depot_layout(save.snapshot())
+	check(String((sign_layout[String(sanayi)] as Dictionary).get("sign", {}).get("t", "")) == "Burak Garaj"
+		and not sign_layout.has(String(CarGarageManager.WAITING)), "açık garajda deponun tabelası (otopark ziyarette yok)")
+	check(garages.set_sign(sanayi, {"t": ""}) and String(garages.sign_of(sanayi)["t"]).is_empty(), "boş yazı tabelayı söker")
+	await frames(3)
 	# Boş depo: NEON al, bitir (otopark boş → boş)
 	garages.purchase(CarGarageCatalog.NEON)
 	garages.finish_build_with_gems(CarGarageCatalog.NEON)

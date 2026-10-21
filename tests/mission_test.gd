@@ -443,25 +443,25 @@ func _scene_tests() -> void:
 	print("== BAŞARIMLAR ==")
 	var line: Dictionary = MissionCatalog.achievement(&"a_repairs")
 	var base_repairs: int = mm.value_of(&"repairs")
-	var need1: int = 50 - base_repairs
+	var need1: int = 100 - base_repairs
 	if need1 > 0:
 		mm.count(&"repairs", need1)
-	check(mm.stars_reached(line) >= 1, "50 tamir → 1. yıldız (TAMİRCİ)")
+	check(mm.stars_reached(line) >= 1, "100 tamir → 1. yıldız (TAMİRCİ)")
 	var g0: int = pp.gems
 	check(mm.claim_achievement(&"a_repairs"), "1. yıldız alındı")
-	check(pp.gems - g0 == MissionCatalog.ach_gems(line, 0) and MissionCatalog.ach_value(line, 0) == 10,
-		"TAMİRCİ 1. yıldız: değer 10 (eski kilometre taşı), gem %d" % MissionCatalog.ach_gems(line, 0))
+	check(pp.gems - g0 == MissionCatalog.ach_gems(line, 0) and MissionCatalog.ach_value(line, 0) == 6,
+		"TAMİRCİ 1. yıldız: değer 6 (2026-10-21 zorluk turu), gem %d" % MissionCatalog.ach_gems(line, 0))
 	check(not mm.claim_achievement(&"a_repairs") or mm.stars_reached(line) >= 2, "ulaşılmamış 2. yıldız alınamaz")
-	mm.count(&"repairs", 250)
+	mm.count(&"repairs", 500)
 	var g1: int = pp.gems
 	check(mm.claim_achievement(&"a_repairs") and pp.gems - g1 == MissionCatalog.ach_gems(line, 1), "2. yıldız %d gem" % MissionCatalog.ach_gems(line, 1))
 	var earn_line: Dictionary = MissionCatalog.achievement(&"a_earn")
-	mm.count(&"repair_money", 10000)
-	check(mm.stars_reached(earn_line) >= 1, "10.000 ₺ kazanç → KAZANÇLI 1. yıldız")
-	mm.count(&"repair_money", 100000)
-	check(mm.stars_reached(earn_line) >= 2, "110.000 ₺ → 2. yıldız")
-	mm.count(&"repair_money", 900000)
-	check(mm.stars_reached(earn_line) >= 3, "1.010.000 ₺ → 3. yıldız")
+	mm.count(&"repair_money", 50000)
+	check(mm.stars_reached(earn_line) >= 1, "50.000 ₺ kazanç → KAZANÇLI 1. yıldız")
+	mm.count(&"repair_money", 450000)
+	check(mm.stars_reached(earn_line) >= 2, "500.000 ₺ → 2. yıldız")
+	mm.count(&"repair_money", 2500000)
+	check(mm.stars_reached(earn_line) >= 3, "3.000.000 ₺ → 3. yıldız")
 	check(mm.value_of(&"ach_stars") >= 5, "YILDIZ TOPLAYICI meta sayacı (≥5 yıldız: %d)" % mm.value_of(&"ach_stars"))
 	var summaries: Array[Dictionary] = []
 	var notices: Array[String] = []

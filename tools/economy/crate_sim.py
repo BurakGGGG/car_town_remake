@@ -13,7 +13,7 @@ Kullanım:
 
 Gem kaynaklarının oyundaki karşılıkları (değer değişirse burası da güncellenmeli; test_sync kontrol eder):
   başlangıç 40 gem ........................ PlayerProgress.gems (Main.tscn)
-  7 hikâye görevi (125) + İLK KASA ........ gameplay/quest_catalog.gd
+  7 hikâye görevi (63) + İLK KASA ........ gameplay/quest_catalog.gd
   seviye 5, her 5. seviyede +25 ........... PlayerProgress.LEVEL_GEMS / LEVEL_GEM_MILESTONE
   giriş 10·10·15·10·15·10·40 .............. GemRewards.LOGIN_CYCLE
   günlük 5/5 bonusu, haftalık görev + büyük ödül  MissionCatalog.DAILY_BONUS_GEMS / WEEKLY_GEMS / WEEKLY_BONUS_GEMS
@@ -57,9 +57,9 @@ STARTING_VEHICLE = "tofas_sahin"
 
 # --- Oyundaki sabitler (bkz. docstring) ---------------------------------------------------------
 START_GEMS = 40
-STORY = [(0, 0), (25, 10), (41, 15), (45, 10), (78, 15), (80, 20), (90, 25), (95, 30)]   # (dk, gem)
+STORY = [(0, 0), (25, 5), (41, 8), (45, 5), (78, 8), (80, 10), (90, 12), (95, 15)]   # (dk, gem)
 FIRST_CRATE_LEVEL = 2
-LEVEL_GEMS, LEVEL_GEM_MILESTONE = 2, 10
+LEVEL_GEMS, LEVEL_GEM_MILESTONE = 1, 10
 LOGIN_CYCLE = [10, 10, 15, 10, 15, 10, 40]
 DAILY_BONUS_GEMS, TASK_MIN_LEVEL = 10, 3
 WEEKLY_GEMS, WEEKLY_BONUS_GEMS = 0, 40

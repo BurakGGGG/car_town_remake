@@ -2278,5 +2278,16 @@
  "YENİ MÜŞTERİ": "NEW CUSTOMER",
  "GARAJ SV.%d + %d ALAN GEREKİR": "NEEDS GARAGE LV.%d + %d BAYS",
  "%s ÇERÇEVE": "%s FRAME",
- "PROFİLİNDE KULLANABİLİRSİN": "USE IT ON YOUR PROFILE"
+ "PROFİLİNDE KULLANABİLİRSİN": "USE IT ON YOUR PROFILE",
+ "AHŞAP": "WOOD",
+ "BU YAZI KULLANILAMAZ": "THIS TEXT CAN'T BE USED",
+ "GARAJINDA YER YOK\nEŞYALARI TAŞI YA DA GARAJI BÜYÜT": "NO ROOM IN YOUR GARAGE\nMOVE ITEMS OR EXPAND THE GARAGE",
+ "HARF RENGİ": "LETTER COLOR",
+ "KLASİK": "CLASSIC",
+ "METAL": "METAL",
+ "STİL": "STYLE",
+ "YAZINI YAZ": "TYPE YOUR TEXT",
+ "İSİM TABELASI": "NAME SIGN",
+ "Harf harf dizilen, yazısı sana ait duvar tabelası.": "A wall sign spelled out letter by letter, with your own text.",
+ "YAZI": "TEXT"
 }

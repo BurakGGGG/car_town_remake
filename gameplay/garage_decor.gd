@@ -26,6 +26,8 @@ enum Kind {
 }
 
 ## Yerleşim türleri.
+## İSİM TABELASI (ana garaj duvar eşyası): yazısı örnek başına (DecorManager.set_instance_sign, NameSign).
+const NAME_SIGN: StringName = &"name_sign"
 const PLACE_FLOOR: StringName = &"floor"      # zemine, X/Z serbest, y otomatik
 const PLACE_WALL: StringName = &"wall"        # garajın iç duvar yüzüne, yön duvardan
 const PLACE_SURFACE: StringName = &"surface"  # zemin/duvar kaplaması: tek seçim, uygulanır

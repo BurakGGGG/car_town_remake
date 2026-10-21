@@ -137,7 +137,7 @@ func _screen() -> void:
 	screen = hud.level_up_screen
 	check(screen != null and not screen.visible, "HUD'da kurulu, kapalı")
 	var money: int = economy.money
-	var need: int = player.xp_to_next() - player.xp + int(round(player.xp_base * 1.25))   # 1 → 3
+	var need: int = player.xp_to_next() - player.xp + int(round(player.xp_base * PlayerProgress.XP_GROWTH))   # 1 → 3
 	player.add_xp(need)
 	check(player.level == 3, "XP ile 1 → 3 (iki seviye birden)")
 	check(economy.money == money + 500 + 750, "seviye ödülleri ödendi (+1.250 ₺)")
@@ -148,7 +148,7 @@ func _screen() -> void:
 	var badge: Control = screen.get("_badge")
 	check((badge.get("_number") as Label).text == "3", "rozet: 3 (atlanan seviyeler tek ekranda)")
 	check((screen.get("_money_label") as Label).text == "+1.250 ₺", "para toplamı: %s" % (screen.get("_money_label") as Label).text)
-	check((screen.get("_gem_label") as Label).text == "+4 GEM", "gem toplamı: %s" % (screen.get("_gem_label") as Label).text)
+	check((screen.get("_gem_label") as Label).text == "+%d GEM" % (PlayerProgress.LEVEL_GEMS * 2), "gem toplamı: %s" % (screen.get("_gem_label") as Label).text)
 	check((screen.get("_divider_label") as Label).text == "AÇILANLAR", "başlık AÇILANLAR")
 	var cards: HBoxContainer = screen.get("_cards")
 	check(cards.get_child_count() == 3, "3 kart: dekor (sv2) + görevler + modifiye (%d)" % cards.get_child_count())

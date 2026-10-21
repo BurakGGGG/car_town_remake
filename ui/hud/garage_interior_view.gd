@@ -43,6 +43,7 @@ var _cars_root: Node3D
 var _cars: Dictionary = {}           # araç id → Node3D
 var _slot_of: Dictionary = {}        # araç id → park yeri (-1 = çekici)
 var _ring: MeshInstance3D
+var _sign: NameSign
 var _focused: StringName = &""
 var _bias: Dictionary = {}           # araç id → uygulanmış LOD katsayısı
 var _detail_wait: float = 0.0
@@ -116,6 +117,7 @@ func exit() -> void:
 	_touches.clear()
 	_mouse_down = false
 	_focused = &""
+	_sign = null   # iç mekânın çocuğu: onunla serbest
 	_cars.clear()
 	_slot_of.clear()
 	_bias.clear()
@@ -186,6 +188,28 @@ func sync_cars(slots: Array[StringName], tow: StringName = &"") -> void:
 		_focused = &""
 	_place_ring()
 	_update_detail()
+
+
+## İSİM TABELASI (NameSign): iç mekânın tabela yerine (GarageInterior.sign_anchor) kurulur; boş yazı tabelayı kaldırır.
+## Tabela iç mekânın çocuğudur: ölçeği (METER) metreyi oyun birimine çevirir.
+func set_sign(data: Dictionary) -> void:
+	if not active:
+		return
+	var anchor: Dictionary = interior.sign_anchor()
+	if anchor.is_empty():
+		return
+	if _sign == null or not is_instance_valid(_sign):
+		_sign = NameSign.new()
+		_sign.name = "NameSign"
+		interior.add_child(_sign)
+		var p: Vector3 = anchor["pos"]
+		_sign.position = Vector3(p.x, p.z, -p.y)
+		_sign.rotation.y = deg_to_rad(float(anchor.get("yaw", 0.0)))
+	_sign.build(data, float(anchor["width"]), float(anchor["height"]), float(anchor.get("posts", 0.0)))
+
+
+func name_sign() -> NameSign:
+	return _sign if is_instance_valid(_sign) else null
 
 
 func has_car(vehicle_id: StringName) -> bool:

@@ -49,6 +49,7 @@ enum Kind {
 	FLAG,      ## dama bayrak (yarış aracı)
 	TROPHY,    ## kupa (koleksiyon)
 	MORE,      ## üç nokta (diğer eylemler)
+	LETTERS,   ## iki harf karosu (isim tabelası) — sona eklendi
 }
 
 const HEART_RED: Color = Color("D7342A")
@@ -174,6 +175,8 @@ static func draw_icon(ci: CanvasItem, kind: Kind, c: Vector2, s: float, ink: Col
 			_trophy(ci, c, s, ink, cutout, w)
 		Kind.MORE:
 			_more(ci, c, s, ink)
+		Kind.LETTERS:
+			_letters(ci, c, s, ink, cutout, w)
 		_:
 			pass
 
@@ -380,6 +383,22 @@ static func _trophy(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Co
 static func _more(ci: CanvasItem, c: Vector2, s: float, ink: Color) -> void:
 	for x: float in [-0.30, 0.0, 0.30]:
 		ci.draw_circle(c + Vector2(x, 0.0) * s, s * 0.10, ink, true, -1.0, true)
+
+
+## İsim tabelası: rayın üstünde iki eğik harf karosu (A ve B'nin oyulmuş çizgileri).
+static func _letters(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+	_rect(ci, c, s, Vector2(-0.48, 0.18), Vector2(0.96, 0.1), ink)
+	for i: int in 2:
+		var o: Vector2 = c + Vector2(-0.22 + i * 0.44, -0.04) * s
+		_round_rect(ci, o, s, Vector2(-0.19, -0.24), Vector2(0.38, 0.46), 0.05, ink)
+	var a: Vector2 = c + Vector2(-0.22, -0.04) * s
+	ci.draw_polyline(PackedVector2Array([a + Vector2(-0.1, 0.14) * s, a + Vector2(0.0, -0.15) * s,
+		a + Vector2(0.1, 0.14) * s]), cutout, w * 0.9, true)
+	ci.draw_line(a + Vector2(-0.055, 0.04) * s, a + Vector2(0.055, 0.04) * s, cutout, w * 0.8, true)
+	var b: Vector2 = c + Vector2(0.22, -0.04) * s
+	ci.draw_line(b + Vector2(-0.07, -0.15) * s, b + Vector2(-0.07, 0.14) * s, cutout, w * 0.9, true)
+	ci.draw_arc(b + Vector2(-0.02, -0.075) * s, 0.07 * s, -PI * 0.5, PI * 0.5, 8, cutout, w * 0.8, true)
+	ci.draw_arc(b + Vector2(-0.015, 0.065) * s, 0.078 * s, -PI * 0.5, PI * 0.5, 8, cutout, w * 0.8, true)
 
 
 ## Nişangâh: halka, ortada nokta ve dört yöne kısa çentik.

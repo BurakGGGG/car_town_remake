@@ -15,6 +15,7 @@ class_name QuestCatalog
 ##   JOB_STARS      tüm arızalardan toplanan ustalık yıldızı    (durum)
 ##   CRATES_BOUGHT  showroom'dan GEMLE alınan kasa sayısı         (sayaç; görev ödülü kasa sayılmaz)
 ##   JUNKYARD_VISITS hurdalığa harita yolculuğu sayısı           (durum: JunkyardManager.visit_count)
+## 2026-10-21 zorluk turu: zincirin gemleri yarıya indi (125 → 63; ilk gün en büyük gem kaynağıydı → 5 araç).
 ## Ödül: "xp", "gems", "money", "crate" (kasa id — ücretsiz teslimat kasası; hepsi isteğe bağlı).
 
 enum Type { REPAIRS, REPAIR_MONEY, PAINTS, OWN_VEHICLES, UPGRADE_LEVEL, PLAYER_LEVEL, REPAIR_BAYS, GARAGE_RANK, JOB_STARS, CRATES_BOUGHT, JUNKYARD_VISITS }
@@ -32,23 +33,23 @@ const ENTRIES: Array[Dictionary] = [
 	{"id": &"crate_order", "title": "KASA SİPARİŞİ", "text": "SHOWROOM'dan gemle bir araç kasası sipariş et", "type": Type.CRATES_BOUGHT, "target": 1, "xp": 30},
 	# --- 10-40 DAKİKA: garajı büyüt, ikinci alanı aç ---
 	{"id": &"first_earnings", "title": "İLK KAZANÇ", "text": "Tamirlerden 3.000 ₺ kazan", "type": Type.REPAIR_MONEY, "target": 3000, "xp": 40, "money": 1000},
-	{"id": &"bigger_garage", "title": "BÜYÜK GARAJ", "text": "Garajı 2. seviyeye genişlet", "type": Type.UPGRADE_LEVEL, "upgrade": &"garage_level", "target": 2, "xp": 60, "gems": 10, "money": 2000},
+	{"id": &"bigger_garage", "title": "BÜYÜK GARAJ", "text": "Garajı 2. seviyeye genişlet", "type": Type.UPGRADE_LEVEL, "upgrade": &"garage_level", "target": 2, "xp": 60, "gems": 5, "money": 2000},
 	{"id": &"second_bay", "title": "İKİNCİ ALAN", "text": "2. tamir alanını satın al", "type": Type.REPAIR_BAYS, "target": 2, "xp": 70, "money": 2500},
 	# Hurdalığın hikâye görevi (docs/HURDALIK_TASARIM.md §1): HARİTA plakası bu görevle görünür olur, hurdalık
 	# 2. tamir alanıyla açılır (JunkyardManager.OPEN_BAYS).
 	{"id": &"junkyard_visit", "title": "HURDACI NECATİ", "text": "HARİTA'dan hurdalığa git, Necati'yle tanış", "type": Type.JUNKYARD_VISITS, "target": 1, "xp": 60, "money": 1500},
 	# --- 40-90 DAKİKA: ilk araç, boya, koleksiyon ---
-	{"id": &"collector", "title": "KOLEKSİYONCU", "text": "2 araca sahip ol", "type": Type.OWN_VEHICLES, "target": 2, "xp": 80, "gems": 15, "money": 2500},
-	{"id": &"first_paint", "title": "YENİ RENK", "text": "Garajda bir aracını boya", "type": Type.PAINTS, "target": 1, "xp": 50, "gems": 10, "money": 1000},
+	{"id": &"collector", "title": "KOLEKSİYONCU", "text": "2 araca sahip ol", "type": Type.OWN_VEHICLES, "target": 2, "xp": 80, "gems": 8, "money": 2500},
+	{"id": &"first_paint", "title": "YENİ RENK", "text": "Garajda bir aracını boya", "type": Type.PAINTS, "target": 1, "xp": 50, "gems": 5, "money": 1000},
 	{"id": &"journeyman", "title": "KALFA", "text": "25 tamir tamamla", "type": Type.REPAIRS, "target": 25, "xp": 90, "money": 1500},
 	# --- 1,5-3 SAAT: üçüncü alan, garaj değeri ---
 	{"id": &"garage_three", "title": "USTA GARAJI", "text": "Garajı 3. seviyeye genişlet", "type": Type.UPGRADE_LEVEL, "upgrade": &"garage_level", "target": 3, "xp": 120, "money": 4000},
-	{"id": &"third_bay", "title": "ÜÇÜNCÜ ALAN", "text": "3. tamir alanını satın al", "type": Type.REPAIR_BAYS, "target": 3, "xp": 140, "gems": 15, "money": 5000},
-	{"id": &"valuable", "title": "DEĞERLİ GARAJ", "text": "Garaj değerinde 3. rütbeye ulaş", "type": Type.GARAGE_RANK, "target": 3, "xp": 150, "gems": 20, "money": 5000},
+	{"id": &"third_bay", "title": "ÜÇÜNCÜ ALAN", "text": "3. tamir alanını satın al", "type": Type.REPAIR_BAYS, "target": 3, "xp": 140, "gems": 8, "money": 5000},
+	{"id": &"valuable", "title": "DEĞERLİ GARAJ", "text": "Garaj değerinde 3. rütbeye ulaş", "type": Type.GARAGE_RANK, "target": 3, "xp": 150, "gems": 10, "money": 5000},
 	# --- UZUN VADE ---
 	{"id": &"master", "title": "USTA", "text": "100 tamir tamamla", "type": Type.REPAIRS, "target": 100, "xp": 200, "money": 8000},
-	{"id": &"fleet", "title": "FİLO", "text": "4 araca sahip ol", "type": Type.OWN_VEHICLES, "target": 4, "xp": 250, "gems": 25, "money": 10000},
-	{"id": &"star_mechanic", "title": "YILDIZLI USTA", "text": "İşlerden toplam 4 ustalık yıldızı topla", "type": Type.JOB_STARS, "target": 4, "xp": 300, "gems": 30, "money": 15000},
+	{"id": &"fleet", "title": "FİLO", "text": "4 araca sahip ol", "type": Type.OWN_VEHICLES, "target": 4, "xp": 250, "gems": 12, "money": 10000},
+	{"id": &"star_mechanic", "title": "YILDIZLI USTA", "text": "İşlerden toplam 4 ustalık yıldızı topla", "type": Type.JOB_STARS, "target": 4, "xp": 300, "gems": 15, "money": 15000},
 ]
 
 

@@ -53,13 +53,14 @@ func value_at(level: int) -> float:
 	return effects[clampi(level - 1, 0, effects.size() - 1)]
 
 
-## GELİŞTİRME KATALOĞU — ilk sürümde iki geliştirme.
+## GELİŞTİRME KATALOĞU — ilk sürümde iki geliştirme. 2026-10-21 zorluk turu (kullanıcı: "garajı hemen büyütüyorum, genişletme
+## ücretleri çok az"): genişletme 36/90/180 b → 90/260/650 b, tamir hızı 1/2/3,5/5 b → 3/7,5/15/30 b.
 static func defaults() -> Array[GarageUpgrade]:
 	return [
 		_make(&"repair_speed", Loc.t("TAMİR HIZI"), &"WRENCH", Loc.t("Tamir süresi"),
-			PackedInt32Array([1000, 2000, 3500, 5000]), PackedFloat32Array([1.0, 0.9, 0.8, 0.7, 0.6])),
+			PackedInt32Array([3000, 7500, 15000, 30000]), PackedFloat32Array([1.0, 0.9, 0.8, 0.7, 0.6])),
 		_make(&"garage_level", Loc.t("GARAJ SEVİYESİ"), &"GARAGE", Loc.t("Garaj alanı"),
-			PackedInt32Array([36000, 90000, 180000]), PackedFloat32Array([1.0, 2.0, 3.0, 4.0])),
+			PackedInt32Array([90000, 260000, 650000]), PackedFloat32Array([1.0, 2.0, 3.0, 4.0])),
 	]
 
 
