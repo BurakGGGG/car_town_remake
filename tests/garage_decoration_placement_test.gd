@@ -3,7 +3,7 @@ extends SceneTree
 ##
 ## Gerçek düğümlerle koşar: Main.tscn, DecorManager, GarageDecorView, GarageEditor, SaveManager,
 ## GarageUpgradeManager. Düzenleyici HUD router'ı üzerinden açılır (oyundaki yol). Sahiplik
-## load_state ile verilir; satın alma, rütbe kilidi ve garaj değeri decor_test paketinde.
+## load_state ile verilir; satın alma, seviye kilidi ve garaj değeri decor_test paketinde.
 ## Gerçek fare / dokunmatik girdiyle oynanış testi ayrıca: qa/garaj_editor_oyun.gd.
 ##
 ## Çalıştırma (yalıtılmış kayıt klasöründe):
@@ -139,7 +139,7 @@ func _catalog() -> void:
 		# ₺ eşya: fiyat > değer > 0. LÜKS eşya elmasla satılır: ₺ fiyatı 0, elmas fiyatı ve değeri > 0.
 		var priced: bool = (int(item["price"]) > 0 and int(item["value"]) < int(item["price"])) \
 			if not GarageDecor.is_gem_item(id) else int(item["price"]) == 0
-		if String(item.get("title", "")) == "" or not priced or int(item["value"]) <= 0 or int(item["min_rank"]) < 1 \
+		if String(item.get("title", "")) == "" or not priced or int(item["value"]) <= 0 or int(item["min_level"]) < 1 \
 				or not [GarageDecor.PLACE_FLOOR, GarageDecor.PLACE_WALL, GarageDecor.PLACE_SURFACE,
 					GarageDecor.PLACE_TILE, GarageDecor.PLACE_EDGE].has(placement):
 			bad.append(String(id))
@@ -149,7 +149,7 @@ func _catalog() -> void:
 				bad.append(String(id) + " (model ölçülemedi)")
 			elif DecorBuilder.has_model(id):
 				glb += 1
-	check(1, bad.is_empty(), "her kayıtta ad, fiyat > değer > 0, rütbe, yerleşim türü; her eşyanın ölçülebilen gövdesi var %s" % [bad])
+	check(1, bad.is_empty(), "her kayıtta ad, fiyat > değer > 0, seviye, yerleşim türü; her eşyanın ölçülebilen gövdesi var %s" % [bad])
 	print("   %d eşya .glb modelli, %d eşya kodla kurulan gövdeli, %d kaplama" % [glb,
 		items.filter(func(i: Dictionary) -> bool: return not GarageDecor.is_surface(i["id"])).size() - glb,
 		items.filter(func(i: Dictionary) -> bool: return GarageDecor.is_surface(i["id"])).size()])

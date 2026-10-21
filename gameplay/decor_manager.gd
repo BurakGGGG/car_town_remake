@@ -48,9 +48,9 @@ var _instances: Array[Dictionary] = []
 var _surfaces: Dictionary = {}
 ## Zemin karoları: Vector2i göz → desen id (boyanmamış göz kayıtta yoktur).
 var _tiles: Dictionary = {}
-## value() önbelleği (-1 = eskidi). Eşya / karo değişen her yerde sıfırlanır. Düzenleyici paletinde her kartın
-## kilidi garaj rütbesine bakıyor ve rütbe her seferinde bütün dekor değerini (sahip olunan her eşya + boyalı
-## her karo) baştan topluyordu: açılışta 228 kez (qa/script_profile.gd open:garage_edit).
+## value() önbelleği (-1 = eskidi). Eşya / karo değişen her yerde sıfırlanır. Garaj değeri her hesapta bütün dekor
+## değerini (sahip olunan her eşya + boyalı her karo) baştan topluyordu; kilit rütbeye bağlıyken düzenleyici paleti
+## açılışta bunu 228 kez yapıyordu (qa/script_profile.gd open:garage_edit).
 var _value_cache: int = -1
 ## İç duvarlar: kenar anahtarı ("x:a:b" / "z:a:b") → {"piece": StringName, "finish": StringName}.
 var _walls: Dictionary = {}
@@ -153,12 +153,12 @@ func owned_ids() -> Array[StringName]:
 	return out
 
 
-## Garaj rütbesi kilidi açıldı mı?
+## Oyuncu seviyesi kilidi açıldı mı? (Eskiden garaj rütbesiydi; kullanıcı kararı 2026-10-21: seviye.)
 func is_unlocked(id: StringName) -> bool:
-	var item: Dictionary = GarageDecor.get_item(id)
-	if item.is_empty():
+	if not GarageDecor.exists(id):
 		return false
-	return GarageValue.current_rank(get_tree()) >= int(item.get("min_rank", 1))
+	var player: PlayerProgress = _player()
+	return (player.level if player else 1) >= GarageDecor.required_level(id)
 
 
 ## Satın alınabilir mi? Kaplama bir kez alınır; eşyadan birden çok kopya alınabilir.
@@ -233,7 +233,7 @@ func grant_exclusive(id: StringName) -> bool:
 
 
 ## HEDİYE kopyaları (POSTA, MailService): para / elmas düşmez, `purchased` yayılmaz (görev sayaçları satın alma
-## saymasın), rütbe kilidine bakılmaz; kopyalar DEPOYA girer. Kurucu eşya tek kopyadır (grant_exclusive). Yalnızca
+## saymasın), seviye kilidine bakılmaz; kopyalar DEPOYA girer. Kurucu eşya tek kopyadır (grant_exclusive). Yalnızca
 ## garaja konan eşya (zemin / duvar); kaplama, karo deseni, duvar parçası ve araç verilmez.
 func grant(id: StringName, count: int = 1) -> bool:
 	if count <= 0 or not GarageDecor.exists(id) or GarageDecor.is_vehicle(id) or not GarageDecor.is_placeable(id):
@@ -516,7 +516,7 @@ func build_walls(keys: Array[String], piece: StringName) -> Dictionary:
 			purchase_failed.emit(piece, spent)
 			return {}
 		_owned[piece] = owned_of(piece) + need
-		_value_cache = -1   # yukarıda is_unlocked değeri eski hâliyle önbelleğe almış olabilir
+		_value_cache = -1   # sahip olunan kopya arttı: garaj değeri yeniden hesaplanır
 	var changes: Array = []
 	for key: String in todo:
 		var from: Dictionary = wall_at(key)

@@ -912,7 +912,7 @@ func _candidates() -> Array[Dictionary]:
 ## Araç ile nokta arasında, yola yakın duran (trafik dışı) araç var mı?
 func _path_clear(v: TrafficVehicle, forward: Vector3, along: float) -> bool:
 	for other: TrafficVehicle in _traffic.vehicles:
-		if other == v or other.mode == TrafficVehicle.Mode.TRAFFIC or other.in_bay():
+		if other == v or other.in_bay() or not _off_road(other):
 			continue
 		var rel: Vector3 = _flat(other.global_position - v.global_position)
 		var a: float = rel.dot(forward)
@@ -927,9 +927,16 @@ func _spot_free(spot: Node3D) -> bool:
 	for v: TrafficVehicle in _traffic.vehicles:
 		if v.wait_spot() == spot:
 			return false
-		if v.mode != TrafficVehicle.Mode.TRAFFIC and Vector2(v.global_position.x - p.x, v.global_position.z - p.z).length() < SPOT_CLEAR:
+		if _off_road(v) and Vector2(v.global_position.x - p.x, v.global_position.z - p.z).length() < SPOT_CLEAR:
 			return false
 	return true
+
+
+## Yol dışında mı (müşteri / bekleyen / kaçan değil, şeritte akan trafik değil). Sabrı biten müşteri give_up ile TRAFFIC
+## olur ama şeride çıkana dek kaldırımdadır: onu yok saymak aynı noktaya yeni müşteri yolluyor, ikisi birbirinin lideri
+## olup kilitleniyor, kuyruk kavşağa taşıyor ve bütün şehir duruyordu (2026-10-21 ölçümü, ~8,5 oyun-saatte bir).
+func _off_road(v: TrafficVehicle) -> bool:
+	return v.mode != TrafficVehicle.Mode.TRAFFIC or v.is_merging()
 
 
 func _pick_fault(options: Array[RepairType]) -> RepairType:

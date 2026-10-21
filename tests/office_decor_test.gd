@@ -1,6 +1,6 @@
 extends SceneTree
 ## OFİS DEKORU — garaja ofis kurmak için 16 eşya (12 zemin YAŞAM ALANI'nda, 4 duvar DUVAR EŞYASI'nda):
-## katalog (tür, yerleşim, model, fiyat / garaj değeri, rütbe), model ölçüsü (gerçek metre) ve üçgen bütçesi,
+## katalog (tür, yerleşim, model, fiyat / garaj değeri, seviye), model ölçüsü (gerçek metre) ve üçgen bütçesi,
 ## İngilizce / İspanyolca çeviri, garajda yerleşim (zemin eşyası boş yere, duvar eşyası duvara), palette kart.
 ## Gerçek düğümlerle koşar (Main.tscn). Modeller: tools/decor/props_v5_ofis.py.
 ##   tools/run_tests.sh office_decor_test
@@ -71,15 +71,15 @@ func _catalog() -> void:
 		var item: Dictionary = GarageDecor.get_item(id)
 		var price: int = int(item.get("price", 0))
 		var value: int = int(item.get("value", 0))
-		if price <= 0 or value * 5 != price * 2 or GarageDecor.is_gem_item(id) or int(item.get("min_rank", 0)) < 1 \
-				or int(item.get("min_rank", 0)) > 4 or String(item.get("desc", "")) == "":
+		if price <= 0 or value * 5 != price * 2 or GarageDecor.is_gem_item(id) or int(item.get("min_level", 0)) < 1 \
+				or int(item.get("min_level", 0)) > 9 or String(item.get("desc", "")) == "":
 			bad.append(id)
-	check(bad.is_empty(), "₺ fiyatı, garaj değeri %%40, rütbe 1–4, açıklama %s" % [bad])
+	check(bad.is_empty(), "₺ fiyatı, garaj değeri %%40, seviye 1–9, açıklama %s" % [bad])
 	var early: int = 0
 	for id: StringName in _all():
-		if int(GarageDecor.get_item(id)["min_rank"]) == 1:
+		if int(GarageDecor.get_item(id)["min_level"]) == 1:
 			early += 1
-	check(early >= 6, "yeni oyuncu ofise hemen başlayabilir: %d eşya rütbe 1'de" % early)
+	check(early >= 6, "yeni oyuncu ofise hemen başlayabilir: %d eşya seviye 1'de" % early)
 	check(not GarageDecor.KIND_KEYS.has("office"), "ayrı OFİS sekmesi yok: ofis YAŞAM ALANI'nda (kullanıcı kararı)")
 
 

@@ -5,7 +5,7 @@
     "Yeni eşya = buraya bir kayıt + assets/decor/<id>.glb (ya da scene_path). Başka kod gerekmez.",
     "kind: floor_pattern | wall_piece | floor_surface | wall_surface | luxury | workshop | lounge | wall_item | yard | plant (palet kategorileri)",
     "placement: floor (zemine) | wall (duvara) | surface (kaplama, uygulanır) | tile (zemin karosu, göze boyanır) | edge (iç duvar, ızgara kenarına örülür)",
-    "value: garaj değerine katkı (adet başına, fiyatın ~%40'ı). min_rank: garaj rütbesi kilidi.",
+    "value: garaj değerine katkı (adet başına, fiyatın ~%40'ı). min_level: oyuncu seviyesi kilidi.",
     "İsteğe bağlı: scene_path (varsayılan assets/decor/<id>.glb), rotation_step (derece),",
     "functional + gameplay_scene (işlevli eşya: gövdeyle aynı dönüşümü paylaşan oyun düğümü).",
     "Boyut YAZILMAZ: yerleşim izi modelin gerçek sınırlarından ölçülür (elle yazılan boyut kayar).",
@@ -26,7 +26,7 @@
       "placement": "surface",
       "price": 6000,
       "value": 2400,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Açık gri karo. Avluyu aydınlatır.",
       "retired": true
     },
@@ -37,7 +37,7 @@
       "placement": "surface",
       "price": 22000,
       "value": 8800,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Koyu asfalt kaplama. Profesyonel görünüm.",
       "retired": true
     },
@@ -48,7 +48,7 @@
       "placement": "surface",
       "price": 9000,
       "value": 3600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Kırmızı tuğla. Klasik tamirhane havası."
     },
     {
@@ -58,7 +58,7 @@
       "placement": "surface",
       "price": 30000,
       "value": 12000,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Beyaz panel kaplama. Temiz ve modern."
     },
     {
@@ -68,7 +68,7 @@
       "placement": "floor",
       "price": 3000,
       "value": 1200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Kırmızı çekmeceli dolap."
     },
     {
@@ -78,7 +78,7 @@
       "placement": "floor",
       "price": 5000,
       "value": 2000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "İstiflenmiş yedek lastikler."
     },
     {
@@ -88,7 +88,7 @@
       "placement": "floor",
       "price": 12000,
       "value": 4800,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Hava kompresörü ve hortum makarası."
     },
     {
@@ -98,7 +98,7 @@
       "placement": "floor",
       "price": 16000,
       "value": 6400,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Tekerlekli alet arabası."
     },
     {
@@ -108,7 +108,7 @@
       "placement": "floor",
       "price": 8000,
       "value": 3200,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Müşteri bekleme kanepesi."
     },
     {
@@ -118,7 +118,7 @@
       "placement": "floor",
       "price": 4000,
       "value": 1600,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Ahşap sehpa, üstünde dergiler."
     },
     {
@@ -128,7 +128,7 @@
       "placement": "floor",
       "price": 26000,
       "value": 10400,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Işıklı atıştırmalık otomatı."
     },
     {
@@ -138,7 +138,7 @@
       "placement": "wall",
       "price": 60000,
       "value": 24000,
-      "min_rank": 6,
+      "min_level": 15,
       "desc": "Duvara asılan neon garaj tabelası."
     },
     {
@@ -148,7 +148,7 @@
       "placement": "floor",
       "price": 3500,
       "value": 1400,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Üç renkli yağ varili."
     },
     {
@@ -158,7 +158,7 @@
       "placement": "floor",
       "price": 2500,
       "value": 1000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "İstiflenmiş ahşap paletler."
     },
     {
@@ -168,7 +168,7 @@
       "placement": "floor",
       "price": 12000,
       "value": 4800,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Üst üste atılmış hurda lastikler."
     },
     {
@@ -178,7 +178,7 @@
       "placement": "floor",
       "price": 9500,
       "value": 3800,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Kırmızı zemin krikosu."
     },
     {
@@ -188,7 +188,7 @@
       "placement": "floor",
       "price": 34000,
       "value": 13600,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Üç katlı metal raf, kasalarla dolu."
     },
     {
@@ -198,7 +198,7 @@
       "placement": "floor",
       "price": 1500,
       "value": 600,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Üçlü turuncu koni takımı."
     },
     {
@@ -208,7 +208,7 @@
       "placement": "floor",
       "price": 7000,
       "value": 2800,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Kırmızı-beyaz yol bariyeri."
     },
     {
@@ -218,7 +218,7 @@
       "placement": "floor",
       "price": 11000,
       "value": 4400,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Tekerlekli yeşil konteyner."
     },
     {
@@ -228,7 +228,7 @@
       "placement": "floor",
       "price": 48000,
       "value": 19200,
-      "min_rank": 5,
+      "min_level": 11,
       "desc": "Nervürlü saç depo konteyneri."
     },
     {
@@ -238,7 +238,7 @@
       "placement": "floor",
       "price": 85000,
       "value": 34000,
-      "min_rank": 7,
+      "min_level": 23,
       "desc": "Kırmızı yakıt pompası, ekranlı."
     },
     {
@@ -248,7 +248,7 @@
       "placement": "floor",
       "price": 5500,
       "value": 2200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Ahşap latalı bahçe bankı."
     },
     {
@@ -258,7 +258,7 @@
       "placement": "floor",
       "price": 14000,
       "value": 5600,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Oturaklı ahşap piknik masası."
     },
     {
@@ -268,7 +268,7 @@
       "placement": "floor",
       "price": 6500,
       "value": 2600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Terracotta saksıda yeşillik."
     },
     {
@@ -278,7 +278,7 @@
       "placement": "floor",
       "price": 40000,
       "value": 16000,
-      "min_rank": 5,
+      "min_level": 11,
       "desc": "Işıklı avlu direği."
     },
     {
@@ -288,7 +288,7 @@
       "placement": "floor",
       "price": 120000,
       "value": 48000,
-      "min_rank": 8,
+      "min_level": 29,
       "desc": "Garaj bayrağı taşıyan direk."
     },
     {
@@ -298,7 +298,7 @@
       "placement": "floor",
       "price": 3000,
       "value": 1200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Budanmış yeşil çit bloğu."
     },
     {
@@ -308,7 +308,7 @@
       "placement": "floor",
       "price": 3500,
       "value": 1400,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Boyalı lastiğin içinde çiçek."
     },
     {
@@ -318,7 +318,7 @@
       "placement": "floor",
       "price": 5000,
       "value": 2000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Ahşap kasada üç yeşillik."
     },
     {
@@ -328,7 +328,7 @@
       "placement": "floor",
       "price": 7500,
       "value": 3000,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Taş bordürlü çiçek tarhı."
     },
     {
@@ -338,7 +338,7 @@
       "placement": "floor",
       "price": 9000,
       "value": 3600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Terracotta vazoda yeşillik."
     },
     {
@@ -348,7 +348,7 @@
       "placement": "floor",
       "price": 18000,
       "value": 7200,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Geniş taçlı gölge ağacı."
     },
     {
@@ -358,7 +358,7 @@
       "placement": "floor",
       "price": 20000,
       "value": 8000,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Uzun ve dar, sıraya dizilir."
     },
     {
@@ -368,7 +368,7 @@
       "placement": "floor",
       "price": 24000,
       "value": 9600,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "Üç katlı iğne yapraklı çam."
     },
     {
@@ -378,7 +378,7 @@
       "placement": "floor",
       "price": 38000,
       "value": 15200,
-      "min_rank": 5,
+      "min_level": 10,
       "desc": "Yedi yapraklı palmiye."
     },
     {
@@ -388,7 +388,7 @@
       "placement": "floor",
       "price": 2000,
       "value": 800,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Sarı-siyah hız kesici."
     },
     {
@@ -398,7 +398,7 @@
       "placement": "floor",
       "price": 2800,
       "value": 1120,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Katlanır sarı uyarı levhası."
     },
     {
@@ -408,7 +408,7 @@
       "placement": "floor",
       "price": 3200,
       "value": 1280,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Üç yedek yakıt bidonu."
     },
     {
@@ -418,7 +418,7 @@
       "placement": "floor",
       "price": 3800,
       "value": 1520,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Üç sıra istiflenmiş torba."
     },
     {
@@ -428,7 +428,7 @@
       "placement": "floor",
       "price": 4000,
       "value": 1600,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Dört ahşap nakliye kasası."
     },
     {
@@ -438,7 +438,7 @@
       "placement": "floor",
       "price": 4500,
       "value": 1800,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Üç sarı baba."
     },
     {
@@ -448,7 +448,7 @@
       "placement": "floor",
       "price": 5500,
       "value": 2200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Direkli sarı yön oku."
     },
     {
@@ -458,7 +458,7 @@
       "placement": "floor",
       "price": 6000,
       "value": 2400,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Ahşap makarada kalın kablo."
     },
     {
@@ -468,7 +468,7 @@
       "placement": "floor",
       "price": 7500,
       "value": 3000,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "İki tüplü stand."
     },
     {
@@ -478,7 +478,7 @@
       "placement": "floor",
       "price": 8500,
       "value": 3400,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Duvara sabit hortum makarası."
     },
     {
@@ -488,7 +488,7 @@
       "placement": "floor",
       "price": 9000,
       "value": 3600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Sarı çift servis rampası."
     },
     {
@@ -498,7 +498,7 @@
       "placement": "floor",
       "price": 13000,
       "value": 5200,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Mavi park levhası."
     },
     {
@@ -508,7 +508,7 @@
       "placement": "floor",
       "price": 28000,
       "value": 11200,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Lastik hava ve basınç ünitesi."
     },
     {
@@ -518,7 +518,7 @@
       "placement": "floor",
       "price": 11000,
       "value": 4400,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Duvara yaslı üç kaporta kapısı."
     },
     {
@@ -528,7 +528,7 @@
       "placement": "floor",
       "price": 17000,
       "value": 6800,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "İki tüplü kaynak arabası."
     },
     {
@@ -538,7 +538,7 @@
       "placement": "floor",
       "price": 22000,
       "value": 8800,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Sehpaya alınmış motor."
     },
     {
@@ -548,7 +548,7 @@
       "placement": "floor",
       "price": 26000,
       "value": 10400,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "İki katlı, altı varilli raf."
     },
     {
@@ -558,7 +558,7 @@
       "placement": "floor",
       "price": 32000,
       "value": 12800,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Alet panolu ahşap tezgâh."
     },
     {
@@ -568,7 +568,7 @@
       "placement": "floor",
       "price": 4500,
       "value": 1800,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Mavi taşınabilir buzluk."
     },
     {
@@ -578,7 +578,7 @@
       "placement": "floor",
       "price": 6000,
       "value": 2400,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Bez şezlong."
     },
     {
@@ -588,7 +588,7 @@
       "placement": "floor",
       "price": 8000,
       "value": 3200,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Kırmızı çatılı kulübe."
     },
     {
@@ -598,7 +598,7 @@
       "placement": "floor",
       "price": 15000,
       "value": 6000,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Kapaklı yuvarlak mangal."
     },
     {
@@ -608,7 +608,7 @@
       "placement": "floor",
       "price": 21000,
       "value": 8400,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Kırmızı şemsiyeli masa, üç tabure."
     },
     {
@@ -618,7 +618,7 @@
       "placement": "floor",
       "price": 26000,
       "value": 10400,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "İki direk arası asma ampuller."
     },
     {
@@ -628,7 +628,7 @@
       "placement": "floor",
       "price": 45000,
       "value": 18000,
-      "min_rank": 5,
+      "min_level": 11,
       "desc": "Çift başlı avlu projektörü."
     },
     {
@@ -638,7 +638,7 @@
       "placement": "floor",
       "price": 110000,
       "value": 44000,
-      "min_rank": 7,
+      "min_level": 27,
       "desc": "Çift direkli büyük tabela."
     },
     {
@@ -648,7 +648,7 @@
       "placement": "wall",
       "price": 6500,
       "value": 2600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Klasik yuvarlak atölye saati."
     },
     {
@@ -658,7 +658,7 @@
       "placement": "wall",
       "price": 8000,
       "value": 3200,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Çerçeveli yarış posteri."
     },
     {
@@ -668,7 +668,7 @@
       "placement": "wall",
       "price": 75000,
       "value": 30000,
-      "min_rank": 6,
+      "min_level": 21,
       "desc": "Harf harf neon garaj tabelası."
     },
     {
@@ -678,7 +678,7 @@
       "placement": "floor",
       "price": 25000,
       "value": 10000,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Tulumlu, şapkalı tamirci."
     },
     {
@@ -688,7 +688,7 @@
       "placement": "floor",
       "price": 30000,
       "value": 12000,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Sekiz çubuklu langırt."
     },
     {
@@ -698,7 +698,7 @@
       "placement": "floor",
       "price": 35000,
       "value": 14000,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Kavisli, ışıklı müzik dolabı."
     },
     {
@@ -708,7 +708,7 @@
       "placement": "floor",
       "price": 45000,
       "value": 18000,
-      "min_rank": 5,
+      "min_level": 11,
       "desc": "Telli jantlı klasik motor."
     },
     {
@@ -718,7 +718,7 @@
       "placement": "floor",
       "price": 55000,
       "value": 22000,
-      "min_rank": 5,
+      "min_level": 11,
       "desc": "Paslı, camı kırık, tek tekeri eksik."
     },
     {
@@ -728,7 +728,7 @@
       "placement": "floor",
       "price": 65000,
       "value": 26000,
-      "min_rank": 6,
+      "min_level": 17,
       "desc": "Dört ayaklı, merdivenli su kulesi."
     },
     {
@@ -738,7 +738,7 @@
       "placement": "floor",
       "price": 70000,
       "value": 28000,
-      "min_rank": 6,
+      "min_level": 19,
       "desc": "Işıklı camlı dokuz kupalı vitrin."
     },
     {
@@ -748,7 +748,7 @@
       "placement": "floor",
       "price": 80000,
       "value": 32000,
-      "min_rank": 7,
+      "min_level": 22,
       "desc": "Pencereli, kapılı servis karavanı."
     },
     {
@@ -758,7 +758,7 @@
       "placement": "floor",
       "price": 95000,
       "value": 38000,
-      "min_rank": 7,
+      "min_level": 14,
       "desc": "İki sütunlu hidrolik lift.",
       "retired": true
     },
@@ -769,7 +769,7 @@
       "placement": "tile",
       "price": 60,
       "value": 24,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "İnce derzli açık gri karo."
     },
     {
@@ -779,7 +779,7 @@
       "placement": "tile",
       "price": 50,
       "value": 20,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Pürüzlü açık beton."
     },
     {
@@ -789,7 +789,7 @@
       "placement": "tile",
       "price": 50,
       "value": 20,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Koyu atölye betonu."
     },
     {
@@ -799,7 +799,7 @@
       "placement": "tile",
       "price": 80,
       "value": 32,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Koyu asfalt kaplama."
     },
     {
@@ -809,7 +809,7 @@
       "placement": "tile",
       "price": 120,
       "value": 48,
-      "min_rank": 2,
+      "min_level": 2,
       "desc": "Üçe üç beyaz fayans."
     },
     {
@@ -819,7 +819,7 @@
       "placement": "tile",
       "price": 150,
       "value": 60,
-      "min_rank": 2,
+      "min_level": 2,
       "desc": "Küçük kareli klasik dama."
     },
     {
@@ -829,7 +829,7 @@
       "placement": "tile",
       "price": 150,
       "value": 60,
-      "min_rank": 2,
+      "min_level": 2,
       "desc": "İri kareli siyah-beyaz dama."
     },
     {
@@ -839,7 +839,7 @@
       "placement": "tile",
       "price": 180,
       "value": 72,
-      "min_rank": 2,
+      "min_level": 2,
       "desc": "Mavi-siyah dama."
     },
     {
@@ -849,7 +849,7 @@
       "placement": "tile",
       "price": 180,
       "value": 72,
-      "min_rank": 2,
+      "min_level": 2,
       "desc": "Kırmızı-siyah dama."
     },
     {
@@ -859,7 +859,7 @@
       "placement": "tile",
       "price": 140,
       "value": 56,
-      "min_rank": 2,
+      "min_level": 2,
       "desc": "Kabartmalı kauçuk zemin."
     },
     {
@@ -869,7 +869,7 @@
       "placement": "tile",
       "price": 160,
       "value": 64,
-      "min_rank": 2,
+      "min_level": 2,
       "desc": "Sarı-siyah çapraz şerit."
     },
     {
@@ -879,7 +879,7 @@
       "placement": "tile",
       "price": 200,
       "value": 80,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Açık renk ahşap parke."
     },
     {
@@ -889,7 +889,7 @@
       "placement": "tile",
       "price": 220,
       "value": 88,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Koyu ceviz parke."
     },
     {
@@ -899,7 +899,7 @@
       "placement": "tile",
       "price": 200,
       "value": 80,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Parlak gri epoksi."
     },
     {
@@ -909,7 +909,7 @@
       "placement": "tile",
       "price": 240,
       "value": 96,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Parlak mavi epoksi."
     },
     {
@@ -919,7 +919,7 @@
       "placement": "tile",
       "price": 240,
       "value": 96,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Parlak kırmızı epoksi."
     },
     {
@@ -929,7 +929,7 @@
       "placement": "tile",
       "price": 200,
       "value": 80,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Koyu zeminde çift beyaz şerit."
     },
     {
@@ -939,7 +939,7 @@
       "placement": "tile",
       "price": 260,
       "value": 104,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "Gümüş kabartmalı sac."
     },
     {
@@ -949,7 +949,7 @@
       "placement": "tile",
       "price": 280,
       "value": 112,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "Siyah kabartmalı sac."
     },
     {
@@ -959,7 +959,7 @@
       "placement": "tile",
       "price": 320,
       "value": 128,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "Karbon fiber örgü."
     },
     {
@@ -969,7 +969,7 @@
       "placement": "tile",
       "price": 190,
       "value": 76,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Pastel pembe-krem dama."
     },
     {
@@ -979,7 +979,7 @@
       "placement": "tile",
       "price": 190,
       "value": 76,
-      "min_rank": 2,
+      "min_level": 2,
       "desc": "Pastel nane-krem dama."
     },
     {
@@ -989,7 +989,7 @@
       "placement": "tile",
       "price": 220,
       "value": 88,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Pembe, nane, mavi ve sarı karolar."
     },
     {
@@ -999,7 +999,7 @@
       "placement": "tile",
       "price": 210,
       "value": 84,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Beyaza boyanmış ahşap parke."
     },
     {
@@ -1009,7 +1009,7 @@
       "placement": "edge",
       "price": 400,
       "value": 160,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Tam boy düz duvar parçası."
     },
     {
@@ -1019,7 +1019,7 @@
       "placement": "edge",
       "price": 300,
       "value": 120,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Bel hizasında alçak duvar."
     },
     {
@@ -1029,7 +1029,7 @@
       "placement": "edge",
       "price": 1500,
       "value": 600,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "İçinde kapı olan duvar parçası."
     },
     {
@@ -1039,7 +1039,7 @@
       "placement": "edge",
       "price": 900,
       "value": 360,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Üstü kapalı, altı açık geçit."
     },
     {
@@ -1049,7 +1049,7 @@
       "placement": "edge",
       "price": 1800,
       "value": 720,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Alt yarısı duvar, üstü cam."
     },
     {
@@ -1059,7 +1059,7 @@
       "placement": "edge",
       "price": 2500,
       "value": 1000,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Çerçeveli tam boy cam."
     },
     {
@@ -1069,7 +1069,7 @@
       "placement": "surface",
       "price": 4000,
       "value": 1600,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Temiz beyaz sıva."
     },
     {
@@ -1079,7 +1079,7 @@
       "placement": "surface",
       "price": 7000,
       "value": 2800,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Derzli beton blok."
     },
     {
@@ -1089,7 +1089,7 @@
       "placement": "surface",
       "price": 8000,
       "value": 3200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Canlı sarı boya."
     },
     {
@@ -1099,7 +1099,7 @@
       "placement": "surface",
       "price": 8000,
       "value": 3200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Koyu mavi boya."
     },
     {
@@ -1109,7 +1109,7 @@
       "placement": "surface",
       "price": 8000,
       "value": 3200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Yarış kırmızısı boya."
     },
     {
@@ -1119,7 +1119,7 @@
       "placement": "surface",
       "price": 9000,
       "value": 3600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Gri endüstriyel tuğla."
     },
     {
@@ -1129,7 +1129,7 @@
       "placement": "surface",
       "price": 12000,
       "value": 4800,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Mat siyah boya."
     },
     {
@@ -1139,7 +1139,7 @@
       "placement": "surface",
       "price": 14000,
       "value": 5600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Galvaniz oluklu sac."
     },
     {
@@ -1149,7 +1149,7 @@
       "placement": "surface",
       "price": 15000,
       "value": 6000,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Beyaz fayans kaplama."
     },
     {
@@ -1159,7 +1159,7 @@
       "placement": "surface",
       "price": 16000,
       "value": 6400,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Yatay ahşap lambri."
     },
     {
@@ -1169,7 +1169,7 @@
       "placement": "surface",
       "price": 22000,
       "value": 8800,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "Siyah-beyaz dama kaplama."
     },
     {
@@ -1179,7 +1179,7 @@
       "placement": "surface",
       "price": 9000,
       "value": 3600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Pastel pembe boya."
     },
     {
@@ -1189,7 +1189,7 @@
       "placement": "surface",
       "price": 9000,
       "value": 3600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Pastel nane yeşili boya."
     },
     {
@@ -1199,7 +1199,7 @@
       "placement": "surface",
       "price": 9000,
       "value": 3600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Pastel lila boya."
     },
     {
@@ -1209,7 +1209,7 @@
       "placement": "surface",
       "price": 18000,
       "value": 7200,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Pembe-krem dikey çizgili tapet."
     },
     {
@@ -1219,7 +1219,7 @@
       "placement": "wall",
       "price": 6000,
       "value": 2400,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Emaye motor yağı tabelası."
     },
     {
@@ -1229,7 +1229,7 @@
       "placement": "wall",
       "price": 7500,
       "value": 3000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Anahtarlı servis levhası."
     },
     {
@@ -1239,7 +1239,7 @@
       "placement": "wall",
       "price": 4500,
       "value": 1800,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Kırmızı yuvarlak giriş yasağı."
     },
     {
@@ -1249,7 +1249,7 @@
       "placement": "wall",
       "price": 5500,
       "value": 2200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Mavi emaye sokak levhası."
     },
     {
@@ -1259,7 +1259,7 @@
       "placement": "wall",
       "price": 6500,
       "value": 2600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Üç sarı ok levhası."
     },
     {
@@ -1269,7 +1269,7 @@
       "placement": "wall",
       "price": 7000,
       "value": 2800,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Kırmızı yarış arabası posteri."
     },
     {
@@ -1279,7 +1279,7 @@
       "placement": "wall",
       "price": 7000,
       "value": 2800,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Mavi rali posteri."
     },
     {
@@ -1289,7 +1289,7 @@
       "placement": "wall",
       "price": 9000,
       "value": 3600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Krem zeminli klasik araç posteri."
     },
     {
@@ -1299,7 +1299,7 @@
       "placement": "wall",
       "price": 28000,
       "value": 11200,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Sarı neon şimşek."
     },
     {
@@ -1309,7 +1309,7 @@
       "placement": "wall",
       "price": 32000,
       "value": 12800,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Kırmızı-mavi neon açık tabelası."
     },
     {
@@ -1319,7 +1319,7 @@
       "placement": "wall",
       "price": 34000,
       "value": 13600,
-      "min_rank": 5,
+      "min_level": 10,
       "desc": "Damalı bayrak neonu."
     },
     {
@@ -1329,7 +1329,7 @@
       "placement": "wall",
       "price": 36000,
       "value": 14400,
-      "min_rank": 5,
+      "min_level": 10,
       "desc": "Çapraz piston neonu."
     },
     {
@@ -1339,7 +1339,7 @@
       "placement": "wall",
       "price": 45000,
       "value": 18000,
-      "min_rank": 6,
+      "min_level": 12,
       "desc": "Araç silueti neonu."
     },
     {
@@ -1349,7 +1349,7 @@
       "placement": "wall",
       "price": 12000,
       "value": 4800,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Asılı aletli delikli pano."
     },
     {
@@ -1359,7 +1359,7 @@
       "placement": "wall",
       "price": 9000,
       "value": 3600,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Kutularla dolu iki katlı raf."
     },
     {
@@ -1369,7 +1369,7 @@
       "placement": "wall",
       "price": 11000,
       "value": 4400,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Duvara asılı üç lastik."
     },
     {
@@ -1379,7 +1379,7 @@
       "placement": "wall",
       "price": 18000,
       "value": 7200,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Duvarda sergilenen iki jant."
     },
     {
@@ -1389,7 +1389,7 @@
       "placement": "wall",
       "price": 3000,
       "value": 1200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Duvar askılı yangın tüpü."
     },
     {
@@ -1399,7 +1399,7 @@
       "placement": "wall",
       "price": 3500,
       "value": 1400,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Beyaz ilk yardım dolabı."
     },
     {
@@ -1409,7 +1409,7 @@
       "placement": "wall",
       "price": 4000,
       "value": 1600,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Panjurlu havalandırma ızgarası."
     },
     {
@@ -1419,7 +1419,7 @@
       "placement": "wall",
       "price": 6000,
       "value": 2400,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Çerçeve içinde eski plaka."
     },
     {
@@ -1429,7 +1429,7 @@
       "placement": "wall",
       "price": 10000,
       "value": 4000,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "İki çapraz damalı bayrak."
     },
     {
@@ -1439,7 +1439,7 @@
       "placement": "wall",
       "price": 20000,
       "value": 8000,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Yarış yayını açık ekran."
     },
     {
@@ -1449,7 +1449,7 @@
       "placement": "wall",
       "price": 8000,
       "value": 3200,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "İş listesi yazılı tahta."
     },
     {
@@ -1459,7 +1459,7 @@
       "placement": "wall",
       "price": 26000,
       "value": 10400,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "Üç kupalı duvar rafı."
     },
     {
@@ -1469,7 +1469,7 @@
       "placement": "wall",
       "price": 5000,
       "value": 2000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Kafesli duvar lambası."
     },
     {
@@ -1479,7 +1479,7 @@
       "placement": "wall",
       "price": 15000,
       "value": 6000,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Uzun mavi LED şeridi."
     },
     {
@@ -1489,7 +1489,7 @@
       "placement": "wall",
       "price": 8500,
       "value": 3400,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Perdeli küçük pencere."
     },
     {
@@ -1499,7 +1499,7 @@
       "placement": "floor",
       "price": 3000,
       "value": 1200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Cam fanuslu jetonlu sakız makinesi."
     },
     {
@@ -1509,7 +1509,7 @@
       "placement": "floor",
       "price": 4000,
       "value": 1600,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Damacanalı su sebili ve bardaklar."
     },
     {
@@ -1519,7 +1519,7 @@
       "placement": "floor",
       "price": 7000,
       "value": 2800,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Ahşap yuvarlak masa, iki sandalye."
     },
     {
@@ -1529,7 +1529,7 @@
       "placement": "floor",
       "price": 9000,
       "value": 3600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Kırmızı minderli üç krom tabure."
     },
     {
@@ -1539,7 +1539,7 @@
       "placement": "floor",
       "price": 18000,
       "value": 7200,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Karşılıklı kırmızı koltuklar ve krom masa."
     },
     {
@@ -1549,7 +1549,7 @@
       "placement": "floor",
       "price": 20000,
       "value": 8000,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Fileli masa ve iki raket."
     },
     {
@@ -1559,7 +1559,7 @@
       "placement": "floor",
       "price": 22000,
       "value": 8800,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Oval tepeli retro gazoz dolabı."
     },
     {
@@ -1569,7 +1569,7 @@
       "placement": "floor",
       "price": 24000,
       "value": 9600,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "Kapitone kahverengi deri kanepe."
     },
     {
@@ -1579,7 +1579,7 @@
       "placement": "floor",
       "price": 28000,
       "value": 11200,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Bas davul, tomlar, ziller ve tabure."
     },
     {
@@ -1589,7 +1589,7 @@
       "placement": "floor",
       "price": 32000,
       "value": 12800,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Işıklı başlıklı jetonlu atari."
     },
     {
@@ -1599,7 +1599,7 @@
       "placement": "floor",
       "price": 38000,
       "value": 15200,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Skor panolu hava hokeyi masası."
     },
     {
@@ -1609,7 +1609,7 @@
       "placement": "floor",
       "price": 42000,
       "value": 16800,
-      "min_rank": 5,
+      "min_level": 11,
       "desc": "Işıklı arka panolu pinbol makinesi."
     },
     {
@@ -1619,7 +1619,7 @@
       "placement": "floor",
       "price": 55000,
       "value": 22000,
-      "min_rank": 6,
+      "min_level": 14,
       "desc": "İki pikap, mikser ve hoparlörler."
     },
     {
@@ -1629,7 +1629,7 @@
       "placement": "floor",
       "price": 60000,
       "value": 24000,
-      "min_rank": 6,
+      "min_level": 16,
       "desc": "Yeşil çuha, dizilmiş toplar ve isteka."
     },
     {
@@ -1639,7 +1639,7 @@
       "placement": "floor",
       "price": 90000,
       "value": 36000,
-      "min_rank": 7,
+      "min_level": 24,
       "desc": "Kapağı açık siyah kuyruklu piyano."
     },
     {
@@ -1649,7 +1649,7 @@
       "placement": "floor",
       "price": 100000,
       "value": 40000,
-      "min_rank": 8,
+      "min_level": 26,
       "desc": "Ceviz masa ve deri kaptan koltuğu."
     },
     {
@@ -1659,7 +1659,7 @@
       "placement": "floor",
       "price": 1800,
       "value": 720,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Kırmızı ve sarı lastik takozlar."
     },
     {
@@ -1669,7 +1669,7 @@
       "placement": "floor",
       "price": 2200,
       "value": 880,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Araç altına kayan tekerlekli yatak."
     },
     {
@@ -1679,7 +1679,7 @@
       "placement": "floor",
       "price": 2800,
       "value": 1120,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Hunili, tekerlekli atık yağ kabı."
     },
     {
@@ -1689,7 +1689,7 @@
       "placement": "floor",
       "price": 6500,
       "value": 2600,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Paslanmaz tekne, musluk ve kova."
     },
     {
@@ -1699,7 +1699,7 @@
       "placement": "floor",
       "price": 7000,
       "value": 2800,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Üst üste jantlar ve iki sergi jantı."
     },
     {
@@ -1709,7 +1709,7 @@
       "placement": "floor",
       "price": 8000,
       "value": 3200,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Göstergeli, maşalı akü şarj cihazı."
     },
     {
@@ -1719,7 +1719,7 @@
       "placement": "floor",
       "price": 15000,
       "value": 6000,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Yeşil gövdeli sütunlu matkap."
     },
     {
@@ -1729,7 +1729,7 @@
       "placement": "floor",
       "price": 19000,
       "value": 7600,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Döner tablalı lastik sökme makinesi."
     },
     {
@@ -1739,7 +1739,7 @@
       "placement": "floor",
       "price": 21000,
       "value": 8400,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Ekranlı teker balans makinesi."
     },
     {
@@ -1749,7 +1749,7 @@
       "placement": "floor",
       "price": 27000,
       "value": 10800,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Hidrolik motor vinci, asılı motorla."
     },
     {
@@ -1759,7 +1759,7 @@
       "placement": "floor",
       "price": 36000,
       "value": 14400,
-      "min_rank": 5,
+      "min_level": 10,
       "desc": "Ekranlı, çekmeceli arıza tespit arabası."
     },
     {
@@ -1769,7 +1769,7 @@
       "placement": "floor",
       "price": 2500,
       "value": 1000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Bayraklı mavi posta kutusu."
     },
     {
@@ -1779,7 +1779,7 @@
       "placement": "floor",
       "price": 3000,
       "value": 1200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Kırmızı döküm yangın musluğu."
     },
     {
@@ -1789,7 +1789,7 @@
       "placement": "floor",
       "price": 3500,
       "value": 1400,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Şeritli, uyarı lambalı bariyer."
     },
     {
@@ -1799,7 +1799,7 @@
       "placement": "floor",
       "price": 3500,
       "value": 1400,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Sekizgen STOP levhası."
     },
     {
@@ -1809,7 +1809,7 @@
       "placement": "floor",
       "price": 4200,
       "value": 1680,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Turuncu-beyaz şeritli üç varil."
     },
     {
@@ -1819,7 +1819,7 @@
       "placement": "floor",
       "price": 6500,
       "value": 2600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Kırmızı-beyaz şeritli beton blok."
     },
     {
@@ -1829,7 +1829,7 @@
       "placement": "floor",
       "price": 9500,
       "value": 3800,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Pist kenarı lastik duvarı."
     },
     {
@@ -1839,7 +1839,7 @@
       "placement": "floor",
       "price": 24000,
       "value": 9600,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "Camlı kırmızı telefon kulübesi."
     },
     {
@@ -1849,7 +1849,7 @@
       "placement": "floor",
       "price": 26000,
       "value": 10400,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "Şemsiyeli dondurma arabası."
     },
     {
@@ -1859,7 +1859,7 @@
       "placement": "floor",
       "price": 30000,
       "value": 12000,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Üç ışıklı ayaklı trafik lambası."
     },
     {
@@ -1869,7 +1869,7 @@
       "placement": "floor",
       "price": 34000,
       "value": 13600,
-      "min_rank": 5,
+      "min_level": 10,
       "desc": "Jetonlu çocuk bineği: kırmızı araba."
     },
     {
@@ -1879,7 +1879,7 @@
       "placement": "floor",
       "price": 48000,
       "value": 19200,
-      "min_rank": 6,
+      "min_level": 12,
       "desc": "Jetonlu çocuk bineği: roket."
     },
     {
@@ -1889,7 +1889,7 @@
       "placement": "floor",
       "price": 70000,
       "value": 28000,
-      "min_rank": 6,
+      "min_level": 18,
       "desc": "Drag yarışı başlangıç ışık ağacı."
     },
     {
@@ -1899,7 +1899,7 @@
       "placement": "floor",
       "price": 95000,
       "value": 38000,
-      "min_rank": 7,
+      "min_level": 25,
       "desc": "Altın, gümüş, bronz basamaklar ve kupalar."
     },
     {
@@ -1909,7 +1909,7 @@
       "placement": "floor",
       "price": 4000,
       "value": 1600,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Saksıda çiçekli kaktüs."
     },
     {
@@ -1919,7 +1919,7 @@
       "placement": "floor",
       "price": 4500,
       "value": 1800,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Beyaz saksıda sarkan eğrelti."
     },
     {
@@ -1929,7 +1929,7 @@
       "placement": "floor",
       "price": 5000,
       "value": 2000,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Saman balyası üstünde balkabakları."
     },
     {
@@ -1939,7 +1939,7 @@
       "placement": "floor",
       "price": 6000,
       "value": 2400,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Ahşap kasada beş ayçiçeği."
     },
     {
@@ -1949,7 +1949,7 @@
       "placement": "floor",
       "price": 8000,
       "value": 3200,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Taş saksıda iki toplu şimşir."
     },
     {
@@ -1959,7 +1959,7 @@
       "placement": "floor",
       "price": 14000,
       "value": 5600,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Taş saksıda boğumlu bambular."
     },
     {
@@ -1969,7 +1969,7 @@
       "placement": "floor",
       "price": 32000,
       "value": 12800,
-      "min_rank": 5,
+      "min_level": 10,
       "desc": "Pembe çiçekli kiraz ağacı."
     },
     {
@@ -1979,7 +1979,7 @@
       "placement": "floor",
       "price": 40000,
       "value": 16000,
-      "min_rank": 5,
+      "min_level": 11,
       "desc": "Süslü çam ve hediye kutuları."
     },
     {
@@ -1989,7 +1989,7 @@
       "placement": "wall",
       "price": 2500,
       "value": 1000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Araba fotoğraflı duvar takvimi."
     },
     {
@@ -1999,7 +1999,7 @@
       "placement": "wall",
       "price": 4500,
       "value": 1800,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Kapaklı dolapta dart tahtası."
     },
     {
@@ -2009,7 +2009,7 @@
       "placement": "wall",
       "price": 5500,
       "value": 2200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Kafesli duvar vantilatörü."
     },
     {
@@ -2019,7 +2019,7 @@
       "placement": "wall",
       "price": 7500,
       "value": 3000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Damalı bayraklı Grand Prix posteri."
     },
     {
@@ -2029,7 +2029,7 @@
       "placement": "wall",
       "price": 8000,
       "value": 3200,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Lastik çerçeveli tabela."
     },
     {
@@ -2039,7 +2039,7 @@
       "placement": "wall",
       "price": 9500,
       "value": 3800,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Ahşap panoda altı plaka."
     },
     {
@@ -2049,7 +2049,7 @@
       "placement": "wall",
       "price": 14000,
       "value": 5600,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Duvarda sergilenen susturucular."
     },
     {
@@ -2059,7 +2059,7 @@
       "placement": "wall",
       "price": 16000,
       "value": 6400,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Askıda üç yarış direksiyonu."
     },
     {
@@ -2069,7 +2069,7 @@
       "placement": "wall",
       "price": 22000,
       "value": 8800,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "İki katlı rafta altı kask."
     },
     {
@@ -2079,7 +2079,7 @@
       "placement": "wall",
       "price": 30000,
       "value": 12000,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Çapraz anahtarlar, pembe halka."
     },
     {
@@ -2089,7 +2089,7 @@
       "placement": "wall",
       "price": 30000,
       "value": 12000,
-      "min_rank": 5,
+      "min_level": 10,
       "desc": "Camlı çerçevede yarış tulumu."
     },
     {
@@ -2099,7 +2099,7 @@
       "placement": "wall",
       "price": 40000,
       "value": 16000,
-      "min_rank": 5,
+      "min_level": 11,
       "desc": "Hot rod alevi."
     },
     {
@@ -2109,7 +2109,7 @@
       "placement": "wall",
       "price": 50000,
       "value": 20000,
-      "min_rank": 6,
+      "min_level": 13,
       "desc": "Neon kadranlı hız göstergesi."
     },
     {
@@ -2119,7 +2119,7 @@
       "placement": "tile",
       "price": 90,
       "value": 36,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Biçilmiş şeritli suni çim."
     },
     {
@@ -2129,7 +2129,7 @@
       "placement": "tile",
       "price": 110,
       "value": 44,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Kırmızı tuğla döşeme."
     },
     {
@@ -2139,7 +2139,7 @@
       "placement": "tile",
       "price": 120,
       "value": 48,
-      "min_rank": 2,
+      "min_level": 2,
       "desc": "Gri taş döşeme."
     },
     {
@@ -2149,7 +2149,7 @@
       "placement": "tile",
       "price": 140,
       "value": 56,
-      "min_rank": 2,
+      "min_level": 2,
       "desc": "Kiremit rengi iri karo."
     },
     {
@@ -2159,7 +2159,7 @@
       "placement": "tile",
       "price": 180,
       "value": 72,
-      "min_rank": 2,
+      "min_level": 2,
       "desc": "Beyaz altıgen karo."
     },
     {
@@ -2169,7 +2169,7 @@
       "placement": "tile",
       "price": 180,
       "value": 72,
-      "min_rank": 2,
+      "min_level": 2,
       "desc": "Sarı-siyah dama."
     },
     {
@@ -2179,7 +2179,7 @@
       "placement": "tile",
       "price": 230,
       "value": 92,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Renkli kırıntılı terazzo."
     },
     {
@@ -2189,7 +2189,7 @@
       "placement": "tile",
       "price": 240,
       "value": 96,
-      "min_rank": 3,
+      "min_level": 6,
       "desc": "Endüstriyel çelik ızgara."
     },
     {
@@ -2199,7 +2199,7 @@
       "placement": "tile",
       "price": 260,
       "value": 104,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "Sepet örgü ahşap parke."
     },
     {
@@ -2209,7 +2209,7 @@
       "placement": "tile",
       "price": 300,
       "value": 120,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "Damarlı beyaz mermer."
     },
     {
@@ -2219,7 +2219,7 @@
       "placement": "surface",
       "price": 8000,
       "value": 3200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Koyu yarış yeşili boya."
     },
     {
@@ -2229,7 +2229,7 @@
       "placement": "surface",
       "price": 8000,
       "value": 3200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Canlı turuncu boya."
     },
     {
@@ -2239,7 +2239,7 @@
       "placement": "surface",
       "price": 10000,
       "value": 4000,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Kalıp izli brüt beton."
     },
     {
@@ -2249,7 +2249,7 @@
       "placement": "surface",
       "price": 11000,
       "value": 4400,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Beyaza boyanmış tuğla."
     },
     {
@@ -2259,7 +2259,7 @@
       "placement": "surface",
       "price": 20000,
       "value": 8000,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "Harçlı doğal taş."
     },
     {
@@ -2269,7 +2269,7 @@
       "placement": "surface",
       "price": 24000,
       "value": 9600,
-      "min_rank": 4,
+      "min_level": 8,
       "desc": "Koyu duvarda kırmızı-beyaz yarış şeridi."
     },
     {
@@ -2279,7 +2279,7 @@
       "placement": "surface",
       "price": 26000,
       "value": 10400,
-      "min_rank": 5,
+      "min_level": 10,
       "desc": "Gümüş kabartmalı sac kaplama."
     },
     {
@@ -2290,7 +2290,7 @@
       "price": 0,
       "price_gems": 40,
       "value": 12000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Altın direkler, kadife kordon ve kırmızı halı. Garajın VIP girişi."
     },
     {
@@ -2301,7 +2301,7 @@
       "price": 0,
       "price_gems": 45,
       "value": 13500,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Altın kollu, kristal sarkıtlı iki aplik."
     },
     {
@@ -2312,7 +2312,7 @@
       "price": 0,
       "price_gems": 55,
       "value": 16500,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Altın saksıda iri bir palmiye. Tamirhaneye tatil havası."
     },
     {
@@ -2323,7 +2323,7 @@
       "price": 0,
       "price_gems": 60,
       "value": 18000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Gün batımında klasik araba; altın çerçeve ve tablo lambası."
     },
     {
@@ -2334,7 +2334,7 @@
       "price": 0,
       "price_gems": 70,
       "value": 21000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Lake sehpada asırlık bonsai. Sabrın ödülü."
     },
     {
@@ -2345,7 +2345,7 @@
       "price": 0,
       "price_gems": 75,
       "value": 22500,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Dört kat kristal sarkıtlı, ışıl ışıl ayaklı avize."
     },
     {
@@ -2356,7 +2356,7 @@
       "price": 0,
       "price_gems": 80,
       "value": 24000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Kadife pano üstünde altın direksiyon."
     },
     {
@@ -2367,7 +2367,7 @@
       "price": 0,
       "price_gems": 90,
       "value": 27000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Işıklı küresiyle altın kaplama nostaljik pompa."
     },
     {
@@ -2378,7 +2378,7 @@
       "price": 0,
       "price_gems": 100,
       "value": 30000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Altın çerçevede neon taç ve VIP yazısı."
     },
     {
@@ -2388,7 +2388,7 @@
       "placement": "floor",
       "price": 0,
       "value": 30000,
-      "min_rank": 1,
+      "min_level": 1,
       "exclusive": true,
       "desc": "Rıza Usta'nın ilk ustalara bıraktığı anahtar. Yalnızca kurucu ustalarda."
     },
@@ -2400,7 +2400,7 @@
       "price": 0,
       "price_gems": 110,
       "value": 33000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Arkadan aydınlatılmış raflarda kupalar ve madalyalar."
     },
     {
@@ -2411,7 +2411,7 @@
       "price": 0,
       "price_gems": 120,
       "value": 36000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Işıklı kaide üstünde üç altın jant."
     },
     {
@@ -2422,7 +2422,7 @@
       "price": 0,
       "price_gems": 140,
       "value": 42000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Dev ekran, ses çubuğu ve arkadan mor ışık."
     },
     {
@@ -2433,7 +2433,7 @@
       "price": 0,
       "price_gems": 150,
       "value": 45000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Yanan ateş, altın saat, şamdanlar ve altın çerçeveli ayna."
     },
     {
@@ -2444,7 +2444,7 @@
       "price": 0,
       "price_gems": 160,
       "value": 48000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Zümrüt kadife köşe koltuk, altın sehpa ve şampanya."
     },
     {
@@ -2455,7 +2455,7 @@
       "price": 0,
       "price_gems": 180,
       "value": 54000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Kara mermer bar, kadeh kulesi, buzda şampanya ve kadife tabureler."
     },
     {
@@ -2466,7 +2466,7 @@
       "price": 0,
       "price_gems": 200,
       "value": 60000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Üç ekranlı karbon yarış kokpiti."
     },
     {
@@ -2477,7 +2477,7 @@
       "price": 0,
       "price_gems": 220,
       "value": 66000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Mercanlar ve renkli balıklarla dolu ışıklı akvaryum."
     },
     {
@@ -2488,7 +2488,7 @@
       "price": 0,
       "price_gems": 260,
       "value": 78000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Kaide üstünde altın kaplama V12 motor."
     },
     {
@@ -2499,7 +2499,7 @@
       "price": 0,
       "price_gems": 300,
       "value": 90000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Işıklı jakuzi, tik güverte ve altın tırabzan."
     },
     {
@@ -2510,7 +2510,7 @@
       "price": 0,
       "price_gems": 350,
       "value": 105000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Mücevherli dev altın kupa. Bir numara sensin."
     },
     {
@@ -2521,7 +2521,7 @@
       "price": 0,
       "price_gems": 400,
       "value": 120000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Işık halkası üstünde süzülen dev pırlanta."
     },
     {
@@ -2532,7 +2532,7 @@
       "price": 0,
       "price_gems": 450,
       "value": 135000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Üç katlı mermer çeşme, altın kenarlar ve ışıklı havuz."
     },
     {
@@ -2543,7 +2543,7 @@
       "price": 0,
       "price_gems": 550,
       "value": 165000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Işıklı kaidede som altın spor araba."
     },
     {
@@ -2554,7 +2554,7 @@
       "price": 0,
       "price_gems": 900,
       "value": 270000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Işıklı pistiyle altın şeritli özel helikopter. Garajın taçı."
     },
     {
@@ -2564,7 +2564,7 @@
       "placement": "floor",
       "price": 3500,
       "value": 1400,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Satış grafiği çizilmiş kâğıtlı sehpa."
     },
     {
@@ -2574,7 +2574,7 @@
       "placement": "floor",
       "price": 4000,
       "value": 1600,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Dört çekmeceli çelik dolap; üst çekmece renkli dosyalarla açık."
     },
     {
@@ -2584,7 +2584,7 @@
       "placement": "floor",
       "price": 4500,
       "value": 1800,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Mermer ayaklı, kavisli okuma lambası."
     },
     {
@@ -2594,7 +2594,7 @@
       "placement": "floor",
       "price": 7500,
       "value": 3000,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Klasörler, kitaplar, küçük kupa ve maket araba dolu raf."
     },
     {
@@ -2604,7 +2604,7 @@
       "placement": "floor",
       "price": 9000,
       "value": 3600,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Çift monitörlü masa, ofis koltuğu ve masa telefonu."
     },
     {
@@ -2614,7 +2614,7 @@
       "placement": "floor",
       "price": 11000,
       "value": 4400,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "İki kumaş koltuk ve dergili yan sehpa."
     },
     {
@@ -2624,7 +2624,7 @@
       "placement": "floor",
       "price": 12000,
       "value": 4800,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Espresso makinesi, öğütücü, kettle ve kupalar."
     },
     {
@@ -2634,7 +2634,7 @@
       "placement": "floor",
       "price": 14000,
       "value": 5600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Kâğıt çekmeceli büyük ofis fotokopisi."
     },
     {
@@ -2644,7 +2644,7 @@
       "placement": "floor",
       "price": 18000,
       "value": 7200,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Şifreli, çarklı eski usul kasa; üstünde deste deste para."
     },
     {
@@ -2654,7 +2654,7 @@
       "placement": "floor",
       "price": 20000,
       "value": 8000,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Eğik masada araba projesi, lamba ve tabure."
     },
     {
@@ -2664,7 +2664,7 @@
       "placement": "floor",
       "price": 26000,
       "value": 10400,
-      "min_rank": 3,
+      "min_level": 7,
       "desc": "Altı koltuklu ceviz masa, dizüstü ve su şişeleri."
     },
     {
@@ -2674,7 +2674,7 @@
       "placement": "floor",
       "price": 32000,
       "value": 12800,
-      "min_rank": 4,
+      "min_level": 9,
       "desc": "Işıklı AUTO YARD bankosu, servis zili ve broşürler."
     },
     {
@@ -2684,7 +2684,7 @@
       "placement": "wall",
       "price": 4500,
       "value": 1800,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Mühürlü ustalık belgeleri ve araba fotoğrafı."
     },
     {
@@ -2694,7 +2694,7 @@
       "placement": "wall",
       "price": 5500,
       "value": 2200,
-      "min_rank": 1,
+      "min_level": 1,
       "desc": "Yükselen grafik, renkli yapışkan notlar ve kalemler."
     },
     {
@@ -2704,7 +2704,7 @@
       "placement": "wall",
       "price": 7000,
       "value": 2800,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "Duvara asılan split klima, 22 derecede."
     },
     {
@@ -2714,7 +2714,7 @@
       "placement": "wall",
       "price": 9000,
       "value": 3600,
-      "min_rank": 2,
+      "min_level": 4,
       "desc": "İğne ve iplerle işaretli araç ithalat rotaları."
     }
   ]

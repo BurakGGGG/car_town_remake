@@ -94,7 +94,7 @@ static func _vehicle_item(id: StringName) -> Dictionary:
 		return {}
 	var item: Dictionary = {
 		"id": id, "title": "%s %s" % [String(entry.get("brand", "")).to_upper(), String(entry.get("model", "")).to_upper()],
-		"kind": Kind.VEHICLE, "placement": String(PLACE_FLOOR), "price": 0, "value": 0, "min_rank": 1,
+		"kind": Kind.VEHICLE, "placement": String(PLACE_FLOOR), "price": 0, "value": 0, "min_level": 1,
 		"rotation_step": VEHICLE_ROTATION_STEP, "vehicle": true,
 	}
 	_vehicle_items[id] = item
@@ -153,6 +153,11 @@ static func scene_path(id: StringName) -> String:
 	return String(get_item(id).get("scene_path", ""))
 
 
+## Eşyanın açıldığı oyuncu seviyesi (`min_level`; bilinmeyen eşya 1).
+static func required_level(id: StringName) -> int:
+	return int(get_item(id).get("min_level", 1))
+
+
 ## İşlevli eşya mı (ileride: ATM, parça rafı...)? Gövdeyle aynı dönüşümü paylaşan oyun düğümü
 ## `gameplay_scene` alanında verilir. Şu an katalogda işlevli eşya yok.
 ## ELMAS fiyatı (LÜKS eşyalar). 0 = ₺ ile satılır (`price`).
@@ -194,7 +199,7 @@ static func items_in(kind: int) -> Array[Dictionary]:
 	return out
 
 
-## Mağaza sırası: rütbe kilidi, sonra fiyat (eşit olanlar katalog sırasında kalır). Palet kartları bu sırayla
+## Mağaza sırası: seviye kilidi, sonra fiyat (eşit olanlar katalog sırasında kalır). Palet kartları bu sırayla
 ## dizilir; desen katmanları ise items_in sırasında kalır (kayıt desen id'si tuttuğu için sıra serbesttir).
 ## LÜKS eşyaların ₺ fiyatı 0'dır: aralarında elmas fiyatına göre dizilirler.
 static func shop_order(kind: int) -> Array[Dictionary]:
@@ -203,8 +208,8 @@ static func shop_order(kind: int) -> Array[Dictionary]:
 	for k: int in out.size():
 		index[out[k]["id"]] = k
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		if int(a["min_rank"]) != int(b["min_rank"]):
-			return int(a["min_rank"]) < int(b["min_rank"])
+		if int(a["min_level"]) != int(b["min_level"]):
+			return int(a["min_level"]) < int(b["min_level"])
 		if int(a["price"]) != int(b["price"]):
 			return int(a["price"]) < int(b["price"])
 		if int(a.get("price_gems", 0)) != int(b.get("price_gems", 0)):
@@ -259,7 +264,7 @@ static func load_from(path: String = DATA_PATH) -> bool:
 		entry["price"] = int(entry.get("price", 0))
 		entry["price_gems"] = maxi(int(entry.get("price_gems", 0)), 0)
 		entry["value"] = int(entry.get("value", 0))
-		entry["min_rank"] = int(entry.get("min_rank", 1))
+		entry["min_level"] = maxi(int(entry.get("min_level", 1)), 1)
 		if not entry.has("placement"):
 			if kind_key == "floor_pattern":
 				entry["placement"] = String(PLACE_TILE)

@@ -1,7 +1,7 @@
 extends SceneTree
 ## DEKOR VARLIK ANALİZİ — katalogdaki her eşyanın gövdesini kurar ve ölçer (rapor §2 tablosu).
 ## Sütunlar: tür, yerleşim, model kaynağı (.glb / kod), dünyadaki iz (en × derinlik) ve boy,
-## modelin orijin sapması (normalleştirmenin düzelttiği: taban y ve iz ortası), rütbe, fiyat.
+## modelin orijin sapması (normalleştirmenin düzelttiği: taban y ve iz ortası), seviye, fiyat.
 ##   godot-4 --headless --path . -s res://qa/dekor_varlik_analizi.gd > tablo.md
 
 
@@ -18,7 +18,7 @@ func _initialize() -> void:
 		kinds[kind] = int(kinds.get(kind, 0)) + 1
 		if GarageDecor.is_surface(id):
 			rows.append("| %s | %s | %s | kaplama | — | — | — | %d | %s |" % [id, item["title"], kind,
-				int(item["min_rank"]), _money(int(item["price"]))])
+				int(item["min_level"]), _money(int(item["price"]))])
 			continue
 		var size: Vector3 = DecorBuilder.local_size(id) * GarageDecorView.WORLD_SCALE
 		var norm: Dictionary = DecorBuilder._norm.get(id, {})
@@ -39,8 +39,8 @@ func _initialize() -> void:
 		rows.append("| %s | %s | %s | %s · %s | %.2f × %.2f | %.2f | %s | %d | %s |" % [id, item["title"], kind,
 			"duvar" if wall else "zemin", "glb" if DecorBuilder.has_model(id) else "kod", size.x, size.z, size.y,
 			"taban %+.3f · orta %.3f" % [-base_off, center_off] if (absf(base_off) > 0.001 or center_off > 0.001) else "—",
-			int(item["min_rank"]), _money(int(item["price"]))])
-	print("| id | ad | kategori | yerleşim · model | iz (en × derinlik) | boy | orijin sapması (düzeltildi) | rütbe | fiyat ₺ |")
+			int(item["min_level"]), _money(int(item["price"]))])
+	print("| id | ad | kategori | yerleşim · model | iz (en × derinlik) | boy | orijin sapması (düzeltildi) | seviye | fiyat ₺ |")
 	print("|---|---|---|---|---|---|---|---|---|")
 	for row: String in rows:
 		print(row)

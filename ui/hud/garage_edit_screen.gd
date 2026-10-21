@@ -813,14 +813,14 @@ func _on_card_pressed(id: StringName) -> void:
 		return
 	if GarageDecor.is_pattern(id):
 		if not _decor.is_unlocked(id):
-			_show_notice(Loc.t("%d. RÜTBEDE AÇILIR") % int(GarageDecor.get_item(id).get("min_rank", 1)))
+			_show_notice(Loc.t("SEVİYE %d GEREKLİ") % GarageDecor.required_level(id))
 			return
 		_editor.begin_paint(id)
 		_refresh_cards()
 		return
 	if GarageDecor.is_wall_piece(id):
 		if not _decor.is_unlocked(id):
-			_show_notice(Loc.t("%d. RÜTBEDE AÇILIR") % int(GarageDecor.get_item(id).get("min_rank", 1)))
+			_show_notice(Loc.t("SEVİYE %d GEREKLİ") % GarageDecor.required_level(id))
 			return
 		_editor.begin_walls(id)
 		_refresh_cards()
@@ -877,7 +877,7 @@ func _vehicle_place(item: StringName) -> String:
 func _buy(id: StringName) -> bool:
 	if not _decor.can_purchase(id):
 		if not _decor.is_unlocked(id):
-			_show_notice(Loc.t("%d. RÜTBEDE AÇILIR") % int(GarageDecor.get_item(id).get("min_rank", 1)))
+			_show_notice(Loc.t("SEVİYE %d GEREKLİ") % GarageDecor.required_level(id))
 		elif GarageDecor.is_surface(id) and _decor.is_owned(id):
 			pass
 		elif GarageDecor.is_gem_item(id):
@@ -994,7 +994,7 @@ func _fit_card(card: PlateButton) -> void:
 
 func _price_status(id: StringName) -> String:
 	if not _decor.is_unlocked(id):
-		return Loc.t("%d. RÜTBE") % int(GarageDecor.get_item(id).get("min_rank", 1))
+		return Loc.t("SEVİYE %d") % GarageDecor.required_level(id)
 	if GarageDecor.is_gem_item(id):
 		return Loc.t("%d GEM") % _decor.gem_price_of(id)
 	return "%s ₺" % Hud.format_thousands(_decor.price_of(id))

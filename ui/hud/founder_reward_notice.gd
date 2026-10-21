@@ -49,7 +49,7 @@ func _tick() -> void:
 		_popup = RewardPopup.new()
 		_popup.hud = _hud
 		_popup.closed.connect(_show_item)
-		_hud.add_child(_popup)   # tam ekran, HUD'un en üstünde
+		_hud.get_node("Root").add_child(_popup)   # tam ekran; Root temayı taşır (CanvasLayer'ın altında plaka temasızdı)
 	_popup.show_rewards(_queue.pop_front())
 
 
@@ -58,6 +58,7 @@ func _is_calm() -> bool:
 	return _hud.router.top().is_empty() and not (tutorial and tutorial.is_running()) \
 		and not (_hud.crate_panel and _hud.crate_panel.visible) \
 		and not (_hud.restoration_result and _hud.restoration_result.visible) \
+		and not (_hud.level_up_screen and _hud.level_up_screen.visible) \
 		and get_tree().root.get_node_or_null("LoadingScreen") == null
 
 

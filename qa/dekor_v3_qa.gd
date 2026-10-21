@@ -67,7 +67,7 @@ func _run() -> void:
 	var pp: PlayerProgress = get_first_node_in_group("player_progress") as PlayerProgress
 	pp.load_state(30, 0, 500)
 	for entry: Dictionary in CarCatalog.all():
-		ownership.add_vehicle(entry["id"])   # garaj değeri → rütbe: bütün eşyalar açılsın
+		ownership.add_vehicle(entry["id"])   # dolu garaj; eşya kilidi seviyeden (yukarıda 30)
 	upgrades.apply_levels({GarageUpgradeManager.GARAGE_ID: 3})
 	economy.set_money(90_000_000)
 	await frames(30)
@@ -78,7 +78,7 @@ func _run() -> void:
 	for id: StringName in ROUND_A + ROUND_B + WALL_ITEMS:
 		if not DecorBuilder.has_model(id) or not decor.is_unlocked(id):
 			missing.append(id)
-	check(missing.is_empty(), "62 yeni eşyanın modeli var ve rütbe kilidi açık %s" % [missing])
+	check(missing.is_empty(), "62 yeni eşyanın modeli var ve seviye kilidi açık %s" % [missing])
 
 	# --- Zemin: 10 yeni desen, şerit şerit --------------------------------------------------
 	for k: int in NEW_PATTERNS.size():
@@ -152,7 +152,7 @@ func _run() -> void:
 		await frames(50)
 		await shot("06_tur_b_yakin_2.png")
 
-	# --- Düzenleme paleti: yeni kartlar rütbe / fiyat sırasıyla ------------------------------
+	# --- Düzenleme paleti: yeni kartlar seviye / fiyat sırasıyla ------------------------------
 	hud.router.open(&"garage_edit")
 	await frames(50)
 	var es: GarageEditScreen = hud.garage_edit_screen
@@ -166,9 +166,9 @@ func _run() -> void:
 	var order: Array[Dictionary] = GarageDecor.shop_order(GarageDecor.Kind.YARD)
 	var sorted: bool = true
 	for k: int in range(1, order.size()):
-		if int(order[k]["min_rank"]) < int(order[k - 1]["min_rank"]):
+		if int(order[k]["min_level"]) < int(order[k - 1]["min_level"]):
 			sorted = false
-	check(sorted, "palet rütbe sırasında (%d avlu eşyası)" % order.size())
+	check(sorted, "palet seviye sırasında (%d avlu eşyası)" % order.size())
 	print("SONUC: fails=%d" % _fails)
 	quit()
 

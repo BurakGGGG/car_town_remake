@@ -95,7 +95,7 @@ func _tiles() -> void:
 	check(decor.tile(Vector2i(1, 1)) == &"concrete_light", "geri al: silinen karo geri geldi")
 	var locked: Dictionary = decor.paint_tiles([Vector2i(5, 5)] as Array[Vector2i], &"carbon")
 	check((locked["changes"] as Array).is_empty() and decor.tile(Vector2i(5, 5)) == &"",
-		"rütbesi yetmeyen desen boyanmaz")
+		"seviyesi yetmeyen desen boyanmaz")
 	economy.set_money(price * 2 + 10)
 	var short: Dictionary = decor.paint_tiles([Vector2i(6, 1), Vector2i(7, 1), Vector2i(8, 1)] as Array[Vector2i], &"concrete_light")
 	check((short["changes"] as Array).size() == 2 and bool(short["short"]) and economy.money == 10,
@@ -175,7 +175,7 @@ func _walls() -> void:
 	decor.revert_walls(r3["changes"], &"wall_door", int(r3["bought"]), int(r3["spent"]))
 	check(decor.wall_at("x:5:3")["piece"] == &"wall_plain" and decor.owned_of(&"wall_door") == 0 and economy.money == money,
 		"geri al: kapı kalktı, satın alınan kopya iade edildi")
-	check(decor.build_walls(["x:7:3"] as Array[String], &"wall_glass").is_empty(), "rütbesi yetmeyen parça örülmez")
+	check(decor.build_walls(["x:7:3"] as Array[String], &"wall_glass").is_empty(), "seviyesi yetmeyen parça örülmez")
 	economy.set_money(10)
 	check(decor.build_walls(["x:7:3", "x:8:3"] as Array[String], &"wall_plain").is_empty() and decor.wall_count() == 3,
 		"para yetmezse hiçbiri örülmez")
@@ -404,7 +404,7 @@ func _hold_to_move() -> void:
 
 
 ## Dekorasyon v3: katalog ~1,5 kat; her yeni desen / kaplama gerçekten çiziliyor, her eşyanın modeli var,
-## desen sayısı zemin shader'ının dizilerine sığıyor, palet rütbe → fiyat sırasında.
+## desen sayısı zemin shader'ının dizilerine sığıyor, palet seviye → fiyat sırasında.
 func _catalog_v3() -> void:
 	print("== 10) DEKORASYON v3 KATALOĞU ==")
 	var active: int = GarageDecor.all().size()   # emekli kayıtlar all()'da yok
@@ -454,11 +454,11 @@ func _catalog_v3() -> void:
 		for k: int in range(1, order.size()):
 			var a: Dictionary = order[k - 1]
 			var b: Dictionary = order[k]
-			if int(a["min_rank"]) > int(b["min_rank"]) \
-					or (int(a["min_rank"]) == int(b["min_rank"]) and int(a["price"]) > int(b["price"])):
+			if int(a["min_level"]) > int(b["min_level"]) \
+					or (int(a["min_level"]) == int(b["min_level"]) and int(a["price"]) > int(b["price"])):
 				unsorted.append(kind)
 				break
-	check(unsorted.is_empty(), "palet kartları rütbe → fiyat sırasında %s" % [unsorted])
+	check(unsorted.is_empty(), "palet kartları seviye → fiyat sırasında %s" % [unsorted])
 
 
 func _mouse(at: Vector2, pressed: bool) -> void:

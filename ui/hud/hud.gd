@@ -191,6 +191,8 @@ var gem_store_screen: GemStoreScreen
 ## Dünyadaki teslimat kasasının AÇ / sonuç plakası.
 var crate_panel: CratePanel
 var restoration_result: RestorationResult
+## SEVİYE ATLADIN ekranı: seviye atlayınca oyun sakinleşince büyük açılır (açılan müşteri / depo / kasa / dekor).
+var level_up_screen: LevelUpScreen
 ## Garajdaki eşyaya basılı tutmak düzenleyiciyi o eşya tutulmuş açar.
 var decor_hold: DecorHoldGesture
 ## SERGİ PLAKASI: ana garajda sergilenen araca dokununca (docs/GARAJLAR_TASARIM.md §10).
@@ -560,7 +562,9 @@ func _connect_gameplay() -> void:
 		_player_progress.level_up.connect(func(_l: int) -> void: _refresh_repair_panel(false))
 		_player_progress.gems_changed.connect(set_gems)
 		_player_progress.xp_changed.connect(_on_xp_changed)
-		_player_progress.level_reward.connect(_on_level_reward)
+		level_up_screen = LevelUpScreen.new(self)
+		get_node("Root").add_child(level_up_screen)   # Root temayı taşır (krem plaka, konturlu yazı)
+		_player_progress.level_reward.connect(level_up_screen.add_level)
 		set_gems(_player_progress.gems)
 		_on_xp_changed(_player_progress.level, _player_progress.xp, _player_progress.xp_to_next())
 	_upgrades = get_tree().get_first_node_in_group("garage_upgrades") as GarageUpgradeManager
@@ -1114,7 +1118,6 @@ func _on_notice_input(event: InputEvent) -> void:
 	action.call()
 
 
-## Seviye atlandı: para ödülü ve (varsa) açılan içerik plakada duyurulur.
 ## Yarış ödülü kasaya girdi: kısa bildirim plakası (para plakası zaten değişimi gösterir).
 func _on_race_reward(won: bool, money: int, xp: int) -> void:
 	var line: String = Loc.t("YARIŞ KAZANILDI") if won else Loc.t("YARIŞ KAYBEDİLDİ")
@@ -1125,14 +1128,6 @@ func _on_race_reward(won: bool, money: int, xp: int) -> void:
 		parts.append(Loc.t("+%d XP") % xp)
 	if not parts.is_empty():
 		line += "\n%s" % "   ".join(parts)
-	_show_notice(line, HudPalette.COIN_DARK, 2.2)
-
-
-func _on_level_reward(new_level: int, money: int, text: String) -> void:
-	var line: String = Loc.t("SEVİYE %d   +%s ₺   +%d GEM") % [new_level, format_thousands(money),
-		int(PlayerProgress.reward_for(new_level)["gems"])]
-	if text != "":
-		line += "\n%s" % text
 	_show_notice(line, HudPalette.COIN_DARK, 2.2)
 
 

@@ -623,6 +623,23 @@ func _run() -> void:
 		await wait(1.4)
 		await _report("gorevler_odul", popup)
 		popup.hide()
+	# SEVİYE ATLADIN (LevelUpScreen): en kalabalık aralık 11 → 14 (müşteri, depo, kasa, kademe, dekor = 5 kart), tek seviye
+	# 12, çerçeveli 3 → 5 ve ilk seviye atlaması 1 → 2 (yalnız dekor)
+	for entry: Array in [["seviye_atladi", 11, 14], ["seviye_atladi_12", 11, 12], ["seviye_atladi_5", 3, 5],
+			["seviye_atladi_2", 1, 2]]:
+		if not _want(String(entry[0])):
+			continue
+		_router.close_all()
+		_hud.crate_panel.hide_panel()
+		_hud.restoration_result.hide_panel()
+		await wait(0.35)
+		var level_screen: LevelUpScreen = _hud.level_up_screen
+		for level: int in range(int(entry[1]) + 1, int(entry[2]) + 1):
+			level_screen.add_level(level, int(PlayerProgress.reward_for(level)["money"]))
+		await wait(2.8)
+		await _report(String(entry[0]), level_screen)
+		level_screen.close()
+		await wait(0.4)
 	await _screen(&"mastery", "ustalik")
 	await _screen(&"garage_value", "garaj_degeri")
 	await _screen(&"profile", "profil")

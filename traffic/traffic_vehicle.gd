@@ -649,6 +649,11 @@ func bubble_visible() -> bool:
 
 
 ## Hedeflenen / durulan yol kenarı bekleme noktası (müşteri değilse null).
+## Kaldırımdan şeride çıkıyor mu (give_up sonrası): kipi TRAFFIC olsa da araç hâlâ kaldırımdadır.
+func is_merging() -> bool:
+	return _merging
+
+
 func wait_spot() -> Node3D:
 	return _spot
 
