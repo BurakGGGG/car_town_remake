@@ -75,6 +75,9 @@ var muted: bool = false
 var hud_size: int = HUD_DEFAULT
 ## Dil: "" = cihaz dili (destekleniyorsa), yoksa Loc.LANGUAGES'tan biri.
 var language: String = ""
+## GİZLİLİK (Telemetry): adsız kullanım istatistikleri (Firebase Analytics) ve hata / çökme raporları (Crashlytics).
+var analytics_enabled: bool = true
+var crash_reports_enabled: bool = true
 
 
 func _ready() -> void:
@@ -136,6 +139,16 @@ func set_sfx_volume(value: float) -> void:
 
 func set_muted(value: bool) -> void:
 	muted = value
+	_changed()
+
+
+func set_analytics_enabled(value: bool) -> void:
+	analytics_enabled = value
+	_changed()
+
+
+func set_crash_reports_enabled(value: bool) -> void:
+	crash_reports_enabled = value
 	_changed()
 
 
@@ -251,6 +264,8 @@ func save_settings() -> void:
 	cfg.set_value("audio", "version", AUDIO_VERSION)
 	cfg.set_value("general", "language", language)
 	cfg.set_value("interface", "hud_size", hud_size)
+	cfg.set_value("privacy", "analytics", analytics_enabled)
+	cfg.set_value("privacy", "crash_reports", crash_reports_enabled)
 	cfg.save(PATH)
 
 
@@ -272,3 +287,5 @@ func load_settings() -> void:
 	muted = bool(cfg.get_value("audio", "muted", false))
 	language = String(cfg.get_value("general", "language", ""))
 	hud_size = clampi(int(cfg.get_value("interface", "hud_size", HUD_DEFAULT)), 0, HUD_SCALES.size() - 1)
+	analytics_enabled = bool(cfg.get_value("privacy", "analytics", true))
+	crash_reports_enabled = bool(cfg.get_value("privacy", "crash_reports", true))

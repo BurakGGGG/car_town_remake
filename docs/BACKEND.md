@@ -86,9 +86,27 @@ Hesap silinince `moderation` ve `admin_notes` de silinir (account_cleanup.js).
 | **Canlı etkinlik** | `config/app.event {id, title, text, money_mult, xp_mult, start, end}` | tamir ödülü iş BAŞLARKEN, yarış ödülü `reward_for`'da çarpılır (1–3); üst ortada geri sayımlı tabela (`EventBanner`, kullanıcı kararı) |
 | **Hedefli gönderim** | panel `players` özetinden süzer: seviye, son oynama, oynamama süresi, sürüm kodu, dil (`stats.lang`) | posta / telefon jetonu (misafir süzülemez) |
 | **İstatistik** | `dailyStats` her gece 03:10 → `stats_daily/{gün}` (hesaplı oyuncu, aktif 1/7/30 gün, bildirim, yeni hesap); panel anlık sayıları da hesaplar | — |
+| **Yarış öğrenmesi** (2026-10-22) | oyun `race_log/{uid}_{UTC gün}` = `{uid, day, events (JSON), n, v, at}` yazar (yalnız sahibi; kimse okumaz; son 2 gün); `raceLearning` (learning.js) her gece 03:30 → `race_learning_daily/{gün}` + son 30 günün toplamı `config/race_learning.table` (MERGE); panel aynı belgeye `off / window / weight` yazar; hesap silinince `race_log` de silinir | `RaceLearning` kolu seçer, yarış sonrası kalışı ölçer, günlüğü yükler; tabloyu `AppConfig` okur. Tasarım: `docs/KOSU_ESLESTIRME.md` |
 
 **Sıra uyarısı:** `stats.lang` kuralı yayında değilken bu alanı yazan yeni sürüm bulut kaydını yazamaz → yeni AAB'den
 ÖNCE kurallar deploy edilmeli.
+
+## Satın alma doğrulaması — `iapVerify`, `iap/{özet}`
+
+Oyun gemi vermeden önce satın almayı Play'e doğrulatır; ayrıntı ve kurulum: `docs/ELMAS_EKONOMISI.md`
+"Sunucu doğrulaması". Kayıt 1 yıl (`cleanupExpired`), hesap silinince hemen (`accountCleanup`).
+
+## Analitik + çökme raporu (`Telemetry`)
+
+`gameplay/telemetry/telemetry.gd`: Firebase Analytics (oyun olayları + `screen_view`) ve Crashlytics (Java / motor
+çökmeleri kendiliğinden, GDScript hataları `Logger` ile ölümcül olmayan kayıt). Kütüphaneler Gradle bağımlılığı
+(`addons/GodotFirebaseAndroid/export_plugin.gd`, BoM 33.13.0 sürümleri + Crashlytics Gradle eklentisi 3.0.3),
+bağlantı JavaClassWrapper ile. Olaylar: `repair_collect`, `repair_gem_finish`, `customer_left`, `crate_open`,
+`race_finish`, `level_up`, `mod_install`, `vehicle_buy`, `decor_buy`, `mastery_up`, `restoration_complete`,
+`iap_result`, `ad_finished`, `tutorial_complete`, `script_error`, `screen_view`; oyuncu özellikleri `lang`, `level`.
+Rıza: AYARLAR → HESAP VE GİZLİLİK → KULLANIM İSTATİSTİKLERİ / HATA RAPORLARI (varsayılan açık, Firebase'in toplama
+anahtarına yazılır). Reklam kimliği toplanmaz, reklam onay sinyalleri reddedilmiş başlar. UID yalnız Crashlytics'e
+(destek için), Analytics hesaba bağlanmaz. Test: `tools/run_tests.sh telemetry_test`.
 
 ## Yönetim paneli
 
@@ -102,11 +120,11 @@ Hesap silinince `moderation` ve `admin_notes` de silinir (account_cleanup.js).
 | Kurallar (emülatör) | `firebase/` içinden `firebase emulators:exec --only firestore --project demo-cartown "node rules_test/rules_test.mjs"` |
 | Functions (birim / emülatör) | `firebase/functions`: `npm test`, `npm run e2e` |
 | Panel | `firebase/admin`: `npm test`, `npm run e2e` |
-| Oyun | `tools/run_tests.sh app_config_test mail_test moderation_test login_flow_test social_test race_news_test settings_test gem_exchange_test` |
+| Oyun | `tools/run_tests.sh app_config_test mail_test moderation_test login_flow_test social_test race_news_test settings_test gem_exchange_test race_learning_test purchase_test telemetry_test` |
 
 ## Açık
 
-- **Satın alma makbuzunun sunucuda doğrulanması** (Play Developer API + hizmet hesabı, Play Console'da kullanıcı
-  bağlar) — kullanıcı kararıyla yayından sonra.
+- İade edilen siparişlerin (voided purchases) gemi geri alması — doğrulama var, iade takibi yok.
+- AB (AEA) için ilk açılışta analitik onayı sorulmuyor (varsayılan açık, AYARLAR'dan kapatılır) — gerekirse onay penceresi.
 - Süresi dolup alınmamış posta belgeleri (hiç açılmayan hesaplar) temizlenmiyor; gerekirse `cleanupExpired`'a
   koleksiyon grubu dizini ile eklenir.

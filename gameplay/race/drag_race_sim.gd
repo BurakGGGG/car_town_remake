@@ -59,8 +59,13 @@ const REACTION_PERFECT: float = 0.15
 const REACTION_WORST: float = 0.55
 ## Stat kaynaklı sapma (± oran) — yalnızca canlılık; rng verilmezse 0.
 const VARIANCE: float = 0.012
-## Başsız benzetim adımı (sn). Sabit adım = deterministik sonuç.
+## Benzetim adımı (sn). Pist de başsız hesaplar da fiziği YALNIZCA bu adımla ilerletir: sonuç kare hızından
+## bağımsızdır ve koşu kaydı (Recording) birebir tekrar edilir (docs/KOSU_ESLESTIRME.md).
 const STEP: float = 1.0 / 120.0
+## Bir koşu en çok bu kadar adım sürer (60 sn): tekrar / yapay zekâ döngülerinin güvenlik sınırı.
+const MAX_STEPS: int = 7200
+## Koşu kaydının biçimi ya da adım mantığı değişince artırılır: eski sürümün kayıtları tekrar edilmez.
+const SIM_VERSION: int = 1
 
 ## TEMPO: tüm fiziği tek katsayıyla hızlandırır. İvmeler (motor kuvveti, çekiş limiti, yuvarlanma)
 ## TEMPO² ile, vites boyları TEMPO ile çarpılır; hava direnci hız² ile zaten uyar. Denklemler
@@ -379,6 +384,8 @@ class Runner:
 	var gear: int = 0
 	var speed: float = 0.0            # m/sn
 	var distance: float = 0.0         # m
+	## Bir önceki adımın sonundaki mesafe: ekran iki sabit adımın arasını bununla ara değerler (çizim içindir).
+	var prev_distance: float = 0.0
 	var rpm: float = 0.0              # GERÇEK motor devri (d/dk)
 	var running: bool = false
 	var time: float = 0.0             # kalkıştan beri
@@ -406,7 +413,8 @@ class Runner:
 	var false_start: bool = false
 
 	var _shift_left: float = 0.0      # kalan geçiş süresi
-	var _jitter: float = 1.0          # koşuya özgü milimetrik sapma
+	## Koşuya özgü milimetrik sapma (güç çarpanı): koşu kaydında saklanır, tekrarda aynen kurulur.
+	var jitter: float = 1.0
 	## Gün formu güç çarpanı (bkz. DragRaceSim.Form): yalnızca rakip AI'de 1'den farklı.
 	var power: float = 1.0
 	var _bog: float = 1.0             # kalkış devri düşükse debriyaj kayarken tork payı
@@ -421,6 +429,7 @@ class Runner:
 		gear = 0
 		speed = 0.0
 		distance = 0.0
+		prev_distance = 0.0
 		rpm = spec.idle_rpm
 		running = false
 		time = 0.0
@@ -439,14 +448,14 @@ class Runner:
 		rpm_sum = 0.0
 		rpm_samples = 0
 		_shift_left = 0.0
-		_jitter = 1.0
+		jitter = 1.0
 		power = 1.0
 		_bog = 1.0
 		launch_rpm = spec.launch_rpm
 		launch_quality = Shift.PERFECT
 		if rng:
 			# Canlılık: aynı araç her koşuda milimetrik farklı çeker (sonucu belirlemez).
-			_jitter = 1.0 + rng.randf_range(-DragRaceSim.VARIANCE, DragRaceSim.VARIANCE)
+			jitter = 1.0 + rng.randf_range(-DragRaceSim.VARIANCE, DragRaceSim.VARIANCE)
 
 	func gear_count() -> int:
 		return spec.gear_count()
@@ -523,8 +532,9 @@ class Runner:
 		_shift_left = float(DragRaceSim.SHIFT_TIME[quality]) * spec.shift_time_scale
 		return quality
 
-	## Bir fizik adımı. `race_time` yarış saatidir (bitiş anını kaydetmek için).
+	## Bir fizik adımı. `race_time` yarış saatidir: adımın SONUNA ait (bitiş anını kaydetmek için).
 	func step(delta: float, race_time: float) -> void:
+		prev_distance = distance
 		if not running or finish_time >= 0.0 or delta <= 0.0:
 			return
 		time += delta
@@ -563,7 +573,7 @@ class Runner:
 		# 3) Kuvvetler
 		var force: float = 0.0
 		if driving:
-			force = spec.force_at(rpm, gear) * _jitter * power
+			force = spec.force_at(rpm, gear) * jitter * power
 			if clutch > 0.0:
 				force *= _bog
 			# Çekiş limiti: aşılırsa patinaj, fazlası boşa gider.
@@ -592,8 +602,12 @@ class Runner:
 		rpm_sum += rpm
 		rpm_samples += 1
 		if distance >= DragRaceSim.DISTANCE:
+			# Çizgi adımın İÇİNDE geçildi: an, adımdaki yol oranıyla bulunur. Eskiden adımın sonu yazılıyordu ve
+			# süre adım boyuna yuvarlanıyordu (60 FPS'te 16,7 ms — iki yakın koşuyu kare hızı ayırıyordu).
+			var covered: float = distance - prev_distance
+			var part: float = (DragRaceSim.DISTANCE - prev_distance) / covered if covered > 0.0 else 1.0
+			finish_time = race_time - delta * (1.0 - clampf(part, 0.0, 1.0))
 			distance = DragRaceSim.DISTANCE
-			finish_time = race_time
 
 	## Kadran oranı (0-1): KENDİ optimum vites devri yeşil dilime denk gelecek şekilde eşlenir.
 	func gauge() -> float:
@@ -654,6 +668,137 @@ class Run:
 		run.top_speed = runner.speed_kmh()
 		run.shift_log = runner.shift_log
 		return run
+
+
+## KOŞU KAYDI (docs/KOSU_ESLESTIRME.md): bir koşunun GİRDİLERİ — kalkış ve vitesler, GO'dan sonra kaçıncı sabit adım
+## TAMAMLANINCA yapıldıklarıyla. Fizik sabit adımla ilerlediği için aynı girdiler aynı koşuyu verir: kayıt başsız
+## (`DragRaceSim.replay`) ya da pistte rakip olarak birebir tekrar edilir. Süre bilgi içindir; asıl kaynak girdilerdir.
+## Ondalıklı alanlar tamsayıdan türetilir (sapma / güç milyonda bir, devir tam sayı): JSON / Firestore gidiş-dönüşünde
+## tek bit bile değişmesin.
+class Recording:
+	## play() dönüşleri (vites atıldıysa Shift.* kalitesi döner).
+	const IDLE: int = -1
+	const LAUNCHED: int = -2
+
+	var version: int = DragRaceSim.SIM_VERSION
+	var vehicle_id: StringName = &""
+	## Koşu anındaki performans modifiyeleri (PerformanceMods.normalized; boş = fabrika).
+	var build: Dictionary = {}
+	var jitter: float = 1.0
+	## Gün formu gücü: yalnızca yapay zekâ koşularında 1'den farklı.
+	var power: float = 1.0
+	## Kalkıştan önce tamamlanan adım sayısı (-1: araç hiç kalkmadı).
+	var launch_step: int = -1
+	var launch_rpm: float = 0.0
+	## Her başarılı vitesten önce tamamlanan adım sayısı (artan sırada).
+	var shift_steps: PackedInt32Array = PackedInt32Array()
+	var false_start: bool = false
+	## Koşunun süresi (sn; -1 = bitmedi) — bilgi; tekrar eden taraf kendisi hesaplar.
+	var time: float = -1.0
+	## Koşunun yapıldığı an (unix sn; 0 = bilinmiyor): oyuncunun son koşuları bununla sıralanır.
+	var at: int = 0
+
+	## Yeni koşunun kaydı: sapma burada çekilir, kalkış devri aracın optimumudur (oyuncu devir ayarlamaz).
+	static func begin(id: StringName, mods: Dictionary, rng: RandomNumberGenerator) -> Recording:
+		var recording: Recording = Recording.new()
+		recording.vehicle_id = id
+		recording.build = PerformanceMods.normalized(mods)
+		if rng:
+			recording.jitter = unit(roundi(rng.randf_range(-DragRaceSim.VARIANCE, DragRaceSim.VARIANCE) * 1000000.0))
+		recording.launch_rpm = roundf(recording.spec().launch_rpm)
+		return recording
+
+	## 1 + milyonda `ppm` (kayıttaki tamsayıdan ondalığa; her cihazda aynı sonuç).
+	static func unit(ppm_value: int) -> float:
+		return 1.0 + float(ppm_value) / 1000000.0
+
+	static func ppm(value: float) -> int:
+		return roundi((value - 1.0) * 1000000.0)
+
+	func spec() -> EngineSpec:
+		return PerformanceMods.spec_with(vehicle_id, build)
+
+	## Kaydın künyesiyle (modifiyeli) kurulmuş, henüz kalkmamış koşucu.
+	func make_runner() -> Runner:
+		var runner: Runner = Runner.new()
+		runner.setup_spec(spec(), null)
+		runner.jitter = jitter
+		runner.power = power
+		return runner
+
+	## `steps` adım tamamlanmışken kaydın o ana düşen girdisini uygular. Dönen: IDLE, LAUNCHED ya da vites kalitesi.
+	func play(runner: Runner, steps: int) -> int:
+		if not runner.running:
+			if steps != launch_step:
+				return IDLE
+			runner.rpm = launch_rpm
+			runner.reaction = float(steps) * DragRaceSim.STEP
+			runner.false_start = false_start
+			runner.launch()
+			return LAUNCHED
+		if not shift_steps.has(steps):
+			return IDLE
+		return runner.shift()
+
+	## Canlı koşucunun kalkışını kaydeder (`steps`: kalkıştan önce tamamlanan adım).
+	func mark_launch(runner: Runner, steps: int) -> void:
+		launch_step = steps
+		launch_rpm = runner.launch_rpm
+		false_start = runner.false_start
+
+	func mark_shift(steps: int) -> void:
+		shift_steps.append(steps)
+
+	## Bir OYUNCUNUN koşusu olabilir mi: gün formu gücü yok, sapma ±VARIANCE içinde, kalkış devri aracın optimumu
+	## (oyuncu devir ayarlamaz — Recording.begin). Arkadaştan gelen kayıt yalnızca böyleyse rakip olur: açık garaj
+	## oyuncunun kendi yazdığı belgedir, elle yazılmış kayıt (güç +%50, uydurma devir) başkasının pistine gitmesin.
+	func is_player_run() -> bool:
+		return power == 1.0 and absi(ppm(jitter)) <= roundi(DragRaceSim.VARIANCE * 1000000.0) \
+			and launch_rpm == roundf(spec().launch_rpm)
+
+	func to_dict() -> Dictionary:
+		var mods: Dictionary = {}
+		for key: Variant in build:
+			mods[String(key)] = build[key]
+		return {"v": version, "car": String(vehicle_id), "b": mods, "j": ppm(jitter), "p": ppm(power),
+			"l": launch_step, "lr": roundi(launch_rpm), "s": Array(shift_steps), "f": false_start,
+			"t": snappedf(time, 0.0001), "at": at}
+
+	## Kayıttan (bulut / dosya) okur; bozuk, eski sürüm ya da bilinmeyen araçsa null.
+	static func from_dict(data: Dictionary) -> Recording:
+		if SaveSafe.i(data.get("v", 0)) != DragRaceSim.SIM_VERSION:
+			return null
+		var id: StringName = StringName(SaveSafe.s(data.get("car", "")))
+		if id == &"" or CarCatalog.get_entry(id).is_empty():
+			return null
+		var recording: Recording = Recording.new()
+		recording.vehicle_id = id
+		recording.build = PerformanceMods.normalized(data.get("b", {}) if data.get("b") is Dictionary else {})
+		var jitter_ppm: int = SaveSafe.i(data.get("j", 0))
+		var power_ppm: int = SaveSafe.i(data.get("p", 0))
+		if absi(jitter_ppm) > 100000 or absi(power_ppm) > 500000:
+			return null
+		recording.jitter = unit(jitter_ppm)
+		recording.power = unit(power_ppm)
+		recording.launch_step = SaveSafe.i(data.get("l", -1))
+		recording.launch_rpm = float(SaveSafe.i(data.get("lr", 0)))
+		if recording.launch_step < -1 or recording.launch_step >= DragRaceSim.MAX_STEPS \
+				or recording.launch_rpm < 0.0 or recording.launch_rpm > 30000.0:
+			return null
+		var raw_steps: Variant = data.get("s", [])
+		if not raw_steps is Array or (raw_steps as Array).size() > DragRaceSim.SHIFTS:
+			return null
+		var previous: int = recording.launch_step
+		for raw: Variant in raw_steps:
+			var value: int = SaveSafe.i(raw)
+			if value <= previous or value >= DragRaceSim.MAX_STEPS:
+				return null
+			recording.shift_steps.append(value)
+			previous = value
+		recording.false_start = SaveSafe.b(data.get("f", false))
+		recording.time = SaveSafe.f(data.get("t", -1.0))
+		recording.at = maxi(SaveSafe.i(data.get("at", 0)), 0)
+		return recording
 
 
 ## Motor devrini KADRAN yayına eşler. Parçalı: rölanti → yayın başı, bu VİTESİN optimum devri →
@@ -786,13 +931,58 @@ static func clear_cache() -> void:
 	PerformanceMods.clear_cache()
 
 
-## Rakibin koşusu (başsız): ekrandaki rakiple AYNI kural — sınıf becerisi + o günün formu.
-## (Eskiden burada `skill_of` kullanılıyordu, ekrandaki rakip ise `class_skill`: testler ve dengeleme
-## araçları oyundakinden farklı bir rakibi ölçüyordu.)
+## Rakibin koşusu (başsız): ekrandaki rakiple AYNI kural ve AYNI yol — sınıf becerisi + o günün formu, sabit adımla
+## sürülür (`ai_recording`). (Eskiden burada `skill_of` kullanılıyordu, ekrandaki rakip ise `class_skill`: testler ve
+## dengeleme araçları oyundakinden farklı bir rakibi ölçüyordu.)
 static func run_rival(vehicle_id: StringName, rng: RandomNumberGenerator) -> Run:
-	var form: Form = roll_form(vehicle_id, rng)
-	return drive(vehicle_id, rival_reaction(form.skill, rng), form.launch_skill, form.skill, rng,
-		rival_shift_plan(spec_of(vehicle_id), form, rng), form.power)
+	var recording: Recording = Recording.begin(vehicle_id, {}, rng)
+	var runner: Runner = _drive_ai(recording, roll_form(vehicle_id, rng), rng)
+	return Run.of(runner, runner.reaction)
+
+
+## RAKİP YAPAY ZEKÂSI, KAYIT olarak: koşu başsız sürülür, girdileri kaydedilir; pistte bu kayıt oynatılır (ekrandaki
+## rakip ile başsız ölçüm birebir aynıdır, süre koşudan ÖNCE bilinir). `mods`: arkadaşın aracıysa onun modifiyeleri.
+static func ai_recording(vehicle_id: StringName, mods: Dictionary, form: Form,
+		rng: RandomNumberGenerator) -> Recording:
+	var recording: Recording = Recording.begin(vehicle_id, mods, rng)
+	_drive_ai(recording, form, rng)
+	return recording
+
+
+## Kaydı yapay zekâyla doldurur: formdaki güç, kalkış devri, tepki ve vites planı. Bitmiş koşucuyu döndürür.
+static func _drive_ai(recording: Recording, form: Form, rng: RandomNumberGenerator) -> Runner:
+	recording.power = Recording.unit(Recording.ppm(form.power))
+	var runner: Runner = recording.make_runner()
+	recording.launch_rpm = roundf(ai_launch_rpm(runner.spec, form.launch_skill, rng))
+	var plan: PackedFloat32Array = rival_shift_plan(runner.spec, form, rng)
+	recording.launch_step = ceili(rival_reaction(form.skill, rng) / STEP)
+	var target: float = plan[0] if not plan.is_empty() else INF
+	var steps: int = 0
+	while runner.finish_time < 0.0 and steps < MAX_STEPS:
+		# Karar, `steps` adım tamamlanmışken verilir — tekrarda Recording.play da tam bu anda uygular.
+		if not runner.running:
+			recording.play(runner, steps)
+		elif runner.gear < runner.top_gear() and not runner.shifting and runner.rpm >= target \
+				and runner.shift() >= 0:
+			recording.mark_shift(steps)
+			target = plan[runner.gear] if runner.gear < plan.size() else INF
+		steps += 1
+		runner.step(STEP, float(steps) * STEP)
+	recording.time = runner.finish_time
+	return runner
+
+
+## Kaydı başsız tekrar eder (sabit adım, pistteki sırayla). Bitmiş koşucu döner; araç hiç kalkmadıysa bitmemiş.
+static func replay(recording: Recording) -> Runner:
+	var runner: Runner = recording.make_runner()
+	if recording.launch_step < 0:
+		return runner
+	var steps: int = 0
+	while runner.finish_time < 0.0 and steps < MAX_STEPS:
+		recording.play(runner, steps)
+		steps += 1
+		runner.step(STEP, float(steps) * STEP)
+	return runner
 
 
 ## Rakibin tepki süresi: beceriden, ±0,06 sn dağınıklıkla.

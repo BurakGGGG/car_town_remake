@@ -5,8 +5,8 @@ extends Node
 ## Play'den bir "satın alma" olarak gelir (FounderReward): satılmaz, aynı sözleşmeyle verilip tüketilir.
 ##
 ## ÖDEME SÖZLEŞMESİ (sıra bozulmaz):
-##   Play "PURCHASED" der → gem eklenir + defterine yazılır → kayıt HEMEN diske yazılır → ancak o zaman
-##   Play'e "tüketildi" denir. Herhangi bir adımda uygulama ölürse:
+##   Play "PURCHASED" der → SUNUCU DOĞRULAR (iapVerify) → gem eklenir + defterine yazılır → kayıt HEMEN diske
+##   yazılır → ancak o zaman Play'e "tüketildi" denir. Herhangi bir adımda uygulama ölürse:
 ##     * gem diske yazılmadan öldüyse: satın alma tüketilmemiştir, açılışta query_purchases onu yeniden
 ##       getirir ve gem o zaman verilir;
 ##     * yazıldıktan sonra öldüyse: defterde "tüketilmedi" işaretlidir, açılışta YALNIZCA tüketilir.
@@ -17,23 +17,37 @@ extends Node
 ## hesaba geçildi) SaveManager.apply_snapshot → carry_over(): yerelde ödenmiş ama gelen kayıtta olmayan
 ## satın almaların gemi yeniden eklenir; parayla alınan gem kaybolmaz.
 ##
-## SUNUCU DOĞRULAMASI YOK (ilk sürüm): makbuz imzası denetlenmez. Kayıt cihazdadır, yani hileye karşı
-## duvar zaten alçaktır; Cloud Function ile doğrulama sonraki adım (docs/ELMAS_EKONOMISI.md).
+## SUNUCU DOĞRULAMASI (2026-10-22): gem vermeden önce satın alma firebase/functions iapVerify'a sorulur; o da Google
+## Play Developer API'ye sorar (sahte satın alma araçları burada takılır). Sonuç:
+##   ok → gem verilir · pending → bekler · canceled / consumed / invalid → gem YOK, tüketilmez (&"rejected")
+##   sunucuya ulaşılamadı → gem YOK, tüketilmez, sonra yeniden sorulur (&"verifying"); Play tüketilmeyen satın almayı
+##   3 gün içinde iade eder, oyuncu parasını kaybetmez. Sahte Play (MockBillingClient) doğrulamasız geçer.
 
 ## Ürün bilgisi / bağlantı durumu değişti (mağaza ekranı kendini tazelesin).
 signal products_changed
 ## Bir satın alma akışı bitti. status: &"granted" · &"canceled" · &"pending" · &"error"
+## · &"verifying" (sunucuya ulaşılamadı, sonra yeniden denenecek) · &"rejected" (Play satın almayı doğrulamadı)
 signal purchase_finished(product_id: StringName, status: StringName)
 ## Gem verildi (satın alma ya da yeniden başlatmada tamamlanan ödeme).
 signal gems_purchased(product_id: StringName, gems: int)
 ## Ön kayıt ödülü hesaba geçti (RewardPopup özeti: FounderReward.grant). Oyun içinde duyurulmalı (Play şartı).
 signal founder_reward_granted(summary: Dictionary)
+## İADE (2026-10-23): Play'de iade / ters ibraz edilen satın almanın gemi düşüldü. taken: düşülen, missing: bakiye
+## yetmediği için düşülemeyen (bakiye 0'ın altına inmez; sunucuda iap kaydı işaretli kalır, yönetim panelinden bakılır).
+signal refund_applied(product_id: StringName, taken: int, missing: int)
 
 ## Cihaz defteri: bu cihazda gem verilmiş satın almaların özetleri. Hesap değişince oyun kaydı sıfırlanır
 ## (SaveManager.new_game) ama Play'de tüketilmemiş kalan bir satın alma yeni oyuna İKİNCİ kez gem vermesin.
 const DEVICE_LEDGER_PATH: String = "user://purchases_device.json"
 ## Bağlantı hatasında yeniden deneme beklemeleri (sn) — sonsuz döngü yok.
 const RETRY_SEC: Array[float] = [15.0, 60.0, 180.0]
+## İADELER sunucudan (users/{uid}/refunds, functions/refunds.js) bu sıklıkla ve oturum açılınca okunur.
+const REFUND_POLL_SEC: float = 1800.0
+## Doğrulama sunucusu (callable Cloud Function, düz HTTP) ve bekleme süresi.
+const VERIFY_URL: String = CloudSaveManager.EMAIL_FUNCTIONS_URL + "iapVerify"
+const VERIFY_TIMEOUT: float = 20.0
+## Sunucuya ulaşılamayınca yeniden sorma beklemeleri (sn); açılışta ve oyuna dönünce de sorulur.
+const VERIFY_RETRY_SEC: Array[float] = [20.0, 60.0, 180.0, 600.0]
 
 var _client: BillingClient
 var _connected: bool = false
@@ -43,9 +57,21 @@ var _ledger: Dictionary = {}         # token özeti → {product, gems, time, or
 var _device: Dictionary = {}         # token özeti → true
 var _retry: int = 0
 var _retry_timer: Timer
+## Doğrulayıcı: func(product: StringName, token: String) -> Dictionary {status, quantity} (await edilir).
+## Testler use_verifier ile verir; boşsa sahte Play'de doğrudan "ok", gerçekte sunucu.
+var _verifier: Callable = Callable()
+var _verifying: Dictionary = {}      # token özeti → true (aynı satın alma iki yoldan aynı anda gelirse)
+var _rejected: Dictionary = {}       # token özeti → durum (bu oturumda sunucu reddetti: yeniden sorulmaz)
+var _verify_retry: int = 0
+var _verify_timer: Timer
+var _refund_timer: Timer
+var _refund_busy: bool = false
+var _refund_uid: String = ""
 
 ## Ödemesi bekleyen (PENDING) satın alma var mı? Mağaza bilgi satırı gösterir.
 var pending_payment: bool = false
+## Ödenmiş ama sunucuya ulaşılamadığı için henüz doğrulanamamış satın alma var mı?
+var awaiting_verification: bool = false
 
 
 func _ready() -> void:
@@ -54,6 +80,16 @@ func _ready() -> void:
 	_retry_timer.one_shot = true
 	_retry_timer.timeout.connect(_start_connection)
 	add_child(_retry_timer)
+	_verify_timer = Timer.new()
+	_verify_timer.one_shot = true
+	_verify_timer.timeout.connect(_requery)
+	add_child(_verify_timer)
+	_refund_timer = Timer.new()
+	_refund_timer.wait_time = REFUND_POLL_SEC
+	_refund_timer.timeout.connect(poll_refunds)
+	add_child(_refund_timer)
+	_refund_timer.start()
+	_connect_refunds.call_deferred()
 	_device = _read_device_ledger()
 	if _client == null:
 		_client = _pick_client()
@@ -75,6 +111,12 @@ func use_client(client: BillingClient) -> void:
 	_client = client
 
 
+## Test: doğrulayıcıyı elle ver. func(product, token) -> {status, quantity}; status: ok · pending · canceled ·
+## consumed · invalid · unavailable.
+func use_verifier(verifier: Callable) -> void:
+	_verifier = verifier
+
+
 func client() -> BillingClient:
 	return _client
 
@@ -89,8 +131,9 @@ static func _pick_client() -> BillingClient:
 
 func _notification(what: int) -> void:
 	# Oyuncu Play'den dönünce (bekleyen ödeme tamamlanmış olabilir) satın almalar yeniden sorulur.
-	if what == NOTIFICATION_APPLICATION_RESUMED and _connected:
-		_client.query_purchases(BillingClient.ProductType.INAPP)
+	if what == NOTIFICATION_APPLICATION_RESUMED:
+		_requery()
+		poll_refunds()
 
 
 # --- Dış API -------------------------------------------------------------------------------
@@ -167,6 +210,7 @@ func load_state(data: Dictionary) -> void:
 				"order": SaveSafe.s(entry.get("order", "")),
 				"token": SaveSafe.s(entry.get("token", "")),
 				"consumed": SaveSafe.b(entry.get("consumed", false)),
+				"refunded": SaveSafe.b(entry.get("refunded", false)),
 			}
 	products_changed.emit()
 	if _connected:
@@ -191,6 +235,8 @@ func carry_over(previous: Dictionary) -> int:
 			continue
 		var entry: Dictionary = ((raw as Dictionary)[key] as Dictionary).duplicate(true)
 		_ledger[key] = entry
+		if SaveSafe.b(entry.get("refunded", false)):
+			continue   # iade edilmiş satın alma: kayıt taşınır (ikinci kez düşülmesin), gemi geri verilmez
 		added += maxi(SaveSafe.i(entry.get("gems", 0)), 0)
 		if FounderReward.is_reward(StringName(String(entry.get("product", "")))):
 			FounderReward.grant(get_tree(), false)   # para + kurucu eşyası da geri gelsin (elması yukarıda)
@@ -255,35 +301,45 @@ func _on_purchases_query(response: Dictionary) -> void:
 	if int(response.get("response_code", -999)) != BillingClient.BillingResponseCode.OK:
 		return
 	var pending: bool = false
+	var unverified: bool = false
 	for p: Variant in response.get("purchases", []):
 		if p is Dictionary:
-			pending = _handle_purchase(p as Dictionary) == &"pending" or pending
+			var status: StringName = await _handle_purchase(p as Dictionary)
+			pending = status == &"pending" or pending
+			unverified = status == &"verifying" or unverified
 	pending_payment = pending
+	_set_awaiting(unverified)
 	_consume_leftovers()
 	products_changed.emit()
 
 
 func _on_purchase_updated(response: Dictionary) -> void:
 	var id: StringName = _busy_product
-	_busy_product = &""
 	var code: int = int(response.get("response_code", -999))
 	if code == BillingClient.BillingResponseCode.USER_CANCELED:
+		_busy_product = &""
 		purchase_finished.emit(id, &"canceled")
 	elif code != BillingClient.BillingResponseCode.OK:
+		_busy_product = &""
 		push_warning("PurchaseManager: satın alma başarısız (%d): %s" % [code, response.get("debug_message", "")])
 		purchase_finished.emit(id, &"error")
 	else:
+		# Pencere doğrulama bitene kadar "meşgul" kalır (kartta "…"): ikinci satın alma araya girmesin
 		for p: Variant in response.get("purchases", []):
 			if not (p is Dictionary):
 				continue
-			var status: StringName = _handle_purchase(p as Dictionary)
+			var status: StringName = await _handle_purchase(p as Dictionary)
 			if status == &"pending":
 				pending_payment = true
+			elif status == &"verifying":
+				_set_awaiting(true)
 			purchase_finished.emit(_product_of(p as Dictionary), status)
+		_busy_product = &""
 	products_changed.emit()
 
 
-## Tek satın almayı işler. Dönüş: &"granted" · &"pending" · &"error" (zaten verilmişse &"granted").
+## Tek satın almayı işler. Dönüş: &"granted" · &"pending" · &"error" · &"verifying" · &"rejected"
+## (zaten verilmişse &"granted").
 func _handle_purchase(p: Dictionary) -> StringName:
 	var token: String = String(p.get("purchase_token", ""))
 	if token.is_empty():
@@ -296,13 +352,43 @@ func _handle_purchase(p: Dictionary) -> StringName:
 		_client.consume_purchase(token)
 		return &"granted"
 	var product: StringName = _product_of(p)
-	if FounderReward.is_reward(product):
-		return _grant_founder(p, token, key)
-	var gems: int = GemProducts.gems_of(product) * maxi(int(p.get("quantity", 1)), 1)
-	if gems <= 0:
+	var founder: bool = FounderReward.is_reward(product)
+	if founder and was_bought(FounderReward.PRODUCT_ID):
+		_client.consume_purchase(token)   # ödül bu kayda zaten verildi (başka belirteçle gelse bile)
+		return &"granted"
+	if not founder and GemProducts.gems_of(product) <= 0:
 		# Bu sürümün tanımadığı ürün: TÜKETİLMEZ — tanıyan bir sürüm gemini verir.
 		push_error("PurchaseManager: tanınmayan ürün %s, gem verilmedi" % product)
 		return &"error"
+	if _rejected.has(key):
+		return &"rejected"
+	if _verifying.has(key):
+		return &"verifying"   # aynı satın alma başka yoldan (açılış sorgusu / güncelleme) şu an doğrulanıyor
+	_verifying[key] = true
+	var check: Dictionary = await _verify(product, token)
+	_verifying.erase(key)
+	if _ledger.has(key) or _device.has(key):
+		return &"granted"   # beklerken başka yol verdi
+	match String(check.get("status", "")):
+		"ok":
+			pass
+		"pending":
+			return &"pending"
+		"invalid" when founder:
+			# ÖN KAYIT ÖDÜLÜ ücretsizdir ve Play'in ödül belirteçlerini doğrulama API'sinin tanıyıp tanımadığı yayından
+			# önce denenemez: tanımazsa ödül yine verilir (sahtesi kayıt başına bir kez 100 gem kazandırır, kayıp küçük)
+			push_warning("PurchaseManager: ön kayıt ödülü Play'de doğrulanamadı, yine veriliyor")
+		"canceled", "consumed", "invalid":
+			push_warning("PurchaseManager: satın alma doğrulanmadı (%s): %s" % [product, check.get("status")])
+			_rejected[key] = String(check.get("status"))
+			return &"rejected"
+		_:
+			_schedule_verify_retry()
+			return &"verifying"
+	if founder:
+		return _grant_founder(p, token, key)
+	var quantity: int = maxi(SaveSafe.i(check.get("quantity", p.get("quantity", 1))), 1)
+	var gems: int = GemProducts.gems_of(product) * quantity
 	var progress: PlayerProgress = _progress()
 	if progress:
 		progress.add_gems(gems)
@@ -318,12 +404,9 @@ func _handle_purchase(p: Dictionary) -> StringName:
 	return &"granted"
 
 
-## ÖN KAYIT ÖDÜLÜ: para + elmas + kurucu eşyası verilir, sonra (kayıt yazılınca) tüketilir. Bir kayda bir kez:
-## defterde zaten varsa (başka bir belirteçle gelse bile) yalnızca tüketilir. Sipariş no'su boş gelebilir.
+## ÖN KAYIT ÖDÜLÜ: para + elmas + kurucu eşyası verilir, sonra (kayıt yazılınca) tüketilir. Bir kayda bir kez
+## (_handle_purchase defterde varsa yalnızca tüketir). Sipariş no'su boş gelebilir.
 func _grant_founder(p: Dictionary, token: String, key: String) -> StringName:
-	if was_bought(FounderReward.PRODUCT_ID):
-		_client.consume_purchase(token)
-		return &"granted"
 	var summary: Dictionary = FounderReward.grant(get_tree())
 	_ledger[key] = {"product": String(FounderReward.PRODUCT_ID), "gems": FounderReward.GEMS,
 		"time": int(Time.get_unix_time_from_system()), "order": String(p.get("order_id", "")), "token": token,
@@ -356,6 +439,120 @@ func _consume_leftovers() -> void:
 	for entry: Dictionary in _ledger.values():
 		if not bool(entry["consumed"]) and not String(entry["token"]).is_empty():
 			_client.consume_purchase(String(entry["token"]))
+
+
+# --- İadeler ------------------------------------------------------------------------------------
+
+func _connect_refunds() -> void:
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
+	if social:
+		# Oturum açılınca / hesap değişince hemen okunur (changed sık yayılır: aynı hesap için yeniden okunmaz)
+		social.changed.connect(func() -> void:
+			if social.uid() != _refund_uid:
+				poll_refunds())
+
+
+## Sunucudaki iade belgelerini okur, uygular, uygulananları siler. Yalnız hesaplı oyuncu (misafirin UID'si yok).
+func poll_refunds() -> void:
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
+	if social == null or social.uid().is_empty() or _refund_busy:
+		return
+	_refund_busy = true
+	_refund_uid = social.uid()
+	var listed: Dictionary = await social.list_refunds()
+	if bool(listed.get("ok", false)):
+		var docs: Dictionary = listed.get("docs", {})
+		for id: String in apply_refunds(docs):
+			await social.delete_refund(id)
+	_refund_busy = false
+
+
+## İade belgelerini uygular (belge kimliği = satın alma belirtecinin özeti = defter anahtarı). Gem, defterde verilen
+## kadar (yoksa ürünün kataloğundaki kadar) düşülür; bakiye 0'ın altına inmez. Aynı iade iki kez düşülmez: defterde
+## işaretlenir, kayıt hemen yazılır. Dönüş: silinebilecek belge kimlikleri (uygulanan + zaten uygulanmış + geçersiz).
+func apply_refunds(docs: Dictionary) -> PackedStringArray:
+	var done: PackedStringArray = PackedStringArray()
+	var changed: bool = false
+	for raw_id: Variant in docs:
+		var id: String = str(raw_id)
+		var doc: Dictionary = docs[raw_id] if docs[raw_id] is Dictionary else {}
+		var product: StringName = StringName(SaveSafe.s(doc.get("product", "")))
+		var entry: Dictionary = _ledger.get(id, {})
+		if FounderReward.is_reward(product) or bool(entry.get("refunded", false)):
+			done.append(id)   # ücretsiz ödül iade edilemez / zaten düşüldü
+			continue
+		var gems: int = SaveSafe.i(entry.get("gems", 0)) if not entry.is_empty() \
+			else GemProducts.gems_of(product) * maxi(SaveSafe.i(doc.get("quantity", 1)), 1)
+		if gems <= 0:
+			done.append(id)   # tanınmayan ürün: düşülecek gem yok
+			continue
+		var progress: PlayerProgress = _progress()
+		var have: int = progress.gems if progress else 0
+		var taken: int = mini(gems, have)
+		if progress and taken > 0:
+			progress.add_gems(-taken)   # harcama sayılmaz (görev / başarım sayaçları ilerlemesin)
+		if entry.is_empty():
+			entry = {"product": String(product), "gems": gems, "time": SaveSafe.i(doc.get("at", 0)),
+				"order": SaveSafe.s(doc.get("order", "")), "token": "", "consumed": true}
+			_ledger[id] = entry
+		entry["refunded"] = true
+		changed = true
+		done.append(id)
+		refund_applied.emit(product, taken, gems - taken)
+	if changed:
+		_save_now()
+		products_changed.emit()
+	return done
+
+
+# --- Sunucu doğrulaması --------------------------------------------------------------------------
+
+func _verify(product: StringName, token: String) -> Dictionary:
+	if _verifier.is_valid():
+		var result: Variant = await _verifier.call(product, token)
+		return result if result is Dictionary else {}
+	if _client is MockBillingClient:
+		return {"status": "ok"}   # sahte Play: doğrulanacak gerçek satın alma yok
+	return await _verify_remote(product, token)
+
+
+## iapVerify'ı düz HTTP ile çağırır (callable biçimi: {"data": …} → {"result": …}). Ağ / sunucu hatası → unavailable.
+func _verify_remote(product: StringName, token: String) -> Dictionary:
+	var http: HTTPRequest = HTTPRequest.new()
+	http.timeout = VERIFY_TIMEOUT
+	add_child(http)
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
+	var body: Dictionary = {"data": {"package": AppInfo.package_name(), "product": String(product), "token": token,
+		"uid": social.uid() if social else ""}}
+	var out: Dictionary = {"status": "unavailable"}
+	if http.request(VERIFY_URL, ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify(body)) == OK:
+		var response: Array = await http.request_completed
+		var parsed: Variant = JSON.parse_string((response[3] as PackedByteArray).get_string_from_utf8()) \
+			if int(response[0]) == HTTPRequest.RESULT_SUCCESS else null
+		if int(response[1]) == 200 and parsed is Dictionary and (parsed as Dictionary).get("result") is Dictionary:
+			out = (parsed as Dictionary)["result"]
+		elif parsed is Dictionary:
+			push_warning("PurchaseManager: doğrulama sunucusu %d: %s" % [int(response[1]), (parsed as Dictionary).get("error")])
+	http.queue_free()
+	return out
+
+
+## Sunucuya ulaşılamadı: bir süre sonra Play'e satın almalar yeniden sorulur (tüketilmeyen geri gelir, yeniden doğrulanır).
+func _schedule_verify_retry() -> void:
+	if _verify_timer.is_stopped():
+		_verify_timer.start(VERIFY_RETRY_SEC[mini(_verify_retry, VERIFY_RETRY_SEC.size() - 1)])
+		_verify_retry += 1
+
+
+func _requery() -> void:
+	if _connected and _client:
+		_client.query_purchases(BillingClient.ProductType.INAPP)
+
+
+func _set_awaiting(on: bool) -> void:
+	awaiting_verification = on
+	if not on:
+		_verify_retry = 0
 
 
 # --- İç ----------------------------------------------------------------------------------------

@@ -83,7 +83,11 @@ service cloud.firestore {
         && request.resource.data.name is string && request.resource.data.name.size() <= 16
         && (!('img' in request.resource.data) || (request.resource.data.img is string
           && request.resource.data.img.size() <= 40000))
-        && request.resource.data.at is int;
+        // `at` sunucu saatinin ±1 günü (2026-10-22): uzak gelecek tarihli şikâyet panel kuyruğunun başında kalıyor ve
+        // 180 günlük temizlik onu hiç silmiyordu. Cihaz saati kaymış oyuncu için pay geniş tutuldu.
+        && request.resource.data.at is int
+        && request.resource.data.at * 1000 > request.time.toMillis() - 86400000
+        && request.resource.data.at * 1000 < request.time.toMillis() + 86400000;
       allow read, delete: if false;
     }
 
@@ -102,6 +106,23 @@ service cloud.firestore {
         && request.resource.data.token.size() <= 4096
         && request.resource.data.lang in ['tr', 'en', 'es', 'de', 'fr']
         && request.resource.data.at is int;
+    }
+
+    // YARIŞ GÜNLÜĞÜ (2026-10-22, docs/KOSU_ESLESTIRME.md Faz 2): race_log/{uid}_{gün} — oyuncunun o günkü yarışları
+    // (sonuç, zorluk kolu, şans, yarıştan sonra oyunda kaldı mı). Gün UTC gün numarasıdır (today() ile aynı); yalnız bugünün
+    // ve son iki günün belgesi yazılır (çevrimdışı birikenler). Yalnız sahibi yazar, KİMSE okumaz: gece fonksiyonu
+    // (raceLearning) ve yönetim paneli yönetici yetkisiyle okur. events: JSON metni (eklenti dizi gönderemiyor).
+    // Hesap silinince accountCleanup uid alanından bulup siler. Tam yasakta yazılamaz (öğrenme tablosunu kirletmesin).
+    match /race_log/{logId} {
+      allow create, update: if signedIn() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'day', 'events', 'n', 'v', 'at'])
+        && request.resource.data.day is int && request.resource.data.day <= today()
+        && request.resource.data.day >= today() - 2
+        && logId == request.auth.uid + '_' + string(request.resource.data.day)
+        && request.resource.data.events is string && request.resource.data.events.size() < 100000
+        && request.resource.data.n is int && request.resource.data.n >= 0 && request.resource.data.n <= 500
+        && request.resource.data.v is int && request.resource.data.at is int
+        && saveAllowed();
     }
 
     // ARKADAŞ KODU → UID. Kod bir kez alınır (üzerine yazılamaz), yalnızca sahibi siler.
@@ -135,6 +156,12 @@ service cloud.firestore {
       // yazar (firebase/admin, yönetici SDK'sı); sahibi listeler, okur ve ödülü kaydına geçirdikten sonra siler. Aynı
       // hediye iki kez alınamaz: belge silinir, alınan kimlik kayıtta da tutulur (silme başarısız olsa bile).
       match /mail/{mailId} {
+        allow read, delete: if isOwner(uid);
+      }
+
+      // İADE (2026-10-23): users/{uid}/refunds/{belirteç özeti} = {product, quantity, order, at}. YALNIZCA SUNUCU yazar
+      // (functions/refunds.js, Play'in iade listesinden); sahibi okur, verilen gemi düşer (PurchaseManager) ve siler.
+      match /refunds/{refundId} {
         allow read, delete: if isOwner(uid);
       }
 

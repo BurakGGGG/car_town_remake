@@ -94,6 +94,8 @@ const REPORTS: String = "reports"
 const PUSH: String = "push"
 ## MODERASYON: moderation/m_{uid} (yalnızca yönetim paneli yazar; ModerationWatch okur).
 const MODERATION: String = "moderation"
+## YARIŞ GÜNLÜĞÜ: race_log/{uid}_{UTC gün} (RaceLearning yazar; kimse okumaz, gece fonksiyonu toplar).
+const RACE_LOG: String = "race_log"
 ## ARKADAŞ DAVETİ: koleksiyon, ömür (sn; kural aynı süreyi sunucu saatiyle uygular) ve paylaşılan linkin başı. Web
 ## sayfası (auto_yard_website /d/<jeton>) oyunu autoyard://davet/<jeton> ile açar; oyun yüklü değilse mağazaya yollar.
 const INVITES: String = "invites"
@@ -228,6 +230,15 @@ func write_push_token(token: String, lang: String, prefs: Dictionary = {}) -> bo
 	return _ok(await _call(&"set", PUSH, "p_" + _uid, doc))
 
 
+## YARIŞ GÜNLÜĞÜ (docs/KOSU_ESLESTIRME.md Faz 2): günün bütün olaylarıyla belge yeniden yazılır (RaceLearning).
+## Oturum yeterli (takma ad şart değil). `events_json`: olay listesinin JSON metni. Başarılıysa true.
+func write_race_log(day: int, events_json: String, count: int) -> bool:
+	if _uid.is_empty() or _fb == null:
+		return false
+	var doc: Dictionary = {"uid": _uid, "day": day, "events": events_json, "n": count, "v": 1, "at": _now()}
+	return _ok(await _call(&"set", RACE_LOG, "%s_%d" % [_uid, day], doc))
+
+
 func delete_push_token() -> void:
 	if not _uid.is_empty() and _fb != null:
 		await _call(&"delete", PUSH, "p_" + _uid)
@@ -242,6 +253,23 @@ func list_mail() -> Dictionary:
 	var result: Dictionary = await _call(&"list", _mail_of(_uid))
 	var data: Variant = result.get("data", {})
 	return {"ok": _ok(result), "docs": data if data is Dictionary else {}}
+
+
+## İADE (PurchaseManager): users/{uid}/refunds — yalnızca sunucu yazar (functions/refunds.js, Play'in iade listesi).
+## Dönüş: {"ok": bool, "docs": {belirteç özeti: {product, quantity, order, at}}}.
+func list_refunds() -> Dictionary:
+	if _uid.is_empty() or _fb == null:
+		return {"ok": false, "docs": {}}
+	var result: Dictionary = await _call(&"list", _refunds_of(_uid))
+	var data: Variant = result.get("data", {})
+	return {"ok": _ok(result), "docs": data if data is Dictionary else {}}
+
+
+func delete_refund(id: String) -> bool:
+	if _uid.is_empty() or _fb == null:
+		return false
+	var result: Dictionary = await _call(&"delete", _refunds_of(_uid), id)
+	return _ok(result) or _not_found(result)
 
 
 ## MODERASYON belgesi (ModerationWatch): moderation/m_{uid}. Sosyal oturum beklenmez — tam yasaklı hesabın kaydı buluta
@@ -1091,7 +1119,14 @@ func _garage_json() -> String:
 	var garage: Dictionary = PublicGarage.from_snapshot(_save.snapshot())
 	var json: String = PublicGarage.to_json(garage)
 	if CloudPack.pack(json).length() > PublicGarage.MAX_JSON:
-		json = PublicGarage.to_json(PublicGarage.without_depots(garage))   # büyük dekor: depolar ziyarette görünmez, özet kalır
+		garage = PublicGarage.without_depots(garage)   # büyük dekor: depolar ziyarette görünmez, özet kalır
+		json = PublicGarage.to_json(garage)
+	if CloudPack.pack(json).length() > PublicGarage.MAX_JSON:
+		garage = PublicGarage.with_runs(garage, PublicGarage.RUNS_TIGHT)   # yine büyük: daha az koşu
+		json = PublicGarage.to_json(garage)
+	if CloudPack.pack(json).length() > PublicGarage.MAX_JSON:
+		garage.erase("race")   # hâlâ büyük (çok araçlı koleksiyon): koşusuz — garaj hiç yayınlanmamaktan iyidir
+		json = PublicGarage.to_json(garage)
 	return json
 
 
@@ -1763,7 +1798,10 @@ func _call(kind: StringName, collection: String, id: String = "", data: Dictiona
 		await _op_slot_free
 	_op_busy = true
 	_current = {"kind": kind, "id": id}
-	_op_timer.start(request_timeout)
+	# Sahne yenilenirken (girişten sonra) kuyruktaki istek ağaçtan çıkmış düğümde sürer: istek yine gider,
+	# yalnız zaman aşımı kurulamaz (Timer ağaç dışında başlamaz, hata basıyordu — login_reload_test)
+	if _op_timer.is_inside_tree():
+		_op_timer.start(request_timeout)
 	match kind:
 		&"get":
 			_fb.firestoreGetDocument(collection, id)
@@ -1865,6 +1903,10 @@ static func _gifts_of(uid: String) -> String:
 
 static func _mail_of(uid: String) -> String:
 	return "users/%s/mail" % uid
+
+
+static func _refunds_of(uid: String) -> String:
+	return "users/%s/refunds" % uid
 
 
 static func _races_of(uid: String) -> String:

@@ -270,11 +270,12 @@ func _label(variation: StringName, text: String) -> Label:
 	return label
 
 
-## Kart altındaki küçük yazı: dar kartta "…" ile kesilmek yerine en çok iki satıra sarılır.
+## Kart altındaki küçük yazı: dar kartta "…" ile kesilmek yerine en çok üç satıra sarılır (Fransızca "NOUVELLES PIÈCES
+## POUR TA VOITURE DE COURSE" iki satıra sığmıyordu).
 func _wrapped(variation: StringName, text: String) -> Label:
 	var label: Label = _label(variation, text)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.max_lines_visible = 2
+	label.max_lines_visible = 3
 	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	return label
 
@@ -340,6 +341,7 @@ func _card(entry: Dictionary) -> Control:
 	pic.add_theme_stylebox_override(&"panel", _rounded(Color(HudPalette.INK, 0.08), 6, 0.0, 0.0))
 	var name_label: Label = _label(&"HudInkValue", "")
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	card.set_meta(&"name_label", name_label)   # dar kartta uzun tek sözcük küçülür (_fit_name)
 	var detail: Label = _wrapped(&"HudInkCaption", "")
 	var tag: String = ""
 	var need: String = ""
@@ -520,7 +522,23 @@ func _layout_cards() -> void:
 	var width: float = clampf(room / float(count), CARD_MIN_WIDTH, CARD_MAX_WIDTH)
 	for child: Node in _cards.get_children():
 		(child as Control).custom_minimum_size.x = width
+		var name_label: Label = child.get_meta(&"name_label", null) as Label
+		if name_label:
+			_fit_name(name_label, width - 16.0)   # kartın iç payı (_card_style: yanlarda 8)
 	_divider.custom_minimum_size.x = width * float(count) + CARD_GAP * float(count - 1)
+
+
+## Kart başlığı sığmıyorsa yazı küçülür (en çok 9 punto; yine sığmazsa üç nokta). Almanca tek sözcük
+## "BREMSENÜBERHOLUNG" (FREN REVİZYONU) en dar tuvalde 181 birimdi, kart 140: kesiliyordu.
+func _fit_name(label: Label, width: float) -> void:
+	label.remove_theme_font_size_override(&"font_size")
+	var font: Font = label.get_theme_font(&"font")
+	var base: int = label.get_theme_font_size(&"font_size")
+	var size: int = base
+	while size > 9 and font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > width:
+		size -= 1
+	if size != base:
+		label.add_theme_font_size_override(&"font_size", size)
 
 
 ## Kart sırayla "pıt" diye yerine oturur.

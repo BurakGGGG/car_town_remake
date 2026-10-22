@@ -270,7 +270,28 @@ func _run() -> void:
 	rm._active.erase(st5)
 
 	print("== 9) AppLovin yapılandırması + gizlilik ==")
-	check(AdConfig.NETWORK == AdConfig.Network.ADMOB, "reklam ağı AdMob (AppLovin yeni yayıncı almıyor; AppLovin kodu beklemede)")
+	check(AdConfig.NETWORK == AdConfig.Network.APPODEAL, "reklam ağı Appodeal (AdMob reddedildi, AppLovin yeni yayıncı almıyor)")
+	print("== 9a) Appodeal yapılandırması ==")
+	var app_key: String = AdConfig.APPODEAL_APP_KEY
+	check(app_key.length() == 48 and app_key.is_valid_hex_number(), "Appodeal uygulama anahtarı 48 haneli onaltılık")
+	var deps_ok: bool = true
+	var has_core: bool = false
+	for dep: String in AdConfig.APPODEAL_DEPENDENCIES:
+		deps_ok = deps_ok and dep.count(":") == 2 and not dep.ends_with(":") and not dep.contains("+")
+		has_core = has_core or dep.begins_with("com.appodeal.ads.sdk:core:")
+		# AdMob kimliği yok → Google reklam SDK'sını getiren adaptör açılışta çöker; Firebase adaptörü sürüm kümemizi bozar
+		deps_ok = deps_ok and not dep.contains("admob") and not dep.contains("google-adapter") \
+			and not dep.contains("google-ad-manager") and not dep.contains("adapters:firebase")
+	check(has_core and deps_ok, "Appodeal bağımlılıkları sabit sürümlü, AdMob / Firebase adaptörü yok")
+	var app_unique: Dictionary = {}
+	for dep: String in AdConfig.APPODEAL_DEPENDENCIES:
+		app_unique[dep.rsplit(":", true, 1)[0]] = true
+	check(app_unique.size() == AdConfig.APPODEAL_DEPENDENCIES.size(), "bağımlılık listesinde tekrar yok")
+	var app_shared: bool = true
+	for slot: StringName in AdConfig.slots():
+		app_shared = app_shared and AdConfig.appodeal_unit(slot) == AdConfig.APPODEAL_UNIT
+	check(app_shared and AdConfig.appodeal_unit(&"yok") == "", "yuvalar Appodeal önbelleğini paylaşır, bilinmeyen yuva kapalı")
+	check(not AppodealProvider.available(), "masaüstünde Appodeal yok (sağlayıcı seçilmez, sahte sağlayıcı kalır)")
 	var al_unit: String = AdConfig.APPLOVIN_REWARDED_UNIT.strip_edges()
 	check(al_unit == "" or (al_unit.length() == 16 and al_unit.is_valid_hex_number() and not al_unit.begins_with("ca-app-pub-")), "AppLovin birimi boş ya da 16 haneli onaltılık (AdMob kimliği değil)")
 	var al_shared: bool = true

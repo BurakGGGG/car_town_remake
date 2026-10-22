@@ -27,6 +27,8 @@ signal gem_store_requested
 signal title_changed(text: String)
 ## Sol / alt panellerin boyu değişti (seviye değişti): garaj yerleşimi tazelesin.
 signal layout_changed
+## Görünen kategori değişti (&"" = genel bakış): modifiye garajının kamerası o parçaya gider (ModGarageView.focus).
+signal focus_changed(category: StringName)
 
 enum View { OVERVIEW, CATEGORY }
 
@@ -170,6 +172,7 @@ func open_category(c: StringName) -> void:
 		_stages[i].set_pressed_no_signal(i + 1 == selected_stage)
 	_show_controls()
 	title_changed.emit(PerformanceMods.category_name(vehicle_id, c))
+	focus_changed.emit(c)
 	refresh()
 	_warm()
 	layout_changed.emit()
@@ -182,6 +185,7 @@ func show_overview() -> void:
 	view = View.OVERVIEW
 	_show_controls()
 	title_changed.emit(Loc.t("MODİFİYE"))
+	focus_changed.emit(&"")
 	refresh()
 	_warm()
 	layout_changed.emit()

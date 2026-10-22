@@ -89,8 +89,10 @@ static func _fit(scroll: ScrollContainer) -> void:
 		for entry: Dictionary in _rows(column, view):
 			if float(entry["top"]) < bottom:
 				shift = maxf(shift, limit - float(entry["left"]))
-		# Ortalama alanı [inset, view.x]: merkez inset / 2 kayar; en çok bloğun sağına kadar
-		inset = clampf(shift * 2.0, 0.0, limit)
+		# Ortalama alanı [inset, view.x]: merkez inset / 2 kayar; en çok bloğun sağına kadar. Sütun da alana sığmalı:
+		# kaydırma sütunu kadrajın sağından taşıracak kadar büyük olamaz (HUD %120'de profil panosu 3 birim taşıyordu)
+		var room: float = maxf(view.x - column.get_combined_minimum_size().x, 0.0)
+		inset = clampf(shift * 2.0, 0.0, minf(limit, room))
 	if not is_equal_approx(scroll.offset_left, inset):
 		scroll.offset_left = inset
 

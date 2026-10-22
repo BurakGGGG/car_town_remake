@@ -300,6 +300,8 @@ const DETAIL_ROWS: Array = [
 var _detail_lanes: Dictionary = {}
 ## ARAÇLAR → MODİFİYE kipi (alt parça şeridi, sağda parça plakası, solda değerler).
 var _workshop: ModWorkshop
+## Modifiye kipinin 3D mekânı: lüks modifiye garajı, araç döner tablada, kamera kategoriye göre parçaya gider.
+var _mod_view: ModGarageView
 ## Sağ sütunun sahnedeki yerleşimi (modifiye kipinde üste sabitlenir, çıkınca geri konur).
 var _right_layout: Dictionary = {}
 var _detail_values: Dictionary = {}
@@ -368,6 +370,10 @@ func _ready() -> void:
 	_workshop.layout_changed.connect(func() -> void:
 		_fit_mod_column.call_deferred()
 		_place_car_list.call_deferred())
+	_mod_view = ModGarageView.new()
+	_mod_view.name = "ModGarageView"
+	add_child(_mod_view)
+	_workshop.focus_changed.connect(_mod_view.focus)
 	_apply_responsive_layout()
 	get_viewport().size_changed.connect(_apply_responsive_layout)
 
@@ -1403,8 +1409,21 @@ func open_mods() -> void:
 			"offset_right", "offset_bottom", "grow_horizontal", "grow_vertical"]:
 		_right_layout[key] = right_group.get(key)
 	_workshop.open(_shown_vehicle)
+	_enter_mod_garage()
 	_fit_mod_column.call_deferred()
 	_place_car_list.call_deferred()
+
+
+## Araç modifiye garajına geçer (depo iç mekânı askıda, eski oda gizli). Sahne yoksa görünüm olduğu gibi kalır.
+func _enter_mod_garage() -> void:
+	var hide: Array[Node3D] = [car_slot]
+	var room: Node3D = car_viewport.get_node_or_null("Environment") as Node3D
+	if room:
+		hide.append(room)
+	_interior_view.suspend(true)
+	if not _mod_view.enter(_shown_vehicle, car_viewport, preview_camera,
+			car_viewport.get_node_or_null("KeyLight") as DirectionalLight3D, hide):
+		_interior_view.suspend(false)
 
 
 ## Araç listesine döner.
@@ -1413,6 +1432,8 @@ func _close_mods() -> void:
 		return
 	_kill_tweens()
 	_workshop.close()
+	_mod_view.exit()   # kamera / ışık iç mekânın ayarına döner
+	_interior_view.suspend(false)
 	for key: String in _right_layout:   # sağ sütun sahnedeki (dikey ortalı) yerine
 		right_group.set(key, _right_layout[key])
 	_right_layout = {}
@@ -1997,6 +2018,10 @@ func _on_interior_car_tapped(vehicle_id: StringName) -> void:
 
 
 func _on_view_gui_input(event: InputEvent) -> void:
+	if _mod_view.active:
+		if _mod_view.handle_input(event):
+			view.accept_event()
+		return
 	if _interior_view.handle_input(event):
 		view.accept_event()
 

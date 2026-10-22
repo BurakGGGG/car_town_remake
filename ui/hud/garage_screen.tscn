@@ -1189,7 +1189,7 @@ theme_override_constants/separation = 0
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HudPlateTitle"
-text = "BMW E46"
+text = "BAVARIA CLUB 46"
 autowrap_mode = 3
 
 [node name="YearLabel" type="Label" parent="Overlay/LeftCenter/InfoColumn/NamePlate/NameBox" unique_id=1656490332]

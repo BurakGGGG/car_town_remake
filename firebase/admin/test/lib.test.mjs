@@ -5,7 +5,7 @@ import { gzipSync } from "node:zlib";
 import {
   PanelError, loadCatalog, buildInfo, buildMail, mailId, buildConfig, buildNews, classifyQuery, unpackSave, texts, MAX_GEMS,
   statsFromSave, buildBan, banActive, moderatedName, groupReports, buildAdjust, buildRestore,
-  buildPromo, buildEvent, buildSegment, matchSegment,
+  buildPromo, buildEvent, buildSegment, matchSegment, buildLearning,
 } from "../lib.mjs";
 
 const catalog = loadCatalog(new URL("../../../", import.meta.url));
@@ -183,4 +183,12 @@ test("hedefli gönderim süzgeci", () => {
   assert.equal(matchSegment(p(3, 1, "tr", 9), buildSegment({ build_max: 9 }), NOW), true);
   assert.throws(() => buildSegment({ level_min: 9, level_max: 3 }), /ters/);
   assert.throws(() => buildSegment({ lang: "xx" }), /dil/);
+});
+
+test("yarış öğrenmesi ayarı: varsayılan, sınırlar", () => {
+  assert.deepEqual(buildLearning({}), { off: false, window: 300, weight: 20 });
+  assert.deepEqual(buildLearning({ off: true, window: "600", weight: 50 }), { off: true, window: 600, weight: 50 });
+  assert.equal(buildLearning({ off: "evet" }).off, false, "yalnız true kapatır");
+  assert.throws(() => buildLearning({ window: 30 }), PanelError);
+  assert.throws(() => buildLearning({ weight: 500 }), PanelError);
 });

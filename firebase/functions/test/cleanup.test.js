@@ -44,11 +44,13 @@ test("süresi dolanlar silinir, geçerliler kalır", async () => {
     "email_codes/yeni": { hash: "h", at: NOW - 5 * 60 * 1000 },
     "email_ips/eski": { at: NOW - 2 * 3600 * 1000 },
     "email_ips/yeni": { at: NOW - 59 * 60 * 1000 },
+    "iap/eski": { product: "gems_pack_1", at: S - 366 * 86400 },
+    "iap/yeni": { product: "gems_pack_1", at: S - 300 * 86400 },
   });
   const deleted = await cleanupExpired({ db, now: NOW });
-  assert.deepStrictEqual(deleted, { invites: 1, push_log: 1, reports: 1, email_codes: 1, email_ips: 1 });
+  assert.deepStrictEqual(deleted, { invites: 1, push_log: 1, reports: 1, email_codes: 1, email_ips: 1, iap: 1 });
   assert.deepStrictEqual(Object.keys(db.store).sort(), ["email_codes/yeni", "email_ips/yeni", "garages/g_a",
-    "invites/YENI00000000", "push_log/l_c_a", "reports/x_a_c"]);
+    "iap/yeni", "invites/YENI00000000", "push_log/l_c_a", "reports/x_a_c"]);
 });
 
 test("birim: push_log ve e-posta kodları milisaniye, diğerleri saniye", () => {
@@ -58,6 +60,7 @@ test("birim: push_log ve e-posta kodları milisaniye, diğerleri saniye", () => 
   assert.strictEqual(cutoffFor(byName.reports, NOW), S - 180 * 86400);
   assert.strictEqual(cutoffFor(byName.email_codes, NOW), NOW - 3600 * 1000);
   assert.strictEqual(cutoffFor(byName.email_ips, NOW), NOW - 3600 * 1000);
+  assert.strictEqual(cutoffFor(byName.iap, NOW), S - 365 * 86400);
 });
 
 test("çok sayıda belge parti parti silinir", async () => {

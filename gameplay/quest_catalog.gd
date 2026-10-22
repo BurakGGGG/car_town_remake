@@ -53,8 +53,15 @@ const ENTRIES: Array[Dictionary] = [
 ]
 
 
+## Oyunda geçerli görevler: kapalı özelliğin görevi (GameFeatures.PAINT kapalıyken YENİ RENK) listeye girmez — yoksa
+## asla tamamlanamaz ve REHBER'in üç yerinden birini sonsuza kadar tutardı.
 static func all() -> Array[Dictionary]:
-	return ENTRIES
+	var out: Array[Dictionary] = []
+	for entry: Dictionary in ENTRIES:
+		if entry["type"] == Type.PAINTS and not GameFeatures.PAINT:
+			continue
+		out.append(entry)
+	return out
 
 
 static func get_entry(quest_id: StringName) -> Dictionary:

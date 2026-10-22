@@ -23,6 +23,9 @@ const LADDER_SHARE: float = 0.34
 const LADDER_MIN: float = 272.0
 const LADDER_MAX: float = 400.0
 const TAB_HEIGHT: float = 46.0   # altı basamak (OTOPARK + 5 depo) telefonda KAPAT'la birlikte sığsın
+## Basamaktaki ad ve durum satırının yazı boyu (sığmazsa _fit_label küçültür).
+const TITLE_FONT: int = 15
+const STATUS_FONT: int = 11
 const ACTION_WIDTH: float = 190.0
 ## Deponun fotoğrafı (tools/make_garage_cards.gd üretir); yoksa koyu zemin. OTOPARK çatı katı sahnesinin klasöründe.
 const CARD_PATH: String = "res://assets/garages/%s/card.png"
@@ -318,14 +321,17 @@ func _tab(garage: StringName) -> Control:
 	text.alignment = BoxContainer.ALIGNMENT_CENTER
 	text.add_theme_constant_override(&"separation", 0)
 	var title: Label = _label(&"HudPlateTitle", _place_name(garage))
-	title.add_theme_font_size_override(&"font_size", 15)
+	title.add_theme_font_size_override(&"font_size", TITLE_FONT)
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var status: Label = _label(&"HudInkCaption", "")
-	status.add_theme_font_size_override(&"font_size", 11)
+	status.add_theme_font_size_override(&"font_size", STATUS_FONT)
 	status.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	text.add_child(title)
 	text.add_child(status)
 	row.add_child(text)
+	# Uzun dil: satır genişliğine sığmayan ad / durum küçülür (ilk yerleşimde de: genişlik o zaman belli olur)
+	title.resized.connect(func() -> void: _fit_label(title, TITLE_FONT, 12))
+	status.resized.connect(func() -> void: _fit_label(status, STATUS_FONT, 9))
 
 	var mark: HudIcon = HudIcon.new()   # BURADASIN
 	mark.kind = HudIcon.Kind.TARGET
@@ -671,6 +677,7 @@ func _refresh_tab(garage: StringName) -> void:
 		icon.visible = false
 		(tab["number"] as Label).visible = true
 		(tab["mark"] as HudIcon).visible = _is_current(garage)
+		_fit_label(line, STATUS_FONT, 9)
 		return
 	match status:
 		CarGarageManager.Status.OWNED:
@@ -695,6 +702,22 @@ func _refresh_tab(garage: StringName) -> void:
 		or (status == CarGarageManager.Status.OWNED and not _manager.job_of(garage).is_empty()) else HudPalette.INK_SOFT)
 	(tab["name"] as Label).add_theme_color_override(&"font_color", HudPalette.INK if built else HudPalette.INK_SOFT)
 	(tab["mark"] as HudIcon).visible = _is_current(garage)
+	_fit_label(tab["name"], TITLE_FONT, 12)
+	_fit_label(line, STATUS_FONT, 9)
+
+
+## Satıra sığmayan ad / durum (İngilizce "UNDERGROUND STORAGE", Fransızca "17 VOITURES · … PAR JOUR") küçülür, en çok
+## `min_size`; yine sığmazsa üç nokta. Genişlik henüz belli değilse (ilk yerleşim) bir şey yapılmaz: resized'da gelir.
+static func _fit_label(label: Label, base: int, min_size: int) -> void:
+	var width: float = label.size.x
+	if width <= 1.0:
+		return
+	var font: Font = label.get_theme_font(&"font")
+	var size: int = base
+	while size > min_size and font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > width:
+		size -= 1
+	if label.get_theme_font_size(&"font_size") != size:
+		label.add_theme_font_size_override(&"font_size", size)
 
 
 func _refresh_preview() -> void:

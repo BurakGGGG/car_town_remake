@@ -185,8 +185,10 @@ func _ready() -> void:
 		_fb.connect("firestore_write_task_completed", _on_write_completed)
 		_fb.connect("firestore_delete_task_completed", _on_delete_completed)
 		_fb.connect("user_deleted", _on_user_deleted)
-		_fb.connect("account_link_success", _on_link_success)
-		_fb.connect("account_link_failure", _on_link_failure)
+		# Hesap bağlama sinyalleri eklentiye sonradan geldi: eski eklenti derlemesi (ve testlerin sahte eklentisi) taşımıyor
+		if _fb.has_signal("account_link_success"):
+			_fb.connect("account_link_success", _on_link_success)
+			_fb.connect("account_link_failure", _on_link_failure)
 	_setup.call_deferred()
 
 

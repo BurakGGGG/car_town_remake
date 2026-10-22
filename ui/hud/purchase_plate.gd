@@ -3,7 +3,7 @@ extends PlatePanel
 ## STANDART SATIN ALMA PLAKASI — garaj genişletme, tamir alanı ve araç satın alma AYNI görsel
 ## hiyerarşiyi kullansın diye tek bileşen:
 ##
-##   BAŞLIK          (GARAJI GENİŞLET / TAMİR ALANI 2 / BMW E46)
+##   BAŞLIK          (GARAJI GENİŞLET / TAMİR ALANI 2 / BAVARIA CLUB 46)
 ##   alt başlık      (SEVİYE 2 / A SINIFI · 2003 · %85)
 ##   FİYAT           (12.000 ₺  ·  PARA YETERSİZ)
 ##   etki satırları  (ProgressionEffects'ten; elle yazılmaz)
@@ -47,6 +47,36 @@ func set_content(title: String, subtitle: String, price: String, effects: Packed
 	_subtitle.visible = subtitle != ""
 	_price.visible = price != ""
 	_effects.visible = not effects.is_empty()
+
+
+## Plaka `max_total` yüksekliği aşıyorsa etki satırlarının yazısı küçülür (en çok `min_size`). Satır sayısı yazı
+## genişliğinden hesaplanır: yerleşim beklenmez. Showroom: uzun oran listesi (SÜPER KASA, Almanca) kısa ekranda
+## orta satırı uzatıp GERİ'yi ekran dışına itiyordu (853×480).
+func fit_height(max_total: float, min_size: int = 8) -> void:
+	_effects.remove_theme_font_size_override(&"font_size")
+	if not _effects.visible or not is_inside_tree():
+		return
+	var box: StyleBox = get_theme_stylebox(&"panel")
+	var margins: Vector2 = box.get_minimum_size() if box else Vector2.ZERO
+	var fixed: float = margins.y
+	for label: Label in [_title, _subtitle, _price]:
+		if label.visible:
+			fixed += label.get_combined_minimum_size().y + 2.0
+	var width: float = maxf(custom_minimum_size.x - margins.x, 1.0)
+	var font: Font = _effects.get_theme_font(&"font")
+	var base: int = _effects.get_theme_font_size(&"font_size")
+	var size: int = base
+	while size > min_size and fixed + _effects_height(font, size, width) > max_total:
+		size -= 1
+	if size != base:
+		_effects.add_theme_font_size_override(&"font_size", size)
+
+
+func _effects_height(font: Font, font_size: int, width: float) -> float:
+	var lines: int = 0
+	for line: String in _effects.text.split("\n"):
+		lines += maxi(1, ceili(font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x / width))
+	return float(lines) * (font.get_height(font_size) + float(_effects.get_theme_constant(&"line_spacing")))
 
 
 ## Ortalanmış yerleşim (dünyadaki plakalar) ya da sola dayalı (showroom bilgi plakası).

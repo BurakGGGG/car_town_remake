@@ -9,7 +9,7 @@ renk yönetimi uygulanarak) ve ekran değeri olarak saklanır. Dönüşüm doğr
 yükler).
 
 Kullanım (ekransız, depo kökünden):
-    blender -b --factory-startup --python tools/garages/export_garage.py -- mahalle|sanayi|…|rooftop [--fast]
+    blender -b --factory-startup --python tools/garages/export_garage.py -- mahalle|sanayi|…|rooftop|modgarage [--fast]
 
 NEDEN PİŞİRME: onaylanan görünüm Cycles render'ı (dolaylı ışık, yumuşak gölge, ışık havuzları). Telefon (GL
 Compatibility) bunu gerçek zamanlı yapamaz: ortam / zemin / eşyalar ışığı pişmiş hâlde IŞIKSIZ çizilir; yalnız araçlar
@@ -189,14 +189,56 @@ def make_probe(o):
     return probe
 
 
-def bake_vertex(objs, samples):
+def face_inside(o, point):
+    """360° iç mekân (MODİFİYE GARAJI): kamera her yöne bakar, yüzler tek bakışa çevrilemez. Her parça (bağlı yüz grubu)
+    ayrı: kapalı parça dışa döner; açık DÜZ parça (duvar, panel, ışık şeridi) `point`'e (odanın içi) döner; öteki açık
+    parçalar tutarlı yapılıp olduğu gibi kalır."""
+    from mathutils import Vector
+    inv = o.matrix_world.inverted_safe()
+    local = inv @ Vector(point)
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    bm.faces.ensure_lookup_table()
+    seen = set()
+    for start in bm.faces:
+        if start.index in seen:
+            continue
+        comp, stack = [], [start]
+        seen.add(start.index)
+        while stack:
+            f = stack.pop()
+            comp.append(f)
+            for e in f.edges:
+                for g in e.link_faces:
+                    if g.index not in seen:
+                        seen.add(g.index)
+                        stack.append(g)
+        edges = {e for f in comp for e in f.edges}
+        closed = all(len(e.link_faces) == 2 for e in edges)
+        bmesh.ops.recalc_face_normals(bm, faces=comp)
+        if closed:
+            continue
+        n0 = comp[0].normal
+        if all(f.normal.dot(n0) > 0.996 for f in comp):
+            c = sum((f.calc_center_median() for f in comp), Vector()) / len(comp)
+            if n0.dot(local - c) < 0.0:
+                bmesh.ops.reverse_faces(bm, faces=comp, flip_multires=False)
+    bm.to_mesh(o.data)
+    bm.free()
+
+
+def bake_vertex(objs, samples, inside=None):
+    """inside: verilirse yüzler kameraya değil bu noktaya (360° oda) göre çevrilir (face_inside)."""
     if not objs:
         return
     scn.view_layers[0].update()
-    to_cam = camera_dir()
+    to_cam = camera_dir() if inside is None else None
     probes = []
     for o in objs:
-        face_camera(o, to_cam)
+        if inside is None:
+            face_camera(o, to_cam)
+        else:
+            face_inside(o, inside)
         probe = make_probe(o)
         me = probe.data
         lit = me.color_attributes.get(LIT) or me.color_attributes.new(LIT, 'FLOAT_COLOR', 'CORNER')
@@ -469,8 +511,33 @@ def export_rooftop():
     export_glb(meshes + [deck, backdrop_o] + beams + slots, os.path.join(OUT_DIR, "rooftop.glb"))
 
 
+# --- MODİFİYE GARAJI ---------------------------------------------------------------------------------
+# Seviyesiz, 360° oda (tools/garages/modgarage.py): köşe rengi yüzler ODANIN İÇİNE çevrilerek pişer; zemin tek doku
+# (floor.png, tablanın altı delik); TableTop ayrı (oyunda yarı saydam parlak siyah, altında aynalı araç); Car işaretçisi.
+
+def export_modgarage():
+    parts = build(TMP_DIR)
+    preview_camera("wide", 1280, 720)
+    view_settings()
+    clear_lights()
+    preview_lights()
+    floor = parts["floor"]
+    meshes = [o for o in parts["static"].objects if o.type == 'MESH'] + [parts["table_body"], parts["table_top"]]
+    bake_vertex(meshes, VERTEX_SAMPLES, inside=INTERIOR)
+    ppm = min(80.0, 2048.0 / max(W, D))
+    bake_image(floor, "floor_lit", int(W * ppm), int(D * ppm), {'DIRECT', 'INDIRECT', 'COLOR'})
+    display_image(bake_image.last, os.path.join(OUT_DIR, "floor.png"))
+    markers = [o for o in bpy.data.collections["Markers"].objects]
+    export_glb(meshes + [floor] + markers, os.path.join(OUT_DIR, "modgarage.glb"))
+
+
 for o in list(scn.objects):
     if o.name in ("Cube", "Light", "Camera"):
         bpy.data.objects.remove(o, do_unlink=True)
-export_rooftop() if SCENE == "rooftop" else export_leveled()
+if SCENE == "rooftop":
+    export_rooftop()
+elif SCENE == "modgarage":
+    export_modgarage()
+else:
+    export_leveled()
 print("BİTTİ %.1f sn" % (time.time() - t0))

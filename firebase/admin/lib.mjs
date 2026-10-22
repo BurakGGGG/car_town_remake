@@ -311,6 +311,18 @@ export function buildEvent(input) {
     money_mult: Math.round(moneyMult * 100) / 100, xp_mult: Math.round(xpMult * 100) / 100, start, end };
 }
 
+/** Yarış öğrenmesi ayarı (config/race_learning, MERGE: gece fonksiyonunun tablosu korunur; oyundaki RaceLearning):
+ *  off (öğrenme kapalı → başlangıç kuralı), window (yarış sonrası kalış penceresi sn, 60–1800), weight (genel tablonun
+ *  önsel ağırlığı, yarış sayısı 1–200). docs/KOSU_ESLESTIRME.md Faz 2. */
+export function buildLearning(input) {
+  const src = input || {};
+  return {
+    off: src.off === true,
+    window: int(src.window ?? 300, 60, 1800, "Kalış penceresi (sn)"),
+    weight: int(src.weight ?? 20, 1, 200, "Genel tablo ağırlığı"),
+  };
+}
+
 /** Hedefli gönderim süzgeci: {level_min, level_max, active_days (son N günde oynamış), inactive_days (N gündür oynamamış),
  *  build_max (bu sürüm kodu ve altı), lang}. Boş alan = süzme yok. */
 export function buildSegment(input) {

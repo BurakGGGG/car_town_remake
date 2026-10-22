@@ -188,7 +188,7 @@
  "BEYAZ PANEL": "WEISSES PANEEL",
  "BEYAZ PARKE": "WEISSES PARKETT",
  "BEYAZ SIVA": "WEISSER PUTZ",
- "BMW E46": "",
+ "BAVARIA CLUB 46": "BAVARIA CLUB 46",
  "BOYA": "LACK",
  "BOYA ATÖLYESİ": "LACKIEREREI",
  "BOYA İŞİ": "LACKIERUNG",
@@ -2286,5 +2286,16 @@
  "YAZINI YAZ": "TEXT EINGEBEN",
  "İSİM TABELASI": "NAMENSSCHILD",
  "Harf harf dizilen, yazısı sana ait duvar tabelası.": "Ein Wandschild aus einzelnen Buchstaben, mit deinem eigenen Text.",
- "YAZI": "TEXT"
+ "YAZI": "TEXT",
+ "EFSANEVİ": "LEGENDÄR",
+ "EPİK": "EPISCH",
+ "GOOGLE PLAY BU ÖDEMEYİ ONAYLAMADI\nGEM VERİLMEDİ": "GOOGLE PLAY HAT DIESE ZAHLUNG NICHT BESTÄTIGT\nES WURDEN KEINE JUWELEN VERGEBEN",
+ "HATA RAPORLARI": "FEHLERBERICHTE",
+ "Hangi ekranların ve özelliklerin ne kadar kullanıldığı sayılır. Oyunu geliştirmemize yardım eder.": "Zählt, wie oft Bildschirme und Funktionen genutzt werden. Hilft uns, das Spiel zu verbessern.",
+ "KULLANIM İSTATİSTİKLERİ": "NUTZUNGSSTATISTIKEN",
+ "NADİR": "SELTEN",
+ "Oyun çökerse ya da bir hata olursa teknik ayrıntılar (cihaz modeli, hatanın yeri) bize gönderilir.": "Stürzt das Spiel ab oder tritt ein Fehler auf, werden technische Details (Gerätemodell, Fehlerstelle) an uns gesendet.",
+ "YAYGIN": "GEWÖHNLICH",
+ "ÖDEMEN HENÜZ DOĞRULANAMADI\nİNTERNETE BAĞLANINCA GEMLER GELİR": "DEINE ZAHLUNG IST NOCH NICHT BESTÄTIGT\nDU ERHÄLTST DIE JUWELEN, SOBALD DU ONLINE BIST",
+ "İADE EDİLEN SATIN ALMA\n−%d GEM GERİ ALINDI": "KAUF ERSTATTET\n−%d JUWELEN ABGEZOGEN"
 }

@@ -88,6 +88,11 @@ func _ensure_crate_system() -> void:
 		gems.name = "GemRewards"
 		add_child(gems)
 	_ensure_settings()
+	# ANALİTİK + ÇÖKME RAPORU (Telemetry, "telemetry"): ayarlardan sonra (rıza anahtarları), yöneticilere ertelenmiş bağlanır
+	if get_tree().get_first_node_in_group("telemetry") == null:
+		var telemetry: Telemetry = Telemetry.new()
+		telemetry.name = "Telemetry"
+		add_child(telemetry)
 	# GÖREVLER (günlük / haftalık / başarım): gün saati GemRewards'tan, sayaçlar oyun sinyallerinden
 	if get_tree().get_first_node_in_group("missions") == null:
 		var missions: MissionManager = MissionManager.new()

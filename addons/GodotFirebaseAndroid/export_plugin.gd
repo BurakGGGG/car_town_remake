@@ -6,6 +6,10 @@ var export_plugin : AndroidExportPlugin
 # Firebase plugin lines to inject into Gradle files
 const BUILD_GRADLE_PLUGIN_LINE := "id 'com.google.gms.google-services'"
 const SETTINGS_GRADLE_PLUGIN_LINE := "id 'com.google.gms.google-services' version '4.4.2' apply false"
+# CarTownRemake eki (2026-10-22): Crashlytics Gradle eklentisi derleme kimliğini pakete yazar (yoksa SDK açılışta
+# "build ID is missing" der, rapor gönderemez). google-services satırlarının hemen ardına eklenir.
+const BUILD_GRADLE_CRASHLYTICS_LINE := "id 'com.google.firebase.crashlytics'"
+const SETTINGS_GRADLE_CRASHLYTICS_LINE := "id 'com.google.firebase.crashlytics' version '3.0.3' apply false"
 
 const DEPENDENCIES := [
 	"com.google.firebase:firebase-auth:23.2.0",
@@ -16,6 +20,11 @@ const DEPENDENCIES := [
 	# CarTownRemake eki (2026-10-17): telefon bildirimi (FCM). Eklentide mesajlaşma modülü yok; jeton oyundan
 	# JavaClassWrapper ile alınır (gameplay/social/push_service.gd), bildirimi sunucu gönderir (firebase/functions).
 	"com.google.firebase:firebase-messaging:24.1.0",
+	# CarTownRemake eki (2026-10-22): ANALİTİK + ÇÖKME RAPORU (gameplay/telemetry/telemetry.gd, JavaClassWrapper ile).
+	# Sürümler Firebase BoM 33.13.0'dan (auth 23.2.0 / firestore 25.1.4 ile aynı küme). -ndk: motorun (C++) çökmeleri.
+	"com.google.firebase:firebase-analytics:22.4.0",
+	"com.google.firebase:firebase-crashlytics:19.4.3",
+	"com.google.firebase:firebase-crashlytics-ndk:19.4.3",
 	# CarTownRemake eki (2026-10-17): Facebook girişi. Eklenti AAR'ı bu sürümle derlenir (tools/firebase_plugin/build.sh).
 	"com.facebook.android:facebook-login:18.3.0"
 ]
@@ -38,6 +47,8 @@ func _disable_plugin() -> void:
 	_cleanup_gradle_files()
 
 func _cleanup_gradle_files() -> void:
+	_clean_line_from_file("res://android/build/build.gradle", BUILD_GRADLE_CRASHLYTICS_LINE)
+	_clean_line_from_file("res://android/build/settings.gradle", SETTINGS_GRADLE_CRASHLYTICS_LINE)
 	_clean_line_from_file("res://android/build/build.gradle", BUILD_GRADLE_PLUGIN_LINE)
 	_clean_line_from_file("res://android/build/settings.gradle", SETTINGS_GRADLE_PLUGIN_LINE)
 
@@ -59,6 +70,8 @@ class AndroidExportPlugin extends EditorExportPlugin:
 		_ensure_invite_link_alias()
 		
 		if (not get_option("gradle_build/use_gradle_build")) or (not FileAccess.file_exists("res://android/build/google-services.json")):
+			_clean_line_from_file("res://android/build/build.gradle", BUILD_GRADLE_CRASHLYTICS_LINE)
+			_clean_line_from_file("res://android/build/settings.gradle", SETTINGS_GRADLE_CRASHLYTICS_LINE)
 			_clean_line_from_file("res://android/build/build.gradle", BUILD_GRADLE_PLUGIN_LINE)
 			_clean_line_from_file("res://android/build/settings.gradle", SETTINGS_GRADLE_PLUGIN_LINE)
 			return
@@ -66,6 +79,8 @@ class AndroidExportPlugin extends EditorExportPlugin:
 		# Modify build.gradle and settings.gradle
 		_insert_line_if_missing("res://android/build/build.gradle", "id 'org.jetbrains.kotlin.android'", BUILD_GRADLE_PLUGIN_LINE)
 		_insert_line_if_missing("res://android/build/settings.gradle", "id 'org.jetbrains.kotlin.android' version versions.kotlinVersion", SETTINGS_GRADLE_PLUGIN_LINE)
+		_insert_line_if_missing("res://android/build/build.gradle", BUILD_GRADLE_PLUGIN_LINE, BUILD_GRADLE_CRASHLYTICS_LINE)
+		_insert_line_if_missing("res://android/build/settings.gradle", SETTINGS_GRADLE_PLUGIN_LINE, SETTINGS_GRADLE_CRASHLYTICS_LINE)
 
 	# CarTownRemake eki (2026-10-17): ARKADAŞ DAVET LİNKİ — autoyard://davet/<jeton> oyunu açar (web sayfası /d/<jeton>
 	# yönlendirir; oyun linki gameplay/social/invite_links.gd ile okur). Ana etkinlik dışa KAPALI (exported=false) ve
@@ -129,8 +144,19 @@ class AndroidExportPlugin extends EditorExportPlugin:
 	# düğmesi "hazır değil" der.
 	const FACEBOOK_CONFIG := "res://firebase/facebook_app.cfg"
 
+	# CarTownRemake eki (2026-10-22): ANALİTİK yalnız ölçüm içindir — reklam kimliği toplanmaz, reklam onay sinyalleri
+	# (Consent Mode v2) reddedilmiş başlar. Oyuncu AYARLAR'dan toplamayı tamamen kapatabilir (Telemetry).
+	const ANALYTICS_META := {
+		"google_analytics_adid_collection_enabled": "false",
+		"google_analytics_default_allow_ad_storage": "false",
+		"google_analytics_default_allow_ad_user_data": "false",
+		"google_analytics_default_allow_ad_personalization_signals": "false",
+	}
+
 	func _get_android_manifest_application_element_contents(platform: EditorExportPlatform, debug: bool) -> String:
 		var xml := ""
+		for key: String in ANALYTICS_META:
+			xml += '<meta-data android:name="%s" android:value="%s" />\n' % [key, ANALYTICS_META[key]]
 		for key: String in ["AutoLogAppEventsEnabled", "AdvertiserIDCollectionEnabled", "MonitorEnabled"]:
 			xml += '<meta-data android:name="com.facebook.sdk.%s" android:value="false" />\n' % key
 		var cfg := ConfigFile.new()

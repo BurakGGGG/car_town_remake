@@ -77,6 +77,8 @@ func open() -> void:
 	PlateAnim.pop_in(self, _column)
 	if _purchases and _purchases.is_available() and _purchases.pending_payment:
 		_show_notice(Loc.t("ÖDEMESİ BEKLENEN BİR SATIN ALMAN VAR\nÖDEME TAMAMLANINCA GEMLER GELİR"))
+	elif _purchases and _purchases.awaiting_verification:
+		_show_notice(Loc.t("ÖDEMEN HENÜZ DOĞRULANAMADI\nİNTERNETE BAĞLANINCA GEMLER GELİR"), 3.6)
 
 
 func close() -> void:
@@ -484,6 +486,10 @@ func _on_purchase_finished(_id: StringName, status: StringName) -> void:
 			_show_notice(Loc.t("SATIN ALMA TAMAMLANAMADI, TEKRAR DENE"))
 		&"pending":
 			_show_notice(Loc.t("ÖDEME BEKLENİYOR\nÖDEME TAMAMLANINCA GEMLER GELİR"), 3.6)
+		&"verifying":
+			_show_notice(Loc.t("ÖDEMEN HENÜZ DOĞRULANAMADI\nİNTERNETE BAĞLANINCA GEMLER GELİR"), 3.6)
+		&"rejected":
+			_show_notice(Loc.t("GOOGLE PLAY BU ÖDEMEYİ ONAYLAMADI\nGEM VERİLMEDİ"), 3.6)
 
 
 func _on_gems_purchased(_id: StringName, gems: int) -> void:

@@ -700,10 +700,6 @@ gizmo_extents = 0.12
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -5.8, 0, -0.06)
 gizmo_extents = 0.12
 
-[node name="RaceSpot" type="Marker3D" parent="Gameplay/RepairSpots" unique_id=2121963795]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -1.7, 0, -0.06)
-gizmo_extents = 0.12
-
 [node name="SaveManager" type="Node" parent="Gameplay" unique_id=3834862]
 script = ExtResource("18_kjvhd")
 
@@ -722,6 +718,5 @@ script = ExtResource("15_j4qnp")
 [node name="JobMastery" type="Node" parent="Gameplay" unique_id=1287692745]
 script = ExtResource("16_fpfj3")
 
-[node name="RaceManager" type="Node" parent="Gameplay" unique_id=1879550802 node_paths=PackedStringArray("challenge_spot")]
+[node name="RaceManager" type="Node" parent="Gameplay" unique_id=1879550802]
 script = ExtResource("17_sc1dx")
-challenge_spot = NodePath("../RepairSpots/RaceSpot")

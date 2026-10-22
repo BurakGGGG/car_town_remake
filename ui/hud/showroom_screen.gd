@@ -41,7 +41,7 @@ signal screen_requested(id: StringName)
 
 const TITLE: String = "MAĞAZA"
 const LIST_WIDTH: float = 188.0
-const INFO_WIDTH: float = 250.0   # kasa oran satırları (nadirlik · model · yüzde) tek satıra sığsın
+const INFO_WIDTH: float = 264.0   # kasa oran satırları (yüzde · model · nadirlik) tek satıra sığsın (en uzunu: OVALE TONNERRE 16 · EFSANEVİ)
 const SLIDE: float = 18.0
 
 # --- 3D sahne ölçüleri (araç ~1 birim uzunlukta) ---
@@ -849,6 +849,16 @@ func _build_overlay() -> void:
 	_exit_group.add_child(exit_spacer)
 
 
+## Bilgi plakası orta satıra sığsın: kısa ekranda uzun oran listesinin yazısı küçülür (PurchasePlate.fit_height).
+## Oda = ekran − kenar payları (2 × 16) − üst ve alt satır − satır aralıkları (2 × 8); plakanın altında 8 + SATIN AL.
+func _fit_info() -> void:
+	if _info_plate == null or not is_inside_tree():
+		return
+	var room: float = get_viewport_rect().size.y - 32.0 - _title_group.get_combined_minimum_size().y \
+		- _exit_group.get_combined_minimum_size().y - 16.0
+	_info_plate.fit_height(room - 8.0 - _buy_button.get_combined_minimum_size().y)
+
+
 ## Dikeyde tek satır (tıklamayı geçirir; içindeki plakalar kendi boyutunda kalır).
 func _row(parent: Control, row_name: String, vertical_flags: int) -> HBoxContainer:
 	var row: HBoxContainer = HBoxContainer.new()
@@ -1157,13 +1167,14 @@ func _refresh_crate() -> void:
 	for row: Dictionary in CrateCatalog.odds(_shown_crate):
 		var car: Dictionary = CarCatalog.get_entry(row["id"])
 		var mark: String = "✔ " if _ownership and _ownership.is_owned(row["id"]) else ""
-		lines.append("%s%s  %s  ·  %s" % [mark, Loc.percent(Loc.decimal(float(row["chance"]) * 100.0)),
+		lines.append("%s%s  %s · %s" % [mark, Loc.percent(Loc.decimal(float(row["chance"]) * 100.0)),
 			String(car.get("display_name", row["id"])).to_upper(), CrateCatalog.rarity_label(row["rarity"])])
 	var price: int = int(entry["price_gems"])
 	if _progress and _progress.gems < price:
 		lines.append(Loc.t("GEM: GÜNLÜK GİRİŞ · GÖREVLER · SEVİYE · USTALIK"))   # gem nereden gelir (QA: anlatılmıyordu)
 	_info_plate.set_content(Loc.t(String(entry["display_name"])),
 		Loc.t("ARAÇ TESLİMAT KASASI  ·  SV %d+") % int(entry["min_level"]), Loc.t("%d GEM") % price, lines)
+	_fit_info()
 	_buy_button.kind = HudIcon.Kind.GEM
 	var reason: String = _crates.buy_block_reason(_shown_crate) if _crates else "unknown"
 	if _closing_after_buy:

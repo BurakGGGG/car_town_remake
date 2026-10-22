@@ -152,6 +152,19 @@ func exit() -> void:
 	_saved.clear()
 
 
+## Modifiye garajı açıkken (ModGarageView aynı kökü ve kamerayı kullanır): iç mekân ve araçlar gizlenir, kamera sürülmez.
+## Kamera / ışık ayarlarını ModGarageView çıkarken geri koyar.
+func suspend(on: bool) -> void:
+	if not active:
+		return
+	for node: Node3D in [interior, _cars_root]:
+		if is_instance_valid(node):
+			node.visible = not on
+	_touches.clear()
+	_mouse_down = false
+	set_process(not on)
+
+
 func set_levels(levels: Dictionary) -> void:
 	if active:
 		interior.set_levels(levels)

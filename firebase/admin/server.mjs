@@ -27,7 +27,7 @@ import { getMessaging } from "firebase-admin/messaging";
 import {
   PanelError, loadCatalog, buildInfo, buildMail, mailId, buildConfig, buildNews, classifyQuery, unpackSave, hasReward,
   statsFromSave, buildBan, banActive, moderatedName, groupReports, UID_PATTERN, BAN_REASONS, buildAdjust, buildRestore,
-  buildPromo, PROMO_RE, buildSegment, matchSegment,
+  buildPromo, PROMO_RE, buildSegment, matchSegment, buildLearning,
 } from "./lib.mjs";
 
 // Gecelik istatistiğin aynısı (functions/stats.js, saf mantık): panel anlık sayıları da onunla hesaplar
@@ -384,6 +384,14 @@ const routes = {
     const groups = groupReports(snap.docs.map((d) => ({ id: d.id, data: d.data() })));
     const mods = groups.length ? await db.getAll(...groups.map((g) => db.doc(`moderation/m_${g.target}`))) : [];
     groups.forEach((g, i) => { g.banned = mods[i].exists && banActive(mods[i].data().ban, Date.now()); });
+    // Şikâyetteki ad / fotoğrafı ŞİKÂYETÇİ yazar (uydurulabilir): karar hedefin güncel garaj adı ve fotoğrafıyla verilsin
+    const garages = groups.length ? await db.getAll(...groups.map((g) => db.doc(`garages/g_${g.target}`))) : [];
+    const avatars = groups.length ? await db.getAll(...groups.map((g) => db.doc(`avatars/a_${g.target}`))) : [];
+    groups.forEach((g, i) => {
+      g.now_name = garages[i].exists ? String(garages[i].get("name") || "").slice(0, 16) : "";
+      const img = avatars[i].exists ? avatars[i].get("img") : "";
+      g.now_img = typeof img === "string" && /^[A-Za-z0-9+/=]{20,40000}$/.test(img) ? img : "";
+    });
     return { groups, reasons: BAN_REASONS };
   },
 
@@ -443,6 +451,21 @@ const routes = {
       levels[band] = (levels[band] || 0) + 1;
     }
     return { live, days, langs, levels };
+  },
+
+  // --- Yarış öğrenmesi (docs/KOSU_ESLESTIRME.md Faz 2): gece tablosu (raceLearning) + panel ayarı + son 30 günün sayıları ---
+  "GET /api/learning": async () => {
+    const snap = await db.doc("config/race_learning").get();
+    const days = (await db.collection("race_learning_daily").orderBy("day", "desc").limit(30).get())
+      .docs.map((d) => ({ day: d.get("day"), events: d.get("events") || 0, players: d.get("players") || 0 })).reverse();
+    return { doc: snap.exists ? snap.data() : null, days };
+  },
+
+  "POST /api/learning": async (body) => {
+    const doc = buildLearning(body);
+    await db.doc("config/race_learning").set(doc, { merge: true });
+    await log({ kind: "learning", ...doc });
+    return { doc };
   },
 
   "GET /api/log": async () => {

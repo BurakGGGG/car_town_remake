@@ -232,7 +232,11 @@ func _refresh() -> void:
 			_render_achievements()
 		Tab.GUIDE:
 			_render_guide()
-	_claim_all.visible = _tab != Tab.GUIDE and _claimable_in_tab() > 0
+	# HEPSİNİ AL bütün sekmeleri toplar (günlük + haftalık + başarım): açık sekmede ödül olmasa da başka sekmede varsa
+	# görünür, kaç ödül alınacağını yazar. REHBER ayrı zincirdir (adım adım açılır), toplanmaz.
+	var claimable: int = _missions.claimable_count() if _missions else 0
+	_claim_all.visible = _tab != Tab.GUIDE and claimable > 0
+	_claim_all.text = "%s (%d)" % [Loc.t("HEPSİNİ AL"), claimable]
 	_claim_all.highlight = _claim_all.visible
 	_fit_body.call_deferred()
 	if not get_tree().process_frame.is_connected(_fit_body):
@@ -246,23 +250,10 @@ func _badge(tab: int, count: int) -> void:
 	button.highlight = tab == _tab
 
 
-func _claimable_in_tab() -> int:
-	if _missions == null:
-		return 0
-	match _tab:
-		Tab.DAILY: return _missions.claimable_daily()
-		Tab.WEEKLY: return _missions.claimable_weekly()
-		Tab.ACHIEVEMENTS: return _missions.claimable_achievements()
-	return 0
-
-
 func _on_claim_all() -> void:
 	if _missions == null:
 		return
-	match _tab:
-		Tab.DAILY: _missions.claim_all_daily()
-		Tab.WEEKLY: _missions.claim_all_weekly()
-		Tab.ACHIEVEMENTS: _missions.claim_all_achievements()
+	_missions.claim_all()
 
 
 ## Gövde ekrandan uzunsa kaydırma alanı, sabit parçalar (başlık, sekmeler, alt düğmeler) düştükten

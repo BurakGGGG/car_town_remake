@@ -10,6 +10,8 @@ extends Node3D
 ##   Decal_<Kalem>_L<n>       o seviyenin zemine düşen gölgesi (çarpımlı, decal_<kalem>_l<n>.png)
 ##   Floor                    zemin: floor_<zemin sv>_<ışık sv>.png (her çift ayrı pişmiş, tam ışıklı)
 ##   DeckTop / Backdrop       çatı katı otoparkın güvertesi (deck.png) ve fon perdesi (backdrop.png)
+##   TableTop, Car            MODİFİYE GARAJI: döner tablanın üstü (ModGarageView yarı saydam yapar) ve araç yeri;
+##                            seviyesiz garajın zemini tek doku (floor.png)
 ##   Beam_*                   ışık huzmeleri (katkılı)
 ##   Slot_<n>, Slot_Tow       park yerleri: araç burnu düğümün +Z'sine bakar
 ## Blender metre; oyunda 1 birim = 4,39 m (araçlar 1,0 boyuna normalize): kök METER ölçeğiyle küçülür.
@@ -22,6 +24,7 @@ const DIR: Dictionary = {
 	&"showroom": "res://assets/garages/showroom/",
 	&"hangar": "res://assets/garages/hangar/",
 	&"waiting": "res://assets/garages/rooftop/",
+	&"modgarage": "res://assets/garages/modgarage/",
 }
 const FILE: Dictionary = {
 	&"mahalle": "mahalle.glb",
@@ -30,6 +33,7 @@ const FILE: Dictionary = {
 	&"showroom": "showroom.glb",
 	&"hangar": "hangar.glb",
 	&"waiting": "rooftop.glb",
+	&"modgarage": "modgarage.glb",
 }
 ## Seviye kalemleri: CarGarageCatalog kalemi → GLB adı öneki.
 const ITEM_NODES: Dictionary = {
@@ -90,6 +94,14 @@ const SETUP: Dictionary = {
 		# ortam ışığı az mor ve zayıf: 0,75 / mavi-mor iken beyaz araçlar leylak görünüyordu
 		"ambient": Color(0.64, 0.58, 0.6), "ambient_energy": 0.5, "background": Color(0.16, 0.11, 0.2),
 		"beam_gain": 0.45,   # direk huzmeleri oyunda önizlemeden belirgin: parlak sütun gibi duruyordu
+	},
+	# MODİFİYE GARAJI (ModGarageView): kamera kodda (kategoriye göre); bounds kameranın kalabileceği oda içi
+	&"modgarage": {
+		"camera": Vector3(15.9, 1.4, 2.5), "target": Vector3(9.5, 9.8, 1.45), "fov": 44.0,
+		"bounds": Rect2(1.1, 1.1, 17.8, 13.8), "height": 4.4,   # köşe kolonları 0,7 m: kamera onların dışında
+		"key_dir": Vector3(0.25, 0.35, -0.9), "key_color": Color(1.0, 0.88, 0.74), "key_energy": 1.05,
+		"ambient": Color(0.58, 0.5, 0.44), "ambient_energy": 0.7, "background": Color(0.012, 0.011, 0.012),
+		"beam_gain": 1.0,
 	},
 }
 
@@ -155,9 +167,19 @@ func set_levels(levels: Dictionary) -> void:
 		_floor_material.albedo_texture = load(String(DIR[garage]) + "floor_%d_%d.png" % [floor_level, lights]) as Texture2D
 
 
-## Seviye kalemli garaj mı (çatı katı otoparkın kalemi yok).
+## Seviye kalemli garaj mı (çatı katı otoparkın ve modifiye garajının kalemi yok).
 func is_leveled() -> bool:
-	return garage != &"waiting"
+	return garage != &"waiting" and garage != &"modgarage"
+
+
+## Adıyla bir GLB düğümü (TableTop, Car …); yoksa null.
+func part(node_name: String) -> Node3D:
+	return _model.get_node_or_null(node_name) as Node3D
+
+
+## İşaretçi düğümün dünya dönüşümü (ölçeksiz); yoksa boş dönüşüm.
+func marker(node_name: String) -> Transform3D:
+	return _marker_transform(part(node_name))
 
 
 func levels() -> Dictionary:
@@ -251,7 +273,7 @@ func _apply_materials() -> void:
 		elif node_name.begins_with("Decal_"):
 			material = _decal_material(node_name)
 		elif node_name == "Floor":
-			_floor_material = _texture_material(null)
+			_floor_material = _texture_material(null if is_leveled() else load(String(DIR[garage]) + "floor.png") as Texture2D)
 			material = _floor_material
 		elif node_name == "DeckTop":
 			material = _texture_material(load(String(DIR[garage]) + "deck.png") as Texture2D)

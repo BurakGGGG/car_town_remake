@@ -1,8 +1,8 @@
 class_name AdProvider
 extends RefCounted
 ## REKLAM SAĞLAYICI SÖZLEŞMESİ — AdService hangi arka uçla konuştuğunu bilmez.
-## APPLOVIN (Android, gerçek, 2026-10-19'dan beri) · ADMOB (Android, hesap reddedildi; kod duruyor) ·
-## MOCK (masaüstü geliştirme / testler) · NONE (kapalı).
+## APPODEAL (Android, gerçek, 2026-10-22'den beri; AppodealProvider) · APPLOVIN (yeni yayıncı almıyor; kod duruyor) ·
+## ADMOB (hesap reddedildi; kod duruyor) · MOCK (masaüstü geliştirme / testler) · NONE (kapalı). Seçim: AdConfig.NETWORK.
 ## Tüm geri çağrılar bir sonraki karede (call_deferred) gelir; senkron çağrı beklenmez.
 ## Reklamlar YUVA (slot) adıyla tutulur: her yuvanın kendi yüklü reklamı vardır.
 

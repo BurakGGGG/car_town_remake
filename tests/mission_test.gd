@@ -481,6 +481,22 @@ func _scene_tests() -> void:
 		check(int(summary["count"]) == claimed_all, "pencere: %d ödülün toplamı" % int(summary["count"]))
 		check(int(summary["gems"]) == pp.gems - gems_before_all and int(summary["money"]) == eco.money - money_before_all,
 			"pencere toplamı verilenle aynı (+%d gem, +%d ₺)" % [int(summary["gems"]), int(summary["money"])])
+	print("== HEPSİNİ AL: bütün sekmeler ==")
+	for t: Dictionary in mm.daily_tasks():
+		mm.count(t["metric"], int(t["target"]))
+	for t: Dictionary in mm.weekly_tasks():
+		mm.count(t["metric"], int(t["target"]))
+	mm.count(&"repairs", 3000)   # TAMİRCİ'nin yeni yıldızı da beklesin
+	check(mm.claimable_daily() > 0 and mm.claimable_weekly() > 0 and mm.claimable_achievements() > 0,
+		"üç sekmede de bekleyen ödül var (%d / %d / %d)" % [mm.claimable_daily(), mm.claimable_weekly(), mm.claimable_achievements()])
+	summaries.clear()
+	mm.rewards_claimed.connect(on_summary)
+	var everything: int = mm.claim_all()
+	mm.rewards_claimed.disconnect(on_summary)
+	check(mm.claimable_count() == 0, "HEPSİNİ AL günlük + haftalık + başarımı birden topladı (%d ödül, kalan %d)"
+		% [everything, mm.claimable_count()])
+	check(summaries.size() == 1 and int(summaries[0]["count"]) == everything, "bütün sekmeler tek ödül penceresinde")
+	check(mm.claim_all() == 0, "ikinci basış: alınacak bir şey yok")
 	check(mm.value_of(&"player_level") == pp.level and mm.value_of(&"garage_level") >= 1, "durum metrikleri oyundan okunuyor")
 	check(mm.value_of(&"cars_discovered") == own.discovered_count(), "cars_discovered = keşfedilen araç")
 

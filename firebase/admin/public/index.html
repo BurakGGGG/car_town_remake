@@ -205,6 +205,16 @@
       <div><h3>Dil</h3><div id="s-langs"></div></div>
       <div><h3>Seviye</h3><div id="s-levels"></div></div>
     </div>
+    <h3>Yarış öğrenmesi</h3>
+    <p class="hint">Oyuncunun yarıştan sonra oyunda kalıp kalmadığına göre kolay / dengeli / zor yarış seçimini öğrenir (docs/KOSU_ESLESTIRME.md). Tablo her gece 03:30'da son 30 günden toplanır; bir bağlamın her kolunda 30 deneme olana kadar oyun o bağlamda başlangıç kuralını kullanır (çoğu dengeli, ~üçte biri kolay, ara sıra zor). Seri kırıcı ve zor sınırı her zaman geçerli.</p>
+    <div id="l-table"></div>
+    <div class="row">
+      <div><label><input type="checkbox" id="l-off"> Öğrenme kapalı (yalnız başlangıç kuralı)</label></div>
+      <div><label>Kalış penceresi (sn)</label><input id="l-window" type="number" min="60" max="1800"></div>
+      <div><label>Genel tablo ağırlığı (yarış)</label><input id="l-weight" type="number" min="1" max="200"></div>
+    </div>
+    <button class="act" id="l-save">Kaydet</button>
+    <div class="status" id="l-status"></div>
   </section>
 
   <section id="player">
@@ -624,6 +634,39 @@ async function loadStats() {
   } catch (e) { $("s-live").textContent = e.message; }
 }
 $("s-load").onclick = loadStats;
+
+// --- Yarış öğrenmesi ---
+const LEARN_CTX = [["new", "Yeni oyuncu (ilk 10 yarış)"], ["WW", "Kazandı · kazandı"], ["WL", "Kazandı · kaybetti"],
+  ["LW", "Kaybetti · kazandı"], ["LL", "Kaybetti · kaybetti"]];
+const LEARN_ARMS = ["Kolay (~%75)", "Dengeli (~%50)", "Zor (~%30)"];
+async function loadLearning() {
+  try {
+    const r = await api("GET", "/api/learning");
+    const d = r.doc || {};
+    $("l-off").checked = d.off === true;
+    $("l-window").value = d.window ?? 300;
+    $("l-weight").value = d.weight ?? 20;
+    const t = d.table || {};
+    const cell = (k, a) => {
+      const c = (t[k] || {})[a] || {};
+      const n = c.n || 0;
+      return `<td>${n ? Math.round((c.s || 0) / n * 100) + "%" : "–"} <span class="hint">(${n} yarış)</span></td>`;
+    };
+    $("l-table").innerHTML = `<table><tr><th>Son iki yarış</th>${LEARN_ARMS.map((a) => `<th>${esc(a)} · kalış</th>`).join("")}</tr>` +
+      LEARN_CTX.map(([k, label]) => `<tr><td>${esc(label)}</td>${[0, 1, 2].map((a) => cell(k, a)).join("")}</tr>`).join("") + "</table>" +
+      `<p class="hint">${d.at ? `Son toplama ${when(d.at)} · ${d.days || 0} gün · ${d.events || 0} yarış` : "Henüz toplanmadı (ilk toplama 03:30'da)"}. ` +
+      "Kalış = yarıştan sonra pencere boyunca oyunda kaldı ya da yeni yarışa girdi. Kalış oranı yüksek olan kol daha sık seçilir.</p>";
+  } catch (e) { $("l-table").textContent = e.message; }
+}
+$("l-save").onclick = async () => {
+  try {
+    await api("POST", "/api/learning", { off: $("l-off").checked, window: Number($("l-window").value), weight: Number($("l-weight").value) });
+    status("l-status", "Kaydedildi (oyuncular en geç 6 saatte alır)", true);
+    loadLearning();
+  } catch (e) { status("l-status", e.message, false); }
+};
+document.querySelector('#tabs button[data-tab="stats"]').addEventListener("click", loadLearning);
+$("s-load").addEventListener("click", loadLearning);
 document.querySelector('#tabs button[data-tab="stats"]').addEventListener("click", loadStats);
 
 // --- Moderasyon yardımcıları ---
@@ -641,9 +684,10 @@ async function loadReports() {
     REASONS = r.reasons || REASONS;
     $("r-list").innerHTML = r.groups.length ? r.groups.map((g) => `
       <div class="card report" style="margin-top:10px">
-        ${g.img ? `<img alt="" src="data:image/jpeg;base64,${g.img}">` : '<div class="noimg"></div>'}
-        <div><b style="font-size:16px">${esc(g.name || "(ad yok)")}</b> ${g.banned ? '<span class="pill red">YASAKLI</span>' : ""}
-          <div class="hint" style="margin:2px 0">${esc(g.target)} · son şikâyet ${when(g.last_at)}</div>
+        ${g.now_img ? `<img alt="" title="Hedefin şu anki fotoğrafı" src="data:image/jpeg;base64,${g.now_img}">` : '<div class="noimg"></div>'}
+        <div><b style="font-size:16px">${esc(g.now_name || "(garaj yok)")}</b> ${g.banned ? '<span class="pill red">YASAKLI</span>' : ""}
+          <div class="hint" style="margin:2px 0">${esc(g.target)} · son şikâyet ${when(g.last_at)} · şu anki ad ve fotoğraf</div>
+          <div class="hint" style="margin:2px 0">Şikâyetçinin gönderdiği (uydurulabilir): ad "${esc(g.name || "–")}"${g.img ? ` · fotoğraf <img alt="" style="width:28px;height:28px;vertical-align:middle" src="data:image/jpeg;base64,${g.img}">` : ""}</div>
           <span class="pill red">${g.count} şikâyet</span>${Object.entries(g.reasons).map(([k, n]) => `<span class="pill">${esc(REPORT_REASONS[k] || k)} ×${n}</span>`).join("")}</div>
         <div class="acts">
           <button class="ghost" data-open="${esc(g.target)}">Oyuncuyu aç</button>

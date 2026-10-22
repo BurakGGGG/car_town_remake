@@ -14,6 +14,11 @@ extends RefCounted
 ## faturalar taşınmaz. Belge alanı değil garaj JSON'unun içinde: Firestore kuralı değişmeden taşınır; JSON sınırı
 ## aşılırsa yerleşim düşürülür, özet kalır (without_depots).
 ##
+## KOŞULAR (docs/KOSU_ESLESTIRME.md, 2026-10-21): sahip olunan araç başına son RUNS_PER_CAR yarış koşusu ("race": {"runs":
+## {araç: [DragRaceSim.Recording.to_dict]}}) — arkadaşın pistteki rakibi bunlardan biridir (RaceManager). Girdiler +
+## modifiyeler; süreyi okuyan taraf kendisi yeniden hesaplar. Garaj JSON'unun içinde: kural değişmez, arkadaş listesi
+## garajı zaten okuduğu için ek okuma yok. Sınır aşılırsa önce depolar, sonra koşular azaltılır (RUNS_TIGHT).
+##
 ## Biçim kayıt sözlüğüyle aynıdır (SaveManager.validate / _apply olduğu gibi okur); ikinci bir model yok.
 
 ## Kaydın içinden alınan alanlar. "progress" ve "vehicles" ayrıca süzülür (aşağıda).
@@ -22,6 +27,9 @@ const COPIED_KEYS: Array[String] = ["garage_upgrades", "repair_bays", "decor"]
 ## Açık JSON çok daha büyük olabilir (sıkışınca ~1/6); okurken açık metnin sınırı CloudPack.MAX_PLAIN.
 const MAX_JSON: int = 19000
 const SUMMARY_KEY: String = "car_garage_summary"
+## Araç başına açık garaja giden son koşu sayısı; garaj sınırı aşılınca RUNS_TIGHT.
+const RUNS_PER_CAR: int = 8
+const RUNS_TIGHT: int = 3
 
 
 ## Kayıt sözlüğünden açık garaj sözlüğü.
@@ -39,6 +47,10 @@ static func from_snapshot(snapshot: Dictionary) -> Dictionary:
 		if vehicles.has(key):
 			out_vehicles[key] = vehicles[key]
 	out["vehicles"] = out_vehicles
+	var race: Dictionary = snapshot.get("race", {}) if snapshot.get("race") is Dictionary else {}
+	var runs: Dictionary = public_runs(race.get("runs", {}), out_vehicles.get("owned", []), RUNS_PER_CAR)
+	if not runs.is_empty():
+		out["race"] = {"runs": runs}
 	var performance: Dictionary = snapshot.get("performance", {}) if snapshot.get("performance") is Dictionary else {}
 	if performance.get("builds") is Dictionary and not (performance["builds"] as Dictionary).is_empty():
 		out["performance"] = {"builds": performance["builds"]}
@@ -86,6 +98,44 @@ static func depot_layout(garage: Dictionary) -> Dictionary:
 	return out
 
 
+## Koşuların açık hali: yalnızca `owned` araçlar, araç başına son `limit` geçerli koşu (sunucudan gelen veri de buradan
+## geçer: bozuk, başka araca ait, kalkmamış, eski sürüm ya da oyuncu koşusu olamayacak kayıt atılır — is_player_run).
+## Koşunun ZAMANI ("at") açık garaja gitmez:
+## arkadaşın rakibi için gereksiz, oyuncunun ne zaman oynadığını gösterirdi (gizlilik metni yalnız girdi + modifiye + süre der).
+static func public_runs(raw: Variant, owned: Variant, limit: int) -> Dictionary:
+	var out: Dictionary = {}
+	if not raw is Dictionary or not owned is Array:
+		return out
+	for key: Variant in raw:
+		var id: String = SaveSafe.s(key)
+		var list: Variant = (raw as Dictionary)[key]
+		if not (owned as Array).has(id) or not list is Array:
+			continue
+		var clean: Array = []
+		for item: Variant in (list as Array).slice(-limit):
+			var recording: DragRaceSim.Recording = DragRaceSim.Recording.from_dict(item) if item is Dictionary else null
+			if recording and String(recording.vehicle_id) == id and recording.launch_step >= 0 and recording.time > 0.0 \
+					and recording.is_player_run():
+				var open_run: Dictionary = recording.to_dict()
+				open_run.erase("at")
+				clean.append(open_run)
+		if not clean.is_empty():
+			out[id] = clean
+	return out
+
+
+## Garaj sınırı aşılınca: araç başına `limit` koşuya indirilmiş kopya.
+static func with_runs(garage: Dictionary, limit: int) -> Dictionary:
+	var out: Dictionary = garage.duplicate()
+	var race: Variant = garage.get("race", {})
+	if race is Dictionary and (race as Dictionary).get("runs") is Dictionary:
+		var runs: Dictionary = {}
+		for id: Variant in (race as Dictionary)["runs"]:
+			runs[id] = ((race as Dictionary)["runs"][id] as Array).slice(-limit)
+		out["race"] = {"runs": runs}
+	return out
+
+
 ## JSON sınırı aşılınca: depo yerleşimi düşürülmüş kopya (özet kalır).
 static func without_depots(garage: Dictionary) -> Dictionary:
 	var out: Dictionary = garage.duplicate()
@@ -122,8 +172,8 @@ static func car_garage_summary(garage: Dictionary) -> Dictionary:
 	return {"own": own, "cap": cap}
 
 
-## Arkadaşın garajından yarış verisi: {cars: Array[String] (tekil), paint: {id: hex}, builds: {id: {kategori: kademe}}}.
-## Biçimsiz değerler atlanır (sunucudan gelen veri).
+## Arkadaşın garajından yarış verisi: {cars: Array[String] (tekil), paint: {id: hex}, builds: {id: {kategori: kademe}},
+## runs: {id: [koşu kaydı]}}. Biçimsiz değerler atlanır (sunucudan gelen veri).
 static func race_data(garage: Dictionary) -> Dictionary:
 	var vehicles: Dictionary = garage.get("vehicles", {}) if garage.get("vehicles") is Dictionary else {}
 	var cars: Array[String] = []
@@ -153,7 +203,8 @@ static func race_data(garage: Dictionary) -> Dictionary:
 					clean[String(category)] = int(stages[category])
 				if not clean.is_empty():
 					builds[id] = clean
-	return {"cars": cars, "paint": paint, "builds": builds}
+	var race: Dictionary = garage.get("race", {}) if garage.get("race") is Dictionary else {}
+	return {"cars": cars, "paint": paint, "builds": builds, "runs": public_runs(race.get("runs", {}), cars, RUNS_PER_CAR)}
 
 
 ## Sıralı anahtarlı JSON (değişti mi karşılaştırması için tek biçim).

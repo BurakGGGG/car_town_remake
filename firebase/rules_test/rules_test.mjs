@@ -166,9 +166,10 @@ await check("fotoğraflar listelenemez (toplu indirme yok)", assertFails(getDocs
 await check("sahibi siler (hesap silme)", assertSucceeds(deleteDoc(doc(alice, "avatars/a_alice"))));
 
 console.log("== reports ==");
-const rep = (over = {}) => ({ target: "alice", reason: "photo", av: "img:0a1b2c3d", name: "Usta Ali", at: 1, ...over });
+const repAt = Math.floor(Date.now() / 1000);
+const rep = (over = {}) => ({ target: "alice", reason: "photo", av: "img:0a1b2c3d", name: "Usta Ali", at: repAt, ...over });
 await check("eve alice'i şikâyet eder", assertSucceeds(setDoc(doc(eve, "reports/x_eve_alice"), rep())));
-await check("aynı şikâyet yeniden yazılır (tek belge)", assertSucceeds(setDoc(doc(eve, "reports/x_eve_alice"), rep({ img: "QUJD", at: 2 }))));
+await check("aynı şikâyet yeniden yazılır (tek belge)", assertSucceeds(setDoc(doc(eve, "reports/x_eve_alice"), rep({ img: "QUJD", at: repAt + 5 }))));
 await check("başkası adına şikâyet edilemez", assertFails(setDoc(doc(eve, "reports/x_bob_alice"), rep())));
 await check("kimlik hedefle uyuşmazsa reddedilir", assertFails(setDoc(doc(eve, "reports/x_eve_bob"), rep())));
 await check("garajı olmayan (uydurma) hedef şikâyet edilemez", assertFails(setDoc(doc(eve, "reports/x_eve_zed"), rep({ target: "zed" }))));
@@ -178,6 +179,8 @@ await check("şikâyet okunamaz (yalnız konsol)", assertFails(getDoc(doc(eve, "
 await check("hedef de okuyamaz", assertFails(getDoc(doc(alice, "reports/x_eve_alice"))));
 await check("şikâyet silinemez", assertFails(deleteDoc(doc(eve, "reports/x_eve_alice"))));
 await check("girişsiz şikâyet edilemez", assertFails(setDoc(doc(anon, "reports/x_anon_alice"), rep())));
+await check("uzak gelecek tarihli şikâyet reddedilir (kuyruğun başına çakılmasın)", assertFails(setDoc(doc(eve, "reports/x_eve_alice"), rep({ at: 9e15 }))));
+await check("çok eski tarihli şikâyet reddedilir", assertFails(setDoc(doc(eve, "reports/x_eve_alice"), rep({ at: 1 }))));
 
 console.log("== yarış haberi (races) ==");
 // alice ↔ bob arkadaş (yukarıda yeniden kuruldu); eve arkadaş değil
@@ -306,6 +309,14 @@ await check("başkası hediye yazamaz", assertFails(setDoc(doc(bob, "users/alice
 await check("başkası silemez", assertFails(deleteDoc(doc(bob, "users/alice/mail/m1"))));
 await check("sahibi alınca siler", assertSucceeds(deleteDoc(doc(alice, "users/alice/mail/m1"))));
 
+console.log("== iade (refunds) ==");
+await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "users/alice/refunds/r1"), { product: "gems_pack_1", quantity: 1, at: 1 }));
+await check("sahibi iadeyi okur", assertSucceeds(getDocs(collection(alice, "users/alice/refunds"))));
+await check("başkası iadeyi okuyamaz", assertFails(getDocs(collection(bob, "users/alice/refunds"))));
+await check("sahibi iade yazamaz / değiştiremez", assertFails(setDoc(doc(alice, "users/alice/refunds/r1"), { product: "x", quantity: 0, at: 1 })));
+await check("başkası iadeyi silemez", assertFails(deleteDoc(doc(bob, "users/alice/refunds/r1"))));
+await check("sahibi uygulayınca siler", assertSucceeds(deleteDoc(doc(alice, "users/alice/refunds/r1"))));
+
 console.log("== kupon kodu (redeem) ==");
 const nowS = Math.floor(Date.now() / 1000);
 await check("oyuncu kod denemesi yazar", assertSucceeds(setDoc(doc(alice, "users/alice/redeem/REELS50"), { at: nowS })));
@@ -338,12 +349,31 @@ await check("tam yasak (kalıcı): bulut kaydı yazılamaz", assertFails(setDoc(
 await check("tam yasak: bildirim jetonu yazılamaz", assertFails(setDoc(doc(mallory, "push/p_mallory"), { token: "m".repeat(150), lang: "tr", at: 2 })));
 await check("tam yasak: sosyal de kapalı", assertFails(setDoc(doc(mallory, "garages/g_mallory"), garage({ code: "MLR234" }))));
 await check("tam yasak: kendi kaydını okuyabilir", assertSucceeds(getDoc(doc(mallory, "players/mallory"))));
+await check("tam yasak: yarış günlüğü yazılamaz", assertFails(setDoc(doc(mallory, `race_log/mallory_${Math.floor(Date.now() / 86400000)}`),
+  { uid: "mallory", day: Math.floor(Date.now() / 86400000), events: "[]", n: 0, v: 1, at: 1 })));
 await check("tam yasak: kayıt geçmişi yazılamaz", assertFails(setDoc(doc(mallory, "players/mallory/history/h01"), { save_json: "{}", updated_at: 1 })));
 await banDb("mallory", { kind: "full", reason: "cheat", until: now - 60, at: now - 7200 });
 await check("süresi dolan yasak: kayıt yine yazılır", assertSucceeds(setDoc(doc(mallory, "players/mallory"), { save_version: 10, save_json: "{}", updated_at: 3 })));
 await check("süresi dolan yasak: garaj yine yazılır", assertSucceeds(setDoc(doc(mallory, "garages/g_mallory"), garage({ code: "MLR234" }))));
 await banDb("mallory", null);
 await check("yasak kaldırılınca (ban alanı yok) her şey açık", assertSucceeds(setDoc(doc(mallory, "users/bob/inbox/r_mallory"), req({ name: "Mallory", code: "MLR234" }))));
+
+console.log("== yarış günlüğü (race_log) ==");
+const logDay = Math.floor(Date.now() / 86400000);
+const rlog = (over = {}) => ({ uid: "alice", day: logDay, events: "[]", n: 0, v: 1, at: nowS, ...over });
+await check("sahibi bugünün günlüğünü yazar", assertSucceeds(setDoc(doc(alice, `race_log/alice_${logDay}`), rlog({ events: "[{}]", n: 1 }))));
+await check("sahibi günlüğü günceller", assertSucceeds(setDoc(doc(alice, `race_log/alice_${logDay}`), rlog({ n: 2 }))));
+await check("iki gün önceki (çevrimdışı birikmiş) günlük yazılır", assertSucceeds(setDoc(doc(alice, `race_log/alice_${logDay - 2}`), rlog({ day: logDay - 2 }))));
+await check("üç gün önceki günlük reddedilir", assertFails(setDoc(doc(alice, `race_log/alice_${logDay - 3}`), rlog({ day: logDay - 3 }))));
+await check("gelecek gün reddedilir", assertFails(setDoc(doc(alice, `race_log/alice_${logDay + 1}`), rlog({ day: logDay + 1 }))));
+await check("başkası adına yazılamaz", assertFails(setDoc(doc(eve, `race_log/alice_${logDay}`), rlog())));
+await check("kimlik ile gün uyuşmazsa reddedilir", assertFails(setDoc(doc(alice, `race_log/alice_${logDay - 1}`), rlog())));
+await check("ek alan reddedilir", assertFails(setDoc(doc(alice, `race_log/alice_${logDay}`), rlog({ money: 1 }))));
+await check("çok büyük günlük reddedilir", assertFails(setDoc(doc(alice, `race_log/alice_${logDay}`), rlog({ events: "x".repeat(100000) }))));
+await check("sahibi bile okuyamaz", assertFails(getDoc(doc(alice, `race_log/alice_${logDay}`))));
+await check("silinemez (hesap silinince sunucu siler)", assertFails(deleteDoc(doc(alice, `race_log/alice_${logDay}`))));
+await check("öğrenme tablosu herkese okunur", assertSucceeds(getDoc(doc(anon, "config/race_learning"))));
+await check("öğrenme tablosu yazılamaz", assertFails(setDoc(doc(alice, "config/race_learning"), { off: true })));
 
 console.log("== başka yollar ==");
 await check("bilinmeyen koleksiyon kapalı", assertFails(setDoc(doc(alice, "other/x"), { a: 1 })));

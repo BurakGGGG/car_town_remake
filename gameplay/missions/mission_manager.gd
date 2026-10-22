@@ -749,6 +749,21 @@ func claim_all_achievements() -> int:
 	return n
 
 
+## HEPSİNİ AL (kullanıcı 2026-10-22: hangi sekmede basılırsa basılsın HEPSİ): günlük + haftalık + başarımların bütün
+## hazır ödülleri, tek ödül penceresi. Ödül almak başka ödülü açabilir (günlük görev → "günlük görev tamamla" başarımı):
+## yeni ödül çıkmayana kadar tekrar edilir.
+func claim_all() -> int:
+	_begin_tally()
+	var n: int = 0
+	for _pass: int in 4:
+		var got: int = claim_all_daily() + claim_all_weekly() + claim_all_achievements()
+		n += got
+		if got == 0:
+			break
+	_end_tally()
+	return n
+
+
 ## Bir basışın ödüllerini toplamaya başlar; iç içe çağrılabilir (HEPSİNİ AL → tek tek ÖDÜLÜ AL).
 func _begin_tally() -> void:
 	if _tally_depth == 0:

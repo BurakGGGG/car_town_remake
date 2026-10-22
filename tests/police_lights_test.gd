@@ -40,7 +40,7 @@ func _run() -> void:
 	var worst: float = 0.0
 	for v: Vector3 in [Vector3(0.1, 0.2, -0.3), Vector3(-0.25, 0.05, 0.4), Vector3(0.0, 0.0, 0.0)]:
 		worst = maxf(worst, absf(Vector3(plane.x, plane.y, plane.z).dot(v) + plane.w - (xf * v).x))
-	check(worst < 1e-5, "side_plane köşenin araç uzayındaki x'ini verir (hata %.2e)" % worst)
+	check(worst < 1e-5, "side_plane köşenin araç uzayındaki x'ini verir (hata %s)" % String.num_scientific(worst))
 
 	print("== rig ==")
 	for id: StringName in POLICE:

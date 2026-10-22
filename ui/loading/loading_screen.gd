@@ -102,10 +102,12 @@ func _ready() -> void:
 	# AdMob eklentisinin sınıfları yüklenirken `static var _plugin := _get_plugin(...)` çalışır;
 	# masaüstü / düzenleyicide sahte reklam düğümünü KÖKE ekler — arka plan iş parçacığında bu
 	# reddediliyordu (sahte reklamlar bozulurdu; Android'de get_singleton, sorun yok). Bu küçük zincir
-	# önce ANA iş parçacığında yüklenir.
-	for path: String in MAIN_THREAD_FIRST:
-		if ResourceLoader.exists(path):
-			load(path)
+	# önce ANA iş parçacığında yüklenir. Yalnız ağ AdMob iken: başka ağda AdService bu betiği hiç yüklemez, eklenti
+	# kapalıyken (Appodeal) Android'de her açılışta "Native plugin not found" hataları basıyordu (2026-10-23).
+	if AdConfig.NETWORK == AdConfig.Network.ADMOB:
+		for path: String in MAIN_THREAD_FIRST:
+			if ResourceLoader.exists(path):
+				load(path)
 	var error: Error = ResourceLoader.load_threaded_request(MAIN_SCENE, "", false)
 	if error != OK:
 		push_warning("LoadingScreen: arka plan yüklemesi başlamadı (%d), doğrudan geçiliyor" % error)

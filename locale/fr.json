@@ -188,7 +188,7 @@
  "BEYAZ PANEL": "PANNEAU BLANC",
  "BEYAZ PARKE": "PARQUET BLANC",
  "BEYAZ SIVA": "ENDUIT BLANC",
- "BMW E46": "",
+ "BAVARIA CLUB 46": "BAVARIA CLUB 46",
  "BOYA": "PEINTURE",
  "BOYA ATÖLYESİ": "ATELIER PEINTURE",
  "BOYA İŞİ": "REMISE EN PEINTURE",
@@ -2286,5 +2286,16 @@
  "YAZINI YAZ": "ÉCRIS TON TEXTE",
  "İSİM TABELASI": "ENSEIGNE",
  "Harf harf dizilen, yazısı sana ait duvar tabelası.": "Une enseigne murale lettre par lettre, avec ton propre texte.",
- "YAZI": "TEXTE"
+ "YAZI": "TEXTE",
+ "EFSANEVİ": "LÉGENDAIRE",
+ "EPİK": "ÉPIQUE",
+ "GOOGLE PLAY BU ÖDEMEYİ ONAYLAMADI\nGEM VERİLMEDİ": "GOOGLE PLAY N'A PAS CONFIRMÉ CE PAIEMENT\nAUCUNE GEMME N'A ÉTÉ DONNÉE",
+ "HATA RAPORLARI": "RAPPORTS D'ERREUR",
+ "Hangi ekranların ve özelliklerin ne kadar kullanıldığı sayılır. Oyunu geliştirmemize yardım eder.": "Compte l'utilisation des écrans et des fonctionnalités. Nous aide à améliorer le jeu.",
+ "KULLANIM İSTATİSTİKLERİ": "STATISTIQUES D'UTILISATION",
+ "NADİR": "RARE",
+ "Oyun çökerse ya da bir hata olursa teknik ayrıntılar (cihaz modeli, hatanın yeri) bize gönderilir.": "Si le jeu plante ou rencontre une erreur, des détails techniques (modèle de l'appareil, lieu de l'erreur) nous sont envoyés.",
+ "YAYGIN": "COMMUN",
+ "ÖDEMEN HENÜZ DOĞRULANAMADI\nİNTERNETE BAĞLANINCA GEMLER GELİR": "TON PAIEMENT N'EST PAS ENCORE VÉRIFIÉ\nTU RECEVRAS TES GEMMES DÈS QUE TU SERAS EN LIGNE",
+ "İADE EDİLEN SATIN ALMA\n−%d GEM GERİ ALINDI": "ACHAT REMBOURSÉ\n−%d GEMMES RETIRÉES"
 }

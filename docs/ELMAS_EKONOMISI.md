@@ -5,7 +5,7 @@
 - Gerçek parayla gem satışı eklendi (Google Play Billing, tüketilebilir ürünler).
 - Ödüllü reklam gem VERMEZ. "Reklamları kaldır" ürünü YOK.
 - Giriş ödülü (`GemRewards.LOGIN_CYCLE`) korundu; kasa fiyatları (30–200) ve boya fiyatları değişmedi.
-- İlk sürümde sunucu doğrulaması yok (aşağıda "Sonraki adım").
+- 2026-10-22: satın almalar sunucuda doğrulanıyor (aşağıda "Sunucu doğrulaması").
 
 ## Kısıntılar
 | Kaynak | Önce | Sonra | Yer |
@@ -68,6 +68,25 @@ Play'den oyuncunun para biriminde gelir; aşağıdaki USD konsola girilecek taba
    satın alma", gizlilik politikası (web sitesi) güncellemesi. Kasa oranları satın almadan önce kasa
    ekranında görünür (Play'in rastgele ürün oranı kuralı).
 
-## Sonraki adım: sunucu doğrulaması
-Firebase Blaze + Cloud Function: makbuzu Google Play Developer API ile doğrula, geri ödenen siparişleri
-(voided purchases) işle. Play Console'a hizmet hesabı bağlanması gerekir.
+## Sunucu doğrulaması (2026-10-22)
+Play "PURCHASED" deyince oyun gemi vermeden `iapVerify`'a sorar (`PurchaseManager._verify`, düz HTTP callable).
+Fonksiyon (`firebase/functions/iap.js`) Google Play Developer API `purchases.products.get` ile bakar:
+
+| Play'in cevabı | Oyun |
+|---|---|
+| ödendi, tüketilmemiş → `ok` | gem verilir, kaydedilir, sonra tüketilir (miktar Play'den) |
+| bekliyor → `pending` | gem yok, ödeme tamamlanınca yeniden gelir |
+| iptal / tüketilmiş / tanınmıyor → `canceled` · `consumed` · `invalid` | gem yok, tüketilmez, MARKET "GOOGLE PLAY BU ÖDEMEYİ ONAYLAMADI" |
+| izin / kota / ağ hatası → `unavailable` | gem yok, tüketilmez; 20 sn → 10 dk aralıkla ve oyuna dönünce yeniden sorulur |
+
+- Sunucuya ulaşılamazsa gem VERİLMEZ (sahte satın alma aracı ağı keserek geçemesin). Play onaylanmayan satın
+  almayı 3 gün içinde iade eder: oyuncu parasını kaybetmez.
+- ÖN KAYIT ÖDÜLÜ istisna: Play'in ödül belirteçlerini tanıdığı yayından önce denenemiyor; `invalid` gelirse ödül
+  yine verilir (sahtesi kayıt başına bir kez 100 gem).
+- Sahte Play (`MockBillingClient`, masaüstü / testler) doğrulamasız geçer; testler `use_verifier` ile taklit eder
+  (`tests/purchase_test.gd` bölüm 12–14).
+- Kayıt: `iap/{belirteç özeti}` (istemciye kapalı) 1 yıl (`cleanup.js`), hesap silinince hemen (`account_cleanup.js`).
+- KURULUM (bir kez): Google Cloud'da "Google Play Android Developer API" açılır; Play Console → Kullanıcılar ve
+  izinler → `1027985902163-compute@developer.gserviceaccount.com` davet edilir (uygulama bilgisi + finansal veri +
+  sipariş yönetimi). İzin 24 saate kadar yayılmayabilir; o sürede satın almalar "doğrulanamadı" der, kaybolmaz.
+- Sonraki adım: iade edilen siparişler (voided purchases API) ile verilen gemin geri alınması.

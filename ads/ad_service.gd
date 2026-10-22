@@ -83,17 +83,27 @@ func set_personalized_ads(on: bool) -> void:
 		_provider.set_personalized_ads(on)
 
 
+## Seçilmeyen ağın sağlayıcısı adıyla anılmaz (yalnız gerekince yüklenir): betiği yüklenince eklentinin GDScript
+## sınıfları da yüklenir ve eklenti kapalıyken her açılışta "Native plugin not found" hataları basar (telefonda
+## görüldü 2026-10-23; Telemetry bunları hata raporu sayıyordu).
+const ADMOB_PROVIDER: String = "res://ads/admob_provider.gd"
+const APPLOVIN_PROVIDER: String = "res://ads/applovin_provider.gd"
+const APPLOVIN_SINGLETON: String = "AppLovinMAXGodotPlugin"   # AppLovinProvider.SINGLETON
+
 ## Ağın eklentisi varsa gerçek sağlayıcı (kimlikler eksikse KAPALI); eklentisiz debug derleme = sahte sağlayıcı.
 static func _pick_provider() -> AdProvider:
 	if not GameFeatures.ADS:
 		return AdProvider.new()   # kapalı: hiçbir şey yüklenmez, hiçbir teklif çıkmaz
 	match AdConfig.NETWORK:
 		AdConfig.Network.APPLOVIN:
-			if Engine.has_singleton(AppLovinProvider.SINGLETON):
-				return AppLovinProvider.new() if AdConfig.applovin_ready() else AdProvider.new()
+			if Engine.has_singleton(APPLOVIN_SINGLETON):
+				return load(APPLOVIN_PROVIDER).new() if AdConfig.applovin_ready() else AdProvider.new()
 		AdConfig.Network.ADMOB:
 			if Engine.has_singleton("PoingGodotAdMob"):
-				return AdMobProvider.new() if AdConfig.any_slot_usable() else AdProvider.new()
+				return load(ADMOB_PROVIDER).new() if AdConfig.any_slot_usable() else AdProvider.new()
+		AdConfig.Network.APPODEAL:
+			if AppodealProvider.available():
+				return AppodealProvider.new() if AdConfig.appodeal_ready() else AdProvider.new()
 	if OS.is_debug_build():
 		return MockAdProvider.new()   # masaüstü geliştirme
 	return AdProvider.new()

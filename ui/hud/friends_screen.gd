@@ -313,7 +313,9 @@ func _on_notice(text: String) -> void:
 # --- Görünüm -------------------------------------------------------------------
 
 func _refresh() -> void:
-	if _cards == null:
+	# Ağaç dışında yenilenmez: sahne yenilenirken (bulut girişi) eski ekran kalıcı SocialManager'ın sinyalini alıyordu,
+	# _stats get_tree() null'da düşüyordu. Ekran açılınca (open) zaten yenilenir.
+	if _cards == null or not is_inside_tree():
 		return
 	var state: SocialManager.State = _social.get_state() if _social else SocialManager.State.UNAVAILABLE
 	var ready: bool = state == SocialManager.State.READY

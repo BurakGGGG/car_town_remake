@@ -92,7 +92,13 @@ static func rarity_weight(rarity: StringName) -> float:
 	return float(_rarities.get(rarity, {}).get("weight", 0.0))
 
 
+## Nadirlik adları oyuncunun dilinde (veri dosyasındaki "label" İngilizceydi: Türkçe arayüzde COMMON / LEGENDARY kalıyordu).
+const RARITY_LABELS: Dictionary = {&"common": "YAYGIN", &"rare": "NADİR", &"epic": "EPİK", &"legendary": "EFSANEVİ"}
+
+
 static func rarity_label(rarity: StringName) -> String:
+	if RARITY_LABELS.has(rarity):
+		return Loc.t(RARITY_LABELS[rarity])
 	_ensure_loaded()
 	return String(_rarities.get(rarity, {}).get("label", String(rarity).to_upper()))
 

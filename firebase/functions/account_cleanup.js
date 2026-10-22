@@ -22,8 +22,8 @@ const UID_RE = /^[A-Za-z0-9]{1,128}$/;
 const OWN_DOCS = (uid) => [`players/${uid}`, `garages/g_${uid}`, `avatars/a_${uid}`, `push/p_${uid}`,
   `moderation/m_${uid}`, `admin_notes/n_${uid}`];
 
-/** `uid` alanıyla bulunan belgeler (arkadaş kodu, davet linki). */
-const OWNED_BY_FIELD = ["codes", "invites"];
+/** `uid` alanıyla bulunan belgeler (arkadaş kodu, davet linki, yarış günlüğü — 2026-10-22). */
+const OWNED_BY_FIELD = ["codes", "invites", "race_log", "iap"];   // iap: satın alma doğrulama kaydı (iap.js)
 
 /** Başkalarının users/{x}/<grup> altına bu UID'nin yazdığı belgeler: grup → kimlik eşleşmesi. */
 const AUTHORED = [

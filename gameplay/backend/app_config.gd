@@ -12,6 +12,10 @@ extends Node
 ##                     tamir (iş başlarken sabitlenir: balondaki tutar doğru kalır) ve yarış ödülleri çarpılır; çarpan 1–3
 ## Metin alanları dil sözlüğüdür; oyuncunun dili yoksa İngilizce, o da yoksa Türkçe gösterilir (text_of).
 ##
+## YARIŞ ÖĞRENMESİ (2026-10-22, docs/KOSU_ESLESTIRME.md Faz 2): ikinci belge config/race_learning — gece fonksiyonunun
+## topladığı tablo {table: {bağlam: {kol: {s, n}}}, events, days, at} + panelin alanları {off, window, weight}. Seyrek
+## değişir: LEARNING_REFRESH'te bir okunur, son hali aynı dosyada saklanır (çevrimdışı da son tablo). RaceLearning okur.
+##
 ## Son okunan belge user://app_config.json'da durur: internet yokken de son bilinen kural geçerlidir (zorunlu güncelleme
 ## uçak moduyla atlatılamaz). Okuma başarısızsa (ağ yok, belge yok) eldeki kural değişmez. Geliştirme sürümü
 ## (AppInfo kodu 0: editör / masaüstü) güncelleme ve bakım kapısına takılmaz; duyuruyu görür.
@@ -23,6 +27,9 @@ signal changed
 
 const NODE_NAME: String = "AppConfig"
 const URL: String = "https://firestore.googleapis.com/v1/projects/car-town-remake/databases/(default)/documents/config/app"
+const LEARNING_URL: String = "https://firestore.googleapis.com/v1/projects/car-town-remake/databases/(default)/documents/config/race_learning"
+## Öğrenme tablosu gecede bir değişir: oyun açıkken en çok bu aralıkla okunur (sn).
+const LEARNING_REFRESH: float = 21600.0
 const FILE: String = "user://app_config.json"
 const STORE_PACKAGE: String = "com.autoyard.app"
 ## Oyun açıkken belge bu aralıkla yeniden okunur; öne gelince son okumadan bu kadar geçtiyse hemen (sn).
@@ -36,6 +43,7 @@ const GATE_MAINTENANCE: StringName = &"maintenance"
 
 ## Boşsa ağdan okunmaz (testler apply ile belge verir).
 var url: String = URL
+var learning_url: String = LEARNING_URL
 
 var _config: Dictionary = {}
 var _state: Dictionary = {}       # {config, fetched_at, seen: {duyuru kimliği: true}, dismissed_latest}
@@ -43,6 +51,9 @@ var _http: HTTPRequest
 var _timer: Timer
 var _busy: bool = false
 var _last_fetch: float = -1.0e9
+var _learning_http: HTTPRequest
+var _learning_busy: bool = false
+var _last_learning_fetch: float = -1.0e9
 
 
 ## Kökte bir tane kurar (LoadingScreen açılışta çağırır).
@@ -72,6 +83,10 @@ func _ready() -> void:
 	_http.timeout = TIMEOUT_SEC
 	_http.request_completed.connect(_on_request_completed)
 	add_child(_http)
+	_learning_http = HTTPRequest.new()
+	_learning_http.timeout = TIMEOUT_SEC
+	_learning_http.request_completed.connect(_on_learning_completed)
+	add_child(_learning_http)
 	_timer = Timer.new()
 	_timer.wait_time = REFRESH_SEC
 	_timer.timeout.connect(refresh)
@@ -87,14 +102,57 @@ func _notification(what: int) -> void:
 			refresh()
 
 
-## Belgeyi yeniden okur (BAKIMDAYIZ → TEKRAR DENE de bunu çağırır).
+## Belgeyi yeniden okur (BAKIMDAYIZ → TEKRAR DENE de bunu çağırır). Öğrenme tablosu vakti geldiyse o da.
 func refresh() -> void:
-	if _busy or url.is_empty() or _http == null:
+	if url.is_empty():
+		return
+	_refresh_learning()
+	if _busy or _http == null:
 		return
 	_busy = true
 	_last_fetch = _seconds()
 	if _http.request(url) != OK:
 		_busy = false
+
+
+func _refresh_learning() -> void:
+	if _learning_busy or learning_url.is_empty() or _learning_http == null \
+			or _seconds() - _last_learning_fetch < LEARNING_REFRESH:
+		return
+	_learning_busy = true
+	_last_learning_fetch = _seconds()
+	if _learning_http.request(learning_url) != OK:
+		_learning_busy = false
+
+
+func _on_learning_completed(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	_learning_busy = false
+	if result != HTTPRequest.RESULT_SUCCESS or (code != 200 and code != 404):
+		_last_learning_fetch = -1.0e9   # sonraki yenilemede yeniden dene
+		return
+	var learning: Dictionary = {}
+	if code == 200:
+		var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+		var fields: Variant = (parsed as Dictionary).get("fields", {}) if parsed is Dictionary else {}
+		learning = decode_fields(fields if fields is Dictionary else {})
+	apply_learning(learning)
+
+
+## Öğrenme belgesini uygular ve saklar (testler doğrudan çağırır). Belge yoksa boş: öğrenme başlangıç kuralıyla çalışır.
+func apply_learning(learning: Dictionary) -> void:
+	_state["learning"] = learning
+	_write()
+
+
+func learning() -> Dictionary:
+	var raw: Variant = _state.get("learning", {})
+	return raw if raw is Dictionary else {}
+
+
+## config/race_learning'in son hali (AppConfig kurulmamışsa — testler, ziyaret — boş).
+static func learning_of(tree: SceneTree) -> Dictionary:
+	var config: AppConfig = of(tree)
+	return config.learning() if config else {}
 
 
 func is_busy() -> bool:

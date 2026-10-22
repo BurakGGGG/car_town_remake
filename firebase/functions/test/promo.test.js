@@ -14,13 +14,17 @@ function fakeDb(initial = {}) {
     store,
     doc: ref,
     collection: (col) => ({
-      where: (field, op, value) => ({
-        async get() {
-          const docs = Object.keys(store).filter((p) => p.startsWith(col + "/") && !p.slice(col.length + 1).includes("/")
-            && store[p][field] > value);
-          return { size: docs.length };
-        },
-      }),
+      where: (field, op, value) => {
+        const query = (max) => ({
+          limit: (n) => query(n),
+          async get() {
+            const docs = Object.keys(store).filter((p) => p.startsWith(col + "/") && !p.slice(col.length + 1).includes("/")
+              && store[p][field] > value);
+            return { size: Math.min(docs.length, max) };
+          },
+        });
+        return query(Infinity);
+      },
     }),
     async runTransaction(fn) {
       const writes = [];
@@ -86,4 +90,12 @@ test("kaba deneme sınırı: saatte en çok RATE_MAX kod", async () => {
   const db = fakeDb(init);
   assert.equal(await redeem(db, "ali", "REELS50"), "rate");
   assert.equal("users/ali/mail/p_reels50" in db.store, false);
+});
+
+test("olay iki kez teslim edilirse ilk sonuç korunur (ikinci çalışma 'already' yazmaz)", async () => {
+  const db = fakeDb({ "promo/REELS50": promo() });
+  assert.equal(await redeem(db, "ali", "REELS50"), "ok");
+  assert.equal(await handleRedeem({ db, uid: "ali", code: "REELS50", now: NOW }), "ok");
+  assert.equal(db.store["users/ali/redeem/REELS50"].status, "ok");
+  assert.equal(db.store["promo/REELS50"].uses, 1);
 });

@@ -40,6 +40,17 @@ extends Node
 ## yönü yalnızca o sayar → iki tarafın tabelası aynı kalır. Gerçek arkadaşı yenmek +%20 para (FRIEND_BONUS),
 ## arkadaş başına günde bir kez. Emre / Elif'e karşı da kendi yönüm sayılır (haber / bonus yok).
 ##
+## KOŞU EŞLEŞTİRME (docs/KOSU_ESLESTIRME.md, 2026-10-21): pistteki rakip birinin GERÇEK koşusunu birebir sürer — gerçek
+## arkadaşın kendi koşusu (açık garajdan; koşusu olmayan araç gelmez, kullanıcı kararı) ya da Emre / Elif / isimsiz
+## rakipte yapay zekânın önceden koşulmuş koşusu (RivalPool). HANGİ koşunun geleceğini RivalSelector oyuncunun kazanma
+## şansına göre seçer (kol: kolay / dengeli / zor). Kol rakip yola çıkarken çekilir (arkadaşın tutan koşusu var mı o an
+## bilinmeli), koşu pist açılırken seçilir (oyuncunun yarış aracı o ana kadar değişebilir); rövanş ve İNTİKAM yeniden seçer.
+## Rakip araç oyuncununkiyle aynı olmak zorunda değil: araç yine performans penceresinden gelir, karşılaştırılan süredir.
+## Oyuncunun koşuları araç başına son RUNS_PER_CAR tanesi kayıtta ("runs") durur ve açık garajla arkadaşlara gider; son
+## yarışların özeti ("recent": kazandı mı, kol, şans) seri kırıcıyı besler. ÖĞRENEN ZORLUK (Faz 2): kolu RaceLearning çeker
+## (oyuncunun yarıştan sonra oyunda kalıp kalmadığından öğrenir; kişisel sayıları kayıtta "learn"), her yarışın sonucu
+## ona bildirilir ve günlük olarak sunucuya gider.
+##
 ## Sahnede World/Gameplay/RaceManager olarak durur, "race" grubundan bulunur (autoload yok).
 ## Kayıt: KİŞİSEL REKOR + profil kartındaki yarış / galibiyet sayıları ("wins", "races"; eski kayıtta 0). Rekor TEKTİR
 ## (kullanıcı 2026-10-20: araçtan araca tutulmaz): hangi araçla olursa olsun en iyi 300 m süresi + o koşunun mesafe izi
@@ -111,6 +122,11 @@ const FRIEND_BONUS: float = 0.2
 ## Rakibin bir arkadaşın (gerçek ya da Emre / Elif) aracıyla gelme olasılığı (kullanıcı kararı: %70). Testler 0 / 1 verir.
 @export_range(0.0, 1.0) var friend_chance: float = 0.7
 
+## KOŞU EŞLEŞTİRME: araç başına kayıtta tutulan son koşu sayısı (açık garaja daha azı gider: PublicGarage.RUNS_PER_CAR).
+const RUNS_PER_CAR: int = 15
+## Son yarışların özetinden kaç tanesi tutulur (seri kırıcı; Faz 2 öğrenmesi).
+const HISTORY_MAX: int = 20
+
 ## Rakip duruş noktasına bu kadar yaklaşınca davet açılır (balon çıkar).
 const ARRIVE_DISTANCE: float = 0.45
 ## El ile verilen duruş noktası şeritten bu kadar uzaksa yok sayılır.
@@ -161,6 +177,28 @@ var _bonus_day: Dictionary = {}
 ## İNTİKAM: yoldan gelen araç yok, pist doğrudan açıldı (yarış oturumu bitene kadar yeni rakip gelmez).
 var _direct: bool = false
 var _revenge: bool = false
+## KOŞU EŞLEŞTİRME — oyuncunun koşuları: araç id (String) → DragRaceSim.Recording.to_dict sözlükleri, eskiden yeniye.
+var _runs: Dictionary = {}
+## Son yarışlar, en yenisi sonda: {"w": kazandı mı, "a": RivalSelector.Arm (-1: ilk yarış), "p": seçilen koşuya karşı şans}.
+var _history: Array[Dictionary] = []
+## Bu rakibin zorluk kolu (-1: pist açılınca çekilir); kol bir yarışta kullanıldıysa rövanş yenisini çeker.
+var _arm: int = -1
+var _arm_used: bool = false
+## Pistteki rakip koşusu ve oyuncunun ona karşı şansı (-1: hesaplanmadı / ilk yarış).
+var _rival_recording: DragRaceSim.Recording
+var _chance: float = -1.0
+## Oyuncunun bu yarıştaki süresi (add_run; -1 = bitirmedi) — yarış günlüğü için.
+var _player_time: float = -1.0
+## ÖĞRENEN ZORLUK (Faz 2): kol seçimi, yarış sonrası kalış ölçümü, yarış günlüğü. _init'te kurulur: kayıt (load_state)
+## sahne hazır olmadan gelebilir.
+var _learning: RaceLearning
+
+
+func _init() -> void:
+	_learning = RaceLearning.new()
+	_learning.name = "RaceLearning"
+	add_child(_learning)
+	_learning.changed.connect(func() -> void: records_changed.emit())   # kişisel sayılar kayda
 
 
 func _ready() -> void:
@@ -241,17 +279,176 @@ func rival_id_for(player_id: StringName, busy: Dictionary = {}) -> StringName:
 	return free[_rng.randi_range(0, free.size() - 1)]
 
 
-## Rakip modeli + sahibi: {"id", "owner"}. friend_chance ile arkadaş turu: gerçek arkadaşın uyan aracı, yoksa
-## havuzdan seçilen araç Emre / Elif'in (aracın karakterine göre). Değilse isimsiz rakip (owner boş).
+## Rakip modeli + sahibi: {"id", "owner"}. Önce bu rakibin zorluk kolu çekilir (ilk yarışta yok). friend_chance ile
+## arkadaş turu: gerçek arkadaşın, penceredeki ve koşusu hedef şansı TUTAN aracı; yoksa Emre / Elif (aracın karakterine
+## göre). Değilse isimsiz rakip (owner boş). Yapay zekâ rakibinin aracı da havuzu hedefi tutanlardan seçilir.
 func pick_rival(player_id: StringName, busy: Dictionary = {}) -> Dictionary:
+	_arm = -1 if is_first_race() else _choose_arm()
+	_arm_used = false
+	var samples: PackedFloat64Array = my_samples(player_id) if _arm >= 0 else PackedFloat64Array()
 	if _rng.randf() < friend_chance:
-		if not is_first_race():
-			var real: Dictionary = _real_friend_pick(player_id, busy)
+		if _arm >= 0:
+			var real: Dictionary = _real_friend_pick(player_id, busy, samples)
 			if not real.is_empty():
 				return real
-		var id: StringName = rival_id_for(player_id, busy)
+		var id: StringName = _ai_car(player_id, busy, samples)
 		return {"id": id, "owner": FeaturedFriends.rival_owner(FeaturedFriends.owner_for_car(id))}
-	return {"id": rival_id_for(player_id, busy), "owner": {}}
+	return {"id": _ai_car(player_id, busy, samples), "owner": {}}
+
+
+## Yapay zekâ rakibinin aracı (Emre / Elif / isimsiz): pencerenin boştaki araçlarından, havuzunda hedef şansı TUTAN koşu
+## olan ilk araç (rastgele sırayla); hiçbiri tutmuyorsa hedefe en yakını. İlk yarışta / kol yokken eski kural.
+func _ai_car(player_id: StringName, busy: Dictionary, samples: PackedFloat64Array) -> StringName:
+	if _arm < 0:
+		return rival_id_for(player_id, busy)
+	var free: Array[StringName] = []
+	for id: StringName in rival_pool(player_id):
+		if not busy.has(id):
+			free.append(id)
+	if free.is_empty():
+		return rival_id_for(player_id, busy)
+	for i: int in range(free.size() - 1, 0, -1):   # karıştır (testler _rng'yi tohumlar)
+		var j: int = _rng.randi_range(0, i)
+		var swap: StringName = free[i]
+		free[i] = free[j]
+		free[j] = swap
+	var target: float = RivalSelector.target_of(_arm)
+	var best: StringName = free[0]
+	var best_gap: float = INF
+	for id: StringName in free:
+		var times: PackedFloat64Array = RivalPool.baked_times(id)
+		if times.is_empty():
+			continue   # pişmiş havuz yok: aramada çalışma anı benzetimi koşulmaz
+		var gap: float = absf(RivalSelector.win_chance(samples, times[RivalSelector.closest(times, samples, target)]) - target)
+		if gap <= RivalSelector.TOLERANCE:
+			return id
+		if gap < best_gap:
+			best_gap = gap
+			best = id
+	return best
+
+
+## PİSTTEKİ RAKİP KOŞUSU (DragRaceScreen açılışta alır): hedef şansa en yakın GERÇEK koşu — gerçek arkadaşın kendi koşusu
+## ya da yapay zekâ havuzundan. Rakip yoksa null. İlk yarışta seçici çalışmaz: gün formu olmayan yapay zekâ (eski kural).
+func rival_recording(player_id: StringName) -> DragRaceSim.Recording:
+	_learning.race_started()   # sıradaki yarış başladı: önceki sonucun ardından oyuncu "kaldı"
+	_rival_recording = null
+	_chance = -1.0
+	_player_time = -1.0
+	if _rival_id == &"":
+		return null
+	if is_first_race():
+		_rival_recording = DragRaceSim.ai_recording(_rival_id, rival_build(), DragRaceSim.roll_form(_rival_id, null), _rng)
+		return _rival_recording
+	if _arm < 0 or _arm_used:
+		_arm = _choose_arm()   # rövanş / İNTİKAM: yeni kol
+	_arm_used = true
+	var samples: PackedFloat64Array = my_samples(player_id)
+	var target: float = RivalSelector.target_of(_arm)
+	var runs: Array = _rival_owner.get("runs", []) if _rival_owner.get("runs") is Array else []
+	if not runs.is_empty():
+		var picked: DragRaceSim.Recording = DragRaceSim.Recording.from_dict(runs[maxi(RivalSelector.closest(_times_of(runs),
+			samples, target), 0)])
+		if picked:
+			picked.time = DragRaceSim.replay(picked).finish_time   # arkadaşın yazdığı süre değil: bu cihazda koşulan
+			_rival_recording = picked
+	elif not _is_real_friend(_rival_owner):
+		var times: PackedFloat64Array = RivalPool.times(_rival_id)
+		_rival_recording = RivalPool.recording(_rival_id, maxi(RivalSelector.closest(times, samples, target), 0))
+	if _rival_recording == null:
+		# Gerçek arkadaşın bu araçta koşusu yok (İNTİKAM'da garajı henüz yenilenmedi): yapay zekâ, onun modifiyeleriyle
+		_rival_recording = DragRaceSim.ai_recording(_rival_id, rival_build(), DragRaceSim.roll_form(_rival_id, _rng), _rng)
+	_chance = RivalSelector.win_chance(samples, _rival_recording.time)
+	return _rival_recording
+
+
+## Oyuncunun biten koşusu (DragRaceScreen bildirir): araç başına son RUNS_PER_CAR tutulur. Kalkmayan / süresi geçersiz
+## koşu saklanmaz (arkadaşa pistte kalkmayan bir rakip gitmesin).
+func add_run(recording: DragRaceSim.Recording) -> void:
+	if recording == null or recording.launch_step < 0 or recording.time < RECORD_MIN or recording.time > RECORD_MAX:
+		return
+	if recording.at <= 0:
+		recording.at = int(Time.get_unix_time_from_system())
+	_player_time = recording.time
+	var key: String = String(recording.vehicle_id)
+	var list: Array = _runs.get(key, [])
+	list.append(recording.to_dict())
+	if list.size() > RUNS_PER_CAR:
+		list = list.slice(list.size() - RUNS_PER_CAR)
+	_runs[key] = list
+	records_changed.emit()   # kayıt + açık garaj
+
+
+## Bu araçla son koşular (eskiden yeniye; Recording.to_dict sözlükleri).
+func runs_of(vehicle_id: StringName) -> Array:
+	return (_runs.get(String(vehicle_id), []) as Array).duplicate(true)
+
+
+## Oyuncunun bu araçla (şu anki modifiyeleriyle) süre örnekleri: kazanma şansı bunlardan.
+func my_samples(player_id: StringName) -> PackedFloat64Array:
+	return RivalSelector.samples_for(player_id, PerformanceMods.build_of(player_id), _runs)
+
+
+## Son yarışların özeti (en yenisi sonda).
+func history() -> Array[Dictionary]:
+	return _history.duplicate(true)
+
+
+## Zorluk kolu: öğrenen sistem (yeterli veri yoksa başlangıç kuralı) + korkuluklar.
+func _choose_arm() -> int:
+	return _learning.choose_arm(_history, _races, _rng)
+
+
+func learning() -> RaceLearning:
+	return _learning
+
+
+## Bu rakibin zorluk kolu (-1: ilk yarış / henüz çekilmedi) ve oyuncunun pistteki koşuya karşı şansı (-1: hesaplanmadı).
+func arm() -> int:
+	return _arm
+
+
+func chance() -> float:
+	return _chance
+
+
+## Yarış günlüğü olayı (RaceLearning; alan adları kısa: günde yüzlerce olay tek belgede).
+func _learning_event(won: bool) -> Dictionary:
+	var progress: PlayerProgress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress \
+		if is_inside_tree() else null
+	var kind: String = "f" if _is_real_friend(_rival_owner) else ("e" if not _rival_owner.is_empty() else "n")
+	return {"c": RaceLearning.context_of(_history, _races), "a": _arm, "p": snappedf(_chance, 0.001), "w": won,
+		"pc": String(player_vehicle_id()), "pt": snappedf(_player_time, 0.001), "rc": String(_rival_id),
+		"rt": snappedf(_rival_recording.time, 0.001) if _rival_recording else -1.0, "o": kind,
+		"lv": progress.level if progress else 0}
+
+
+static func _is_real_friend(owner: Dictionary) -> bool:
+	return not SaveSafe.s(owner.get("uid", "")).is_empty() and not bool(owner.get("featured", false))
+
+
+static func _times_of(runs: Array) -> PackedFloat64Array:
+	var out: PackedFloat64Array = PackedFloat64Array()
+	for raw: Variant in runs:
+		out.append(SaveSafe.f((raw as Dictionary).get("t", 0.0)) if raw is Dictionary else 0.0)
+	return out
+
+
+## Arkadaşın bir aracındaki geçerli koşuları — yalnızca `build` modifiyeleriyle yapılanlar (davet panosundaki sınıf /
+## modifiye ile pistteki araç aynı olsun); başka araca ait, kalkmamış, bozuk ya da oyuncu koşusu olamayacak kayıt atılır.
+static func _runs_with_build(raw: Variant, vehicle_id: StringName, build: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if not raw is Array:
+		return out
+	var key: String = PerformanceMods.build_key(PerformanceMods.normalized(build))
+	for item: Variant in raw:
+		if not item is Dictionary:
+			continue
+		var recording: DragRaceSim.Recording = DragRaceSim.Recording.from_dict(item)
+		if recording and recording.vehicle_id == vehicle_id and recording.launch_step >= 0 and recording.time > 0.0 \
+				and PerformanceMods.build_key(recording.build) == key and recording.is_player_run():
+			out.append(recording.to_dict())
+	return out
 
 
 ## Rakip olabilecek sürelerin aralığı (sn): rival_pool'un vardığı pencere (oyuncunun modifiyeli süresine göre).
@@ -266,29 +463,51 @@ static func rival_window(player_id: StringName) -> Vector2:
 	return Vector2(low, high)
 
 
-## Gerçek arkadaşlardan biri (rastgele) ve onun penceredeki, şehirde olmayan araçlarından biri. Yoksa boş.
-func _real_friend_pick(player_id: StringName, busy: Dictionary) -> Dictionary:
+## Gerçek arkadaşın penceredeki, şehirde olmayan, KOŞUSU OLAN bir aracı (koşusu olmayan araç gelmez — kullanıcı kararı).
+## Koşusu hedef şansı tutan arkadaşlardan biri rastgele; hiçbiri tutmuyorsa bütün arkadaşların koşularından hedefe en yakın
+## olan (kullanıcı kararı 2026-10-21: arkadaş oranı korunur, şans hedeften sapabilir). Seri kırıcıda (üst üste iki kayıp)
+## tutmayan arkadaş gelmez: rakip yapay zekânın kolay koşusu olur. Yoksa boş.
+func _real_friend_pick(player_id: StringName, busy: Dictionary, samples: PackedFloat64Array) -> Dictionary:
 	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager if is_inside_tree() else null
 	if social == null or not social.is_ready():
 		return {}
 	var window: Vector2 = rival_window(player_id)
-	var options: Array[Dictionary] = []   # {friend, cars: Array[StringName]}
+	var target: float = RivalSelector.target_of(_arm)
+	var options: Array[Dictionary] = []   # {friend, cars: Array[StringName], runs: {id: Array[Dictionary]}}
+	var nearest: Dictionary = {}          # hiçbiri tutmazsa: {friend, cars: [id], runs: {id: koşular}}
+	var nearest_gap: float = INF
 	for friend: Dictionary in social.friends:
 		var race_data: Dictionary = friend.get("race", {}) if friend.get("race") is Dictionary else {}
 		var builds: Dictionary = race_data.get("builds", {}) if race_data.get("builds") is Dictionary else {}
+		var all_runs: Dictionary = race_data.get("runs", {}) if race_data.get("runs") is Dictionary else {}
 		var fits: Array[StringName] = []
+		var fit_runs: Dictionary = {}
 		for raw: Variant in race_data.get("cars", []):
 			var id: StringName = StringName(SaveSafe.s(raw))
 			if busy.has(id) or not _rival_eligible(id):
 				continue
 			var build: Dictionary = builds.get(String(id), {}) if builds.get(String(id)) is Dictionary else {}
 			var t: float = float(PerformanceMods.measure(id, build)["t300"]) if not build.is_empty() else DragRaceSim.base_time(id)
-			if t >= window.x and t <= window.y:
+			if t < window.x or t > window.y:
+				continue
+			var runs: Array[Dictionary] = _runs_with_build(all_runs.get(String(id)), id, build)
+			if runs.is_empty():
+				continue
+			var times: PackedFloat64Array = _times_of(runs)
+			var gap: float = absf(RivalSelector.win_chance(samples, times[RivalSelector.closest(times, samples, target)]) - target)
+			if gap <= RivalSelector.TOLERANCE:
 				fits.append(id)
+				fit_runs[id] = runs
+			elif gap < nearest_gap:
+				nearest_gap = gap
+				var only: Array[StringName] = [id]
+				nearest = {"friend": friend, "cars": only, "runs": {id: runs}}
 		if not fits.is_empty():
-			options.append({"friend": friend, "cars": fits})
+			options.append({"friend": friend, "cars": fits, "runs": fit_runs})
 	if options.is_empty():
-		return {}
+		if nearest.is_empty() or RivalSelector.streak_breaker(_history):
+			return {}
+		options.append(nearest)
 	var chosen: Dictionary = options[_rng.randi_range(0, options.size() - 1)]
 	var cars: Array[StringName] = chosen["cars"]
 	var car: StringName = cars[_rng.randi_range(0, cars.size() - 1)]
@@ -300,9 +519,24 @@ func _real_friend_pick(player_id: StringName, busy: Dictionary) -> Dictionary:
 		"flag": SaveSafe.s(friend_entry.get("flag", "")), "featured": false,
 		"paint": SaveSafe.s((race_info.get("paint", {}) as Dictionary).get(String(car), "")) if race_info.get("paint") is Dictionary else "",
 		"build": PerformanceMods.normalized((race_info.get("builds", {}) as Dictionary).get(String(car), {})) if race_info.get("builds") is Dictionary else {},
+		"runs": (chosen["runs"] as Dictionary)[car],
 	}
 	social.avatar_of(owner["uid"], owner["av"])   # fotoğraf önbellekte değilse araç yoldayken insin
 	return {"id": car, "owner": owner}
+
+
+## İNTİKAM: arkadaşın o aracındaki koşuları (arkadaş listesindeki açık garajından, haberdeki modifiyelerle). Yoksa boş.
+func _friend_runs(uid: String, vehicle_id: StringName, build: Dictionary) -> Array[Dictionary]:
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager if is_inside_tree() else null
+	if social == null or uid.is_empty():
+		return []
+	for friend: Dictionary in social.friends:
+		if SaveSafe.s(friend.get("uid", "")) != uid or not friend.get("race") is Dictionary:
+			continue
+		var all_runs: Variant = (friend["race"] as Dictionary).get("runs", {})
+		if all_runs is Dictionary:
+			return _runs_with_build((all_runs as Dictionary).get(String(vehicle_id)), vehicle_id, build)
+	return []
 
 
 ## Rakip olabilir mi (katalogda, edinilebilir, hurdalık aracı değil): arkadaşın garajından gelen kimlik süzülür.
@@ -417,6 +651,10 @@ func start_revenge(owner: Dictionary, vehicle_id: StringName) -> bool:
 	_revenge = true
 	_rival_id = vehicle_id
 	_rival_owner = owner.duplicate(true)
+	# Kullanıcı kararı: seni yenen koşu değil, sistem arkadaşın o aracındaki koşularından yeniden seçer (pist açılınca)
+	_rival_owner["runs"] = _friend_runs(SaveSafe.s(owner.get("uid", "")), vehicle_id, rival_build())
+	_arm = -1
+	_arm_used = false
 	_rival_appearance = _appearance_for(vehicle_id, _rival_owner)
 	_reward_paid = false
 	_rematches = 0   # rövanş zaten çıkmaz (yolda bekleyen rakip yok); kayıpta normal teselli XP'si
@@ -483,12 +721,16 @@ func finish_race(won: bool) -> Dictionary:
 	if _reward_paid:
 		return {"money": 0, "xp": 0}
 	_reward_paid = true
+	_learning.race_finished(_learning_event(won))   # bağlam bu yarıştan ÖNCEKİ geçmişle (kol o geçmişle çekildi)
 	_races += 1
 	if won:
 		_wins += 1
 	var car: StringName = player_vehicle_id()
 	var counts: Vector2i = _car_counts.get(car, Vector2i.ZERO)
 	_car_counts[car] = counts + Vector2i(1, 1 if won else 0)
+	_history.append({"w": won, "a": _arm, "p": snappedf(_chance, 0.001)})
+	if _history.size() > HISTORY_MAX:
+		_history = _history.slice(_history.size() - HISTORY_MAX)
 	records_changed.emit()   # kayıt (ödülsüz rövanş kaybında para / XP değişmez, sayaç yine yazılsın)
 	# Gerçek arkadaşı yendin: +%20, arkadaş başına günde bir
 	if won and int(reward["money"]) > 0 and friend_bonus_available():
@@ -572,6 +814,10 @@ func release_challenger(fled: bool = false) -> void:
 	_rival_appearance = null
 	_direct = false
 	_revenge = false
+	_arm = -1
+	_arm_used = false
+	_rival_recording = null
+	_chance = -1.0
 	_awaiting_rematch = false
 	_loser_waiting = false
 	_loser_flees = false
@@ -665,7 +911,8 @@ func state() -> Dictionary:
 	for id: StringName in _car_counts:
 		var counts: Vector2i = _car_counts[id]
 		cars[String(id)] = {"r": counts.x, "w": counts.y}
-	return {"best": best, "races": _races, "wins": _wins, "cars": cars, "rivals": rivals, "bonus": _bonus_day.duplicate()}
+	return {"best": best, "races": _races, "wins": _wins, "cars": cars, "rivals": rivals, "bonus": _bonus_day.duplicate(),
+		"runs": _runs.duplicate(true), "recent": _history.duplicate(true), "learn": _learning.counts_state()}
 
 
 func load_state(data: Dictionary) -> void:
@@ -696,6 +943,30 @@ func load_state(data: Dictionary) -> void:
 	if bonus is Dictionary:
 		for uid: Variant in bonus:
 			_bonus_day[SaveSafe.s(uid)] = SaveSafe.i((bonus as Dictionary)[uid])
+	_runs.clear()
+	var runs: Variant = data.get("runs", {})
+	if runs is Dictionary:
+		for key: Variant in runs:
+			var id: StringName = StringName(SaveSafe.s(key))
+			var clean: Array = []
+			var list: Variant = (runs as Dictionary)[key]
+			if list is Array:
+				for raw: Variant in (list as Array).slice(-RUNS_PER_CAR):
+					var recording: DragRaceSim.Recording = DragRaceSim.Recording.from_dict(raw) if raw is Dictionary else null
+					if recording and recording.vehicle_id == id and recording.launch_step >= 0 \
+							and recording.time >= RECORD_MIN and recording.time <= RECORD_MAX:
+						clean.append(recording.to_dict())
+			if not clean.is_empty():
+				_runs[String(id)] = clean
+	_learning.load_counts(data.get("learn", {}))
+	_history.clear()
+	var recent: Variant = data.get("recent", [])
+	if recent is Array:
+		for raw: Variant in (recent as Array).slice(-HISTORY_MAX):
+			if raw is Dictionary:
+				_history.append({"w": SaveSafe.b((raw as Dictionary).get("w", false)),
+					"a": clampi(SaveSafe.i((raw as Dictionary).get("a", -1)), -1, RivalSelector.Arm.HARD),
+					"p": clampf(SaveSafe.f((raw as Dictionary).get("p", -1.0)), -1.0, 1.0)})
 	var best: Variant = data.get("best", {})
 	if not best is Dictionary:
 		return
@@ -724,6 +995,9 @@ func reset() -> void:
 	_car_counts.clear()
 	_rivals.clear()
 	_bonus_day.clear()
+	_runs.clear()
+	_history.clear()
+	_learning.load_counts({})
 
 
 # --- İç ---------------------------------------------------------------------------

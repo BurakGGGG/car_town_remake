@@ -7,6 +7,9 @@
 //   emailCodeSend   E-POSTA İLE GİRİŞ: 6 haneli kodu oyuncunun e-postasına yollar (mantık email_code.js, gönderim Resend)
 //   emailCodeVerify kodu doğrular, Firebase özel jetonu döner (oyun signInWithCustomToken ile girer)
 //   accountCleanup  Firebase hesabı silinince o UID'nin bütün verisi silinir (mantık account_cleanup.js)
+//   raceLearning    her gece yarış günlüklerini (race_log) bağlam × kol başına toplar → config/race_learning (learning.js)
+//   iapVerify       oyun elmas vermeden önce satın almayı Google Play'den doğrular (mantık iap.js)
+//   iapVoided       6 saatte bir Play'in iade / ters ibraz listesini okur, oyuncuya iade belgesi bırakır (mantık refunds.js)
 // Test: npm test. Bölge europe-west4: Firestore eur3 (europe-west1 / europe-west4) ile aynı yer.
 // Gönderim: firebase/ klasöründen `firebase deploy --only functions --project car-town-remake` (Blaze planı gerekir).
 
@@ -22,9 +25,13 @@ const { handleRaceNews } = require("./news");
 const { handleMailCreated } = require("./mail");
 const { handleRedeem } = require("./promo");
 const { writeDailyStats } = require("./stats");
+const { writeLearning } = require("./learning");
 const { cleanupExpired } = require("./cleanup");
 const { sendCode, verifyCode, CodeError, clientIp } = require("./email_code");
 const { cleanupAccount } = require("./account_cleanup");
+const { verifyPurchase, IapError, PACKAGES } = require("./iap");
+const { processVoided } = require("./refunds");
+const { GoogleAuth } = require("google-auth-library");
 const functionsV1 = require("firebase-functions/v1");
 
 // Resend API anahtarı (Secret Manager; kodda / depoda YOK). Kurulum: firebase functions:secrets:set RESEND_API_KEY
@@ -161,3 +168,71 @@ exports.cleanupExpired = onSchedule(
     console.log(`cleanupExpired: ${JSON.stringify(deleted)}`);
   },
 );
+
+// Gece yarış öğrenmesi (docs/KOSU_ESLESTIRME.md Faz 2): dailyStats'tan sonra; okuma = dün + önceki günün günlük belgeleri.
+exports.raceLearning = onSchedule(
+  { schedule: "30 3 * * *", region: "europe-west4", timeZone: "Europe/Istanbul", maxInstances: 1 },
+  async () => {
+    const result = await writeLearning({ db: getFirestore(), now: Date.now() });
+    console.log(`raceLearning: ${JSON.stringify(result)}`);   // yalnızca sayılar
+  },
+);
+
+
+// SATIN ALMA DOĞRULAMASI: Play Developer API'ye fonksiyonun hizmet hesabıyla gidilir (Play Console'da davetli olmalı,
+// bkz. iap.js KURULUM). Oyun düz HTTP ile çağırır (misafir de satın alabilir: oturum istenmez, uid yalnız kayıt içindir).
+const playAuth = new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/androidpublisher"] });
+
+async function fetchPlayPurchase(pkg, product, token) {
+  const client = await playAuth.getClient();
+  const url = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/"
+    + `${encodeURIComponent(pkg)}/purchases/products/${encodeURIComponent(product)}/tokens/${encodeURIComponent(token)}`;
+  const res = await client.request({ url, validateStatus: () => true });
+  return { code: res.status, body: res.data };
+}
+
+// NOT: callable fonksiyonun herkese açık çağrı iznini (Cloud Run allUsers) CLI yalnızca İLK oluşturmada verir; `invoker`
+// seçeneği onCall'da bildirime yazılmaz. İlk dağıtım yarıda kesilirse fonksiyon 403 verir → silip yeniden dağıt.
+exports.iapVerify = onCall({ region: "europe-west4", maxInstances: 10, cors: false }, async (req) => {
+  const data = req.data && typeof req.data === "object" ? req.data : {};
+  try {
+    return await verifyPurchase({ ...data, uid: req.auth ? req.auth.uid : data.uid },
+      { fetchPurchase: fetchPlayPurchase, db: getFirestore(), now: Date.now() });
+  } catch (e) {
+    if (e instanceof IapError) throw new HttpsError(e.status, e.reason, { reason: e.reason });
+    console.error(e);
+    throw new HttpsError("internal", "internal", { reason: "internal" });
+  }
+});
+
+
+
+// İADELER: son VOIDED_WINDOW_DAYS gün her çalışmada yeniden okunur (işlem tek seferdir, refunds.js iap kaydına bakar);
+// zamanlayıcı bir turu kaçırsa da iade kaybolmaz. Play'e ulaşılamazsa sonraki turda yeniden denenir.
+const VOIDED_WINDOW_DAYS = 3;
+
+async function fetchVoided(pkg, startTimeMs) {
+  const client = await playAuth.getClient();
+  const items = [];
+  let page = "";
+  for (let i = 0; i < 20; i++) {
+    const url = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/"
+      + `${encodeURIComponent(pkg)}/purchases/voidedpurchases?type=0&maxResults=1000&startTime=${startTimeMs}`
+      + (page ? `&token=${encodeURIComponent(page)}` : "");
+    const res = await client.request({ url, validateStatus: () => true });
+    if (res.status !== 200) throw new Error(`Play ${res.status} ${JSON.stringify(res.data || {}).slice(0, 300)}`);
+    items.push(...((res.data && res.data.voidedPurchases) || []));
+    page = res.data && res.data.tokenPagination ? res.data.tokenPagination.nextPageToken || "" : "";
+    if (!page) break;
+  }
+  return items;
+}
+
+exports.iapVoided = onSchedule({ schedule: "every 6 hours", region: "europe-west4", timeoutSeconds: 300 }, async () => {
+  const now = Date.now();
+  for (const pkg of PACKAGES) {
+    const items = await fetchVoided(pkg, now - VOIDED_WINDOW_DAYS * 24 * 3600 * 1000);
+    const result = await processVoided({ items, db: getFirestore(), now });
+    console.log(`iapVoided ${pkg}: ${JSON.stringify(result)}`);
+  }
+});

@@ -7,7 +7,9 @@ function fakeDb(paths) {
   const store = new Set(paths);
   const ref = (path) => ({ path, async delete() { store.delete(path); } });
   const docOf = (path) => ({ id: path.split("/").pop(), ref: ref(path) });
-  const fields = { "codes/ABC234": { uid: "ali" }, "codes/XYZ789": { uid: "veli" }, "invites/TOKENTOKEN12": { uid: "ali" } };
+  const fields = { "codes/ABC234": { uid: "ali" }, "codes/XYZ789": { uid: "veli" }, "invites/TOKENTOKEN12": { uid: "ali" },
+    "race_log/ali_20383": { uid: "ali" }, "race_log/veli_20383": { uid: "veli" },
+    "iap/t_ali": { uid: "ali" }, "iap/t_veli": { uid: "veli" }, "iap/t_misafir": { uid: "" } };
   return {
     store,
     doc: ref,
@@ -37,7 +39,7 @@ const WORLD = [
   // ali'nin kendi belgeleri
   "players/ali", "garages/g_ali", "avatars/a_ali", "push/p_ali", "codes/ABC234", "invites/TOKENTOKEN12",
   "moderation/m_ali", "admin_notes/n_ali", "users/ali/mail/m_x", "players/ali/history/h05", "players/ali/history/d2",
-  "promo/REELS50/used/ali", "users/ali/redeem/REELS50",
+  "promo/REELS50/used/ali", "users/ali/redeem/REELS50", "race_log/ali_20383", "iap/t_ali",
   "users/ali/friends/f_veli", "users/ali/inbox/r_ayse", "users/ali/races/e_veli", "users/ali/gifts/p_veli_20000",
   // ali'nin başkalarına yazdıkları (eski arkadaş ayse dahil)
   "users/veli/friends/f_ali", "users/veli/races/e_ali", "users/veli/visits/v_ali", "users/veli/gifts/p_ali_20380",
@@ -45,7 +47,8 @@ const WORLD = [
   // başkalarının belgeleri: KALMALI
   "players/veli", "garages/g_veli", "codes/XYZ789", "users/veli/friends/f_ayse", "users/veli/gifts/p_ayse_20380",
   "users/veli/visits/v_alican", "users/veli/gifts/p_alican_20380", "reports/x_ali_veli", "reports/x_veli_ali",
-  "moderation/m_veli", "admin_notes/n_veli", "players/veli/history/h01", "promo/REELS50/used/veli",
+  "moderation/m_veli", "admin_notes/n_veli", "players/veli/history/h01", "promo/REELS50/used/veli", "race_log/veli_20383",
+  "iap/t_veli", "iap/t_misafir",
 ];
 
 test("silinen hesabın bütün belgeleri gider, başkalarınınkiler kalır", async () => {
@@ -53,12 +56,12 @@ test("silinen hesabın bütün belgeleri gider, başkalarınınkiler kalır", as
   const result = await cleanupAccount({ db, uid: "ali" });
   const left = [...db.store].sort();
   assert.deepStrictEqual(left, [
-    "admin_notes/n_veli", "codes/XYZ789", "garages/g_veli", "moderation/m_veli", "players/veli", "players/veli/history/h01", "promo/REELS50/used/veli",
-    "reports/x_ali_veli", "reports/x_veli_ali",   // şikâyetler 180 gün kalır (cleanup.js siler)
+    "admin_notes/n_veli", "codes/XYZ789", "garages/g_veli", "iap/t_misafir", "iap/t_veli", "moderation/m_veli", "players/veli", "players/veli/history/h01", "promo/REELS50/used/veli",
+    "race_log/veli_20383", "reports/x_ali_veli", "reports/x_veli_ali",   // şikâyetler 180 gün kalır (cleanup.js siler)
     "users/veli/friends/f_ayse", "users/veli/gifts/p_alican_20380", "users/veli/gifts/p_ayse_20380",
     "users/veli/visits/v_alican",   // "alican" "ali" ile başlıyor ama başka oyuncu
   ]);
-  assert.deepStrictEqual(result, { owned: 2, authored: 9 });
+  assert.deepStrictEqual(result, { owned: 4, authored: 9 });   // kod + davet + yarış günlüğü + satın alma doğrulaması
 });
 
 test("UID biçimsizse (yol kırabilecek karakter) hiçbir şey silinmez", async () => {

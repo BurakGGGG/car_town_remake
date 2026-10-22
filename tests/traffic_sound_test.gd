@@ -237,10 +237,16 @@ func _run() -> void:
 			break
 	check(best > 0.8 * 1.6, "kalkışta hızla gider (en çok %.2f birim/sn, normal 0,8)" % best)
 	check(chirps[0] >= 1, "kalkışta lastik cıyağı çaldı")
-	check(await wait_until(func() -> bool: return not is_instance_valid(racer) or not racer.is_launching(), 8.0),
+	# Araç şehirden çıkınca silinir: lambda nesneyi değil zayıf başvuruyu yakalar ("Lambda capture … was freed" hatası)
+	var racer_ref: WeakRef = weakref(racer)
+	check(await wait_until(func() -> bool:
+		var alive: Variant = racer_ref.get_ref()
+		return alive == null or not alive.is_launching(), 8.0),
 		"kalkış biter (ya da araç şehirden çıkar)")
 	if is_instance_valid(racer):
-		check(await wait_until(func() -> bool: return not is_instance_valid(racer) or racer.speed <= racer.max_speed + 0.05, 5.0),
+		check(await wait_until(func() -> bool:
+			var alive: Variant = racer_ref.get_ref()
+			return alive == null or alive.speed <= alive.max_speed + 0.05, 5.0),
 			"normal hıza süzülür")
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)

@@ -35,7 +35,7 @@ function rewardMail(code, promo, nowS) {
 
 /**
  * Tek bir kod denemesini işler. db: Firestore (yönetici) benzeri {doc(yol) → {get, set(v, opts)}, collection(yol).where(alan,
- * ">", d).get() → {size}, runTransaction(fn: t → {get(ref), set(ref, v), update(ref, v)})}. Dönüş: status.
+ * ">", d).limit(n).get() → {size}, runTransaction(fn: t → {get(ref), set(ref, v), update(ref, v)})}. Dönüş: status.
  */
 async function handleRedeem({ db, uid, code, now }) {
   const nowS = Math.floor(now / 1000);
@@ -46,7 +46,11 @@ async function handleRedeem({ db, uid, code, now }) {
     return status;
   };
   if (!CODE_RE.test(String(code || ""))) return finish("not_found");
-  const recent = await db.collection(`users/${uid}/redeem`).where("at", ">", nowS - RATE_WINDOW_S).get();
+  // Olay iki kez teslim edilirse (tetikleyici en az bir kez çalışır) ikinci çalışma ilk sonucu "already" ile ezmesin
+  const prior = await redeemRef.get();
+  if (prior.exists && typeof (prior.data() || {}).status === "string") return prior.data().status;
+  // limit: saldırgan saatte binlerce kod belgesi yazarsa her tetikleme hepsini okumasın (okuma faturası ~n²)
+  const recent = await db.collection(`users/${uid}/redeem`).where("at", ">", nowS - RATE_WINDOW_S).limit(RATE_MAX + 1).get();
   if (recent.size > RATE_MAX) return finish("rate");
   const promoRef = db.doc(`promo/${code}`);
   const usedRef = db.doc(`promo/${code}/used/${uid}`);

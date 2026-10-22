@@ -101,6 +101,19 @@ static func _engine(character: int) -> AudioStreamWAV:
 	return _engine_streams[character]
 
 
+## Aracın motor döngüsü (perde 1 = BASE_RPM × karakter katsayısı) ve o karakterin perde katsayısı / düzey farkı:
+## modifiye garajı gaz sesini aynı tınıyla çalar. [stream, pitch, db]
+static func engine_for(perf: float, electric: bool) -> Array:
+	var character: int = ELECTRIC if electric else _character_of(perf)
+	return [_engine(character), float(CHARACTERS[character][0]), float(CHARACTERS[character][1])]
+
+
+## Vites patlaması örneği (tek seferlik).
+static func pop_stream() -> AudioStreamWAV:
+	_ensure_streams()
+	return _pop_stream
+
+
 ## Motorlar rölantide çalışmaya başlar (geri sayımda devir yükselir).
 func start() -> void:
 	_time = 0.0

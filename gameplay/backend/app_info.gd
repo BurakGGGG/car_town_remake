@@ -6,6 +6,8 @@ extends RefCounted
 ## yerde elle tutulmaz. Editör / masaüstü / testlerde dosya yoktur: kod 0 = geliştirme sürümü, güncelleme istenmez.
 
 const FILE: String = "res://build_info.json"
+## Play paket adı (export_presets package/unique_name); geliştirme sürümünde dosya yoktur, bu kullanılır.
+const DEFAULT_PACKAGE: String = "com.autoyard.app"
 
 ## Testler sürümü taklit eder (0'dan büyükse dosyanın yerine geçer).
 static var override_code: int = 0
@@ -13,6 +15,7 @@ static var override_code: int = 0
 static var _loaded: bool = false
 static var _code: int = 0
 static var _name: String = ""
+static var _package: String = ""
 
 
 static func version_code() -> int:
@@ -25,6 +28,12 @@ static func version_code() -> int:
 static func version_name() -> String:
 	_load()
 	return _name if not _name.is_empty() else "dev"
+
+
+## Play paket adı (satın alma doğrulaması sunucuya bununla sorar).
+static func package_name() -> String:
+	_load()
+	return _package if not _package.is_empty() else DEFAULT_PACKAGE
 
 
 ## Geliştirme sürümü mü (paket dışa aktarılmamış).
@@ -42,3 +51,4 @@ static func _load() -> void:
 	if parsed is Dictionary:
 		_code = SaveSafe.i((parsed as Dictionary).get("code", 0))
 		_name = SaveSafe.s((parsed as Dictionary).get("name", ""))
+		_package = SaveSafe.s((parsed as Dictionary).get("package", ""))

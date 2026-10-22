@@ -2,445 +2,445 @@
   "_readme": "OTOMATİK ÜRETİLİR — elle düzenleme. tools/bake_race_specs.gd (bkz. DragRaceSim.TUNING_VERSION).",
   "cars": {
     "alfa_romeo_159": {
-      "base_time": 11.5917,
+      "base_time": 11.5908,
       "key": "69e275df00990208e3bfe73b3e143821",
       "race_top_kmh": 154.473,
       "torque": 300.436
     },
     "anadol_a1": {
-      "base_time": 15.2333,
+      "base_time": 15.2323,
       "key": "688be1c2fd459bf1fa11d2e21e7f30bb",
       "race_top_kmh": 116.802,
       "torque": 136.059
     },
     "aston_martin_db5": {
-      "base_time": 11.1917,
+      "base_time": 11.1833,
       "key": "66d72544dd9fc171e5866bce0bc39fc2",
       "race_top_kmh": 159.365,
       "torque": 315.821
     },
     "audi_a3": {
-      "base_time": 10.7583,
+      "base_time": 10.752,
       "key": "80620073f442b6b5eb74acce0e85f69c",
       "race_top_kmh": 172.726,
       "torque": 357.934
     },
     "audi_a6": {
-      "base_time": 10.1667,
+      "base_time": 10.1624,
       "key": "0e59f210cc983da6f08f50caa40ba247",
       "race_top_kmh": 176.317,
       "torque": 439.111
     },
     "audi_quattro_s1": {
-      "base_time": 9.3417,
+      "base_time": 9.3355,
       "key": "231156edc48717989c5497fe890d9f65",
       "race_top_kmh": 192.338,
       "torque": 460.066
     },
     "audi_rs6": {
-      "base_time": 8.3583,
+      "base_time": 8.3518,
       "key": "5f9892585818863f19dbfcc6de349bfe",
       "race_top_kmh": 222.426,
       "torque": 856.315
     },
     "bmw_e46": {
-      "base_time": 10.3417,
+      "base_time": 10.3407,
       "key": "7cbd2c1da4c595829ae44f2ba0f92626",
       "race_top_kmh": 175.114,
       "torque": 386.359
     },
     "bmw_e60": {
-      "base_time": 10.375,
+      "base_time": 10.3703,
       "key": "7b5a8e7cd15e07198f13324c7fdfb72b",
       "race_top_kmh": 172.44,
       "torque": 414.707
     },
     "bmw_f30": {
-      "base_time": 10.8333,
+      "base_time": 10.8295,
       "key": "c2e116a21dce19ed2bd38ee0ada72146",
       "race_top_kmh": 164.957,
       "torque": 340.853
     },
     "bmw_m3_e30": {
-      "base_time": 10.4083,
+      "base_time": 10.4063,
       "key": "897d5559acf5b0689bf3ab9561e0ada5",
       "race_top_kmh": 174.808,
       "torque": 377.059
     },
     "bugatti_chiron": {
-      "base_time": 6.7917,
+      "base_time": 6.7852,
       "key": "e23fe13a696acfe01c8a80a66e5bbe56",
       "race_top_kmh": 277.707,
       "torque": 1451.158
     },
     "bugatti_veyron": {
-      "base_time": 6.925,
+      "base_time": 6.918,
       "key": "201b243c4446b265ff00672904ddb409",
       "race_top_kmh": 271.94,
       "torque": 1353.18
     },
     "chery_tiggo_8": {
-      "base_time": 12.1667,
+      "base_time": 12.1664,
       "key": "931b11e285f9e1d9dca24ee903666021",
       "race_top_kmh": 147.675,
       "torque": 304.291
     },
     "chevrolet_bel_air_1956": {
-      "base_time": 13.0083,
+      "base_time": 13.0077,
       "key": "39e1f1e0b94eb926b33a7511cb1d203b",
       "race_top_kmh": 138.355,
       "torque": 280.782
     },
     "chevrolet_camaro": {
-      "base_time": 8.3667,
+      "base_time": 8.3606,
       "key": "2c4ff9077546de745116fc233cc464fe",
       "race_top_kmh": 230.731,
       "torque": 878.957
     },
     "chevrolet_corvette_c2": {
-      "base_time": 10.2167,
+      "base_time": 10.2156,
       "key": "2396bb1fa15f3a8186de79e20d35f62a",
       "race_top_kmh": 181.198,
       "torque": 436.878
     },
     "cupra_formentor": {
-      "base_time": 9.4,
+      "base_time": 9.3996,
       "key": "08a61eff159c030bd77289eb9cc6bd29",
       "race_top_kmh": 188.449,
       "torque": 452.917
     },
     "dodge_charger_1970": {
-      "base_time": 10.5083,
+      "base_time": 10.5029,
       "key": "66901a1260cf6a8e02c14c9b4cb8f3b5",
       "race_top_kmh": 170.842,
       "torque": 476.403
     },
     "ferrari_488_pista": {
-      "base_time": 7.4417,
+      "base_time": 7.4381,
       "key": "70c50d01e4fc0f67d5aae758b0d24504",
       "race_top_kmh": 251.369,
       "torque": 1080.527
     },
     "ferrari_laferrari": {
-      "base_time": 7.0667,
+      "base_time": 7.0591,
       "key": "c2c5a822d46121cb67407bb0e12309c8",
       "race_top_kmh": 265.783,
       "torque": 1315.141
     },
     "fiat_500_1965": {
-      "base_time": 21.1667,
+      "base_time": 21.1598,
       "key": "7489af95667840aad86c4a74a6282c88",
       "race_top_kmh": 83.068,
       "torque": 27.865
     },
     "ford_escort_rs1600": {
-      "base_time": 11.6417,
+      "base_time": 11.6378,
       "key": "aebf3d2bcfa3fbcde6377d63b1b1b3b4",
       "race_top_kmh": 151.055,
       "torque": 224.578
     },
     "ford_focus": {
-      "base_time": 12.525,
+      "base_time": 12.5233,
       "key": "8f6c365f8e980a8c5e5ac442dab6f6f7",
       "race_top_kmh": 142.017,
       "torque": 226.062
     },
     "ford_mustang_1967": {
-      "base_time": 10.875,
+      "base_time": 10.8704,
       "key": "9fe25eb1ee98b35dc6c306fab5e72a17",
       "race_top_kmh": 163.869,
       "torque": 350.195
     },
     "ford_rs200": {
-      "base_time": 10.175,
+      "base_time": 10.1708,
       "key": "d343327b73b81bb34f6657d12dfd14ef",
       "race_top_kmh": 172.44,
       "torque": 325.193
     },
     "ford_transit": {
-      "base_time": 13.775,
+      "base_time": 13.7699,
       "key": "78f0d4250d5c182d39e53bd2f30e3b34",
       "race_top_kmh": 131.886,
       "torque": 302.499
     },
     "honda_civic": {
-      "base_time": 12.35,
+      "base_time": 12.3481,
       "key": "a51c692c94d2c463da67a1387565deb1",
       "race_top_kmh": 144.467,
       "torque": 234.927
     },
     "hyundai_accent_blue": {
-      "base_time": 12.2333,
+      "base_time": 12.2264,
       "key": "490983d7a56df7f83316b392adcab5f2",
       "race_top_kmh": 145.682,
       "torque": 231.473
     },
     "hyundai_era": {
-      "base_time": 13.0667,
+      "base_time": 13.0659,
       "key": "6622a479c6109243c4907fef5ee13a22",
       "race_top_kmh": 135.987,
       "torque": 198.635
     },
     "hyundai_getz": {
-      "base_time": 12.7333,
+      "base_time": 12.732,
       "key": "b853f0ec2aaba9ca9d761883848e0c64",
       "race_top_kmh": 137.42,
       "torque": 171.254
     },
     "jaguar_e_type": {
-      "base_time": 10.7,
+      "base_time": 10.6938,
       "key": "2795faf7250db656d31fcb83d5511131",
       "race_top_kmh": 169.885,
       "torque": 354.245
     },
     "lambo_huracan": {
-      "base_time": 7.275,
+      "base_time": 7.2697,
       "key": "86141cf6367236986076b0895f7315d9",
       "race_top_kmh": 272.292,
       "torque": 1151.72
     },
     "lamborghini_miura": {
-      "base_time": 10.425,
+      "base_time": 10.4219,
       "key": "6049db5e715b4608e0d517fd62c956f2",
       "race_top_kmh": 176.285,
       "torque": 385.226
     },
     "lancia_delta_integrale": {
-      "base_time": 9.9417,
+      "base_time": 9.9385,
       "key": "8a67cf505419b7c51041bcae65747f7d",
       "race_top_kmh": 175.814,
       "torque": 330.956
     },
     "lancia_stratos": {
-      "base_time": 10.5917,
+      "base_time": 10.5888,
       "key": "fcc135bdd7dcd3f6c095d552910d734f",
       "race_top_kmh": 171.258,
       "torque": 286.012
     },
     "land_rover_series3": {
-      "base_time": 19.075,
+      "base_time": 19.0721,
       "key": "9c3358a75446dcdc3baf10c6ac2b05bb",
       "race_top_kmh": 92.092,
       "torque": 72.673
     },
     "mercedes_300sl": {
-      "base_time": 11.5833,
+      "base_time": 11.5799,
       "key": "4868d0c6dadcb66b19a1fe061dc67393",
       "race_top_kmh": 153.864,
       "torque": 293.956
     },
     "mercedes_cls": {
-      "base_time": 10.575,
+      "base_time": 10.5732,
       "key": "1b7d7c1b218a3e1f636c3f8ab010ce20",
       "race_top_kmh": 171.307,
       "torque": 405.728
     },
     "mercedes_g": {
-      "base_time": 9.0833,
+      "base_time": 9.0817,
       "key": "1bcbce44d4acf75dfd7f781bfa015ce1",
       "race_top_kmh": 195.211,
       "torque": 656.113
     },
     "mercedes_s400": {
-      "base_time": 9.5,
+      "base_time": 9.4947,
       "key": "4e141f12a1de9c873e2635f162f73301",
       "race_top_kmh": 197.356,
       "torque": 648.88
     },
     "mercedes_sprinter": {
-      "base_time": 15.5833,
+      "base_time": 15.5751,
       "key": "f7cb4040474c6aa64f12c052081ca21e",
       "race_top_kmh": 121.159,
       "torque": 303.888
     },
     "mercedes_w123": {
-      "base_time": 15.8833,
+      "base_time": 15.8778,
       "key": "eb8daab63fc438b7058ab1c016d19393",
       "race_top_kmh": 114.47,
       "torque": 159.883
     },
     "mini_cooper_1965": {
-      "base_time": 13.675,
+      "base_time": 13.6699,
       "key": "0195e803dd34a52b3aa60b2a24933b51",
       "race_top_kmh": 125.683,
       "torque": 95.459
     },
     "mitsubishi_evo6": {
-      "base_time": 8.95,
+      "base_time": 8.9418,
       "key": "2f6affe5031a254db1a184d339895f99",
       "race_top_kmh": 203.444,
       "torque": 560.679
     },
     "opel_corsa": {
-      "base_time": 12.65,
+      "base_time": 12.642,
       "key": "f9000a46452dbd33213c3f4a84eba290",
       "race_top_kmh": 138.592,
       "torque": 174.28
     },
     "peugeot_404": {
-      "base_time": 14.5167,
+      "base_time": 14.5159,
       "key": "eb2f511a490e546927f4d0cec7d7f3df",
       "race_top_kmh": 123.052,
       "torque": 172.682
     },
     "police_bentley": {
-      "base_time": 8.2,
+      "base_time": 8.1951,
       "key": "9c85ec2536367362977e11f1397b4222",
       "race_top_kmh": 233.524,
       "torque": 893.829
     },
     "police_vito": {
-      "base_time": 12.1667,
+      "base_time": 12.1658,
       "key": "38ab6a621092237eb2b17d6e9f76ce5d",
       "race_top_kmh": 147.904,
       "torque": 317.01
     },
     "porsche_911_1973": {
-      "base_time": 9.85,
+      "base_time": 9.8488,
       "key": "9239d96b40049723037b32f58576f6c4",
       "race_top_kmh": 190.566,
       "torque": 444.336
     },
     "porsche_gt3": {
-      "base_time": 7.8417,
+      "base_time": 7.8351,
       "key": "be45a4c6c823fe0467367c7f6849662e",
       "race_top_kmh": 250.492,
       "torque": 934.085
     },
     "porsche_taycan": {
-      "base_time": 7.7167,
+      "base_time": 7.71,
       "key": "62d1a9fe5162ad1417a6b27ff5127681",
       "race_top_kmh": 242.347,
       "torque": 1082.629
     },
     "renault_fluence": {
-      "base_time": 12.1083,
+      "base_time": 12.1013,
       "key": "723f7ef493d9f460e049ffb00b787517",
       "race_top_kmh": 147.918,
       "torque": 267.383
     },
     "renault_megane_4": {
-      "base_time": 12.0583,
+      "base_time": 12.0515,
       "key": "3155c0765a016273e4af4a000de15df2",
       "race_top_kmh": 149.005,
       "torque": 265.982
     },
     "renault_toros": {
-      "base_time": 13.8333,
+      "base_time": 13.8276,
       "key": "53dcd300b5cbd6ec1b6fca05a1810250",
       "race_top_kmh": 128.309,
       "torque": 184.533
     },
     "seat_leon": {
-      "base_time": 11.2333,
+      "base_time": 11.2323,
       "key": "77eb7412a0e65719c345d9bbfe6d49fe",
       "race_top_kmh": 161.905,
       "torque": 298.715
     },
     "skoda_kamiq": {
-      "base_time": 12.2333,
+      "base_time": 12.2273,
       "key": "bfc121f05ceb316b4c7d34f6e0ac575c",
       "race_top_kmh": 145.493,
       "torque": 250.554
     },
     "skoda_superb": {
-      "base_time": 11.6083,
+      "base_time": 11.6044,
       "key": "eb41702d1cdadeaa7c49931c2448faa6",
       "race_top_kmh": 155.177,
       "torque": 318.183
     },
     "tesla_model_y": {
-      "base_time": 9.4333,
+      "base_time": 9.4318,
       "key": "ffbd17668aeb5f2e2f88efc7ce7825cf",
       "race_top_kmh": 189.105,
       "torque": 561.641
     },
     "tofas_murat_124": {
-      "base_time": 14.2833,
+      "base_time": 14.2813,
       "key": "576d43050d36b31c87b4fd20f73d45b9",
       "race_top_kmh": 123.321,
       "torque": 151.74
     },
     "tofas_murat_131": {
-      "base_time": 13.65,
+      "base_time": 13.6449,
       "key": "ab551324c828af4b2142344672439e54",
       "race_top_kmh": 129.673,
       "torque": 185.021
     },
     "tofas_sahin": {
-      "base_time": 13.4,
+      "base_time": 13.3937,
       "key": "651a05391926c592a8d192b210203994",
       "race_top_kmh": 132.563,
       "torque": 194.747
     },
     "togg_t10f": {
-      "base_time": 10.9417,
+      "base_time": 10.9411,
       "key": "278319f9772ab0da735b23d774509cab",
       "race_top_kmh": 163.804,
       "torque": 358.768
     },
     "togg_t10x": {
-      "base_time": 11.1,
+      "base_time": 11.0961,
       "key": "05a0f7a084d19d47a63f6093fd35328f",
       "race_top_kmh": 160.77,
       "torque": 357.929
     },
     "toyota_celica_gt4": {
-      "base_time": 10.9583,
+      "base_time": 10.955,
       "key": "51376b27c600a703b0e6a604eba4aa2b",
       "race_top_kmh": 162.092,
       "torque": 315.463
     },
     "toyota_corolla": {
-      "base_time": 12.5917,
+      "base_time": 12.5907,
       "key": "a763b7a1e57836706c5fe41c72400ca6",
       "race_top_kmh": 142.968,
       "torque": 241.244
     },
     "volvo_s60": {
-      "base_time": 10.6,
+      "base_time": 10.596,
       "key": "ca5308aceee29d690025fe4dfa6546b5",
       "race_top_kmh": 176.216,
       "torque": 420.816
     },
     "vw_beetle": {
-      "base_time": 10.5917,
+      "base_time": 10.5844,
       "key": "b0d31a3d8d06eb40c925a8e45096a857",
       "race_top_kmh": 177.8,
       "torque": 387.897
     },
     "vw_beetle_1967": {
-      "base_time": 15.225,
+      "base_time": 15.2231,
       "key": "ca724153404458136dc65e2f36db3963",
       "race_top_kmh": 116.172,
       "torque": 128.734
     },
     "vw_golf_7": {
-      "base_time": 11.3333,
+      "base_time": 11.332,
       "key": "288d946650adc1e7383dfb374fd29325",
       "race_top_kmh": 160.057,
       "torque": 287.365
     },
     "vw_passat_b55": {
-      "base_time": 12.0917,
+      "base_time": 12.0836,
       "key": "9e4e0cd806ce7b28c8a5de74d4c87561",
       "race_top_kmh": 148.479,
       "torque": 276.999
     },
     "vw_passat_b8": {
-      "base_time": 11.4167,
+      "base_time": 11.4132,
       "key": "74439d80f7d428d58c22fa590262c238",
       "race_top_kmh": 157.421,
       "torque": 318.028
     },
     "vw_t1_bus": {
-      "base_time": 22.0167,
+      "base_time": 22.0129,
       "key": "13570c76a6e79667b659ad6e4b4f0403",
       "race_top_kmh": 84.928,
       "torque": 65.972
     },
     "willys_jeep_mb": {
-      "base_time": 19.475,
+      "base_time": 19.4705,
       "key": "052d0b705337911e4f43bfe3191165fc",
       "race_top_kmh": 90.263,
       "torque": 59.413

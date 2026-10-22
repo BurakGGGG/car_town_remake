@@ -104,6 +104,8 @@ func _init() -> void:
 	_issue_plate.theme_type_variation = &"HudPlateSmall"
 	_issue_plate.kind = HudIcon.Kind.WRENCH
 	_issue_plate.icon_size = 13.0
+	# İkon solda: küçük plakada üstte ikon payı yok, iki satırlı yazının (REVİZYON / 300 sn) üstüne biniyordu
+	_issue_plate.icon_left = true
 	_issue_plate.bolts = false
 	_issue_plate.disabled = true           # bilgi plakası: arıza müşteriden gelir, seçilmez
 	_issue_plate.focus_mode = Control.FOCUS_NONE

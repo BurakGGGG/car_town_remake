@@ -604,6 +604,20 @@ func _run() -> void:
 		await wait(0.4)
 		var workshop: ModWorkshop = screen.get("_workshop")
 		workshop.open_category(&"motor"))
+	# MODİFİYE GARAJI: her kategorinin kamera çekimi (kamera varıp gösteri başladıktan sonra)
+	for category: StringName in PerformanceMods.CATEGORIES:
+		await _screen(&"garage", "modgarage_%s" % category, func() -> void:
+			var screen: GarageScreen = _router.screen(&"garage") as GarageScreen
+			screen.open_mods()
+			await wait(1.4)
+			(screen.get("_workshop") as ModWorkshop).open_category(category)
+			await wait(1.6))   # kamera yolu 1,15 sn
+	await _screen(&"garage", "modgarage_geri", func() -> void:   # GERİ: depo görünümü (kamera, park etmiş araçlar) geri gelir
+		var screen: GarageScreen = _router.screen(&"garage") as GarageScreen
+		screen.open_mods()
+		await wait(1.4)
+		screen.call("_on_exit_pressed")
+		await wait(0.8))
 	await _screen(&"showroom", "magaza")
 	await _screen(&"showroom", "magaza_son_kasa", func() -> void:   # en uzun oran listesi
 		var crates: Array[Dictionary] = CrateCatalog.all()

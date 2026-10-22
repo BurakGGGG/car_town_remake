@@ -14,6 +14,11 @@ func frames(n: int) -> void:
 
 func _init() -> void: _run()
 
+## Doğrulayıcı lambdası sözlüğü yakalar (değişken yeniden atanırsa eski kopyayı görür): cevap yerinde değiştirilir.
+func _answer(answer: Dictionary, value: Dictionary) -> void:
+	answer.clear()
+	answer.merge(value)
+
 func _make(mock: MockBillingClient) -> PurchaseManager:
 	var pm: PurchaseManager = PurchaseManager.new()
 	pm.use_client(mock)
@@ -184,6 +189,115 @@ func _run() -> void:
 	save.new_game()
 	check(not pm4.was_bought(&"gems_pack_2"), "yeni oyun defteri sıfırlar")
 	save.delete_save()
+	pm4.queue_free()
+	await frames(2)
+
+	print("== 12) Sunucu doğrulaması ==")
+	pp.load_state(1, 0, 0)
+	var answer: Dictionary = {"status": "invalid"}
+	var asked: Array = []
+	var gate: Array = [false]   # true → doğrulayıcı cevap vermeden bekler (yavaş sunucu)
+	var verifier: Callable = func(product: StringName, token: String) -> Dictionary:
+		asked.append([product, token])
+		while gate[0]:
+			await process_frame
+		return answer.duplicate()
+	var mock5: MockBillingClient = MockBillingClient.new()
+	var pm5: PurchaseManager = PurchaseManager.new()
+	pm5.use_client(mock5)
+	pm5.use_verifier(verifier)
+	root.add_child(pm5)
+	await frames(4)
+	var results: Array = []
+	pm5.purchase_finished.connect(func(id: StringName, status: StringName) -> void: results.append([id, status]))
+	pm5.buy(&"gems_pack_1")
+	await frames(4)
+	check(asked.size() == 1 and asked[0][0] == &"gems_pack_1", "gem vermeden önce sunucuya soruldu")
+	check(pp.gems == 0 and results.back()[1] == &"rejected", "sahte satın alma (invalid): gem YOK, sonuç rejected")
+	check(mock5.owned.size() == 1, "reddedilen satın alma tüketilmedi")
+	mock5.query_purchases(BillingClient.ProductType.INAPP)
+	await frames(4)
+	check(asked.size() == 1 and pp.gems == 0, "reddedilen belirteç bu oturumda yeniden sorulmaz")
+	mock5.owned.clear()
+
+	_answer(answer, {"status": "unavailable"})
+	asked.clear()
+	pm5.buy(&"gems_pack_2")
+	await frames(4)
+	check(pp.gems == 0 and results.back()[1] == &"verifying" and pm5.awaiting_verification,
+		"sunucuya ulaşılamadı: gem YOK, doğrulama bekliyor")
+	check(mock5.owned.size() == 1 and not pm5.is_busy(), "tüketilmedi, pencere kapandı")
+	check(not pm5._verify_timer.is_stopped(), "yeniden sorma zamanlandı")
+	_answer(answer, {"status": "ok", "quantity": 1})
+	pm5._verify_timer.stop()
+	pm5._requery()   # zamanlayıcı doldu / oyuncu oyuna döndü
+	await frames(5)
+	check(pp.gems == 550 and mock5.owned.is_empty() and not pm5.awaiting_verification,
+		"sunucu dönünce gem verildi ve tüketildi (%d)" % pp.gems)
+
+	print("== 13) Aynı satın alma iki yoldan aynı anda ==")
+	asked.clear()
+	gate[0] = true
+	var twin: Dictionary = mock5.make_purchase("gems_pack_1")
+	mock5.owned.append(twin)
+	mock5.query_purchases(BillingClient.ProductType.INAPP)
+	mock5.on_purchase_updated.emit({"response_code": BillingClient.BillingResponseCode.OK, "debug_message": "",
+		"purchases": [twin.duplicate(true)]})
+	await frames(4)
+	check(asked.size() == 1, "sunucuya bir kez soruldu (%d)" % asked.size())
+	gate[0] = false
+	await frames(5)
+	check(pp.gems == 650 and mock5.owned.is_empty(), "gem bir kez verildi (%d)" % pp.gems)
+
+	print("== 14) Miktar sunucudan ==")
+	_answer(answer, {"status": "ok", "quantity": 2})
+	mock5.outcome = MockBillingClient.Outcome.PURCHASED
+	pm5.buy(&"gems_pack_1")
+	await frames(5)
+	check(pp.gems == 850, "Play'in onayladığı miktar kadar gem (2 × 100 → %d)" % pp.gems)
+	_answer(answer, {"status": "pending"})
+	pm5.buy(&"gems_pack_1")
+	await frames(5)
+	check(pp.gems == 850 and results.back()[1] == &"pending", "sunucu 'bekliyor' derse gem yok")
+	mock5.owned.clear()
+	_answer(answer, {"status": "consumed"})
+	pm5.buy(&"gems_pack_2")
+	await frames(5)
+	check(pp.gems == 850 and results.back()[1] == &"rejected", "daha önce tüketilmiş belirteç: gem yok")
+	pm5.queue_free()
+	await frames(2)
+
+	print("== 15) İade ==")
+	pp.load_state(1, 0, 0)
+	var mock6: MockBillingClient = MockBillingClient.new()
+	var pm6: PurchaseManager = _make(mock6)
+	await frames(4)
+	pm6.buy(&"gems_pack_2")
+	await frames(5)
+	var key6: String = String((pm6.state()["ledger"] as Dictionary).keys()[0])
+	check(pp.gems == 550 and pp.spend_gems(100) and pp.gems == 450, "satın alındı, 100'ü harcandı")
+	var refunds: Array = []
+	pm6.refund_applied.connect(func(id: StringName, taken: int, missing: int) -> void: refunds.append([id, taken, missing]))
+	var doc6: Dictionary = {"product": "gems_pack_2", "quantity": 1, "order": "GPA.X", "at": 1}
+	var done6: PackedStringArray = pm6.apply_refunds({key6: doc6})
+	check(done6 == PackedStringArray([key6]) and pp.gems == 0, "iade: verilen 550'nin bakiyedeki 450'si düşüldü, bakiye 0'da durdu")
+	check(refunds.size() == 1 and refunds[0] == [&"gems_pack_2", 450, 100], "düşülemeyen 100 bildirildi (%s)" % str(refunds))
+	check(bool((pm6.state()["ledger"] as Dictionary)[key6].get("refunded", false)), "defterde iade işaretli")
+	pp.add_gems(300)
+	done6 = pm6.apply_refunds({key6: doc6})
+	check(done6 == PackedStringArray([key6]) and pp.gems == 300 and refunds.size() == 1, "aynı iade ikinci kez düşülmez (belge yine silinir)")
+	done6 = pm6.apply_refunds({"baska_cihaz": {"product": "gems_pack_1", "quantity": 2, "at": 2}})
+	check(done6 == PackedStringArray(["baska_cihaz"]) and pp.gems == 100, "defterde olmayan satın alma: katalogdaki 2 × 100 düşüldü (%d)" % pp.gems)
+	done6 = pm6.apply_refunds({"odul": {"product": String(FounderReward.PRODUCT_ID), "quantity": 1}, "bozuk": "x"})
+	check(done6.size() == 2 and pp.gems == 100, "ön kayıt ödülü ve bozuk belge gem düşmez, silinir")
+	var before_cloud: Dictionary = JSON.parse_string(JSON.stringify(pm6.state()))
+	pm6.load_state({})
+	check(pm6.carry_over(before_cloud) == 0 and pp.gems == 100, "bulut kaydı uygulanınca iade edilen satın almanın gemi geri gelmez")
+	check(bool((pm6.state()["ledger"] as Dictionary)[key6].get("refunded", false)), "iade işareti taşındı")
+	var reloaded6: Dictionary = JSON.parse_string(JSON.stringify(pm6.state()))
+	pm6.load_state(reloaded6)
+	check(bool((pm6.state()["ledger"] as Dictionary)[key6].get("refunded", false)), "iade işareti kayıt turundan sağ çıkar")
+	pm6.queue_free()
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PurchaseManager.DEVICE_LEDGER_PATH))
 	print("RESULT fails=%d" % fails)

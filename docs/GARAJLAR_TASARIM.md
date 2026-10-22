@@ -277,6 +277,34 @@ araç sınırı seçilmedi. `GarageInteriorView._update_detail`: odaktaki araç 
 Ölçüm QA_SETTLE=800 ile (400 karede birleştirme bitmemiş olabiliyor; parçalı hâl daha az üçgen gösterir, yanıltır).
 Uzaktaki araçlarda gözle görülür bozulma yok. Telefonda denenmedi.
 
+### MODİFİYE GARAJI (2026-10-22, kullanıcı isteği)
+ARAÇLAR → MODİFİYE açılınca araç eski kutu odaya / depodaki park yerine değil, kendi lüks garajına geçer. Üç taslaktan
+**A SİYAH & ALTIN** seçildi ("etrafa daha kaliteli dekorlar koy, dolu dursun"): siyah mermer zemin + altın pusula kakması,
+tablanın üstünde altın halka ışık, kasetli tavan, arkadan aydınlatılmış parça vitrinleri, ışıklı jant duvarı, altın alet
+panosu, kask / kupa rafları, konyak deri salon + bar, fanuslarda altın V8 ve maket araç, kadife kordonlu direkler.
+- **Blender:** `tools/garages/modgarage.py` (20 × 16 × 5,6 m, tabla (10, 8.4) r 2,7; önizleme `-- preview wide|hood|wheel|
+  west|north|east|rear`), dışa aktarma `export_garage.py -- modgarage` (~3 dk; 60 bin üçgen). Oda 360° görüldüğü için
+  pişirmede yüzler kameraya değil ODANIN İÇİNE döner (`face_inside`: kapalı parça dışa, açık düz parça oda merkezine).
+  Zemin tek doku (`floor.png`), tablanın altı delik; `TableTop` ayrı nesne; `Car` işaretçisi.
+- **Oyun:** `ui/hud/mod_garage_view.gd` (ModGarageView). GarageScreen.open_mods → `_enter_mod_garage` (depo iç mekânı
+  `GarageInteriorView.suspend`, eski oda gizli), `_close_mods` → exit (kamera / ışık iç mekânın ayarına döner).
+  ModWorkshop.focus_changed(kategori) → `focus`: kamera parçaya 1,15 sn'de süzülür, TABLA parçayı kameraya çevirir (kamera hep
+  güneydoğu yarıda). Çekimler `SHOTS`: MOTOR kaput üstten, TURBO egzoz (alev + patlama + tıslama), HAVA AKIŞI ön tampon
+  (hava çizgileri), ŞANZIMAN yan (vites sesi), LASTİK & JANT ön teker (teker döner + duman), GÖVDE yan profil (tabla
+  döner); her birinde boyada ışık süpürmesi + aracın kendi motor tınısıyla gaz (RaceAudio.engine_for). Genel bakışta
+  tabla döner, parmakla çevrilir.
+- **Yansıma:** TableTop yarı saydam parlak siyah (shader), altında aracın tabla düzlemine göre aynalı kopyası (MIRROR_LAYER,
+  aynalı anahtar ışık), iki koyu disk derinlikle karartır. Tek araç olduğu için ucuz.
+- **Kadraj:** hedef plakaların arasındaki görünür pencereye (`FRAME_OVERVIEW` / `FRAME_CATEGORY`, h/v_offset). Kamera oda
+  kutusunun ve tablanın çevresindeki eşyasız dairenin (`SAFE_RADIUS` 7 m) içinde kalır; mesafe yetmezse görüş açısı
+  genişler (en çok 70°), parça aynı boyda kalır.
+- **Tuzaklar:** (1) Tripo modellerde parça düğümleri dönük: dönük AABB'nin AABB'si gerçeğin ~3 katı (BMW E60 genişlik
+  1,34) → kamera köşe kolonuna girip ekran SİMSİYAH. Sınırlar köşe noktalarından ölçülür (`_local_bounds`). (2) Ekran
+  kapanınca süren tween'ler serbest düğüm yakalamış lambda çağırıyordu → tween'ler ilgili düğümden (`sweep.create_tween()`).
+  (3) h_offset kamerayı kaydırır: hedefi sağa almak için EKSİ. (4) Tarama çekimi kamera yolu (1,15 sn) bitmeden alınırsa
+  kadraj yanlış görünür.
+- Test `tests/mod_garage_test.gd` (22, run_tests HEADLESS); tarama `modgarage_<kategori>`, `modgarage_geri`.
+
 ## 8. Uygulama sırası
 1. **Liste (UYGULANDI 2026-10-19):**
    - TÜM ARAÇLAR panosu, SINIF/NADİRLİK filtreleri, 5 sıralama.

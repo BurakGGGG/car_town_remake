@@ -121,6 +121,11 @@ var _missions: MissionManager
 
 ## Oyun HUD'unun ölçeği (AYARLAR → HUD BOYUTU); 1.0 = tasarım boyu.
 var hud_scale: float = 1.0
+## Alt şerit büyük HUD'da üst kümelere yetişirse (853 birimlik telefon, %120, kasa sorusu + bildirim: bildirim
+## MARKET'in üstüne biniyordu — ekran taraması 2026-10-22) yalnız o an bu tabana kadar küçülür.
+const BOTTOM_FIT_MIN: float = 0.8
+const BOTTOM_FIT_GAP: float = 6.0
+const BOTTOM_FIT_STEP: float = 0.02
 var _settings: GameSettings
 var _nav_group: ButtonGroup = ButtonGroup.new()
 var _nav_ids: Dictionary = {}
@@ -283,6 +288,11 @@ func _ready() -> void:
 	_apply_safe_area()
 	get_viewport().size_changed.connect(_apply_safe_area)
 	top_left.resized.connect(_sync_modal_hud, CONNECT_DEFERRED)   # pano payı blokla birlikte değişsin
+	# Alt sütun dizildikten sonra (bildirim / kasa sorusu açılıp kapanınca) ve üst bloklar değişince sığdırılır
+	(car_info_panel.get_parent() as Container).sort_children.connect(_fit_bottom)
+	top_left.resized.connect(_fit_bottom, CONNECT_DEFERRED)
+	top_right.resized.connect(_fit_bottom, CONNECT_DEFERRED)
+	get_viewport().size_changed.connect(_fit_bottom, CONNECT_DEFERRED)
 	_connect_gameplay.call_deferred()  # sahnedeki yöneticiler hazır olsun
 
 
@@ -335,6 +345,41 @@ func set_hud_scale(value: float) -> void:
 	_apply_safe_area()
 	_fit_car_info()
 	_sync_modal_hud()
+	_fit_bottom()
+
+
+## Alt şeridin ölçeği: HUD boyutunda sığıyorsa o, sütunun bir öğesi sol üst / sağ üst bloğa yetişiyorsa
+## sığana kadar küçülür (en çok BOTTOM_FIT_MIN). Sütun alt ortadan ölçeklendiği için öğenin ekran yeri hesaplanır.
+func _fit_bottom() -> void:
+	if not is_node_ready():
+		return
+	var fit: float = hud_scale
+	var blocks: Array[Rect2] = []
+	for cluster: Control in [top_left, top_right]:
+		if cluster.is_visible_in_tree():
+			blocks.append(screen_rect(cluster).grow(BOTTOM_FIT_GAP))
+	var column: Control = car_info_panel.get_parent() as Control
+	if bottom.is_visible_in_tree() and not blocks.is_empty():
+		var pivot_local: Vector2 = bottom.get_combined_pivot_offset()
+		var pivot: Vector2 = bottom.get_global_transform() * pivot_local
+		var lowest: float = minf(hud_scale, BOTTOM_FIT_MIN)
+		while fit > lowest and _bottom_hits(column, blocks, pivot, pivot_local, fit):
+			fit = maxf(fit - BOTTOM_FIT_STEP, lowest)
+	if not bottom.scale.is_equal_approx(Vector2(fit, fit)):
+		bottom.scale = Vector2(fit, fit)
+
+
+func _bottom_hits(column: Control, blocks: Array[Rect2], pivot: Vector2, pivot_local: Vector2, fit: float) -> bool:
+	for child: Node in column.get_children():
+		var item: Control = child as Control
+		if item == null or not item.visible:
+			continue
+		var local: Rect2 = Rect2(column.position + item.position, item.size)
+		var rect: Rect2 = Rect2(pivot + (local.position - pivot_local) * fit, local.size * fit)
+		for block: Rect2 in blocks:
+			if rect.intersects(block):
+				return true
+	return false
 
 
 ## Bir HUD öğesinin EKRANDAKİ dikdörtgeni (HUD boyutu ölçeği dahil; get_global_rect ölçeği yok sayar).
@@ -1777,6 +1822,10 @@ func _setup_gem_store() -> void:
 	purchases.gems_purchased.connect(func(_id: StringName, gems: int) -> void:
 		if router.top() != &"gem_store":
 			_show_notice(Loc.t("SATIN ALMA TAMAMLANDI\n+%d GEM") % gems, HudPalette.GEM_DARK, 2.4))
+	# İADE: Play'de iade edilen satın almanın gemi düşüldü (PurchaseManager.apply_refunds)
+	purchases.refund_applied.connect(func(_id: StringName, taken: int, _missing: int) -> void:
+		if taken > 0:
+			_show_notice(Loc.t("İADE EDİLEN SATIN ALMA\n−%d GEM GERİ ALINDI") % taken, HudPalette.INK, 3.0))
 	add_child(FounderRewardNotice.new(self, purchases))   # ön kayıt ödülü: oyun sakinleşince ödül penceresi
 	# CANLI ETKİNLİK tabelası (üst orta): POSTA / yasak pencerelerinden ÖNCE eklenir, onlar üstünde kalsın
 	garage_screen.get_parent().add_child(EventBanner.new(self))

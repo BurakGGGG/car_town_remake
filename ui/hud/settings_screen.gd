@@ -20,7 +20,7 @@ enum Page { LANGUAGE, GRAPHICS, AUDIO, ACCOUNT, ABOUT }
 
 ## Sürüm adı: export_presets.cfg "version/name" ile AYNI tutulmalı (dışa aktarımda proje ayarına girmiyor). Yalnızca
 ## editörde / masaüstünde gösterilir; dışa aktarılmış pakette sürüm AppInfo'dan gelir (version_label).
-const VERSION: String = "1.0.9"
+const VERSION: String = "1.1.0"
 ## "Dil" sözcüğü her dilin kendi yazımıyla (çevrilmez: language_title'da İngilizcesiyle yan yana durur).
 const LANGUAGE_WORDS: Dictionary = {"tr": "DİL", "es": "IDIOMA", "de": "SPRACHE", "fr": "LANGUE"}
 const VOLUME_STEP: float = 0.1
@@ -48,6 +48,8 @@ var _quality_buttons: Array[PlateButton] = []
 var _quality_group: ButtonGroup = ButtonGroup.new()
 var _quality_note: Label
 var _saver: PlateButton
+var _analytics_toggle: PlateButton
+var _crash_toggle: PlateButton
 var _hud_buttons: Array[PlateButton] = []
 var _hud_group: ButtonGroup = ButtonGroup.new()
 var _music_label: Label
@@ -400,6 +402,17 @@ func _build_account() -> void:
 	_personal_ads.pressed.connect(func() -> void:
 		if _ads:
 			_ads.set_personalized_ads(_personal_ads.button_pressed))
+	# Telemetry: Firebase Analytics / Crashlytics toplama anahtarları
+	_analytics_toggle = _toggle_row(box, Loc.t("KULLANIM İSTATİSTİKLERİ"),
+		Loc.t("Hangi ekranların ve özelliklerin ne kadar kullanıldığı sayılır. Oyunu geliştirmemize yardım eder."))
+	_analytics_toggle.pressed.connect(func() -> void:
+		if _settings:
+			_settings.set_analytics_enabled(_analytics_toggle.button_pressed))
+	_crash_toggle = _toggle_row(box, Loc.t("HATA RAPORLARI"),
+		Loc.t("Oyun çökerse ya da bir hata olursa teknik ayrıntılar (cihaz modeli, hatanın yeri) bize gönderilir."))
+	_crash_toggle.pressed.connect(func() -> void:
+		if _settings:
+			_settings.set_crash_reports_enabled(_crash_toggle.button_pressed))
 	box.add_child(_rule())
 	# Akış kabı: uzun dillerde (DE / FR) iki bağlantı yan yana sığmazsa alt alta iner, sayfayı genişletmez
 	var links: HFlowContainer = HFlowContainer.new()
@@ -429,9 +442,25 @@ func _build_about() -> void:
 		if router:
 			router.close_all()
 		director.restart())
+	if Telemetry.test_crash_available():
+		_build_test_crash(box)
 	box.add_child(_rule())
 	var info: Label = _caption(Loc.t("AUTO YARD  ·  SÜRÜM %s\n%s") % [version_label(), Loc.SITE_HOST])
 	box.add_child(info)
+
+
+## Crashlytics kurulum düğmesi (yalnız Android hata ayıklama sürümü; oyuncu görmez, metinler çevrilmez). İki dokunuş:
+## ilki "EMİN MİSİN?" der, 3 sn içinde ikincisi oyunu çökertir.
+func _build_test_crash(box: VBoxContainer) -> void:
+	var crash: PlateButton = _link_row(box, "TEST ÇÖKMESİ", "Crashlytics kurulumu için oyunu bilerek çökertir. Sonra oyunu yeniden aç.", "ÇÖKERT")
+	crash.pressed.connect(func() -> void:
+		if crash.text != "ÇÖKERT":
+			Telemetry.test_crash()
+			return
+		crash.text = Loc.t("EMİN MİSİN?")
+		get_tree().create_timer(3.0).timeout.connect(func() -> void:
+			if is_instance_valid(crash):
+				crash.text = "ÇÖKERT"))
 
 
 # --- Yapı taşları ---------------------------------------------------------------------
@@ -563,6 +592,10 @@ func _refresh() -> void:
 		_quality_note.text += "  " + Loc.t("Telefonuna göre otomatik seçildi.")
 	_saver.set_pressed_no_signal(_settings.battery_saver)
 	_paint_toggle(_saver, _settings.battery_saver)
+	_analytics_toggle.set_pressed_no_signal(_settings.analytics_enabled)
+	_paint_toggle(_analytics_toggle, _settings.analytics_enabled)
+	_crash_toggle.set_pressed_no_signal(_settings.crash_reports_enabled)
+	_paint_toggle(_crash_toggle, _settings.crash_reports_enabled)
 	for level: int in _hud_buttons.size():
 		_hud_buttons[level].set_pressed_no_signal(_settings.hud_size == level)
 		_hud_buttons[level].highlight = _settings.hud_size == level

@@ -89,6 +89,9 @@ const PHOTO_FINISH_SCALE: float = 0.32
 const FLAME_MIN_PERF: float = 0.45   # performance_ratio: Golf / Leon / Alfa ve üstü (dizel Passat yok)
 ## Bu tepkinin altı "SÜPER ÇIKIŞ".
 const GREAT_REACTION: float = 0.24
+## Bir karede en çok bu kadar yarış saati adımlanır: arka plandan dönüşte yarış bitişe sıçramasın. Sıradan takılmalara
+## dokunmaz — 0,25 sn denendi, yavaş çizen pencerede (race_test) yarışı ağır çekime sokuyordu.
+const MAX_FRAME_SIM: float = 1.0
 ## Yarış telemetrisini ekrana basar (devir, vites, hız, kalite). Yayında KAPALI olmalı;
 ## `DRAG_DEBUG=1` ortam değişkeni ya da `--drag-debug` ile açılır.
 static func debug_enabled() -> bool:
@@ -154,16 +157,19 @@ var _rival_id: StringName = &""
 var _tap_delay: float = -1.0
 ## Hatalı çıkışta oyuncunun aracı bu ana kadar çizgide tutulur (fiziksel ceza).
 var _hold_until: float = 0.0
-## Rakip AI'si: [hedef devir, sınırda oyalanma süresi] + sayaçlar.
-## Rakibin bu vites için hedeflediği devir (AI aynı fiziği kullanır, yalnızca isabeti değişir).
-var _rival_target: float = 0.0
-var _rival_form: DragRaceSim.Form
-var _rival_plan: PackedFloat32Array = PackedFloat32Array()   # vites başına hedef devir (DragRaceSim.rival_shift_plan)
-## Rakibin hedef kalkış devri.
+## SABİT ADIM (docs/KOSU_ESLESTIRME.md): fizik yalnızca DragRaceSim.STEP adımlarıyla ilerler, sonuç kare hızından
+## bağımsızdır. `_steps`: GO'dan beri tamamlanan adım (`_time` = _steps · STEP); `_step_left`: henüz adımlanmamış
+## yarış saati — araçlar iki adımın arası bununla ara değerlenerek çizilir (foto finişte kare başına adım düşmüyor).
+var _steps: int = 0
+var _step_left: float = 0.0
+## Oyuncunun bu koşudaki girdileri (kalkış + vitesler, adım numarasıyla) ve rakibin pistte OYNATILAN kaydı. Rakip
+## yapay zekâsı koşuyu açılışta başsız sürer (DragRaceSim.ai_recording): kural aynı, süresi koşudan önce bellidir.
+var _player_recording: DragRaceSim.Recording
+var _rival_recording: DragRaceSim.Recording
+## Rakibin kalkış devri (geri sayım boyunca oraya yükselir).
 var _rival_launch_target: float = 0.0
 ## Hata ayıklama katmanı (yalnızca DRAG_DEBUG açıkken).
 var _debug_label: Label
-var _rival_skill: float = 0.5
 ## Vites penceresinin İÇİNDE miyiz (kadran yanar, plaka amber olur)?
 var _shift_hot: bool = false
 ## Pencere dışındayken gösterilecek normal yazı (pencere içinde "ŞİMDİ!" yazar).
@@ -234,6 +240,8 @@ func open() -> void:
 		_rival_id = _player_id
 	_phase = Phase.READY
 	_time = 0.0
+	_steps = 0
+	_step_left = 0.0
 	_countdown = 3.0 * COUNTDOWN_STEP
 	_tap_delay = -1.0
 	_hold_until = 0.0
@@ -247,26 +255,20 @@ func open() -> void:
 	_first_finish_time = -1.0
 	_player_distance = DragTrack.START_Z
 	_rival_distance = DragTrack.START_Z
-	_player = DragRaceSim.Runner.new()
-	_player.setup_spec(PerformanceMods.spec_for(_player_id), _rng)   # modifiyeli künye
-	_rival = DragRaceSim.Runner.new()
-	# Rakip fabrika künyesiyle; ARKADAŞIN aracıysa onun modifiyeleriyle (RaceManager.rival_build)
-	var rival_build: Dictionary = race.rival_build() if race and race.rival_id() == _rival_id else {}
-	if rival_build.is_empty():
-		_rival.setup(_rival_id, _rng)
-	else:
-		_rival.setup_spec(PerformanceMods.spec_with(_rival_id, rival_build), _rng)
-	# Rakibin becerisi SINIFINDAN gelir (D çok hata yapar, S neredeyse kusursuz) ve her yarışta bir GÜN
-	# FORMU çekilir: güç, beceri, ara sıra kötü gün (kalkışı kaçırır, bir vitesi ıskalar) ya da iyi gün.
-	# Hile yok — aynı Runner, aynı fizik; başsız run_rival ile aynı plan (DragRaceSim.Form).
-	# İlk yarışta form yok (sınıf becerisi, güç 1,0): bkz. RaceManager.is_first_race
-	_rival_form = DragRaceSim.roll_form(_rival_id, null if race and race.is_first_race() else _rng)
-	_rival_skill = _rival_form.skill
-	_rival.power = _rival_form.power
-	_rival_launch_target = DragRaceSim.ai_launch_rpm(_rival.spec, _rival_form.launch_skill, _rng)
+	# Oyuncunun koşusu KAYDA alınır; koşucu kayıttan kurulur (modifiyeli künye + sapma): kayıt birebir tekrar edilir.
+	_player_recording = DragRaceSim.Recording.begin(_player_id, PerformanceMods.build_of(_player_id), _rng)
+	_player = _player_recording.make_runner()
+	# RAKİP KOŞUSU (docs/KOSU_ESLESTIRME.md): RaceManager seçer — gerçek arkadaşın kendi koşusu ya da yapay zekâ
+	# havuzundan, oyuncunun kazanma şansı hedefe en yakın olanı (araç onun modifiyeleriyle, kayıttan kurulur).
+	_rival_recording = race.rival_recording(_player_id) if race and race.rival_id() == _rival_id else null
+	if _rival_recording == null:
+		# Davetsiz açılış (menü / hata ayıklama): yapay zekâ, rakibin SINIFINDAN beceri + GÜN FORMU (güç, beceri, ara
+		# sıra kötü / iyi gün). Hile yok — aynı Runner, aynı fizik; başsız run_rival ile aynı yol.
+		var form: DragRaceSim.Form = DragRaceSim.roll_form(_rival_id, null if race and race.is_first_race() else _rng)
+		_rival_recording = DragRaceSim.ai_recording(_rival_id, {}, form, _rng)
+	_rival = _rival_recording.make_runner()
+	_rival_launch_target = _rival_recording.launch_rpm
 	_rival.rpm = _rival.spec.idle_rpm
-	_rival_plan = DragRaceSim.rival_shift_plan(_rival.spec, _rival_form, _rng)
-	_rival_target = _rival_plan[0] if not _rival_plan.is_empty() else INF
 	# Hızlı araçla yarışırken dünya daha hızlı akar (aynı 300 m, daha uzun çizilmiş pist)
 	_track.set_scale_factor(DragTrack.scale_for(_player_id))
 	_player_perf = PerformanceMods.performance_ratio(_player_id)
@@ -430,6 +432,15 @@ func rival_run() -> DragRaceSim.Run:
 	return _summary(_rival)
 
 
+## Bu koşunun kayıtları: oyuncunun girdileri ve rakibin oynatılan kaydı (DragRaceSim.replay ile birebir tekrar edilir).
+func player_recording() -> DragRaceSim.Recording:
+	return _player_recording
+
+
+func rival_recording() -> DragRaceSim.Recording:
+	return _rival_recording
+
+
 func _summary(runner: DragRaceSim.Runner) -> DragRaceSim.Run:
 	if runner == null or runner.finish_time < 0.0:
 		return null
@@ -451,7 +462,7 @@ func tap() -> void:
 			if not _player.running:
 				# GO'dan sonraki İLK dokunuş TEPKİdir (vites değil): araç orada kalkar, yani
 				# gecikme doğrudan mesafeye yansır.
-				_launch_player(_time)
+				_launch_player()
 			elif _player.finish_time < 0.0:
 				_register_shift()
 		_:
@@ -826,41 +837,66 @@ func _process(delta: float) -> void:
 				_audio.go_beep()
 				_set_status(Loc.t("ŞİMDİ DOKUN"))
 				_time = 0.0
+				_steps = 0
+				_step_left = 0.0
 				_phase = Phase.RUNNING
-				# RAKİP YEŞİLDE KENDİ KALKAR: oyuncu dokunmasa da yarış başlar.
-				_rival.reaction = DragRaceSim.rival_reaction(_rival_skill, _rng)
+				# RAKİP YEŞİLDE KENDİ KALKAR (kaydındaki adımda): oyuncu dokunmasa da yarış başlar.
 				_tap_button.text = Loc.t("VİTES")
 		Phase.RUNNING:
 			if _shift_hot:
 				# Yuvarlak tabela da nabız atsın: efekt tek bir yerde kalmasın
 				_tap_button.pivot_offset = _tap_button.size * 0.5
 				_tap_button.scale = Vector2.ONE * (1.0 + 0.055 * _shift_dial.pulse())
-			# Foto finişte yalnızca ekran saati yavaşlar: iki koşucu aynı (küçük) adımla ilerler.
+			# Foto finişte yalnızca ekran saati yavaşlar: fizik hep aynı sabit adımla ilerler, kare başına daha
+			# az adım düşer (araçlar adımların arası ara değerlenerek çizilir).
 			var sim_delta: float = delta * _time_scale
-			_time += sim_delta
-			if not _rival.running:
-				_rival.rev(sim_delta, _rival_launch_rpm())
-				if _time >= _rival.reaction:
-					_rival.launch()
-					_spawn_smoke(_rival_car)
-			if not _player.running and _hold_until > 0.0 and _time >= _hold_until:
-				_launch_player(_time)   # hatalı çıkış cezası doldu, araç kalkıyor
+			var stepped: float = _run_steps(sim_delta)
 			# Dokunulmazsa araç KALKMAZ: yeşili kaçırmak oyuncunun hatası, oyun onun yerine
 			# başlatmaz (rakip gider, oyuncu geç kalkarsa yarışı kaybeder).
-			_advance(sim_delta, delta)
+			_advance(stepped, sim_delta, delta)
 		Phase.DONE:
 			pass
 
 
-## Oyuncunun kalkışı: araç TAM O ANDA hareketlenir, yani gecikme doğrudan mesafeye yansır.
-func _launch_player(at_time: float) -> void:
+## Biriken yarış saatini sabit adımlarla harcar. Dönen: bu karede gerçekten adımlanan yarış saati.
+func _run_steps(sim_delta: float) -> float:
+	_step_left = minf(_step_left + sim_delta, MAX_FRAME_SIM)
+	var stepped: float = 0.0
+	while _step_left >= DragRaceSim.STEP:
+		_step_left -= DragRaceSim.STEP
+		_sim_step()
+		stepped += DragRaceSim.STEP
+	return stepped
+
+
+## Tek fizik adımı. Girdiler adımların ARASINDA uygulanır (oyuncununki `tap` ile, rakibinki kaydından) ve kaçıncı
+## adımdan sonra uygulandıkları kaydedilir — sıra DragRaceSim.replay ile aynıdır, koşu birebir tekrar edilir.
+func _sim_step() -> void:
+	if not _rival.running:
+		_rival.rev(DragRaceSim.STEP, _rival_launch_rpm())
+	var rival_event: int = _rival_recording.play(_rival, _steps)
+	if rival_event == DragRaceSim.Recording.LAUNCHED:
+		_spawn_smoke(_rival_car)
+	elif rival_event >= 0:
+		_rival_shift_fx(rival_event)
+	if not _player.running and _hold_until > 0.0 and _time >= _hold_until:
+		_launch_player()   # hatalı çıkış cezası doldu, araç kalkıyor
+	_steps += 1
+	_time = float(_steps) * DragRaceSim.STEP
+	_player.step(DragRaceSim.STEP, _time)
+	_rival.step(DragRaceSim.STEP, _time)
+
+
+## Oyuncunun kalkışı: araç bir sonraki adımda hareketlenir, yani gecikme doğrudan mesafeye yansır.
+func _launch_player() -> void:
 	if _player.running:
 		return
 	# Araç kalkış devrinde hazır bekler: oyuncunun kalkıştaki becerisi TEPKİ süresidir,
 	# devir ayarlamak değil (kullanıcı kararı). Debriyaj kayması ve patinaj yine modelden.
-	_player.rpm = _player.spec.launch_rpm
-	_player.reaction = maxf(at_time, 0.0)
+	_player.rpm = _player_recording.launch_rpm
+	_player.reaction = _time
 	_player.launch()
+	_player_recording.mark_launch(_player, _steps)
 	_punch = 1.0
 	_shake = 1.0
 	_spawn_smoke(_player_car)
@@ -879,13 +915,11 @@ func _false_start() -> void:
 	_set_status(Loc.t("HATALI ÇIKIŞ"))
 
 
-## Canlı adım: iki koşucu da ilerler, rakip kendi vitesini atar, kadran oyuncunun devrini gösterir.
-## `delta` yarış saatidir (foto finişte yavaş), `real_delta` ekran saati (kamera, efekt sönümü).
-func _advance(delta: float, real_delta: float) -> void:
-	_player.step(delta, _time)
-	_rival.step(delta, _time)
-	_drive_rival(delta)
-	_track_feel(delta, real_delta)
+## Kare güncellemesi (fizik `_run_steps`'te ilerledi): kadran oyuncunun devrini gösterir, araçlar ve efektler çizilir.
+## `stepped` bu karede adımlanan yarış saati (ivme ondan), `delta` karenin yarış saati (foto finişte yavaş),
+## `real_delta` ekran saati (kamera, efekt sönümü).
+func _advance(stepped: float, delta: float, real_delta: float) -> void:
+	_track_feel(stepped, real_delta)
 
 	# Kadran: ibre motor devrinin YAY KARŞILIĞI (yeşil dilim = iyi vites, sağdaki kırmızı = geç
 	# kaldın, en sağ = devir sınırı; ibre oradan öteye geçmez).
@@ -943,8 +977,8 @@ func _track_feel(delta: float, real_delta: float) -> void:
 		_rival_fx.set_smoke(_smoke_amount(_rival))
 	# Hız çizgileri: dünyanın ekrandaki akışından (oyuncu bitirdiyse frenleyen hız)
 	_set_speed_lines(clampf(inverse_lerp(LINES_FROM_FLOW, LINES_FULL_FLOW, _player_flow()), 0.0, 1.0))
-	_progress.player = _player.progress()
-	_progress.rival = _rival.progress()
+	_progress.player = _drawn_distance(_player) / DragRaceSim.DISTANCE
+	_progress.rival = _drawn_distance(_rival) / DragRaceSim.DISTANCE
 	_update_record_hud()
 	# Foto finiş: iki araç da son düzlükte ve burun buruna → ekran saati yavaşlar
 	var left: float = DragRaceSim.DISTANCE - maxf(_player.distance, _rival.distance)
@@ -988,6 +1022,8 @@ func _update_record_hud() -> void:
 		_trace.append(DragRaceSim.DISTANCE)
 		if _race and _player.running:
 			_record_new = _race.submit_time(_player_id, _player.finish_time, _trace)
+			_player_recording.time = _player.finish_time
+			_race.add_run(_player_recording)   # koşu kaydı: kazanma şansı + arkadaşların rakibi
 		if _record_new:
 			_record_label.text = Loc.t("YENİ REKOR!")
 			_show_popup(Loc.t("YENİ REKOR!"), HudPalette.PLATE_SELECTED)
@@ -1115,7 +1151,8 @@ func _update_debug() -> void:
 		Loc.t("GEÇİŞ ") if p.shifting else "", Loc.t("PATİNAJ ") if p.wheelspin else "",
 		Loc.t("SINIR ") if p.limiter else "", Loc.t("DEBRİYAJ ") if p.clutch > 0.0 else "",
 		p.good_shifts, p.perfect_shifts, p.limiter_time, p.spin_time,
-		r.vehicle_id, r.rpm, r.gear + 1, r.speed_kmh(), r.distance, _rival_target]
+		r.vehicle_id, r.rpm, r.gear + 1, r.speed_kmh(), r.distance,
+		float(_rival_recording.shift_steps[r.gear]) if r.gear < _rival_recording.shift_steps.size() else -1.0]
 
 
 ## Rakibin hedeflediği kalkış devri (açılışta seçildi; geri sayım boyunca oraya yükselir).
@@ -1123,21 +1160,13 @@ func _rival_launch_rpm() -> float:
 	return _rival_launch_target
 
 
-## Rakip sürücü: kendi planına göre vites atar (iyi sürücü tepede, kötü sürücü erken ya da
-## devir sınırında oyalanarak). Oyuncunun dokunuşuyla aynı `shift()` çağrısını kullanır.
-func _drive_rival(_delta: float) -> void:
-	if not _rival.running or _rival.shifting or _rival.gear >= _rival.top_gear():
+## Rakibin vitesi (kaydından oynatıldı; yapay zekânın planı kayıt üretilirken uygulandı): alev ve patlama sesi.
+func _rival_shift_fx(quality: int) -> void:
+	if _rival_electric:
 		return
-	if _rival.rpm < _rival_target:
-		return
-	var quality: int = _rival.shift()
-	if quality < 0:
-		return
-	if not _rival_electric:
-		if _rival_fx and _rival_perf >= FLAME_MIN_PERF:
-			_rival_fx.flame(_shift_strength(quality) * _flame_scale(_rival_perf) * 0.8)
-		_audio.backfire(_shift_strength(quality) * _flame_scale(_rival_perf), true)
-	_rival_target = _rival_plan[_rival.gear] if _rival.gear < _rival_plan.size() else INF
+	if _rival_fx and _rival_perf >= FLAME_MIN_PERF:
+		_rival_fx.flame(_shift_strength(quality) * _flame_scale(_rival_perf) * 0.8)
+	_audio.backfire(_shift_strength(quality) * _flame_scale(_rival_perf), true)
 
 
 ## İDEAL DEVİR BİLDİRİMİ: ibre amber pencereye girince kadran yanar, yuvarlak tabela amber olur
@@ -1167,6 +1196,7 @@ func _register_shift() -> void:
 	var quality: int = _player.shift()
 	if quality < 0:
 		return
+	_player_recording.mark_shift(_steps)
 	_set_hot(false)
 	_shift_dial.over = false
 	_shift_dial.flash = quality == DragRaceSim.Shift.PERFECT
@@ -1268,19 +1298,23 @@ func _move_car(car: Node3D, rig: CarRig, target_z: float, delta: float, is_playe
 	car.position.y = buzz
 
 
+## Koşucunun ÇİZİLEN mesafesi: son iki sabit adımın arası, henüz adımlanmamış yarış saatiyle ara değerlenir.
+func _drawn_distance(runner: DragRaceSim.Runner) -> float:
+	return lerpf(runner.prev_distance, runner.distance, clampf(_step_left / DragRaceSim.STEP, 0.0, 1.0))
+
+
 ## Oyuncunun pistteki yeri (dünya birimi, START_Z'den): bitişten sonra da ilerlemeye devam eder.
 func _player_track_z() -> float:
 	if _player == null:
 		return 0.0
-	return _player.progress() * _track.length \
-		+ _player_over * (_track.length / DragRaceSim.DISTANCE)
+	return (_drawn_distance(_player) + _player_over) * (_track.length / DragRaceSim.DISTANCE)
 
 
-## İki aracın ortalama ilerlemesi (0-1) — doğrudan canlı koşuculardan.
+## İki aracın ortalama ilerlemesi (0-1) — canlı koşuculardan (çizildikleri yer).
 func _track_center() -> float:
 	if _player == null or _rival == null:
 		return 0.0
-	return (_player.progress() + _rival.progress()) * 0.5
+	return (_drawn_distance(_player) + _drawn_distance(_rival)) * 0.5 / DragRaceSim.DISTANCE
 
 
 ## Rakibin ekranda oyuncuya göre farkı (dünya birimi): rakip ÖNDEYSE artı. Pistteki GERÇEK metre
@@ -1288,8 +1322,8 @@ func _track_center() -> float:
 func _visual_gap() -> float:
 	if _player == null or _rival == null:
 		return 0.0
-	var rival_total: float = _rival.distance + _rival_over
-	var player_total: float = _player.distance + _player_over
+	var rival_total: float = _drawn_distance(_rival) + _rival_over
+	var player_total: float = _drawn_distance(_player) + _player_over
 	return (rival_total - player_total) * (_track.length / DragRaceSim.DISTANCE)
 
 
@@ -1345,6 +1379,7 @@ func _finish() -> void:
 	_audio.fade_out()   # motorlar sonuç panosunun altında uğuldamasın
 	var player_time: float = _player.finish_time if _player.finish_time >= 0.0 else _time
 	var rival_time: float = _rival.finish_time if _rival.finish_time >= 0.0 else _time
+	_player_recording.time = _player.finish_time
 	var won: bool = player_time <= rival_time
 	_status_label.text = Loc.t("KAZANDIN!") if won else Loc.t("KAYBETTİN")
 	race_completed.emit(won, player_time, rival_time)

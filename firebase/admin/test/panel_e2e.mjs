@@ -92,13 +92,15 @@ try {
 
   console.log("== moderasyon ==");
   await db.doc("garages/g_alice_uid_1").set({ name: "Kötü Ad", code: "ABC234", level: 3, value: 1, garage_json: "{}", updated_at: 1, av: "img:0011aabb" });
-  await db.doc("avatars/a_alice_uid_1").set({ img: "x", hash: "0011aabb", at: 1 });
+  await db.doc("avatars/a_alice_uid_1").set({ img: "B".repeat(40), hash: "0011aabb", at: 1 });
   await db.doc("reports/x_bob_uid_22_alice_uid_1").set({ target: "alice_uid_1", reason: "photo", av: "img:0011aabb",
     img: "A".repeat(40), name: "Kötü Ad", at: 100 });
   await db.doc("reports/x_carol_uid_3_alice_uid_1").set({ target: "alice_uid_1", reason: "name", av: "", name: "Kötü Ad", at: 200 });
   const reports = await call("GET", "/api/reports");
   check(reports.data.groups?.[0]?.target === "alice_uid_1" && reports.data.groups[0].count === 2 && reports.data.groups[0].img,
     "şikâyet kuyruğu: hedefe göre, görselli");
+  check(reports.data.groups[0].now_name === "Kötü Ad" && reports.data.groups[0].now_img === "B".repeat(40),
+    "şikâyet kuyruğu hedefin GÜNCEL adını ve fotoğrafını da gösterir (şikâyetteki uydurulabilir)");
   const rn = await call("POST", "/api/mod/reset-name", { uid: "alice_uid_1" });
   const g1 = (await db.doc("garages/g_alice_uid_1").get()).data();
   const m1 = (await db.doc("moderation/m_alice_uid_1").get()).data();
@@ -174,6 +176,17 @@ try {
     "istatistik: anlık sayılar, gecelik kayıt, dil dağılımı");
   const ev = await call("POST", "/api/config", { min_code: 0, latest_code: 0, event: { id: "hs1", money_mult: 2, xp_mult: 1, start: 1, end: 4_000_000_000 } });
   check(ev.status === 200 && (await db.doc("config/app").get()).data().event?.money_mult === 2, "etkinlik config/app'e yazıldı");
+
+  console.log("== yarış öğrenmesi ==");
+  await db.doc("config/race_learning").set({ table: { LL: { 0: { s: 40, n: 50 } } }, events: 50, days: 1, at: 9 });
+  await db.doc("race_learning_daily/20383").set({ day: 20383, events: 50, players: 7, table: {} });
+  const lset = await call("POST", "/api/learning", { off: true, window: 600, weight: 30 });
+  const ldoc = (await db.doc("config/race_learning").get()).data();
+  check(lset.status === 200 && ldoc.off === true && ldoc.window === 600 && ldoc.table?.LL?.["0"]?.s === 40,
+    "öğrenme ayarı yazıldı, gece tablosu korundu (merge)");
+  check((await call("POST", "/api/learning", { window: 5 })).status === 400, "geçersiz pencere: 400");
+  const lget = await call("GET", "/api/learning");
+  check(lget.data.doc?.weight === 30 && lget.data.days?.[0]?.players === 7, "öğrenme tablosu ve günlük sayılar okunur");
 
   console.log("== duyuru ==");
   const test = await call("POST", "/api/news/send", { body: { tr: "Deneme", en: "Test" }, test_query: "abc234" });

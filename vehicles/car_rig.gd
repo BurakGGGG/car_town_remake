@@ -569,6 +569,19 @@ func _set_merged_materials(materials: Array[Material]) -> void:
 
 # --- Tekerlek ------------------------------------------------------------------
 
+## Teker eksenlerinin DÜNYA konumu ({"front": bool, "position": Vector3}): modifiye garajında kamera tekere buraya bakar.
+func wheel_points() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for group: Dictionary in _wheel_groups:
+		var meshes: Array = group["meshes"]
+		if meshes.is_empty() or not is_instance_valid(meshes[0]):
+			continue
+		var parent: Node3D = (meshes[0] as Node3D).get_parent_node_3d()
+		var pivot: Vector3 = group["pivot"]
+		out.append({"front": bool(group["front"]), "position": parent.global_transform * pivot if parent else pivot})
+	return out
+
+
 ## Tüm tekerleri aks ekseninde verilen açıya getirir (derece).
 func set_wheel_spin(degrees: float) -> void:
 	spin_deg = fmod(degrees, 360.0)
