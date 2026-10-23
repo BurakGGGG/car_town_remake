@@ -2452,6 +2452,18 @@
       "desc": "Günlük giriş merdiveninin 28 gününü aralıksız çıkan ustalara. Mağazada yok."
     },
     {
+      "id": "referral_neon",
+      "title": "DOSTLAR NEON TABELASI",
+      "kind": "luxury",
+      "placement": "wall",
+      "price": 0,
+      "value": 20000,
+      "min_level": 1,
+      "exclusive": true,
+      "referral": 5,
+      "desc": "Arkadaş daveti ödülü: 5 arkadaşını Auto Yard'a getiren ustalara. Mağazada yok."
+    },
+    {
       "id": "lux_trophy_wall",
       "title": "KUPA DUVARI",
       "kind": "luxury",

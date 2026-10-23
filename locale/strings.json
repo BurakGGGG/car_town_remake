@@ -165,7 +165,7 @@
   "gameplay/progression_effects.gd:134"
  ],
  "%d. ARKADAŞ · BÜYÜK ÖDÜL": [
-  "ui/hud/referral_tab.gd:363"
+  "ui/hud/referral_tab.gd:382"
  ],
  "%d. AY": [
   "ui/hud/login_ladder_screen.gd:172"
@@ -198,10 +198,10 @@
   "ui/hud/mail_notice.gd:253"
  ],
  "%d. seviyeye ulaşınca ödülün gelir": [
-  "ui/hud/referral_tab.gd:204"
+  "ui/hud/referral_tab.gd:205"
  ],
  "%d. ÖDÜL HAZIR": [
-  "ui/hud/referral_tab.gd:450"
+  "ui/hud/referral_tab.gd:469"
  ],
  "%d/%d PARK YERİ": [
   "ui/hud/car_garages_screen.gd:698"
@@ -769,7 +769,6 @@
   "gameplay/social/referral_rewards.gd:65",
   "ui/hud/login_ladder_screen.gd:205",
   "ui/hud/login_ladder_screen.gd:272",
-  "ui/hud/referral_tab.gd:335",
   "ui/hud/level_up_screen.gd:167",
   "ui/hud/mission_screen.gd:311",
   "ui/hud/mission_screen.gd:479",
@@ -926,8 +925,8 @@
  ],
  "AL": [
   "ui/hud/login_ladder_screen.gd:465",
-  "ui/hud/referral_tab.gd:315",
-  "ui/hud/referral_tab.gd:387",
+  "ui/hud/referral_tab.gd:319",
+  "ui/hud/referral_tab.gd:406",
   "ui/hud/mail_notice.gd:173"
  ],
  "AL, İLK ARACIN!": [
@@ -953,7 +952,7 @@
   "gameplay/missions/mission_catalog.gd:141"
  ],
  "ALINDI": [
-  "ui/hud/referral_tab.gd:396",
+  "ui/hud/referral_tab.gd:415",
   "ui/hud/mission_screen.gd:489"
  ],
  "ALINDI · %d. GÜN": [
@@ -1013,7 +1012,7 @@
   "ui/hud/legendary_pick_screen.gd:110"
  ],
  "ARACINI SEÇ": [
-  "ui/hud/referral_tab.gd:391"
+  "ui/hud/referral_tab.gd:410"
  ],
  "ARALIK": [
   "ui/hud/news_digest.gd:480"
@@ -1089,7 +1088,7 @@
   "ui/hud/visit_depots_screen.gd:115"
  ],
  "ARKADAŞINI ÇAĞIR": [
-  "ui/hud/referral_tab.gd:155",
+  "ui/hud/referral_tab.gd:156",
   "ui/hud/friends_screen.gd:491"
  ],
  "ARKADAŞININ KODU": [
@@ -1277,6 +1276,9 @@
  "Arkadan aydınlatılmış raflarda kupalar ve madalyalar.": [
   "decor/decorations.json:lux_trophy_wall.desc"
  ],
+ "Arkadaş daveti ödülü: 5 arkadaşını Auto Yard'a getiren ustalara. Mağazada yok.": [
+  "decor/decorations.json:referral_neon.desc"
+ ],
  "Arkadaş eklemek için giriş yapmalısın. Girişten sonra davet yeniden açılır.": [
   "ui/hud/invite_screen.gd:224"
  ],
@@ -1321,7 +1323,7 @@
   "ui/hud/referral_tab.gd:73"
  ],
  "Arkadaşın oyunu indirip hesabıyla girer": [
-  "ui/hud/referral_tab.gd:203"
+  "ui/hud/referral_tab.gd:204"
  ],
  "Arkadaşının isteği değişti.": [
   "gameplay/social/social_manager.gd:1083"
@@ -1777,7 +1779,7 @@
   "ui/hud/login_screen.gd:390"
  ],
  "Bu davet kodu şu an kullanılamıyor.": [
-  "gameplay/social/referral_manager.gd:147"
+  "gameplay/social/referral_manager.gd:159"
  ],
  "Bu davet linkinin süresi dolmuş (linkler 1 saat geçerli). %s oyuncusundan yeni bir link iste.": [
   "ui/hud/invite_screen.gd:216"
@@ -1852,7 +1854,7 @@
   "gameplay/social/social_manager.gd:1919"
  ],
  "Bu telefondan daha önce davetle gelinmiş.": [
-  "gameplay/social/referral_manager.gd:145"
+  "gameplay/social/referral_manager.gd:157"
  ],
  "Budanmış yeşil çit bloğu.": [
   "decor/decorations.json:hedge.desc"
@@ -1903,7 +1905,7 @@
   "ui/hud/mission_screen.gd:333"
  ],
  "Böyle bir davet kodu yok. Harfleri kontrol et.": [
-  "gameplay/social/referral_manager.gd:139"
+  "gameplay/social/referral_manager.gd:151"
  ],
  "Böyle bir kod yok. Harfleri kontrol et.": [
   "gameplay/backend/promo_service.gd:64"
@@ -2092,20 +2094,20 @@
   "ui/hud/friends_screen.gd:385"
  ],
  "DAVET ETTİKLERİN": [
-  "ui/hud/referral_tab.gd:411"
+  "ui/hud/referral_tab.gd:430"
  ],
  "DAVET ETTİKLERİN %d": [
-  "ui/hud/referral_tab.gd:411"
+  "ui/hud/referral_tab.gd:430"
  ],
  "DAVET KODUN": [
-  "ui/hud/referral_tab.gd:163"
+  "ui/hud/referral_tab.gd:164"
  ],
  "DAVET LİNKİ GÖNDER": [
   "ui/hud/friends_screen.gd:198",
   "ui/hud/friends_screen.gd:494"
  ],
  "DAVET LİNKİ PAYLAŞ": [
-  "ui/hud/referral_tab.gd:189"
+  "ui/hud/referral_tab.gd:190"
  ],
  "DAVETLE GELDİN!": [
   "ui/hud/mail_notice.gd:216"
@@ -2268,6 +2270,9 @@
  "DONDURMA ARABASI": [
   "decor/decorations.json:ice_cream_cart.title"
  ],
+ "DOSTLAR NEON TABELASI": [
+  "decor/decorations.json:referral_neon.title"
+ ],
  "DOSTLUK YARIŞI": [
   "gameplay/missions/mission_catalog.gd:142"
  ],
@@ -2360,19 +2365,19 @@
   "ui/hud/friends_screen.gd:667"
  ],
  "Davet kabul edildi! Hoş geldin hediyen POSTA'da.": [
-  "gameplay/social/referral_manager.gd:137"
+  "gameplay/social/referral_manager.gd:149"
  ],
  "Davet kodu (AY-…)": [
-  "ui/hud/referral_tab.gd:473"
+  "ui/hud/referral_tab.gd:492"
  ],
  "Davet kodu yalnız yeni oyuncular içindir (ilk %d gün).": [
-  "gameplay/social/referral_manager.gd:143"
+  "gameplay/social/referral_manager.gd:155"
  ],
  "Davet kodunu yaz, ikiniz de hediye kazanın (ilk %d gün).": [
-  "ui/hud/referral_tab.gd:466"
+  "ui/hud/referral_tab.gd:485"
  ],
  "Davet kontrol edilemedi. İnternet bağlantını kontrol edip tekrar dene.": [
-  "gameplay/social/referral_manager.gd:152"
+  "gameplay/social/referral_manager.gd:164"
  ],
  "Davet linki gönder; açan arkadaşın seni hemen ekler. Garajını gezer, aracına karşı yarışırsınız.": [
   "ui/hud/friends_screen.gd:492"
@@ -2601,7 +2606,7 @@
   "ui/hud/legendary_pick_screen.gd:141"
  ],
  "EFSANEVİ ARAÇ": [
-  "ui/hud/referral_tab.gd:380"
+  "ui/hud/referral_tab.gd:399"
  ],
  "EFSANEVİ ARAÇ SEÇİMİ": [
   "gameplay/backend/mail_service.gd:193",
@@ -3517,7 +3522,7 @@
   "ui/hud/mod_workshop.gd:639"
  ],
  "GİR": [
-  "ui/hud/referral_tab.gd:490"
+  "ui/hud/referral_tab.gd:509"
  ],
  "GİRİLMEZ LEVHASI": [
   "decor/decorations.json:sign_no_entry.title"
@@ -3816,7 +3821,7 @@
   "ui/hud/profile_edit_screen.gd:454"
  ],
  "Henüz kimseyi davet etmedin. Linkini paylaş; arkadaşın %d. seviyeye ulaşınca ilk ödülün gelir.": [
-  "ui/hud/referral_tab.gd:418"
+  "ui/hud/referral_tab.gd:437"
  ],
  "Her depo ve yükseltme GARAJ DEĞERİ'ni artırır; değer büyüdükçe rütben yükselir. Kolay gelsin usta!": [
   "ui/tutorial/tutorial_director.gd:722"
@@ -3941,6 +3946,9 @@
  ],
  "Instagram ve YouTube'da paylaştığımız kodu yaz. Her kod hesabına bir kez geçer, ödül postana düşer.": [
   "ui/hud/gem_store_screen.gd:267"
+ ],
+ "InstallReferrer: %s": [
+  "gameplay/social/install_referrer.gd:102"
  ],
  "IŞIK DİZİSİ": [
   "decor/decorations.json:string_lights.title"
@@ -4165,7 +4173,7 @@
   "decor/decorations.json:speed_bump.title"
  ],
  "KATILDI": [
-  "ui/hud/referral_tab.gd:452"
+  "ui/hud/referral_tab.gd:471"
  ],
  "KAUÇUK MAT": [
   "decor/decorations.json:rubber.title"
@@ -4294,7 +4302,7 @@
   "ui/hud/crate_panel.gd:122"
  ],
  "KOPYALA": [
-  "ui/hud/referral_tab.gd:181",
+  "ui/hud/referral_tab.gd:182",
   "ui/hud/friends_screen.gd:291"
  ],
  "KORE HATTI": [
@@ -4477,7 +4485,7 @@
   "ui/tutorial/tutorial_director.gd:919"
  ],
  "Kendi davet kodunu kullanamazsın.": [
-  "gameplay/social/referral_manager.gd:141"
+  "gameplay/social/referral_manager.gd:153"
  ],
  "Kendi fotoğrafını kullanıyorsun.": [
   "ui/hud/profile_edit_screen.gd:278"
@@ -4522,10 +4530,10 @@
   "gameplay/cloud_save_manager.gd:475"
  ],
  "Kodu kaydettik. Hesabınla girince davet sayılacak.": [
-  "gameplay/social/referral_manager.gd:151"
+  "gameplay/social/referral_manager.gd:163"
  ],
  "Kodun kopyalandı.": [
-  "ui/hud/referral_tab.gd:518",
+  "ui/hud/referral_tab.gd:537",
   "ui/hud/friends_screen.gd:605"
  ],
  "Kodun süresi doldu. Yeni kod iste.": [
@@ -4697,10 +4705,10 @@
   "ui/hud/link_share.gd:39"
  ],
  "Linkini ya da kodunu paylaş": [
-  "ui/hud/referral_tab.gd:203"
+  "ui/hud/referral_tab.gd:204"
  ],
  "Linkle de kodla da gelebilir. Gelen arkadaşın da hediye alır.": [
-  "ui/hud/referral_tab.gd:156"
+  "ui/hud/referral_tab.gd:157"
  ],
  "LÜKS": [
   "gameplay/garage_decor.gd:303"
@@ -5539,7 +5547,7 @@
   "gameplay/social/profile_catalog.gd:49"
  ],
  "ReferralManager: %s": [
-  "gameplay/social/referral_manager.gd:371"
+  "gameplay/social/referral_manager.gd:383"
  ],
  "Renkli kırıntılı terazzo.": [
   "decor/decorations.json:terrazzo.desc"
@@ -5673,13 +5681,13 @@
   "ui/hud/race_result_screen.gd:61"
  ],
  "SEN SEÇERSİN + %s": [
-  "ui/hud/referral_tab.gd:395"
+  "ui/hud/referral_tab.gd:414"
  ],
  "SEN YOKKEN NELER OLDU?": [
   "ui/hud/news_screen.gd:399"
  ],
  "SENİ BİR ARKADAŞIN MI ÇAĞIRDI?": [
-  "ui/hud/referral_tab.gd:462"
+  "ui/hud/referral_tab.gd:481"
  ],
  "SENİN ARACIN": [
   "ui/hud/race_challenge_screen.gd:77"
@@ -5743,7 +5751,7 @@
   "ui/hud/visit_bar.gd:52"
  ],
  "SEVİYE %d / %d": [
-  "ui/hud/referral_tab.gd:455"
+  "ui/hud/referral_tab.gd:474"
  ],
  "SEVİYE %d GEREKLİ": [
   "ui/hud/mod_workshop.gd:728",
@@ -5802,7 +5810,7 @@
   "ui/hud/car_garages_screen.gd:809"
  ],
  "SIRADAKİ": [
-  "ui/hud/referral_tab.gd:298"
+  "ui/hud/referral_tab.gd:299"
  ],
  "SIRADAKİ RÜTBE: %s ₺ (%s ₺ kaldı)": [
   "ui/hud/garage_value_screen.gd:136"
@@ -6097,7 +6105,7 @@
   "gameplay/race/performance_mods.gd:90"
  ],
  "TABELA + ÇERÇEVE": [
-  "ui/hud/referral_tab.gd:341"
+  "ui/hud/referral_tab.gd:360"
  ],
  "TADİLAT TAMAM: %d YÜKSELTME BİTTİ": [
   "ui/hud/news_digest.gd:282"
@@ -6841,7 +6849,7 @@
   "ui/hud/level_up_screen.gd:382"
  ],
  "YENİ OYUNCU": [
-  "ui/hud/referral_tab.gd:443"
+  "ui/hud/referral_tab.gd:462"
  ],
  "YENİ REKOR!": [
   "ui/hud/drag_race_screen.gd:1028",
@@ -7085,7 +7093,7 @@
   "gameplay/social/social_manager.gd:1201"
  ],
  "Zaten bir arkadaşının davetiyle geldin.": [
-  "gameplay/social/referral_manager.gd:149"
+  "gameplay/social/referral_manager.gd:161"
  ],
  "Zoom (ortografik size)": [
   "world_camera.gd:23"
@@ -7152,6 +7160,9 @@
  ],
  "kategori EFSANE": [
   "ui/hud/mod_dyno.gd:143"
+ ],
+ "kurulum kimliği": [
+  "gameplay/social/referral_manager.gd:88"
  ],
  "kısa alt vitesler": [
   "gameplay/race/performance_mods.gd:488"

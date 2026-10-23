@@ -267,8 +267,8 @@ func open_session(account: String, new_phone: bool, sign_in: bool = true) -> voi
 	fb.firestore_get_task_completed.connect(cloud._on_get_completed)
 	fb.firestore_write_task_completed.connect(cloud._on_write_completed)
 	fb.firestore_delete_task_completed.connect(cloud._on_delete_completed)
-	w = {"root": root_node, "eco": eco, "prog": prog, "own": own, "profile": profile, "save": save, "cloud": cloud,
-		"social": social, "mail": mail, "ref": referral}
+	w = {"root": root_node, "eco": eco, "prog": prog, "own": own, "decor": decor, "profile": profile, "save": save,
+		"cloud": cloud, "social": social, "mail": mail, "ref": referral}
 	await frames(6)
 	if sign_in:
 		await sign_in_now()
@@ -477,6 +477,9 @@ func _tier_mail() -> void:
 	check(profile.frame_unlocked("inviter") and profile.frames_owned.has("inviter") and profile.frame_id != "inviter",
 		"5. basamak: DAVETÇİ çerçevesi verildi (takılmadı)")
 	check((summary["items"] as Array).any(func(s: String) -> bool: return s.contains("DAVETÇİ ÇERÇEVESİ")), "ödül penceresinde çerçeve")
+	check((w["decor"] as DecorManager).owned_of(ReferralRewards.DECOR_NEON) == 1
+		and (summary["items"] as Array).any(func(s: String) -> bool: return s.contains("DOSTLAR NEON TABELASI")),
+		"5. basamak: DOSTLAR NEON TABELASI da verildi")
 	check(profile.set_frame("inviter"), "verilen çerçeve takılır")
 	summary = mail.claim("ref_10")
 	check(ref().car_choices == 1 and summary.get("choice") == ReferralRewards.CHOICE_LEGENDARY and profile.frames_owned.has("envoy"),

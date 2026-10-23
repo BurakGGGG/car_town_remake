@@ -2451,5 +2451,9 @@
  "Seni bu arkadaşın mı davet etti?": "Cet ami t’a invité ?",
  "Sıradaki: %d. arkadaşta %s": "Suivant : ami n° %d → %s",
  "TABELA + ÇERÇEVE": "ENSEIGNE + CADRE",
- "YENİ OYUNCU": "NOUVEAU JOUEUR"
+ "YENİ OYUNCU": "NOUVEAU JOUEUR",
+ "DOSTLAR NEON TABELASI": "ENSEIGNE NÉON DES AMIS",
+ "Arkadaş daveti ödülü: 5 arkadaşını Auto Yard'a getiren ustalara. Mağazada yok.": "Récompense d’invitation pour les maîtres qui ont amené 5 amis sur Auto Yard. Introuvable en boutique.",
+ "InstallReferrer: %s": "",
+ "kurulum kimliği": ""
 }

@@ -2451,5 +2451,9 @@
  "Seni bu arkadaşın mı davet etti?": "¿Te invitó este amigo?",
  "Sıradaki: %d. arkadaşta %s": "Siguiente: amigo %d → %s",
  "TABELA + ÇERÇEVE": "LETRERO + MARCO",
- "YENİ OYUNCU": "JUGADOR NUEVO"
+ "YENİ OYUNCU": "JUGADOR NUEVO",
+ "DOSTLAR NEON TABELASI": "LETRERO NEÓN DE AMIGOS",
+ "Arkadaş daveti ödülü: 5 arkadaşını Auto Yard'a getiren ustalara. Mağazada yok.": "Recompensa de invitación para los maestros que trajeron a 5 amigos a Auto Yard. No está en la tienda.",
+ "InstallReferrer: %s": "",
+ "kurulum kimliği": ""
 }

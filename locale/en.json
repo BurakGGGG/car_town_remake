@@ -2451,5 +2451,9 @@
  "Seni bu arkadaşın mı davet etti?": "Did this friend invite you?",
  "Sıradaki: %d. arkadaşta %s": "Next: friend %d → %s",
  "TABELA + ÇERÇEVE": "SIGN + FRAME",
- "YENİ OYUNCU": "NEW PLAYER"
+ "YENİ OYUNCU": "NEW PLAYER",
+ "DOSTLAR NEON TABELASI": "FRIENDS NEON SIGN",
+ "Arkadaş daveti ödülü: 5 arkadaşını Auto Yard'a getiren ustalara. Mağazada yok.": "Invite reward for masters who brought 5 friends to Auto Yard. Not sold in the shop.",
+ "InstallReferrer: %s": "",
+ "kurulum kimliği": ""
 }

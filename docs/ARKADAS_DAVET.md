@@ -3,7 +3,7 @@
 2026-10-23. Kullanıcı isteği: "Arkadaşa önerme ekleyeceğiz. Önerdiğin her arkadaş oyunu indirip girerse ödül olacak,
 en büyük ödül 10. arkadaşta."
 
-Durum: **TASARIM ONAYLANDI · FAZ 1–3 UYGULANDI (2026-10-23, commit yok; kurallar + fonksiyonlar CANLIDA)**. Görsel taslaklar: https://claude.ai/artifact/7mRspEq7zkk5qvTaPNitya
+Durum: **TASARIM ONAYLANDI · FAZ 1–5 UYGULANDI (2026-10-23; kurallar + fonksiyonlar + site CANLIDA)**. Görsel taslaklar: https://claude.ai/artifact/7mRspEq7zkk5qvTaPNitya
 (A: ARKADAŞLAR'da DAVET ET sekmesi · B: ayrı DAVET MERDİVENİ ekranı · C: DAVET PİSTİ; ortak: davet edilenin karşılaması +
 ödül anı). **Seçilen: A**; kararlar en altta.
 
@@ -415,3 +415,48 @@ EVET `submit_code`'u çağırır, sonuç pencerenin bildiriminde görünür.
 - `GODOT_ANDROID_KEYSTORE_DEBUG_*` = `~/godot-debug.keystore` / `androiddebugkey` / `android`
 - `export_presets.cfg` `gradle_build/export_format` geçici 0 → `godot-4 --headless --export-debug Android <apk>` →
   geri 1 (yedek `~/Projects/ct_builds/export_presets.pre_davet_apk.cfg`).
+
+## Faz 4: site UYGULANDI ve yayında (2026-10-23, auto_yard_website 2195e78)
+
+**`src/assets/davet.js`:**
+
+- `/d/<jeton>[?r=<KOD>]` ve kalıcı `/r/<KOD>` (`AY-` öneki ve küçük harf kabul).
+- Kod kutusu "Davet kodu: AY-…".
+- Oyunu `intent://davet/<jeton>?r=<KOD>` ya da `intent://davet/r/<KOD>` ile açar.
+- Yüklü değilse: Play yayındaysa (`site.config.json` `playStoreLive`) ve kod varsa doğrudan
+  `…details?id=com.autoyard.app&referrer=ref%3D<KOD>%26inv%3D<jeton>` adresine gider. Değilse sayfaya `?yok&r=` ile
+  döner.
+- Sayfadaki Play düğmeleri de referrer'lı adrese çevrilir.
+- Masaüstünde kod gösterilir. Eski, kodsuz jeton linkleri eskisi gibi çalışır.
+
+**Diğer dosyalar:**
+
+- `vercel.json`: `/r/:code` beş dil yönlendirmesi (`/d/:token` ile aynı).
+- Davet sayfası beş dilde yeni metin. Oyunda kod yeri: ARKADAŞLAR → DAVET ET (EN FRIENDS → INVITE, ES AMIGOS → INVITAR,
+  DE FREUNDE → EINLADEN, FR AMIS → INVITER).
+- Gizlilik (5 dil):
+  - bölüm 2'ye "Arkadaş daveti ödülü" alt başlığı: kod, geliş yolu, ANDROID_ID'nin SHA-256 özeti, Install Referrer,
+    sunucu denetimleri, görünürlük;
+  - amaç tablosuna satır; saklama süreleri (hesapsız cihaz kaydı süresiz); silme; Google Play yükleme kaynağı.
+- Kullanım şartları 5. bölüm: davet ödülü koşulları ve kötüye kullanım. Hesap silme tablosu + "bir süre kalabilecekler".
+- Doğrulama: `npm run build` (46 sayfa denetimi) + `npm test` 14. `davet.js` Node'da sahte DOM ile 6 senaryo denendi.
+  Canlıda 5 dil `/r/` ve `/d/` 200, gizlilik / şartlar güncel.
+- Chrome'un `intent://` adımı canlıda telefonla denenmedi (telefon bağlantısı koptu). Oyunun aldığı link biçimleri
+  telefonda denendi (Faz 3).
+
+**Play Console (kullanıcıya kalan):** Veri güvenliği formuna "Cihaz veya diğer kimlikler" (dolandırıcılık önleme,
+hesap yönetimi; toplanır, paylaşılmaz, şifrelenmiş aktarım) eklenmeli.
+
+## Faz 5: DOSTLAR NEON TABELASI UYGULANDI (2026-10-23)
+
+- `tools/decor/props_v8_davet.py` (Blender kit): duvar neonu, mor levha + altın çerçeve, iki arkadaş silüeti
+  (camgöbeği / pembe), ortada altın kalp, kıvılcımlar. Yazı yok, dil bağımsız. 1,16 × 0,80 m, 6.252 üçgen.
+- `assets/decor/referral_neon.glb`: `.import`'ta `ensure_tangents` / `create_shadow_meshes` false (NEON ANAHTAR ile
+  aynı ayarlar).
+- Katalog `decor/decorations.json`: `referral_neon` "DOSTLAR NEON TABELASI", luxury, wall, `exclusive`,
+  `"referral": 5`, değer 20.000. 4 dile çevrildi.
+- 5. basamak postası artık tabela + DAVETÇİ çerçevesi verir.
+- QA `qa/davet_dekor_qa.gd`: posta → tabela + çerçeve, arka duvara asılır, oyun kamerası + yakın plan + NEON ANAHTAR
+  kıyası. Kareler `~/Projects/ct_shots/davet_dekor/`.
+- Testler: referral_test 70, decor_test 310, luxury_decor_test 27, decor_v2_test 86, login_ladder_test 32,
+  founder_reward_test 31, office_decor_test 19, locale_test 47, mail_test 48.
