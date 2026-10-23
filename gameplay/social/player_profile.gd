@@ -81,7 +81,8 @@ func load_state(data: Dictionary) -> void:
 	if owned is Array:
 		for id: Variant in owned:
 			var frame: String = SaveSafe.s(id)
-			if ProfileCatalog.is_frame(frame) and int(ProfileCatalog.frame(frame)["gems"]) > 0 and not frames_owned.has(frame):
+			if ProfileCatalog.is_frame(frame) and (int(ProfileCatalog.frame(frame)["gems"]) > 0
+					or ProfileCatalog.frame_exclusive(frame)) and not frames_owned.has(frame):
 				frames_owned.append(frame)
 	var chosen: String = SaveSafe.s(data.get("frame", ProfileCatalog.DEFAULT_FRAME))
 	frame_id = chosen if ProfileCatalog.is_frame(chosen) else ProfileCatalog.DEFAULT_FRAME
@@ -235,12 +236,12 @@ func set_use_google(on: bool) -> void:
 	_changed(true)
 
 
-## Çerçeve oyuncunun mu: seviyesi yetiyor ya da elmasla alınmış.
+## Çerçeve oyuncunun mu: seviyesi yetiyor, elmasla alınmış ya da (yalnız verilen çerçeve) verilmiş.
 func frame_unlocked(id: String) -> bool:
 	var entry: Dictionary = ProfileCatalog.frame(id)
 	if entry.is_empty():
 		return false
-	if int(entry["gems"]) > 0:
+	if int(entry["gems"]) > 0 or ProfileCatalog.frame_exclusive(id):
 		return frames_owned.has(id)
 	return _level() >= int(entry["level"])
 
@@ -265,6 +266,16 @@ func buy_frame(id: String) -> bool:
 		return false
 	frames_owned.append(id)
 	frame_id = id
+	_changed(false)
+	return true
+
+
+## Yalnız verilen çerçeve (ARKADAŞ DAVETİ ödülü, POSTA "frame"): sahibinin olur, takılmaz (oyuncu PROFİL'den seçer).
+## Zaten varsa ya da böyle bir çerçeve yoksa false.
+func grant_frame(id: String) -> bool:
+	if not ProfileCatalog.frame_exclusive(id) or frames_owned.has(id):
+		return false
+	frames_owned.append(id)
 	_changed(false)
 	return true
 

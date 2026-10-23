@@ -22,6 +22,8 @@ func _exit_tree() -> void:
 
 
 class AutoYardAndroidExport extends EditorExportPlugin:
+	const INSTALL_REFERRER: String = "com.android.installreferrer:installreferrer:2.2"
+
 	func _get_name() -> String:
 		return "AutoYardAndroid"
 
@@ -52,8 +54,13 @@ class AutoYardAndroidExport extends EditorExportPlugin:
 
 	# REKLAM AĞI APPODEAL (2026-10-22): SDK + ağ adaptörleri Gradle bağımlılığı olarak gelir (eklenti AAR'ı yok; oyun
 	# Java köprüsüyle konuşur, ads/appodeal_provider.gd). Liste ve depo AdConfig'te; ağ değişince ikisi de düşer.
+	# ARKADAŞ DAVETİ (2026-10-23): Play Install Referrer kütüphanesi her zaman (gameplay/social/install_referrer.gd;
+	# Google Maven'da, ek depo gerekmez).
 	func _get_android_dependencies(_platform: EditorExportPlatform, _debug: bool) -> PackedStringArray:
-		return AdConfig.APPODEAL_DEPENDENCIES if _appodeal() else PackedStringArray()
+		var dependencies: PackedStringArray = PackedStringArray([INSTALL_REFERRER])
+		if _appodeal():
+			dependencies.append_array(AdConfig.APPODEAL_DEPENDENCIES)
+		return dependencies
 
 	func _get_android_dependencies_maven_repos(_platform: EditorExportPlatform, _debug: bool) -> PackedStringArray:
 		return PackedStringArray([AdConfig.APPODEAL_MAVEN]) if _appodeal() else PackedStringArray()

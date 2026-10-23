@@ -17,6 +17,8 @@ extends Node
 ##   users/{alıcı}/races/e_{gön}  {name, car, paint, build, their_car, won, revenge, mw, ml, at}  YARIŞ HABERİ
 ##   users/{sahip}/visits/v_{ziy} {name, at, day, liked}   ZİYARET + BEĞENİ (ziyaretçi dönüşte yazar; sahip okur, siler)
 ##   invites/{jeton}              {uid, name, code, at}     ARKADAŞ DAVETİ (link; 1 saat; jetonla okunur)
+##   users/{uid}/referral/ref_*   DAVET ÖDÜLÜ talebi / seviye işareti / cihaz özeti (ReferralManager; sunucu referral.js)
+##   referrals/r_{uid}[/invited]  DAVET SAYACI + davet edilenler (yalnız sunucu yazar, sahibi okur)
 ## ARKADAŞ DAVETİ (2026-10-17, kullanıcı isteği): kod yazmak yerine link. A create_invite ile link üretir ve paylaşır
 ## (ARKADAŞLAR → DAVET LİNKİ GÖNDER); B linke dokunur → oyun açılır (InviteLinks) → A'nın profil kartı → ARKADAŞ
 ## EKLE (accept_invite) → iki arkadaşlık belgesini B yazar, belgede davet jetonu (inv) durur, kural daveti doğrular.
@@ -99,6 +101,8 @@ const RACE_LOG: String = "race_log"
 ## ARKADAŞ DAVETİ: koleksiyon, ömür (sn; kural aynı süreyi sunucu saatiyle uygular) ve paylaşılan linkin başı. Web
 ## sayfası (auto_yard_website /d/<jeton>) oyunu autoyard://davet/<jeton> ile açar; oyun yüklü değilse mağazaya yollar.
 const INVITES: String = "invites"
+## DAVET ÖDÜLÜ sayacı (functions/referral.js yazar): referrals/r_{uid} + referrals/r_{uid}/invited.
+const REFERRALS: String = "referrals"
 const INVITE_TTL: int = 3600
 const INVITE_URL: String = "https://autoyard.online/d/"
 ## Sitenin eski adresleri (Vercel yeni adrese yönlendirir): önceden paylaşılmış linkler de ayrışsın.
@@ -322,6 +326,44 @@ func read_redeem(code: String) -> Dictionary:
 
 static func _redeem_of(uid: String) -> String:
 	return "users/%s/redeem" % uid
+
+
+## ARKADAŞ DAVETİ (ReferralManager): users/{uid}/referral/{ref_claim | ref_lvl3 | ref_owner}. Talep ve seviye işareti bir
+## kez yazılabilir (kural); talebin sonucunu sunucu (functions/referral.js) aynı belgeye yazar. Oturum yeter (takma ad
+## şart değil: yeni oyuncu henüz profil açmamış olabilir).
+func write_referral(id: String, data: Dictionary) -> Dictionary:
+	if _uid.is_empty() or _fb == null:
+		return {"status": false, "error": "unavailable"}
+	return await _call(&"set", _referral_of(_uid), id, data)
+
+
+## Davet belgesi: {"ok", "doc"} (belge yoksa ok + boş).
+func read_referral(id: String) -> Dictionary:
+	if _uid.is_empty() or _fb == null:
+		return {"ok": false, "doc": {}}
+	var result: Dictionary = await _call(&"get", _referral_of(_uid), id)
+	if _not_found(result):
+		return {"ok": true, "doc": {}}
+	var data: Variant = result.get("data", {})
+	return {"ok": _ok(result), "doc": data if data is Dictionary else {}}
+
+
+## DAVET EDEN: sayaç ve davet edilenler. Dönüş: {"ok", "stats": {joined, count}, "invited": {f_{uid}: belge}}. Hiç davet
+## yoksa ok + boş (belge / liste yok).
+func read_referrals() -> Dictionary:
+	if _uid.is_empty() or _fb == null:
+		return {"ok": false, "stats": {}, "invited": {}}
+	var stats: Dictionary = await _call(&"get", REFERRALS, "r_" + _uid)
+	if not _ok(stats) and not _not_found(stats):
+		return {"ok": false, "stats": {}, "invited": {}}
+	var stats_doc: Variant = stats.get("data", {}) if _ok(stats) else {}
+	var list: Dictionary = await _call(&"list", "%s/r_%s/invited" % [REFERRALS, _uid])
+	var docs: Variant = list.get("data", {})
+	return {"ok": _ok(list), "stats": stats_doc if stats_doc is Dictionary else {}, "invited": docs if docs is Dictionary else {}}
+
+
+static func _referral_of(uid: String) -> String:
+	return "users/%s/referral" % uid
 
 
 ## Alınan postayı siler (zaten yoksa da başarı sayılır).
@@ -1791,7 +1833,8 @@ func unblock(uid: String) -> void:
 func _call(kind: StringName, collection: String, id: String = "", data: Dictionary = {}) -> Dictionary:
 	if _fb == null:
 		return {"status": false, "error": "unavailable"}
-	if kind == &"set" and not restricted_text.is_empty() and collection != PUSH and not collection.ends_with("/redeem"):
+	if kind == &"set" and not restricted_text.is_empty() and collection != PUSH and not collection.ends_with("/redeem") \
+			and not collection.ends_with("/referral"):   # kural bu ikisini yalnız tam yasakta reddeder
 		_restricted_notice()
 		return {"status": false, "error": "PERMISSION_DENIED: restricted"}
 	while _op_busy:

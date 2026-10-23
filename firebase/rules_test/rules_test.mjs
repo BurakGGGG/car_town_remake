@@ -328,6 +328,41 @@ await check("sonuç alanını istemci yazamaz", assertFails(setDoc(doc(alice, "u
 await check("geçmiş tarihli deneme reddedilir (saat sınırı atlatılamaz)", assertFails(setDoc(doc(alice, "users/alice/redeem/OLDTRY"), { at: nowS - 7200 })));
 await check("kupon belgesi istemciye kapalı", assertFails(getDoc(doc(alice, "promo/REELS50"))));
 
+console.log("== arkadaş daveti ödülü (referral) ==");
+const claim = (over = {}) => ({ code: "ABC234", src: "link", dev: "a".repeat(64), at: nowS, ...over });
+const hex = (c) => c.repeat(64);
+await check("talepsiz seviye işareti yazılamaz", assertFails(setDoc(doc(bob, "users/bob/referral/ref_lvl3"), { at: nowS })));
+await check("yeni oyuncu davet talebi yazar", assertSucceeds(setDoc(doc(bob, "users/bob/referral/ref_claim"), claim())));
+await check("talep ikinci kez yazılamaz (başka koda geçilemez)", assertFails(setDoc(doc(bob, "users/bob/referral/ref_claim"), claim({ code: "XYZ789" }))));
+await check("sonucu okur", assertSucceeds(getDoc(doc(bob, "users/bob/referral/ref_claim"))));
+await check("başkasının talebi okunamaz", assertFails(getDoc(doc(eve, "users/bob/referral/ref_claim"))));
+await check("başkası adına talep yazılamaz", assertFails(setDoc(doc(eve, "users/alice/referral/ref_claim"), claim())));
+await check("sonuç alanını istemci yazamaz", assertFails(setDoc(doc(alice, "users/alice/referral/ref_claim"), claim({ status: "ok" }))));
+await check("biçimsiz cihaz özeti reddedilir", assertFails(setDoc(doc(alice, "users/alice/referral/ref_claim"), claim({ dev: "ham-android-id" }))));
+await check("bilinmeyen kaynak reddedilir", assertFails(setDoc(doc(alice, "users/alice/referral/ref_claim"), claim({ src: "hack" }))));
+await check("biçimsiz kod reddedilir", assertFails(setDoc(doc(alice, "users/alice/referral/ref_claim"), claim({ code: "abc234" }))));
+await check("geçmiş tarihli talep reddedilir", assertFails(setDoc(doc(alice, "users/alice/referral/ref_claim"), claim({ at: nowS - 7200 }))));
+await check("talepten sonra seviye işareti yazılır", assertSucceeds(setDoc(doc(bob, "users/bob/referral/ref_lvl3"), { at: nowS })));
+await check("seviye işareti ikinci kez yazılamaz", assertFails(setDoc(doc(bob, "users/bob/referral/ref_lvl3"), { at: nowS })));
+await check("seviye işaretinde ek alan reddedilir", assertFails(setDoc(doc(alice, "users/alice/referral/ref_lvl3"), { at: nowS, level: 30 })));
+await check("kendi cihaz özetini yazar", assertSucceeds(setDoc(doc(alice, "users/alice/referral/ref_owner"), { dev: hex("c"), at: nowS })));
+await check("telefon değişince günceller", assertSucceeds(setDoc(doc(alice, "users/alice/referral/ref_owner"), { dev: hex("d"), at: nowS })));
+await check("başkasının cihaz özeti yazılamaz", assertFails(setDoc(doc(eve, "users/alice/referral/ref_owner"), { dev: hex("e"), at: nowS })));
+await check("tanımsız belge adı reddedilir", assertFails(setDoc(doc(alice, "users/alice/referral/ref_other"), { at: nowS })));
+await check("talep silinemez", assertFails(deleteDoc(doc(bob, "users/bob/referral/ref_claim"))));
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), "referrals/r_alice"), { joined: 2, count: 1, at: nowS });
+  await setDoc(doc(ctx.firestore(), "referrals/r_alice/invited/f_bob"), { at: nowS, state: "qualified", tier: 1, src: "link" });
+});
+await check("davet sayacını sahibi okur", assertSucceeds(getDoc(doc(alice, "referrals/r_alice"))));
+await check("başkasının sayacı okunamaz", assertFails(getDoc(doc(bob, "referrals/r_alice"))));
+await check("davet listesini sahibi okur", assertSucceeds(getDocs(collection(alice, "referrals/r_alice/invited"))));
+await check("başkasının listesi okunamaz", assertFails(getDocs(collection(bob, "referrals/r_alice/invited"))));
+await check("sayaçlar listelenemez", assertFails(getDocs(collection(alice, "referrals"))));
+await check("istemci sayacı yazamaz", assertFails(setDoc(doc(alice, "referrals/r_alice"), { joined: 2, count: 10, at: nowS })));
+await check("istemci listeye yazamaz", assertFails(setDoc(doc(alice, "referrals/r_alice/invited/f_eve"), { state: "qualified" })));
+await check("cihaz kayıtları istemciye kapalı", assertFails(getDoc(doc(alice, "ref_devices/" + hex("a")))));
+
 console.log("== moderasyon / yasak ==");
 const now = Math.floor(Date.now() / 1000);
 const banDb = (id, ban) => env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), `moderation/m_${id}`), ban ? { ban } : {}));
@@ -352,6 +387,8 @@ await check("tam yasak: kendi kaydını okuyabilir", assertSucceeds(getDoc(doc(m
 await check("tam yasak: yarış günlüğü yazılamaz", assertFails(setDoc(doc(mallory, `race_log/mallory_${Math.floor(Date.now() / 86400000)}`),
   { uid: "mallory", day: Math.floor(Date.now() / 86400000), events: "[]", n: 0, v: 1, at: 1 })));
 await check("tam yasak: kayıt geçmişi yazılamaz", assertFails(setDoc(doc(mallory, "players/mallory/history/h01"), { save_json: "{}", updated_at: 1 })));
+await check("tam yasak: davet talebi yazılamaz", assertFails(setDoc(doc(mallory, "users/mallory/referral/ref_claim"),
+  { code: "ABC234", src: "code", dev: "f".repeat(64), at: Math.floor(Date.now() / 1000) })));
 await banDb("mallory", { kind: "full", reason: "cheat", until: now - 60, at: now - 7200 });
 await check("süresi dolan yasak: kayıt yine yazılır", assertSucceeds(setDoc(doc(mallory, "players/mallory"), { save_version: 10, save_json: "{}", updated_at: 3 })));
 await check("süresi dolan yasak: garaj yine yazılır", assertSucceeds(setDoc(doc(mallory, "garages/g_mallory"), garage({ code: "MLR234" }))));

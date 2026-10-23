@@ -177,6 +177,26 @@ service cloud.firestore {
           && saveAllowed();
       }
 
+      // ARKADAŞ DAVETİ (2026-10-23, docs/ARKADAS_DAVET.md; sunucu functions/referral.js):
+      //   ref_claim {code, src, dev, at}: davetle gelen yeni oyuncunun talebi — hesap başına BİR KEZ (üzerine yazılamaz:
+      //     ikinci bir koda geçilemez). Sunucu doğrular, sonucu {status, referrer} aynı belgeye yazar.
+      //   ref_lvl3 {at}: davetli 3. seviyeye ulaştı (yalnız talep varken, bir kez) → sunucu davet edenin sayacını artırır.
+      //   ref_owner {dev, at}: oyuncunun şu anki cihaz özeti (kendi telefonunda ikinci hesapla kendini davet edemesin;
+      //     telefon değişince güncellenir).
+      // dev: ANDROID_ID'nin SHA-256 özeti (ham kimlik hiçbir yere yazılmaz). `at` sunucu saatine ±10 dk. Tam yasakta yazılamaz.
+      match /referral/{refDoc} {
+        allow get: if isOwner(uid);
+        allow create: if isOwner(uid) && saveAllowed() && (
+          (refDoc == 'ref_claim' && request.resource.data.keys().hasOnly(['code', 'src', 'dev', 'at'])
+            && request.resource.data.code is string && request.resource.data.code.matches('^[A-HJ-NP-Z2-9]{6}$')
+            && request.resource.data.src in ['play', 'link', 'code']
+            && isDeviceHash(request.resource.data.dev) && isRecent(request.resource.data.at))
+          || (refDoc == 'ref_lvl3' && request.resource.data.keys().hasOnly(['at']) && isRecent(request.resource.data.at)
+            && exists(/databases/$(database)/documents/users/$(uid)/referral/ref_claim))
+          || (refDoc == 'ref_owner' && isValidRefOwner(request.resource.data)));
+        allow update: if isOwner(uid) && saveAllowed() && refDoc == 'ref_owner' && isValidRefOwner(request.resource.data);
+      }
+
       // GELEN İSTEK: users/{alıcı}/inbox/r_{gönderen}. Gönderen yazar; alıcı ve gönderen okur / siler.
       match /inbox/{reqId} {
         allow read, delete: if signedIn()
@@ -267,6 +287,16 @@ service cloud.firestore {
           );
         allow delete: if signedIn()
           && (request.auth.uid == uid || friendId == 'f_' + request.auth.uid);
+      }
+    }
+
+    // DAVET SAYACI (functions/referral.js): referrals/r_{uid} = {joined, count, at} ve davet ettiklerinin listesi
+    // referrals/r_{uid}/invited/f_{davetli} = {at, state: joined | qualified, tier, src}. YALNIZCA SUNUCU yazar; sahibi
+    // okur (ARKADAŞLAR › DAVET ET). ref_devices/{cihaz özeti} (bir cihaz bir davet) istemciye tamamen kapalıdır.
+    match /referrals/{refId} {
+      allow get: if signedIn() && refId == 'r_' + request.auth.uid;
+      match /invited/{entryId} {
+        allow read: if signedIn() && refId == 'r_' + request.auth.uid;
       }
     }
 
@@ -409,6 +439,20 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/invites/$(data.inv))
         && get(/databases/$(database)/documents/invites/$(data.inv)).data.uid == inviter
         && (get(/databases/$(database)/documents/invites/$(data.inv)).data.at + 3600) * 1000 > request.time.toMillis();
+    }
+
+    // Cihaz özeti: SHA-256 (64 küçük onaltılık karakter).
+    function isDeviceHash(d) {
+      return d is string && d.matches('^[0-9a-f]{64}$');
+    }
+
+    // İstemcinin yazdığı an sunucu saatinin ±10 dakikası (geçmiş / gelecek tarihli belge yazılamaz).
+    function isRecent(at) {
+      return at is int && at * 1000 > request.time.toMillis() - 600000 && at * 1000 < request.time.toMillis() + 600000;
+    }
+
+    function isValidRefOwner(data) {
+      return data.keys().hasOnly(['dev', 'at']) && isDeviceHash(data.dev) && data.at is int;
     }
 
     function isValidRequest(data) {

@@ -9,6 +9,9 @@ extends Node
 ## geçer, kimlik kayda yazılır (SaveManager "mail") → kayıt diske → belge silinir. Silme başarısız olsa da kimlik
 ## kayıtta olduğundan ödül ikinci kez verilmez; sonraki listede belge yeniden silinir. Süresi dolan posta ödülsüz silinir.
 ## Değerler istemcide de sınırlanır (MAX_*): panelde yanlış yazılmış bir sıfır oyunu bozmasın.
+## ARKADAŞ DAVETİ postaları (2026-10-23, functions/referral.js): money_min (₺ = oyuncunun o anki aktif gelirinin dakikası,
+## ReferralRewards.money_for), frame (yalnız verilen profil çerçevesi, PlayerProfile.grant_frame), choice "legendary_car"
+## (efsanevi araç seçme hakkı ReferralManager'a eklenir; oyuncu sonra seçer, hak kayıtta durur).
 ## DESTEK postaları (2026-10-21): adjust {money, gems} BAKİYE DÜZELTMESİ (eksi de olabilir, 0'ın altına inmez; harcama
 ## sayılmaz) ve restore {save_json, at} KAYIT GERİ YÜKLEME (AL → CloudSaveManager.restore_snapshot: kayıt o hâline döner,
 ## dünya yeniden kurulur; postanın kimliği geri yüklenen kayda da yazılır, ikinci kez uygulanmaz).
@@ -144,6 +147,7 @@ func _grant(mail: Dictionary) -> Dictionary:
 	var names: Array = []
 	var money: int = int(mail["money"])
 	var gems: int = int(mail["gems"])
+	money += income_money(tree, int(mail["money_min"]))
 	var economy: EconomyManager = tree.get_first_node_in_group("economy") as EconomyManager
 	if economy and money > 0:
 		economy.add_money(money)
@@ -178,9 +182,21 @@ func _grant(mail: Dictionary) -> Dictionary:
 		var count: int = int(decor_map[item])
 		if decor and decor.grant(item, count):
 			names.append("+%d %s" % [count, decor_name(item)])
+	var frame: String = mail["frame"]
+	var profile: PlayerProfile = tree.get_first_node_in_group("player_profile") as PlayerProfile
+	if not frame.is_empty() and profile and profile.grant_frame(frame):
+		names.append("+1 " + frame_name(frame))
+	var choice: String = mail["choice"]
+	var referral: ReferralManager = tree.get_first_node_in_group("referral") as ReferralManager
+	if choice == ReferralRewards.CHOICE_LEGENDARY and referral:
+		referral.add_car_choice()
+		names.append("+1 " + Loc.t("EFSANEVİ ARAÇ SEÇİMİ"))
 	if money <= 0 and gems <= 0 and names.is_empty():
 		return {}
-	return {"title": Loc.t("HEDİYEN GELDİ!"), "money": money, "gems": gems, "items": names}
+	var summary: Dictionary = {"title": Loc.t("HEDİYEN GELDİ!"), "money": money, "gems": gems, "items": names}
+	if choice == ReferralRewards.CHOICE_LEGENDARY and referral:
+		summary["choice"] = choice   # ödül penceresinden sonra araç seçimi açılır
+	return summary
 
 
 ## Kayıt geri yükleme: postanın kimliği geri yüklenen kayda da yazılır (yeni sahnede ikinci kez uygulanmasın), belge
@@ -235,6 +251,21 @@ static func normalize(id: String, doc: Dictionary) -> Dictionary:
 		var save_json: String = SaveSafe.s((raw_restore as Dictionary).get("save_json", ""))
 		if not save_json.is_empty() and save_json.length() <= 300000:
 			restore = {"save_json": save_json, "at": SaveSafe.i((raw_restore as Dictionary).get("at", 0))}
+	var frame: String = SaveSafe.s(doc.get("frame", ""))
+	if not ProfileCatalog.frame_exclusive(frame):
+		frame = ""   # posta yalnız davetle açılan çerçeveyi verir (satılık / seviyeli çerçeve verilmez)
+	var choice: String = SaveSafe.s(doc.get("choice", ""))
+	if choice != ReferralRewards.CHOICE_LEGENDARY:
+		choice = ""
+	# Davet postası (functions/referral.js "referral": welcome | tier_<n>, "friend": sayılan arkadaş): pencere özel görünür
+	var ref_kind: String = ""
+	var ref_tier: int = 0
+	var referral: String = SaveSafe.s(doc.get("referral", ""))
+	if referral == "welcome":
+		ref_kind = "welcome"
+	elif referral.begins_with("tier_") and referral.trim_prefix("tier_").is_valid_int():
+		ref_tier = clampi(referral.trim_prefix("tier_").to_int(), 0, ReferralRewards.max_tier())
+		ref_kind = "tier" if ref_tier > 0 else ""
 	var mail: Dictionary = {
 		"id": id,
 		"title": AppConfig.text_of(doc.get("title")),
@@ -242,8 +273,14 @@ static func normalize(id: String, doc: Dictionary) -> Dictionary:
 		"from": SaveSafe.s(doc.get("from", "")).strip_edges().left(24),
 		"money": clampi(SaveSafe.i(doc.get("money", 0)), 0, MAX_MONEY),
 		"gems": clampi(SaveSafe.i(doc.get("gems", 0)), 0, MAX_GEMS),
+		"money_min": clampi(SaveSafe.i(doc.get("money_min", 0)), 0, ReferralRewards.MAX_MONEY_MIN),
 		"crates": crates,
 		"decor": decor,
+		"frame": frame,
+		"choice": choice,
+		"ref_kind": ref_kind,
+		"ref_tier": ref_tier,
+		"friend": SaveSafe.s(doc.get("friend", "")).left(128),
 		"adjust": adjust,
 		"restore": restore,
 		"at": SaveSafe.i(doc.get("at", 0)),
@@ -256,8 +293,9 @@ static func normalize(id: String, doc: Dictionary) -> Dictionary:
 ## Oyuncunun eline bir şey geçiyor mu (AL düğmesi): ödül ya da artı düzeltme. Eksi düzeltme ve mesaj: TAMAM.
 static func has_reward(mail: Dictionary) -> bool:
 	var adjust: Dictionary = mail.get("adjust", {}) if mail.get("adjust") is Dictionary else {}
-	return int(mail.get("money", 0)) > 0 or int(mail.get("gems", 0)) > 0 \
+	return int(mail.get("money", 0)) > 0 or int(mail.get("gems", 0)) > 0 or int(mail.get("money_min", 0)) > 0 \
 		or not (mail.get("crates", {}) as Dictionary).is_empty() or not (mail.get("decor", {}) as Dictionary).is_empty() \
+		or not SaveSafe.s(mail.get("frame", "")).is_empty() or not SaveSafe.s(mail.get("choice", "")).is_empty() \
 		or int(adjust.get("money", 0)) > 0 or int(adjust.get("gems", 0)) > 0
 
 
@@ -267,6 +305,18 @@ static func crate_name(crate_id: StringName) -> String:
 
 static func decor_name(item: StringName) -> String:
 	return Loc.t(SaveSafe.s(GarageDecor.get_item(item).get("title", item)))
+
+
+## `minutes` dakikalık aktif gelirin şu anki ₺ karşılığı (davet postası money_min; POSTA penceresi de gösterir).
+static func income_money(tree: SceneTree, minutes: int) -> int:
+	if minutes <= 0:
+		return 0
+	var offline: OfflineEarnings = tree.get_first_node_in_group("offline_earnings") as OfflineEarnings if tree else null
+	return ReferralRewards.money_for(minutes, offline.current_active_rate() if offline else LoginLadder.FALLBACK_INCOME)
+
+
+static func frame_name(frame: String) -> String:
+	return Loc.t("%s ÇERÇEVESİ") % Loc.t(SaveSafe.s(ProfileCatalog.frame(frame).get("name", frame)))
 
 
 func _trim_claimed() -> void:

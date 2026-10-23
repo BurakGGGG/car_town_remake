@@ -23,7 +23,8 @@ const PHOTO_B64_MAX: int = 40000
 const TITLE_MAX: int = 20
 
 ## ÇERÇEVELER: seviyeyle açılanlar ("level") ve elmasla alınanlar ("gems", 100–600; kullanıcı kararı 2026-10-16).
-## "animated": AvatarView her karede yeniden çizer (yalnız görünürken).
+## "animated": AvatarView her karede yeniden çizer (yalnız görünürken). "exclusive": satılmaz, seviyeyle açılmaz; yalnız
+## verilince (POSTA "frame") sahibinin olur ve seçicide yalnız sahibine görünür — ARKADAŞ DAVETİ ödülleri (2026-10-23).
 const FRAMES: Array[Dictionary] = [
 	{"id": "plate", "name": "PLAKA", "level": 1, "gems": 0},
 	{"id": "bronze", "name": "BRONZ", "level": 5, "gems": 0},
@@ -35,6 +36,8 @@ const FRAMES: Array[Dictionary] = [
 	{"id": "neon", "name": "NEON", "level": 1, "gems": 350, "animated": true},
 	{"id": "flame", "name": "ALEV", "level": 1, "gems": 450, "animated": true},
 	{"id": "rainbow", "name": "GÖKKUŞAĞI", "level": 1, "gems": 600, "animated": true},
+	{"id": "inviter", "name": "DAVETÇİ", "level": 1, "gems": 0, "exclusive": true},
+	{"id": "envoy", "name": "ELÇİ", "level": 1, "gems": 0, "exclusive": true},
 ]
 const DEFAULT_FRAME: String = "plate"
 
@@ -198,6 +201,11 @@ static func is_frame(id: String) -> bool:
 
 static func frame_animated(id: String) -> bool:
 	return bool(frame(id).get("animated", false))
+
+
+## Yalnız verilerek açılan çerçeve (satılmaz, seviyeyle açılmaz).
+static func frame_exclusive(id: String) -> bool:
+	return bool(frame(id).get("exclusive", false))
 
 
 # --- Bayraklar -------------------------------------------------------------------

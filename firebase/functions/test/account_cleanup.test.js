@@ -41,14 +41,16 @@ const WORLD = [
   "moderation/m_ali", "admin_notes/n_ali", "users/ali/mail/m_x", "players/ali/history/h05", "players/ali/history/d2",
   "promo/REELS50/used/ali", "users/ali/redeem/REELS50", "race_log/ali_20383", "iap/t_ali",
   "users/ali/friends/f_veli", "users/ali/inbox/r_ayse", "users/ali/races/e_veli", "users/ali/gifts/p_veli_20000",
+  "users/ali/referral/ref_claim", "referrals/r_ali", "referrals/r_ali/invited/f_ayse",
   // ali'nin başkalarına yazdıkları (eski arkadaş ayse dahil)
   "users/veli/friends/f_ali", "users/veli/races/e_ali", "users/veli/visits/v_ali", "users/veli/gifts/p_ali_20380",
   "users/ayse/outbox/o_ali", "users/ayse/visits/v_ali", "users/ayse/gifts/p_ali_20379", "users/ayse/inbox/r_ali",
+  "referrals/r_veli/invited/f_ali",   // ali'yi veli davet etmişti
   // başkalarının belgeleri: KALMALI
   "players/veli", "garages/g_veli", "codes/XYZ789", "users/veli/friends/f_ayse", "users/veli/gifts/p_ayse_20380",
   "users/veli/visits/v_alican", "users/veli/gifts/p_alican_20380", "reports/x_ali_veli", "reports/x_veli_ali",
   "moderation/m_veli", "admin_notes/n_veli", "players/veli/history/h01", "promo/REELS50/used/veli", "race_log/veli_20383",
-  "iap/t_veli", "iap/t_misafir",
+  "iap/t_veli", "iap/t_misafir", "referrals/r_veli", "referrals/r_veli/invited/f_alican", `ref_devices/${"a".repeat(64)}`,
 ];
 
 test("silinen hesabın bütün belgeleri gider, başkalarınınkiler kalır", async () => {
@@ -57,11 +59,13 @@ test("silinen hesabın bütün belgeleri gider, başkalarınınkiler kalır", as
   const left = [...db.store].sort();
   assert.deepStrictEqual(left, [
     "admin_notes/n_veli", "codes/XYZ789", "garages/g_veli", "iap/t_misafir", "iap/t_veli", "moderation/m_veli", "players/veli", "players/veli/history/h01", "promo/REELS50/used/veli",
-    "race_log/veli_20383", "reports/x_ali_veli", "reports/x_veli_ali",   // şikâyetler 180 gün kalır (cleanup.js siler)
+    "race_log/veli_20383", "ref_devices/" + "a".repeat(64),   // cihaz özeti kalır (UID yok)
+    "referrals/r_veli", "referrals/r_veli/invited/f_alican",   // davet edenin sayacı kalır
+    "reports/x_ali_veli", "reports/x_veli_ali",   // şikâyetler 180 gün kalır (cleanup.js siler)
     "users/veli/friends/f_ayse", "users/veli/gifts/p_alican_20380", "users/veli/gifts/p_ayse_20380",
     "users/veli/visits/v_alican",   // "alican" "ali" ile başlıyor ama başka oyuncu
   ]);
-  assert.deepStrictEqual(result, { owned: 4, authored: 9 });   // kod + davet + yarış günlüğü + satın alma doğrulaması
+  assert.deepStrictEqual(result, { owned: 4, authored: 10 });   // kod + davet + yarış günlüğü + satın alma doğrulaması
 });
 
 test("UID biçimsizse (yol kırabilecek karakter) hiçbir şey silinmez", async () => {

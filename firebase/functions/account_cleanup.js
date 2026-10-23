@@ -8,7 +8,8 @@
 //   - artık arkadaş olmayanlara yazılmış ziyaret / yarış haberi / istek
 //   - hesap oyun dışından silindiyse her şey
 // Bilerek KALANLAR (gizlilik metnindeki süreleriyle cleanup.js siler): reports (180 gün, kötüye kullanım incelemesi),
-// email_codes / email_ips (1 saat, özet), push_log (1 gün).
+// email_codes / email_ips (1 saat, özet), push_log (1 gün). ref_devices/{cihaz özeti} süresiz kalır: içinde UID yok,
+// aynı telefonun hesap silip yeniden açarak ikinci kez davetle gelmesini önler (referral.js).
 //
 // Başkalarının alt koleksiyonlarındaki belgeler kimlikten tanınır (alanlarında UID yok): ilgili koleksiyon grupları
 // yalnızca belge referansıyla (select()) taranır. Okuma sayısı o gruplardaki belge sayısı kadardır; silme seyrek olduğu
@@ -20,7 +21,7 @@ const UID_RE = /^[A-Za-z0-9]{1,128}$/;
 /** UID'nin kendi kökteki belgeleri. moderation / admin_notes: yönetim panelinin kararı ve notu (2026-10-21) — silinen
  *  hesaba ait kişisel veri kalmasın; yasak yeni hesaba zaten geçmez (yeni UID). */
 const OWN_DOCS = (uid) => [`players/${uid}`, `garages/g_${uid}`, `avatars/a_${uid}`, `push/p_${uid}`,
-  `moderation/m_${uid}`, `admin_notes/n_${uid}`];
+  `moderation/m_${uid}`, `admin_notes/n_${uid}`, `referrals/r_${uid}`];
 
 /** `uid` alanıyla bulunan belgeler (arkadaş kodu, davet linki, yarış günlüğü — 2026-10-22). */
 const OWNED_BY_FIELD = ["codes", "invites", "race_log", "iap"];   // iap: satın alma doğrulama kaydı (iap.js)
@@ -34,6 +35,8 @@ const AUTHORED = [
   { group: "visits", matches: (id, uid) => id === `v_${uid}` },
   { group: "gifts", matches: (id, uid) => id.startsWith(`p_${uid}_`) },
   { group: "used", matches: (id, uid) => id === uid },   // kupon kullanımı promo/{KOD}/used/{uid} (sayaç kalır)
+  // davet edenin listesindeki satır referrals/r_{x}/invited/f_{uid} (davet edenin sayacı ve aldığı ödül kalır)
+  { group: "invited", matches: (id, uid) => id === `f_${uid}` },
 ];
 
 /**
@@ -54,6 +57,7 @@ async function cleanupAccount({ db, uid }) {
   }
   await db.recursiveDelete(db.doc(`users/${uid}`));   // kendi arkadaş / istek / haber / ziyaret / hediye / posta listeleri
   await db.recursiveDelete(db.doc(`players/${uid}`));   // kayıt geçmişi (players/{uid}/history, 2026-10-21)
+  await db.recursiveDelete(db.doc(`referrals/r_${uid}`));   // davet ettiklerinin listesi (referral.js)
   const ownPrefix = `users/${uid}/`;
   for (const { group, matches } of AUTHORED) {
     const snap = await db.collectionGroup(group).select().get();

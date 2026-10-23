@@ -32,8 +32,8 @@ static func between(from_level: int, to_level: int) -> Array[Dictionary]:
 				"level": PerformanceMods.required_level(stage), "stage": stage})
 	if _in_range(MissionCatalog.MIN_LEVEL, from_level, to_level):
 		out.append({"kind": Kind.MISSIONS, "id": &"missions", "level": MissionCatalog.MIN_LEVEL})
-	for frame: Dictionary in ProfileCatalog.FRAMES:   # elmasla alınanlar seviyeyle açılmaz
-		if int(frame["gems"]) == 0 and _in_range(int(frame["level"]), from_level, to_level):
+	for frame: Dictionary in ProfileCatalog.FRAMES:   # elmasla alınanlar ve yalnız verilenler seviyeyle açılmaz
+		if int(frame["gems"]) == 0 and not frame.get("exclusive", false) and _in_range(int(frame["level"]), from_level, to_level):
 			out.append({"kind": Kind.FRAME, "id": StringName(frame["id"]), "level": int(frame["level"])})
 	var decor: Array[Dictionary] = []
 	for item: Dictionary in GarageDecor.all():

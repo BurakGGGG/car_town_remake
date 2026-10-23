@@ -16,6 +16,9 @@ extends Control
 ## Kararlar: kart ızgarası / tek sıra büyük kart, krem plaka dili sadeleşmiş, istek + haber rozetli sekmelerde,
 ## sağ üstte yuvarlak ✕, kendi kodun KODLA EKLE'de, ustalar başta. Haber varken ekran HABERLER'de açılır.
 ## Ziyarete gidilince kendi sahne dondurulur ve bu ekran AÇIK kalır: dönünce oyuncu vitrine döner.
+## DAVET ET sekmesi (2026-10-23, ARKADAŞ DAVETİ; içerik ReferralTab): ödül yolu, davet kodu + paylaş, davet edilenler.
+## Sekmede eylem satırı ve kart vitrini gizlenir. Rozet: alınmayı bekleyen basamak + efsanevi araç seçimi; haber yokken
+## rozet varsa ekran o sekmede açılır. Paylaşılan her davet linki davet kodunu da taşır (?r=KOD).
 ## Ekran TAMAMEN KODLA kurulur (.tscn yok); HUD temalı Root'un altına ekler, UiRouter'a MODAL kaydeder. Mantık
 ## SocialManager'da ("social" grubu); bu ekran yalnızca gösterir ve düğmeleri ona iletir.
 
@@ -27,8 +30,10 @@ signal screen_requested(id: StringName)
 signal person_requested(uid: String)
 ## YARIŞ HABERİ: İNTİKAM AL (gönderenin aracına karşı pist doğrudan açılır; HUD yürütür).
 signal revenge_requested(uid: String)
+## DAVET ET: basamağın postası alınsın (HUD → MailNotice.claim_now).
+signal reward_claim_requested(mail_id: String)
 
-enum Tab { FRIENDS, REQUESTS, NEWS }
+enum Tab { FRIENDS, REQUESTS, NEWS, INVITE }
 
 const CARD_WIDTH: float = 176.0
 const WIDE_CARD_WIDTH: float = 250.0
@@ -40,11 +45,16 @@ const COMPACT_HEIGHT: float = 600.0
 const COMPACT_AVATAR: float = 54.0
 const COMPACT_THUMB: Vector2 = Vector2(140.0, 60.0)
 const POPUP_WIDTH: float = 380.0
+## DAR EKRAN (telefon tuvali 853 genişlik): dört sekmeyle başlık sığmıyordu (2026-10-23, DAVET ET eklenince) → başlıktaki
+## "ARKADAŞLAR" yazısı gizlenir, kask rozeti kalır (sekmede zaten "ARKADAŞLAR n" yazıyor).
+const NARROW_WIDTH: float = 1000.0
 
 var _social: SocialManager
+var _referral: ReferralManager
 var _tab: Tab = Tab.FRIENDS
 var _compact: bool = false
 var _margin: MarginContainer
+var _title_text: Control
 var _rows: VBoxContainer
 var _window: PlatePanel
 var _tabs: Dictionary = {}               # Tab → PlateButton
@@ -52,6 +62,8 @@ var _tab_group: ButtonGroup = ButtonGroup.new()
 var _refresh_button: PlateButton
 var _invite_button: PlateButton
 var _code_button: PlateButton
+var _actions: HBoxContainer
+var _referral_tab: ReferralTab
 var _notice: Label
 var _scroll: ScrollContainer
 var _cards: HBoxContainer
@@ -68,6 +80,9 @@ var _name_line: HBoxContainer
 var _rename_line: HBoxContainer
 var _popup_notice: Label
 var _renaming: bool = false
+var _ref_ask: HBoxContainer              # KODLA EKLE: "Seni X mi davet etti?" (yeni hesap, davet kodu yok)
+var _ref_ask_label: Label
+var _ref_ask_code: String = ""
 
 
 func _ready() -> void:
@@ -87,8 +102,15 @@ func open() -> void:
 	if _social:
 		_social.retry()
 		_social.refresh()
-		# İNTİKAM bekleyen haber varsa doğrudan oraya (HUD bildirimi "İNTİKAM İÇİN: ARKADAŞLAR" der)
-		_tab = Tab.NEWS if _social.is_ready() and not _social.race_events.is_empty() else Tab.FRIENDS
+		# İNTİKAM bekleyen haber varsa doğrudan oraya (HUD bildirimi "İNTİKAM İÇİN: ARKADAŞLAR" der); yoksa alınmayı
+		# bekleyen davet ödülü varsa DAVET ET'e
+		_tab = Tab.FRIENDS
+		if _social.is_ready() and not _social.race_events.is_empty():
+			_tab = Tab.NEWS
+		elif _social.is_ready() and _referral and _referral.attention() > 0:
+			_tab = Tab.INVITE
+		if _referral and _social.is_ready():
+			_referral.load_progress()
 	_scroll.scroll_horizontal = 0
 	_apply_compact()
 	_refresh()
@@ -150,7 +172,7 @@ func _build() -> void:
 	var tabs: HBoxContainer = _hbox(6)
 	tabs.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	header.add_child(tabs)
-	for tab: Tab in [Tab.FRIENDS, Tab.REQUESTS, Tab.NEWS]:
+	for tab: Tab in [Tab.FRIENDS, Tab.REQUESTS, Tab.NEWS, Tab.INVITE]:
 		var button: PlateButton = _button("", func() -> void: _select_tab(tab))
 		button.name = "Tab%d" % tab
 		button.toggle_mode = true
@@ -170,7 +192,9 @@ func _build() -> void:
 
 	# Eylem satırı: davet + kodla ekle + son bildirim (kaymaz)
 	var actions: HBoxContainer = _hbox(8)
+	actions.name = "Actions"
 	rows.add_child(actions)
+	_actions = actions
 	_invite_button = _button(Loc.t("DAVET LİNKİ GÖNDER"), _on_invite_pressed, true)
 	_invite_button.name = "InviteButton"
 	actions.add_child(_invite_button)
@@ -203,6 +227,15 @@ func _build() -> void:
 	_scroll.add_child(_cards)
 	TouchScroll.attach(_scroll)
 
+	# DAVET ET sekmesi: vitrinin yerinde
+	_referral_tab = ReferralTab.new()
+	_referral_tab.visible = false
+	rows.add_child(_referral_tab)
+	_referral_tab.share_requested.connect(_on_invite_pressed)
+	_referral_tab.notice.connect(_on_notice)
+	_referral_tab.claim_requested.connect(func(id: String) -> void: reward_claim_requested.emit(id))
+	_referral_tab.pick_requested.connect(func() -> void: screen_requested.emit(&"legendary_pick"))
+
 	_build_popup()
 
 
@@ -212,6 +245,7 @@ func _apply_compact() -> void:
 	for side: String in ["top", "bottom"]:
 		_margin.add_theme_constant_override("margin_" + side, 6 if _compact else 14)
 	_rows.add_theme_constant_override(&"separation", 5 if _compact else 8)
+	_title_text.visible = get_viewport_rect().size.x >= NARROW_WIDTH
 
 
 ## KODLA EKLE: senin kodun · arkadaşının kodu · takma adın (ekranın içinde, kendi karartmasıyla).
@@ -267,6 +301,18 @@ func _build_popup() -> void:
 	add.name = "AddButton"
 	add_line.add_child(add)
 	box.add_child(add_line)
+	_ref_ask = _hbox(8)
+	_ref_ask.name = "ReferralAsk"
+	_ref_ask.visible = false
+	_ref_ask_label = _label(&"HudInkValue", "")
+	_ref_ask_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_ref_ask_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_ref_ask.add_child(_ref_ask_label)
+	var yes: PlateButton = _button(Loc.t("EVET"), _on_ref_ask_yes, true)
+	yes.name = "ReferralYes"
+	_ref_ask.add_child(yes)
+	_ref_ask.add_child(_button(Loc.t("HAYIR"), func() -> void: _ref_ask.hide()))
+	box.add_child(_ref_ask)
 	box.add_child(_rule())
 
 	box.add_child(_label(&"HudInkCaption", Loc.t("TAKMA ADIN")))
@@ -296,6 +342,15 @@ func _build_popup() -> void:
 
 func _connect_social() -> void:
 	_social = get_tree().get_first_node_in_group("social") as SocialManager
+	_referral = get_tree().get_first_node_in_group("referral") as ReferralManager
+	var mail: MailService = get_tree().get_first_node_in_group("mail") as MailService
+	var refresh_if_open: Callable = func() -> void:
+		if visible:
+			_refresh()
+	if _referral:
+		_referral.changed.connect(refresh_if_open)
+	if mail:
+		mail.arrived.connect(refresh_if_open)
 	if _social:
 		_social.changed.connect(_refresh)
 		_social.notice.connect(_on_notice)
@@ -327,8 +382,10 @@ func _refresh() -> void:
 	(_tabs[Tab.FRIENDS] as PlateButton).text = Loc.t("ARKADAŞLAR %d") % friend_count
 	(_tabs[Tab.REQUESTS] as PlateButton).text = Loc.t("İSTEKLER")
 	(_tabs[Tab.NEWS] as PlateButton).text = Loc.t("HABERLER")
+	(_tabs[Tab.INVITE] as PlateButton).text = Loc.t("DAVET ET")
 	(_tabs[Tab.REQUESTS] as PlateButton).badge = _social.incoming.size() if ready else 0
 	(_tabs[Tab.NEWS] as PlateButton).badge = _social.race_events.size() if ready else 0
+	(_tabs[Tab.INVITE] as PlateButton).badge = _referral.attention() if ready and _referral else 0
 	for tab: Tab in _tabs:
 		var button: PlateButton = _tabs[tab]
 		button.visible = ready or tab == Tab.FRIENDS
@@ -340,6 +397,12 @@ func _refresh() -> void:
 	_invite_button.disabled = busy
 	_code_button.visible = ready
 	_notice.text = _notice_text
+	var inviting: bool = _tab == Tab.INVITE
+	_actions.visible = not inviting
+	_scroll.visible = not inviting
+	_referral_tab.visible = inviting
+	if inviting:
+		_referral_tab.refresh(_compact)
 	_build_cards(state, busy)
 	if _popup.visible:
 		if ready:
@@ -354,6 +417,8 @@ func _select_tab(tab: Tab) -> void:
 		return
 	_tab = tab
 	_scroll.scroll_horizontal = 0
+	if tab == Tab.INVITE and _referral:
+		_referral.load_progress()   # sayaç / liste (30 sn'den yeniyse okunmaz); gelince changed → _refresh
 	_refresh()
 
 
@@ -366,6 +431,8 @@ func _build_cards(state: SocialManager.State, busy: bool) -> void:
 		_add_state_card(state, busy)
 		return
 	match _tab:
+		Tab.INVITE:
+			pass   # içerik ReferralTab'da
 		Tab.REQUESTS:
 			_add_request_cards(busy)
 		Tab.NEWS:
@@ -542,8 +609,34 @@ func _on_add_pressed() -> void:
 	if _social == null or _code_edit.text.strip_edges().is_empty():
 		return
 	_notice_text = ""
+	var code: String = SocialNames.normalize_code(_code_edit.text)
+	_ref_ask.hide()
 	if await _social.send_request(_code_edit.text):
 		_code_edit.text = ""
+		_ask_referral(code)
+
+
+## Yeni hesap (davet talebi yok) koduyla birini ekledi: "Seni X mi davet etti?" — kodu linksiz paylaşanları da yakalar.
+func _ask_referral(code: String) -> void:
+	if _referral == null or not _referral.can_enter_code() or not SocialNames.is_valid_code(code):
+		return
+	var name: String = ""
+	for entry: Dictionary in _social.outgoing + _social.friends:
+		if SaveSafe.s(entry.get("code", "")) == code:
+			name = SaveSafe.s(entry.get("name", ""))
+	_ref_ask_code = code
+	_ref_ask_label.text = Loc.t("Seni %s mi davet etti?") % name if not name.is_empty() else Loc.t("Seni bu arkadaşın mı davet etti?")
+	_ref_ask.show()
+
+
+func _on_ref_ask_yes() -> void:
+	_ref_ask.hide()
+	if _referral == null or _ref_ask_code.is_empty():
+		return
+	var result: String = await _referral.submit_code(_ref_ask_code)
+	_ref_ask_code = ""
+	if is_inside_tree():
+		_on_notice(ReferralManager.status_text(result))
 
 
 func _on_rename_saved() -> void:
@@ -565,10 +658,14 @@ func _on_invite_pressed() -> void:
 	if link.is_empty():
 		_refresh()   # nedeni SocialManager.notice yazdı
 		return
-	var text: String = Loc.t("Auto Yard'da arkadaşım ol! Linke dokun, beni hemen eklersin (1 saat geçerli): %s") % link
+	# DAVET ÖDÜLÜ: link davet kodunu da taşır (?r=KOD; jeton 1 saat, kod kalıcı — yeni oyuncu yükledikten sonra da sayılır)
+	var code: String = _social.my_code()
+	link += "?r=" + code
+	var text: String = Loc.t("Auto Yard'da garajıma gel, ikimiz de hediye kazanalım! Davet kodum: %s\n%s") \
+		% [SocialNames.display_code(code), link]
 	var how: String = LinkShare.share(text, Loc.t("Davet linkini gönder"))
-	_on_notice(Loc.t("Link 1 saat geçerli. Açan arkadaşın seni hemen ekler.") if how == "shared"
-		else Loc.t("Davet linki kopyalandı. Arkadaşına gönder (1 saat geçerli)."))
+	_on_notice(Loc.t("Davet gönderildi! Arkadaşın linkle ya da kodunla gelince ödül yolunda ilerlersin.") if how == "shared"
+		else Loc.t("Davet linki kopyalandı. Arkadaşına gönder; kodunla da gelebilir."))
 
 
 func _on_visit_pressed(uid: String) -> void:
@@ -858,9 +955,11 @@ func _title_block() -> HBoxContainer:
 	badge.add_child(icon)
 	block.add_child(badge)
 	var column: VBoxContainer = VBoxContainer.new()
+	column.name = "TitleText"
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	column.add_theme_constant_override(&"separation", 2)
+	_title_text = column
 	var title: Label = _label(&"HudSignTitle", Loc.t("ARKADAŞLAR"))
 	title.name = "Title"
 	title.add_theme_font_size_override(&"font_size", 24)

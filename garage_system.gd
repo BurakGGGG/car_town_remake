@@ -174,6 +174,11 @@ func _ensure_social() -> void:
 		var mail: MailService = MailService.new()
 		mail.name = "MailService"
 		add_child(mail)
+	# ARKADAŞ DAVETİ (ReferralManager, "referral"): davet kodu talebi, seviye işareti, davet sayacı (SaveManager'dan ÖNCE)
+	if get_tree().get_first_node_in_group("referral") == null:
+		var referral: ReferralManager = ReferralManager.new()
+		referral.name = "ReferralManager"
+		add_child(referral)
 	# MODERASYON (ModerationWatch, "moderation"): yönetim panelinin yasak / ad / fotoğraf kararları
 	if get_tree().get_first_node_in_group("moderation") == null:
 		var moderation: ModerationWatch = ModerationWatch.new()

@@ -2,6 +2,8 @@
 //   raceNewsPush    yarış haberi yazılınca alıcıya telefon bildirimi (mantık news.js)
 //   mailPush        yönetim paneli postaya hediye bırakınca alıcıya "hediyen var" bildirimi (mantık mail.js)
 //   promoRedeem     oyuncu kupon kodu girince doğrular, ödülü postaya bırakır (mantık promo.js)
+//   referralJoin    davetle gelen yeni oyuncunun talebini doğrular: arkadaşlık + hoş geldin postası (mantık referral.js)
+//   referralQualify davetli 3. seviyeye ulaşınca davet edenin sayacı +1, basamak ödülü postaya (mantık referral.js)
 //   dailyStats      her gece günlük sayılar stats_daily/{gün}: hesaplı oyuncu, aktif 1/7/30 gün, bildirim, yeni hesap (stats.js)
 //   cleanupExpired  saatte bir süresi dolan davet / bildirim kaydı / şikâyet / e-posta kodu silinir (mantık cleanup.js)
 //   emailCodeSend   E-POSTA İLE GİRİŞ: 6 haneli kodu oyuncunun e-postasına yollar (mantık email_code.js, gönderim Resend)
@@ -24,6 +26,7 @@ const { getMessaging } = require("firebase-admin/messaging");
 const { handleRaceNews } = require("./news");
 const { handleMailCreated } = require("./mail");
 const { handleRedeem } = require("./promo");
+const { handleJoin, handleQualify } = require("./referral");
 const { writeDailyStats } = require("./stats");
 const { writeLearning } = require("./learning");
 const { cleanupExpired } = require("./cleanup");
@@ -142,6 +145,31 @@ exports.promoRedeem = onDocumentCreated(
   async (event) => {
     const result = await handleRedeem({ db: getFirestore(), uid: event.params.uid, code: event.params.code, now: Date.now() });
     console.log(`promoRedeem: ${result}`);   // kod / UID günlüğe yazılmaz
+  },
+);
+
+// ARKADAŞ DAVETİ (docs/ARKADAS_DAVET.md): hesabın yaşı Auth'tan okunur (istemcinin söylediği tarihe güvenilmez).
+async function createdMs(uid) {
+  try {
+    return Date.parse((await getAuth().getUser(uid)).metadata.creationTime) || 0;
+  } catch (e) {
+    return 0;   // hesap yok (silinmiş): eski sayılır
+  }
+}
+
+exports.referralJoin = onDocumentCreated(
+  { document: "users/{uid}/referral/ref_claim", region: "europe-west4", maxInstances: 5 },
+  async (event) => {
+    const result = await handleJoin({ db: getFirestore(), uid: event.params.uid, now: Date.now(), createdMs });
+    console.log(`referralJoin: ${result}`);   // kod / UID günlüğe yazılmaz
+  },
+);
+
+exports.referralQualify = onDocumentCreated(
+  { document: "users/{uid}/referral/ref_lvl3", region: "europe-west4", maxInstances: 5 },
+  async (event) => {
+    const result = await handleQualify({ db: getFirestore(), uid: event.params.uid, now: Date.now() });
+    console.log(`referralQualify: ${result}`);
   },
 );
 

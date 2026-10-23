@@ -100,6 +100,10 @@ var event_screen: EventScreen
 var quest_button: PlateButton
 ## Kodla kurulan ARKADAŞLAR tabelası ve onu açan plaka (alt sırada, GÖREVLER'in yanında).
 var friends_screen: FriendsScreen
+## ARKADAŞ DAVETİ: 10. basamaktaki efsanevi araç seçimi (UiRouter SUB &"legendary_pick") ve POSTA penceresi (davet
+## ödülleri; DAVET ET sekmesinin AL'ı claim_now).
+var legendary_pick_screen: LegendaryPickScreen
+var mail_notice: MailNotice
 var friends_button: PlateButton
 ## OTOPARK SAYACI: otoparkta araç varken sağ üst sütunda P plakası (docs/GARAJLAR_TASARIM.md §10, depo isteği).
 var lot_button: ParkingBadge
@@ -1607,6 +1611,7 @@ func _register_screens() -> void:
 	router.register(&"photo", photo_mode, UiRouter.Kind.PLACE)   # HUD'suz dünya: fotoğraf / HUD gizli / sinema
 	# ALT PANOLAR: altlarındaki panoyu kapatmadan açılır (kart → liste, düzenleme → profil, kırpma → düzenleme)
 	router.register(&"friend_card", friend_card_screen, UiRouter.Kind.SUB)
+	router.register(&"legendary_pick", legendary_pick_screen, UiRouter.Kind.SUB)
 	router.register(&"profile_edit", profile_edit_screen, UiRouter.Kind.SUB)
 	router.register(&"avatar_crop", avatar_cropper, UiRouter.Kind.SUB)
 	router.register(&"avatar_camera", camera_capture, UiRouter.Kind.SUB)
@@ -1860,7 +1865,8 @@ func _setup_gem_store() -> void:
 	event_screen.action_requested.connect(_on_event_action)
 	var mail: MailService = get_tree().get_first_node_in_group("mail") as MailService
 	if mail:
-		garage_screen.get_parent().add_child(MailNotice.new(self, mail))   # yönetim panelinin hediyeleri (temalı kök)
+		mail_notice = MailNotice.new(self, mail)
+		garage_screen.get_parent().add_child(mail_notice)   # yönetim panelinin hediyeleri (temalı kök)
 	var moderation: ModerationWatch = get_tree().get_first_node_in_group("moderation") as ModerationWatch
 	if moderation:
 		garage_screen.get_parent().add_child(BanNotice.new(self, moderation))   # yasak: sebep + bitiş penceresi
@@ -2299,6 +2305,11 @@ func _build_friends() -> void:
 		if friend_card_screen.show_for(uid):
 			router.open(&"friend_card"))
 	friends_screen.revenge_requested.connect(_start_revenge)
+	friends_screen.reward_claim_requested.connect(func(id: String) -> void:
+		if mail_notice:
+			mail_notice.claim_now(id))
+	legendary_pick_screen = LegendaryPickScreen.new(self)
+	garage_screen.get_parent().add_child(legendary_pick_screen)
 
 
 ## OTOPARK SAYACI: sağ üst sütunun sonunda (MARKET'in altında) ParkingBadge (P tabelası, OTOPARK, günlük ücret, araç sayısı
@@ -2432,6 +2443,13 @@ func _connect_social() -> void:
 	_social = get_tree().get_first_node_in_group("social") as SocialManager
 	if _social:
 		_social.changed.connect(_refresh_friends_button)
+		# DAVET ÖDÜLÜ: alınmayı bekleyen basamak / efsanevi araç seçimi de rozette
+		var referral: ReferralManager = get_tree().get_first_node_in_group("referral") as ReferralManager
+		if referral:
+			referral.changed.connect(_refresh_friends_button)
+		var mail: MailService = get_tree().get_first_node_in_group("mail") as MailService
+		if mail:
+			mail.arrived.connect(_refresh_friends_button)
 		# Hurdalık hediyesi / isteği gibi bildirimler ARKADAŞLAR ekranı dışında da görünsün (ekran açıkken
 		# kendi yazı satırında gösteriyor)
 		_social.notice.connect(func(text: String) -> void:
@@ -2449,7 +2467,9 @@ func _refresh_friends_button() -> void:
 	if friends_button == null:
 		return
 	friends_button.text = Loc.t("ARKADAŞLAR")
-	friends_button.badge = (_social.incoming.size() + _social.race_events.size()) if _social else 0
+	var referral: ReferralManager = get_tree().get_first_node_in_group("referral") as ReferralManager
+	friends_button.badge = ((_social.incoming.size() + _social.race_events.size()) if _social else 0) \
+		+ (referral.attention() if referral and not GarageVisit.is_visiting() else 0)
 	friends_button.highlight = false
 
 

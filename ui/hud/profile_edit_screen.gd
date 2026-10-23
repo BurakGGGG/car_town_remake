@@ -357,6 +357,8 @@ func _build_frames() -> void:
 	var illustrated: bool = _profile.my_illustrated()
 	for entry: Dictionary in ProfileCatalog.FRAMES:
 		var id: String = entry["id"]
+		if ProfileCatalog.frame_exclusive(id) and not _profile.frame_unlocked(id):
+			continue   # yalnız verilen çerçeve (davet ödülü): sahibi olmayan görmez
 		var cell: VBoxContainer = VBoxContainer.new()
 		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cell.add_theme_constant_override(&"separation", 0)

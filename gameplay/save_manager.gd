@@ -76,6 +76,7 @@ var _profile: PlayerProfile
 var _repairs: RepairManager
 var _away: OfflineEarnings
 var _car_garages: CarGarageManager
+var _referral: ReferralManager
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -114,6 +115,7 @@ func _setup() -> void:
 	_repairs = get_tree().get_first_node_in_group("repair_manager") as RepairManager
 	_away = get_tree().get_first_node_in_group("offline_earnings") as OfflineEarnings
 	_car_garages = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
+	_referral = get_tree().get_first_node_in_group("referral") as ReferralManager
 	if visit_mode:
 		_loading = true
 		_apply(GarageVisit.garage())
@@ -241,6 +243,8 @@ func new_game() -> void:
 		_profile.reset()
 	if _away:
 		_away.reset()
+	if _referral:
+		_referral.reset()
 	if _repairs:
 		_repairs.load_jobs([])
 	if _crates:
@@ -410,6 +414,9 @@ func _collect() -> Dictionary:
 		# GARAJLARIM: alınmış / inşaattaki araç garajları, iç yükseltmeler (süren işin bitişi unix sn), araçların park
 		# yerleri ve bekleme otoparkı. Eski kayıtta yoktur: yalnız MAHALLE GARAJI, araçlar sırayla yerleşir.
 		"car_garages": _car_garages.state() if _car_garages else {},
+		# ARKADAŞ DAVETİ: bu hesabın davet sonucu, seviye işareti gitti mi, cihaz özeti, efsanevi araç seçme hakları.
+		# Eski kayıtta yoktur: davetsiz.
+		"referral": _referral.state() if _referral else {},
 	}
 
 
@@ -557,6 +564,9 @@ func _apply(data: Dictionary) -> void:
 	if _away:
 		var away_data: Variant = data.get("away", {})
 		_away.load_state(away_data if away_data is Dictionary else {})
+	if _referral:
+		var referral_data: Variant = data.get("referral", {})
+		_referral.load_state(referral_data if referral_data is Dictionary else {})
 	if legacy:
 		if _missions:
 			_missions.mark_legacy_repairs_passed()   # geçilmiş tamir yıldızları ödenmiş sayılır

@@ -265,6 +265,14 @@ func _draw_ring(c: Vector2, rr: float, w: float) -> void:
 				var hue: float = fposmod(float(i) / n3 + _t * 0.12, 1.0)
 				_canvas.draw_arc(c, rr, a, a + TAU / n3 + 0.01, 3, Color.from_hsv(hue, 0.5, 1.0), w, true)
 			_edge(c, rr, w, Color(0.18, 0.2, 0.22, 0.6))
+		"inviter":   # DAVETÇİ (5. davet): turkuaz metal (gümüşten ayrılsın), iki yanda elmas
+			_metal(c, rr, w, Color("2FA597"), Color("A8F0E6"), Color("17675E"))
+			for k: int in 2:
+				_gem(c + Vector2.from_angle(PI * k) * rr, w * 0.85)
+		"envoy":   # ELÇİ (10. davet): parlak altın, çevresinde altı elmas
+			_metal(c, rr, w, Color("D9A520"), Color("FFF0B0"), Color("8A5F0A"))
+			for k: int in 6:
+				_gem(c + Vector2.from_angle(PI / 6.0 + TAU * k / 6.0) * rr, w * 0.8)
 		_:
 			_canvas.draw_arc(c, rr, 0.0, TAU, SEGMENTS, HudPalette.PLATE_SELECTED_EDGE, w, true)
 			_canvas.draw_arc(c, rr - w * 0.5 + 0.75, 0.0, TAU, SEGMENTS, HudPalette.PLATE_SELECTED, maxf(w * 0.25, 1.0), true)

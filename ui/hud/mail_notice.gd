@@ -4,6 +4,9 @@ extends Control
 ## panosu, yükleme ekranı, uzaktan ayar penceresi yok; FounderRewardNotice ile aynı kural): POSTA tabelası, gönderen,
 ## başlık, mesaj ve ödül satırları. AL → ödül hesaba geçer, ödül penceresi açılır (paralar sayaçlara uçar); ödülsüz
 ## mesajda TAMAM. Birden çok posta sırayla gelir (eskisi önce). Hud kurar (_setup_gem_store). Ekran TAMAMEN KODLA kurulur.
+## ARKADAŞ DAVETİ postaları (2026-10-23, MailService "ref_kind"): tabela DAVETLE GELDİN! / N. DAVET ÖDÜLÜ; davet edenin
+## ya da sayılan arkadaşın avatarı, basamak ilerlemesi (ReferralDots) ve altta bir sonraki basamak. 10. basamaktaki
+## efsanevi araç seçimi ödül penceresi kapanınca açılır (UiRouter &"legendary_pick"). DAVET ET sekmesinin AL'ı claim_now.
 
 const PANEL_WIDTH: float = 420.0
 const CHECK_SEC: float = 0.5
@@ -15,11 +18,13 @@ var _mail: MailService
 var _popup: RewardPopup
 var _column: VBoxContainer
 var _box: VBoxContainer
+var _sign_title: Label
 var _button: PlateButton
 var _current: String = ""
 var _calm: float = 0.0
 var _timer: Timer
 var _closing: bool = false
+var _pick_after: bool = false   # alınan postada efsanevi araç seçimi vardı: ödül penceresinden sonra seçim ekranı
 
 
 func _init(hud: Hud, mail: MailService) -> void:
@@ -44,6 +49,18 @@ func _ready() -> void:
 ## Açık postanın kimliği (testler): boşsa pencere kapalı.
 func current() -> String:
 	return _current
+
+
+## DAVET ET sekmesindeki AL: posta pencere beklemeden alınır, ödül penceresi açılır. Alındıysa true.
+func claim_now(id: String) -> bool:
+	if visible and _current == id:
+		_on_take()
+		return true
+	var summary: Dictionary = _mail.claim(id)
+	if summary.is_empty():
+		return false
+	_show_rewards(summary)
+	return true
 
 
 func _on_arrived() -> void:
@@ -86,26 +103,38 @@ func _open(mail: Dictionary) -> void:
 	for child: Node in _box.get_children():
 		_box.remove_child(child)
 		child.queue_free()
-	var from: String = SaveSafe.s(mail.get("from", ""))
-	var sender: Label = _label(&"HudInkCaption", Loc.t("%s gönderdi") % (from if not from.is_empty() else "AUTO YARD"))
-	sender.modulate.a = 0.7
-	_box.add_child(sender)
-	var title: String = SaveSafe.s(mail.get("title", ""))
-	if not title.is_empty():
-		var head: Label = _label(&"HudPlateTitle", title)
-		head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		head.custom_minimum_size = Vector2(PANEL_WIDTH - 24.0, 0.0)
-		_box.add_child(head)
-	var text: String = SaveSafe.s(mail.get("text", ""))
-	if not text.is_empty():
-		_box.add_child(_wrapped(text))
+	var ref_kind: String = SaveSafe.s(mail.get("ref_kind", ""))
+	_sign_title.text = Loc.t("POSTA")
+	if not ref_kind.is_empty():
+		_referral_head(mail, ref_kind)
+	else:
+		var from: String = SaveSafe.s(mail.get("from", ""))
+		var sender: Label = _label(&"HudInkCaption", Loc.t("%s gönderdi") % (from if not from.is_empty() else "AUTO YARD"))
+		sender.modulate.a = 0.7
+		_box.add_child(sender)
+		var title: String = SaveSafe.s(mail.get("title", ""))
+		if not title.is_empty():
+			var head: Label = _label(&"HudPlateTitle", title)
+			head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			head.custom_minimum_size = Vector2(PANEL_WIDTH - 24.0, 0.0)
+			_box.add_child(head)
+		var text: String = SaveSafe.s(mail.get("text", ""))
+		if not text.is_empty():
+			_box.add_child(_wrapped(text))
 	var rewards: VBoxContainer = VBoxContainer.new()
 	rewards.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rewards.add_theme_constant_override(&"separation", 2)
 	if int(mail["money"]) > 0:
 		rewards.add_child(_reward_row(HudIcon.Kind.COIN, "+%s ₺" % Hud.format_thousands(int(mail["money"])), HudPalette.COIN_DARK))
+	if int(mail["money_min"]) > 0:   # davet ödülü: aktif gelirin dakikası, alındığı andaki tutar
+		var income: int = MailService.income_money(get_tree(), int(mail["money_min"]))
+		rewards.add_child(_reward_row(HudIcon.Kind.COIN, "+%s ₺" % Hud.format_thousands(income), HudPalette.COIN_DARK))
 	if int(mail["gems"]) > 0:
 		rewards.add_child(_reward_row(HudIcon.Kind.GEM, Loc.t("+%d GEM") % int(mail["gems"]), HudPalette.GEM_DARK))
+	if not String(mail["frame"]).is_empty():
+		rewards.add_child(_reward_row(HudIcon.Kind.HELMET, MailService.frame_name(mail["frame"]), HudPalette.INK))
+	if not String(mail["choice"]).is_empty():
+		rewards.add_child(_reward_row(HudIcon.Kind.CAR, Loc.t("EFSANEVİ ARAÇ SEÇİMİ"), HudPalette.INK))
 	var crates: Dictionary = mail["crates"]
 	for crate_id: StringName in crates:
 		var count: int = int(crates[crate_id])
@@ -138,6 +167,8 @@ func _open(mail: Dictionary) -> void:
 	if rewards.get_child_count() > 0:
 		_box.add_child(HSeparator.new())
 		_box.add_child(rewards)
+	if not ref_kind.is_empty():
+		_referral_foot(mail, ref_kind)
 	var gift: bool = MailService.has_reward(mail)
 	_button.text = Loc.t("KAYDI GERİ YÜKLE") if not restore.is_empty() else (Loc.t("AL") if gift else Loc.t("TAMAM"))
 	_button.disabled = false
@@ -165,14 +196,88 @@ func _on_take() -> void:
 
 
 func _show_rewards(summary: Dictionary) -> void:
+	_pick_after = _pick_after or summary.has("choice")
 	if _popup == null:
 		_popup = RewardPopup.new()
 		_popup.hud = _hud
 		_popup.closed.connect(func() -> void:
-			if not _mail.pending().is_empty():
+			if _pick_after:
+				_pick_after = false
+				_hud.router.open(&"legendary_pick")
+			elif not _mail.pending().is_empty():
 				_timer.start())
 		_hud.get_node("Root").add_child(_popup)   # tam ekran; Root temayı taşır (CanvasLayer'ın altında plaka temasızdı)
 	_popup.show_rewards(summary)
+
+
+## Davet postasının üstü: tabela, avatar (davet eden / sayılan arkadaş), başlık, metin, basamak ilerlemesi.
+func _referral_head(mail: Dictionary, ref_kind: String) -> void:
+	var tier: int = int(mail.get("ref_tier", 0))
+	_sign_title.text = Loc.t("DAVETLE GELDİN!") if ref_kind == "welcome" else Loc.t("%d. DAVET ÖDÜLÜ") % tier
+	var person: Dictionary = _person(_referral_uid(mail, ref_kind))
+	var avatar: AvatarView = AvatarView.new()
+	avatar.custom_minimum_size = Vector2(84.0, 84.0)
+	avatar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	avatar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var art: Dictionary = ProfileCard.avatar_for(get_tree(), person)
+	avatar.show_avatar(art.get("texture"), bool(art.get("illustrated", true)), SaveSafe.s(person.get("frame", "")),
+		SaveSafe.s(person.get("flag", "")))
+	_box.add_child(avatar)
+	var title: String = SaveSafe.s(mail.get("title", ""))
+	if not title.is_empty():
+		var head: Label = _label(&"HudPlateTitle", title)
+		head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		head.custom_minimum_size = Vector2(PANEL_WIDTH - 24.0, 0.0)
+		_box.add_child(head)
+	var text: String = SaveSafe.s(mail.get("text", ""))
+	if not text.is_empty():
+		var body: Label = _wrapped(text)
+		body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_box.add_child(body)
+	if ref_kind == "tier":
+		var dots: ReferralDots = ReferralDots.new()
+		dots.name = "ReferralDots"
+		dots.reached = tier
+		dots.current = tier
+		dots.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		_box.add_child(dots)
+
+
+## Davet postasının altı: hoş geldin → davet edenin de ödül alacağı; basamak → sıradaki basamağın ödülü.
+func _referral_foot(mail: Dictionary, ref_kind: String) -> void:
+	var line: String = ""
+	if ref_kind == "welcome":
+		var name: String = SaveSafe.s(_person(_referral_uid(mail, ref_kind)).get("name", ""))
+		line = Loc.t("%d. seviyeye ulaştığında %s davet ödülünü kazanacak.") % [ReferralRewards.QUALIFY_LEVEL, name] \
+			if not name.is_empty() else Loc.t("%d. seviyeye ulaştığında seni çağıran arkadaşın da ödül kazanacak.") \
+			% ReferralRewards.QUALIFY_LEVEL
+	else:
+		var next: int = int(mail.get("ref_tier", 0)) + 1
+		line = Loc.t("Sıradaki: %d. arkadaşta %s") % [next, ReferralRewards.label(next, get_tree())] \
+			if next <= ReferralRewards.max_tier() else Loc.t("Davet merdivenini tamamladın! Teşekkürler usta.")
+	var foot: Label = _wrapped(line)
+	foot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	foot.modulate.a = 0.8
+	_box.add_child(foot)
+
+
+func _referral_uid(mail: Dictionary, ref_kind: String) -> String:
+	if ref_kind == "tier":
+		return SaveSafe.s(mail.get("friend", ""))
+	var referral: ReferralManager = get_tree().get_first_node_in_group("referral") as ReferralManager
+	return referral.referrer if referral else ""
+
+
+## Arkadaş listesindeki kişi (ad, avatar, çerçeve); yoksa boş (varsayılan kask).
+func _person(uid: String) -> Dictionary:
+	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
+	if social == null or uid.is_empty():
+		return {}
+	for entry: Dictionary in social.friends:
+		if SaveSafe.s(entry.get("uid", "")) == uid:
+			return entry
+	return {}
 
 
 func _build() -> void:
@@ -192,9 +297,10 @@ func _build() -> void:
 	var sign: PlatePanel = PlatePanel.new()
 	sign.theme_type_variation = &"HudCarPlate"
 	sign.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var title: Label = _label(&"HudSignTitle", Loc.t("POSTA"))
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sign.add_child(title)
+	_sign_title = _label(&"HudSignTitle", Loc.t("POSTA"))
+	_sign_title.name = "SignTitle"
+	_sign_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sign.add_child(_sign_title)
 	_column.add_child(sign)
 
 	var info: PlatePanel = PlatePanel.new()

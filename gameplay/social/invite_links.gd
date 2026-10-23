@@ -7,6 +7,8 @@ extends Node
 ## invite_opened yayar. Aynı jeton süreç boyunca bir kez işlenir. HUD kurar; ekranı InviteScreen gösterir.
 ## `pending`: gösterilmeyi bekleyen jeton. STATİK: Google girişi sahneyi yeniden kurar, davet kaybolmasın.
 ## Masaüstü / QA: `-- --davet=<jeton>`.
+## DAVET ÖDÜLÜ (2026-10-23): link davet edenin arkadaş kodunu da taşır — autoyard://davet/<jeton>?r=<KOD> ya da (jetonsuz,
+## kalıcı link) autoyard://davet/r/<KOD>. Kod ReferralManager'a gider (yeni oyuncuysa hesapla girince davet sayılır).
 
 signal invite_opened(token: String)
 
@@ -39,6 +41,22 @@ static func parse_token(text: String) -> String:
 	return token if SocialNames.is_valid_token(token) else ""
 
 
+## Linkteki davet ödülü kodu (`?r=KOD` ya da `davet/r/KOD`; yoksa ya da geçersizse boş).
+static func parse_ref(text: String) -> String:
+	var link: String = text.strip_edges().get_slice("#", 0)
+	var code: String = ""
+	var query: int = link.find("?")
+	if query >= 0:
+		for pair: String in link.substr(query + 1).split("&"):
+			if pair.begins_with("r="):
+				code = pair.substr(2)
+		link = link.left(query)
+	if code.is_empty() and link.begins_with(SCHEME + "r/"):
+		code = link.trim_prefix(SCHEME + "r/").trim_suffix("/")
+	code = SocialNames.normalize_code(code)
+	return code if SocialNames.is_valid_code(code) else ""
+
+
 ## Davet ekranı işini bitirdi (eklendi / vazgeçildi): jeton artık beklemiyor.
 static func clear_pending(token: String) -> void:
 	if pending == token:
@@ -52,6 +70,14 @@ func _check_intent() -> void:
 
 
 func _receive(text: String) -> void:
+	var ref: String = parse_ref(text)
+	if not ref.is_empty():
+		var referral: ReferralManager = get_tree().get_first_node_in_group("referral") as ReferralManager \
+			if is_inside_tree() else null
+		if referral:
+			referral.receive(ref, "link")
+		else:
+			ReferralManager.remember(ref, "link")   # oyun açılırken: kod cihazda bekler
 	var token: String = parse_token(text)
 	if token.is_empty() or _handled.has(token):
 		return
