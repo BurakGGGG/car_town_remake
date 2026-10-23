@@ -57,7 +57,7 @@ export function loadCatalog(root) {
   const decorList = (decor.items || [])
     .filter((i) => i && i.id && !i.retired && placementOf(i) !== "surface" && placementOf(i) !== "tile" && placementOf(i) !== "edge")
     .map((i) => ({ id: i.id, name: i.title || i.id, kind: i.kind, exclusive: !!i.exclusive, gems: i.price_gems || 0 }));
-  return { crates: crateList, decor: decorList, cars: carList, metrics: MISSION_METRICS };
+  return { crates: crateList, decor: decorList, cars: carList, metrics: MISSION_METRICS, ad_kinds: AD_KINDS, ad_defaults: AD_DEFAULTS };
 }
 
 // GarageDecor.load_from ile aynı çıkarım.
@@ -418,6 +418,43 @@ export function buildEvent(input, catalog = null, packs = []) {
   if (!ID_RE.test(id)) throw new PanelError("Etkinlik kimliği: küçük harf / rakam / _");
   return { id, title: texts(input.title, MAX_TITLE, "Etkinlik başlığı"), text: texts(input.text, MAX_TEXT, "Etkinlik metni"),
     start, end, money_mult: event.money_mult || 1, xp_mult: event.xp_mult || 1, ...event };
+}
+
+// --- Ödüllü reklam ayarları (config/app.ads; oyundaki AdPolicy.normalize_remote ile aynı sınırlar) -------------
+
+// Teklif türü → panel adı ve oyundaki varsayılan günlük sınır (AdPolicy.RULES)
+export const AD_KINDS = {
+  free_gems: { label: "MARKET · ücretsiz elmas", cap: 5 },
+  race_double: { label: "Yarış ödülü ×2", cap: 5 },
+  offline_double: { label: "OTO MANŞET kazancı ×2", cap: 2 },
+  daily_double: { label: "Günlük giriş elması ×2", cap: 1 },
+  levelup_double: { label: "Seviye ödülü ×2", cap: 3 },
+  repair_boost: { label: "Uzun tamiri kısalt", cap: 8 },
+  time_skip: { label: "Modifiye / depo / iç yükseltme süresi yarıya", cap: 8 },
+  mission_reroll: { label: "Günlük görevi değiştir", cap: 1 },
+  junk_refill: { label: "Hurdalık yığınını doldur", cap: 2 },
+};
+export const AD_DEFAULTS = { total_cap: 20, free_gems: 5, free_gems_cooldown: 180 };
+
+/** Panel formundan reklam ayarı: total_cap 0–100, free_gems 1–50 (reklam başına elmas), free_gems_cooldown 0–3600 sn,
+ *  caps {tür: 0–50} (0 = o teklif kapalı). Varsayılana eşit alanlar da yazılır (oyun hep panelin değerini kullanır). */
+export function buildAds(input) {
+  const src = input || {};
+  const caps = {};
+  for (const kind of Object.keys(AD_KINDS)) {
+    const v = src.caps && src.caps[kind];
+    if (v === undefined || v === null || v === "") continue;
+    caps[kind] = int(v, 0, 50, `${AD_KINDS[kind].label} günlük sınırı`);
+  }
+  for (const kind of Object.keys(src.caps || {})) {
+    if (!(kind in AD_KINDS)) throw new PanelError(`Bilinmeyen reklam türü "${kind}"`);
+  }
+  return {
+    total_cap: int(src.total_cap ?? AD_DEFAULTS.total_cap, 0, 100, "Günlük toplam reklam sınırı"),
+    free_gems: int(src.free_gems ?? AD_DEFAULTS.free_gems, 1, 50, "Reklam başına elmas"),
+    free_gems_cooldown: int(src.free_gems_cooldown ?? AD_DEFAULTS.free_gems_cooldown, 0, 3600, "Ücretsiz elmas beklemesi (sn)"),
+    caps,
+  };
 }
 
 /** config/app'in etkinlik + paket kısmı (POST /api/event): mevcut belgenin öbür alanlarına dokunulmaz. */

@@ -518,6 +518,24 @@ func next_pile_seconds() -> int:
 	return best
 
 
+## REKLAMLA DOLDUR (ödüllü reklam, AdPolicy.JUNK_REFILL): en yakın dolacak boş yığın hemen dolar. Dönen: dolan yığın
+## (-1 = boş yığın yok).
+func refill_pile() -> int:
+	var best: int = -1
+	var best_left: int = 0
+	for i: int in pile_count():
+		var left: int = pile_seconds_left(i)
+		if left > 0 and (best < 0 or left < best_left):
+			best = i
+			best_left = left
+	if best < 0:
+		return -1
+	_pile_ready_at[best] = _now()
+	yard_changed.emit()
+	junkyard_changed.emit()
+	return best
+
+
 ## Yığının dolduğu / dolacağı an (unix sn; 0 = hiç aranmadı). OTO MANŞET "sen yokken doldu" haberine bakar.
 func pile_ready_at(index: int) -> int:
 	return _pile_ready_at[index] if index >= 0 and index < _pile_ready_at.size() else 0

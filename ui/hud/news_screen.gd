@@ -2,7 +2,8 @@ class_name NewsScreen
 extends Control
 ## OTO MANŞET — oyuna girişte "sen yokken neler oldu" gazetesi (2026-10-17, kullanıcıyla soru-cevapla karar):
 ## renkli magazin gazetesi (kırmızı başlık bandı, kalın manşet, renkli fotoğraflar), esprili magazin dili, tek sayfa,
-## YALNIZ TAMAM düğmesi (intikam / gönder / kabul ARKADAŞLAR'dan yapılır). Önce gazeteci çocuğun bisiklet zili çalar,
+## YALNIZ TAMAM düğmesi (intikam / gönder / kabul ARKADAŞLAR'dan yapılır); sen yokken kazanç varsa yanında ödüllü
+## reklam teklifi "REKLAM İZLE ×2" (2026-10-23; oyuncu basarsa, AdPolicy.OFFLINE_DOUBLE). Önce gazeteci çocuğun bisiklet zili çalar,
 ## gazete MASAYA FIRLATILMIŞ gibi yandan kayarak gelir, "pat" diye düşer ve birkaç derece yamuk kalır.
 ## İçerik NewsDigest'ten: manşet (en çarpıcı haber + büyük fotoğraf), sütunlar, alttaki KISA KISA şeridi.
 ## Kullanım: prepare(ham haberler, sayı) → UiRouter MODAL "news" open(). Sol üst HUD açıkken gizlenir (tam sayfa).
@@ -54,6 +55,10 @@ var _slot: Control
 var _paper: PanelContainer
 var _column: VBoxContainer
 var _ok: PlateButton
+## Sen yokken kazancı ×2 (ödüllü reklam). İzlenip hak edilince doubled = true: kapanışta NewsFlow iki katını verir.
+var _double: AdOfferButton
+var doubled: bool = false
+var _double_money: int = 0
 var _sfx: NewsSfx
 var _briefs: Label
 var _brief_list: PackedStringArray = PackedStringArray()
@@ -92,6 +97,15 @@ func prepare(raw: Array[Dictionary], number: int) -> bool:
 
 func has_issue() -> bool:
 	return not _issue.is_empty()
+
+
+## Gazetenin vereceği kazanç (NewsFlow, prepare'den sonra): >0 ise ×2 teklifi; yeni gazetede ×2 sıfırlanır.
+func set_double_offer(money: int) -> void:
+	_double_money = maxi(money, 0)
+	doubled = false
+	_ok.text = Loc.t("TAMAM")
+	_double.reward_text = "+%s ₺" % Hud.format_thousands(_double_money)
+	_double.refresh()
 
 
 ## Paraların uçuşa başlayacağı yer (tuval koordinatı): kapanırken kazanç fotoğrafının ortası, yoksa ekranın ortası.
@@ -272,6 +286,15 @@ func _build() -> void:
 	_ok.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_ok.pressed.connect(close)
 
+	_double = AdOfferButton.new(AdPolicy.OFFLINE_DOUBLE)
+	_double.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_double.condition = func() -> bool: return not doubled and not _closing and _double_money > 0
+	_double.rewarded.connect(func() -> void:
+		doubled = true
+		_ok.text = Loc.t("TAMAM  ×2")
+		_double.refresh())
+	add_child(_double)   # yer tutucu: _footer TAMAM'ın yanına taşır
+
 
 ## Sayfa ölçüleri ve yazı ölçeği ekran boyundan (açılışta bir kez).
 func _layout() -> void:
@@ -301,6 +324,8 @@ func _fill() -> void:
 	_money_from = Vector2.ZERO
 	if _ok.get_parent():
 		_ok.get_parent().remove_child(_ok)
+	if _double.get_parent():
+		_double.get_parent().remove_child(_double)
 	for child: Node in _column.get_children():
 		_column.remove_child(child)
 		child.queue_free()
@@ -476,6 +501,7 @@ func _footer(briefs: Array) -> HBoxContainer:
 	news.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	news.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(news)
+	row.add_child(_double)
 	row.add_child(_ok)
 	return row
 

@@ -50,6 +50,9 @@ enum Kind {
 	TROPHY,    ## kupa (koleksiyon)
 	MORE,      ## üç nokta (diğer eylemler)
 	LETTERS,   ## iki harf karosu (isim tabelası) — sona eklendi
+	PLAY,      ## ekranda oynat üçgeni (ödüllü reklam: REKLAM İZLE) — sona eklendi
+	TASKS,     ## onay işaretli pano (alt sekme GÖREVLER) — sona eklendi
+	FRIENDS,   ## iki kişi (alt sekme ARKADAŞLAR) — sona eklendi
 }
 
 const HEART_RED: Color = Color("D7342A")
@@ -177,8 +180,43 @@ static func draw_icon(ci: CanvasItem, kind: Kind, c: Vector2, s: float, ink: Col
 			_more(ci, c, s, ink)
 		Kind.LETTERS:
 			_letters(ci, c, s, ink, cutout, w)
+		Kind.PLAY:
+			_play(ci, c, s, ink, cutout)
+		Kind.TASKS:
+			_tasks(ci, c, s, ink, cutout, w)
+		Kind.FRIENDS:
+			_friends(ci, c, s, ink, cutout)
 		_:
 			pass
+
+
+## Görevler: kıskaçlı pano, üstünde iki işaretli satır ve bir boş satır.
+static func _tasks(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+	_round_rect(ci, c, s, Vector2(-0.34, -0.40), Vector2(0.68, 0.88), 0.08, ink)
+	_rect(ci, c, s, Vector2(-0.25, -0.26), Vector2(0.50, 0.64), cutout)
+	_round_rect(ci, c, s, Vector2(-0.16, -0.48), Vector2(0.32, 0.16), 0.05, ink)   # kıskaç
+	for y: float in [-0.12, 0.08]:
+		var tick: PackedVector2Array = PackedVector2Array([c + Vector2(-0.19, y) * s, c + Vector2(-0.13, y + 0.06) * s,
+			c + Vector2(-0.03, y - 0.06) * s])
+		ci.draw_polyline(tick, ink, w * 0.6, true)
+		ci.draw_line(c + Vector2(0.03, y) * s, c + Vector2(0.18, y) * s, ink, w * 0.55, true)
+	ci.draw_line(c + Vector2(-0.18, 0.26) * s, c + Vector2(0.18, 0.26) * s, ink, w * 0.55, true)
+
+
+## Arkadaşlar: arkada (sağda) bir kişi, önde (solda) zemin renginde kenarlıkla ayrılmış ikinci kişi.
+static func _friends(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+	ci.draw_circle(c + Vector2(0.17, -0.18) * s, s * 0.14, ink, true, -1.0, true)
+	ci.draw_colored_polygon(_dome(c + Vector2(0.17, 0.36) * s, s * 0.27, PI, TAU, 16), ink)
+	ci.draw_circle(c + Vector2(-0.13, -0.10) * s, s * 0.19, cutout, true, -1.0, true)
+	ci.draw_circle(c + Vector2(-0.13, -0.10) * s, s * 0.155, ink, true, -1.0, true)
+	ci.draw_colored_polygon(_dome(c + Vector2(-0.13, 0.46) * s, s * 0.34, PI, TAU, 18), cutout)
+	ci.draw_colored_polygon(_dome(c + Vector2(-0.13, 0.46) * s, s * 0.30, PI, TAU, 18), ink)
+
+
+## Oynat: yuvarlatılmış ekran, içinde oynat üçgeni (ödüllü reklam).
+static func _play(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+	_round_rect(ci, c, s, Vector2(-0.46, -0.34), Vector2(0.92, 0.68), 0.14, ink)
+	_poly(ci, c, s, PackedVector2Array([Vector2(-0.12, -0.18), Vector2(0.2, 0.0), Vector2(-0.12, 0.18)]), cutout)
 
 
 ## Harita: üç katlı kâğıt (orta kat içe kırık) + üstünde iğne.

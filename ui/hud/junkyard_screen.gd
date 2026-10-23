@@ -248,6 +248,18 @@ func _build_bottom() -> void:
 	timer_box.add_child(_pile_label)
 	timer_plate.add_child(timer_box)
 	row.add_child(timer_plate)
+	# Boş yığını ödüllü reklamla hemen doldur (günde 2; boş yığın yokken gizli)
+	var refill: AdOfferButton = AdOfferButton.new(AdPolicy.JUNK_REFILL, Loc.t("BİR YIĞIN DOLSUN"))
+	refill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	refill.condition = func() -> bool:
+		var jy: JunkyardManager = _jy()
+		return visible and jy != null and jy.ready_pile_count() < jy.pile_count()
+	refill.rewarded.connect(func() -> void:
+		var jy: JunkyardManager = _jy()
+		if jy and jy.refill_pile() >= 0:
+			_notice(Loc.t("BİR YIĞIN DOLDU"), HudPalette.COIN_DARK)
+			_tick())
+	row.add_child(refill)
 
 
 ## Sinema şeritleri (üst / alt siyah bant): çekme sahnesi "ara sahne" gibi okunsun. Yükseklik açılışta

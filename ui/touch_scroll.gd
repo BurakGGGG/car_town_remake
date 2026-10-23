@@ -46,6 +46,12 @@ var _touch_accum: float = 0.0
 var _touch_start: float = 0.0
 var _touch_dragging: bool = false
 
+## Tüm sürücüler için TEK node_added bağlantısı: yeni Control'ün ataları bir kez yürünür, kabı kayıtlı sürücüler onu
+## sahiplenir. Eskiden her sürücü ayrı bağlıydı: 30+ kapta her düğüm eklenişi 30+ çağrı (garaj açılışı 32 bin,
+## betik profili 2026-10-23). Davranış aynı: kabın İÇİNE (her derinlikte) sonradan eklenen her Control.
+static var _drivers: Dictionary = {}   # kap instance_id → Array[TouchScroll]
+static var _hooked: SceneTree
+
 
 ## `scroll`'a dokunmatik kaydırma ekler (yatay mı dikey mi kabın açık eksenine göre belli olur).
 static func attach(scroll: ScrollContainer, snap_to_cards: bool = false) -> TouchScroll:
@@ -71,19 +77,53 @@ func _ready() -> void:
 	for control: Node in _scroll.find_children("*", "Control", true, false):
 		_pass(control)
 		_watch(control)
-	get_tree().node_added.connect(_on_node_added)   # sonradan kurulan kartlar da (liste yenilenince)
+	_register()   # sonradan kurulan kartlar da (liste yenilenince)
 	set_process(false)
 
 
+func _enter_tree() -> void:
+	if _scroll:
+		_register()   # kap ağaçtan çıkıp geri girdi (ilk girişte _ready kaydeder)
+
+
 func _exit_tree() -> void:
-	if get_tree() and get_tree().node_added.is_connected(_on_node_added):
-		get_tree().node_added.disconnect(_on_node_added)
+	if _scroll == null:
+		return
+	var id: int = _scroll.get_instance_id()
+	var list: Array = _drivers.get(id, [])
+	list.erase(self)
+	if list.is_empty():
+		_drivers.erase(id)
 
 
-func _on_node_added(node: Node) -> void:
-	if node is Control and _scroll and _scroll.is_ancestor_of(node):
-		_pass(node)
-		_watch(node)
+func _register() -> void:
+	var id: int = _scroll.get_instance_id()
+	if not _drivers.has(id):
+		_drivers[id] = []
+	var list: Array = _drivers[id]
+	if not list.has(self):
+		list.append(self)
+	var tree: SceneTree = get_tree()
+	if _hooked != tree:
+		tree.node_added.connect(_on_tree_node_added)
+		_hooked = tree
+
+
+static func _on_tree_node_added(node: Node) -> void:
+	if not node is Control or _drivers.is_empty():
+		return
+	var ancestor: Node = node.get_parent()
+	while ancestor:
+		var list: Variant = _drivers.get(ancestor.get_instance_id())
+		if list:
+			for driver: TouchScroll in list:
+				driver._adopt(node)
+		ancestor = ancestor.get_parent()
+
+
+func _adopt(node: Node) -> void:
+	_pass(node)
+	_watch(node)
 
 
 ## Kaptaki her öğenin dokunuşu (öğe olayı kaba aktarmasa da) parmağın bu kaba indiğini bildirir.

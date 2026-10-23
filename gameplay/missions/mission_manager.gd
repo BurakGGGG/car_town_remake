@@ -254,6 +254,29 @@ func seconds_to_week_reset() -> int:
 	return seconds_to_reset() + days_left * 86400
 
 
+## GÖREV DEĞİŞTİR (ödüllü reklam): bitmemiş günlük görev aynı kademede başka bir görevle değişir (ödülü aynı ölçekte,
+## ilerleme sıfırdan). Bitmiş / alınmış görev değişmez. Dönen: değişti mi.
+func reroll_daily(index: int) -> bool:
+	if index < 0 or index >= _daily.size() or bool(_daily[index].get("done", false)):
+		return false
+	var fresh: Dictionary = MissionGenerator.replacement(build_profile(), _mix(_seed, today() * 31 + index + randi() % 1000),
+		_daily, index)
+	if fresh.is_empty():
+		return false
+	fresh["base"] = int(_day_c.get(fresh["metric"], 0))
+	fresh["done"] = false
+	_daily[index] = fresh
+	_request_save()
+	missions_changed.emit()
+	return true
+
+
+## Bu günlük görev değiştirilebilir mi (bitmemiş ve yerine aday var): GÖREVİ DEĞİŞTİR teklifi yalnızca o zaman.
+func can_reroll(index: int) -> bool:
+	return index >= 0 and index < _daily.size() and not bool(_daily[index].get("done", false)) \
+		and MissionGenerator.has_replacement(build_profile(), _daily, index)
+
+
 ## Gün / hafta değişimini işler. Tekrar çağrılması güvenlidir.
 func ensure_current() -> void:
 	if not is_inside_tree():

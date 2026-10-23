@@ -76,6 +76,8 @@ var clock_offset: float = 0.0
 var _garages: Dictionary = {}
 ## İnşaatta: id → bitiş (unix sn).
 var _building: Dictionary = {}
+## Reklamla kısaltılmış inşaatlar (AdPolicy.TIME_SKIP, inşaat başına bir kez): garaj id → true.
+var _build_cut: Dictionary = {}
 ## İç yükseltme işleri: garaj id → {"item", "level", "end"}.
 var _jobs: Dictionary = {}
 ## OTOPARK, geliş sırasıyla.
@@ -191,6 +193,44 @@ func finish_build_with_gems(garage: StringName) -> bool:
 	gem_finished.emit(garage)
 	_building[garage] = now()
 	_check_timers()
+	return true
+
+
+## REKLAMLA KISALT (inşaat): düşecek süre (sn; inşaat başına bir kez, kısa kalan sürede 0).
+func build_ad_cut(garage: StringName) -> float:
+	if not _building.has(garage) or _build_cut.has(garage):
+		return 0.0
+	return AdPolicy.time_cut(build_remaining(garage))
+
+
+func apply_build_ad_cut(garage: StringName) -> bool:
+	var cut: float = build_ad_cut(garage)
+	if cut <= 0.0:
+		return false
+	_building[garage] = float(_building[garage]) - cut
+	_build_cut[garage] = true
+	garages_changed.emit()
+	_check_timers()
+	_request_save()
+	return true
+
+
+## REKLAMLA KISALT (iç yükseltme): düşecek süre (sn; iş başına bir kez).
+func job_ad_cut(garage: StringName) -> float:
+	if not _jobs.has(garage) or bool((_jobs[garage] as Dictionary).get("ad_cut", false)):
+		return 0.0
+	return AdPolicy.time_cut(job_remaining(garage))
+
+
+func apply_job_ad_cut(garage: StringName) -> bool:
+	var cut: float = job_ad_cut(garage)
+	if cut <= 0.0:
+		return false
+	_jobs[garage]["end"] = float(_jobs[garage]["end"]) - cut
+	_jobs[garage]["ad_cut"] = true
+	garages_changed.emit()
+	_check_timers()
+	_request_save()
 	return true
 
 
@@ -588,6 +628,8 @@ func state() -> Dictionary:
 	var jobs: Dictionary = {}
 	for id: StringName in _jobs:
 		jobs[String(id)] = {"item": String(_jobs[id]["item"]), "level": int(_jobs[id]["level"]), "end": float(_jobs[id]["end"])}
+		if bool(_jobs[id].get("ad_cut", false)):
+			jobs[String(id)]["ad_cut"] = true   # yalnız kısaltılmışsa (eski biçim birebir kalsın)
 	var waiting: Array = []
 	for car: StringName in _waiting:
 		waiting.append(String(car))
@@ -601,6 +643,11 @@ func state() -> Dictionary:
 			"periods": int(entry["periods"])})
 	var out: Dictionary = {"garages": garages, "building": building, "jobs": jobs, "waiting": waiting, "done": done,
 		"fee_since": _fee_since, "fees": fees}
+	if not _build_cut.is_empty():
+		var cut: Array = []
+		for id: StringName in _build_cut:
+			cut.append(String(id))
+		out["build_cut"] = cut
 	if not _signs.is_empty():   # tabelasız kayıt eski biçimle birebir aynı kalsın (bulut karşılaştırması)
 		var signs: Dictionary = {}
 		for id: StringName in _signs:
@@ -615,6 +662,10 @@ func state() -> Dictionary:
 func load_state(data: Dictionary) -> void:
 	_garages.clear()
 	_building.clear()
+	_build_cut.clear()
+	var cut_in: Variant = data.get("build_cut", [])
+	for raw: Variant in (cut_in if cut_in is Array else []):
+		_build_cut[StringName(SaveSafe.s(raw))] = true
 	_jobs.clear()
 	_waiting.clear()
 	_done.clear()
@@ -664,6 +715,8 @@ func load_state(data: Dictionary) -> void:
 				continue
 			var end: float = minf(SaveSafe.f((job as Dictionary).get("end", now())), now() + CarGarageCatalog.step_time(id, item, level))
 			_jobs[id] = {"item": item, "level": level, "end": end}
+			if SaveSafe.b((job as Dictionary).get("ad_cut", false)):
+				_jobs[id]["ad_cut"] = true
 	var waiting: Variant = data.get("waiting", [])
 	if waiting is Array:
 		for raw: Variant in waiting:
@@ -737,6 +790,7 @@ func _check_timers() -> void:
 	for id: StringName in _building.keys():
 		if float(_building[id]) <= t:
 			_open_garage(id)
+			_build_cut.erase(id)
 			_request_save()
 	for id: StringName in _jobs.keys():
 		var job: Dictionary = _jobs[id]

@@ -11,7 +11,7 @@ extends Control
 ##   üst orta  : GARAJI DÜZENLE plakası, içinde ne yapılacağını söyleyen ipucu; altında uyarı hapı
 ##   sol üst   : bakiye
 ##   sağ üst   : IZGARA · GERİ AL · BİTİR (ikonlu)
-##   alt       : İKİ KATMANLI menü — solda dört MOD (EŞYALAR · ZEMİN · DUVAR · ARAÇLAR, ikonlu), sağda
+##   alt       : İKİ KATMANLI menü — solda MODLAR (EŞYALAR · ZEMİN · DUVAR · ARAÇLAR · YÜKSELTMELER, ikonlu), sağda
 ##               modun alt kategorileri (EŞYALAR: atölye, yaşam alanı...; DUVAR: İÇ DUVAR · KAPLAMA). Tek
 ##               kategorili modda alt satır yok. Altında eşya şeridi: depo adedi rozeti, fiyat, rütbe
 ##               kilidi. Açık moda yeniden dokunmak şeridi katlar, garajın tamamı görünür.
@@ -21,6 +21,10 @@ extends Control
 ##               araç açıkken araç çubuğu (zemin: rulo · alan · kova · damlalık · silgi, duvar: ör · sök)
 ## Kategoriler katalogdaki GERÇEK türlerden gelir (GarageDecor.categories()); _tab_buttons her
 ## kategoriye (+ ARAÇLAR) bir alt kategori düğmesi tutar, gizli olsa da.
+## YÜKSELTMELER (2026-10-23, eski GARAJ paneli buraya taşındı — kullanıcı: "garaj butonu garajı düzenle olacak, seviye /
+## tamir hızı / tamir alanı yükseltmeler altında"): şeritte GARAJ SEVİYESİ · TAMİR HIZI · TAMİR ALANI kartları; karta
+## dokununca satın alma plakası (ne kazandırdığı + SATIN AL / VAZGEÇ, dünyadaki plakayla aynı metinler). Garaj büyüyünce
+## kamera garajı yeniden sığdırır.
 ## Dekorasyon v2: ZEMİN sekmesinde desen kartına dokunmak boyama aracını, DUVAR ÖR'de parça kartı
 ## örme aracını, DUVAR KAPLAMASI'nda kaplama kartı kaplama aracını açar; başka sekmeye geçmek eşya
 ## düzenine döndürür.
@@ -101,6 +105,18 @@ var _sign_iid: String = ""
 var _sign_on_select: bool = false   # yeni konan tabela seçilince pano kendiliğinden açılır
 ## Araç çubuğu düğmeleri: kip → PlateButton (zemin ve duvar kipleri).
 var _tool_buttons: Dictionary = {}
+## YÜKSELTMELER modu: açık mı, mod düğmesi, kartlar (&"garage" / &"speed" / &"bay" → kart), satın alma plakası.
+const UPGRADE_IDS: Array[StringName] = [&"garage", &"speed", &"bay"]
+const UPGRADE_CARD_WIDTH: float = 150.0
+var _upgrades_open: bool = false
+var _upgrade_button: PlateButton
+var _upgrade_cards: Dictionary = {}
+var _upgrade_group: VBoxContainer
+var _upgrade_plate: PurchasePlate
+var _upgrade_buy: PlateButton
+var _upgrade_target: StringName = &""
+var _upgrade_manager: GarageUpgradeManager
+var _bays: RepairBayManager
 
 
 func _ready() -> void:
@@ -220,7 +236,19 @@ func _bind() -> void:
 		if _economy:
 			_economy.money_changed.connect(func(_m: int) -> void:
 				_refresh_money()
-				_refresh_cards())
+				_refresh_cards()
+				_refresh_upgrades())
+	if _upgrade_manager == null:
+		_upgrade_manager = get_tree().get_first_node_in_group("garage_upgrades") as GarageUpgradeManager
+		if _upgrade_manager:
+			_upgrade_manager.levels_changed.connect(_refresh_upgrades)
+	if _bays == null:
+		_bays = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
+		if _bays:
+			_bays.bays_changed.connect(_refresh_upgrades)
+			_bays.no_room.connect(func(_i: int) -> void:
+				if visible:
+					_show_notice(Loc.t("TAMİR ALANI İÇİN YER YOK\nBİR EŞYAYI TAŞI")))
 	if _player == null:
 		_player = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
 		if _player:
@@ -370,6 +398,29 @@ func _build() -> void:
 	# isteyen dokunuş, komşu tabelanın çubuğundaki DEPOYA KALDIR'a gitti. Kamera garajı ekranın üst
 	# kısmına sığdırdığı için bu bant hiçbir eşyanın üstüne binmez ve başparmağın ulaştığı yerdedir.
 	# Alt grup aşağıdan yukarı büyüdüğü için çubuk açılıp kapanınca sekmeler yerinden oynamaz.
+	_upgrade_group = VBoxContainer.new()
+	_upgrade_group.name = "UpgradePurchase"
+	_upgrade_group.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_upgrade_group.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_upgrade_group.add_theme_constant_override(&"separation", 6)
+	_upgrade_group.visible = false
+	bottom.add_child(_upgrade_group)
+	_upgrade_plate = PurchasePlate.new(260.0)
+	_upgrade_plate.set_centered(true)
+	_upgrade_group.add_child(_upgrade_plate)
+	var upgrade_row: HBoxContainer = HBoxContainer.new()
+	upgrade_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	upgrade_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	upgrade_row.add_theme_constant_override(&"separation", 8)
+	_upgrade_group.add_child(upgrade_row)
+	_upgrade_buy = _plate(Loc.t("SATIN AL"), &"HudPlateSmall")
+	_upgrade_buy.name = "UpgradeBuy"
+	_upgrade_buy.highlight = true
+	_upgrade_buy.pressed.connect(_on_upgrade_buy)
+	upgrade_row.add_child(_upgrade_buy)
+	var upgrade_cancel: PlateButton = _plate(Loc.t("VAZGEÇ"), &"HudPlateSmall")
+	upgrade_cancel.pressed.connect(_hide_upgrade_plate)
+	upgrade_row.add_child(upgrade_cancel)
 	var bar_row: MarginContainer = MarginContainer.new()
 	bar_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bar_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -392,6 +443,9 @@ func _build() -> void:
 		var mode_button: PlateButton = _icon_plate(_nav, _mode_title(mode), _mode_icon(mode), &"HudPlate")
 		mode_button.pressed.connect(_on_mode_pressed.bind(mode))
 		_mode_buttons[mode] = mode_button
+	_upgrade_button = _icon_plate(_nav, Loc.t("YÜKSELTMELER"), HudIcon.Kind.WRENCH, &"HudPlate")
+	_upgrade_button.name = "UpgradesMode"
+	_upgrade_button.pressed.connect(_on_upgrades_pressed)
 	var divider: ColorRect = ColorRect.new()
 	divider.name = "NavDivider"
 	divider.color = Color(HudPalette.TEXT_LIGHT, 0.55)
@@ -481,6 +535,187 @@ func _build() -> void:
 		button.toggle_mode = true
 		button.pressed.connect(_on_tool_mode.bind(mode))
 		_tool_buttons[mode] = button
+
+
+# --- YÜKSELTMELER ---------------------------------------------------------------------------
+
+## YÜKSELTMELER moduna dokunmak: şeritte üç kart. Açıkken yeniden dokunmak şeridi katlar (öteki modlar gibi).
+func _on_upgrades_pressed() -> void:
+	if _upgrades_open and _strip_panel.visible:
+		_strip_panel.visible = false
+		_hide_upgrade_plate()
+		_refresh_nav()
+		_reframe_later()
+		return
+	var was_hidden: bool = not _strip_panel.visible
+	_open_upgrades()
+	if was_hidden:
+		_reframe_later()
+
+
+func _open_upgrades() -> void:
+	if _editor:
+		if _editor.is_placing():
+			_editor.cancel_ghost()
+		_editor.end_tool()
+	_upgrades_open = true
+	_confirm_buy = &""
+	_strip_panel.visible = true
+	for k: int in _tab_buttons:
+		(_tab_buttons[k] as PlateButton).set_pressed_no_signal(false)
+	for child: Node in _strip.get_children():
+		child.queue_free()
+	_cards.clear()
+	_upgrade_cards.clear()
+	for id: StringName in UPGRADE_IDS:
+		var card: PlateButton = PlateButton.new()
+		card.name = "Upgrade_" + String(id)
+		card.theme_type_variation = &"HudGalleryPlate"
+		card.kind = HudIcon.Kind.NONE
+		card.bolts = false
+		card.focus_mode = Control.FOCUS_NONE
+		card.custom_minimum_size = Vector2(UPGRADE_CARD_WIDTH, 0.0)
+		card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		card.mouse_filter = Control.MOUSE_FILTER_PASS   # şerit parmakla kaysın (bkz. _add_card)
+		card.draw.connect(_draw_upgrade_card.bind(card, id))
+		card.pressed.connect(_show_upgrade_plate.bind(id))
+		_strip.add_child(card)
+		_upgrade_cards[id] = card
+	_scroll.scroll_horizontal = 0
+	_refresh_nav()
+	_refresh_upgrades()
+
+
+func _draw_upgrade_card(card: PlateButton, id: StringName) -> void:
+	var area: Rect2 = Rect2(Vector2((card.size.x - THUMB_AREA.x) * 0.5, THUMB_TOP), THUMB_AREA)
+	var icon: HudIcon.Kind = HudIcon.Kind.GARAGE
+	match id:
+		&"speed":
+			icon = HudIcon.Kind.WRENCH
+		&"bay":
+			icon = HudIcon.Kind.AREA
+	var ink: Color = HudPalette.INK if not card.disabled else Color(HudPalette.INK, 0.4)
+	HudIcon.draw_icon(card, icon, area.get_center(), 44.0, ink, HudPalette.PLATE)
+
+
+## Kart yazıları (eski GARAJ panelindeki gibi): "BAŞLIK\nEYLEM ücret ₺"; sonda MAKSİMUM / TÜMÜ AÇIK.
+func _refresh_upgrades() -> void:
+	if not _upgrades_open or _upgrade_cards.is_empty():
+		return
+	var garage: PlateButton = _upgrade_cards.get(&"garage")
+	var speed: PlateButton = _upgrade_cards.get(&"speed")
+	var bay: PlateButton = _upgrade_cards.get(&"bay")
+	if _upgrade_manager:
+		_write_upgrade_card(garage, GarageUpgradeManager.GARAGE_ID, Loc.t("GARAJ SV.%d"), Loc.t("GENİŞLET"))
+		_write_upgrade_card(speed, GarageUpgradeManager.SPEED_ID, Loc.t("TAMİR HIZI %d/%d"), Loc.t("YÜKSELT"))
+	if _bays == null or _bays.unlocked_count() >= _bays.bay_count():
+		bay.text = Loc.t("TAMİR ALANI\nTÜMÜ AÇIK")
+	else:
+		var next: int = _bays.unlocked_count()
+		match _bays.status(next):
+			RepairBayManager.Status.NEEDS_LEVEL:
+				bay.text = Loc.t("TAMİR ALANI %d\nGARAJ SV.%d") % [next + 1, _bays.required_level(next)]
+			_:
+				bay.text = Loc.t("TAMİR ALANI %d\nAL %s ₺") % [next + 1, Hud.format_thousands(_bays.price(next))]
+	for card: PlateButton in _upgrade_cards.values():
+		_fit_card(card)
+		card.custom_minimum_size.x = maxf(card.custom_minimum_size.x, UPGRADE_CARD_WIDTH)
+		card.queue_redraw()
+	if _upgrade_group.visible:
+		_show_upgrade_plate(_upgrade_target)   # açık plaka güncel durumu göstersin
+
+
+func _write_upgrade_card(card: PlateButton, id: StringName, title: String, action: String) -> void:
+	var upgrade: GarageUpgrade = _upgrade_manager.get_upgrade(id)
+	if upgrade == null:
+		card.text = title.split(" ")[0]
+		return
+	var head: String = title % [upgrade.current_level] if id == GarageUpgradeManager.GARAGE_ID \
+			else title % [upgrade.current_level, upgrade.max_level]
+	if upgrade.is_max():
+		card.text = Loc.t("%s\nMAKSİMUM") % head
+		return
+	card.text = "%s\n%s %s ₺" % [head, action, Hud.format_thousands(upgrade.next_cost())]
+
+
+## Satın alma plakası: başlık / alt başlık / fiyat / etkiler (ProgressionEffects; dünyadaki plakalarla aynı metinler).
+func _show_upgrade_plate(id: StringName) -> void:
+	_upgrade_target = id
+	var tree: SceneTree = get_tree()
+	var title: String = ""
+	var subtitle: String = ""
+	var price: String = Loc.t("MAKSİMUM")
+	var effects: PackedStringArray = PackedStringArray()
+	var can_buy: bool = false
+	match id:
+		&"garage", &"speed":
+			if _upgrade_manager == null:
+				return
+			var upgrade_id: StringName = GarageUpgradeManager.GARAGE_ID if id == &"garage" else GarageUpgradeManager.SPEED_ID
+			var next_level: int = _upgrade_manager.level(upgrade_id) + 1
+			title = Loc.t("GARAJI GENİŞLET") if id == &"garage" else Loc.t("TAMİR HIZI")
+			subtitle = Loc.t("SEVİYE %d") % (next_level if not _upgrade_manager.is_max(upgrade_id) else next_level - 1)
+			if not _upgrade_manager.is_max(upgrade_id):
+				var cost: int = _upgrade_manager.next_cost(upgrade_id)
+				can_buy = _economy == null or _economy.can_afford(cost)
+				price = "%s ₺%s" % [Hud.format_thousands(cost), "" if can_buy else Loc.t("  ·  PARA YETERSİZ")]
+				if id == &"garage":
+					effects = ProgressionEffects.garage_level_lines(tree, next_level)
+				else:
+					var summary: String = ProgressionEffects.upgrade_summary(tree, upgrade_id, next_level)
+					if summary != "":
+						effects.append(summary)
+			_upgrade_buy.text = Loc.t("GENİŞLET") if id == &"garage" else Loc.t("YÜKSELT")
+		&"bay":
+			if _bays == null:
+				return
+			var index: int = _bays.unlocked_count()
+			_upgrade_buy.text = Loc.t("SATIN AL")
+			if index >= _bays.bay_count():
+				title = Loc.t("TAMİR ALANI")
+				price = Loc.t("TÜMÜ AÇIK")
+			else:
+				title = Loc.t("TAMİR ALANI %d") % (index + 1)
+				price = "%s ₺" % Hud.format_thousands(_bays.price(index))
+				effects = ProgressionEffects.bay_lines(tree, index)
+				match _bays.status(index):
+					RepairBayManager.Status.NEEDS_LEVEL:
+						price = Loc.t("ÖNCE GARAJI SEVİYE %d'E GENİŞLET") % _bays.required_level(index)
+					RepairBayManager.Status.TOO_EXPENSIVE:
+						price += Loc.t("  ·  PARA YETERSİZ")
+					RepairBayManager.Status.OPEN:
+						price = Loc.t("AÇIK")
+						effects = PackedStringArray()
+					_:
+						can_buy = true
+	_upgrade_plate.set_content(title, subtitle, price, effects)
+	_upgrade_buy.disabled = not can_buy
+	_upgrade_group.show()
+
+
+func _hide_upgrade_plate() -> void:
+	_upgrade_target = &""
+	if _upgrade_group:
+		_upgrade_group.hide()
+
+
+func _on_upgrade_buy() -> void:
+	match _upgrade_target:
+		&"garage":
+			if _upgrade_manager and _upgrade_manager.buy(GarageUpgradeManager.GARAGE_ID):
+				_hide_upgrade_plate()
+				_show_notice(Loc.t("GARAJ SEVİYE %d") % _upgrade_manager.garage_level(), HudPalette.COIN_DARK)
+				_reframe_later()   # garaj büyüdü: kamera yeni boyu sığdırsın
+		&"speed":
+			if _upgrade_manager and _upgrade_manager.buy(GarageUpgradeManager.SPEED_ID):
+				_hide_upgrade_plate()
+				_show_notice(Loc.t("TAMİR HIZI %d/%d") % [_upgrade_manager.level(GarageUpgradeManager.SPEED_ID),
+					_upgrade_manager.get_upgrade(GarageUpgradeManager.SPEED_ID).max_level], HudPalette.COIN_DARK)
+		&"bay":
+			if _bays and _bays.purchase(_bays.unlocked_count()):
+				_hide_upgrade_plate()
+				_show_notice(Loc.t("TAMİR ALANI %d AÇILDI") % _bays.unlocked_count(), HudPalette.COIN_DARK)
+	_refresh_upgrades()
 
 
 # --- İSİM TABELASI -------------------------------------------------------------------------
@@ -661,7 +896,7 @@ static func _chip_title(kind: int) -> String:
 ## Moda dokunmak: o modda en son açılan kategoriye (yoksa ilkine) geçer. Açık moda yeniden
 ## dokunmak şeridi katlar / açar.
 func _on_mode_pressed(mode: StringName) -> void:
-	if mode == mode_of(_kind):
+	if mode == mode_of(_kind) and not _upgrades_open:
 		_on_tab_pressed(_kind)
 		return
 	var kinds: Array[int] = _kinds_of(mode)
@@ -703,6 +938,9 @@ func _reframe_later() -> void:
 func _select_tab(kind: int) -> void:
 	if _editor and _kind != kind:
 		_editor.end_tool()   # başka sekme: eşya düzenine dönülür (araç kartına dokununca yeniden açılır)
+	_upgrades_open = false
+	_upgrade_cards.clear()
+	_hide_upgrade_plate()
 	_kind = kind
 	_mode_kind[mode_of(kind)] = kind
 	_confirm_buy = &""
@@ -746,11 +984,12 @@ func _reveal_tab(kind: int) -> void:
 func _refresh_nav() -> void:
 	var mode: StringName = mode_of(_kind)
 	for m: StringName in _mode_buttons:
-		(_mode_buttons[m] as PlateButton).highlight = m == mode and _strip_panel.visible
+		(_mode_buttons[m] as PlateButton).highlight = m == mode and _strip_panel.visible and not _upgrades_open
+	_upgrade_button.highlight = _upgrades_open and _strip_panel.visible
 	var kinds: Array[int] = _kinds_of(mode)
 	for k: int in _tab_buttons:
-		(_tab_buttons[k] as PlateButton).visible = kinds.size() > 1 and kinds.has(k)
-	_tab_scroll.visible = kinds.size() > 1
+		(_tab_buttons[k] as PlateButton).visible = kinds.size() > 1 and kinds.has(k) and not _upgrades_open
+	_tab_scroll.visible = kinds.size() > 1 and not _upgrades_open
 	_nav.get_node("NavDivider").visible = _tab_scroll.visible
 
 
@@ -1279,8 +1518,9 @@ func _apply_ui_scale() -> void:
 	_fit_top()
 
 
-func _show_notice(text: String) -> void:
+func _show_notice(text: String, color: Color = HudPalette.DANGER) -> void:
 	_notice.text = text
+	_notice.add_theme_color_override(&"font_color", color)
 	if _notice_tween:
 		_notice_tween.kill()
 	_notice_plate.modulate.a = 1.0

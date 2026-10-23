@@ -299,6 +299,9 @@ func _render_daily() -> void:
 		_body.add_child(_note(Loc.t("GÜNLÜK GÖREVLER SEVİYE %d'TE AÇILIR") % MissionCatalog.MIN_LEVEL,
 			Loc.t("Önce REHBER görevlerini tamamla: tamir yap, garajını büyüt.")))
 		return
+	var login: Control = _login_plate()
+	if login:
+		_body.add_child(login)
 	var tasks: Array[Dictionary] = _missions.daily_tasks()
 	for i: int in tasks.size():
 		_body.add_child(_task_plate(tasks[i], false, i))
@@ -382,8 +385,60 @@ func _task_plate(task: Dictionary, weekly: bool, index: int) -> PlatePanel:
 			_claimed(_missions.claim_weekly(index))
 		else:
 			_claimed(_missions.claim_daily(index)))
-	row.add_child(button)
+	if not weekly and not done:
+		# GÖREV DEĞİŞTİR: beğenilmeyen günlük görev ödüllü reklamla başka bir görevle değişir (günde bir)
+		var side: VBoxContainer = VBoxContainer.new()
+		side.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		side.add_theme_constant_override(&"separation", 4)
+		side.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		side.add_child(button)
+		var reroll: AdOfferButton = AdOfferButton.new(AdPolicy.MISSION_REROLL, Loc.t("DEĞİŞTİR"))
+		reroll.compact = true   # listede beş kez görünebilir: sade, tek satır (oynat ikonu reklam olduğunu söyler)
+		reroll.custom_minimum_size = Vector2(100.0, 0.0)
+		reroll.icon_size = 14.0
+		var can: bool = _missions.can_reroll(index)   # yerine aday yoksa teklif yok (reklam boşa gitmesin)
+		reroll.condition = func() -> bool: return can
+		reroll.rewarded.connect(func() -> void: _claimed(_missions.reroll_daily(index)))
+		side.add_child(reroll)
+		row.add_child(side)
+	else:
+		row.add_child(button)
 	_mark(plate, Mark.CLAIMED if claimed else (Mark.READY if done else Mark.NORMAL), title)
+	return plate
+
+
+## GÜNLÜK GİRİŞ ×2: bugünün giriş elması alındıysa ve ikiye katlanmadıysa üstte teklif (oyuncu basarsa reklam).
+func _login_plate() -> Control:
+	var gem_rewards: GemRewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
+	var gems: int = gem_rewards.login_double_amount() if gem_rewards else 0
+	var ads: AdService = get_tree().get_first_node_in_group("ads") as AdService
+	if gems <= 0 or ads == null or ads.block_reason(AdPolicy.DAILY_DOUBLE) != AdPolicy.OK:
+		return null
+	var plate: PlatePanel = PlatePanel.new()
+	plate.name = "LoginDouble"
+	plate.theme_type_variation = &"HudCarPlate"
+	plate.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override(&"separation", 10)
+	plate.add_child(row)
+	var texts: VBoxContainer = VBoxContainer.new()
+	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	texts.add_child(_label(&"HudPlateTitle", Loc.t("GÜNLÜK GİRİŞ  %d. GÜN") % gem_rewards.streak()))
+	var caption: Label = _label(&"HudInkCaption", Loc.t("Bugün +%d gem aldın. Reklam izle, bir o kadar daha.") % gems)
+	caption.add_theme_color_override(&"font_color", HudPalette.GEM_DARK)
+	texts.add_child(caption)
+	row.add_child(texts)
+	var offer: AdOfferButton = AdOfferButton.new(AdPolicy.DAILY_DOUBLE, Loc.t("+%d GEM") % gems)
+	offer.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	offer.custom_minimum_size = Vector2(130.0, 0.0)
+	offer.rewarded.connect(func() -> void:
+		var given: int = gem_rewards.double_login(false)
+		if given > 0:
+			_reward_popup.show_rewards({"gems": given, "title": Loc.t("GÜNLÜK GİRİŞ ×2")})
+		_refresh())
+	row.add_child(offer)
 	return plate
 
 

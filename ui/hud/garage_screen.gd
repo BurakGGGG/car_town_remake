@@ -7,8 +7,8 @@ extends Control
 ## tabelalar (TÜM ARAÇLAR, KOLEKSİYON), altta koyu raf (küçük resim şeridi + YARIŞ / DİĞER tabelaları + amber
 ## MODİFİYE), sol alt çıkış. Seyrek eylemler (TAŞI, SAT) DİĞER panosunda; panolar sağ ortada açılır.
 ## (B tasarımı, 2026-10-20: eskiden 16 eşit krem plakaydı; TAMİR işlevsizdi, DETAY statları artık hep görünür.)
-## Bu ekran ARAÇLAR sekmesidir: yalnızca araçlar. Garaj seviyesi / tamir hızı / düzenleme / detay /
-## ustalık ana görünümün alt panelindedir (GaragePanel).
+## Bu ekran bir deponun / otoparkın araçlarıdır (alt sıradaki DEPOLARIM panosundan depoya dokununca açılır): yalnızca
+## araçlar. Garaj seviyesi / tamir hızı / tamir alanı GARAJI DÜZENLE → YÜKSELTMELER'de, detay / ustalık PROFİL'dedir.
 ## Alt listede (CarGallery, OWNED kipi) YALNIZCA oyuncunun SAHİP OLDUĞU araçlar durur
 ## (VehicleOwnership); satın alınmamış araçlar burada da dünyada da görünmez. Gösterilecek araç
 ## artık dünyadaki park etmiş bir node değil, bir araç id'sidir: listeden gelen vehicle_selected
@@ -319,8 +319,8 @@ func _ready() -> void:
 	# (eski QA betikleri DETAY panosunu onlarla açıyor), görünmez.
 	detail_button.hide()
 	repair_button.hide()
-	# Bu ekran ARAÇLAR sekmesidir; garajın kendisi (seviye, düzenleme, detay) ana görünümün alt
-	# panelindedir (GaragePanel). Sahne dosyasındaki "GARAJ" yazıları burada değiştirilir.
+	# Bu ekran ARAÇLAR sekmesidir; garajın kendisi (seviye, düzenleme) GARAJI DÜZENLE'de, detay PROFİL'de.
+	# Sahne dosyasındaki "GARAJ" yazıları burada değiştirilir.
 	exit_button.text = Loc.t("GERİ")
 	var title: Label = find_child("TitleLabel", true, false) as Label
 	if title:
@@ -634,7 +634,7 @@ func _kill_tweens() -> void:
 
 # --- Araç bilgisi ------------------------------------------------------------
 
-## ARAÇLAR sekmesinden gelindi: alt listedeki araç plakaları kısa bir amber vuruşla öne çıkar
+## "Yer yok" bildiriminden gelindi (Hud._open_cars_on): alt listedeki araç plakaları kısa bir amber vuruşla öne çıkar
 ## (ayrı bir "araçlarım" ekranı açmıyoruz — araçlar zaten fiziksel olarak burada park ediyor).
 func focus_cars() -> void:
 	if car_list == null:
@@ -1747,17 +1747,6 @@ func _garage_cycle() -> Array[StringName]:
 	if not manager.waiting_ids().is_empty():
 		out.append(CarGarageManager.WAITING)
 	return out
-
-
-## Depolarda ya da otoparkta gösterilecek araç var mı (yoksa ARAÇLAR sekmesi DEPOLARIM'ı açar).
-func has_browsable_cars() -> bool:
-	var manager: CarGarageManager = _garages()
-	if manager == null:
-		return true   # ziyaret / yöneticisiz: eski tek garaj görünümü
-	for place: StringName in _garage_cycle():
-		if not manager.cars_in(place).is_empty():
-			return true
-	return false
 
 
 ## Bir sonraki açılış bu yerde (DEPOLARIM'dan dünyadayken GİT).

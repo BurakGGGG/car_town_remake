@@ -34,6 +34,10 @@ var _hud: Hud
 var _from_level: int = 0
 var _to_level: int = 0
 var _money: int = 0
+## Ekrandaki seviye ödülü (₺): ödüllü reklamla bir kez ×2 (AdPolicy.LEVELUP_DOUBLE).
+var _shown_money: int = 0
+var _doubled: bool = false
+var _double: AdOfferButton
 var _gems: int = 0
 var _calm: float = 0.0
 var _opened_at: int = 0
@@ -56,6 +60,8 @@ var _cards: HBoxContainer
 var _continue: PlateButton
 ## Dekor küçük resmi bekleyen TextureRect'ler: eşya id → Array[TextureRect].
 var _thumb_slots: Dictionary = {}
+## Kırpılmış dekor küçük resimleri (_fitted_thumb): eşya id → Texture2D.
+static var _fitted: Dictionary = {}
 
 
 func _init(hud: Hud) -> void:
@@ -90,6 +96,18 @@ func add_level(level: int, money: int, _text: String = "") -> void:
 ## Bekleyen seviye var mı (açılmayı bekliyor ya da ekranda)?
 func is_pending() -> bool:
 	return _to_level != 0 or visible
+
+
+## Reklam izlendi: seviye ödülünün ₺'si bir kez daha verilir.
+func _on_double() -> void:
+	if _doubled or _shown_money <= 0:
+		return
+	_doubled = true
+	var economy: EconomyManager = get_tree().get_first_node_in_group("economy") as EconomyManager
+	if economy:
+		economy.add_money(_shown_money)
+	_money_label.text = "+%s ₺  ×2" % Hud.format_thousands(_shown_money * 2)
+	_double.refresh()
 
 
 func close() -> void:
@@ -144,6 +162,10 @@ func _open() -> void:
 	_badge.set_level(to_level)
 	_money_label.text = "+%s ₺" % Hud.format_thousands(_money)
 	_money_chip.visible = _money > 0
+	_shown_money = _money
+	_doubled = false
+	_double.reward_text = "+%s ₺" % Hud.format_thousands(_shown_money)
+	_double.refresh()
 	_gem_label.text = Loc.t("+%d GEM") % _gems
 	_gem_chip.visible = _gems > 0
 	_from_level = 0
@@ -251,15 +273,25 @@ func _build() -> void:
 	_cards.add_theme_constant_override(&"separation", int(CARD_GAP))
 	_column.add_child(_cards)
 
+	var buttons: HBoxContainer = HBoxContainer.new()
+	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override(&"separation", 10)
+	_column.add_child(buttons)
 	_continue = PlateButton.new()
 	_continue.theme_type_variation = &"HudPlateSmall"
 	_continue.text = Loc.t("DEVAM ET")
 	_continue.highlight = true
 	_continue.focus_mode = Control.FOCUS_NONE
 	_continue.custom_minimum_size = Vector2(200.0, 0.0)
-	_continue.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_continue.pressed.connect(close)
-	_column.add_child(_continue)
+	buttons.add_child(_continue)
+	# Seviye ödülü ×2: oyuncu basarsa ödüllü reklam (kendiliğinden açılmaz)
+	_double = AdOfferButton.new(AdPolicy.LEVELUP_DOUBLE)
+	_double.custom_minimum_size = Vector2(200.0, 0.0)
+	_double.condition = func() -> bool: return visible and not _closing and not _doubled and _shown_money > 0
+	_double.rewarded.connect(_on_double)
+	buttons.add_child(_double)
 
 
 func _label(variation: StringName, text: String) -> Label:
@@ -465,42 +497,77 @@ func _photo(path: String) -> TextureRect:
 	return photo
 
 
-## İlk DECOR_THUMBS eşyanın küçük resmi (DecorThumbs tembel üretir) + kalanların sayısı.
+## İlk DECOR_THUMBS eşyanın küçük resmi (DecorThumbs tembel üretir) + kalanların sayısı köşede. Zemin karosu / duvar
+## kaplamasının 3B resmi yok: dokunun kendisinden kare önizleme (dekor paletindeki gibi; seviye 2'de yalnız karo açılır,
+## kart bomboş kalıyordu).
 func _decor_strip(items: Array[StringName]) -> Control:
+	var holder: MarginContainer = MarginContainer.new()
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side: StringName in [&"margin_top", &"margin_right"]:
+		holder.add_theme_constant_override(side, 4)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override(&"separation", 0)
+	holder.add_child(row)
 	for i: int in mini(items.size(), DECOR_THUMBS):
+		var id: StringName = items[i]
+		if GarageDecor.is_pattern(id) or GarageDecor.is_surface(id):
+			var swatch: _Swatch = _Swatch.new()
+			swatch.texture = DecorTextures.swatch(id)
+			swatch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			swatch.custom_minimum_size = Vector2(0.0, PIC_HEIGHT - 4.0)
+			swatch.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(swatch)
+			continue
 		var thumb: TextureRect = TextureRect.new()
 		thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		thumb.custom_minimum_size = Vector2(0.0, PIC_HEIGHT)   # genişlik kartın: dar ekranda kartı büyütmesin
+		thumb.custom_minimum_size = Vector2(0.0, PIC_HEIGHT - 4.0)   # genişlik kartın: dar ekranda kartı büyütmesin
 		thumb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		thumb.texture = DecorThumbs.cached(items[i])
+		thumb.texture = _fitted_thumb(id)
 		if thumb.texture == null:
-			if not _thumb_slots.has(items[i]):
-				_thumb_slots[items[i]] = []
-			(_thumb_slots[items[i]] as Array).append(thumb)
-			_thumbs.request(items[i])
+			if not _thumb_slots.has(id):
+				_thumb_slots[id] = []
+			(_thumb_slots[id] as Array).append(thumb)
+			_thumbs.request(id)
 		row.add_child(thumb)
 	if items.size() > DECOR_THUMBS:
 		var more: PanelContainer = PanelContainer.new()
 		more.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		more.size_flags_horizontal = Control.SIZE_SHRINK_END   # köşede, resimlerin üstünde: genişliklerinden yemesin
 		more.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		more.add_theme_stylebox_override(&"panel", _rounded(HudPalette.INK, 9, 6.0, 1.0))
 		var label: Label = _label(&"HudInkCaption", "+%d" % (items.size() - DECOR_THUMBS))
 		label.add_theme_color_override(&"font_color", HudPalette.TEXT_LIGHT)
 		more.add_child(label)
-		row.add_child(more)
-	return row
+		holder.add_child(more)
+	return holder
+
+
+## DecorThumbs resmi, eşyanın çevresindeki saydam boşluk kırpılmış (kartta üç resim yan yana: 160x110 karede eşya
+## alanın beşte biri kadardı, küçücük görünüyordu). Kırpılmış doku eşya başına bir kez üretilir.
+static func _fitted_thumb(id: StringName) -> Texture2D:
+	if _fitted.has(id):
+		return _fitted[id]
+	var source: Texture2D = DecorThumbs.cached(id)
+	if source == null:
+		return null
+	var texture: Texture2D = source
+	var image: Image = source.get_image()
+	var used: Rect2i = image.get_used_rect() if image else Rect2i()
+	if used.has_area():
+		used = used.grow(2).intersection(Rect2i(Vector2i.ZERO, image.get_size()))
+		texture = ImageTexture.create_from_image(image.get_region(used))
+	_fitted[id] = texture
+	return texture
 
 
 func _on_thumb_ready(id: StringName) -> void:
 	for thumb: Variant in _thumb_slots.get(id, []):
 		if is_instance_valid(thumb):
-			(thumb as TextureRect).texture = DecorThumbs.cached(id)
+			(thumb as TextureRect).texture = _fitted_thumb(id)
 	_thumb_slots.erase(id)
 
 
@@ -601,6 +668,22 @@ class _Badge extends Control:
 		draw_circle(center, radius, HudPalette.PLATE_SELECTED, true, -1.0, true)
 		draw_circle(center, radius - 3.0, HudPalette.INK, true, -1.0, true)
 		draw_circle(center, radius - 7.0, HudPalette.PLATE_SELECTED, true, -1.0, true)
+
+
+## Zemin karosu / duvar kaplaması önizlemesi: dokudan kare, ince gölge ve çerçeve (dekor paletindeki kartla aynı dil).
+class _Swatch extends Control:
+	var texture: Texture2D
+
+	func _draw() -> void:
+		if texture == null:
+			return
+		var side: float = minf(size.x - 8.0, size.y - 8.0)
+		if side <= 0.0:
+			return
+		var rect: Rect2 = Rect2(size * 0.5 - Vector2(side, side) * 0.5, Vector2(side, side))
+		draw_rect(Rect2(rect.position + Vector2(2.0, 3.0), rect.size), HudPalette.SHADOW, true)
+		draw_texture_rect(texture, rect, false)
+		draw_rect(rect, Color(HudPalette.INK, 0.55), false, 1.5, true)
 
 
 ## Beyaz daire + renkli halka + ortada HudIcon (müşteri balonu, modifiye dişlisi, görev onayı).

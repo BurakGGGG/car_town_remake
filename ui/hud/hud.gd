@@ -5,18 +5,19 @@ extends CanvasLayer
 ## Sağ üst: yuvarlak tabela butonları (kamera / ses / AYARLAR dişlisi). Kamera tabelası altında küçük KAMERA
 ## kutusunu açar (CameraMenu, yazısız yuvarlak tabelalar: fotoğraf · HUD'u gizle · sinema | uzaklaş · yakınlaş ·
 ## ortala); modlar PhotoMode'dadır.
-## Alt: dört plaka (GARAJ / ARAÇLAR / MAĞAZA / PROFİL) ve seçilince açılan araç plakası.
+## Alt: plakalar (GARAJI DÜZENLE / DEPOLARIM / SHOWROOM / GÖREVLER / ARKADAŞLAR, hikâyeyle HARİTA) ve seçilince açılan
+## araç plakası. PROFİL plakası gizli (2026-10-23: sol üstteki avatar profili açar); GÖREVLER ve ARKADAŞLAR sağ üstten
+## alt sıraya indi; ARAÇLAR plakası (cars_button) DEPOLARIM panosunu açar, depoya dokununca araçlar GarageScreen'de.
 ## Araç satın alma artık alt menüde DEĞİL: haritadaki "CAR PARTS & SHOWROOM" binasına tıklanınca
 ## açılan MAĞAZA ekranındadır (ShowroomScreen, HUD'un altına kodla eklenir ve "showroom" grubundan
-## bulunur). ARAÇLAR plakası bu yüzden pasiftir (sekme seçer, mağaza açmaz); garaj listesi
-## (CarGallery, OWNED kipi) GarageScreen'in içinde kalır. Showroom açıkken oyun HUD'u gizlenir,
+## bulunur). Garaj listesi (CarGallery, OWNED kipi) GarageScreen'in içinde kalır. Showroom açıkken oyun HUD'u gizlenir,
 ## kapanınca aynen geri gelir — GarageScreen ile aynı davranış.
 ## PROFİL plakası ve isim plakası PLAYER tabelasını (LoginScreen, kodla eklenir) açar: Google girişi,
 ## profil / çıkış ve bulut kayıt seçimi. Google hesabıyla girilince isim plakasında hesabın adı yazar
 ## (CloudSaveManager, "cloud_save" grubu); çıkışta player_name'e döner.
-## Sağ üstte tabelaların altında GÖREVLER plakası GÖREVLER tabelasını (MissionScreen: günlük / haftalık / başarım, kodla eklenir) açar;
-## alınabilir ödül varken plaka amber olur ve sayıyı gösterir. Görev tamamlanınca / ödül alınınca kısa
-## bildirim plakası çıkar (QuestManager, "quests" grubu).
+## Alt sıradaki GÖREVLER plakası GÖREVLER tabelasını (MissionScreen: günlük / haftalık / başarım, kodla eklenir) açar;
+## alınabilir ödül sayısı plakanın rozetindedir. Sağ üstte tabelaların altında MARKET (ve otoparkta araç varken OTOPARK)
+## kalır. Görev tamamlanınca / ödül alınınca kısa bildirim plakası çıkar (QuestManager, "quests" grubu).
 ## HUD BOYUTU (AYARLAR, GameSettings.hud_scale): sol üst / sağ üst / alt şerit kümeleri kendi sabit köşelerinden
 ## ölçeklenir (dünya plakaları alt şeritte olduğu için onlarla birlikte); panolar ve tam ekranlar değişmez.
 ## Sadece görsel katman: değerler setter'larla gelir, butonlar sinyal olarak dışarı verilir.
@@ -89,15 +90,15 @@ var settings_button: PlateButton
 ## Kamera tabelasının altında açılan menü ve onun açtığı FOTOĞRAF / HUD GİZLİ / SİNEMA katmanı.
 var camera_menu: CameraMenu
 var photo_mode: PhotoMode
-## Kodla kurulan GÖREVLER tabelası ve onu açan plaka.
+## Kodla kurulan GÖREVLER tabelası ve onu açan plaka (alt sırada).
 var quest_screen: MissionScreen
 ## ETKİNLİK PANOSU: canlı etkinlik tabelasına dokununca (modüller ve düğmeleri).
 var event_screen: EventScreen
 var quest_button: PlateButton
-## Kodla kurulan ARKADAŞLAR tabelası ve onu açan plaka (GÖREVLER'in altında).
+## Kodla kurulan ARKADAŞLAR tabelası ve onu açan plaka (alt sırada, GÖREVLER'in yanında).
 var friends_screen: FriendsScreen
 var friends_button: PlateButton
-## OTOPARK SAYACI: otoparkta araç varken sağ üst sütunda kırmızı plaka (docs/GARAJLAR_TASARIM.md §10, depo isteği).
+## OTOPARK SAYACI: otoparkta araç varken sağ üst sütunda P plakası (docs/GARAJLAR_TASARIM.md §10, depo isteği).
 var lot_button: ParkingBadge
 ## PROFİL (2026-10-16): sol üstte kendi avatarın; arkadaş kartı, profil düzenleme, fotoğraf kırpma, kamera alt panoları.
 var avatar_button: AvatarButton
@@ -174,10 +175,6 @@ var _race: RaceManager
 var mastery_screen: MasteryScreen
 ## Avlu dekorasyonu panosu (dünyada avluya dokununca açılır).
 var garage_edit_screen: GarageEditScreen
-## GARAJ panelindeki DÜZENLE düğmesi (GaragePanel.edit_button).
-var edit_button: PlateButton
-var garage_panel: GaragePanel
-var _garage_panel_open: bool = false
 var garage_value_screen: GarageValueScreen
 ## KOLEKSİYON tabelası (showroom ve garaj ekranından açılır).
 var collection_screen: CollectionScreen
@@ -230,11 +227,11 @@ func _ready() -> void:
 		shop_button: &"shop",
 		profile_button: &"profile",
 	}
-	# GARAJ sekmesi ekran AÇMAZ: ana görünüme (dünya garajı) döner ve alt paneli (GaragePanel:
-	# genişlet / tamir hızı / düzenle / detay / ustalık) gösterir. ARAÇLAR yalnızca araçları
-	# (GarageScreen), MAĞAZA showroom'u, PROFİL ilerleme panosunu açar.
+	# GARAJ plakası GARAJI DÜZENLE'yi açar (_on_nav_pressed; yükseltmeler oranın YÜKSELTMELER modunda). ARAÇLAR plakası
+	# DEPOLARIM'ı açar (2026-10-23; depoya dokununca o deponun araçları GarageScreen'de), SHOWROOM mağazayı, PROFİL (gizli
+	# plaka; sol üst avatar) ilerleme panosunu açar.
 	_nav_screens = {
-		cars_button: &"garage",
+		cars_button: &"car_garages",
 		shop_button: &"showroom",
 		profile_button: &"profile",
 	}
@@ -243,7 +240,10 @@ func _ready() -> void:
 		button.toggled.connect(_on_nav_toggled.bind(button))
 		button.pressed.connect(_on_nav_pressed.bind(button))
 	_sync_nav_tab.call_deferred(&"")   # açılışta hiçbir sekme sarı değil (GARAJ yalnızca paneli açıkken)
-	_build_garage_panel()
+	# GARAJ plakası artık GARAJI DÜZENLE'yi açar (2026-10-23; eski alt paneldeki GENİŞLET / TAMİR HIZI / TAMİR ALANI
+	# düzenleme ekranının YÜKSELTMELER modunda, DETAY / USTALIK PROFİL'de)
+	garage_button.text = Loc.t("GARAJI DÜZENLE")
+	cars_button.text = Loc.t("DEPOLARIM")   # 2026-10-23: ARAÇLAR plakası DEPOLARIM'ı açar
 	_build_router()
 	_build_showroom()
 	_build_login_screen()
@@ -559,6 +559,8 @@ var _notice_busy: bool = false
 var _garage_rank: int = 0
 ## Yarış sonucunda teklif edilen ödüllü reklam bonusu (₺). 0 = teklif yok / verildi.
 var _race_bonus_amount: int = 0
+## Günlük giriş ×2 reklamı giriş bildiriminden başlatıldı (ödül HUD'da verilir; GÖREVLER düğmesi kendisi verir).
+var _daily_double_pending: bool = false
 var _ads_bound: AdService = null
 ## Süre kısaltma reklamı izlenirken kısaltılacak araç.
 var _boost_car: Node3D = null
@@ -621,7 +623,8 @@ func _connect_gameplay() -> void:
 	_bays = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
 	if _bays:
 		_bays.no_room.connect(func(_i: int) -> void:
-			_show_notice(Loc.t("TAMİR ALANI İÇİN YER YOK\nBİR EŞYAYI TAŞI"), HudPalette.INK, 2.4))
+			if router.top() != &"garage_edit":   # düzenleme ekranı kendisi söyler
+				_show_notice(Loc.t("TAMİR ALANI İÇİN YER YOK\nBİR EŞYAYI TAŞI"), HudPalette.INK, 2.4))
 		_bays.bay_unlocked.connect(_on_bay_unlocked)
 		_bays.purchase_failed.connect(_on_bay_purchase_failed)
 	_sfx = HudSfx.new()
@@ -1023,14 +1026,16 @@ func _on_bay_buy_pressed() -> void:
 
 ## Garaj genişledi: plaka kapanır, kısa bildirim çıkar (yeni tamir alanı kilitli olarak belirir).
 func _on_upgrade_purchased(id: StringName, level: int) -> void:
-	if id != GarageUpgradeManager.GARAGE_ID:
-		return
+	if id != GarageUpgradeManager.GARAGE_ID or router.top() == &"garage_edit":
+		return   # düzenleme ekranındaki YÜKSELTMELER kendi bildirimini gösterir
 	hide_bay_plate()
 	_show_notice(Loc.t("GARAJ SEVİYE %d") % level, HudPalette.COIN_DARK)
 
 
 func _on_bay_unlocked(index: int) -> void:
 	hide_bay_plate()
+	if router.top() == &"garage_edit":
+		return   # YÜKSELTMELER'den alındı: bildirim düzenleme ekranında
 	_show_notice(Loc.t("TAMİR ALANI %d AÇILDI\nGARAJI DÜZENLE'DEN TAŞIYABİLİRSİN") % (index + 1), HudPalette.COIN_DARK, 2.4)
 
 
@@ -1244,6 +1249,22 @@ func _on_race_completed(won: bool, player_time: float, rival_time: float) -> voi
 	router.open(&"race_result")
 
 
+## Günlük giriş elması: bildirim; reklam hazırsa bildirime dokunmak ödüllü reklamı açar (×2). Kaçırılırsa teklif
+## GÖREVLER › GÜNLÜK'te gün boyu durur.
+func _on_login_granted(gems: int, streak: int) -> void:
+	var text: String = Loc.t("GÜNLÜK GİRİŞ  %d. GÜN\n+%d GEM") % [streak, gems]
+	var ads: AdService = _ads_service()
+	if ads and ads.can_offer(AdPolicy.DAILY_DOUBLE):
+		_show_notice(text + "\n" + Loc.t("DOKUN: REKLAM İZLE, ×2"), HudPalette.INK, 4.0, _start_daily_double)
+	else:
+		_show_notice(text, HudPalette.INK, 1.8)
+
+
+func _start_daily_double() -> void:
+	var ads: AdService = _ads_service()
+	_daily_double_pending = ads != null and ads.show_rewarded(AdPolicy.DAILY_DOUBLE)
+
+
 ## Reklam servisini bulur ve sinyallerini BİR kez bağlar. Servis sahneye HUD'dan sonra kurulabildiği için
 ## bağlantı kurulumda değil ilk kullanımda yapılır (ödül sinyalinin kaçırılması = reklam izlenip ödül verilmemesi olurdu).
 func _ads_service() -> AdService:
@@ -1270,6 +1291,12 @@ func _on_ad_reward_earned(kind: StringName) -> void:
 		_boost_car = null
 		_refresh_repair_panel(false)
 		return
+	if kind == AdPolicy.DAILY_DOUBLE and _daily_double_pending:   # giriş bildiriminden başlatıldı
+		_daily_double_pending = false
+		var gem_rewards: GemRewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
+		if gem_rewards:
+			gem_rewards.double_login()
+		return
 	if kind != AdPolicy.RACE_DOUBLE or _race_bonus_amount <= 0 or _economy == null:
 		return
 	var amount: int = _race_bonus_amount
@@ -1279,6 +1306,8 @@ func _on_ad_reward_earned(kind: StringName) -> void:
 
 
 func _on_ad_finished(kind: StringName, rewarded: bool) -> void:
+	if kind == AdPolicy.DAILY_DOUBLE:
+		_daily_double_pending = false
 	if kind == AdPolicy.REPAIR_BOOST:
 		_boost_car = null
 		_refresh_repair_panel(false)
@@ -1371,49 +1400,15 @@ func _on_nav_toggled(pressed: bool, button: PlateButton) -> void:
 ## Sekmeye basıldı: ilgili ekranı açar. Açık olan sekmeye tekrar basmak onu kapatır (geri döner).
 func _on_nav_pressed(button: PlateButton) -> void:
 	if button == garage_button:
-		# GARAJ: açık yer / pano kapanır ve GARAJ paneli açılır; panel açıkken tekrar basmak kapatır.
-		var in_world: bool = router.top() == &""
-		router.close_all()
-		_garage_panel_open = not (in_world and _garage_panel_open)
-		_sync_nav_tab(router.current_place())
+		router.open(&"garage_edit")   # GARAJI DÜZENLE (yükseltmeler de orada: YÜKSELTMELER modu)
 		return
-	_garage_panel_open = false   # başka sekme: panel kapanır
-	_sync_garage_panel()
 	var id: StringName = _nav_screens.get(button, &"")
 	if id == &"":
 		return
 	if router.is_open(id) and router.top() == id:
 		router.back()
 		return
-	if button == cars_button and id == &"garage" and not garage_screen.has_browsable_cars():
-		router.open(&"car_garages")   # araçların hepsi ana garajda: depo / otopark yok → DEPOLARIM (depo alma isteği)
-		return
 	router.open(id)
-	if button == cars_button and id == &"garage":
-		garage_screen.focus_cars()   # ARAÇLAR sekmesi: garajdaki araç listesini öne çıkarır
-
-
-## GARAJ sekmesinin alt paneli: sekme satırının (NavRow) hemen üstüne kodla eklenir (sahne düzenlenmez).
-func _build_garage_panel() -> void:
-	garage_panel = GaragePanel.new()
-	var nav_row: Node = garage_button.get_parent()
-	var column: Node = nav_row.get_parent()
-	column.add_child(garage_panel)
-	column.move_child(garage_panel, nav_row.get_index())
-	edit_button = garage_panel.edit_button
-	garage_panel.expand_requested.connect(show_expansion_plate)
-	garage_panel.bay_requested.connect(show_bay_plate)
-	garage_panel.edit_requested.connect(func() -> void: router.open(&"garage_edit"))
-	garage_panel.value_requested.connect(func() -> void: router.open(&"garage_value"))
-	garage_panel.mastery_requested.connect(func() -> void: router.open(&"mastery"))
-	_sync_garage_panel()
-
-
-## Panel varsayılan KAPALI: yalnızca GARAJ sekmesine basınca açılır; bir yer (araçlar, mağaza,
-## düzenleme) açılınca ya da başka sekmeye basınca kapanır.
-func _sync_garage_panel() -> void:
-	if garage_panel:
-		garage_panel.visible = _garage_panel_open and (router == null or not router.place_open())
 
 
 func _build_router() -> void:
@@ -1639,8 +1634,6 @@ func _on_ui_stack_changed(top: StringName, place_open: bool) -> void:
 	garage_screen.set_covered(router.current_place() == &"garage" and top != &"garage")
 	_sync_modal_hud()
 	_sync_world_rendering()
-	if place_open:
-		_garage_panel_open = false
 	if top != &"":
 		camera_button.button_pressed = false   # kamera menüsü bir ekranın altında açık kalmasın
 		hide_bay_plate()   # dünya plakası bir ekranın altında asılı kalmasın
@@ -1681,8 +1674,8 @@ func _sync_world_rendering() -> void:
 			get_viewport().disable_3d = true)
 
 
-## Alt sekme yalnızca AÇIK olanı sarı gösterir: ARAÇLAR / MAĞAZA ekranı, PROFİL panosu ya da GARAJ paneli.
-## Hiçbiri açık değilse hiçbir sekme sarı değildir (GARAJ eskiden hep sarı kalıyordu).
+## Alt sekme yalnızca AÇIK olanı sarı gösterir: DEPOLARIM panosu (ya da oradan açılan depo ekranı) / MAĞAZA ekranı ya
+## da PROFİL panosu (GARAJI DÜZENLE açılınca oyun HUD'u gizli). Hiçbiri açık değilse hiçbir sekme sarı değildir.
 func _sync_nav_tab(place: StringName) -> void:
 	var target: PlateButton = null
 	match place:
@@ -1691,14 +1684,13 @@ func _sync_nav_tab(place: StringName) -> void:
 		&"garage":
 			target = cars_button
 		&"":
-			if router and router.top() in [&"profile", &"account", &"profile_edit", &"avatar_crop", &"avatar_camera"]:
+			if router and router.top() == &"car_garages":
+				target = cars_button
+			elif router and router.top() in [&"profile", &"account", &"profile_edit", &"avatar_crop", &"avatar_camera"]:
 				target = profile_button
-			elif _garage_panel_open:
-				target = garage_button
 	# ButtonGroup set_pressed_no_signal ile diğerlerini bırakmıyor: iki sekme birden amber kalıyordu.
 	for button: PlateButton in _nav_ids:
 		button.set_pressed_no_signal(button == target)
-	_sync_garage_panel()
 
 
 # --- Eğitim -----------------------------------------------------------------------------
@@ -1798,6 +1790,7 @@ func _connect_crates() -> void:
 		gem_rewards.reward_granted.connect(func(_amount: int, text: String) -> void:
 			if text != "":
 				_show_notice(text, HudPalette.INK, 1.8))
+		gem_rewards.login_granted.connect(_on_login_granted)
 	_setup_gem_store()
 	_setup_login_prompt.call_deferred()   # CloudSaveManager kendi kaydını (cloud_sync.json) okusun
 
@@ -1814,10 +1807,13 @@ func _setup_gem_store() -> void:
 		var mb: InputEventMouseButton = event as InputEventMouseButton   # dokunuş fareye çevrilir
 		if mb and mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
 			router.open(&"gem_store"))
-	# GEM AL düğmesi: sayaç satırının (Currency) altına, aynı sütuna (Info) eklenir
+	# MARKET: sağ üstte tabelaların (ve açıksa kamera kutusunun) hemen altında (2026-10-23 alt bar; eskiden sol üstte)
 	var shop_button: GemShopButton = GemShopButton.new()
 	shop_button.name = "GemShopButton"
-	box.get_parent().get_parent().add_child(shop_button)
+	var column: Node = camera_menu.get_parent()
+	column.add_child(shop_button)
+	column.move_child(shop_button, camera_menu.get_index() + 1)
+	shop_button.size_flags_horizontal = Control.SIZE_SHRINK_END
 	shop_button.pressed.connect(func() -> void: router.open(&"gem_store"))
 	var refresh_badge: Callable = func() -> void:
 		shop_button.show_badge = purchases.is_available() and purchases.block_reason(GemProducts.STARTER) != "owned"
@@ -1986,8 +1982,8 @@ func fits_home(vehicle_id: StringName) -> bool:
 
 
 ## Yeni araç GARAJIM'a sığmadı (kullanıcı kararı 2026-10-20): YERLEŞTİR sorulmaz, araç varsayılan yerinde kalır (boş
-## yeri olan depo, yoksa otopark). DEPO DERSİ yapılmadıysa ders başlar (Rıza Usta → ARAÇLAR → depolar); yapıldıysa
-## kısa bildirim, dokununca ARAÇLAR o araçla açılır.
+## yeri olan depo, yoksa otopark). DEPO DERSİ yapılmadıysa ders başlar (Rıza Usta → DEPOLARIM); yapıldıysa kısa
+## bildirim, dokununca aracın deposu / otoparkı o araçla açılır.
 func _on_garage_full(vehicle_id: StringName) -> void:
 	var lessons: TutorialManager = get_tree().get_first_node_in_group("tutorial") as TutorialManager
 	if tutorial and lessons and not lessons.is_done(TutorialManager.GARAGES):
@@ -2001,7 +1997,7 @@ func _on_garage_full(vehicle_id: StringName) -> void:
 		HudPalette.DANGER if place == CarGarageManager.WAITING else HudPalette.INK, 4.0, _open_cars_on.bind(vehicle_id))
 
 
-## ARAÇLAR'ı bu araçla açar (aracın deposu / otoparkı, araç lifte).
+## Aracın deposunu / otoparkını açar (araç lifte).
 func _open_cars_on(vehicle_id: StringName) -> void:
 	if _ownership == null or not _ownership.is_owned(vehicle_id):
 		return
@@ -2239,35 +2235,35 @@ func _on_profile_button_pressed() -> void:
 	router.open(&"profile")
 
 
-## GÖREVLER plakası sağ üst tabela sırasının hemen altına (kamera kontrollerinin üstüne) eklenir.
+## GÖREVLER ve ARKADAŞLAR plakaları alt sıraya (NavRow) PROFİL'in yerine eklenir (2026-10-23, kullanıcı: "görevler ve
+## arkadaşlar alt bara insin, profil kalksın"); PROFİL plakası gizlenir — sol üstteki avatar profili açar. Düğme nesnesi
+## kalır (avatar dokusu, sekme eşlemesi). HARİTA plakası (hikâyeyle görünür) sonra eklenir, sıranın sonunda durur.
+func _nav_plate(plate_name: String, label: String, icon: HudIcon.Kind) -> PlateButton:
+	var plate: PlateButton = PlateButton.new()
+	plate.name = plate_name
+	plate.custom_minimum_size = garage_button.custom_minimum_size
+	plate.theme_type_variation = &"HudPlate"
+	plate.kind = icon
+	plate.text = label
+	plate.focus_mode = Control.FOCUS_NONE
+	var row: Node = garage_button.get_parent()
+	row.add_child(plate)
+	row.move_child(plate, profile_button.get_index())
+	return plate
+
+
 func _build_quests() -> void:
-	quest_button = PlateButton.new()
-	quest_button.name = "QuestButton"
-	quest_button.theme_type_variation = &"HudPlateSmall"
-	quest_button.text = Loc.t("GÖREVLER")
-	quest_button.focus_mode = Control.FOCUS_NONE
-	quest_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	profile_button.visible = false
+	quest_button = _nav_plate("QuestButton", Loc.t("GÖREVLER"), HudIcon.Kind.TASKS)
 	quest_button.pressed.connect(_on_quest_button_pressed)
-	var column: Node = camera_controls.get_parent()
-	column.add_child(quest_button)
-	column.move_child(quest_button, camera_controls.get_index())
 	quest_screen = MissionScreen.new()
 	garage_screen.get_parent().add_child(quest_screen)
 	quest_screen.attach_hud(self)
 
 
-## ARKADAŞLAR plakası GÖREVLER plakasının hemen altına eklenir; gelen istek varsa amber olur.
 func _build_friends() -> void:
-	friends_button = PlateButton.new()
-	friends_button.name = "FriendsButton"
-	friends_button.theme_type_variation = &"HudPlateSmall"
-	friends_button.text = Loc.t("ARKADAŞLAR")
-	friends_button.focus_mode = Control.FOCUS_NONE
-	friends_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	friends_button = _nav_plate("FriendsButton", Loc.t("ARKADAŞLAR"), HudIcon.Kind.FRIENDS)
 	friends_button.pressed.connect(func() -> void: router.open(&"friends"))
-	var column: Node = quest_button.get_parent()
-	column.add_child(friends_button)
-	column.move_child(friends_button, quest_button.get_index() + 1)
 	friends_screen = FriendsScreen.new()
 	garage_screen.get_parent().add_child(friends_screen)
 	friends_screen.screen_requested.connect(func(id: StringName) -> void: router.open(id))
@@ -2280,20 +2276,18 @@ func _build_friends() -> void:
 	friends_screen.revenge_requested.connect(_start_revenge)
 
 
-## OTOPARK SAYACI: ARKADAŞLAR'ın altında ParkingBadge (P tabelası, OTOPARK, günlük ücret, araç sayısı balonda); dokununca DEPOLARIM OTOPARK basamağıyla
-## açılır. Otopark boşken ve ziyarette görünmez.
+## OTOPARK SAYACI: sağ üst sütunun sonunda (MARKET'in altında) ParkingBadge (P tabelası, OTOPARK, günlük ücret, araç sayısı
+## balonda); dokununca DEPOLARIM OTOPARK basamağıyla açılır. Otopark boşken ve ziyarette görünmez.
 func _build_lot_counter() -> void:
 	var garages: CarGarageManager = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
-	if garages == null or friends_button == null:
+	if garages == null:
 		return
 	lot_button = ParkingBadge.new()   # mavi P tabelası + OTOPARK + günlük ücret, araç sayısı köşe balonunda
 	lot_button.name = "LotButton"
 	lot_button.pressed.connect(func() -> void:
 		router.open(&"car_garages")
 		car_garages_screen.select(CarGarageManager.WAITING))
-	var column: Node = friends_button.get_parent()
-	column.add_child(lot_button)
-	column.move_child(lot_button, friends_button.get_index() + 1)
+	camera_controls.get_parent().add_child(lot_button)
 	garages.layout_changed.connect(_refresh_lot_counter)
 	garages.garages_changed.connect(_refresh_lot_counter)
 	_refresh_lot_counter()
@@ -2425,12 +2419,13 @@ func _connect_social() -> void:
 	_refresh_friends_button()
 
 
+## Gelen istek + yarış haberi sayısı ARKADAŞLAR plakasının rozetinde (alt sırada sekme gibi durur: amber = seçili olurdu).
 func _refresh_friends_button() -> void:
 	if friends_button == null:
 		return
-	var count: int = (_social.incoming.size() + _social.race_events.size()) if _social else 0
-	friends_button.text = Loc.t("ARKADAŞLAR (%d)") % count if count > 0 else Loc.t("ARKADAŞLAR")
-	friends_button.highlight = count > 0
+	friends_button.text = Loc.t("ARKADAŞLAR")
+	friends_button.badge = (_social.incoming.size() + _social.race_events.size()) if _social else 0
+	friends_button.highlight = false
 
 
 func _on_quest_button_pressed() -> void:
@@ -2438,14 +2433,15 @@ func _on_quest_button_pressed() -> void:
 	_refresh_quest_button()
 
 
-## Alınabilir ödül (günlük + haftalık + başarım + rehber) varsa plaka amber olur ve sayıyı gösterir.
+## Alınabilir ödül (günlük + haftalık + başarım + rehber) sayısı GÖREVLER plakasının rozetinde.
 func _refresh_quest_button() -> void:
 	if quest_button == null:
 		return
 	quest_button.visible = true
 	var count: int = (_quests.claimable_count() if _quests else 0) + (_missions.claimable_count() if _missions else 0)
-	quest_button.text = Loc.t("GÖREVLER (%d)") % count if count > 0 else Loc.t("GÖREVLER")
-	quest_button.highlight = count > 0
+	quest_button.text = Loc.t("GÖREVLER")
+	quest_button.badge = count
+	quest_button.highlight = false
 
 
 func _on_quest_completed(quest_id: StringName) -> void:

@@ -110,7 +110,7 @@ func _build() -> void:
 	await frames(5)
 
 	print("== 2) GARAJI DÜZENLE plakası ==")
-	var edit_button: PlateButton = _hud.get("edit_button")
+	var edit_button: PlateButton = _hud.garage_button   # 2026-10-23: GARAJ plakası düzenleyiciyi açar
 	var cam_before: Vector3 = _camera.global_position
 	var min_zoom_before: float = (_camera as WorldCamera).min_zoom
 	await _tap(edit_button.get_global_rect().get_center())

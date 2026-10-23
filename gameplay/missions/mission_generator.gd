@@ -50,6 +50,44 @@ static func daily(profile: Dictionary, seed_value: int, yesterday: Array) -> Arr
 	return out
 
 
+## GÖREV DEĞİŞTİR (ödüllü reklam, AdPolicy.MISSION_REROLL): `tasks` listesinin `index`'teki görevinin yerine aynı
+## yuvanın kademesinde, listedeki ÖTEKİ görevlerin ve değiştirilen görevin metriği dışında yeni bir görev. Aday yoksa boş.
+## İlk yuvanın "konfor görevi" kuralı (yalnız tamir / kazanç) değiştirirken uygulanmaz: oyuncu tam da onu istemeyebilir.
+static func replacement(profile: Dictionary, seed_value: int, tasks: Array[Dictionary], index: int) -> Dictionary:
+	var pool: Array[Dictionary] = _replacement_pool(profile, tasks, index)
+	if pool.is_empty():
+		return {}
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var slot: int = int(tasks[index].get("slot", index))
+	var tier: int = MissionCatalog.DAILY_SLOTS[clampi(slot, 0, MissionCatalog.DAILY_SLOTS.size() - 1)]
+	return _make_daily(_pick(pool, profile, [], true, rng), slot, tier, profile)
+
+
+## Değiştirilebilir mi (aday var mı): teklif yalnızca o zaman gösterilir, reklam boşa izlenmez.
+static func has_replacement(profile: Dictionary, tasks: Array[Dictionary], index: int) -> bool:
+	return not _replacement_pool(profile, tasks, index).is_empty()
+
+
+static func _replacement_pool(profile: Dictionary, tasks: Array[Dictionary], index: int) -> Array[Dictionary]:
+	if index < 0 or index >= tasks.size():
+		return []
+	var slot: int = int(tasks[index].get("slot", index))
+	var tier: int = MissionCatalog.DAILY_SLOTS[clampi(slot, 0, MissionCatalog.DAILY_SLOTS.size() - 1)]
+	var used_metrics: Dictionary = {}
+	var cat_count: Dictionary = {}
+	for i: int in tasks.size():
+		used_metrics[tasks[i]["metric"]] = true   # değiştirilen dahil: aynı görev geri gelmesin
+		if i != index:
+			cat_count[int(tasks[i]["cat"])] = int(cat_count.get(int(tasks[i]["cat"]), 0)) + 1
+	var templates: Array[Dictionary] = _expand_daily(profile)
+	for relax: int in 4:
+		var pool: Array[Dictionary] = _eligible(templates, profile, tier, maxi(slot, 1), used_metrics, cat_count, relax)
+		if not pool.is_empty():
+			return pool
+	return []
+
+
 ## Haftalık 5 görev: hacim, kazanç, günlük bağı + 2 havuz görevi.
 static func weekly(profile: Dictionary, seed_value: int, last_week: Array) -> Array[Dictionary]:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()

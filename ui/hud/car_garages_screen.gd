@@ -75,6 +75,8 @@ var _status: Label
 var _stars: GridContainer
 var _star_labels: Dictionary = {}   # kalem → Label
 var _main: PlateButton
+## İnşaatı ödüllü reklamla kısalt (AdPolicy.TIME_SKIP; inşaat başına bir kez).
+var _ad_cut: AdOfferButton
 var _upgrades: PlateButton
 var _cards: Dictionary = {}         # garaj id → Texture2D (pano açıkken; kapanınca bırakılır)
 var _armed: Dictionary = {}         # garaj id → onay süresinin bittiği an (ms): ELMASLA BİTİR iki dokunuş
@@ -463,6 +465,16 @@ func _build_preview() -> Control:
 	_main.name = "Main"
 	_main.icon_size = 16.0
 	actions.add_child(_main)
+	_ad_cut = AdOfferButton.new(AdPolicy.TIME_SKIP)
+	_ad_cut.condition = func() -> bool:
+		return _manager != null and visible and _selected != CarGarageManager.WAITING and _manager.build_ad_cut(_selected) > 0.0
+	_ad_cut.reward_fn = func() -> String:
+		return AdOfferButton.cut_text(_manager.build_ad_cut(_selected)) if _manager else ""
+	_ad_cut.rewarded.connect(func() -> void:
+		if _manager:
+			_manager.apply_build_ad_cut(_selected)
+		_refresh_preview())
+	actions.add_child(_ad_cut)
 	_upgrades = _button(Loc.t("İÇ YÜKSELTMELER"), func() -> void: upgrades_requested.emit(_selected))
 	_upgrades.name = "Upgrades"
 	_upgrades.kind = HudIcon.Kind.WRENCH

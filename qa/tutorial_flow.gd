@@ -304,9 +304,9 @@ func _vehicles_chapter() -> void:
 
 
 ## DEPO DERSİ: öteki dersler bitmiş sayılır, otoparka iki araç düşene dek araç eklenir; ders gerçek dokunuşlarla oynanır
-## (ARAÇLAR → aracın yeri → OTOPARK → sıradaki depo → SATIN AL / GARAJIM / GARAJ DEĞERİ kartları → ödül).
-## `full`: garaj zemini araçlarla doldurulur, sonra gelen araç sığmaz → ders "GARAJIN DOLDU!" ile açılmalı ve ARAÇLAR o
-## araçla açılmalı (kullanıcı kararı 2026-10-20).
+## (DEPOLARIM → OTOPARK → sıradaki depo → SATIN AL / GARAJIM / GARAJ DEĞERİ kartları → ödül).
+## `full`: garaj zemini araçlarla doldurulur, sonra gelen araç sığmaz → ders "YENİ ARACIN NEREDE?" ile açılmalı
+## (kullanıcı kararı 2026-10-20; 2026-10-23'ten beri DEPOLARIM plakası panoyu doğrudan açar).
 func _garages_chapter(full: bool = false) -> void:
 	var manager: TutorialManager = root.get_tree().get_first_node_in_group("tutorial") as TutorialManager
 	for id: StringName in [TutorialManager.VEHICLES, TutorialManager.RACE, TutorialManager.DECOR, TutorialManager.JUNKYARD]:
@@ -342,12 +342,9 @@ func _garages_chapter(full: bool = false) -> void:
 	await _garages_rest(manager)
 
 
-## DEPO DERSİ'nin ARAÇLAR'dan sonrası (iki giriş de buraya bağlanır).
+## DEPO DERSİ'nin DEPOLARIM'dan sonrası (iki giriş de buraya bağlanır).
 func _garages_rest(manager: TutorialManager) -> void:
-	await _until(func() -> bool: return _step_title() == Loc.t("NEREDE DURUYOR?"), 6.0, "nerede duruyor")
-	await _wait(1.6)
-	_shot("garaj_adi")
-	await _tap_hole()
+	await _until(func() -> bool: return _hud.router.top() == &"car_garages", 5.0, "DEPOLARIM açıldı")
 	await _until(func() -> bool: return _step_title() == Loc.t("OTOPARK"), 6.0, "otopark")
 	await _wait(1.2)
 	_shot("garaj_otopark")
@@ -401,10 +398,7 @@ func _garage_full_start(manager: TutorialManager) -> void:
 	await _wait(1.0)
 	_shot("garajdolu_araclar")
 	await _tap_hole()
-	await _until(func() -> bool: return _hud.router.current_place() == &"garage", 5.0, "ARAÇLAR açıldı")
-	await _wait(1.2)
-	print("QA ARAÇLAR'da gösterilen: %s (sığmayan %s, yeri %s)" % [_hud.garage_screen.get("_shown_vehicle"), extra,
-		garages.garage_of(extra)])
+	print("QA sığmayan %s, yeri %s" % [extra, garages.garage_of(extra)])
 	await _garages_rest(manager)
 
 func _decor_chapter() -> void:

@@ -21,7 +21,7 @@ const PLATE_WIDTH: float = 470.0
 const CARD_WIDTH: float = 178.0
 const ART_SIZE: Vector2 = Vector2(166.0, 132.0)
 const CARD_GAP: float = 8.0
-const MAX_CARDS: int = 5
+const MAX_CARDS: int = 6   # GEM AL: ÜCRETSİZ ELMAS + 5 paket
 ## Panonun kaplayacağı ekran oranı (genişlik, yükseklik): hangisi önce dolarsa ölçek odur.
 const FILL: Vector2 = Vector2(0.86, 0.80)
 const TAB_GEMS: StringName = &"gems"
@@ -43,6 +43,7 @@ var _list: HBoxContainer
 ## KAP çocuğuna verilemez (Container her yerleştirmede çocuğun ölçeğini 1'e sıfırlar); açılış animasyonu da
 ## sütunun kendi ölçeğiyle oynar, ikisi çakışmaz.
 var _stage: Control
+var _center: CenterContainer
 var _column: VBoxContainer
 var _reward_popup: RewardPopup
 var _notice: PlatePanel
@@ -121,6 +122,7 @@ func _build() -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_stage.add_child(center)
+	_center = center
 
 	var column: VBoxContainer = VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -199,6 +201,13 @@ func _fit() -> void:
 	if content.x <= 0.0 or content.y <= 0.0:
 		return
 	var k: float = minf(size.x * FILL.x / content.x, size.y * FILL.y / content.y)
+	# İçerik ekrandan genişse (6 kart, dar tuval) ortalayıcı kap taşan kısmı yalnız sağa büyütüyordu: pano kayıyordu.
+	# Taşma iki yana eşit verilir, ölçek sahneyi ekranın ortasından küçültür.
+	var over: Vector2 = (content - size).max(Vector2.ZERO) * 0.5
+	_center.offset_left = -over.x
+	_center.offset_right = over.x
+	_center.offset_top = -over.y
+	_center.offset_bottom = over.y
 	_stage.pivot_offset = size * 0.5
 	_stage.scale = Vector2.ONE * k
 
@@ -229,6 +238,7 @@ func _refresh() -> void:
 		for i: int in GemExchange.OFFERS.size():
 			_list.add_child(_cash_card(i, player.level if player else 1))
 	else:
+		_list.add_child(_free_card())   # ödüllü reklamla elmas (mağazaya ulaşılamasa da çalışır)
 		for entry: Dictionary in GemProducts.PRODUCTS:
 			if bool(entry["once"]) and _purchases and _purchases.was_bought(entry["id"]):
 				continue   # tek seferlik paket alındı: listeden çıkar
@@ -381,6 +391,51 @@ func _card(entry: Dictionary) -> PlatePanel:
 	price.pressed.connect(func() -> void: _purchases.buy(id))
 	box.add_child(price)
 	return card
+
+
+## ÜCRETSİZ ELMAS (2026-10-23): reklam izle → +AdPolicy.free_gems() elmas; günde 5, iki izleme arası 3 dk (panelden
+## değişebilir). Düğme beklemede geri sayımı, hak bitince YARIN YENİLENİR yazar.
+func _free_card() -> PlatePanel:
+	var card: PlatePanel = PlatePanel.new()
+	card.name = "FreeGemsCard"
+	card.theme_type_variation = &"HudCarPlate"
+	card.custom_minimum_size = Vector2(CARD_WIDTH, 0.0)
+	var box: VBoxContainer = VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override(&"separation", 2)
+	card.add_child(box)
+	var art: GemPackArt = GemPackArt.new()
+	art.kind = GemPackArt.Kind.FREE
+	art.custom_minimum_size = ART_SIZE
+	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	box.add_child(art)
+	var amount: Label = _label(&"HudInkValue", Loc.t("+%d GEM") % AdPolicy.free_gems())
+	amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	amount.add_theme_font_size_override(&"font_size", 24)
+	amount.add_theme_color_override(&"font_color", HudPalette.GEM_DARK)
+	box.add_child(amount)
+	var ads: AdService = get_tree().get_first_node_in_group("ads") as AdService if is_inside_tree() else null
+	var left: int = ads.remaining_today(AdPolicy.FREE_GEMS) if ads else 0
+	var caption: Label = _label(&"HudInkCaption", Loc.t("ÜCRETSİZ · BUGÜN %d / %d") % [left, AdPolicy.daily_cap(AdPolicy.FREE_GEMS)])
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(caption)
+	var button: AdOfferButton = AdOfferButton.new(AdPolicy.FREE_GEMS, "", true)
+	button.clip_text = true   # "REKLAM HAZIRLANIYOR" gibi uzun durum yazısı kartı (ve panoyu) genişletmesin
+	button.rewarded.connect(_on_free_gems)
+	button.finished.connect(func(_ok: bool) -> void:
+		if visible and _tab == TAB_GEMS:
+			_refresh())
+	box.add_child(button)
+	return card
+
+
+func _on_free_gems() -> void:
+	var player: PlayerProgress = _player()
+	var gems: int = AdPolicy.free_gems()
+	if player == null:
+		return
+	player.add_gems(gems)
+	_reward_popup.show_rewards({"gems": gems, "title": Loc.t("ÜCRETSİZ ELMAS")})
 
 
 # --- PARAYA ÇEVİR ------------------------------------------------------------------------------

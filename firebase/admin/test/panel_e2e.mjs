@@ -184,6 +184,13 @@ try {
   check(keep.status === 200 && (await db.doc("config/app").get()).data().event?.id === "hs1", "sürüm / bakım kaydı etkinliği korur");
   check((await call("POST", "/api/event", { event: { id: "x", start: 1, end: 2, pack: "yok" }, packs: [] })).status === 400,
     "listede olmayan paket: 400");
+  const ads = await call("POST", "/api/ads", { total_cap: 25, free_gems: 6, free_gems_cooldown: 120, caps: { free_gems: 6 } });
+  const adsDoc = (await db.doc("config/app").get()).data();
+  check(ads.status === 200 && adsDoc.ads?.free_gems === 6 && adsDoc.ads.caps.free_gems === 6 && adsDoc.event?.id === "hs1",
+    "reklam ayarı yazıldı, etkinlik korundu");
+  await call("POST", "/api/config", { min_code: 0, latest_code: 0, maintenance: false });
+  check((await db.doc("config/app").get()).data().ads?.total_cap === 25, "sürüm / bakım kaydı reklam ayarını korur");
+  check((await call("POST", "/api/ads", { caps: { uydurma: 1 } })).status === 400, "bilinmeyen reklam türü: 400");
   const local = await call("GET", "/api/packs/local");
   check(local.status === 200 && Array.isArray(local.data.packs), "bilgisayardaki paketler listelenir");
 

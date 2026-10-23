@@ -4,10 +4,10 @@ extends Control
 ## koddan çizilir (doku yok): yüzeyli gemler, ışık hüzmesi, parıltı, gölge. Paket büyüdükçe sahne
 ## zenginleşir: avuç → kese → sandık → kasa dairesi; başlangıç paketi hediye kutusudur.
 ## PARAYA ÇEVİR kartları (CASH_1..4, GemExchange): gemden altın sikkeye — tek deste → iki → üç deste ve
-## saçılmış sikkeler → ₺ amblemli para kesesi.
+## saçılmış sikkeler → ₺ amblemli para kesesi. ÜCRETSİZ ELMAS (FREE, ödüllü reklam): tek gem + oynat rozeti.
 ## Ölçü kutunun kısa kenarına (s) göre: her boyutta aynı oranla çizilir.
 
-enum Kind { STARTER, HANDFUL, POUCH, CHEST, VAULT, BUTTON, CASH_1, CASH_2, CASH_3, CASH_4 }
+enum Kind { STARTER, HANDFUL, POUCH, CHEST, VAULT, BUTTON, CASH_1, CASH_2, CASH_3, CASH_4, FREE }
 
 const GEM_BLUE: Color = Color("6CCBF2")
 const GEM_CYAN: Color = Color("8FE3F5")
@@ -36,6 +36,7 @@ const BACKDROP: Dictionary = {
 	Kind.CASH_2: Color("21634A"),
 	Kind.CASH_3: Color("2A5A2A"),
 	Kind.CASH_4: Color("173A28"),
+	Kind.FREE: Color("4A2A6E"),
 }
 ## Mağaza kartları saniyede en çok bu kadar yeniden çizilir: hareketler yavaş (1,8–3 rad/sn), 30 Hz akıcı; kart
 ## çizimi ağır (yığın, ışın, gem) ve mağaza açıkken beş kart her karede baştan çiziliyordu (masaüstü ~3,8 ms/kare).
@@ -105,11 +106,27 @@ func _draw() -> void:
 			_draw_cash(c, s)
 		Kind.CASH_4:
 			_draw_cash_bag(c, s)
+		Kind.FREE:
+			_draw_free(c, s)
 	if not badge_text.is_empty():
 		_draw_badge(Vector2(size.x - s * 0.2, s * 0.19), s * 0.17)
 
 
 # --- Sahneler -------------------------------------------------------------------------------
+
+## ÜCRETSİZ ELMAS: tek büyük gem, altında oynat rozeti (reklam izleyerek kazanılır).
+func _draw_free(c: Vector2, s: float) -> void:
+	_glow(c, s * 0.4, GEM_VIOLET, 0.35)
+	_shadow(c + Vector2(0.0, s * 0.3), s * 0.3)
+	var bob: float = sin(_t * 2.0) * s * 0.02
+	_gem(c + Vector2(0.0, -s * 0.06 + bob), s * 0.5, GEM_CYAN, 0.0)
+	var badge: Vector2 = c + Vector2(s * 0.27, s * 0.22)
+	draw_circle(badge, s * 0.14, Color.WHITE, true, -1.0, true)
+	draw_circle(badge, s * 0.115, GIFT, true, -1.0, true)
+	var r: float = s * 0.055
+	draw_colored_polygon(PackedVector2Array([badge + Vector2(-r * 0.7, -r), badge + Vector2(r * 1.1, 0.0),
+		badge + Vector2(-r * 0.7, r)]), Color.WHITE)
+	_twinkles(c, s, [Vector2(-0.3, -0.24), Vector2(0.3, -0.22), Vector2(-0.22, 0.24)])
 
 func _draw_handful(c: Vector2, s: float) -> void:
 	_glow(c + Vector2(0.0, 0.0), s * 0.42, GEM_CYAN, 0.35)

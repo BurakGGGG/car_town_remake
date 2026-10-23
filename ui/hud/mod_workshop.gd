@@ -87,6 +87,8 @@ var _lines: Label
 var _time: Label
 var _price: Label
 var _buy: PlateButton
+## Süren takmayı ödüllü reklamla kısalt (AdPolicy.TIME_SKIP; takma başına bir kez).
+var _ad_cut: AdOfferButton
 var _dyno: ModDyno
 var _dyno_title: Label
 var _tech: Label
@@ -469,7 +471,21 @@ func _build_detail() -> PlatePanel:
 	_buy.highlight = true
 	_buy.focus_mode = Control.FOCUS_NONE
 	_buy.pressed.connect(_on_buy_pressed)
-	for node: Control in [_category_label, _tier, _part, _icon, _lines, _time, _price, _buy]:
+	_ad_cut = AdOfferButton.new(AdPolicy.TIME_SKIP)
+	_ad_cut.condition = func() -> bool:
+		var mods: PerformanceModManager = _mods()
+		var job: Dictionary = mods.job_of(vehicle_id) if mods else {}
+		return _active and view == View.CATEGORY and not job.is_empty() and job["category"] == category \
+			and int(job["stage"]) == selected_stage and mods.ad_cut(vehicle_id) > 0.0
+	_ad_cut.reward_fn = func() -> String:
+		var mods: PerformanceModManager = _mods()
+		return AdOfferButton.cut_text(mods.ad_cut(vehicle_id)) if mods else ""
+	_ad_cut.rewarded.connect(func() -> void:
+		var mods: PerformanceModManager = _mods()
+		if mods:
+			mods.apply_ad_cut(vehicle_id)
+		refresh())
+	for node: Control in [_category_label, _tier, _part, _icon, _lines, _time, _price, _buy, _ad_cut]:
 		box.add_child(node)
 	return panel
 
@@ -567,6 +583,8 @@ func _refresh_category() -> void:
 		PerformanceMods.stage_of(vehicle_id, category), PerformanceMods.STAGES]
 	_refresh_dyno()
 	_refresh_detail()
+	if _ad_cut:
+		_ad_cut.refresh()
 
 
 ## Seçilen kademenin dinamometresi: şu an → o kademeye kadar takılınca (takılı bir kademe seçildiyse onun katkısı).

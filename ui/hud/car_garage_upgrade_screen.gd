@@ -117,10 +117,24 @@ func _build() -> void:
 	scroll.add_child(_rows_box)
 	_column.add_child(_body)
 
+	# Süren işi ödüllü reklamla kısalt (AdPolicy.TIME_SKIP; iş başına bir kez): GERİ'nin yanında, iş yokken gizli
+	var bottom: HBoxContainer = HBoxContainer.new()
+	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
+	bottom.add_theme_constant_override(&"separation", 8)
+	_column.add_child(bottom)
 	var back: PlateButton = _button(Loc.t("GERİ"), close)
-	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	back.custom_minimum_size = Vector2(220.0, 0.0)
-	_column.add_child(back)
+	bottom.add_child(back)
+	var cut: AdOfferButton = AdOfferButton.new(AdPolicy.TIME_SKIP)
+	cut.custom_minimum_size = Vector2(220.0, 0.0)
+	cut.condition = func() -> bool: return _manager != null and visible and _manager.job_ad_cut(garage) > 0.0
+	cut.reward_fn = func() -> String: return AdOfferButton.cut_text(_manager.job_ad_cut(garage)) if _manager else ""
+	cut.rewarded.connect(func() -> void:
+		if _manager:
+			_manager.apply_job_ad_cut(garage)
+		_refresh_rows())
+	bottom.add_child(cut)
 
 
 func _connect_manager() -> void:

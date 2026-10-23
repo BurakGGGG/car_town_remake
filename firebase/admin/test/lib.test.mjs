@@ -6,6 +6,7 @@ import {
   PanelError, loadCatalog, buildInfo, buildMail, mailId, buildConfig, buildNews, classifyQuery, unpackSave, texts, MAX_GEMS,
   statsFromSave, buildBan, banActive, moderatedName, groupReports, buildAdjust, buildRestore,
   buildPromo, buildEvent, buildSegment, matchSegment, buildLearning, buildPacks, buildEventDoc, SALE_MAX, MISSION_METRICS,
+  buildAds, AD_KINDS,
 } from "../lib.mjs";
 
 const catalog = loadCatalog(new URL("../../../", import.meta.url));
@@ -198,6 +199,19 @@ test("etkinlik modülleri: indirim, kasa, görev, rakip, paket", () => {
   assert.throws(() => buildEvent({ id: "k", start: 1, end: 2, pack: "yok" }, catalog, packs), /paket listesinde yok/);
   assert.equal(buildEvent({ id: "k", start: 1, end: 2, sale: {}, missions: [] }, catalog), null, "modülsüz = etkinlik yok");
   assert.ok(Object.keys(MISSION_METRICS).length >= 15);
+});
+
+test("ödüllü reklam ayarı: varsayılanlar, sınırlar, bilinmeyen tür", () => {
+  const d = buildAds({});
+  assert.deepEqual(d, { total_cap: 20, free_gems: 5, free_gems_cooldown: 180, caps: {} }, "boş form = oyunun varsayılanı");
+  const a = buildAds({ total_cap: 30, free_gems: 10, free_gems_cooldown: 60, caps: { free_gems: 8, junk_refill: 0 } });
+  assert.equal(a.caps.free_gems, 8);
+  assert.equal(a.caps.junk_refill, 0, "0 = teklif kapalı");
+  assert.throws(() => buildAds({ free_gems: 0 }), /1 ile 50/);
+  assert.throws(() => buildAds({ free_gems_cooldown: 4000 }), /0 ile 3600/);
+  assert.throws(() => buildAds({ caps: { uydurma: 3 } }), /Bilinmeyen/);
+  assert.equal(AD_KINDS.free_gems.cap, 5);
+  assert.equal(Object.keys(AD_KINDS).length, 9, "oyundaki 9 teklif türü");
 });
 
 test("paket listesi ve etkinlik belgesi (öbür alanlar korunur)", () => {

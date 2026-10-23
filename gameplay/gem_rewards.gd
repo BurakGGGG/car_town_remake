@@ -24,6 +24,8 @@ signal reward_granted(amount: int, text: String)
 signal daily_changed
 ## Yeni güne geçildi (yalnızca ileri; MissionManager yeni görevleri kurar).
 signal day_changed(day: int)
+## Günlük giriş elması verildi (HUD bildirimi; ödüllü reklamla ×2 teklifi: AdPolicy.DAILY_DOUBLE).
+signal login_granted(gems: int, streak: int)
 
 const LOGIN_CYCLE: Array[int] = [10, 10, 15, 10, 15, 10, 40]
 const TIP_EVERY: int = 50
@@ -36,6 +38,8 @@ const ROLLBACK_TOLERANCE: int = 600
 var test_now: int = -1
 
 var _login_day: int = -1
+## Bugünün giriş ödülünün reklamla ikiye katlandığı gün (-1 = hiç).
+var _login_doubled_day: int = -1
 var _streak: int = 0
 var _max_seen: int = 0
 var _day: int = -1
@@ -103,7 +107,8 @@ func check_day() -> void:
 		_streak = _streak + 1 if today == _login_day + 1 else 1
 		_login_day = today
 		var gems: int = login_gems(_streak)
-		_grant(gems, Loc.t("GÜNLÜK GİRİŞ  %d. GÜN\n+%d GEM") % [_streak, gems])
+		_grant(gems, "")   # bildirimi HUD login_granted'den gösterir (×2 teklifiyle)
+		login_granted.emit(gems, _streak)
 		daily_changed.emit()
 	_request_save()
 
@@ -115,6 +120,27 @@ static func login_gems(streak: int) -> int:
 
 func streak() -> int:
 	return _streak
+
+
+## GÜNLÜK GİRİŞ ×2 (ödüllü reklam): bugünün giriş elması kadar ek elmas; bugün giriş alınmadıysa / zaten ikiye
+## katlandıysa 0.
+func login_double_amount() -> int:
+	if _login_day != day_key(now_unix()) or _login_doubled_day == _login_day:
+		return 0
+	return login_gems(_streak)
+
+
+## Reklam ödülü: bugünün giriş elması bir kez daha verilir. Dönen: verilen elmas. announce false: bildirim yok (ödül
+## penceresi gösteren GÖREVLER).
+func double_login(announce: bool = true) -> int:
+	var gems: int = login_double_amount()
+	if gems <= 0:
+		return 0
+	_login_doubled_day = _login_day
+	_grant(gems, Loc.t("GÜNLÜK GİRİŞ ×2\n+%d GEM") % gems if announce else "")
+	daily_changed.emit()
+	_request_save()
+	return gems
 
 
 # --- Tamir: bahşiş ------------------------------------------------------
@@ -141,7 +167,7 @@ func legacy_repair_step() -> int:
 
 func state() -> Dictionary:
 	return {
-		"login": {"day": _login_day, "streak": _streak},
+		"login": {"day": _login_day, "streak": _streak, "doubled": _login_doubled_day},
 		"max_seen": _max_seen,
 		"day": _day,
 		"tips": {"day": _tip_day, "count": _tip_count, "carry": _tip_carry},
@@ -153,6 +179,7 @@ func load_state(data: Dictionary) -> void:
 	var login: Dictionary = data.get("login", {}) if data.get("login") is Dictionary else {}
 	_login_day = SaveSafe.i(login.get("day", -1))
 	_streak = maxi(SaveSafe.i(login.get("streak", 0)), 0)
+	_login_doubled_day = SaveSafe.i(login.get("doubled", -1))
 	_max_seen = maxi(SaveSafe.i(data.get("max_seen", 0)), 0)
 	# Eski kayıt: günlük görev bölümündeki gün (geriye dönük uyum); yeni kayıt "day" yazar
 	var legacy: Dictionary = data.get("daily", {}) if data.get("daily") is Dictionary else {}

@@ -629,6 +629,11 @@ func _road_point(camera: Camera3D, distance: float) -> Vector3:
 # --- Sentez (arka plan) ------------------------------------------------------------------------
 
 static func _synthesize() -> void:
+	_bank = AudioCache.fetch("city_ambience", _build_bank)   # tek atama: ana iş parçacığı yalnızca görev bitince okur
+
+
+## Bankanın sentezi (sabit tohum: her seferinde aynı ses; AudioCache sürüm başına bir kez çağırır).
+static func _build_bank() -> Dictionary:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = 20261017
 	var birds: Array = []
@@ -660,7 +665,7 @@ static func _synthesize() -> void:
 		(bank["traffic_engines"] as Dictionary)[kind] = TrafficEngine.make_stream(kind as TrafficEngine.Kind)
 	for horn: int in TrafficEngine.Horn.values():
 		(bank["car_horns"] as Dictionary)[horn] = TrafficEngine.horn_streams(horn as TrafficEngine.Horn)
-	_bank = bank   # tek atama: ana iş parçacığı yalnızca görev bitince okur
+	return bank
 
 
 ## UZAK ŞEHİR UĞULTUSU: kalın gürültü (alçak geçiren ×2) + uzaktan geçen araçlar gibi kabarıp sönen orta bant + çok

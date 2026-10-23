@@ -28,7 +28,7 @@ import { getStorage } from "firebase-admin/storage";
 import {
   PanelError, loadCatalog, buildInfo, buildMail, mailId, buildConfig, buildNews, classifyQuery, unpackSave, hasReward,
   statsFromSave, buildBan, banActive, moderatedName, groupReports, UID_PATTERN, BAN_REASONS, buildAdjust, buildRestore,
-  buildPromo, PROMO_RE, buildSegment, matchSegment, buildLearning, buildEventDoc,
+  buildPromo, PROMO_RE, buildSegment, matchSegment, buildLearning, buildEventDoc, buildAds,
 } from "./lib.mjs";
 
 // Gecelik istatistiğin aynısı (functions/stats.js, saf mantık): panel anlık sayıları da onunla hesaplar
@@ -208,6 +208,7 @@ const routes = {
     const old = current.exists ? current.data() : {};
     if (old.event) doc.event = old.event;
     if (old.packs) doc.packs = old.packs;
+    if (old.ads) doc.ads = old.ads;
     await db.doc("config/app").set(doc);
     await log({ kind: "config", min_code: doc.min_code, latest_code: doc.latest_code, maintenance: doc.maintenance,
       notice: doc.notice ? doc.notice.id : "" });
@@ -234,6 +235,27 @@ const routes = {
       ["sale", "crate_boost", "missions", "rival", "pack"].includes(k) || (k.endsWith("_mult") && e[k] > 1)).join(",") : "",
       packs: (doc.packs || []).map((p) => p.id).join(",") });
     return { event: doc.event || null, packs: doc.packs || [] };
+  },
+
+  // --- Ödüllü reklam ayarları (config/app.ads; öbür alanlara dokunulmaz) ---
+  "GET /api/ads": async () => {
+    const snap = await db.doc("config/app").get();
+    return { ads: snap.exists ? snap.data().ads || null : null };
+  },
+
+  "POST /api/ads": async (body) => {
+    const ref = db.doc("config/app");
+    const ads = body.reset ? null : buildAds(body);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const doc = { ...(snap.exists ? snap.data() : {}) };
+      delete doc.ads;
+      if (ads) doc.ads = ads;
+      doc.updated_at = Math.floor(Date.now() / 1000);
+      tx.set(ref, doc);
+    });
+    await log({ kind: "ads", reset: !ads, total_cap: ads ? ads.total_cap : 0, free_gems: ads ? ads.free_gems : 0 });
+    return { ads };
   },
 
   // Bilgisayardaki kurulmuş paketler (build_pack.sh çıktısı): özet dosyası + .pck birlikte olmalı

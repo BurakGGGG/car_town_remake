@@ -243,6 +243,29 @@ func finish_with_gems(vehicle_id: StringName) -> bool:
 	return collect(vehicle_id)
 
 
+## REKLAMLA KISALT (ödüllü reklam, AdPolicy.TIME_SKIP): bu takmadan düşecek süre (sn; takma başına bir kez, kısa
+## kalan sürede teklif yok → 0).
+func ad_cut(vehicle_id: StringName) -> float:
+	var i: int = _job_index(vehicle_id)
+	if i < 0 or bool(_jobs[i].get("ad_cut", false)):
+		return 0.0
+	return AdPolicy.time_cut(remaining(vehicle_id))
+
+
+## Reklam ödülü: kalan süre ad_cut kadar kısalır, takma işaretlenir (ikinci kez kısaltılmaz).
+func apply_ad_cut(vehicle_id: StringName) -> bool:
+	var cut: float = ad_cut(vehicle_id)
+	if cut <= 0.0:
+		return false
+	var i: int = _job_index(vehicle_id)
+	_jobs[i]["end"] = float(_jobs[i]["end"]) - cut
+	_jobs[i]["ad_cut"] = true
+	_check_ready()
+	jobs_changed.emit()
+	_request_save()
+	return true
+
+
 ## Kalan süreyi bitirir (test / hata ayıklama; elmasla bitirme de buradan geçer).
 func finish_now(vehicle_id: StringName) -> void:
 	var i: int = _job_index(vehicle_id)
@@ -302,7 +325,8 @@ func state() -> Dictionary:
 	var jobs_out: Array = []
 	for job: Dictionary in _jobs:
 		jobs_out.append({"car": String(job["car"]), "category": String(job["category"]), "stage": int(job["stage"]),
-			"bay": int(job["bay"]), "start": float(job["start"]), "end": float(job["end"])})
+			"bay": int(job["bay"]), "start": float(job["start"]), "end": float(job["end"]),
+			"ad_cut": bool(job.get("ad_cut", false))})
 	return {"builds": builds, "floors": floors, "jobs": jobs_out}
 
 
@@ -348,7 +372,8 @@ func load_state(data: Dictionary) -> void:
 			var end: float = SaveSafe.f(d.get("end", start))
 			# Saat geri alınmışsa süre kısalmaz ama sonsuza da uzamaz: en fazla kademenin süresi kalır
 			end = minf(end, now() + PerformanceMods.install_time(stage))
-			_jobs.append({"car": id, "category": category, "stage": stage, "bay": bay, "start": start, "end": end})
+			_jobs.append({"car": id, "category": category, "stage": stage, "bay": bay, "start": start, "end": end,
+				"ad_cut": SaveSafe.b(d.get("ad_cut", false))})
 	_publish_all()
 	for id: StringName in _builds:
 		mods_changed.emit(id)

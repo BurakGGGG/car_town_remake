@@ -330,6 +330,17 @@ func _run() -> void:
 		var car: Node3D = map.get("_traveller_car") as Node3D
 		check(is_instance_valid(car) and car.global_basis.z.x < -0.7,
 			"yolculuk aracı 3B olarak gidiş yönüne dönüyor (ön: %s)" % (car.global_basis.z if is_instance_valid(car) else Vector3.ZERO))
+		# YAKINDA mekânları (OTO ŞOV, LİMAN): simgesi var, altında YAKINDA, dokununca yolculuk başlamaz
+		var pins: Dictionary = map.get("_pins")
+		var hints: Dictionary = map.get("_hints")
+		var soon_ok: bool = true
+		for place: StringName in MapScreen.SOON:
+			soon_ok = soon_ok and pins.has(place) and (hints[place] as Label).text == Loc.t("YAKINDA")
+		check(soon_ok, "haritada YAKINDA mekânları: OTO ŞOV + LİMAN")
+		(pins[&"port"] as PlateButton).pressed.emit()
+		await frames(1)
+		check(not map.get("_travelling") and (map.get("_card_label") as Label).text.contains(Loc.t("LİMAN")),
+			"YAKINDA mekânına dokunmak yolculuk başlatmaz, kart yazar")
 		map.close()
 	else:
 		check(false, "harita ekranı HUD'a bağlandı")

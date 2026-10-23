@@ -31,7 +31,7 @@ var _last_ad_end_ms: int = -1
 ## Yuva başına: {"loading": bool, "loaded_at": int(ms, -1=yok), "retry": int}
 var _slots: Dictionary = {}
 var _pending_slot: StringName = &""
-var _state: Dictionary = {"day": -1, "counts": {}}
+var _state: Dictionary = {"day": -1, "counts": {}, "last": {}}
 var _pending_kind: StringName = &""
 var _earned_this_show: bool = false
 var _clock_unix: float = -1.0       # testler için: ≥0 ise sistem saati yerine bu unix zamanı
@@ -45,7 +45,18 @@ func _ready() -> void:
 	if _provider == null:
 		_provider = _pick_provider()
 	_roll_day()
+	_apply_remote()
+	var config: AppConfig = AppConfig.current()
+	if config:
+		config.changed.connect(_apply_remote)   # panelden reklam sınırları (config/app.ads)
 	_provider.start(_on_provider_started)
+
+
+## Yönetim panelinin reklam ayarı (sınırlar, ücretsiz elmas miktarı / beklemesi) kurallara yazılır.
+func _apply_remote() -> void:
+	var config: AppConfig = AppConfig.current()
+	AdPolicy.remote = AdPolicy.normalize_remote(config.config().get("ads") if config else null)
+	readiness_changed.emit()
 
 
 ## Test / geliştirme: sağlayıcıyı elle ver (_ready'den ÖNCE çağrılmalı).
@@ -133,7 +144,12 @@ func is_busy() -> bool:
 ## (Yüklü reklam olup olmadığı AYRI: is_ready().)
 func block_reason(kind: StringName) -> StringName:
 	_roll_day()
-	return AdPolicy.block_reason(kind, _state, _level(), Time.get_ticks_msec(), _last_ad_end_ms)
+	return AdPolicy.block_reason(kind, _state, _level(), Time.get_ticks_msec(), _last_ad_end_ms, _now_unix())
+
+
+## Türün beklemesinin bitmesine kalan sn (ÜCRETSİZ ELMAS geri sayımı; 0 = izlenebilir).
+func cooldown_left(kind: StringName) -> int:
+	return AdPolicy.cooldown_left(kind, _state, _now_unix())
 
 
 ## Teklif plakası görünsün mü: politika uygun VE reklam hazır.
@@ -148,8 +164,7 @@ func used_today(kind: StringName) -> int:
 
 
 func remaining_today(kind: StringName) -> int:
-	var rule: Dictionary = AdPolicy.RULES.get(kind, {})
-	return maxi(int(rule.get("daily_cap", 0)) - used_today(kind), 0)
+	return maxi(AdPolicy.daily_cap(kind) - used_today(kind), 0)
 
 
 # --- Gösterim ---------------------------------------------------------------------
@@ -173,6 +188,9 @@ func _on_earned() -> void:
 	_earned_this_show = true
 	var counts: Dictionary = _state["counts"]
 	counts[_pending_kind] = int(counts.get(_pending_kind, 0)) + 1
+	if not _state.has("last"):
+		_state["last"] = {}
+	(_state["last"] as Dictionary)[_pending_kind] = _now_unix()   # tür beklemesi (ÜCRETSİZ ELMAS 3 dk)
 	_request_save()   # sayaç ödülden ÖNCE diske istenir: uygulama ölürse hak geri verilmez
 	reward_earned.emit(_pending_kind)
 
@@ -270,7 +288,8 @@ func _schedule_expiry(slot: StringName) -> void:
 
 func state() -> Dictionary:
 	_roll_day()
-	return {"day": int(_state["day"]), "counts": (_state["counts"] as Dictionary).duplicate()}
+	return {"day": int(_state["day"]), "counts": (_state["counts"] as Dictionary).duplicate(),
+		"last": (_state.get("last", {}) as Dictionary).duplicate()}
 
 
 ## Kayıttan (SaveManager). Bozuk alanlar güvenle atılır.
@@ -282,13 +301,20 @@ func load_state(data: Dictionary) -> void:
 			var kind: StringName = StringName(SaveSafe.s(key))
 			if AdPolicy.RULES.has(kind):
 				counts[kind] = clampi(SaveSafe.i((raw as Dictionary)[key]), 0, 1000)
-	_state = {"day": SaveSafe.i(data.get("day", -1)), "counts": counts}
+	var last: Dictionary = {}
+	var raw_last: Variant = data.get("last", {})
+	if raw_last is Dictionary:
+		for key: Variant in (raw_last as Dictionary):
+			var kind: StringName = StringName(SaveSafe.s(key))
+			if AdPolicy.RULES.has(kind):
+				last[kind] = maxi(SaveSafe.i((raw_last as Dictionary)[key]), 0)
+	_state = {"day": SaveSafe.i(data.get("day", -1)), "counts": counts, "last": last}
 	_roll_day()
 	readiness_changed.emit()
 
 
 func reset() -> void:
-	_state = {"day": -1, "counts": {}}
+	_state = {"day": -1, "counts": {}, "last": {}}
 	_roll_day()
 
 
@@ -297,8 +323,11 @@ func _roll_day() -> void:
 
 
 func _today() -> int:
-	var now: float = _clock_unix if _clock_unix >= 0.0 else Time.get_unix_time_from_system()
-	return AdPolicy.day_number(now, int(Time.get_time_zone_from_system().get("bias", 0)))
+	return AdPolicy.day_number(float(_now_unix()), int(Time.get_time_zone_from_system().get("bias", 0)))
+
+
+func _now_unix() -> int:
+	return int(_clock_unix if _clock_unix >= 0.0 else Time.get_unix_time_from_system())
 
 
 ## Testler: sistem saati yerine sabit unix zamanı (-1 = gerçek saat).

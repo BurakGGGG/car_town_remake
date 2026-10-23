@@ -191,8 +191,11 @@ func _run() -> void:
 	var far_dash: Node3D = main.get_node_or_null("RoadLeft/LaneLine15") as Node3D    # x −6,01
 	check(old_square != null and not old_square.visible and old_edge != null and not old_edge.visible,
 		"sahnenin eski kavşak karesi ve kenar çizgileri gizli")
-	check(near_dash != null and not near_dash.visible and far_dash != null and far_dash.visible,
-		"kavşağa yakın kesikler gizli (orta çizgi düz), uzaktakiler duruyor")
+	# Uzaktaki kesik birleşik tek çizimde (WorldDressing._batch_lane_lines): CSG düğümü gizli, `batched` işaretli
+	var lane_batch: MeshInstance3D = main.find_child("LaneLinesScene", true, false) as MeshInstance3D
+	check(near_dash != null and not near_dash.visible and not near_dash.has_meta(&"batched") and far_dash != null \
+		and far_dash.has_meta(&"batched") and lane_batch != null and lane_batch.visible,
+		"kavşağa yakın kesikler gizli (orta çizgi düz), uzaktakiler duruyor (tek çizimde)")
 
 	print("== BILLBOARD ==")
 	check(CityBillboard.POSTERS.size() >= 7, "%d afiş (en az bir hafta)" % CityBillboard.POSTERS.size())

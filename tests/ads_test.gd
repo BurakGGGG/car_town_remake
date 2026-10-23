@@ -33,13 +33,33 @@ func _run() -> void:
 	check(AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 3, 0, -1) == AdPolicy.OK, "seviye yetince uygun")
 	st["counts"] = {AdPolicy.RACE_DOUBLE: 5}
 	check(AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, 0, -1) == AdPolicy.DAILY_CAP, "tür günlük sınırı")
-	st["counts"] = {AdPolicy.RACE_DOUBLE: 4, AdPolicy.REPAIR_BOOST: 7}
-	check(AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, 0, -1) == AdPolicy.OK, "toplam 12 altında (11) uygun")
-	st["counts"] = {AdPolicy.RACE_DOUBLE: 4, AdPolicy.REPAIR_BOOST: 7, AdPolicy.LEVELUP_DOUBLE: 1}
-	check(AdPolicy.total_today(st) == 12 and AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, 0, -1) == AdPolicy.TOTAL_CAP, "toplam günlük sınır")
+	st["counts"] = {AdPolicy.RACE_DOUBLE: 4, AdPolicy.REPAIR_BOOST: 8, AdPolicy.FREE_GEMS: 5, AdPolicy.LEVELUP_DOUBLE: 2}
+	check(AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, 0, -1) == AdPolicy.OK, "toplam 20 altında (19) uygun")
+	st["counts"] = {AdPolicy.RACE_DOUBLE: 4, AdPolicy.REPAIR_BOOST: 8, AdPolicy.FREE_GEMS: 5, AdPolicy.LEVELUP_DOUBLE: 3}
+	check(AdPolicy.total_today(st) == 20 and AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, 0, -1) == AdPolicy.TOTAL_CAP, "toplam günlük sınır (20)")
 	st["counts"] = {}
 	check(AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, 10_000, 0) == AdPolicy.TOO_SOON, "iki reklam arası bekleme")
 	check(AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, AdPolicy.MIN_GAP_MS + 1, 0) == AdPolicy.OK, "bekleme bitince uygun")
+	# ÜCRETSİZ ELMAS: iki izleme arası 3 dk (kayıtta, gece yarısını geçer)
+	st = {"day": 100, "counts": {AdPolicy.FREE_GEMS: 1}, "last": {AdPolicy.FREE_GEMS: 1_000_000}}
+	check(AdPolicy.cooldown_sec(AdPolicy.FREE_GEMS) == 180, "ücretsiz elmas beklemesi 3 dk")
+	check(AdPolicy.block_reason(AdPolicy.FREE_GEMS, st, 9, 0, -1, 1_000_100) == AdPolicy.COOLDOWN
+		and AdPolicy.cooldown_left(AdPolicy.FREE_GEMS, st, 1_000_100) == 80, "beklemede: 80 sn kaldı")
+	check(AdPolicy.block_reason(AdPolicy.FREE_GEMS, st, 9, 0, -1, 1_000_181) == AdPolicy.OK, "3 dk dolunca uygun")
+	check(AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, 0, -1, 1_000_100) == AdPolicy.OK, "bekleme yalnız kendi türünde")
+	check((AdPolicy.roll_day(st, 101)["last"] as Dictionary).has(AdPolicy.FREE_GEMS), "yeni günde bekleme sürer (gece yarısı hilesi yok)")
+	# Süre kısaltma: yarısı, en çok 30 dk, 2 dk'dan kısa kalanda yok
+	check(AdPolicy.time_cut(600.0) == 300.0 and AdPolicy.time_cut(7200.0) == 1800.0 and AdPolicy.time_cut(100.0) == 0.0,
+		"süre kısaltma: yarısı / en çok 30 dk / kısa işte yok")
+	# Panel ayarı (config/app.ads)
+	AdPolicy.remote = AdPolicy.normalize_remote({"total_cap": 999, "free_gems": 10, "free_gems_cooldown": 60,
+		"caps": {"free_gems": 2, "junk_refill": 0, "uydurma": 9}})
+	check(AdPolicy.total_cap() == AdPolicy.REMOTE_TOTAL_MAX and AdPolicy.free_gems() == 10
+		and AdPolicy.cooldown_sec(AdPolicy.FREE_GEMS) == 60, "panel: toplam sınırlı, elmas 10, bekleme 1 dk")
+	check(AdPolicy.daily_cap(AdPolicy.FREE_GEMS) == 2 and AdPolicy.daily_cap(AdPolicy.JUNK_REFILL) == 0
+		and AdPolicy.daily_cap(AdPolicy.RACE_DOUBLE) == 5, "panel: tür sınırı (0 = kapalı), verilmeyen varsayılan")
+	check(AdPolicy.block_reason(AdPolicy.JUNK_REFILL, {"day": 1, "counts": {}}, 9, 0, -1) == AdPolicy.DAILY_CAP, "panelde kapatılan teklif sunulmaz")
+	AdPolicy.remote = {}
 	var fwd: Dictionary = AdPolicy.roll_day({"day": 100, "counts": {&"race_double": 4}}, 101)
 	check(fwd["day"] == 101 and (fwd["counts"] as Dictionary).is_empty(), "gün ilerleyince sayaç sıfırlanır")
 	var back: Dictionary = AdPolicy.roll_day({"day": 100, "counts": {&"race_double": 4}}, 99)

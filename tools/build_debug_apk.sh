@@ -13,5 +13,9 @@ export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/snap/godot-4/common/gradle}"
 export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/godot-debug.keystore"
 export GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey
 export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
+# Kayıpsız paket küçültme (docs/MESH_BUTCESI.md "Paket boyutu 4"): içe aktarma güncellenir, sonra mesh / sahne
+# kapları (RSCC) 4 KB yerine 1 MiB blokla yeniden sıkıştırılır (açılan içerik aynı; −~18 MiB).
+godot-4 --headless --path . --import
+python3 tools/size/rscc_repack.py
 godot-4 --headless --path . --export-debug Android ../AutoYard_release/AutoYard_debug.apk
 ls -la ../AutoYard_release/AutoYard_debug.apk

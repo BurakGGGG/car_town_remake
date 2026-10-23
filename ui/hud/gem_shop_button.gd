@@ -1,13 +1,15 @@
 class_name GemShopButton
 extends Button
-## HUD'un sol üstündeki MARKET düğmesi (eski adı GEM AL) — para / gem sayacının hemen altında, dikkat çeken mavi hap:
-## solda zıplayan gem çizimi (GemPackArt.BUTTON), üstünden periyodik ışık süpürmesi, birkaç saniyede
-## bir "nefes alma" büyümesi. Başlangıç paketi alınmadıysa sağ üstte kırmızı "!" rozeti.
+## HUD'un MARKET düğmesi (eski adı GEM AL) — 2026-10-23 alt bar taslağıyla sağ üstte, tabelaların altında: oyunun krem
+## plakası (PLAYER plakası gibi, altta kalınlık kenarı), solda plakadan taşan 2B elmas + altın çizimi, koyu yazı; birkaç
+## saniyede bir "nefes alma" büyümesi. Başlangıç paketi alınmadıysa sağ üstte kırmızı "!" rozeti.
 ## Kodla kurulur (Hud._setup_gem_store); basınca `pressed` → mağaza.
 
 const HEIGHT: float = 44.0
 const PULSE_EVERY: float = 4.0
-const SHINE_EVERY: float = 3.2
+## Çizim plakanın solundan ve üstünden taşar (yükselen ikon dili).
+const ART_SIZE: Vector2 = Vector2(56.0, 46.7)
+const ART_SLOT: float = 50.0
 
 ## Sağ üstte rozet gösterilsin mi (tek seferlik paket hâlâ alınabilir).
 var show_badge: bool = false:
@@ -15,7 +17,7 @@ var show_badge: bool = false:
 		show_badge = value
 		_overlay.animate()
 
-var _art: GemPackArt
+var _art: TextureRect
 var _row: HBoxContainer
 var _overlay: _Overlay
 var _t: float = 0.0
@@ -28,9 +30,9 @@ func _init() -> void:
 	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	clip_contents = false
 	text = ""
-	add_theme_stylebox_override(&"normal", _style(HudPalette.GEM_DARK, HudPalette.GEM))
-	add_theme_stylebox_override(&"hover", _style(HudPalette.GEM_DARK.lightened(0.08), HudPalette.GEM.lightened(0.1)))
-	add_theme_stylebox_override(&"pressed", _style(HudPalette.GEM_DARK.darkened(0.12), HudPalette.GEM_DARK))
+	add_theme_stylebox_override(&"normal", _style(HudPalette.PLATE))
+	add_theme_stylebox_override(&"hover", _style(HudPalette.PLATE_HOVER))
+	add_theme_stylebox_override(&"pressed", _style(HudPalette.PLATE.darkened(0.06)))
 	add_theme_stylebox_override(&"focus", StyleBoxEmpty.new())
 
 	var row: HBoxContainer = HBoxContainer.new()
@@ -40,22 +42,16 @@ func _init() -> void:
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(row)
 	var pad: Control = Control.new()
-	pad.custom_minimum_size = Vector2(4.0, 0.0)
+	pad.custom_minimum_size = Vector2(ART_SLOT, 0.0)
 	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(pad)
-	_art = GemPackArt.new()
-	_art.kind = GemPackArt.Kind.BUTTON
-	_art.custom_minimum_size = Vector2(38.0, 38.0)
-	_art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(_art)
 	var label: Label = Label.new()
 	label.text = Loc.t("MARKET")
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.theme_type_variation = &"HudOutlined"
-	label.add_theme_font_size_override(&"font_size", 17)
-	label.add_theme_color_override(&"font_color", Color.WHITE)
-	label.add_theme_color_override(&"font_outline_color", HudPalette.GEM_DARK.darkened(0.45))
-	label.add_theme_constant_override(&"outline_size", 5)
+	label.add_theme_font_size_override(&"font_size", 16)
+	label.add_theme_color_override(&"font_color", HudPalette.INK)
+	label.add_theme_constant_override(&"outline_size", 0)
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.size_flags_vertical = Control.SIZE_FILL
 	row.add_child(label)
@@ -63,6 +59,16 @@ func _init() -> void:
 	tail.custom_minimum_size = Vector2(14.0, 0.0)
 	tail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(tail)
+
+	_art = TextureRect.new()
+	_art.texture = load("res://ui/hud/art/nav/market.svg") as Texture2D
+	_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	_art.size = ART_SIZE
+	_art.position = Vector2(-2.0, HEIGHT - 4.0 - ART_SIZE.y)
+	add_child(_art)
 
 	_overlay = _Overlay.new()
 	_overlay.owner_button = self
@@ -94,76 +100,51 @@ func _fit_width() -> void:
 	custom_minimum_size.x = _row.get_combined_minimum_size().x
 
 
-static func _style(bg: Color, border: Color) -> StyleBoxFlat:
+## Krem plaka: altta kalınlık kenarı (oyunun plaka dili), cıvatalar _Overlay'da.
+static func _style(bg: Color) -> StyleBoxFlat:
 	var sb: StyleBoxFlat = StyleBoxFlat.new()
 	sb.bg_color = bg
-	sb.border_color = border.lightened(0.35)
-	sb.set_border_width_all(2)
+	sb.border_color = HudPalette.PLATE_EDGE
 	sb.border_width_bottom = 4
-	sb.set_corner_radius_all(int(HEIGHT * 0.5))
-	sb.shadow_color = HudPalette.SHADOW
-	sb.shadow_size = 3
+	sb.set_corner_radius_all(9)
+	sb.shadow_color = Color(0.0, 0.0, 0.0, 0.15)
+	sb.shadow_size = 1
 	sb.shadow_offset = Vector2(0.0, 2.0)
 	sb.anti_aliasing = true
 	return sb
 
 
-## Üst katman: cam parlaklığı, süpürme ışığı, rozet. Yazının ÜSTÜNDE çizilir. Parlaklık yalnızca boyut
-## değişince çizilir; süpürme ve rozet nabzı alt öğelerin konum / ölçek / saydamlığıyla oynar (eskiden her
-## karede yeni StyleBoxFlat + çokgen üretiliyordu; görüntü aynı — qa/gem_button_shots.gd).
+## Üst katman: sağdaki cıvata ve rozet. Yazının ÜSTÜNDE çizilir; rozet nabzı alt öğenin ölçeğiyle oynar (her karede
+## yeni çizim yok).
 class _Overlay:
 	extends Control
 	var owner_button: GemShopButton
-	var _gloss: StyleBoxFlat
-	var _shine: _Shape
 	var _disc: _Shape
 	var _mark: _Shape
 
 	func _ready() -> void:
-		_gloss = StyleBoxFlat.new()
-		_gloss.bg_color = Color(1.0, 1.0, 1.0, 0.16)
-		_gloss.anti_aliasing = true
-		_shine = _Shape.new(_Shape.SHINE)
 		_disc = _Shape.new(_Shape.DISC)
 		_mark = _Shape.new(_Shape.MARK)
 		_mark.font = get_theme_default_font()
-		for shape: _Shape in [_shine, _disc, _mark]:
+		for shape: _Shape in [_disc, _mark]:
 			add_child(shape)
 		resized.connect(_layout)
 		_layout()
 
 	func _layout() -> void:
-		var r: float = size.y * 0.5
-		_gloss.set_corner_radius_all(int(r))
-		_gloss.corner_radius_bottom_left = 0
-		_gloss.corner_radius_bottom_right = 0
-		_shine.extent = size.y
-		_shine.queue_redraw()
 		_disc.position = Vector2(size.x - 4.0, 3.0)
 		_mark.position = _disc.position
 		queue_redraw()
 		animate()
 
 	func _draw() -> void:
-		# Üst yarıda cam parlaklığı
-		draw_style_box(_gloss, Rect2(Vector2(4.0, 3.0), Vector2(size.x - 8.0, size.y * 0.42)))
+		draw_circle(Vector2(size.x - 9.0, (size.y - 4.0) * 0.5), 2.4, HudPalette.PLATE_EDGE, true, -1.0, true)
 
-	## Süpürme: eğik beyaz şerit soldan sağa geçer (hap şeklinin içinde kalsın diye kenarlarda söner).
 	## Rozet dairesi nabız atar, "!" sabit boyda kalır.
 	func animate() -> void:
-		if _shine == null:
+		if _disc == null:
 			return
 		var t: float = owner_button._t
-		var r: float = size.y * 0.5
-		var phase: float = fmod(t, SHINE_EVERY) / 0.7
-		var fade: float = 0.0
-		var x: float = 0.0
-		if phase < 1.0:
-			x = lerpf(-size.y, size.x + size.y, phase)
-			fade = clampf(minf(x - r * 0.5, size.x - r * 0.5 - x) / r, 0.0, 1.0)
-		_shine.visible = fade > 0.0
-		_shine.position = Vector2(x, 0.0)
-		_shine.modulate.a = fade
 		var badge: bool = owner_button.show_badge
 		_disc.visible = badge
 		_mark.visible = badge
@@ -175,11 +156,9 @@ class _Overlay:
 ## Üst katmanın bir kez çizilen parçası.
 class _Shape:
 	extends Node2D
-	const SHINE: int = 0
 	const DISC: int = 1
 	const MARK: int = 2
 	var what: int
-	var extent: float = 0.0   # SHINE: düğme yüksekliği
 	var font: Font
 
 	func _init(what_value: int) -> void:
@@ -187,14 +166,6 @@ class _Shape:
 
 	func _draw() -> void:
 		match what:
-			SHINE:
-				if extent <= 0.0:
-					return
-				var w: float = extent * 0.35
-				draw_colored_polygon(PackedVector2Array([
-					Vector2(0.0, 4.0), Vector2(w, 4.0),
-					Vector2(w - extent * 0.4, extent - 5.0), Vector2(-extent * 0.4, extent - 5.0)]),
-					Color(1.0, 1.0, 1.0, 0.35))
 			DISC:
 				draw_circle(Vector2.ZERO, 10.0, Color("A42E35"), true, -1.0, true)
 				draw_circle(Vector2.ZERO, 8.5, Color("E2474F"), true, -1.0, true)

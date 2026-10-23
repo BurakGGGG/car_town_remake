@@ -83,12 +83,11 @@ func _player(volume_db: float) -> AudioStreamPlayer:
 # --- Sentez (arka plan) --------------------------------------------------------------------------
 
 static func _synthesize() -> void:
-	var bell_stream: AudioStreamWAV = _wav(bell_samples())
-	var slap_stream: AudioStreamWAV = _wav(slap_samples())
-	var rustle_stream: AudioStreamWAV = _wav(rustle_samples())
-	_bell_stream = bell_stream
-	_slap_stream = slap_stream
-	_rustle_stream = rustle_stream   # en son: ana iş parçacığı üçü de hazır olunca çalar
+	var streams: Array = AudioCache.fetch("news_sfx", func() -> Array:
+		return [_wav(bell_samples()), _wav(slap_samples()), _wav(rustle_samples())])
+	_bell_stream = streams[0]
+	_slap_stream = streams[1]
+	_rustle_stream = streams[2]   # en son: ana iş parçacığı üçü de hazır olunca çalar
 
 
 ## "Dırın dırın": her çalışta tokmak kubbeye hızla 6 kez vurur (ilk vuruş en güçlü), zil çınlayarak söner.

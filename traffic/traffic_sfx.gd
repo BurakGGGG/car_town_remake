@@ -76,12 +76,14 @@ func _player(volume_db: float, polyphony: int) -> AudioStreamPlayer:
 # --- Sentez (arka plan) --------------------------------------------------------------------------
 
 static func _synthesize() -> void:
-	var honks: Array[AudioStreamWAV] = [
-		horn_stream([[0.0, 0.34]], 392.0, 494.0),                 # tek, uzun "döööt"
-		horn_stream([[0.0, 0.13], [0.19, 0.30]], 415.0, 523.0),   # çift "dıt-dııt"
-	]
-	_honk_streams = honks
-	_screech_stream = squeal_stream(0.85)
+	var streams: Array = AudioCache.fetch("traffic_sfx", func() -> Array:
+		var honks: Array[AudioStreamWAV] = [
+			horn_stream([[0.0, 0.34]], 392.0, 494.0),                 # tek, uzun "döööt"
+			horn_stream([[0.0, 0.13], [0.19, 0.30]], 415.0, 523.0),   # çift "dıt-dııt"
+		]
+		return [honks, squeal_stream(0.85)])
+	_honk_streams = streams[0]
+	_screech_stream = streams[1]
 
 
 ## Korna: iki tonlu (iki sinyal birlikte), zengin harmonik (kare dalgaya yakın), yumuşak atak / bırakış.

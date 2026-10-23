@@ -194,14 +194,16 @@ func shown_money() -> int:
 
 ## TAMAM: gösterilen pay verilir (para + yarım işlerin XP'si ve ustalık sayacı), kasadan düşülür, kayıt HEMEN yazılır
 ## (gazete açıkken uygulama kapanırsa ödeme ya hiç yapılmamış ya da bir kez yapılmıştır). {money, xp, bank, full}.
-func collect() -> Dictionary:
+## money_mult: gazetede ödüllü reklam izlendiyse 2 (yalnız para katlanır).
+func collect(money_mult: int = 1) -> Dictionary:
 	if _shown.is_empty():
 		return {}
 	var shown: Dictionary = _shown
 	_shown = {}
+	var paid: int = int(shown["money"]) * clampi(money_mult, 1, 2)
 	var economy: EconomyManager = get_tree().get_first_node_in_group("economy") as EconomyManager
 	if economy:
-		economy.add_money(int(shown["money"]))
+		economy.add_money(paid)
 	var progress: PlayerProgress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
 	if progress:
 		progress.add_xp(int(shown["xp"]))
@@ -217,7 +219,7 @@ func collect() -> Dictionary:
 		bank_jobs = maxi(bank_jobs - int(shown["bank_jobs"]), 0)
 		full = full and bank_minutes >= CAP_MINUTES - 0.01
 	_save_now()
-	return {"money": int(shown["money"]), "xp": int(shown["xp"]), "bank": paid_minutes > 0.0, "full": bool(shown["full"])}
+	return {"money": paid, "xp": int(shown["xp"]), "bank": paid_minutes > 0.0, "full": bool(shown["full"])}
 
 
 ## Gazetenin bir sonraki sayısı (açılırken çağrılır, kayda girer).

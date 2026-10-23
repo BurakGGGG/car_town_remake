@@ -4,7 +4,7 @@ extends Node
 ## Sahnede World/Gameplay/RepairBayManager olarak durur; arayanlar "repair_bays" grubundan bulur
 ## (autoload yok — proje kuralı).
 ##
-## SATIN ALMA: alanlar GARAJ panelinden (GaragePanel) sırayla satın alınır; garaj seviyesi yalnızca
+## SATIN ALMA: alanlar GARAJI DÜZENLE → YÜKSELTMELER'den (GarageEditScreen) sırayla satın alınır; garaj seviyesi yalnızca
 ## alanın alınabilir olduğu eşiktir (alan N için garaj Sv.N). Satın alınan alan dünyada ilk boş
 ## yere konur ve garaj düzenleyicisinde dekor gibi taşınır / döndürülür. Dünyada kilit, bariyer ya da
 ## fiyat plakası yoktur. Kullanılabilir kapasite = SATIN ALINMIŞ alan sayısı (RepairManager.capacity()

@@ -106,6 +106,7 @@ func present() -> bool:
 	items.append_array(NewsSources.local(get_tree(), _away.window_from, _away.window_to))
 	if items.is_empty() or not screen.prepare(items, _away.issue + 1):
 		return false
+	screen.set_double_offer(_away.shown_money())   # sen yokken kazanç: REKLAM İZLE ×2 (oyuncu basarsa)
 	_away.next_issue()
 	hud.router.open(&"news")
 	return true
@@ -147,10 +148,11 @@ func _busy() -> bool:
 func _on_closed() -> void:
 	if _away == null:
 		return
-	var money: int = _away.shown_money()
+	var mult: int = 2 if screen.doubled else 1   # gazetede ödüllü reklam izlendi: kazanç ×2
+	var money: int = _away.shown_money() * mult
 	if money > 0:
 		hud.hold_reward(money, 0)   # para hesaba şimdi girer, sayaç paralar varana dek eski değeri gösterir
-	var result: Dictionary = _away.collect()
+	var result: Dictionary = _away.collect(mult)
 	_away.clear_window()
 	if _social:
 		_social.news_shown()

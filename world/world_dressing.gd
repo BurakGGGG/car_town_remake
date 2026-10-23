@@ -69,6 +69,60 @@ func _ready() -> void:
 	add_child(IntersectionMarkings.new())    # kavşağın yaya geçitleri, dur / orta çizgileri, okları (eskileri gizlenir)
 	add_child(TrafficLights.new(_traffic))   # showroom önündeki kavşak; trafik yeşilde geçer
 	add_child(CityBillboard.new())           # showroom meydanında, günde bir değişen araç afişi
+	_batch_lane_lines.call_deferred()        # sahnedeki 62 CSG kesik → tek çizim (kavşaktakiler yukarıda gizlendi)
+
+
+## ŞERİT ÇİZGİLERİ TEK ÇİZİM (2026-10-23 optimizasyon turu): Main.tscn'deki yol kesikleri 62 ayrı CSGMesh3D kök
+## (malzemesiz) — her biri ayrı çizim çağrısı, dünyanın 3B çağrılarının ~%40'ı (qa/render_breakdown.gd). Görünür olanlar
+## CSG'nin kendi ürettiği mesh'le (bake_static_mesh), dünya dönüşümü işlenerek malzemeye göre tek mesh'te birleşir;
+## CSG düğümleri gizlenir ve `batched` işareti alır. Malzeme yine boş (motorun varsayılanı), geometri aynı: görüntü aynı.
+const LANE_ROADS: Array[String] = ["RoadLeft", "RoadLeft2", "RoadRight", "RoadRight2"]
+
+
+func _batch_lane_lines() -> void:
+	await get_tree().process_frame   # CSG mesh'i bir kare gecikmeli güncellenir (bake_static_mesh notu)
+	var scene: Node = get_tree().current_scene
+	if scene == null or not is_inside_tree():
+		return
+	var tools: Dictionary = {}   # malzeme (ya da null) → SurfaceTool
+	var first: CSGShape3D = null
+	var to_world: Transform3D = global_transform.affine_inverse()
+	for road_name: String in LANE_ROADS:
+		var road: Node = scene.get_node_or_null(road_name)
+		if road == null:
+			continue
+		for child: Node in road.get_children():
+			var csg: CSGShape3D = child as CSGShape3D
+			if csg == null or not String(csg.name).begins_with("LaneLine") or not csg.is_visible_in_tree() \
+					or not csg.is_root_shape() or csg.has_meta(&"batched"):
+				continue
+			var mesh: ArrayMesh = csg.bake_static_mesh()
+			if mesh == null or mesh.get_surface_count() == 0:
+				continue
+			var xform: Transform3D = to_world * csg.global_transform
+			for surface: int in mesh.get_surface_count():
+				var material: Material = mesh.surface_get_material(surface)
+				if not tools.has(material):
+					var tool: SurfaceTool = SurfaceTool.new()
+					tools[material] = tool
+				(tools[material] as SurfaceTool).append_from(mesh, surface, xform)
+			if first == null:
+				first = csg
+			csg.visible = false
+			csg.set_meta(&"batched", true)
+	if first == null:
+		return
+	var merged: ArrayMesh = ArrayMesh.new()
+	for material: Variant in tools:
+		var tool: SurfaceTool = tools[material]
+		tool.set_material(material as Material)
+		tool.commit(merged)
+	var lines: MeshInstance3D = MeshInstance3D.new()
+	lines.name = "LaneLinesScene"
+	lines.mesh = merged
+	lines.cast_shadow = first.cast_shadow
+	lines.layers = first.layers
+	add_child(lines)
 
 
 func _build_environment() -> void:

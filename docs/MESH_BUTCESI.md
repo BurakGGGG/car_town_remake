@@ -411,3 +411,60 @@ değildi; eskileri `~/Projects/ct_builds/glb_yedek_2026-10-19_sadelestirme_onces
   fasetleri seçiliyor.
 - LOD1 kademesini atmak: görüntü aynı kalır (Godot o mesafede LOD0'ı çizer), ama şehirde orta mesafede
   üçgen artar; telefonda kare hızı ölçülmeden yapılmamalı.
+
+## Paket boyutu 4 (2026-10-23) — tamamen kayıpsız
+
+İstek: "mükemmel bir optimizasyon ve boyut küçültme yap, görsel olarak bir şey kaybetmek istemiyorum". Bu turda
+yalnız açılan baytı / pikseli değiştirmeyen yollar uygulandı.
+
+| Kalem (AAB, MiB) | 1.1.0 doğrulama | Sonra | Not |
+|---|---|---|---|
+| Mesh / sahne (.scn) | 136,3 / 178,6 | **~122,3 / ~160,1** | RSCC 2 MiB blok (aşağıda) |
+| Dokular (.ctex) | 61,5 | 61,0 | kayıpsız WebP en yüksek çaba |
+| Diğer oyun dosyaları | 4,2 | 3,9 | açılış resmi / simge RGB |
+| Motor, Java, kitaplıklar | 51,1 | 51,1 | dokunulmadı |
+| **Toplam** | **261,6 / 398,1** | **246,8 / 378,7** | sıkıştırılmış (≈ indirme) / açık (≈ kurulu) |
+
+Ölçülen doğrulama AAB'si (debug anahtarıyla imzalı): `~/Projects/ct_builds/size_night/AutoYard_gece_son_dogrulama_debug_imzali.aab`.
+Arada eklenen canlı etkinlik kodu dahil; .pck 253,8 → 234,2 MiB (o sırada pakette turkuaz alt barın birkaç küçük SVG'si de vardı, bar sonra geri alındı).
+
+### RSCC yeniden paketleme (`tools/size/rscc_repack.py`)
+
+Godot ikili kaynakları `RSCC` kabında 4 KB'lık bloklar hâlinde AYRI AYRI zstd'lenir (FileAccessCompressed, blok boyu
+motorda sabit). Sıkıştırılmış köşe verisi küçük blokta neredeyse hiç sıkışmıyor. Aynı BMW sahnesi (açık 2,28 MB):
+
+| blok | zstd-19 | |
+|---|---|---|
+| 4 KB (Godot) | 1,67 MB | — |
+| 256 KB | 1,48 MB | −%11,3 |
+| 1 MB | 1,46 MB | −%12,5 |
+| tek blok (dosya boyu) | ~1,42 MB | ~−%15 |
+
+Tüm RSCC kaynakları (207,2 MiB): 1 MiB blok 170,2 · **2 MiB blok 168,3** · 4 MiB tavanlı tek blok 168,7 · sınırsız tek blok
+166,8. Seçilen 2 MiB: FileAccessCompressed yüklerken dosya başına bir blokluk arabellek + sıkışık blok tutar; sınırsız tek
+blokta en büyük araçta ~14 MB'a çıkıyordu (trafik / hurdalık modelleri paralel yüklenir → düşük RAM'li telefonda tepe bellek),
+2 MiB'te ≤ ~4 MB. Tek bloğa göre fark yalnız ~1,2 MiB (pakete giren pay).
+
+Okuyucu blok boyunu başlıktan okur, yani motor aynı kalır; yalnız yazan taraf değişir. Betik `.godot/imported` içindeki
+her RSCC dosyasını 2 MiB'e kadar tek blok, büyüğünü 2 MiB bloklarla yeniden yazar ve `.md5` kaydındaki `dest_md5`'i günceller
+(yoksa editör dosyayı bozulmuş sayıp yeniden içe aktarır, 4 KB'a döner). Her dosyada yeni kabın açılmış içeriği eskisiyle
+bayt bayt karşılaştırılır. Doğrulama: `qa/size_audit/resource_hash.gd` dışa aktarılan 303 kaynağı (mesh köşe / indeks / LOD
+verisi, materyaller) yükleyip özetler — önce / sonra özetler aynı; editörün `--import`'u dosyaları yeniden üretmiyor.
+`tools/build_release_aab.sh` ve `build_debug_apk.sh` dışa aktarmadan önce `--import` + betiği çalıştırır (yeni içe aktarılan
+araç böylece paketlenir). `vfx/decor_patterns.res` (pişirme aracı 4 KB yazar) EXTRA listesinde.
+
+Yükleme belleği: dosya başına en çok ~2 MiB arabellek + sıkışık blok (geçici). Açma hızı aynı (zstd'de seviye yalnız
+sıkıştırmayı etkiler).
+
+### Diğer kayıpsız kalemler
+- `project.godot` `rendering/textures/webp_compression/compression_method=6`, `lossless_compression_factor=100`:
+  kayıpsız (WebP) dokular 8,06 → 7,25 MiB. 243 PNG dokunun Godot'nun çözdüğü hâli kaynakla piksel piksel aynı.
+- `ui/loading/loading_bg.png` (açılış resmi, pakete ham da girer) ve `assets/branding/icon_512.png`: alfa kanalı her
+  pikselde 255 → RGB (1,41 → 1,19 MB, 0,25 → 0,21 MB). `tools/make_loading_art.gd` artık RGB kaydeder.
+
+### Bakılıp değmeyen
+- Kopya içerik: pakette aynı baytlı iki dosya yok.
+- ETC2 dokular AAB'de dosya dosya deflate'leniyor (zemin dokuları %17'ye iniyor): indirmede zaten küçük.
+- Teğetler: sıkıştırılmış köşe biçiminde normalle aynı 4 baytta, ek yer tutmuyor.
+- Eklenti dosyaları (AdMob arayüz SVG'leri vb.) toplam ~0,4 MiB — dokunmaya değmez.
+- Müzik zaten QOA; LOD1 / R8 / müzik kullanıcı tarafından istenmedi (bkz. Paket boyutu 2–3).

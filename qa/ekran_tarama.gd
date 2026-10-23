@@ -450,8 +450,6 @@ func _world(state: String, setup: Callable) -> void:
 	_hud.hide_car_info()
 	_hud.crate_panel.hide_panel()
 	_hud.restoration_result.hide_panel()
-	_hud.set("_garage_panel_open", false)
-	_hud.call("_sync_garage_panel")
 	await wait(0.3)
 	await setup.call()
 	await wait(0.6)
@@ -484,14 +482,11 @@ func _run() -> void:
 
 	# --- Ana dünya HUD'u ---
 	await _world("dunya", func() -> void: pass)
-	await _world("dunya_garaj_paneli", func() -> void:
-		_hud.garage_button.pressed.emit())
 	await _world("dunya_alan_plakasi", func() -> void:
 		_hud.show_bay_plate(mini(3, _hud._bays.bay_count() - 1) if _hud._bays else 1))
 	await _world("dunya_genisletme_plakasi", func() -> void:
 		_hud.show_expansion_plate())
 	await _world("dunya_en_kalabalik", func() -> void:
-		_hud.garage_button.pressed.emit()
 		_hud.show_bay_plate(mini(3, _hud._bays.bay_count() - 1) if _hud._bays else 1)
 		_hud._show_notice(Loc.t("TAMİR ALANI %d AÇILDI\nGARAJI DÜZENLE'DEN TAŞIYABİLİRSİN") % 3, HudPalette.COIN_DARK, 6.0)
 		await wait(0.4))
@@ -716,6 +711,10 @@ func _run() -> void:
 	await _screen(&"garage_edit", "dekor")
 	await _screen(&"garage_edit", "dekor_araclar", func() -> void:   # kartlarda aracın yeri (GARAJDA / depo / OTOPARK)
 		(_router.screen(&"garage_edit") as GarageEditScreen).call("_select_tab", GarageDecor.Kind.VEHICLE))
+	await _screen(&"garage_edit", "dekor_yukseltmeler", func() -> void:   # YÜKSELTMELER: kartlar + garaj plakası
+		var edit: GarageEditScreen = _router.screen(&"garage_edit") as GarageEditScreen
+		edit.call("_on_upgrades_pressed")
+		edit.call("_show_upgrade_plate", &"garage"))
 	# SERGİ PLAKASI: ana garajdaki araca dokununca kamera yaklaşır, plaka açılır (docs/GARAJLAR_TASARIM.md §10)
 	var garages_qa: CarGarageManager = get_first_node_in_group("car_garages") as CarGarageManager
 	var shown: Array[StringName] = garages_qa.cars_in(CarGarageManager.HOME) if garages_qa else ([] as Array[StringName])

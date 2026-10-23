@@ -198,8 +198,12 @@ static func store(kind: Kind, wav: AudioStreamWAV) -> void:
 		_streams[kind] = wav
 
 
-## Saf sentez (önbelleğe dokunmaz): iş parçacığından çağrılabilir.
+## Saf sentez (önbelleğe dokunmaz): iş parçacığından çağrılabilir. Paketlenmiş sürümde diskten (AudioCache).
 static func build(kind: Kind) -> AudioStreamWAV:
+	return AudioCache.fetch("siren_%d" % kind, _synth.bind(kind))
+
+
+static func _synth(kind: Kind) -> AudioStreamWAV:
 	if kind == Kind.WAIL:
 		return _to_wav(_make_wail(), 1.9)
 	return _to_wav(_make_hi_lo(), 1.4)

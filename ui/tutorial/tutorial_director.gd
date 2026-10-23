@@ -6,12 +6,12 @@ extends Node
 ## Dersler oyunda KOŞULU OLUŞUNCA başlar (oyuncuya ders listesi dayatılmaz):
 ##   İLK TAMİR        ilk açılışta (hoş geldin kartıyla) — HOŞ GELDİN KUTUSU (dokun → AÇ → ilk araç) → müşteri →
 ##                    TAMİRE AL → bekle → PARA TOPLA. Kutu açılmışsa / yoksa hediye adımları atlanır.
-##   ARAÇ KOLEKSİYONU İLK KASA görevi bitince ya da garaja kasa gelince — ödül → kasa → AÇ → ARAÇLAR → MAĞAZA
+##   ARAÇ KOLEKSİYONU İLK KASA görevi bitince ya da garaja kasa gelince — ödül → kasa → AÇ → DEPOLARIM → MAĞAZA
 ##   DRAG YARIŞI      ilk rakip 🏁 balonuyla yanaşınca — davet → YARIŞ → kurallar → canlı yarış → sonuç
-##   GARAJINI SÜSLE   seviye 3'te — GARAJ → DÜZENLE → eşya seç → yerleştir → BİTİR
+##   GARAJINI SÜSLE   seviye 3'te — GARAJI DÜZENLE → eşya seç → yerleştir → BİTİR
 ##   HURDALIK         ilk hurdalık ziyaretinde (Necati + Cemo) — yığın ara → PARÇALAR → araç → RESTORE ET
 ##                    Rıza Usta'nın dört dersinden ayrı sayılır (TutorialManager.EXTRA).
-##   DEPOLARIM        otoparkta araç varken — ARAÇLAR → aracın yeri → DEPOLARIM → OTOPARK ücreti → sıradaki depo →
+##   DEPOLARIM        otoparkta araç varken — DEPOLARIM (alt sıradaki plaka) → OTOPARK ücreti → sıradaki depo →
 ##                    SATIN AL → İÇ YÜKSELTMELER → GARAJIM sergisi. Bu da EXTRA.
 ## Ders yalnızca oyuncu boştayken açılır (açık ekran, kasa açılışı yokken) ve dersler arasında nefes
 ## payı bırakılır. Her ders kartında SONRA (bir süre sonra yeniden sorulur), her adımda DERSİ GEÇ var.
@@ -643,18 +643,17 @@ func _build_steps(id: StringName) -> Array[Dictionary]:
 	return []
 
 
-## DEPOLARIM (otoparkta araç varken): ARAÇLAR → aracın yeri (DEPOLARIM açılır) → OTOPARK ücreti → ilk / sıradaki depo →
-## SATIN AL → (alınmış depo varsa) İÇ YÜKSELTMELER → GARAJIM sergisi → garaj değeri. Satın almaya zorlamaz (para / seviye
-## yetmeyebilir): SATIN AL adımı İLERİ ile geçer. Pano kapanırsa yer adımına dönülür; ARAÇLAR'dan çıkılırsa ders sonraya
-## kalır. Kurallar: docs/GARAJLAR_TASARIM.md §10.
+## DEPOLARIM (otoparkta araç varken): alt sıradaki DEPOLARIM plakası (2026-10-23'e kadar ARAÇLAR → aracın yeri) → OTOPARK
+## ücreti → ilk / sıradaki depo → SATIN AL → (alınmış depo varsa) İÇ YÜKSELTMELER → GARAJIM sergisi → garaj değeri. Satın
+## almaya zorlamaz (para / seviye yetmeyebilir): SATIN AL adımı İLERİ ile geçer. Pano kapanıp dünyaya dönülürse ilk adıma
+## dönülür; bir YER açılırsa (GİT → depo) ders sonraya kalır. Kurallar: docs/GARAJLAR_TASARIM.md §10.
 func _garage_steps() -> Array[Dictionary]:
 	var screen: GarageScreen = hud.garage_screen
 	var board: CarGaragesScreen = hud.car_garages_screen
-	var in_garage: Callable = func() -> bool: return _place() == &"garage"
 	var on_board: Callable = func() -> bool: return _top() == &"car_garages"
-	var left_board: Callable = func() -> bool: return in_garage.call() and not on_board.call()
+	var left_board: Callable = func() -> bool: return _top() == &""   # pano kapandı, dünyadayız → DEPOLARIM'a yeniden dokun
 	var no_next: Callable = func() -> bool: return board.next_garage() == &""
-	var left_garage: Callable = func() -> bool: return not in_garage.call()
+	var left_garage: Callable = func() -> bool: return _place() != &""   # GİT → depo ekranı / başka yer
 	# SATIN AL kartı sıradaki deponun durumuna göre (ders başlarken): yeni oyuncuda çoğu zaman alınabilir (MAHALLE sv.1)
 	var buy_text: String = Loc.t("Fiyatı ve inşaat süresi burada. SATIN AL'a basınca inşaat başlar; bitince otoparktaki araçlar kendiliğinden depoya geçer. Acelen varsa elmasla bitirirsin.")
 	var manager: CarGarageManager = _garage_manager()
@@ -669,29 +668,21 @@ func _garage_steps() -> Array[Dictionary]:
 			elif status == CarGarageManager.Status.TOO_EXPENSIVE:
 				buy_text = Loc.t("Fiyatı ve inşaat süresi burada. Paran yetince SATIN AL: inşaat bitince otoparktaki araçlar kendiliğinden depoya geçer. Tamirlerle para biriktir!")
 			break   # sıradaki (alınmamış ilk) depo
-	# Garaja sığmayan yeni araçla başladıysa ilk adım o aracı anlatır; ARAÇLAR onunla açılır
+	# Garaja sığmayan yeni araçla başladıysa ilk adım o aracı anlatır
 	var full: StringName = _garage_full_vehicle()
 	var first_title: String = Loc.t("OTOPARKTASIN")
-	var first_text: String = Loc.t("Araçların otoparkta duruyor ve her gün ücret ödüyorsun. Önce ARAÇLAR'a dokun.")
+	var first_text: String = Loc.t("Araçların otoparkta duruyor ve her gün ücret ödüyorsun. Önce DEPOLARIM'a dokun.")
 	if full != &"" and manager:
 		first_title = Loc.t("YENİ ARACIN NEREDE?")
-		first_text = Loc.t("Garajına sığmayan yeni aracın otoparkta; otoparkta her gün ücret ödenir. ARAÇLAR'a dokun.") \
+		first_text = Loc.t("Garajına sığmayan yeni aracın otoparkta; otoparkta her gün ücret ödenir. DEPOLARIM'a dokun.") \
 			if manager.garage_of(full) == CarGarageManager.WAITING \
-			else Loc.t("Garajına sığmayan yeni aracın şimdilik burada: %s. ARAÇLAR'a dokun.") % CarGarageCatalog.display_name(manager.garage_of(full))
+			else Loc.t("Garajına sığmayan yeni aracın şimdilik burada: %s. DEPOLARIM'a dokun.") % CarGarageCatalog.display_name(manager.garage_of(full))
 	return [
 		{"title": first_title,
 			"text": first_text,
-			"enter": func() -> void:
-				if full != &"":
-					screen.open_on_vehicle(full),
 			"target": func() -> Control: return hud.cars_button,
-			"skip_if": in_garage,
-			"done": in_garage},
-		{"title": Loc.t("NEREDE DURUYOR?"),
-			"text": Loc.t("Üstte aracın nerede durduğu yazar. Ona dokun: DEPOLARIM açılır."),
-			"target": func() -> Control: return screen.tutorial_anchor(&"title"),
-			"done": on_board,
-			"fail": left_garage},
+			"skip_if": on_board,
+			"done": on_board},
 		{"title": Loc.t("OTOPARK"),
 			"text": Loc.t("En altta OTOPARK: sınırsızdır ama orada duran her araç için her gün değerinin yüzde 5'i ödenir."),
 			"target": func() -> Control: return board.tutorial_anchor(&"waiting"),
@@ -723,7 +714,7 @@ func _garage_steps() -> Array[Dictionary]:
 			"hand": false, "button": Loc.t("İLERİ"),
 			"back": left_board, "fail": left_garage},
 		{"title": Loc.t("GARAJIM"),
-			"text": Loc.t("Bir yol daha: araçlarını ana garajında sergile, ücret yok. GARAJ'dan garajını genişletirsen sergine daha çok araç sığar."),
+			"text": Loc.t("Bir yol daha: araçlarını ana garajında sergile, ücret yok. GARAJI DÜZENLE → YÜKSELTMELER'den garajını genişletirsen sergine daha çok araç sığar."),
 			"target": func() -> Control: return board.tutorial_anchor(&"home"),
 			"hand": false, "button": Loc.t("İLERİ"),
 			"back": left_board, "fail": left_garage},
@@ -825,7 +816,7 @@ func _basics_steps() -> Array[Dictionary]:
 					_ctx["first_edit"] = true
 				return _first_car_home() or (_ctx.has("first_edit") and _place() != &"garage_edit")},
 		{"title": Loc.t("BİTİR"),
-			"text": Loc.t("Araban garajında! Garajını istediğin zaman GARAJ → DÜZENLE'den yeniden düzenlersin. Şimdi BİTİR'e bas."),
+			"text": Loc.t("Araban garajında! Garajını istediğin zaman GARAJI DÜZENLE'den yeniden düzenlersin. Şimdi BİTİR'e bas."),
 			"skip_if": func() -> bool: return _place() != &"garage_edit",
 			"target": func() -> Control: return hud.garage_edit_screen.tutorial_anchor(&"done"),
 			"done": func() -> bool: return _place() != &"garage_edit"},
@@ -986,15 +977,15 @@ func _vehicle_steps() -> Array[Dictionary]:
 			"dim": false, "block": false,
 			"done": func() -> bool: return _flags.has(&"reveal_finished") or (not hud.crate_panel.visible and not _delivery.is_revealing())},
 		{"title": Loc.t("ARAÇLARIN"),
-			"text": Loc.t("Bütün araçların ARAÇLAR'da durur. Hadi bir bak!"),
+			"text": Loc.t("Araçlarının nerede durduğunu DEPOLARIM'da görürsün: ana garajın, depoların ve otopark. Hadi bir bak!"),
 			"target": func() -> Control: return hud.cars_button,
-			"done": func() -> bool: return _place() == &"garage",
+			"done": func() -> bool: return _top() == &"car_garages",
 			"skip_if": func() -> bool: return _ownership == null or _ownership.owned_count() < 2},
 		{"title": Loc.t("YARIŞ ARACI"),
-			"text": Loc.t("Araçlarını buradan incelersin. Beğendiğin aracı seçip bayraklı YARIŞA SEÇ tabelasına basarsan drag yarışlarına o çıkar."),
-			"target": func() -> Control: return hud.garage_screen.find_child("RacePickButton", true, false) as Control,
+			"text": Loc.t("Garajında sergilenen bir araca dokun ya da bir depoyu aç: aracın bayraklı YARIŞA SEÇ tabelasına basarsan drag yarışlarına o çıkar."),
+			"target": func() -> Control: return hud.car_garages_screen.tutorial_anchor(&"home"),
 			"hand": false, "button": Loc.t("İLERİ"),
-			"skip_if": func() -> bool: return _place() != &"garage"},
+			"skip_if": func() -> bool: return _top() != &"car_garages"},
 		{"title": Loc.t("YENİ ARAÇLAR"),
 			"text": Loc.t("Yeni kasalar SHOWROOM'da: kasalar GEM ile alınır. Gem; seviye atlayınca, görevlerden ve günlük girişten gelir."),
 			"enter": func() -> void:
@@ -1005,22 +996,18 @@ func _vehicle_steps() -> Array[Dictionary]:
 	]
 
 
-## GARAJINI SÜSLE: GARAJ → DÜZENLE → eşya seç → yerleştir → değer/rütbe → BİTİR.
+## GARAJINI SÜSLE: GARAJI DÜZENLE → eşya seç → yerleştir → değer/rütbe → BİTİR. (2026-10-23: GARAJ plakası doğrudan
+## düzenleyiciyi açar; ara panel ve DÜZENLE adımı kalktı.)
 func _decor_steps() -> Array[Dictionary]:
 	var edit_screen: GarageEditScreen = hud.garage_edit_screen
 	var editing: Callable = func() -> bool: return _place() == &"garage_edit"
 	var placing: Callable = func() -> bool: return _editor_node() != null and _editor_node().is_placing()
 	return [
-		{"title": Loc.t("GARAJ MENÜSÜ"),
-			"text": Loc.t("Garajınla ilgili her şey GARAJ'da. Dokun!"),
+		{"title": Loc.t("GARAJI DÜZENLE"),
+			"text": Loc.t("Garajını buradan süsler; YÜKSELTMELER'den genişletir, tamir hızını artırır ve yeni tamir alanı açarsın. Dokun!"),
 			"target": func() -> Control: return hud.garage_button,
-			"skip_if": func() -> bool: return hud.garage_panel.visible,
-			"done": func() -> bool: return hud.garage_panel.visible},
-		{"title": Loc.t("DÜZENLE"),
-			"text": Loc.t("Buradan garajı genişletir, tamir hızını yükseltir ve yeni tamir alanı açarsın. Şimdi DÜZENLE'ye bas!"),
-			"target": func() -> Control: return hud.edit_button,
-			"done": editing,
-			"back": func() -> bool: return not hud.garage_panel.visible and not editing.call()},
+			"skip_if": editing,
+			"done": editing},
 		{"title": Loc.t("BİR EŞYA SEÇ"),
 			"text": Loc.t("Alttan bir kategori ve eşya seç. Depondaki eşyalar bedava; yeni eşyayı almak için kartına iki kez dokun."),
 			"target": func() -> Control: return edit_screen.tutorial_anchor(&"bottom"), "pad": 2.0, "hand": false,

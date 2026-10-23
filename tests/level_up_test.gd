@@ -152,6 +152,12 @@ func _screen() -> void:
 	check((screen.get("_divider_label") as Label).text == "AÇILANLAR", "başlık AÇILANLAR")
 	var cards: HBoxContainer = screen.get("_cards")
 	check(cards.get_child_count() == 3, "3 kart: dekor (sv2) + görevler + modifiye (%d)" % cards.get_child_count())
+	# Seviye 2'de yalnız zemin karosu açılır (3B küçük resmi yok): kartta dokudan kare önizleme olmalı (boş kalıyordu)
+	var swatches: int = 0
+	for node: Node in cards.find_children("*", "Control", true, false):
+		if node.get_script() != null and node.get("texture") is Texture2D and not node is TextureRect:
+			swatches += 1
+	check(swatches == LevelUpScreen.DECOR_THUMBS, "dekor kartında karo önizlemesi (%d)" % swatches)
 	(screen.get("_continue") as PlateButton).pressed.emit()
 	await seconds(0.4)
 	check(not screen.visible and not screen.is_pending(), "DEVAM ile kapandı")

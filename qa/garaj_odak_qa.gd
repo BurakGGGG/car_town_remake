@@ -76,7 +76,7 @@ func _run() -> void:
 	await _shot("01_normal")
 
 	print("== DÜZENLEME ==")
-	var edit_button: Control = hud.get("edit_button")
+	var edit_button: Control = hud.garage_button   # 2026-10-23: GARAJ plakası düzenleyiciyi açar
 	router.open(&"garage_edit")
 	await frames(40)
 	check(editor.active, "düzenleme açık")

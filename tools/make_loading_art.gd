@@ -126,6 +126,7 @@ func _run(preview: bool) -> void:
 	if _scale != 1:
 		image.resize(FINAL_SIZE.x, FINAL_SIZE.y, Image.INTERPOLATE_LANCZOS)
 	var target: String = PREVIEW if preview else ProjectSettings.globalize_path(OUT)
+	image.convert(Image.FORMAT_RGB8)   # tam opak: alfa kanalı boşuna yer tutuyordu (paket boyutu 4)
 	image.save_png(target)
 	print("KAYDEDİLDİ ", target, " ", image.get_size())
 	quit(0)

@@ -76,6 +76,7 @@
   <button data-tab="overview" class="on">Özet</button>
   <button data-tab="config">Sürüm ve bakım</button>
   <button data-tab="event">Etkinlik</button>
+  <button data-tab="ads">Reklamlar</button>
   <button data-tab="mail">Hediye gönder</button>
   <button data-tab="news">Duyuru bildirimi</button>
   <button data-tab="player">Oyuncu</button>
@@ -204,6 +205,23 @@
       <div style="grid-column: span 2"><label>Adres (https)</label><input id="pk-url" placeholder="https://…/kis_2026.pck"></div></div>
     <button class="ghost" id="pk-inspect" style="margin-top:8px">İndir, özeti hesapla, listeye ekle</button>
     <div class="status" id="pk-status"></div>
+  </section>
+
+  <section id="ads">
+    <h2>Ödüllü reklamlar</h2>
+    <p class="hint">Oyunda yalnızca ödüllü reklam var: oyuncu bir düğmeye basarsa açılır; ara reklam / banner / kendiliğinden açılan
+      pencere yok. Buradaki sınırlar oyuncu başına günlüktür (gece yarısı sıfırlanır). Oyun ayarı açılışta, öne gelince ve 15
+      dakikada bir okur. 0 = o teklif kapalı.</p>
+    <div class="row3">
+      <div><label>Günlük toplam (bütün teklifler)</label><input id="a-total" type="number" min="0" max="100"></div>
+      <div><label>Ücretsiz elmas: reklam başına elmas</label><input id="a-gems" type="number" min="1" max="50"></div>
+      <div><label>Ücretsiz elmas: iki izleme arası (dakika)</label><input id="a-cool" type="number" min="0" max="60" step="0.5"></div>
+    </div>
+    <h3>Teklif başına günlük sınır</h3>
+    <table id="a-caps"></table>
+    <button class="act" id="a-save">Kaydet ve yayınla</button>
+    <button class="act ghost" id="a-reset" style="margin-left:8px">Oyunun varsayılanına dön</button>
+    <div class="status" id="a-status"></div>
   </section>
 
   <section id="mail">
@@ -390,6 +408,7 @@ function describe(e) {
   if (e.kind === "mail_delete") return `posta silindi ${e.uid}/${e.id}`;
   if (e.kind === "event") return e.id ? `etkinlik ${e.id} yayınlandı (${e.modules || "-"})${e.packs ? " · paketler " + e.packs : ""}` : `etkinlik kaldırıldı${e.packs ? " · paketler " + e.packs : ""}`;
   if (e.kind === "pack_upload") return `paket yüklendi ${e.id} (${Math.round(e.size / 1024)} KB)`;
+  if (e.kind === "ads") return e.reset ? "reklam ayarı varsayılana döndü" : `reklam ayarı: günde ${e.total_cap}, ücretsiz elmas ${e.free_gems}`;
   if (e.kind === "ban") return `YASAK (${e.ban_kind === "full" ? "tam" : "sosyal"}, ${e.until ? "bitiş " + when(e.until) : "kalıcı"}) ${e.uid} · ${e.reason}`;
   if (e.kind === "unban") return `yasak kaldırıldı ${e.uid}`;
   if (e.kind === "reset_name") return `ad sıfırlandı ${e.uid}: ${e.old || "?"} → ${e.name}`;
@@ -613,6 +632,40 @@ $("e-stop").onclick = () => {
   publishEvent(null);
 };
 document.querySelector('#tabs button[data-tab="event"]').addEventListener("click", loadEvent);
+
+// --- Ödüllü reklamlar ---
+function fillAds(ads) {
+  const d = info.catalog.ad_defaults;
+  const a = ads || {};
+  $("a-total").value = a.total_cap ?? d.total_cap;
+  $("a-gems").value = a.free_gems ?? d.free_gems;
+  $("a-cool").value = ((a.free_gems_cooldown ?? d.free_gems_cooldown) / 60).toString();
+  const caps = a.caps || {};
+  $("a-caps").innerHTML = `<tr><th>Teklif</th><th>Günde en çok</th><th>Oyunun varsayılanı</th></tr>` +
+    Object.entries(info.catalog.ad_kinds).map(([k, v]) => `<tr><td>${esc(v.label)}</td>` +
+      `<td><input data-kind="${k}" type="number" min="0" max="50" value="${caps[k] ?? v.cap}" style="max-width:100px"></td><td>${v.cap}</td></tr>`).join("");
+}
+async function loadAds() {
+  if (!info) { setTimeout(loadAds, 300); return; }
+  try { fillAds((await api("GET", "/api/ads")).ads); } catch (e) { status("a-status", e.message, false); }
+}
+$("a-save").onclick = async () => {
+  const caps = Object.fromEntries([...$("a-caps").querySelectorAll("input[data-kind]")].map((x) => [x.dataset.kind, Number(x.value)]));
+  const body = { total_cap: Number($("a-total").value), free_gems: Number($("a-gems").value),
+    free_gems_cooldown: Math.round(Number($("a-cool").value) * 60), caps };
+  try {
+    fillAds((await api("POST", "/api/ads", body)).ads);
+    status("a-status", "Yayınlandı. Oyuncular en geç 15 dakika içinde (açılışta hemen) yeni sınırlarla oynar.", true);
+  } catch (e) { status("a-status", e.message, false); }
+};
+$("a-reset").onclick = async () => {
+  if (!confirm("Reklam ayarları silinsin, oyunun kendi varsayılanları kullanılsın mı?")) return;
+  try {
+    fillAds((await api("POST", "/api/ads", { reset: true })).ads);
+    status("a-status", "Ayar kaldırıldı: oyun varsayılanları geçerli.", true);
+  } catch (e) { status("a-status", e.message, false); }
+};
+document.querySelector('#tabs button[data-tab="ads"]').addEventListener("click", loadAds);
 
 // --- Hediye ---
 function catalogRow(container, list, kind) {

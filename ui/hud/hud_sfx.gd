@@ -80,10 +80,10 @@ func _player(volume_db: float, polyphony: int) -> AudioStreamPlayer:
 # --- Sentez (arka plan) --------------------------------------------------------------------------
 
 static func _synthesize() -> void:
-	var collect_stream: AudioStreamWAV = _wav(collect_samples())
-	var gem_stream: AudioStreamWAV = _wav(gem_samples())
-	_collect_stream = collect_stream
-	_gem_stream = gem_stream   # en son: ana iş parçacığı ikisi de hazır olunca çalar
+	var streams: Array = AudioCache.fetch("hud_sfx", func() -> Array:
+		return [_wav(collect_samples()), _wav(gem_samples())])
+	_collect_stream = streams[0]
+	_gem_stream = streams[1]   # en son: ana iş parçacığı ikisi de hazır olunca çalar
 
 
 ## "Ka-çın-çın" + yere düşen altınlar. QA da çağırır (dinleme dosyası).

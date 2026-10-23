@@ -10,6 +10,8 @@ extends Control
 ## Harita 16:9'dur; başka oranlı ekranda kenarlardan kırpılır (ekranı kaplar). Kırpma mekân simgelerini
 ## ekran dışına itecekse (4:3 tablet, katlanabilir iç ekran: HURDALIK simgesi sol kenarın dışındaydı) harita
 ## simgeler sığana kadar küçülür; altta açılan bandı deniz rengi doldurur (bkz. _layout_board).
+## YAKINDA mekânları (SOON: OTO ŞOV, LİMAN — 2026-10-23): görselde gri maket, simgesi gri ve altında YAKINDA;
+## dokununca yalnız "yakında açılıyor" kartı çıkar, yolculuk yok.
 
 signal closed
 ## Yolculuk başladı: hedef mekânın varlıkları arka planda yüklenmeye başlasın (varışta takılma olmasın).
@@ -30,6 +32,9 @@ const MAP_TILT_DEG: float = 50.0
 const MAP_ASPECT: float = 16.0 / 9.0
 ## Mekân simgesinin ekran kenarına bıraktığı en az pay.
 const PIN_EDGE: float = 10.0
+## Henüz açılmayan mekânlar (haritada görünür, gidilmez).
+const SOON: Array[StringName] = [&"meet", &"port"]
+const SOON_TINT: Color = Color(0.72, 0.72, 0.74, 0.95)
 
 var current: StringName = &"city"
 ## Haritanın kendisi (16:9). Kaplama ölçeğiyle ortalanır; simgeler sığmıyorsa küçülür (_layout_board).
@@ -125,6 +130,8 @@ func _build() -> void:
 	_build_traveller()
 	_add_pin(&"city", Loc.t("ŞEHİR"), HudIcon.Kind.GARAGE)
 	_add_pin(&"junkyard", Loc.t("HURDALIK"), HudIcon.Kind.WRENCH)
+	_add_pin(&"meet", Loc.t("OTO ŞOV"), HudIcon.Kind.FRIENDS)
+	_add_pin(&"port", Loc.t("LİMAN"), HudIcon.Kind.BOX)
 
 	var top: MarginContainer = _margin(14, 12, 14, 0)
 	top.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
@@ -236,6 +243,10 @@ func _refresh() -> void:
 		var button: PlateButton = _pins[place]
 		var hint: Label = _hints[place]
 		button.highlight = place == current
+		if SOON.has(place):
+			hint.text = Loc.t("YAKINDA")
+			button.modulate = SOON_TINT
+			continue
 		if place == current:
 			hint.text = Loc.t("BURADASIN")
 		elif place == &"junkyard" and not open_yard:
@@ -252,6 +263,9 @@ func _on_pin(place: StringName) -> void:
 		return
 	if place == current:
 		close()
+		return
+	if SOON.has(place):
+		_flash_card(Loc.t("%s YAKINDA AÇILIYOR") % (_pins[place] as PlateButton).text)
 		return
 	if place == &"junkyard" and not _yard_open():
 		_flash_card(Loc.t("HURDALIK, 2. TAMİR ALANINI AÇINCA YOLA ÇIKAR"))
