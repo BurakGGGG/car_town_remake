@@ -1,7 +1,7 @@
 extends SceneTree
 ## YÜKLEME EKRANI SLAYTLARI: temiz kayıtla açılır (ilk açılış → giriş seçenekleri ekranı tutar), 26 sn boyunca
-## görünen slayt izlenir: sıra (garaj → drag → showroom → hurdalık → kovalamaca → garaj), geçiş ortasında iki görselin
-## karışması, en kötü kare süresi. Kareler: ~/Projects/ct_shots/loading_slides/.
+## görünen slayt izlenir: Tofaş'lı açılış görseli hiç gelmez, ilk görsel bir slayt, rastgele torba sırası (dördü
+## gösterilmeden tekrar yok, art arda aynısı yok), geçiş ortasında iki görselin karışması, en kötü kare süresi. Kareler: ~/Projects/ct_shots/loading_slides/.
 ## Kullanım: CT_LOGIN_GATE=1 CT_NO_TUTORIAL=1 tools/qa_isolated.sh res://qa/yukleme_slayt_qa.gd --display-driver x11 --resolution 1152x648
 const OUT: String = "/home/burak/Projects/ct_shots/loading_slides/"
 const DURATION_MS: int = 26000
@@ -53,13 +53,21 @@ func _run() -> void:
 		if not mid_fade_shot and next.texture != null and next.modulate.a > 0.4 and next.modulate.a < 0.6:
 			mid_fade_shot = true
 			_shot("gecis_ortasi")
-	var expected: Array[String] = ["loading_bg", "drag", "showroom", "hurdalik", "kovalamaca", "loading_bg"]
-	for i: int in mini(order.size(), expected.size()):
-		if order[i] != expected[i]:
-			print("SLAYT HATA: %d. görsel %s, beklenen %s" % [i + 1, order[i], expected[i]])
+	# 2026-10-23 kuralı: Tofaş'lı garaj (loading_bg) yalnız motorun açılış ekranında; çubukla birlikte rastgele bir slayt,
+	# sonra torba usulü rastgele sıra — dördü gösterilmeden tekrar yok, art arda aynısı yok
+	var slides: int = LoadingScreen.SLIDES.size()
+	if order.has("loading_bg"):
+		print("SLAYT HATA: yükleme ekranında Tofaş'lı açılış görseli göründü")
+		fails += 1
+	for i: int in order.size():
+		if i > 0 and order[i] == order[i - 1]:
+			print("SLAYT HATA: %d. görsel bir öncekiyle aynı (%s)" % [i + 1, order[i]])
 			fails += 1
-	if order.size() < expected.size():
-		print("SLAYT HATA: %d görsel görüldü, en az %d bekleniyordu" % [order.size(), expected.size()])
+		if i < slides and order.slice(0, i).has(order[i]):
+			print("SLAYT HATA: %s, dört görsel gösterilmeden tekrar geldi" % order[i])
+			fails += 1
+	if order.size() < slides + 1:
+		print("SLAYT HATA: %d görsel görüldü, en az %d bekleniyordu" % [order.size(), slides + 1])
 		fails += 1
 	if not mid_fade_shot:
 		print("SLAYT HATA: geçiş ortası yakalanamadı")

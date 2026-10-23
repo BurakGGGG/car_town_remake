@@ -9,6 +9,8 @@ extends Control
 ## dokunmatik: TouchScroll). Oyunu engellemez: KAPAT ile oyun sürer.
 
 signal opened
+## GÜNLÜK GİRİŞ MERDİVENİ kartındaki düğme (Hud panoyu açar).
+signal login_ladder_requested
 signal closed
 
 enum Tab { DAILY, WEEKLY, ACHIEVEMENTS, GUIDE, EVENT }
@@ -407,15 +409,14 @@ func _task_plate(task: Dictionary, weekly: bool, index: int) -> PlatePanel:
 	return plate
 
 
-## GÜNLÜK GİRİŞ ×2: bugünün giriş elması alındıysa ve ikiye katlanmadıysa üstte teklif (oyuncu basarsa reklam).
+## GÜNLÜK GİRİŞ MERDİVENİ kartı (eskiden giriş elması ×2 teklifiydi; ×2 artık merdiven panosunda): bugünkü basamak,
+## alınabilirse amber MERDİVEN düğmesi. Basınca pano (login_ladder_requested → Hud).
 func _login_plate() -> Control:
 	var gem_rewards: GemRewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
-	var gems: int = gem_rewards.login_double_amount() if gem_rewards else 0
-	var ads: AdService = get_tree().get_first_node_in_group("ads") as AdService
-	if gems <= 0 or ads == null or ads.block_reason(AdPolicy.DAILY_DOUBLE) != AdPolicy.OK:
+	if gem_rewards == null:
 		return null
 	var plate: PlatePanel = PlatePanel.new()
-	plate.name = "LoginDouble"
+	plate.name = "LoginLadder"
 	plate.theme_type_variation = &"HudCarPlate"
 	plate.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
 	var row: HBoxContainer = HBoxContainer.new()
@@ -425,20 +426,22 @@ func _login_plate() -> Control:
 	var texts: VBoxContainer = VBoxContainer.new()
 	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	texts.add_child(_label(&"HudPlateTitle", Loc.t("GÜNLÜK GİRİŞ  %d. GÜN") % gem_rewards.streak()))
-	var caption: Label = _label(&"HudInkCaption", Loc.t("Bugün +%d gem aldın. Reklam izle, bir o kadar daha.") % gems)
-	caption.add_theme_color_override(&"font_color", HudPalette.GEM_DARK)
+	texts.add_child(_label(&"HudPlateTitle", Loc.t("GÜNLÜK GİRİŞ MERDİVENİ  %d / %d") % [gem_rewards.ladder_day(),
+		LoginLadder.DAYS]))
+	var ready: bool = gem_rewards.can_claim()
+	var caption: Label = _label(&"HudInkCaption", Loc.t("Bugünün ödülü seni bekliyor!") if ready \
+		else Loc.t("Bugünün ödülünü aldın. Yarın bir basamak daha!"))
+	caption.add_theme_color_override(&"font_color", HudPalette.COIN_DARK if ready else HudPalette.INK)
 	texts.add_child(caption)
 	row.add_child(texts)
-	var offer: AdOfferButton = AdOfferButton.new(AdPolicy.DAILY_DOUBLE, Loc.t("+%d GEM") % gems)
-	offer.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	offer.custom_minimum_size = Vector2(130.0, 0.0)
-	offer.rewarded.connect(func() -> void:
-		var given: int = gem_rewards.double_login(false)
-		if given > 0:
-			_reward_popup.show_rewards({"gems": given, "title": Loc.t("GÜNLÜK GİRİŞ ×2")})
-		_refresh())
-	row.add_child(offer)
+	var open_button: PlateButton = PlateButton.new()
+	open_button.theme_type_variation = &"HudPlateSmall"
+	open_button.text = Loc.t("MERDİVEN")
+	open_button.highlight = ready
+	open_button.focus_mode = Control.FOCUS_NONE
+	open_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	open_button.pressed.connect(func() -> void: login_ladder_requested.emit())
+	row.add_child(open_button)
 	return plate
 
 

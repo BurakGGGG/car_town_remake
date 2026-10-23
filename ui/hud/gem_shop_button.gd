@@ -1,15 +1,13 @@
 class_name GemShopButton
-extends Button
-## HUD'un MARKET düğmesi (eski adı GEM AL) — 2026-10-23 alt bar taslağıyla sağ üstte, tabelaların altında: oyunun krem
-## plakası (PLAYER plakası gibi, altta kalınlık kenarı), solda plakadan taşan 2B elmas + altın çizimi, koyu yazı; birkaç
-## saniyede bir "nefes alma" büyümesi. Başlangıç paketi alınmadıysa sağ üstte kırmızı "!" rozeti.
-## Kodla kurulur (Hud._setup_gem_store); basınca `pressed` → mağaza.
+extends PlateButton
+## HUD'un MARKET düğmesi (eski adı GEM AL) — sağ üstte, kamera / ayar tabelalarının dilinde YUVARLAK ve YAZISIZ tabela
+## (2026-10-23, kullanıcı: "market butonunu yuvarlak yap, market yazmasın"; önceki gün krem plakaydı): içinde 2B elmas +
+## altın çizimi (biraz taşar), birkaç saniyede bir "nefes alma" büyümesi. Başlangıç paketi alınmadıysa sağ üstte kırmızı
+## "!" rozeti. Yanında GÜNLÜK GİRİŞ tabelası durur. Kodla kurulur (Hud._setup_gem_store); basınca `pressed` → mağaza.
 
-const HEIGHT: float = 44.0
 const PULSE_EVERY: float = 4.0
-## Çizim plakanın solundan ve üstünden taşar (yükselen ikon dili).
-const ART_SIZE: Vector2 = Vector2(56.0, 46.7)
-const ART_SLOT: float = 50.0
+## Çizimin tabela çapına oranı (1'den büyük: kenardan biraz taşar, yükselen ikon dili).
+const ART_RATIO: float = 1.04
 
 ## Sağ üstte rozet gösterilsin mi (tek seferlik paket hâlâ alınabilir).
 var show_badge: bool = false:
@@ -18,58 +16,27 @@ var show_badge: bool = false:
 		_overlay.animate()
 
 var _art: TextureRect
-var _row: HBoxContainer
 var _overlay: _Overlay
 var _t: float = 0.0
 var _next_pulse: float = 1.5
 
 
 func _init() -> void:
+	shape = Shape.ROUND
+	kind = HudIcon.Kind.NONE
+	bolts = false
+	lift_when_pressed = 0.0
+	theme_type_variation = &"HudSign"
 	focus_mode = Control.FOCUS_NONE
-	custom_minimum_size = Vector2(0.0, HEIGHT)
-	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	clip_contents = false
 	text = ""
-	add_theme_stylebox_override(&"normal", _style(HudPalette.PLATE))
-	add_theme_stylebox_override(&"hover", _style(HudPalette.PLATE_HOVER))
-	add_theme_stylebox_override(&"pressed", _style(HudPalette.PLATE.darkened(0.06)))
-	add_theme_stylebox_override(&"focus", StyleBoxEmpty.new())
-
-	var row: HBoxContainer = HBoxContainer.new()
-	_row = row
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_theme_constant_override(&"separation", 4)
-	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(row)
-	var pad: Control = Control.new()
-	pad.custom_minimum_size = Vector2(ART_SLOT, 0.0)
-	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(pad)
-	var label: Label = Label.new()
-	label.text = Loc.t("MARKET")
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.theme_type_variation = &"HudOutlined"
-	label.add_theme_font_size_override(&"font_size", 16)
-	label.add_theme_color_override(&"font_color", HudPalette.INK)
-	label.add_theme_constant_override(&"outline_size", 0)
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.size_flags_vertical = Control.SIZE_FILL
-	row.add_child(label)
-	var tail: Control = Control.new()
-	tail.custom_minimum_size = Vector2(14.0, 0.0)
-	tail.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(tail)
-
 	_art = TextureRect.new()
 	_art.texture = load("res://ui/hud/art/nav/market.svg") as Texture2D
 	_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	_art.size = ART_SIZE
-	_art.position = Vector2(-2.0, HEIGHT - 4.0 - ART_SIZE.y)
 	add_child(_art)
-
 	_overlay = _Overlay.new()
 	_overlay.owner_button = self
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -78,10 +45,16 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	# Genişlik içerikten (yazı tipi temadan ağaca girince çözülür)
-	_fit_width.call_deferred()
-	resized.connect(func() -> void: pivot_offset = size * 0.5)
+	super._ready()
+	resized.connect(_layout)
+	_layout()
+
+
+## Çizim tabelanın ortasında, çapın ART_RATIO katı; nabız tabelanın ortasından büyür.
+func _layout() -> void:
 	pivot_offset = size * 0.5
+	_art.size = size * ART_RATIO
+	_art.position = (size - _art.size) * 0.5 + Vector2(0.0, -1.0)
 
 
 func _process(delta: float) -> void:
@@ -96,26 +69,7 @@ func _process(delta: float) -> void:
 		tween.tween_property(self, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
-func _fit_width() -> void:
-	custom_minimum_size.x = _row.get_combined_minimum_size().x
-
-
-## Krem plaka: altta kalınlık kenarı (oyunun plaka dili), cıvatalar _Overlay'da.
-static func _style(bg: Color) -> StyleBoxFlat:
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.bg_color = bg
-	sb.border_color = HudPalette.PLATE_EDGE
-	sb.border_width_bottom = 4
-	sb.set_corner_radius_all(9)
-	sb.shadow_color = Color(0.0, 0.0, 0.0, 0.15)
-	sb.shadow_size = 1
-	sb.shadow_offset = Vector2(0.0, 2.0)
-	sb.anti_aliasing = true
-	return sb
-
-
-## Üst katman: sağdaki cıvata ve rozet. Yazının ÜSTÜNDE çizilir; rozet nabzı alt öğenin ölçeğiyle oynar (her karede
-## yeni çizim yok).
+## Üst katman: sağ üstteki "!" rozeti. Çizimin ÜSTÜNDE; rozet nabzı alt öğenin ölçeğiyle oynar (her karede yeni çizim yok).
 class _Overlay:
 	extends Control
 	var owner_button: GemShopButton
@@ -132,13 +86,9 @@ class _Overlay:
 		_layout()
 
 	func _layout() -> void:
-		_disc.position = Vector2(size.x - 4.0, 3.0)
+		_disc.position = Vector2(size.x - 3.0, 3.0)
 		_mark.position = _disc.position
-		queue_redraw()
 		animate()
-
-	func _draw() -> void:
-		draw_circle(Vector2(size.x - 9.0, (size.y - 4.0) * 0.5), 2.4, HudPalette.PLATE_EDGE, true, -1.0, true)
 
 	## Rozet dairesi nabız atar, "!" sabit boyda kalır.
 	func animate() -> void:

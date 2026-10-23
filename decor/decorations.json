@@ -12,7 +12,8 @@
     "floor_pattern: price/value GÖZ BAŞINA (her boyanan karo ücretlidir, silmek ücretsiz). wall_piece: adet başına, depoya döner.",
     "retired: true → mağazada / paletten kalkar, eski kayıttaki kopya yüklenir (floor_surface → karolara taşındı).",
     "price_gems: ELMAS fiyatı (LÜKS eşyalar; price 0). value yine ₺ (garaj değeri, elmas başına 300 ₺). luxury kayıtlarında placement açıkça yazılır (floor / wall).",
-    "exclusive: true → SATILMAZ (ön kayıt ödülü gibi yalnızca kodla verilir: DecorManager.grant_exclusive). Sahibi olmayanın paletinde hiç görünmez; sahibinde sergilenen araç gibi SERGİLE / SERGİLENİYOR. Lüks ışıltısı alır."
+    "exclusive: true → SATILMAZ (ön kayıt ödülü gibi yalnızca kodla verilir: DecorManager.grant_exclusive). Sahibi olmayanın paletinde hiç görünmez; sahibinde sergilenen araç gibi SERGİLE / SERGİLENİYOR. Lüks ışıltısı alır.",
+    "login: {month, week} → GÜNLÜK GİRİŞ MERDİVENİ ödülü (exclusive ile): week 1-3 hafta sonu dekoru, week 4 ay sonu (28. gün). Yeni ay = o ayın dört kaydı + modelleri (tools/decor/props_v7_giris.py gibi); yoksa yerine elmas verilir (LoginLadder)."
   ],
   "defaults": {
     "rotation_step": 45,
@@ -2401,6 +2402,54 @@
       "min_level": 1,
       "exclusive": true,
       "desc": "Rıza Usta'nın ilk ustalara bıraktığı anahtar. Yalnızca kurucu ustalarda."
+    },
+    {
+      "id": "login_m01_w1",
+      "title": "ALTIN KRİKO",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "value": 15000,
+      "min_level": 1,
+      "exclusive": true,
+      "login": {"month": 1, "week": 1},
+      "desc": "Günlük giriş merdiveni, 1. ay 1. hafta ödülü. Mağazada yok."
+    },
+    {
+      "id": "login_m01_w2",
+      "title": "NEON ANAHTAR TABELASI",
+      "kind": "luxury",
+      "placement": "wall",
+      "price": 0,
+      "value": 18000,
+      "min_level": 1,
+      "exclusive": true,
+      "login": {"month": 1, "week": 2},
+      "desc": "Günlük giriş merdiveni, 1. ay 2. hafta ödülü. Mağazada yok."
+    },
+    {
+      "id": "login_m01_w3",
+      "title": "KROM V8 HEYKELİ",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "value": 22000,
+      "min_level": 1,
+      "exclusive": true,
+      "login": {"month": 1, "week": 3},
+      "desc": "Günlük giriş merdiveni, 1. ay 3. hafta ödülü. Mağazada yok."
+    },
+    {
+      "id": "login_m01_cup",
+      "title": "1. AY KUPASI",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "value": 40000,
+      "min_level": 1,
+      "exclusive": true,
+      "login": {"month": 1, "week": 4},
+      "desc": "Günlük giriş merdiveninin 28 gününü aralıksız çıkan ustalara. Mağazada yok."
     },
     {
       "id": "lux_trophy_wall",

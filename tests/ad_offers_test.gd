@@ -167,28 +167,29 @@ func _time_skip() -> void:
 
 
 func _daily_double() -> void:
-	print("== 4) Günlük giriş elması ×2 ==")
+	print("== 4) Günlük giriş merdiveni ×2 ==")
 	await _ready_ads()
 	var gem: GemRewards = g(&"gem_rewards") as GemRewards
 	var pp: PlayerProgress = g(&"player_progress")
 	gem.check_day()
-	var amount: int = gem.login_double_amount()
-	check(amount > 0, "bugünün giriş elması alındı, ×2 teklifi var (+%d)" % amount)
+	check(gem.ladder_double().is_empty(), "basamak alınmadan ×2 teklifi yok")
 	pp.load_state(8, 0, 0)
-	hud.router.open(&"quests")
+	hud.router.open(&"login_ladder")
 	await seconds(0.6)
-	hud.quest_screen._on_tab_pressed(MissionScreen.Tab.DAILY)
+	(hud.login_ladder_screen.get("_claim") as PlateButton).pressed.emit()
 	await frames(4)
-	var plate: Control = hud.quest_screen.find_child("LoginDouble", true, false) as Control
-	var button: AdOfferButton = _offer(hud.quest_screen, AdPolicy.DAILY_DOUBLE)
-	check(plate != null and button != null and button.visible, "GÖREVLER › GÜNLÜK'ün başında GÜNLÜK GİRİŞ ×2")
+	(hud.login_ladder_screen.get("_reward_popup") as RewardPopup).close()
+	await seconds(0.6)
+	var extra: Dictionary = gem.ladder_double()
+	var gems: int = pp.gems
+	check(not extra.is_empty() and int(extra["gems"]) > 0, "basamak alındı, ×2 teklifi var (+%d gem)" % int(extra.get("gems", 0)))
+	var button: AdOfferButton = _offer(hud.login_ladder_screen, AdPolicy.DAILY_DOUBLE)
+	check(button != null and button.visible, "merdiven panosunda GÜNLÜK GİRİŞ ×2")
 	await _press(button)
-	check(pp.gems == amount and gem.login_double_amount() == 0, "reklam sonrası +%d elmas, bugün bir daha yok" % amount)
+	check(pp.gems == gems + int(extra["gems"]) and gem.ladder_double().is_empty(), "reklam sonrası +%d elmas, bugün bir daha yok" % int(extra["gems"]))
 	var saved: Dictionary = gem.state()
 	gem.load_state(saved)
-	check(gem.login_double_amount() == 0, "kayıt: ikiye katlandı işareti kalır")
-	await frames(4)
-	check(hud.quest_screen.find_child("LoginDouble", true, false) == null, "teklif plakası kalktı")
+	check(gem.ladder_double().is_empty(), "kayıt: ikiye katlandı işareti kalır")
 	hud.router.close_all()
 	await seconds(0.5)
 

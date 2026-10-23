@@ -60,8 +60,6 @@ var _cards: HBoxContainer
 var _continue: PlateButton
 ## Dekor küçük resmi bekleyen TextureRect'ler: eşya id → Array[TextureRect].
 var _thumb_slots: Dictionary = {}
-## Kırpılmış dekor küçük resimleri (_fitted_thumb): eşya id → Texture2D.
-static var _fitted: Dictionary = {}
 
 
 func _init(hud: Hud) -> void:
@@ -195,6 +193,7 @@ func _open() -> void:
 	_closing = false
 	_opened_at = Time.get_ticks_msec()
 	PlateAnim.pop_in(self, _column)
+	_double.refresh()   # koşulu ekranın görünür olmasına bakar: yukarıdaki tazeleme ekran açılmadan yapıldı
 	_rays.start()
 	_sfx.fanfare()
 	var cards: Array[Node] = _cards.get_children()
@@ -526,7 +525,7 @@ func _decor_strip(items: Array[StringName]) -> Control:
 		thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		thumb.custom_minimum_size = Vector2(0.0, PIC_HEIGHT - 4.0)   # genişlik kartın: dar ekranda kartı büyütmesin
 		thumb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		thumb.texture = _fitted_thumb(id)
+		thumb.texture = DecorThumbs.fitted(id)
 		if thumb.texture == null:
 			if not _thumb_slots.has(id):
 				_thumb_slots[id] = []
@@ -546,28 +545,10 @@ func _decor_strip(items: Array[StringName]) -> Control:
 	return holder
 
 
-## DecorThumbs resmi, eşyanın çevresindeki saydam boşluk kırpılmış (kartta üç resim yan yana: 160x110 karede eşya
-## alanın beşte biri kadardı, küçücük görünüyordu). Kırpılmış doku eşya başına bir kez üretilir.
-static func _fitted_thumb(id: StringName) -> Texture2D:
-	if _fitted.has(id):
-		return _fitted[id]
-	var source: Texture2D = DecorThumbs.cached(id)
-	if source == null:
-		return null
-	var texture: Texture2D = source
-	var image: Image = source.get_image()
-	var used: Rect2i = image.get_used_rect() if image else Rect2i()
-	if used.has_area():
-		used = used.grow(2).intersection(Rect2i(Vector2i.ZERO, image.get_size()))
-		texture = ImageTexture.create_from_image(image.get_region(used))
-	_fitted[id] = texture
-	return texture
-
-
 func _on_thumb_ready(id: StringName) -> void:
 	for thumb: Variant in _thumb_slots.get(id, []):
 		if is_instance_valid(thumb):
-			(thumb as TextureRect).texture = _fitted_thumb(id)
+			(thumb as TextureRect).texture = DecorThumbs.fitted(id)
 	_thumb_slots.erase(id)
 
 

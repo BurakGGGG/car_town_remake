@@ -233,10 +233,16 @@ func next_issue() -> int:
 
 ## Şu anki garajın pasif geliri (₺/dk).
 func offline_rate() -> float:
+	return current_active_rate() * OFFLINE_SHARE
+
+
+## Şu anki garajın ölçülmüş AKTİF geliri (₺/dk): garaj seviyesi, açık alan, tamir hızı, orta işler. Günlük giriş merdiveninin
+## para ödülleri de buna bağlıdır (LoginLadder: "kaç dakikalık oyun geliri").
+func current_active_rate() -> float:
 	var upgrades: GarageUpgradeManager = get_tree().get_first_node_in_group("garage_upgrades") as GarageUpgradeManager
 	var bays: RepairBayManager = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
 	return active_rate(upgrades.garage_level() if upgrades else 1, bays.unlocked_count() if bays else 1,
-		upgrades.repair_speed_multiplier() if upgrades else 1.0, _medium_jobs()) * OFFLINE_SHARE
+		upgrades.repair_speed_multiplier() if upgrades else 1.0, _medium_jobs())
 
 
 ## Ölçülmüş aktif gelir (₺/dk). `speed`: tamir süresi çarpanı (1,0 … 0,6).

@@ -14,12 +14,17 @@ extends CanvasLayer
 ## (LoginGate — FACEBOOK / GOOGLE / E-POSTA / misafir). Seçim yapılınca ekran söner. Ekran kökte durdukça
 ## oyunun açılış akışları (ders, gazete, kasa hatırlatması) bekler.
 ##
-## Arka plan görseli: LOADING_IMAGE (2400×1080, önemli içerik ortadaki 1920×1080'de, alttaki ~200
-## piksel sakin — çubuk ve yazı orada). Dosya yoksa koyu düz zemin. Aynı görsel motorun açılış
-## ekranına da (application/boot_splash/image) verilir: dokunuştan oyuna tek, kesintisiz ekran.
-## Ekran açık kaldıkça (giriş seçenekleri dahil) SLIDES sırayla, yumuşak geçişle gelir; sonuncudan sonra
-## yeniden LOADING_IMAGE. Slaytlar tools/make_loading_scenes.gd ile çizilir (aynı yerleşim), bellekte en
-## çok iki görsel durur, sıradaki KENDİ iş parçacığında yüklenir (bkz. _rotate_slide).
+## Görseller 2400×1080 (önemli içerik ortadaki 1920×1080'de, alttaki ~200 piksel sakin — çubuk ve yazı orada); hiç
+## görsel yoksa koyu düz zemin. LOADING_IMAGE (Tofaş'lı garaj) motorun açılış ekranının görselidir
+## (application/boot_splash/image) — yükleme ekranında yalnız slayt dosyası hiç yoksa görünür.
+## SLAYTLAR (2026-10-23, kullanıcı: "hep aynı drag fotosu gelmesin, rastgele gelsin; yükleniyor barı gelir gelmez yeni
+## foto gelsin, sadece açılışta Tofaş"): çubuk göründüğü İLK karede rastgele bir SLIDES görseli vardır (açılış ekranı
+## dururken, ilk kareden önce yüklenir), ekran açık kaldıkça (giriş seçenekleri dahil) her SLIDE_HOLD'da rastgele
+## sıradaki yumuşak geçişle gelir — torba usulü: hepsi gösterilmeden tekrar yok, art arda aynısı yok; LOADING_IMAGE
+## dönmez. Eskiden açılış ekranındaki görsel 3,6 sn daha dururdu, PC'de oyun 2,3 sn'de açıldığı için ikinci foto hiç
+## görünmüyordu. Çok hızlı açılışta ekran ilk foto en az FIRST_MIN_VIEW görünmeden kalkmaz. Bellekte en çok iki görsel
+## durur, sıradaki KENDİ iş parçacığında yüklenir (bkz. _rotate_slide). Yavaş telefon benzetimiyle ölçüm:
+## qa/yukleme_slayt_zaman.gd. Slaytlar tools/make_loading_scenes.gd ile çizilir (aynı yerleşim).
 ##
 ## Sahne dosyası elle yazılmaz: tools/make_loading_scene.gd üretir.
 
@@ -27,24 +32,31 @@ const MAIN_SCENE: String = "res://Main.tscn"
 ## Arka plan yüklemesinden ÖNCE ana iş parçacığında yüklenmesi gereken betikler (bkz. _ready).
 const MAIN_THREAD_FIRST: Array[String] = ["res://ads/admob_provider.gd"]
 const LOADING_IMAGE: String = "res://ui/loading/loading_bg.png"
-## LOADING_IMAGE'den sonra gelen görseller (sırayla). Dosyası olmayan atlanır.
+## Yükleme ekranında rastgele sırayla dönen görseller. Dosyası olmayan atlanır (hiçbiri yoksa LOADING_IMAGE durur).
 const SLIDES: Array[String] = [
 	"res://ui/loading/slides/drag.png",
 	"res://ui/loading/slides/showroom.png",
 	"res://ui/loading/slides/hurdalik.png",
 	"res://ui/loading/slides/kovalamaca.png",
 ]
-## Her görsel bu kadar durur, sonra sıradakine SLIDE_FADE sürede geçilir (sn).
-const SLIDE_HOLD: float = 3.6
-const SLIDE_FADE: float = 0.9
+## Her görsel bu kadar durur, sonra sıradakine SLIDE_FADE sürede geçilir (sn). Oyun ilk fotodan önce hazırsa ekran ilk
+## foto en az FIRST_MIN_VIEW görünene kadar açık kalır.
+const SLIDE_HOLD: float = 3.0
+## Çubuğun zamana göre tahmini (gerçek ilerleme iri adımlarla gelir): 1 - e^(-t / bu). 1,4 idi — uzun (telefon) yüklemede
+## çubuk 4. saniyede %83'e varıp sonra %89'da takılı kalıyordu; şimdi 3 sn ≈ %40, 9 sn ≈ %80.
+const ESTIMATE_TIME: float = 3.5
+const SLIDE_FADE: float = 0.7
+const FIRST_MIN_VIEW: float = 1.0
 const THEME_PATH: String = "res://ui/theme/hud_theme.tres"
 ## Görsel yokken zemin; motorun açılış ekranı rengiyle AYNI (geçiş fark edilmesin).
 const BG_COLOR: Color = Color("1E2124")
 ## İpuçları bu aralıkla değişir (sn); değişim kısa bir solup belirmeyle (TIP_FADE her yön).
 const TIP_INTERVAL: float = 2.4
 const TIP_FADE: float = 0.12
-## Main eklendikten sonra ekranın üstte kaldığı kare sayısı (ilk ağır kareler).
+## Main eklendikten sonra ekranın üstte kaldığı kare sayısı (ilk ağır kareler); ardından HUD'un ön ısıtması (Hud._warm_up,
+## birkaç kareye yayılır) beklenir — en çok WARMUP_MAX_WAIT (sn).
 const SETTLE_FRAMES: int = 5
+const WARMUP_MAX_WAIT: float = 8.0
 const FADE_TIME: float = 0.35
 ## Çubuk %100'de bu kadar durur, sonra giriş seçeneklerine yer açmak için söner (sn).
 const GATE_HOLD: float = 0.2
@@ -84,12 +96,21 @@ var _settle: int = -1
 var _gate_open: bool = false
 var _art: TextureRect            # görünen görsel
 var _art_next: TextureRect       # üstünde belirerek gelen sıradaki
-var _slides: Array[String] = []  # LOADING_IMAGE + var olan SLIDES
-var _slide_index: int = 0
+var _slides: Array[String] = []  # var olan SLIDES
+var _queue: Array[String] = []   # sıradaki görseller (karışık torba; boşalınca yeniden karılır)
+var _current: String = ""        # ekrandaki görsel
 var _slide_timer: float = 0.0
 var _slide_fading: bool = false
 var _next_texture: Texture2D     # sıradaki slayt: beklemenin yarısında yüklenir, sonunda belirir
 var _slide_loader: Thread        # sıradaki slaydı yükleyen iş parçacığı (yalnız yükleme sürerken var)
+var _leave_pending: bool = false # oyun hazır, ilk foto FIRST_MIN_VIEW dolmadı
+var _leaving: bool = false       # ekran sönüyor: yeni slayt geçişi başlamaz
+
+## YAVAŞ TELEFON BENZETİMİ (yalnız QA, qa/yukleme_slayt_zaman.gd; oyunda 0): arka plan yüklemesi en az bu kadar sürmüş
+## sayılır (sn) ve oyunun kurulduğu kare bu kadar uzatılır (ms, ana iş parçacığı bekler — telefondaki ilk ağır kare).
+static var simulate_load_seconds: float = 0.0
+static var simulate_heavy_frame_ms: int = 0
+var _main_at: float = -1.0       # Main'in eklendiği an (_elapsed)
 
 
 func _ready() -> void:
@@ -141,9 +162,12 @@ func _process(delta: float) -> void:
 			# geri gitmeden, gerçek değerin ve zamana göre yavaşlayan bir tahminin büyüğüne yürür,
 			# yükleme bitmeden %90'ı geçmez.
 			var real: float = float(progress[0]) if not progress.is_empty() else 0.0
-			var estimate: float = 1.0 - exp(-_elapsed / 1.4)
+			var estimate: float = 1.0 - exp(-_elapsed / ESTIMATE_TIME)
 			_show(minf(maxf(real, estimate), 1.0) * 0.9, delta)
 		ResourceLoader.THREAD_LOAD_LOADED:
+			if _elapsed < simulate_load_seconds:
+				_show(minf(1.0 - exp(-_elapsed / ESTIMATE_TIME), 1.0) * 0.9, delta)   # benzetim: yükleme sürüyormuş gibi
+				return
 			_start_game(ResourceLoader.load_threaded_get(MAIN_SCENE) as PackedScene)
 		_:
 			push_warning("LoadingScreen: arka plan yüklemesi başarısız, doğrudan geçiliyor")
@@ -164,23 +188,42 @@ func _start_game(scene: PackedScene) -> void:
 	tree.root.add_child(_main)
 	tree.current_scene = _main
 	_settle = SETTLE_FRAMES
+	_main_at = _elapsed
+	if simulate_heavy_frame_ms > 0:
+		OS.delay_msec(simulate_heavy_frame_ms)
+
+
+func _warmed_up() -> bool:
+	var hud: Node = _main.get_node_or_null(^"HUD") if is_instance_valid(_main) else null
+	return hud == null or not ("warmed_up" in hud) or bool(hud.get("warmed_up"))
 
 
 func _finish_step() -> void:
+	if _leave_pending:
+		if _elapsed >= FIRST_MIN_VIEW:
+			_leave_pending = false
+			_fade_out()
+		return
 	if _settle < 0:
 		return
-	_settle -= 1
 	if _settle > 0:
+		_settle -= 1
 		return
+	if not _warmed_up() and _elapsed - _main_at < WARMUP_MAX_WAIT:
+		return   # HUD'un ön ısıtması sürüyor (adımlar ayrı karelerde; aralarda bu ekran çizilir)
 	_settle = -1
 	_show(1.0, 1.0)
 	if LoginGate.wanted(get_tree()):
 		_open_login_gate()
 		return
-	_fade_out()
+	if _elapsed >= FIRST_MIN_VIEW:
+		_fade_out()
+	else:
+		_leave_pending = true   # çok hızlı açılış: ilk foto bir an görünüp kaybolmasın
 
 
 func _fade_out() -> void:
+	_leaving = true
 	var tween: Tween = create_tween()
 	tween.tween_property(_root, "modulate:a", 0.0, FADE_TIME)
 	tween.tween_callback(queue_free)
@@ -221,7 +264,7 @@ func _rotate_tip(delta: float) -> void:
 ## ancak yükleme bitince (giriş ekranında) dönüyordu — yavaş cihazda oyuncu yükleme boyunca aynı görsele bakıyordu
 ## (kullanıcı 2026-10-20). Ana iş parçacığında yüklemek de olmazdı: görsel başına ~25 ms (masaüstü), telefonda çubuk takılır.
 func _rotate_slide(delta: float) -> void:
-	if _slides.size() < 2 or _slide_fading:
+	if _slides.size() < 2 or _slide_fading or _leaving:
 		return
 	_slide_timer += delta
 	if _slide_timer >= SLIDE_HOLD * 0.5 and _next_texture == null and _slide_loader == null:
@@ -234,6 +277,7 @@ func _rotate_slide(delta: float) -> void:
 		if _next_texture == null:
 			push_warning("LoadingScreen: slayt yüklenemedi, atlanıyor: %s" % path)
 			_slides.erase(path)
+			_queue.erase(path)
 			return
 	if _slide_timer < SLIDE_HOLD or _next_texture == null:
 		return
@@ -250,13 +294,20 @@ func _end_slide_fade() -> void:
 	_art.texture = _art_next.texture   # önceki görsel bırakılır: bellekte en çok iki görsel
 	_art_next.texture = null
 	_art_next.modulate.a = 0.0
-	_slide_index = (_slide_index + 1) % _slides.size()
+	_current = _next_slide()
+	_queue.pop_front()
 	_slide_timer = 0.0
 	_slide_fading = false
 
 
+## Sıradaki görsel (torbanın başı). Torba boşalınca karılarak yeniden dolar; yeni torba ekrandakiyle başlamaz.
 func _next_slide() -> String:
-	return _slides[(_slide_index + 1) % _slides.size()]
+	if _queue.is_empty():
+		_queue = _slides.duplicate()
+		_queue.shuffle()
+		if _queue.size() > 1 and _queue[0] == _current:
+			_queue.push_back(_queue.pop_front())
+	return _queue[0]
 
 
 ## İş parçacığında çalışır: yalnızca görseli yükler (sahneye dokunmaz).
@@ -298,17 +349,24 @@ func _build() -> void:
 		title.add_theme_font_size_override(&"font_size", 64)
 		title.add_theme_constant_override(&"outline_size", 14)
 		center.add_child(title)
-	if ResourceLoader.exists(LOADING_IMAGE):
+	for path: String in SLIDES:
+		if ResourceLoader.exists(path):
+			_slides.append(path)
+	# İlk kareden ÖNCE (motorun açılış ekranı hâlâ görünürken) rastgele bir slayt: çubuk onunla birlikte belirir
+	var first: Texture2D = null
+	if not _slides.is_empty():
+		_current = _next_slide()
+		_queue.pop_front()
+		first = load(_current) as Texture2D
+	if first == null and ResourceLoader.exists(LOADING_IMAGE):
+		first = load(LOADING_IMAGE) as Texture2D
+	if first != null:
 		_art = _art_rect()
-		_art.texture = load(LOADING_IMAGE)
+		_art.texture = first
 		_root.add_child(_art)
 		_art_next = _art_rect()
 		_art_next.modulate.a = 0.0
 		_root.add_child(_art_next)
-		_slides.append(LOADING_IMAGE)
-		for path: String in SLIDES:
-			if ResourceLoader.exists(path):
-				_slides.append(path)
 
 	# Alt şerit: ipucu, çubuk + durum / yüzde
 	_bottom = MarginContainer.new()

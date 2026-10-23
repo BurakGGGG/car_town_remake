@@ -1,6 +1,6 @@
 class_name GemRewards
 extends Node
-## TEKRARLAYAN GEM KAYNAKLARI — günlük giriş serisi, tamir bahşişi ve ustalık yıldızı gemi. Tasarım ve
+## TEKRARLAYAN GEM KAYNAKLARI — günlük giriş serisi (GÜNLÜK GİRİŞ MERDİVENİ), tamir bahşişi ve ustalık yıldızı gemi. Tasarım ve
 ## simülasyon: docs/vehicle_crate_design_v2.md §3. GÜNLÜK / HAFTALIK GÖREVLER ve tamir kilometre taşları
 ## artık GÖREVLER sistemindedir (gameplay/missions/, docs/gorevler_tasarimi.md); bu sınıf gün / hafta
 ## SAATİNİN tek kaynağı olarak kalır (MissionManager buradan okur).
@@ -16,6 +16,12 @@ extends Node
 ##   * Saat ileri alınırsa yalnızca O GÜNÜN ödülü alınır (kaçırılan günler telafi edilmez) ve seri
 ##     bozulur (gün farkı 1 değilse seri 1'e döner). Geri dönülünce yukarıdaki kural kilitler:
 ##     ileri almanın kazancı, gerçek zamanda o günler kaybedilerek geri ödenir.
+##
+## GÜNLÜK GİRİŞ MERDİVENİ (2026-10-23, docs/GIRIS_MERDIVENI.md): eski 7 günlük giriş elmasının (10-10-15-10-15-10-40,
+## girişte kendiliğinden) yerine 28 basamak (LoginLadder). Basamak = ardışık giriş serisi (bir gün kaçırılınca 1. güne
+## dönülür — kullanıcı kararı). Ödül girişte VERİLMEZ: merdiven ekranında AL ile alınır (ladder_ready → HUD ekranı açar).
+## Alınmadan gün dönerse o basamağın ödülü kendiliğinden verilir (kaybolmaz). 28. gün alınınca ay tamamlanır; sonraki
+## merdiven bir sonraki ayın dekorlarını verir (tamamlanan ay sayısı kayıtta).
 ##   * Her ödül (giriş, görev, bonus, haftalık) kayıtta işaretlidir: aynı gün / hafta iki kez verilmez.
 ##     İşaretler gemle aynı kayıt dosyasındadır; eski bir kayda dönmek gemleri de geri alır.
 
@@ -24,10 +30,10 @@ signal reward_granted(amount: int, text: String)
 signal daily_changed
 ## Yeni güne geçildi (yalnızca ileri; MissionManager yeni görevleri kurar).
 signal day_changed(day: int)
-## Günlük giriş elması verildi (HUD bildirimi; ödüllü reklamla ×2 teklifi: AdPolicy.DAILY_DOUBLE).
-signal login_granted(gems: int, streak: int)
-
-const LOGIN_CYCLE: Array[int] = [10, 10, 15, 10, 15, 10, 40]
+## Yeni giriş günü: merdivenin bugünkü basamağı alınabilir (HUD oyun sakinleşince merdiven ekranını açar).
+signal ladder_ready(day: int)
+## Merdiven ödülü verildi: LoginLadder.reward sözlüğü; "auto" true ise alınmadan gün döndüğü için kendiliğinden.
+signal ladder_claimed(reward: Dictionary)
 const TIP_EVERY: int = 50
 const TIP_DAILY_CAP: int = 3
 const MASTERY_STAR_GEMS: int = 3
@@ -41,6 +47,11 @@ var _login_day: int = -1
 ## Bugünün giriş ödülünün reklamla ikiye katlandığı gün (-1 = hiç).
 var _login_doubled_day: int = -1
 var _streak: int = 0
+## MERDİVEN: ödülün alındığı giriş günü (-1 = hiç), alınan elmas / ₺ (×2 bunları bir kez daha verir), tamamlanan ay.
+var _claimed_day: int = -1
+var _claimed_gems: int = 0
+var _claimed_money: int = 0
+var _months: int = 0
 var _max_seen: int = 0
 var _day: int = -1
 var _tip_day: int = -1
@@ -104,43 +115,117 @@ func check_day() -> void:
 		_day = today
 		day_changed.emit(today)
 	if today > _login_day:
+		if can_claim():
+			_claim(true)   # önceki giriş günün basamağı alınmamıştı: kaybolmasın
 		_streak = _streak + 1 if today == _login_day + 1 else 1
 		_login_day = today
-		var gems: int = login_gems(_streak)
-		_grant(gems, "")   # bildirimi HUD login_granted'den gösterir (×2 teklifiyle)
-		login_granted.emit(gems, _streak)
 		daily_changed.emit()
+		ladder_ready.emit(ladder_day())
 	_request_save()
-
-
-## Serinin n. günündeki giriş ödülü (7 günlük döngü).
-static func login_gems(streak: int) -> int:
-	return LOGIN_CYCLE[(maxi(streak, 1) - 1) % LOGIN_CYCLE.size()]
 
 
 func streak() -> int:
 	return _streak
 
 
-## GÜNLÜK GİRİŞ ×2 (ödüllü reklam): bugünün giriş elması kadar ek elmas; bugün giriş alınmadıysa / zaten ikiye
-## katlandıysa 0.
-func login_double_amount() -> int:
-	if _login_day != day_key(now_unix()) or _login_doubled_day == _login_day:
-		return 0
-	return login_gems(_streak)
+# --- Günlük giriş merdiveni ------------------------------------------------------------
+
+## Merdivenin bugünkü basamağı (1..28): ardışık giriş serisinden.
+func ladder_day() -> int:
+	return (maxi(_streak, 1) - 1) % LoginLadder.DAYS + 1
 
 
-## Reklam ödülü: bugünün giriş elması bir kez daha verilir. Dönen: verilen elmas. announce false: bildirim yok (ödül
-## penceresi gösteren GÖREVLER).
-func double_login(announce: bool = true) -> int:
-	var gems: int = login_double_amount()
-	if gems <= 0:
-		return 0
-	_login_doubled_day = _login_day
-	_grant(gems, Loc.t("GÜNLÜK GİRİŞ ×2\n+%d GEM") % gems if announce else "")
+## Kaçıncı merdiven (ay; 1'den): tamamlanan ay + 1. Bugün 28. gün alındıysa az önce biten ay.
+func ladder_month() -> int:
+	return _months + (0 if ladder_day() == LoginLadder.DAYS and not can_claim() else 1)
+
+
+## Tamamlanan merdiven (ay) sayısı.
+func months_done() -> int:
+	return _months
+
+
+## Bugünün (son giriş gününün) basamağı alınabilir mi.
+func can_claim() -> bool:
+	return _login_day >= 0 and _claimed_day != _login_day
+
+
+## `day` basamağının ödülü (bu ay — `month` verilirse o ay —, oyuncunun şu anki geliriyle) — ekran önizlemesi için.
+func ladder_reward(day: int, month: int = 0) -> Dictionary:
+	return LoginLadder.reward(day, month if month > 0 else ladder_month(), _income())
+
+
+## AL: bugünün basamağı verilir. Dönen: verilen ödül (alınacak yoksa boş).
+func claim_ladder() -> Dictionary:
+	return _claim(false) if can_claim() else {}
+
+
+func _claim(auto: bool) -> Dictionary:
+	var reward: Dictionary = LoginLadder.reward(ladder_day(), ladder_month(), _income())
+	_claimed_day = _login_day
+	var decor: StringName = reward["decor"]
+	if decor != &"":
+		var decor_manager: DecorManager = get_tree().get_first_node_in_group("decor") as DecorManager
+		if decor_manager == null or not decor_manager.grant(decor, 1):
+			# Eşya verilemedi (zaten sahip / yönetici yok): yerine o günün yedek elması
+			reward["decor"] = &""
+			reward["gems"] = int(reward["gems"]) + (LoginLadder.FALLBACK_MONTH_GEMS if bool(reward["month_end"]) \
+				else LoginLadder.FALLBACK_WEEK_GEMS)
+	_claimed_gems = int(reward["gems"])
+	_claimed_money = int(reward["money"])
+	_grant(_claimed_gems, "")   # bildirimi merdiven ekranı / HUD gösterir
+	if _claimed_money > 0:
+		var economy: EconomyManager = get_tree().get_first_node_in_group("economy") as EconomyManager
+		if economy:
+			economy.add_money(_claimed_money)
+	if bool(reward["month_end"]):
+		_months += 1
+	reward["auto"] = auto
+	ladder_claimed.emit(reward)
 	daily_changed.emit()
 	_request_save()
-	return gems
+	return reward
+
+
+## GÜNLÜK GİRİŞ ×2 (ödüllü reklam): bugün alınan basamağın elması / ₺'si bir kez daha (dekor ikiye katlanmaz).
+## {"gems", "money"}; bugün alınmadıysa / zaten ikiye katlandıysa / katlanacak yoksa boş.
+func ladder_double() -> Dictionary:
+	if _claimed_day != _login_day or _login_doubled_day == _login_day or _login_day != day_key(now_unix()) \
+			or (_claimed_gems <= 0 and _claimed_money <= 0):
+		return {}
+	return {"gems": _claimed_gems, "money": _claimed_money}
+
+
+## Reklam ödülü: ladder_double kadar bir kez daha verilir. Dönen: verilen (boşsa verilmedi). announce false: bildirim
+## yok (ödül penceresi gösteren ekran).
+func double_ladder(announce: bool = true) -> Dictionary:
+	var extra: Dictionary = ladder_double()
+	if extra.is_empty():
+		return {}
+	_login_doubled_day = _login_day
+	var gems: int = int(extra["gems"])
+	var money: int = int(extra["money"])
+	if money > 0:
+		var economy: EconomyManager = get_tree().get_first_node_in_group("economy") as EconomyManager
+		if economy:
+			economy.add_money(money)
+	var text: String = ""
+	if announce:
+		text = Loc.t("GÜNLÜK GİRİŞ ×2") + "\n" + (Loc.t("+%d GEM") % gems if gems > 0 else "+%s ₺" % Hud.format_thousands(money))
+	if gems > 0:
+		_grant(gems, text)
+	elif announce:
+		reward_granted.emit(0, text)
+	daily_changed.emit()
+	_request_save()
+	return extra
+
+
+## Oyuncunun aktif oyun geliri (₺/dk; merdivenin para ödülleri buna bağlı).
+func _income() -> float:
+	var offline: OfflineEarnings = get_tree().get_first_node_in_group("offline_earnings") as OfflineEarnings \
+		if is_inside_tree() else null
+	return offline.current_active_rate() if offline else LoginLadder.FALLBACK_INCOME
 
 
 # --- Tamir: bahşiş ------------------------------------------------------
@@ -167,7 +252,8 @@ func legacy_repair_step() -> int:
 
 func state() -> Dictionary:
 	return {
-		"login": {"day": _login_day, "streak": _streak, "doubled": _login_doubled_day},
+		"login": {"day": _login_day, "streak": _streak, "doubled": _login_doubled_day, "claimed": _claimed_day,
+			"cg": _claimed_gems, "cm": _claimed_money, "months": _months},
 		"max_seen": _max_seen,
 		"day": _day,
 		"tips": {"day": _tip_day, "count": _tip_count, "carry": _tip_carry},
@@ -180,6 +266,11 @@ func load_state(data: Dictionary) -> void:
 	_login_day = SaveSafe.i(login.get("day", -1))
 	_streak = maxi(SaveSafe.i(login.get("streak", 0)), 0)
 	_login_doubled_day = SaveSafe.i(login.get("doubled", -1))
+	# Merdiven alanları yoksa (eski kayıt: giriş elması girişte verilmişti) son giriş günü alınmış sayılır
+	_claimed_day = SaveSafe.i(login.get("claimed", _login_day))
+	_claimed_gems = maxi(SaveSafe.i(login.get("cg", 0)), 0)
+	_claimed_money = maxi(SaveSafe.i(login.get("cm", 0)), 0)
+	_months = maxi(SaveSafe.i(login.get("months", 0)), 0)
 	_max_seen = maxi(SaveSafe.i(data.get("max_seen", 0)), 0)
 	# Eski kayıt: günlük görev bölümündeki gün (geriye dönük uyum); yeni kayıt "day" yazar
 	var legacy: Dictionary = data.get("daily", {}) if data.get("daily") is Dictionary else {}
@@ -192,7 +283,7 @@ func load_state(data: Dictionary) -> void:
 	daily_changed.emit()
 
 
-## Yeni oyun: seri ve görevler sıfırdan (ilk check_day bugünün girişini verir).
+## Yeni oyun: seri ve görevler sıfırdan (ilk check_day bugünün basamağını açar).
 func reset() -> void:
 	load_state({})
 	check_day.call_deferred()

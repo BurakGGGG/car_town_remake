@@ -5,7 +5,7 @@ extends CanvasLayer
 ## Sağ üst: yuvarlak tabela butonları (kamera / ses / AYARLAR dişlisi). Kamera tabelası altında küçük KAMERA
 ## kutusunu açar (CameraMenu, yazısız yuvarlak tabelalar: fotoğraf · HUD'u gizle · sinema | uzaklaş · yakınlaş ·
 ## ortala); modlar PhotoMode'dadır.
-## Alt: plakalar (GARAJI DÜZENLE / DEPOLARIM / SHOWROOM / GÖREVLER / ARKADAŞLAR, hikâyeyle HARİTA) ve seçilince açılan
+## Alt: plakalar (GARAJI DÜZENLE / DEPOLARIM / SHOWROOM / GÖREVLER / ARKADAŞLAR / HARİTA) ve seçilince açılan
 ## araç plakası. PROFİL plakası gizli (2026-10-23: sol üstteki avatar profili açar); GÖREVLER ve ARKADAŞLAR sağ üstten
 ## alt sıraya indi; ARAÇLAR plakası (cars_button) DEPOLARIM panosunu açar, depoya dokununca araçlar GarageScreen'de.
 ## Araç satın alma artık alt menüde DEĞİL: haritadaki "CAR PARTS & SHOWROOM" binasına tıklanınca
@@ -87,6 +87,9 @@ var invite_screen: InviteScreen
 ## Kodla kurulan AYARLAR tabelası ve onu açan dişli tabela (sağ üst).
 var settings_screen: SettingsScreen
 var settings_button: PlateButton
+## Sağ üstte MARKET'in yanındaki GÜNLÜK GİRİŞ merdiveni tabelası (_setup_gem_store) ve merdiven panosu.
+var login_ladder_button: LoginLadderButton
+var login_ladder_screen: LoginLadderScreen
 ## Kamera tabelasının altında açılan menü ve onun açtığı FOTOĞRAF / HUD GİZLİ / SİNEMA katmanı.
 var camera_menu: CameraMenu
 var photo_mode: PhotoMode
@@ -171,6 +174,10 @@ var profile_screen: ProfileScreen
 var race_challenge_screen: RaceChallengeScreen
 var drag_race_screen: DragRaceScreen
 var race_result_screen: RaceResultScreen
+## SÜPER ARABA TANITIMI'nın sonu: "BİR GÜN SENİN DE OLACAK!" (tanıtım yarışı kaybedilip GARAJA DÖN'e basılınca).
+var supercar_tease_screen: SupercarTeaseScreen
+## Ön ısıtma bitti mi (_warm_up). Yükleme ekranı bu olmadan kalkmaz: ilk kullanım takılmaları oyuna taşınmasın.
+var warmed_up: bool = false
 var _race: RaceManager
 var mastery_screen: MasteryScreen
 ## Avlu dekorasyonu panosu (dünyada avluya dokununca açılır).
@@ -560,7 +567,6 @@ var _garage_rank: int = 0
 ## Yarış sonucunda teklif edilen ödüllü reklam bonusu (₺). 0 = teklif yok / verildi.
 var _race_bonus_amount: int = 0
 ## Günlük giriş ×2 reklamı giriş bildiriminden başlatıldı (ödül HUD'da verilir; GÖREVLER düğmesi kendisi verir).
-var _daily_double_pending: bool = false
 var _ads_bound: AdService = null
 ## Süre kısaltma reklamı izlenirken kısaltılacak araç.
 var _boost_car: Node3D = null
@@ -650,7 +656,6 @@ func _connect_gameplay() -> void:
 	_quests = get_tree().get_first_node_in_group("quests") as QuestManager
 	if _quests:
 		_quests.quests_changed.connect(_refresh_quest_button)
-		_quests.quests_changed.connect(_refresh_map_button)
 		_quests.quest_completed.connect(_on_quest_completed)
 	var restoration_bays: RestorationBays = get_tree().get_first_node_in_group("restoration_bays") as RestorationBays
 	if restoration_bays:
@@ -760,11 +765,7 @@ func _connect_gameplay() -> void:
 					HudPalette.COIN_DARK, 2.0))
 		junkyard.tier_unlocked.connect(func(tier_id: StringName) -> void: _new_tiers.append(tier_id))
 		junkyard.opened.connect(func() -> void:
-			_refresh_map_button()
 			_show_notice(Loc.t("HURDALIK AÇILDI\nHARİTA'DAN NECATİ'YE GİT"), HudPalette.COIN_DARK, 2.6))
-	if _bays:
-		_bays.bays_changed.connect(_refresh_map_button)
-	_refresh_map_button()
 	_missions = get_tree().get_first_node_in_group("missions") as MissionManager
 	if _missions:
 		_missions.missions_changed.connect(_refresh_quest_button)
@@ -1249,20 +1250,27 @@ func _on_race_completed(won: bool, player_time: float, rival_time: float) -> voi
 	router.open(&"race_result")
 
 
-## Günlük giriş elması: bildirim; reklam hazırsa bildirime dokunmak ödüllü reklamı açar (×2). Kaçırılırsa teklif
-## GÖREVLER › GÜNLÜK'te gün boyu durur.
-func _on_login_granted(gems: int, streak: int) -> void:
-	var text: String = Loc.t("GÜNLÜK GİRİŞ  %d. GÜN\n+%d GEM") % [streak, gems]
-	var ads: AdService = _ads_service()
-	if ads and ads.can_offer(AdPolicy.DAILY_DOUBLE):
-		_show_notice(text + "\n" + Loc.t("DOKUN: REKLAM İZLE, ×2"), HudPalette.INK, 4.0, _start_daily_double)
-	else:
-		_show_notice(text, HudPalette.INK, 1.8)
+## GÜNLÜK GİRİŞ MERDİVENİ: tabela (gün numarası, alınabilir rozeti) her değişimde tazelenir; alınmadan gün dönüp
+## kendiliğinden verilen basamak bildirimle söylenir (ekranda AL'a basılan ödülü pencere gösterir).
+func _refresh_login_ladder() -> void:
+	var gem_rewards: GemRewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
+	if gem_rewards == null or login_ladder_button == null:
+		return
+	login_ladder_button.day = gem_rewards.ladder_day()
+	login_ladder_button.ready_to_claim = gem_rewards.can_claim()
 
 
-func _start_daily_double() -> void:
-	var ads: AdService = _ads_service()
-	_daily_double_pending = ads != null and ads.show_rewarded(AdPolicy.DAILY_DOUBLE)
+func _on_ladder_claimed(reward: Dictionary) -> void:
+	if not bool(reward.get("auto", false)):
+		return
+	var parts: PackedStringArray = PackedStringArray()
+	if int(reward["money"]) > 0:
+		parts.append("+%s ₺" % format_thousands(int(reward["money"])))
+	if int(reward["gems"]) > 0:
+		parts.append(Loc.t("+%d GEM") % int(reward["gems"]))
+	if reward["decor"] != &"":
+		parts.append(Loc.t(String(GarageDecor.get_item(reward["decor"]).get("title", ""))))
+	_show_notice(Loc.t("DÜNKÜ GİRİŞ ÖDÜLÜ ALINDI") + "\n" + "   ".join(parts), HudPalette.INK, 2.6)
 
 
 ## Reklam servisini bulur ve sinyallerini BİR kez bağlar. Servis sahneye HUD'dan sonra kurulabildiği için
@@ -1291,12 +1299,6 @@ func _on_ad_reward_earned(kind: StringName) -> void:
 		_boost_car = null
 		_refresh_repair_panel(false)
 		return
-	if kind == AdPolicy.DAILY_DOUBLE and _daily_double_pending:   # giriş bildiriminden başlatıldı
-		_daily_double_pending = false
-		var gem_rewards: GemRewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
-		if gem_rewards:
-			gem_rewards.double_login()
-		return
 	if kind != AdPolicy.RACE_DOUBLE or _race_bonus_amount <= 0 or _economy == null:
 		return
 	var amount: int = _race_bonus_amount
@@ -1306,8 +1308,6 @@ func _on_ad_reward_earned(kind: StringName) -> void:
 
 
 func _on_ad_finished(kind: StringName, rewarded: bool) -> void:
-	if kind == AdPolicy.DAILY_DOUBLE:
-		_daily_double_pending = false
 	if kind == AdPolicy.REPAIR_BOOST:
 		_boost_car = null
 		_refresh_repair_panel(false)
@@ -1348,6 +1348,8 @@ func _on_race_exit() -> void:
 		_race.set_racing(false)
 	if router.is_open(&"drag_race") or router.is_open(&"race_result"):
 		router.close_all()
+	if _race and _race.take_showcase_tease():
+		router.open.call_deferred(&"supercar_tease")   # tanıtım yarışı kaybedildi: dünyaya dönünce hedef ekranı
 
 
 ## Showroom'dan araç satın alındı: kısa bildirim plakası (para düşüşünü zaten coin plakası gösterir).
@@ -1497,6 +1499,8 @@ func _build_race_screens() -> void:
 	host.add_child(drag_race_screen)
 	race_result_screen = RaceResultScreen.new()
 	host.add_child(race_result_screen)
+	supercar_tease_screen = SupercarTeaseScreen.new()
+	host.add_child(supercar_tease_screen)
 	race_challenge_screen.race_accepted.connect(_on_race_accepted)
 	drag_race_screen.race_completed.connect(_on_race_completed)
 	race_result_screen.exit_requested.connect(_on_race_exit)
@@ -1540,8 +1544,7 @@ func _build_junkyard_screens() -> void:
 	map_button.kind = HudIcon.Kind.MAP
 	map_button.text = Loc.t("HARİTA")
 	map_button.focus_mode = Control.FOCUS_NONE
-	map_button.visible = false   # hikâye göreviyle görünür (_refresh_map_button)
-	map_button.pressed.connect(func() -> void: _open_map(&"city"))
+	map_button.pressed.connect(func() -> void: _open_map(&"city"))   # HEP görünür (2026-10-23; eskiden hurdalık açılınca)
 	garage_button.get_parent().add_child(map_button)
 
 
@@ -1573,17 +1576,6 @@ func _on_map_closed() -> void:
 	router.open.call_deferred(&"junkyard")
 
 
-## HARİTA plakası hurdalığın hikâye görevi aktifleşince (ya da hurdalık açıksa) görünür.
-func _refresh_map_button() -> void:
-	if map_button == null:
-		return
-	var junkyard: JunkyardManager = get_tree().get_first_node_in_group("junkyard") as JunkyardManager
-	var shown: bool = junkyard != null and junkyard.is_open()
-	if _quests and (_quests.is_active(&"junkyard_visit") or _quests.is_claimed(&"junkyard_visit")):
-		shown = true
-	map_button.visible = shown
-
-
 func _register_screens() -> void:
 	router.register(&"garage", garage_screen, UiRouter.Kind.PLACE)
 	router.register(&"showroom", showroom, UiRouter.Kind.PLACE)
@@ -1601,6 +1593,7 @@ func _register_screens() -> void:
 	router.register(&"race_challenge", race_challenge_screen, UiRouter.Kind.MODAL)
 	router.register(&"drag_race", drag_race_screen, UiRouter.Kind.PLACE)
 	router.register(&"race_result", race_result_screen, UiRouter.Kind.MODAL)
+	router.register(&"supercar_tease", supercar_tease_screen, UiRouter.Kind.MODAL)
 	router.register(&"collection", collection_screen, UiRouter.Kind.MODAL)
 	router.register(&"all_cars", all_cars_screen, UiRouter.Kind.MODAL)
 	router.register(&"car_garages", car_garages_screen, UiRouter.Kind.MODAL)
@@ -1617,12 +1610,21 @@ func _register_screens() -> void:
 	router.register(&"profile_edit", profile_edit_screen, UiRouter.Kind.SUB)
 	router.register(&"avatar_crop", avatar_cropper, UiRouter.Kind.SUB)
 	router.register(&"avatar_camera", camera_capture, UiRouter.Kind.SUB)
-	# 3D ekranların shader'ları oyun yüklenirken derlensin (ilk açılış takılmasız)
-	drag_race_screen.prewarm.call_deferred()
-	showroom.prewarm.call_deferred()
-	garage_screen.prewarm.call_deferred()
-	# Dünya efektleri (ilk tamirin yazılı balonu, kıvılcım / duman) — bkz. WorldPrewarm
-	WorldPrewarm.run.call_deferred(get_tree())
+	# 3D ekranların shader'ları ve dünya efektleri oyun yüklenirken derlensin (ilk açılış takılmasız) — bkz. _warm_up
+	_warm_up.call_deferred()
+
+
+## ÖN ISITMA: pist / showroom / garaj ekranı gizlice bir kez küçük çizilir, dünya efektleri (ilk tamirin yazılı balonu,
+## kıvılcım / duman, polis / dörtlü ışıkları; WorldPrewarm) zeminin altında birkaç kare çizilir — shader'lar oyun
+## yüklenirken derlenir. Her adım AYRI karede (2026-10-23): eskiden hepsi dünyanın ilk çizimiyle aynı karedeydi, o kare
+## masaüstünde 1,3 sn sürüyor ve yükleme ekranı (slaytlar, ipucu, çubuk) donuyordu. Şimdi aralarda yükleme ekranı çizilir.
+func _warm_up() -> void:
+	var tree: SceneTree = get_tree()
+	for step: Callable in [drag_race_screen.prewarm, showroom.prewarm, garage_screen.prewarm, WorldPrewarm.run.bind(tree)]:
+		await tree.process_frame   # her karede tek adım: o karenin çiziminde yalnız onun shader'ları derlenir
+		step.call()
+	await tree.process_frame
+	warmed_up = true
 
 
 ## Yığın değişti: oyun HUD'u yalnızca bir YER (garaj/showroom) açıkken gizlenir; panolar
@@ -1790,8 +1792,16 @@ func _connect_crates() -> void:
 		gem_rewards.reward_granted.connect(func(_amount: int, text: String) -> void:
 			if text != "":
 				_show_notice(text, HudPalette.INK, 1.8))
-		gem_rewards.login_granted.connect(_on_login_granted)
+		# GÜNLÜK GİRİŞ MERDİVENİ: pano (sakin anda kendiliğinden açılır) + sağ üstteki tabela (_setup_gem_store kurar)
+		login_ladder_screen = LoginLadderScreen.new(self)
+		garage_screen.get_parent().add_child(login_ladder_screen)
+		router.register(&"login_ladder", login_ladder_screen, UiRouter.Kind.MODAL)
+		gem_rewards.ladder_ready.connect(login_ladder_screen.request_auto)
+		gem_rewards.ladder_claimed.connect(_on_ladder_claimed)
+		gem_rewards.daily_changed.connect(_refresh_login_ladder)
+		quest_screen.login_ladder_requested.connect(func() -> void: router.open(&"login_ladder"))
 	_setup_gem_store()
+	_refresh_login_ladder()
 	_setup_login_prompt.call_deferred()   # CloudSaveManager kendi kaydını (cloud_sync.json) okusun
 
 
@@ -1807,13 +1817,28 @@ func _setup_gem_store() -> void:
 		var mb: InputEventMouseButton = event as InputEventMouseButton   # dokunuş fareye çevrilir
 		if mb and mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
 			router.open(&"gem_store"))
-	# MARKET: sağ üstte tabelaların (ve açıksa kamera kutusunun) hemen altında (2026-10-23 alt bar; eskiden sol üstte)
+	# İKİNCİ TABELA SIRASI: sağ üstte tabelaların (ve açıksa kamera kutusunun) hemen altında, sağa yaslı — GÜNLÜK GİRİŞ ·
+	# MARKET. İkisi de kamera / ayar gibi yuvarlak ve yazısız (2026-10-23, kullanıcı: "market butonunu yuvarlak yap, market
+	# yazmasın, yanına günlük giriş merdiveni butonu yap"; MARKET önceki gün krem plakaydı).
+	var sign_row: HBoxContainer = camera_button.get_parent() as HBoxContainer
+	var shop_row: HBoxContainer = HBoxContainer.new()
+	shop_row.name = "ShopRow"
+	shop_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shop_row.alignment = BoxContainer.ALIGNMENT_END
+	shop_row.add_theme_constant_override(&"separation", sign_row.get_theme_constant(&"separation"))
+	var column: Node = camera_menu.get_parent()
+	column.add_child(shop_row)
+	column.move_child(shop_row, camera_menu.get_index() + 1)
+	login_ladder_button = LoginLadderButton.new()
+	login_ladder_button.name = "LoginLadderButton"
+	login_ladder_button.custom_minimum_size = camera_button.custom_minimum_size
+	login_ladder_button.visible = login_ladder_screen != null
+	login_ladder_button.pressed.connect(func() -> void: router.open(&"login_ladder"))
+	shop_row.add_child(login_ladder_button)
 	var shop_button: GemShopButton = GemShopButton.new()
 	shop_button.name = "GemShopButton"
-	var column: Node = camera_menu.get_parent()
-	column.add_child(shop_button)
-	column.move_child(shop_button, camera_menu.get_index() + 1)
-	shop_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	shop_button.custom_minimum_size = camera_button.custom_minimum_size
+	shop_row.add_child(shop_button)
 	shop_button.pressed.connect(func() -> void: router.open(&"gem_store"))
 	var refresh_badge: Callable = func() -> void:
 		shop_button.show_badge = purchases.is_available() and purchases.block_reason(GemProducts.STARTER) != "owned"

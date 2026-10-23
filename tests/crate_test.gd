@@ -85,7 +85,8 @@ func _run() -> void:
 	check(CrateCatalog.is_gift(CrateCatalog.WELCOME) and not CrateCatalog.all().any(func(e: Dictionary) -> bool: return e["id"] == CrateCatalog.WELCOME),
 		"hediye kutusu mağaza listesinde yok")
 	check(CrateCatalog.crate_of(&"tofas_sahin") == &"", "Şahin hiçbir mağaza kasasından çıkmaz (koleksiyonda BAŞLANGIÇ)")
-	check(pp.gems == 50, "40 başlangıç + 10 ilk gün girişi = 50 gem (%d)" % pp.gems)
+	# 2026-10-23: günlük giriş ödülü merdivende AL ile alınır, girişte kendiliğinden eklenmez
+	check(pp.gems == 40, "40 başlangıç gemi (%d)" % pp.gems)
 	check(not save.has_progress(), "yeni kurulum 'ilerleme yok' sayılır (bulut kaydı otomatik gelsin)")
 	check(await wait_state(crates, welcome, CrateManager.State.WAITING_TO_OPEN, 3.0) and delivery.visual_of(welcome) != null,
 		"kutu garaja indi, açılmayı bekliyor")
@@ -98,7 +99,7 @@ func _run() -> void:
 		await create_timer(0.1).timeout
 		gift_wait += 0.1
 	check(not gift.is_empty() and bool(gift[0].get("gift", false)) and gift[0]["vehicle"] == &"tofas_sahin", "içinden Tofaş Şahin çıktı")
-	check(not gift.is_empty() and int(gift[0]["gems"]) == 0 and pp.gems == 50, "hediye keşif elması vermez (%d)" % pp.gems)
+	check(not gift.is_empty() and int(gift[0]["gems"]) == 0 and pp.gems == 40, "hediye keşif elması vermez (%d)" % pp.gems)
 	delivery.finish_reveal(welcome)
 	await create_timer(0.8).timeout
 	check(crates.welcome_uid() == 0 and crates.pending_count() == 0 and delivery.visual_of(welcome) == null, "kutu kaldırıldı")
@@ -112,7 +113,7 @@ func _run() -> void:
 	await reload()
 	own = g(&"vehicle_ownership"); pp = g(&"player_progress"); crates = g(&"crates")
 	check(own.owned_count() == 1 and crates.welcome_uid() == 0, "yeniden açılışta hâlâ 1 araç, kutu yok")
-	check(pp.gems == 50, "aynı gün ikinci giriş gemi yok (%d)" % pp.gems)
+	check(pp.gems == 40, "aynı gün ikinci açılışta gem eklenmez (%d)" % pp.gems)
 
 	print("== 3) İLK ÜCRETSİZ KASA (Sv 2 görevi) ==")
 	var quests: QuestManager = g(&"quests")
@@ -311,7 +312,8 @@ func _run() -> void:
 	f.close()
 	await reload()
 	own = g(&"vehicle_ownership"); crates = g(&"crates"); quests = g(&"quests"); pp = g(&"player_progress")
-	check(pp.gems == 7 + GemRewards.login_gems(1), "eski kayıt: yalnızca günün girişi, geriye dönük tamir/koleksiyon gemi yok (%d)" % pp.gems)
+	# 2026-10-23: günlük giriş merdiveni girişte ödül vermez (AL ile alınır); günün basamağı alınabilir durumda bekler
+	check(pp.gems == 7 and g(&"gem_rewards").can_claim(), "eski kayıt: geriye dönük tamir/koleksiyon gemi yok, günün basamağı bekliyor (%d)" % pp.gems)
 	check(quests.is_claimed(&"first_crate") and not quests.claim(&"first_crate") and crates.pending_count() == 0, "eski oyuncuya bedava İLK KASA verilmez")
 	var legacy_gems: int = pp.gems
 	own.add_vehicle(&"hyundai_accent_blue")   # 6. araç: 5'lik koleksiyon taşı eski kayıtta ödenmiş sayılır
@@ -332,21 +334,26 @@ func _run() -> void:
 	var t0: int = 1_800_000_000
 	gr.test_now = t0
 	gr.check_day()
-	check(pp.gems == 10 and gr.streak() == 1, "1. gün girişi +10")
+	check(pp.gems == 0 and gr.streak() == 1 and gr.can_claim(), "1. gün: merdiven basamağı alınabilir, kendiliğinden verilmez")
+	gr.claim_ladder()
+	check(pp.gems == 10 and not gr.can_claim(), "1. gün AL → +10 gem")
 	gr.check_day()
-	check(pp.gems == 10, "aynı gün ikinci kez verilmez")
+	check(pp.gems == 10 and gr.claim_ladder().is_empty(), "aynı gün ikinci kez verilmez")
 	gr.test_now = t0 + 86400
 	gr.check_day()
-	check(pp.gems == 20 and gr.streak() == 2, "2. gün +10, seri 2")
+	check(gr.streak() == 2 and gr.ladder_day() == 2 and gr.can_claim(), "2. gün, seri 2")
+	gr.claim_ladder()
 	gr.test_now = t0 - 86400 * 3
 	gr.check_day()
-	check(pp.gems == 20 and gr.is_clock_rolled_back(), "saat geri alındı: ödül yok, tespit edildi")
+	check(not gr.can_claim() and gr.is_clock_rolled_back(), "saat geri alındı: yeni basamak yok, tespit edildi")
 	gr.test_now = t0 + 86400 * 6
 	gr.check_day()
-	check(gr.streak() == 1 and pp.gems == 30, "saat ileri alındı: yalnızca o günün ödülü, seri sıfırlandı")
+	check(gr.streak() == 1 and gr.ladder_day() == 1 and gr.can_claim(), "saat ileri alındı: seri sıfırlandı, merdiven 1. günde")
+	gr.claim_ladder()
+	check(pp.gems == 20, "yalnızca o günün basamağı (+10)")
 	gr.test_now = t0 + 86400 * 2
 	gr.check_day()
-	check(pp.gems == 30, "gerçek güne dönünce kilit: kaçırılan günler telafi edilmez")
+	check(pp.gems == 20 and not gr.can_claim(), "gerçek güne dönünce kilit: kaçırılan günler telafi edilmez")
 	gr.test_now = t0 + 86400 * 6
 	# Günlük / haftalık görevler ve tamir kilometre taşları artık GÖREVLER sisteminde (tests/mission_test.gd)
 	check(not gr.has_method("daily_tasks") and not gr.has_method("check_repair_milestones"), "günlük görev / kilometre taşı GemRewards'tan kalktı")

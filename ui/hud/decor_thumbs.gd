@@ -15,6 +15,7 @@ const THUMBS_PER_FRAME: int = 2
 const VIEW_DIR: Vector3 = Vector3(0.6408563, 0.42261827, 0.6408563)
 
 static var _cache: Dictionary = {}   # id → ImageTexture
+static var _fitted: Dictionary = {}  # id → kırpılmış Texture2D (fitted)
 
 var _queue: Array[StringName] = []
 var _queued: Dictionary = {}
@@ -23,6 +24,24 @@ var _pumping: bool = false
 
 static func cached(id: StringName) -> Texture2D:
 	return _cache.get(id)
+
+
+## Küçük resmin eşyanın çevresindeki saydam boşluğu kırpılmış hâli (kartta yan yana birkaç resim: 160x110 karede eşya
+## alanın beşte biri kadardı, küçücük görünüyordu). Eşya başına bir kez üretilir; resim henüz yoksa null.
+static func fitted(id: StringName) -> Texture2D:
+	if _fitted.has(id):
+		return _fitted[id]
+	var source: Texture2D = cached(id)
+	if source == null:
+		return null
+	var texture: Texture2D = source
+	var image: Image = source.get_image()
+	var used: Rect2i = image.get_used_rect() if image else Rect2i()
+	if used.has_area():
+		used = used.grow(2).intersection(Rect2i(Vector2i.ZERO, image.get_size()))
+		texture = ImageTexture.create_from_image(image.get_region(used))
+	_fitted[id] = texture
+	return texture
 
 
 func request(id: StringName) -> void:

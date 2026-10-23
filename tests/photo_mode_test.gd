@@ -111,8 +111,10 @@ func _run() -> void:
 	check(menu != null and not menu.visible, "menü kapalı başlar")
 	check(menu.get_parent() == sign_row.get_parent() and menu.get_index() == sign_row.get_index() + 1,
 		"menü tabela sırasının hemen altında (sağ üst sütun)")
-	var market: Node = menu.get_parent().get_node_or_null("GemShopButton")
-	check(market == null or market.get_index() > menu.get_index(), "MARKET menünün altında kalır")
+	# 2026-10-23: MARKET yuvarlak tabela, yanında GÜNLÜK GİRİŞ — ikisi menünün altındaki ikinci tabela sırasında
+	var shop_row: Node = menu.get_parent().get_node_or_null("ShopRow")
+	check(shop_row == null or (shop_row.get_index() > menu.get_index() and shop_row.get_node_or_null("GemShopButton") != null
+		and shop_row.get_node_or_null("LoginLadderButton") != null), "MARKET + GÜNLÜK GİRİŞ menünün altında kalır")
 	check(hud.quest_button.get_parent() == hud.garage_button.get_parent(), "GÖREVLER alt sırada (sağ üstte değil)")
 	var camera_at: Vector2 = hud.camera_button.get_global_rect().position
 	hud.camera_button.button_pressed = true

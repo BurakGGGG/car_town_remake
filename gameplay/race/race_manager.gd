@@ -57,6 +57,15 @@ extends Node
 ## normal ödülün üstüne panelin ÖZEL ÖDÜLÜnü verir — etkinlik başına bir kez ("event_paid" kayıtta). Arkadaş haberi /
 ## skoru yazılmaz.
 ##
+## SÜPER ARABA TANITIMI (2026-10-23, kullanıcı: "ilk 2 dragını yapsın, 3. dragında süper araç gelsin, ezici üstünlükle
+## yensin, sonra ileride senin de araçların böyle olacak ekranı gelsin; sadece yeni başlayanlarda"): 2 yarışı biten
+## (SHOWCASE_AFTER) ve tanıtımı görmemiş oyuncuya sıradaki rakip öne çıkan arkadaşın (Emre / Elif) BEYAZ OVALE ÉCLAIR'i
+## (SHOWCASE_CAR) olur. Rakip kusursuz sürer (gün formu yok, beceri tam); rövanş çıkmaz, öğrenen zorluğa yazılmaz.
+## Kaybedince GARAJA DÖN'de HUD "BİR GÜN SENİN DE OLACAK!" ekranını açar (take_showcase_tease). Tanıtım bir kez ("showcase"
+## kayıtta); davet geri çevrilirse araç şehre karışır, şehirden çıkınca yine gelir (arada normal rakip gelebilir: bir
+## modelden tek araç). SHOWCASE_UNTIL yarıştan sonra (eski oyuncu) hiç gelmez.
+## Arayüzü kodla süren testlerde kapalı (showcase_enabled; CT_NO_TUTORIAL).
+##
 ## Sahnede World/Gameplay/RaceManager olarak durur, "race" grubundan bulunur (autoload yok).
 ## Kayıt: KİŞİSEL REKOR + profil kartındaki yarış / galibiyet sayıları ("wins", "races"; eski kayıtta 0). Rekor TEKTİR
 ## (kullanıcı 2026-10-20: araçtan araca tutulmaz): hangi araçla olursa olsun en iyi 300 m süresi + o koşunun mesafe izi
@@ -130,6 +139,14 @@ const FRIEND_BONUS: float = 0.2
 ## Rakibin bir arkadaşın (gerçek ya da Emre / Elif) aracıyla gelme olasılığı (kullanıcı kararı: %70). Testler 0 / 1 verir.
 @export_range(0.0, 1.0) var friend_chance: float = 0.7
 
+## SÜPER ARABA TANITIMI: rakip araç, rengi ve hangi yarış aralığında gelebileceği (biten yarış sayısı).
+const SHOWCASE_CAR: StringName = &"bugatti_veyron"
+const SHOWCASE_COLOR: Color = Color("F2F2EB")
+const SHOWCASE_AFTER: int = 2
+const SHOWCASE_UNTIL: int = 10
+## Arayüzü kodla süren testler (CT_NO_TUTORIAL=1) tanıtımı kapatır: yarış sayan testlere 3. yarışta hiper araç gelmesin.
+var showcase_enabled: bool = not TutorialDirector.disabled_by_env()
+
 ## KOŞU EŞLEŞTİRME: araç başına kayıtta tutulan son koşu sayısı (açık garaja daha azı gider: PublicGarage.RUNS_PER_CAR).
 const RUNS_PER_CAR: int = 15
 ## Son yarışların özetinden kaç tanesi tutulur (seri kırıcı; Faz 2 öğrenmesi).
@@ -200,6 +217,10 @@ var _rival_recording: DragRaceSim.Recording
 var _chance: float = -1.0
 ## Oyuncunun bu yarıştaki süresi (add_run; -1 = bitirmedi) — yarış günlüğü için.
 var _player_time: float = -1.0
+## SÜPER ARABA TANITIMI: gösterildi mi (kayıtta), yoldaki / pistteki rakip tanıtım rakibi mi, kaybedildi ve ekranı bekliyor mu.
+var _showcase_done: bool = false
+var _showcase: bool = false
+var _showcase_tease: bool = false
 ## ÖĞRENEN ZORLUK (Faz 2): kol seçimi, yarış sonrası kalış ölçümü, yarış günlüğü. _init'te kurulur: kayıt (load_state)
 ## sahne hazır olmadan gelebilir.
 var _learning: RaceLearning
@@ -348,6 +369,13 @@ func rival_recording(player_id: StringName) -> DragRaceSim.Recording:
 	_player_time = -1.0
 	if _rival_id == &"":
 		return null
+	if _showcase:   # tanıtım: kusursuz sürüş, gün formu yok (ezici üstünlük)
+		var flawless: DragRaceSim.Form = DragRaceSim.roll_form(_rival_id, null)
+		flawless.skill = 1.0
+		flawless.launch_skill = 1.0
+		_rival_recording = DragRaceSim.ai_recording(_rival_id, {}, flawless, _rng)
+		_chance = RivalSelector.win_chance(my_samples(player_id), _rival_recording.time)
+		return _rival_recording
 	if is_first_race():
 		_rival_recording = DragRaceSim.ai_recording(_rival_id, rival_build(), DragRaceSim.roll_form(_rival_id, null), _rng)
 		return _rival_recording
@@ -769,7 +797,11 @@ func finish_race(won: bool) -> Dictionary:
 	if _reward_paid:
 		return {"money": 0, "xp": 0}
 	_reward_paid = true
-	_learning.race_finished(_learning_event(won))   # bağlam bu yarıştan ÖNCEKİ geçmişle (kol o geçmişle çekildi)
+	if _showcase:
+		_showcase_done = true   # tanıtım bir kez; öğrenen zorluğa yazılmaz (senaryolu yarış)
+		_showcase_tease = not won
+	else:
+		_learning.race_finished(_learning_event(won))   # bağlam bu yarıştan ÖNCEKİ geçmişle (kol o geçmişle çekildi)
 	_races += 1
 	if won:
 		_wins += 1
@@ -813,8 +845,8 @@ func finish_race(won: bool) -> Dictionary:
 	elif won and is_instance_valid(_challenger):
 		_loser_waiting = true   # kaybeden rakip oyuncu dünyaya dönünce yola çıkar (end_race_session)
 		_loser_flees = _rng.randf() < flee_chance
-	elif won or not is_instance_valid(_challenger) or _rematches >= MAX_REMATCHES:
-		release_challenger()   # rövanş hakkı bitti: rakip yola döner
+	elif won or not is_instance_valid(_challenger) or _rematches >= MAX_REMATCHES or _showcase:
+		release_challenger()   # rövanş hakkı bitti (tanıtımda hiç yok): rakip yola döner
 	else:
 		_awaiting_rematch = true   # rakip şeritte bekler: oyuncu RÖVANŞ ya da GARAJA DÖN seçer
 	return reward
@@ -845,7 +877,7 @@ func _pay_event_rival() -> Dictionary:
 
 ## Kaybedilen yarışın rövanşı yapılabilir mi (rakip hâlâ şeritte bekliyor).
 func can_rematch() -> bool:
-	return _awaiting_rematch and _rematches < MAX_REMATCHES and is_instance_valid(_challenger) and _rival_id != &""
+	return not _showcase and _awaiting_rematch and _rematches < MAX_REMATCHES and is_instance_valid(_challenger) and _rival_id != &""
 
 
 ## Bu rakiple kaçıncı rövanş (0 = ilk yarış).
@@ -895,6 +927,7 @@ func release_challenger(fled: bool = false) -> void:
 	_direct = false
 	_revenge = false
 	_event_rival = false
+	_showcase = false
 	_arm = -1
 	_arm_used = false
 	_rival_recording = null
@@ -909,6 +942,37 @@ func release_challenger(fled: bool = false) -> void:
 		if fled:
 			vehicle.flee()
 		challenger_left.emit(vehicle)
+
+
+# --- Süper araba tanıtımı ----------------------------------------------------------
+
+## Sıradaki rakip tanıtım rakibi olmalı mı (yeni oyuncu, 2 yarışı bitti, henüz görmedi).
+func showcase_due() -> bool:
+	return showcase_enabled and not _showcase_done and _races >= SHOWCASE_AFTER and _races < SHOWCASE_UNTIL
+
+
+## Yoldaki / pistteki rakip tanıtım rakibi mi.
+func is_showcase() -> bool:
+	return _showcase
+
+
+func showcase_done() -> bool:
+	return _showcase_done
+
+
+## Tanıtım yarışı kaybedildi: "BİR GÜN SENİN DE OLACAK!" ekranı açılmalı mı (BİR kez true döner).
+func take_showcase_tease() -> bool:
+	var due: bool = _showcase_tease
+	_showcase_tease = false
+	return due
+
+
+## Tanıtım rakibi: öne çıkan arkadaşın (Emre / Elif) beyaz hiper aracı.
+func _set_showcase_rival() -> void:
+	_rival_id = SHOWCASE_CAR
+	_rival_owner = FeaturedFriends.rival_owner(FeaturedFriends.owner_for_car(SHOWCASE_CAR))
+	_rival_appearance = CarAppearance.new()
+	_rival_appearance.body_color = SHOWCASE_COLOR
 
 
 # --- Kişisel rekor ----------------------------------------------------------------
@@ -994,7 +1058,7 @@ func state() -> Dictionary:
 		cars[String(id)] = {"r": counts.x, "w": counts.y}
 	return {"best": best, "races": _races, "wins": _wins, "cars": cars, "rivals": rivals, "bonus": _bonus_day.duplicate(),
 		"runs": _runs.duplicate(true), "recent": _history.duplicate(true), "learn": _learning.counts_state(),
-		"event_paid": _event_paid.duplicate()}
+		"event_paid": _event_paid.duplicate(), "showcase": _showcase_done}
 
 
 func load_state(data: Dictionary) -> void:
@@ -1007,6 +1071,7 @@ func load_state(data: Dictionary) -> void:
 				_event_paid[SaveSafe.s(key)] = true
 	_races = maxi(SaveSafe.i(data.get("races", 0)), 0)
 	_wins = clampi(SaveSafe.i(data.get("wins", 0)), 0, _races)
+	_showcase_done = SaveSafe.b(data.get("showcase", false))
 	_car_counts.clear()
 	var cars: Variant = data.get("cars", {})
 	if cars is Dictionary:
@@ -1078,6 +1143,8 @@ func load_state(data: Dictionary) -> void:
 
 func reset() -> void:
 	_records.clear()
+	_showcase_done = false
+	_showcase_tease = false
 	_races = 0
 	_wins = 0
 	_car_counts.clear()
@@ -1113,7 +1180,9 @@ func _send_challenger() -> void:
 	# Rakip modeli ÖNCE seçilir (oyuncunun aracının performansına göre), araç o modelle yola çıkar: yoldan
 	# gelen araç ile yarışta karşına çıkan araç AYNI olur. Sahibi (arkadaş / isimsiz) de o anda seçilir.
 	# Seçilen model bu arada şehre çıktıysa (aynı modelden tek araç) boştakilerden yeniden seçilir
-	if _rival_id == &"" or _traffic.is_model_in_use(_rival_id):
+	if showcase_due() and _rival_id != SHOWCASE_CAR and not _traffic.is_model_in_use(SHOWCASE_CAR):
+		_set_showcase_rival()   # SÜPER ARABA TANITIMI: 3. yarışın rakibi
+	elif _rival_id == &"" or _traffic.is_model_in_use(_rival_id):
 		var pick: Dictionary = pick_rival(player_vehicle_id(), _traffic.models_in_use())
 		_rival_id = pick["id"]
 		_rival_owner = pick["owner"]
@@ -1125,6 +1194,10 @@ func _send_challenger() -> void:
 	_challenger = vehicle
 	_rival_id = vehicle.vehicle_id
 	_rival_appearance = vehicle.appearance   # isimsiz rakibin rastgele rengi de pistte aynı kalsın
+	_showcase = _rival_id == SHOWCASE_CAR and showcase_due()
+	if _showcase:
+		_arm = -1   # senaryolu yarış: zorluk kolu çekilmez
+		_arm_used = true
 	_reward_paid = false
 
 

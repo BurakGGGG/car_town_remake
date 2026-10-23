@@ -114,6 +114,18 @@ static func exists(id: StringName) -> bool:
 
 
 # --- Kurucu eşyalar ----------------------------------------------------------------------
+## GÜNLÜK GİRİŞ MERDİVENİ dekoru: kaydında `"login": {"month": m, "week": w}` olan eşya (week 4 = ay sonu); yoksa &"".
+## Bkz. LoginLadder.
+static func login_item(month: int, week: int) -> StringName:
+	_ensure_loaded()
+	for id: StringName in _by_id:
+		var login: Variant = (_by_id[id] as Dictionary).get("login")
+		if login is Dictionary and int((login as Dictionary).get("month", 0)) == month \
+				and int((login as Dictionary).get("week", 0)) == week:
+			return id
+	return &""
+
+
 ## Satılmayan, yalnızca kodla verilen eşya (ön kayıt ödülü TAŞTAKİ ALTIN ANAHTAR). Bkz. FounderReward.
 static func is_exclusive(id: StringName) -> bool:
 	return bool(get_item(id).get("exclusive", false))

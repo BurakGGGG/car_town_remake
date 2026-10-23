@@ -654,6 +654,8 @@ func _run() -> void:
 		await _report(String(entry[0]), level_screen)
 		level_screen.close()
 		await wait(0.4)
+	await _screen(&"supercar_tease", "super_araba", Callable(), 1.4)
+	await _screen(&"login_ladder", "giris_merdiveni", Callable(), 1.4)   # GÜNLÜK GİRİŞ MERDİVENİ   # SÜPER ARABA TANITIMI sonu (BİR GÜN SENİN DE OLACAK!)
 	await _screen(&"mastery", "ustalik")
 	await _screen(&"garage_value", "garaj_degeri")
 	await _screen(&"profile", "profil")
