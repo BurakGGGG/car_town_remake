@@ -1,6 +1,7 @@
 // AUTO YARD yönetim paneli — saf mantık (sunucu server.mjs bağlar; test/lib.test.mjs internetsiz sınar).
 // Belgelerin biçimi oyundakiyle aynıdır:
-//   config/app             gameplay/backend/app_config.gd (AppConfig)
+//   config/app             gameplay/backend/app_config.gd (AppConfig); event modülleri ve packs gameplay/backend/live_event.gd /
+//                          live_packs.gd (aynı sınırlar: SALE_MAX, BOOST, MISSION_MAX, RIVAL_STAGE_MAX, ödül sınırları)
 //   users/{uid}/mail/{id}  gameplay/backend/mail_service.gd (MailService.normalize aynı sınırları uygular)
 //   bildirim konusu        gameplay/social/push_service.gd (news_<dil>)
 import { readFileSync } from "node:fs";
@@ -48,11 +49,15 @@ const empty = (o) => Object.keys(o).length === 0;
 export function loadCatalog(root) {
   const crates = JSON.parse(readFileSync(new URL("vehicles/crates.json", root), "utf8"));
   const decor = JSON.parse(readFileSync(new URL("decor/decorations.json", root), "utf8"));
-  const crateList = (crates.crates || []).map((c) => ({ id: c.id, name: c.display_name || c.id }));
+  const cars = JSON.parse(readFileSync(new URL("vehicles/cars.json", root), "utf8"));
+  const crateList = (crates.crates || []).map((c) => ({ id: c.id, name: c.display_name || c.id, pool: c.pool || [] }));
+  // Etkinlik rakibi olabilecek araçlar (CarCatalog.is_obtainable: polis gibi edinilemeyen hariç)
+  const carList = (cars.cars || []).filter((c) => c && c.id && c.obtainable !== false)
+    .map((c) => ({ id: c.id, name: c.display_name || c.id, class: c.class || "" }));
   const decorList = (decor.items || [])
     .filter((i) => i && i.id && !i.retired && placementOf(i) !== "surface" && placementOf(i) !== "tile" && placementOf(i) !== "edge")
     .map((i) => ({ id: i.id, name: i.title || i.id, kind: i.kind, exclusive: !!i.exclusive, gems: i.price_gems || 0 }));
-  return { crates: crateList, decor: decorList };
+  return { crates: crateList, decor: decorList, cars: carList, metrics: MISSION_METRICS };
 }
 
 // GarageDecor.load_from ile aynı çıkarım.
@@ -132,8 +137,6 @@ export function buildConfig(input, now) {
     maintenance_until: int(input.maintenance_until, 0, 4_000_000_000, "Bakım bitişi"),
     updated_at: Math.floor(now / 1000),
   };
-  const event = buildEvent(input.event);
-  if (event) doc.event = event;
   if (doc.latest_code > 0 && doc.latest_code < doc.min_code) {
     throw new PanelError("Son sürüm kodu en düşük sürüm kodundan küçük olamaz");
   }
@@ -295,20 +298,139 @@ export function buildPromo(input, catalog) {
   };
 }
 
-/** Panel formundan canlı etkinlik (config/app.event; oyundaki AppConfig.active_event): çarpanlar 1–3, başlangıç < bitiş. */
-export function buildEvent(input) {
+// --- Canlı etkinlik (config/app.event) ve içerik paketleri (config/app.packs) ---------------
+
+export const SALE_KINDS = ["crates", "cars", "decor", "mods"];
+export const SALE_MAX = 50;
+export const MISSION_MAX = 6;
+export const RIVAL_STAGE_MAX = 5;
+const BOOST_MIN = 2;
+const BOOST_MAX = 5;
+const REWARD_MAX = { money: 5_000_000, gems: 1000, xp: 100_000 };
+const ID_RE = /^[a-z0-9_]{1,40}$/;
+// Etkinlik görevinin sayabileceği metrikler → panelde görünen ad (oyundaki LiveEvent.MISSION_TEXTS ile aynı anahtarlar)
+export const MISSION_METRICS = {
+  repairs: "Tamir yap", repair_money: "Tamirden ₺ kazan", long_jobs: "Uzun iş tamamla", races: "Yarışa katıl",
+  race_wins: "Yarış kazan", event_rival_wins: "Etkinlik rakibini yen", crates_opened: "Kasa aç", crates_bought: "Kasa sipariş et",
+  decor_placed: "Eşya yerleştir", decor_bought: "Eşya satın al", paints: "Araç boya", mods_installed: "Modifiye tak",
+  junk_searches: "Hurdalıkta yığın ara", junk_parts: "Hurdalıktan parça topla", friend_races: "Arkadaş yarışına katıl",
+  friend_wins: "Arkadaş yarışı kazan", money_spent: "₺ harca",
+};
+
+const num = (v, lo, hi, what) => {
+  const n = v === "" || v === undefined || v === null ? lo : Number(v);
+  if (!Number.isFinite(n) || n < lo || n > hi) throw new PanelError(`${what}: ${lo} ile ${hi} arasında olmalı`);
+  return Math.round(n * 100) / 100;
+};
+
+/** Ödül alanları: ₺, elmas, XP, kasa (satılan kasa), eşya (oyunun ya da bir içerik paketinin eşya kimliği). */
+function buildReward(src, catalog, what) {
+  const crate = String(src.crate || "").trim();
+  if (crate && catalog && !catalog.crates.some((c) => c.id === crate)) throw new PanelError(`${what}: bilinmeyen kasa "${crate}"`);
+  const decor = String(src.decor || "").trim();
+  if (decor && !ID_RE.test(decor)) throw new PanelError(`${what}: eşya kimliği küçük harf / rakam / _`);
+  return {
+    money: int(src.money, 0, REWARD_MAX.money, `${what} ₺`),
+    gems: int(src.gems, 0, REWARD_MAX.gems, `${what} elmas`),
+    xp: int(src.xp, 0, REWARD_MAX.xp, `${what} XP`),
+    crate, decor,
+  };
+}
+
+/** İçerik paketleri listesi: [{id, url (https), sha256, size}]; aynı kimlik iki kez olmaz. */
+export function buildPacks(input) {
+  const out = [];
+  for (const p of Array.isArray(input) ? input : []) {
+    const id = String(p && p.id || "").trim();
+    const url = String(p && p.url || "").trim();
+    const sha256 = String(p && p.sha256 || "").trim().toLowerCase();
+    if (!ID_RE.test(id)) throw new PanelError("Paket kimliği: küçük harf / rakam / _ (en çok 40)");
+    if (out.some((x) => x.id === id)) throw new PanelError(`Paket "${id}" iki kez listede`);
+    if (!/^https:\/\/[^\s]+$/.test(url)) throw new PanelError(`Paket "${id}": adres https:// ile başlamalı`);
+    if (!/^[0-9a-f]{64}$/.test(sha256)) throw new PanelError(`Paket "${id}": sha256 64 onaltılık karakter olmalı`);
+    out.push({ id, url, sha256, size: int(p.size, 1, 64 * 1024 * 1024, `Paket "${id}" boyutu`) });
+  }
+  return out;
+}
+
+/**
+ * Panel formundan canlı etkinlik (oyundaki LiveEvent.normalize ile aynı sınırlar). Modüller: money_mult / xp_mult (1–3),
+ * sale {crates, cars, decor, mods: 0–50}, crate_boost {crate, cars (havuzdan), mult 2–5}, missions [{metric, target, ödül}]
+ * (en çok 6), rival {car, stage 0–5, name, paint, ödül}, pack (packs listesinden). Hiçbir modül yoksa null (etkinlik yok).
+ * catalog verilmezse kimlikler katalogla sınanmaz (eski testler).
+ */
+export function buildEvent(input, catalog = null, packs = []) {
   if (!input) return null;
+  const event = {};
   const moneyMult = Number(input.money_mult || 1);
   const xpMult = Number(input.xp_mult || 1);
   if (!(moneyMult >= 1 && moneyMult <= 3) || !(xpMult >= 1 && xpMult <= 3)) throw new PanelError("Çarpan 1 ile 3 arasında olmalı");
-  if (moneyMult === 1 && xpMult === 1) return null;
+  if (moneyMult > 1) event.money_mult = Math.round(moneyMult * 100) / 100;
+  if (xpMult > 1) event.xp_mult = Math.round(xpMult * 100) / 100;
+  const sale = {};
+  for (const kind of SALE_KINDS) {
+    const p = int(input.sale && input.sale[kind], 0, SALE_MAX, `İndirim (${kind}) yüzdesi`);
+    if (p > 0) sale[kind] = p;
+  }
+  if (!empty(sale)) event.sale = sale;
+  const boost = input.crate_boost;
+  if (boost && boost.crate) {
+    const crate = catalog ? catalog.crates.find((c) => c.id === boost.crate) : { id: boost.crate, pool: null };
+    if (!crate) throw new PanelError(`Etkinlik kasası: bilinmeyen kasa "${boost.crate}"`);
+    const cars = [...new Set((boost.cars || []).map(String))];
+    if (!cars.length) throw new PanelError("Etkinlik kasası: en az bir araç seç");
+    for (const car of cars) {
+      if (crate.pool && !crate.pool.includes(car)) throw new PanelError(`Etkinlik kasası: "${car}" bu kasanın havuzunda değil`);
+    }
+    event.crate_boost = { crate: crate.id, cars, mult: num(boost.mult, BOOST_MIN, BOOST_MAX, "Kasa şans çarpanı") };
+  }
+  const missions = [];
+  for (const [i, m] of (Array.isArray(input.missions) ? input.missions : []).entries()) {
+    if (!m || !m.metric) continue;
+    if (!(m.metric in MISSION_METRICS)) throw new PanelError(`Görev ${i + 1}: bilinmeyen görev türü "${m.metric}"`);
+    const id = String(m.id || `m${i + 1}`).trim();
+    if (!ID_RE.test(id) || missions.some((x) => x.id === id)) throw new PanelError(`Görev ${i + 1}: kimlik geçersiz ya da yinelenmiş`);
+    missions.push({ id, metric: m.metric, target: int(m.target, 1, 1_000_000, `Görev ${i + 1} hedefi`),
+      ...buildReward(m, catalog, `Görev ${i + 1} ödülü`) });
+  }
+  if (missions.length > MISSION_MAX) throw new PanelError(`En çok ${MISSION_MAX} etkinlik görevi`);
+  if (missions.length) event.missions = missions;
+  const rival = input.rival;
+  if (rival && rival.car) {
+    if (catalog && !catalog.cars.some((c) => c.id === rival.car)) throw new PanelError(`Özel rakip: bilinmeyen ya da edinilemeyen araç "${rival.car}"`);
+    const paint = String(rival.paint || "").trim();
+    if (paint && !/^#[0-9a-fA-F]{6}$/.test(paint)) throw new PanelError("Özel rakip boyası #RRGGBB olmalı");
+    const name = String(rival.name || "").trim();
+    if (name.length > 24) throw new PanelError("Özel rakip adı en çok 24 karakter");
+    event.rival = { car: rival.car, stage: int(rival.stage, 0, RIVAL_STAGE_MAX, "Özel rakip kademesi"), name, paint,
+      ...buildReward(rival, catalog, "Özel rakip ödülü") };
+  }
+  const pack = String(input.pack || "").trim();
+  if (pack) {
+    if (!packs.some((p) => p.id === pack)) throw new PanelError(`İçerik paketi "${pack}" paket listesinde yok`);
+    event.pack = pack;
+  }
+  if (empty(event)) return null;
   const start = int(input.start, 0, 4_000_000_000, "Etkinlik başlangıcı");
   const end = int(input.end, 1, 4_000_000_000, "Etkinlik bitişi");
   if (end <= start) throw new PanelError("Etkinlik bitişi başlangıçtan sonra olmalı");
   const id = String(input.id || "").trim();
-  if (!/^[a-z0-9_]{1,40}$/.test(id)) throw new PanelError("Etkinlik kimliği: küçük harf / rakam / _");
+  if (!ID_RE.test(id)) throw new PanelError("Etkinlik kimliği: küçük harf / rakam / _");
   return { id, title: texts(input.title, MAX_TITLE, "Etkinlik başlığı"), text: texts(input.text, MAX_TEXT, "Etkinlik metni"),
-    money_mult: Math.round(moneyMult * 100) / 100, xp_mult: Math.round(xpMult * 100) / 100, start, end };
+    start, end, money_mult: event.money_mult || 1, xp_mult: event.xp_mult || 1, ...event };
+}
+
+/** config/app'in etkinlik + paket kısmı (POST /api/event): mevcut belgenin öbür alanlarına dokunulmaz. */
+export function buildEventDoc(input, catalog, current, now) {
+  const packs = buildPacks(input.packs);
+  const event = buildEvent(input.event, catalog, packs);
+  const doc = { ...(current || {}) };
+  delete doc.event;
+  if (event) doc.event = event;
+  if (packs.length) doc.packs = packs;
+  else delete doc.packs;
+  doc.updated_at = Math.floor(now / 1000);
+  return doc;
 }
 
 /** Yarış öğrenmesi ayarı (config/race_learning, MERGE: gece fonksiyonunun tablosu korunur; oyundaki RaceLearning):

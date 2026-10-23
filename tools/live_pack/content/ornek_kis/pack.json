@@ -1,0 +1,15 @@
+{
+	"banner": "banner.png",
+	"decor": [
+		{
+			"id": "kis_cami",
+			"kind": "plant",
+			"title": {"tr": "Kış Çamı", "en": "Winter Pine", "es": "Pino de invierno", "de": "Wintertanne", "fr": "Sapin d'hiver"},
+			"price": 6000,
+			"value": 3000,
+			"min_level": 1,
+			"model": "res://assets/decor/tree_pine.glb",
+			"event_only": true
+		}
+	]
+}

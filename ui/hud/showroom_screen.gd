@@ -121,6 +121,8 @@ var _closing: bool = false
 var _tweens: Array[Tween] = []
 var _group_targets: Dictionary = {}
 
+## open_on_crate: bir sonraki açılışta gösterilecek kasa.
+var _open_on: StringName = &""
 
 func _ready() -> void:
 	name = "ShowroomScreen"
@@ -153,17 +155,26 @@ func open() -> void:
 	_idle_time = AUTO_RESUME
 	_display_root.rotation = Vector3(0.0, deg_to_rad(-38.0), 0.0)   # showroom açılış kadrajı: 3/4
 	var target: StringName = _shown_crate if _shown_crate != &"" else _first_crate()
+	var asked: StringName = _open_on
+	_open_on = &""
 	_shown_crate = &""
 	_shown_vehicle = &""
 	_shown_pending = 0
-	# Yolda kasa varsa önce o (alt sekmedeki rozet buraya getirir)
-	if _first_pending() > 0:
+	# Yolda kasa varsa önce o (alt sekmedeki rozet buraya getirir); ETKİNLİK panosundan gelindiyse etkinliğin kasası
+	if asked != &"" and CrateCatalog.exists(asked):
+		_show_crate(asked)
+	elif _first_pending() > 0:
 		_show_pending(_first_pending())
 	else:
 		_show_crate(target)
 	set_process(true)
 	opened.emit()
 	_enter_animation()
+
+
+## Bir sonraki açılış bu kasada (ETKİNLİK panosu: etkinlik kasası).
+func open_on_crate(crate_id: StringName) -> void:
+	_open_on = crate_id
 
 
 func close() -> void:
@@ -917,13 +928,21 @@ func _rebuild_list() -> void:
 			pending_plate.toggled.connect(func(pressed: bool) -> void:
 				if pressed:
 					_show_pending(uid))
+	var sale: int = LiveEvent.sale_percent(&"crates")
 	for crate: Dictionary in CrateCatalog.all():
 		var id: StringName = crate["id"]
-		var plate: PlateButton = _list_plate("crate:%s" % id, Loc.t("%s\n%d GEM") % [Loc.t(String(crate["display_name"])), crate["price_gems"]], HudIcon.Kind.GEM)
+		var label: String = Loc.t("%s\n%d GEM") % [Loc.t(String(crate["display_name"])), CrateCatalog.sale_price(id)]
+		if sale > 0:   # canlı etkinlik indirimi
+			label += "  " + sale_tag(sale)
+		var boosted: bool = not LiveEvent.crate_boost(id).is_empty()
+		if boosted:   # ETKİNLİK KASASI: seçili araçların şansı artmış
+			label = "★ " + label
+		var plate: PlateButton = _list_plate("crate:%s" % id, label, HudIcon.Kind.GEM)
+		plate.highlight = boosted
 		plate.toggled.connect(func(pressed: bool) -> void:
 			if pressed:
 				_show_crate(id))
-	var buyback: Array[StringName] = []
+	var buyback: Array[StringName] = []   # (indirimli fiyat _refresh_vehicle'da: VehicleOwnership.buy_price)
 	if _ownership:
 		for id: StringName in _ownership.discovered_ids():
 			# Restorasyon aracı parayla geri alınmaz: yalnızca hurdalıkta yeniden restore edilir
@@ -1164,12 +1183,21 @@ func _set_reveal_chrome(on: bool) -> void:
 func _refresh_crate() -> void:
 	var entry: Dictionary = CrateCatalog.get_entry(_shown_crate)
 	var lines: PackedStringArray = PackedStringArray()
+	var price: int = CrateCatalog.sale_price(_shown_crate)
+	var sale: int = LiveEvent.sale_percent(&"crates")
+	if sale > 0:
+		lines.append(Loc.t("ETKİNLİK İNDİRİMİ %s · %d → %d GEM") % [sale_tag(sale), CrateCatalog.price(_shown_crate), price])
+	var boost: Dictionary = LiveEvent.crate_boost(_shown_crate)
+	if not boost.is_empty():
+		lines.append(Loc.t("★ ETKİNLİK KASASI: işaretli araçların şansı ×%s") % Loc.decimal(float(boost.values()[0]), 1)
+			.trim_suffix(",0").trim_suffix(".0"))
 	for row: Dictionary in CrateCatalog.odds(_shown_crate):
 		var car: Dictionary = CarCatalog.get_entry(row["id"])
 		var mark: String = "✔ " if _ownership and _ownership.is_owned(row["id"]) else ""
+		if float(row.get("boost", 1.0)) > 1.0:
+			mark = "★ " + mark
 		lines.append("%s%s  %s · %s" % [mark, Loc.percent(Loc.decimal(float(row["chance"]) * 100.0)),
 			String(car.get("display_name", row["id"])).to_upper(), CrateCatalog.rarity_label(row["rarity"])])
-	var price: int = int(entry["price_gems"])
 	if _progress and _progress.gems < price:
 		lines.append(Loc.t("GEM: GÜNLÜK GİRİŞ · GÖREVLER · SEVİYE · USTALIK"))   # gem nereden gelir (QA: anlatılmıyordu)
 	_info_plate.set_content(Loc.t(String(entry["display_name"])),
@@ -1198,6 +1226,11 @@ func _refresh_crate() -> void:
 			_buy_button.disabled = true
 
 
+## İndirim etiketi: "−%30" (dile göre yüzde biçimi).
+static func sale_tag(percent: int) -> String:
+	return "−" + Loc.percent(str(percent))
+
+
 func _gem_store_available() -> bool:
 	var purchases: PurchaseManager = get_tree().get_first_node_in_group("purchases") as PurchaseManager
 	return purchases != null and purchases.is_available()
@@ -1206,12 +1239,16 @@ func _gem_store_available() -> bool:
 ## GERİ AL plakası: keşfedilmiş aracın ₺ fiyatı (VehicleOwnership.status kararı).
 func _refresh_vehicle() -> void:
 	var entry: Dictionary = CarCatalog.get_entry(_shown_vehicle)
-	var price: int = int(entry.get("price", 0))
+	var price: int = _ownership.buy_price(_shown_vehicle) if _ownership else int(entry.get("price", 0))
+	var lines: PackedStringArray = ProgressionEffects.vehicle_lines(get_tree(), _shown_vehicle)
+	var sale: int = LiveEvent.sale_percent(&"cars")
+	if sale > 0:
+		lines.insert(0, Loc.t("ETKİNLİK İNDİRİMİ %s · %s → %s ₺") % [sale_tag(sale),
+			Hud.format_thousands(int(entry.get("price", 0))), Hud.format_thousands(price)])
 	_info_plate.set_content(
 		"%s %s" % [String(entry.get("brand", "")).to_upper(), String(entry.get("model", "")).to_upper()],
 		ProgressionEffects.vehicle_subtitle(_shown_vehicle),
-		"%s ₺" % Hud.format_thousands(price),
-		ProgressionEffects.vehicle_lines(get_tree(), _shown_vehicle))
+		"%s ₺" % Hud.format_thousands(price), lines)
 	_buy_button.kind = HudIcon.Kind.COIN
 	if _ownership == null:
 		_buy_button.text = "%s ₺" % Hud.format_thousands(price)

@@ -51,6 +51,12 @@ extends Node
 ## (oyuncunun yarıştan sonra oyunda kalıp kalmadığından öğrenir; kişisel sayıları kayıtta "learn"), her yarışın sonucu
 ## ona bildirilir ve günlük olarak sunucuya gider.
 ##
+## ETKİNLİK RAKİBİ (2026-10-23, canlı etkinlik — LiveEvent.rival): yönetim panelinde seçilen araç, verilen modifiye
+## kademesiyle (her kategoride aynı) ve boyasıyla gelir; pist İNTİKAM gibi doğrudan açılır (start_event_rival, rövanş yok,
+## istenildiği kadar yarışılır). Koşusu yapay zekânın o yapıyla koşusudur (gün formu, havuz/arkadaş koşusu değil). Yenmek
+## normal ödülün üstüne panelin ÖZEL ÖDÜLÜnü verir — etkinlik başına bir kez ("event_paid" kayıtta). Arkadaş haberi /
+## skoru yazılmaz.
+##
 ## Sahnede World/Gameplay/RaceManager olarak durur, "race" grubundan bulunur (autoload yok).
 ## Kayıt: KİŞİSEL REKOR + profil kartındaki yarış / galibiyet sayıları ("wins", "races"; eski kayıtta 0). Rekor TEKTİR
 ## (kullanıcı 2026-10-20: araçtan araca tutulmaz): hangi araçla olursa olsun en iyi 300 m süresi + o koşunun mesafe izi
@@ -73,6 +79,8 @@ signal record_broken(vehicle_id: StringName, time: float)
 signal rematch_started(count: int)
 ## Arkadaşın (gerçek ya da Emre / Elif) aracıyla yarış bitti: haber + skor (SocialManager dinler).
 signal friend_race_finished(owner: Dictionary, won: bool, player_vehicle: StringName, rival_vehicle: StringName, revenge: bool)
+## Etkinlik rakibi yenildi (görev sayacı: event_rival_wins).
+signal event_rival_won
 
 ## Bir rakip gittikten sonra yenisi ne kadar sonra gelir (sn).
 ## 2026-10-21 zorluk turu: 5–10 sn idi (ardı ardına yarış tamirden çok kazandırıyordu) → 25–45 sn denendi, kullanıcı
@@ -177,6 +185,9 @@ var _bonus_day: Dictionary = {}
 ## İNTİKAM: yoldan gelen araç yok, pist doğrudan açıldı (yarış oturumu bitene kadar yeni rakip gelmez).
 var _direct: bool = false
 var _revenge: bool = false
+## Pistteki rakip canlı etkinliğin rakibi (start_event_rival); özel ödülü alınmış etkinlikler: kimlik → true.
+var _event_rival: bool = false
+var _event_paid: Dictionary = {}
 ## KOŞU EŞLEŞTİRME — oyuncunun koşuları: araç id (String) → DragRaceSim.Recording.to_dict sözlükleri, eskiden yeniye.
 var _runs: Dictionary = {}
 ## Son yarışlar, en yenisi sonda: {"w": kazandı mı, "a": RivalSelector.Arm (-1: ilk yarış), "p": seçilen koşuya karşı şans}.
@@ -339,6 +350,10 @@ func rival_recording(player_id: StringName) -> DragRaceSim.Recording:
 		return null
 	if is_first_race():
 		_rival_recording = DragRaceSim.ai_recording(_rival_id, rival_build(), DragRaceSim.roll_form(_rival_id, null), _rng)
+		return _rival_recording
+	if _event_rival:   # etkinlik rakibi: panelin verdiği yapıyla yapay zekâ koşusu (seçici / havuz yok)
+		_rival_recording = DragRaceSim.ai_recording(_rival_id, rival_build(), DragRaceSim.roll_form(_rival_id, _rng), _rng)
+		_chance = RivalSelector.win_chance(my_samples(player_id), _rival_recording.time)
 		return _rival_recording
 	if _arm < 0 or _arm_used:
 		_arm = _choose_arm()   # rövanş / İNTİKAM: yeni kol
@@ -665,6 +680,39 @@ func is_revenge() -> bool:
 	return _revenge
 
 
+## ETKİNLİK RAKİBİ: canlı etkinliğin rakibine karşı pist doğrudan açılır. Yoldaki davet varsa kapanır. Etkinlikte rakip
+## yoksa false.
+func start_event_rival() -> bool:
+	var rival: Dictionary = LiveEvent.rival()
+	if rival.is_empty():
+		return false
+	release_challenger()
+	_direct = true
+	_event_rival = true
+	_rival_id = rival["car"]
+	var build: Dictionary = {}
+	if int(rival["stage"]) > 0:
+		for category: StringName in PerformanceMods.CATEGORIES:
+			build[category] = int(rival["stage"])
+	_rival_owner = {"name": String(rival["name"]) if not String(rival["name"]).is_empty() else Loc.t("ETKİNLİK RAKİBİ"),
+		"event": true, "paint": rival["paint"], "build": build}
+	_arm = -1
+	_arm_used = false
+	_rival_appearance = _appearance_for(_rival_id, _rival_owner)
+	_reward_paid = false
+	_rematches = 0
+	return true
+
+
+func is_event_rival() -> bool:
+	return _event_rival
+
+
+## Süren etkinliğin rakibinin özel ödülü bu oyuncuya verildi mi.
+func event_reward_taken() -> bool:
+	return _event_paid.has(LiveEvent.id())
+
+
 ## Rakip gerçek arkadaşsa ve bugün ondan bonus alınmadıysa kazanınca +%20.
 func friend_bonus_available() -> bool:
 	var uid: String = SaveSafe.s(_rival_owner.get("uid", ""))
@@ -738,6 +786,13 @@ func finish_race(won: bool) -> Dictionary:
 		reward["money"] = int(reward["money"]) + bonus
 		reward["friend_bonus"] = bonus
 		_bonus_day[SaveSafe.s(_rival_owner.get("uid", ""))] = _today()
+	# Etkinlik rakibini ilk kez yendin: panelin özel ödülü (₺ / XP yarış ödülüne eklenir; gem, kasa, eşya ayrıca)
+	if _event_rival and won:
+		var bonus: Dictionary = _pay_event_rival()
+		if not bonus.is_empty():
+			reward["event_bonus"] = bonus
+			reward["money"] = int(reward["money"]) + int(bonus["money"])
+			reward["xp"] = int(reward["xp"]) + int(bonus["xp"])
 	var economy: EconomyManager = get_tree().get_first_node_in_group("economy") as EconomyManager
 	if economy and int(reward["money"]) > 0:
 		economy.add_money(int(reward["money"]))
@@ -745,7 +800,9 @@ func finish_race(won: bool) -> Dictionary:
 	if progress and int(reward["xp"]) > 0:
 		progress.add_xp(int(reward["xp"]))
 	race_finished.emit(won, int(reward["money"]), int(reward["xp"]))
-	if not _rival_owner.is_empty():
+	if _event_rival and won:
+		event_rival_won.emit()
+	if not _rival_owner.is_empty() and not _event_rival:
 		var uid: String = SaveSafe.s(_rival_owner.get("uid", ""))
 		var r: Dictionary = _rivals.get(uid, {})
 		r["mw" if won else "ml"] = SaveSafe.i(r.get("mw" if won else "ml", 0)) + 1
@@ -761,6 +818,29 @@ func finish_race(won: bool) -> Dictionary:
 	else:
 		_awaiting_rematch = true   # rakip şeritte bekler: oyuncu RÖVANŞ ya da GARAJA DÖN seçer
 	return reward
+
+
+## Etkinlik rakibinin özel ödülü — etkinlik başına bir kez. Gem / kasa / eşya burada verilir; ₺ ve XP'yi çağıran yarış
+## ödülüne ekler. Dönen: verilen ödül (zaten alınmışsa / etkinlik bittiyse boş).
+func _pay_event_rival() -> Dictionary:
+	var rival: Dictionary = LiveEvent.rival()
+	var event_id: String = LiveEvent.id()
+	if rival.is_empty() or event_id.is_empty() or _event_paid.has(event_id) or not is_inside_tree():
+		return {}
+	_event_paid[event_id] = true
+	records_changed.emit()   # kayıt
+	var out: Dictionary = {"money": int(rival["money"]), "xp": int(rival["xp"]), "gems": int(rival["gems"]),
+		"crate": rival["crate"], "decor": &""}
+	var player: PlayerProgress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
+	if player and int(rival["gems"]) > 0:
+		player.add_gems(int(rival["gems"]))
+	var crates: CrateManager = get_tree().get_first_node_in_group("crates") as CrateManager
+	if StringName(rival["crate"]) != &"" and (crates == null or crates.grant_free(rival["crate"], "event") <= 0):
+		out["crate"] = &""
+	var decor: DecorManager = get_tree().get_first_node_in_group("decor") as DecorManager
+	if StringName(rival["decor"]) != &"" and decor and decor.grant(rival["decor"], 1):
+		out["decor"] = rival["decor"]
+	return out
 
 
 ## Kaybedilen yarışın rövanşı yapılabilir mi (rakip hâlâ şeritte bekliyor).
@@ -814,6 +894,7 @@ func release_challenger(fled: bool = false) -> void:
 	_rival_appearance = null
 	_direct = false
 	_revenge = false
+	_event_rival = false
 	_arm = -1
 	_arm_used = false
 	_rival_recording = null
@@ -912,11 +993,18 @@ func state() -> Dictionary:
 		var counts: Vector2i = _car_counts[id]
 		cars[String(id)] = {"r": counts.x, "w": counts.y}
 	return {"best": best, "races": _races, "wins": _wins, "cars": cars, "rivals": rivals, "bonus": _bonus_day.duplicate(),
-		"runs": _runs.duplicate(true), "recent": _history.duplicate(true), "learn": _learning.counts_state()}
+		"runs": _runs.duplicate(true), "recent": _history.duplicate(true), "learn": _learning.counts_state(),
+		"event_paid": _event_paid.duplicate()}
 
 
 func load_state(data: Dictionary) -> void:
 	_records.clear()
+	_event_paid.clear()
+	var paid: Variant = data.get("event_paid", {})
+	if paid is Dictionary:
+		for key: Variant in (paid as Dictionary):
+			if _event_paid.size() < 100:
+				_event_paid[SaveSafe.s(key)] = true
 	_races = maxi(SaveSafe.i(data.get("races", 0)), 0)
 	_wins = clampi(SaveSafe.i(data.get("wins", 0)), 0, _races)
 	_car_counts.clear()
@@ -997,6 +1085,7 @@ func reset() -> void:
 	_bonus_day.clear()
 	_runs.clear()
 	_history.clear()
+	_event_paid.clear()
 	_learning.load_counts({})
 
 

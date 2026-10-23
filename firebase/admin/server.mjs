@@ -15,7 +15,7 @@
 // Başlatma: cd firebase/admin && npm install && npm start   (ayrıntı: README.md)
 import http from "node:http";
 import crypto from "node:crypto";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -24,10 +24,11 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { createRequire } from "node:module";
 import { getAuth } from "firebase-admin/auth";
 import { getMessaging } from "firebase-admin/messaging";
+import { getStorage } from "firebase-admin/storage";
 import {
   PanelError, loadCatalog, buildInfo, buildMail, mailId, buildConfig, buildNews, classifyQuery, unpackSave, hasReward,
   statsFromSave, buildBan, banActive, moderatedName, groupReports, UID_PATTERN, BAN_REASONS, buildAdjust, buildRestore,
-  buildPromo, PROMO_RE, buildSegment, matchSegment, buildLearning,
+  buildPromo, PROMO_RE, buildSegment, matchSegment, buildLearning, buildEventDoc,
 } from "./lib.mjs";
 
 // Gecelik istatistiğin aynısı (functions/stats.js, saf mantık): panel anlık sayıları da onunla hesaplar
@@ -43,6 +44,10 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = new URL("../../", import.meta.url);
 const KEY = crypto.randomBytes(24).toString("base64url");
 const BATCH = 400;
+// İÇERİK PAKETLERİ: tools/live_pack/build_pack.sh buraya yazar (<kimlik>.pck + <kimlik>.json özet); panel Storage'a yükler.
+const PACKS_DIR = resolve(HERE, "packs");
+const BUCKET = "car-town-remake.firebasestorage.app";
+const PACK_MAX = 64 * 1024 * 1024;
 
 function die(message) {
   console.error("\n  PANEL AÇILMADI: " + message + "\n");
@@ -198,10 +203,88 @@ const routes = {
 
   "POST /api/config": async (body) => {
     const doc = buildConfig(body, Date.now());
+    // Etkinlik ve içerik paketleri kendi sekmesinden yazılır (POST /api/event): burada olduğu gibi korunur
+    const current = await db.doc("config/app").get();
+    const old = current.exists ? current.data() : {};
+    if (old.event) doc.event = old.event;
+    if (old.packs) doc.packs = old.packs;
     await db.doc("config/app").set(doc);
     await log({ kind: "config", min_code: doc.min_code, latest_code: doc.latest_code, maintenance: doc.maintenance,
       notice: doc.notice ? doc.notice.id : "" });
     return { config: doc };
+  },
+
+  // --- Canlı etkinlik + içerik paketleri (config/app.event / packs; öbür alanlara dokunulmaz) ---
+  "GET /api/event": async () => {
+    const snap = await db.doc("config/app").get();
+    const c = snap.exists ? snap.data() : {};
+    return { event: c.event || null, packs: c.packs || [] };
+  },
+
+  "POST /api/event": async (body) => {
+    const ref = db.doc("config/app");
+    const doc = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const next = buildEventDoc(body, catalog, snap.exists ? snap.data() : {}, Date.now());
+      tx.set(ref, next);
+      return next;
+    });
+    const e = doc.event;
+    await log({ kind: "event", id: e ? e.id : "", modules: e ? Object.keys(e).filter((k) =>
+      ["sale", "crate_boost", "missions", "rival", "pack"].includes(k) || (k.endsWith("_mult") && e[k] > 1)).join(",") : "",
+      packs: (doc.packs || []).map((p) => p.id).join(",") });
+    return { event: doc.event || null, packs: doc.packs || [] };
+  },
+
+  // Bilgisayardaki kurulmuş paketler (build_pack.sh çıktısı): özet dosyası + .pck birlikte olmalı
+  "GET /api/packs/local": async () => {
+    if (!existsSync(PACKS_DIR)) return { packs: [] };
+    const out = [];
+    for (const name of readdirSync(PACKS_DIR).filter((n) => n.endsWith(".json")).sort()) {
+      try {
+        const meta = JSON.parse(readFileSync(resolve(PACKS_DIR, name), "utf8"));
+        if (existsSync(resolve(PACKS_DIR, `${meta.id}.pck`))) out.push(meta);
+      } catch {
+        // bozuk özet dosyası: listelenmez
+      }
+    }
+    return { packs: out };
+  },
+
+  // Paketi Firebase Storage'a yükler (indirme anahtarlı herkese açık adres); listeye ekleme + yayın formdan yapılır
+  "POST /api/packs/upload": async (body) => {
+    const id = String(body.id || "");
+    if (!/^[a-z0-9_]{1,40}$/.test(id)) throw new PanelError("Paket kimliği geçersiz");
+    const file = resolve(PACKS_DIR, `${id}.pck`);
+    if (!existsSync(file)) throw new PanelError(`firebase/admin/packs/${id}.pck yok: önce tools/live_pack/build_pack.sh ${id}`);
+    const data = readFileSync(file);
+    if (data.length > PACK_MAX) throw new PanelError("Paket 64 MB'tan büyük");
+    const sha256 = crypto.createHash("sha256").update(data).digest("hex");
+    if (EMULATOR) throw new PanelError("Emülatörde Storage yok: canlı panelden yükle");
+    const bucket = getStorage().bucket(BUCKET);
+    const dest = `live_packs/${id}-${sha256.slice(0, 12)}.pck`;
+    const token = crypto.randomUUID();
+    try {
+      await bucket.file(dest).save(data, { resumable: false, metadata: { contentType: "application/octet-stream",
+        cacheControl: "public, max-age=31536000, immutable", metadata: { firebaseStorageDownloadTokens: token } } });
+    } catch (e) {
+      throw new PanelError(`Storage'a yüklenemedi (${e.message}). Firebase konsolu → Storage açık mı? Değilse paketi ` +
+        "kendi sitende barındırıp 'Adresten ekle'yi kullan.");
+    }
+    const url = `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/${encodeURIComponent(dest)}?alt=media&token=${token}`;
+    await log({ kind: "pack_upload", id, size: data.length });
+    return { pack: { id, url, sha256, size: data.length } };
+  },
+
+  // Başka yerde barındırılan paket: panel indirir, özeti ve boyutu hesaplar (elle yazılan özet hatası olmasın)
+  "POST /api/packs/inspect": async (body) => {
+    const url = String(body.url || "").trim();
+    if (!/^https:\/\/[^\s]+$/.test(url)) throw new PanelError("Adres https:// ile başlamalı");
+    const res = await fetch(url, { redirect: "follow" });
+    if (!res.ok) throw new PanelError(`Paket indirilemedi (HTTP ${res.status})`);
+    const data = Buffer.from(await res.arrayBuffer());
+    if (!data.length || data.length > PACK_MAX) throw new PanelError("Paket boş ya da 64 MB'tan büyük");
+    return { sha256: crypto.createHash("sha256").update(data).digest("hex"), size: data.length };
   },
 
   "POST /api/player": async (body) => playerSummary(await resolvePlayer(body.query)),

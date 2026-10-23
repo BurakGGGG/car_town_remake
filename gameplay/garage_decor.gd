@@ -9,6 +9,8 @@ class_name GarageDecor
 ##
 ## YENİ EŞYA = decorations.json'a bir kayıt + assets/decor/<id>.glb (ya da kayıtta scene_path).
 ## Kod değişmez; kategori, yerleşim türü ve fiyat kayıttan gelir, boyut modelden ölçülür.
+## GÜNCELLEMESİZ EŞYA: İÇERİK PAKETİ (LivePacks) kendi kayıtlarını register_pack_items ile ekler (model paketin içinde,
+## scene_path ile). "event_only" eşya yalnızca o paketin etkinliği sürerken satılır; sahibinin paletinde hep durur.
 
 ## Eşya türleri (= palet kategorileri, bu sırayla). JSON'da küçük harf ad olarak yazılır.
 enum Kind {
@@ -51,6 +53,10 @@ static var _loaded: bool = false
 ## KURUCU (exclusive) eşyalar all()'da yoktur: satılmaz, sahibi olmayanın paletinde görünmez. Sahibinin paletinde
 ## görünsün diye DecorManager sahip olunanları buraya bildirir (id → true); items_in / shop_order bunları ekler.
 static var _listed_exclusives: Dictionary = {}
+## İçerik paketlerinin kayıtları: paket kimliği → ham kayıtlar (load_from kataloğu yeniden okurken de eklenir).
+static var _pack_items: Dictionary = {}
+## Sahip olunan etkinlik eşyaları (DecorManager bildirir): etkinlik bitince de paletinde dursun.
+static var _owned_event: Dictionary = {}
 
 
 static func all() -> Array[Dictionary]:
@@ -121,6 +127,59 @@ static func set_listed_exclusives(ids: Array[StringName]) -> void:
 			_listed_exclusives[id] = true
 
 
+# --- İçerik paketi eşyaları ------------------------------------------------------------
+## Paketin eşyalarını kataloğa ekler (aynı kimlik ikinci kez eklenmez: oyunun kendi eşyası paketle ezilemez).
+## Dönen: eklenen kayıt sayısı.
+static func register_pack_items(pack_id: String, raws: Array) -> int:
+	_ensure_loaded()
+	_pack_items[pack_id] = raws.duplicate(true)
+	return _add_pack_items(pack_id, raws)
+
+
+static func _add_pack_items(pack_id: String, raws: Array) -> int:
+	var added: int = 0
+	for raw: Variant in raws:
+		if not raw is Dictionary:
+			continue
+		var entry: Dictionary = _normalize(raw)
+		if entry.is_empty() or _by_id.has(entry["id"]) or bool(entry.get("exclusive", false)):
+			continue
+		entry["live_pack"] = pack_id
+		entry["event_only"] = bool((raw as Dictionary).get("event_only", false))
+		_by_id[entry["id"]] = entry
+		if not bool(entry.get("retired", false)):
+			_items.append(entry)
+		added += 1
+	return added
+
+
+## Paketle gelen, yalnızca etkinlik sürerken satılan eşya mı?
+static func is_event_item(id: StringName) -> bool:
+	return bool(get_item(id).get("event_only", false))
+
+
+## Eşyanın geldiği içerik paketi ("" = oyunun kendi eşyası).
+static func pack_of(id: StringName) -> String:
+	return String(get_item(id).get("live_pack", ""))
+
+
+## Mağazada satılıyor mu: etkinlik eşyası yalnızca paketinin etkinliği sürerken.
+static func on_sale(id: StringName) -> bool:
+	var item: Dictionary = get_item(id)
+	return not bool(item.get("event_only", false)) or LiveEvent.pack_id() == String(item.get("live_pack", ""))
+
+
+## Sahip olunan etkinlik eşyaları (DecorManager kayıt yüklenince / eşya gelince bildirir).
+static func set_owned_event_items(ids: Array[StringName]) -> void:
+	_owned_event.clear()
+	for id: StringName in ids:
+		_owned_event[id] = true
+
+
+static func _listed(item: Dictionary) -> bool:
+	return not bool(item.get("event_only", false)) or _owned_event.has(item["id"]) or on_sale(item["id"])
+
+
 ## Yerleşim türü: &"floor" | &"wall" | &"surface".
 static func placement(id: StringName) -> StringName:
 	return StringName(String(get_item(id).get("placement", PLACE_FLOOR)))
@@ -181,7 +240,8 @@ static func categories() -> Array[int]:
 	_ensure_loaded()
 	var seen: Dictionary = {}
 	for item: Dictionary in _items:
-		seen[int(item["kind"])] = true
+		if _listed(item):
+			seen[int(item["kind"])] = true
 	var out: Array[int] = []
 	for kind: int in Kind.values():
 		if seen.has(kind):
@@ -192,7 +252,7 @@ static func categories() -> Array[int]:
 static func items_in(kind: int) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for item: Dictionary in all():
-		if int(item["kind"]) == kind:
+		if int(item["kind"]) == kind and _listed(item):
 			out.append(item)
 	for id: StringName in _listed_exclusives:
 		var item: Dictionary = _by_id.get(id, {})
@@ -255,26 +315,9 @@ static func load_from(path: String = DATA_PATH) -> bool:
 	for raw: Variant in (data as Dictionary)["items"]:
 		if not (raw is Dictionary):
 			continue
-		var entry: Dictionary = (raw as Dictionary).duplicate()
-		var kind_key: String = String(entry.get("kind", ""))
-		if not KIND_KEYS.has(kind_key) or String(entry.get("id", "")) == "":
-			push_warning("GarageDecor: geçersiz kayıt atlandı (%s)" % entry)
+		var entry: Dictionary = _normalize(raw)
+		if entry.is_empty():
 			continue
-		# Kod tarafı tür ve kimliği enum / StringName olarak görür (JSON'da okunur metin).
-		entry["id"] = StringName(String(entry["id"]))
-		entry["kind"] = int(KIND_KEYS[kind_key])
-		entry["price"] = int(entry.get("price", 0))
-		entry["price_gems"] = maxi(int(entry.get("price_gems", 0)), 0)
-		entry["value"] = int(entry.get("value", 0))
-		entry["min_level"] = maxi(int(entry.get("min_level", 1)), 1)
-		if not entry.has("placement"):
-			if kind_key == "floor_pattern":
-				entry["placement"] = String(PLACE_TILE)
-			elif kind_key == "wall_piece":
-				entry["placement"] = String(PLACE_EDGE)
-			else:
-				entry["placement"] = String(PLACE_SURFACE) if kind_key.ends_with("_surface") \
-						else (String(PLACE_WALL) if kind_key == "wall_item" else String(PLACE_FLOOR))
 		if _by_id.has(entry["id"]):
 			push_warning("GarageDecor: yinelenen id '%s' atlandı" % entry["id"])
 			continue
@@ -284,7 +327,34 @@ static func load_from(path: String = DATA_PATH) -> bool:
 		if bool(entry.get("retired", false)) or bool(entry.get("exclusive", false)):
 			continue   # kurucu eşya: sahibinin paletine items_in ekler (set_listed_exclusives)
 		_items.append(entry)
+	for pack_id: String in _pack_items:   # kataloğu yeniden okuyan (testler) paket eşyalarını kaybetmesin
+		_add_pack_items(pack_id, _pack_items[pack_id])
 	return true
+
+
+## Ham kayıt → katalog kaydı (tür / yerleşim / sayılar). Geçersizse boş.
+static func _normalize(raw: Dictionary) -> Dictionary:
+	var entry: Dictionary = raw.duplicate()
+	var kind_key: String = String(entry.get("kind", ""))
+	if not KIND_KEYS.has(kind_key) or String(entry.get("id", "")) == "":
+		push_warning("GarageDecor: geçersiz kayıt atlandı (%s)" % entry)
+		return {}
+	# Kod tarafı tür ve kimliği enum / StringName olarak görür (JSON'da okunur metin).
+	entry["id"] = StringName(String(entry["id"]))
+	entry["kind"] = int(KIND_KEYS[kind_key])
+	entry["price"] = int(entry.get("price", 0))
+	entry["price_gems"] = maxi(int(entry.get("price_gems", 0)), 0)
+	entry["value"] = int(entry.get("value", 0))
+	entry["min_level"] = maxi(int(entry.get("min_level", 1)), 1)
+	if not entry.has("placement"):
+		if kind_key == "floor_pattern":
+			entry["placement"] = String(PLACE_TILE)
+		elif kind_key == "wall_piece":
+			entry["placement"] = String(PLACE_EDGE)
+		else:
+			entry["placement"] = String(PLACE_SURFACE) if kind_key.ends_with("_surface") \
+					else (String(PLACE_WALL) if kind_key == "wall_item" else String(PLACE_FLOOR))
+	return entry
 
 
 static func _ensure_loaded() -> void:

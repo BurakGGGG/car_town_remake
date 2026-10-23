@@ -816,6 +816,12 @@ func _draw_badges(card: PlateButton, id: StringName, area: Rect2) -> void:
 		card.draw_arc(center, 17.0, 0.0, TAU, 28, Color(HudPalette.INK, 0.35), 1.5, true)
 		HudIcon.draw_icon(card, HudIcon.Kind.LOCK, center, 20.0, HudPalette.INK, HudPalette.PLATE)
 		return
+	# Canlı etkinlik: sol üstte indirim ("−%30") ya da paketle gelen etkinlik eşyası (ETKİNLİK)
+	var sale: int = LiveEvent.sale_percent(&"decor")
+	if GarageDecor.is_event_item(id):
+		_draw_corner_chip(card, area, Loc.t("ETKİNLİK"), HudPalette.COIN_DARK)
+	elif sale > 0 and not GarageDecor.is_pattern(id):
+		_draw_corner_chip(card, area, ShowroomScreen.sale_tag(sale), HudPalette.DANGER)
 	var stock: int = _decor.available_of(id) if GarageDecor.is_placeable(id) or GarageDecor.is_wall_piece(id) else 0
 	if stock <= 0:
 		return
@@ -833,6 +839,23 @@ func _draw_badges(card: PlateButton, id: StringName, area: Rect2) -> void:
 	card.draw_style_box(style, badge)
 	card.draw_string(font, Vector2(badge.position.x, badge.position.y + 16.0), text, HORIZONTAL_ALIGNMENT_CENTER,
 		badge.size.x, font_size, HudPalette.TEXT_LIGHT)
+
+
+## Küçük resmin sol üst köşesinde yuvarlak etiket (etkinlik indirimi / etkinlik eşyası).
+func _draw_corner_chip(card: PlateButton, area: Rect2, text: String, color: Color) -> void:
+	var font: Font = card.get_theme_font(&"font")
+	var font_size: int = 11
+	var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x + 12.0
+	var chip: Rect2 = Rect2(Vector2(area.position.x - 4.0, area.position.y - 4.0), Vector2(width, 19.0))
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = color
+	style.border_color = HudPalette.TEXT_LIGHT
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(9)
+	style.anti_aliasing = true
+	card.draw_style_box(style, chip)
+	card.draw_string(font, Vector2(chip.position.x, chip.position.y + 14.0), text, HORIZONTAL_ALIGNMENT_CENTER,
+		chip.size.x, font_size, HudPalette.TEXT_LIGHT)
 
 
 ## Araç kartı: sol üstte yerin türü (alt satırdaki yer adı, aracın adının devamı gibi okunuyordu):

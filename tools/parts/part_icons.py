@@ -768,6 +768,32 @@ def cryo():
         sphere(0.07, (math.cos(a) * 0.52, math.sin(a) * 0.52, 0.5 + i * 0.15), m["frost"], seg=8)
 
 
+# --- KOZMETİK (modifiye ana menüsünün kartı; parça değil) ------------------------------------------
+
+def spray_can(color="red", loc=(0, 0, 0), scale=1.0):
+    """Sprey boya kutusu: renkli gövde, beyaz etiket bandı, konik omuz, boyun, püskürtme başlığı."""
+    m = M()
+    x, y, z = loc
+    h = 1.3 * scale
+    r = 0.36 * scale
+    cyl(r, h, (x, y, z), m=m[color], verts=40, bevel=0.03 * scale)
+    cyl(r * 1.015, 0.42 * scale, (x, y, z - 0.08 * scale), m=m["white"], verts=40, bevel=0.0)
+    torus(r * 0.98, 0.03 * scale, (x, y, z - h / 2 + 0.02 * scale), m=m["steel"], seg=40, mseg=6)
+    cyl(r, 0.22 * scale, (x, y, z + h / 2 + 0.11 * scale), m=m["steel"], verts=40, r2=0.55 * r, bevel=0.01)
+    cyl(0.12 * scale, 0.16 * scale, (x, y, z + h / 2 + 0.3 * scale), m=m["steel"], verts=24)
+    box((0.17 * scale, 0.21 * scale, 0.14 * scale), (x, y, z + h / 2 + 0.44 * scale), m=m["white"], bevel=0.03 * scale)
+    cyl(0.03 * scale, 0.06 * scale, (x, y - 0.12 * scale, z + h / 2 + 0.45 * scale), rot=(90, 0, 0), m=m["dark"], verts=12)
+
+
+def paint_cans():
+    """İki sprey kutusu (kırmızı önde, mavi arkada) ve kırmızı kutunun memesinden çıkan boya bulutu."""
+    m = M()
+    spray_can("blue", (0.55, 0.45, -0.08), 0.92)
+    spray_can("red", (0.0, 0.0, 0.0), 1.0)
+    for k, (dx, dz, rr) in enumerate([(0.0, 0.0, 0.07), (-0.08, 0.06, 0.055), (0.07, 0.08, 0.05), (-0.02, 0.14, 0.04)]):
+        sphere(rr, (dx, -0.3 - 0.09 * k, 1.3 / 2 + 0.47 + dz), m=m["red"], seg=12)
+
+
 # --- Parça listesi: id → model (PerformanceMods.PART_ICONS bu id'leri kullanır) ---------------------------
 
 PARTS = {
@@ -806,6 +832,8 @@ PARTS = {
     "body_hood": hood,
     "body_seat": bucket_seat,
     "body_spoiler": spoiler,
+    # MODİFİYE ANA MENÜSÜ: KOZMETİK kartı (parça değil; kart yanına tire_slick'in altın jantını koyar)
+    "cosmetic_paint": paint_cans,
     "body_shell": carbon_body,
     # KLASİK: ateşleme, KOMPRESÖR, KARBÜRATÖR & EGZOZ
     "classic_ignition": distributor,

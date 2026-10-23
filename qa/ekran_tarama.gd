@@ -596,8 +596,13 @@ func _run() -> void:
 	await _screen(&"garage", "garaj_sat", func() -> void:
 		var screen: GarageScreen = _router.screen(&"garage") as GarageScreen
 		screen.sell_button.button_pressed = true)
-	await _screen(&"garage", "garaj_modifiye", func() -> void:
+	await _screen(&"garage", "garaj_modifiye", func() -> void:   # ana menü: PERFORMANS / KOZMETİK
 		(_router.screen(&"garage") as GarageScreen).open_mods())
+	await _screen(&"garage", "garaj_modifiye_performans", func() -> void:
+		var screen: GarageScreen = _router.screen(&"garage") as GarageScreen
+		screen.open_mods()
+		await wait(0.4)
+		(screen.get("_workshop") as ModWorkshop).show_overview())
 	await _screen(&"garage", "garaj_modifiye_kategori", func() -> void:
 		var screen: GarageScreen = _router.screen(&"garage") as GarageScreen
 		screen.open_mods()

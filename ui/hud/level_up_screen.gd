@@ -366,7 +366,7 @@ func _card(entry: Dictionary) -> Control:
 			tag = Loc.t("YENİ KASA")
 			pic.add_child(_CratePreview.new(crate))
 			name_label.text = Loc.t(String(crate.get("display_name", "")))
-			detail.text = Loc.t("SHOWROOM'DA · %d GEM") % int(crate.get("price_gems", 0))
+			detail.text = Loc.t("SHOWROOM'DA · %d GEM") % CrateCatalog.sale_price(entry["id"])
 		LevelUnlocks.Kind.MOD_TIER:
 			var stage: int = int(entry["stage"])
 			tag = Loc.t("MODİFİYE")

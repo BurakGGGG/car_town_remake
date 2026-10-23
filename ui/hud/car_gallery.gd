@@ -309,7 +309,7 @@ func _refresh_actions() -> void:
 				action.text = Loc.t("SAHİPSİN")
 				action.disabled = true
 			VehicleOwnership.Status.TOO_EXPENSIVE:
-				action.text = Loc.t("%s ₺\nPARA YETERSİZ") % Hud.format_thousands(_ownership.price(id))
+				action.text = Loc.t("%s ₺\nPARA YETERSİZ") % Hud.format_thousands(_ownership.buy_price(id))
 				action.disabled = true
 			VehicleOwnership.Status.LOCKED_LEVEL:
 				action.text = Loc.t("SEVİYE %d\nGEREKLİ") % _ownership.required_level(id)
@@ -318,7 +318,7 @@ func _refresh_actions() -> void:
 				action.text = Loc.t("RÜTBE %d\nGEREKLİ") % _ownership.required_rank(id)
 				action.disabled = true
 			_:
-				action.text = Loc.t("%s ₺\nSATIN AL") % Hud.format_thousands(_ownership.price(id))
+				action.text = Loc.t("%s ₺\nSATIN AL") % Hud.format_thousands(_ownership.buy_price(id))
 				action.disabled = false
 
 

@@ -2,3 +2,5 @@ node_modules/
 # Hizmet hesabı anahtarı: depo HERKESE AÇIK, anahtar asla commit'lenmez (server.mjs izleniyorsa açılmaz)
 service-account*.json
 *.key.json
+# İçerik paketi çıktıları (tools/live_pack/build_pack.sh): kaynağı tools/live_pack/content, yükleme panelden
+packs/

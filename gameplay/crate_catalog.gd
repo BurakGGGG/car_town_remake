@@ -5,7 +5,8 @@ class_name CrateCatalog
 ##
 ## OLASILIK: bir aracın bir kasadan çıkma olasılığı = nadirlik ağırlığı / havuzdaki ağırlıkların
 ## toplamı. Oyuncunun sahip olduğu ya da keşfettiği araçlar olasılığı DEĞİŞTİRMEZ; ekranda
-## gösterilen oran her zaman gerçek orandır (docs/vehicle_crate_design_v2.md §7).
+## gösterilen oran her zaman gerçek orandır (docs/vehicle_crate_design_v2.md §7). ETKİNLİK KASASI
+## (LiveEvent.crate_boost) seçili araçların ağırlığını etkinlik süresince çarpar — oran yine gerçek oran.
 ## Kayıtlar salt okunurdur.
 
 const DATA_PATH: String = "res://vehicles/crates.json"
@@ -47,8 +48,14 @@ static func is_gift(crate_id: StringName) -> bool:
 	return bool(get_entry(crate_id).get("gift", false))
 
 
+## Katalog fiyatı (gem). Ekonomi hesapları (görev ödülü değeri) bunu okur.
 static func price(crate_id: StringName) -> int:
 	return int(get_entry(crate_id).get("price_gems", 0))
+
+
+## Satış fiyatı: canlı etkinlik indirimi düşülmüş (mağaza, satın alma).
+static func sale_price(crate_id: StringName) -> int:
+	return LiveEvent.sale_price(&"crates", price(crate_id))
 
 
 static func min_level(crate_id: StringName) -> int:
@@ -114,18 +121,21 @@ static func rarity_rank(rarity: StringName) -> int:
 
 # --- Olasılık ----------------------------------------------------------------------
 
-## Kasadaki her aracın olasılığı, havuz sırasıyla: [{"id", "rarity", "chance"}]. Toplam 1.
+## Kasadaki her aracın olasılığı, havuz sırasıyla: [{"id", "rarity", "chance", "boost"}]. Toplam 1. "boost": etkinlik
+## çarpanı (1 = yok).
 static func odds(crate_id: StringName) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var ids: Array[StringName] = pool(crate_id)
+	var boost: Dictionary = LiveEvent.crate_boost(crate_id)
 	var total: float = 0.0
 	for id: StringName in ids:
-		total += rarity_weight(rarity_of(id))
+		total += rarity_weight(rarity_of(id)) * float(boost.get(id, 1.0))
 	if total <= 0.0:
 		return out
 	for id: StringName in ids:
 		var rarity: StringName = rarity_of(id)
-		out.append({"id": id, "rarity": rarity, "chance": rarity_weight(rarity) / total})
+		var mult: float = float(boost.get(id, 1.0))
+		out.append({"id": id, "rarity": rarity, "chance": rarity_weight(rarity) * mult / total, "boost": mult})
 	return out
 
 

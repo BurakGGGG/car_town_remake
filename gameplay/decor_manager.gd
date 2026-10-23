@@ -54,6 +54,12 @@ var _tiles: Dictionary = {}
 var _value_cache: int = -1
 ## İç duvarlar: kenar anahtarı ("x:a:b" / "z:a:b") → {"piece": StringName, "finish": StringName}.
 var _walls: Dictionary = {}
+## BEKLEYEN eşyalar: kayıtta olup katalogda (henüz) olmayanlar — İÇERİK PAKETİ inmemişken açılan oyun (yeni kurulum,
+## paket önbelleği silinmiş). Silinmez, kayda aynen geri yazılır; paket gelince revive_dormant yerine koyar.
+## Sahiplik: eşya id (String) → adet; örnekler: kayıttaki ham sözlükler.
+var _dormant_owned: Dictionary = {}
+var _dormant_instances: Array = []
+const DORMANT_MAX: int = 200
 
 ## Eski tüm-zemin kaplamasının karşılığı olan desen (v1 kaydı karolara taşınırken).
 const LEGACY_FLOOR_PATTERN: Dictionary = {&"floor_tile": &"tile_grey", &"floor_epoxy": &"asphalt"}
@@ -168,22 +174,24 @@ func can_purchase(id: StringName) -> bool:
 		return false   # sergilenen araç / kurucu eşya satın alınmaz; karo deseni göz başına boyarken ödenir
 	if GarageDecor.is_surface(id) and is_owned(id):
 		return false
-	if owned_of(id) >= MAX_COPIES:
+	if owned_of(id) >= MAX_COPIES or not GarageDecor.on_sale(id):   # etkinlik eşyası yalnız etkinlikte satılır
 		return false
 	if GarageDecor.is_gem_item(id):   # LÜKS: elmasla
 		var player: PlayerProgress = _player()
-		return player == null or player.can_afford_gems(GarageDecor.gem_price(id))
+		return player == null or player.can_afford_gems(gem_price_of(id))
 	var economy: EconomyManager = _economy()
 	return economy == null or economy.can_afford(price_of(id))
 
 
+## ₺ fiyatı (eşya, karo gözü, duvar parçası): canlı etkinlik indirimi düşülmüş. Karo / duvar GERİ AL'ı ödenen tutarı
+## iade eder (GarageEditor işlemi kaydeder), indirim bitince geri almak kâr etmez.
 func price_of(id: StringName) -> int:
-	return int(GarageDecor.get_item(id).get("price", 0))
+	return LiveEvent.sale_price(&"decor", int(GarageDecor.get_item(id).get("price", 0)))
 
 
-## Elmas fiyatı (LÜKS eşya; değilse 0).
+## Elmas fiyatı (LÜKS eşya; değilse 0), etkinlik indirimi düşülmüş.
 func gem_price_of(id: StringName) -> int:
-	return GarageDecor.gem_price(id)
+	return LiveEvent.sale_price(&"decor", GarageDecor.gem_price(id))
 
 
 ## Garaj değerine katkı: sahip olunan her kopya (garajda olsun olmasın, Car Town "Item Storage").
@@ -215,6 +223,8 @@ func purchase(id: StringName) -> bool:
 			return false
 	_owned[id] = owned_of(id) + 1
 	_value_cache = -1
+	if GarageDecor.is_event_item(id):
+		_list_exclusives()   # etkinlik eşyası: etkinlik bitince de sahibinin paletinde
 	purchased.emit(id)
 	placement_changed.emit()
 	return true
@@ -242,6 +252,8 @@ func grant(id: StringName, count: int = 1) -> bool:
 		return grant_exclusive(id)
 	_owned[id] = owned_of(id) + count
 	_value_cache = -1
+	if GarageDecor.is_event_item(id):
+		_list_exclusives()
 	placement_changed.emit()
 	return true
 
@@ -249,10 +261,45 @@ func grant(id: StringName, count: int = 1) -> bool:
 ## Sahip olunan kurucu eşyalar paletde görünsün (sahibi olmayanda hiç görünmez).
 func _list_exclusives() -> void:
 	var ids: Array[StringName] = []
+	var event_ids: Array[StringName] = []
 	for id: StringName in _owned:
 		if GarageDecor.is_exclusive(id):
 			ids.append(id)
+		if GarageDecor.is_event_item(id):
+			event_ids.append(id)
 	GarageDecor.set_listed_exclusives(ids)
+	GarageDecor.set_owned_event_items(event_ids)   # etkinlik bitince de sahibinin paletinde
+
+
+## İÇERİK PAKETİ yüklendi (LivePacks): bekleyen eşyalardan artık katalogda olanlar yerine konur. Dönen: kaç eşya.
+func revive_dormant() -> int:
+	if _dormant_owned.is_empty() and _dormant_instances.is_empty():
+		return 0
+	var revived: int = 0
+	for raw: String in _dormant_owned.keys():
+		var id: StringName = StringName(raw)
+		if GarageDecor.exists(id):
+			_owned[id] = mini(owned_of(id) + SaveSafe.i(_dormant_owned[raw]), MAX_COPIES)
+			_dormant_owned.erase(raw)
+			revived += 1
+	var waiting: Array = []
+	for rec: Variant in _dormant_instances:
+		var item: StringName = StringName(SaveSafe.s((rec as Dictionary).get("catalog_id", ""))) if rec is Dictionary else &""
+		if GarageDecor.exists(item):
+			_load_instance(rec)
+		else:
+			waiting.append(rec)
+	_dormant_instances = waiting
+	if revived > 0:
+		_value_cache = -1
+		_list_exclusives()
+		placement_changed.emit()
+	return revived
+
+
+## Katalogda olmayan (paketi inmemiş) eşya sayısı.
+func dormant_count() -> int:
+	return _dormant_owned.size()
 
 
 # --- Yerleşim --------------------------------------------------------------------------
@@ -684,6 +731,11 @@ func state() -> Dictionary:
 		if inst.has("sign"):
 			rec["sign"] = (inst["sign"] as Dictionary).duplicate()   # İSİM TABELASI yazısı (açık garajla arkadaşa da gider)
 		list.append(rec)
+	for raw: String in _dormant_owned:   # paketi inmemiş eşyalar olduğu gibi geri yazılır
+		if not owned.has(raw):
+			owned[raw] = SaveSafe.i(_dormant_owned[raw])
+	for rec: Variant in _dormant_instances:
+		list.append((rec as Dictionary).duplicate(true))
 	var surfaces: Dictionary = {}
 	for slot: StringName in _surfaces:
 		surfaces[String(slot)] = String(_surfaces[slot])
@@ -699,6 +751,8 @@ func load_state(data: Dictionary) -> void:
 	_surfaces.clear()
 	_tiles.clear()
 	_walls.clear()
+	_dormant_owned.clear()
+	_dormant_instances.clear()
 	_next_iid = 1
 	if data.get("owned") is Array:
 		data = _migrate_v8(data)   # v8: sahiplik dizi, yerleşim yuva → eşya
@@ -707,7 +761,9 @@ func load_state(data: Dictionary) -> void:
 		for raw: Variant in (owned as Dictionary):
 			var id: StringName = StringName(SaveSafe.s(raw))
 			if not GarageDecor.exists(id):
-				push_warning("DecorManager: kayıttaki '%s' katalogda yok, atlandı" % id)
+				# İçerik paketinin eşyası olabilir (paket henüz inmedi): silinmez, bekler
+				if not String(id).is_empty() and _dormant_owned.size() < DORMANT_MAX:
+					_dormant_owned[String(id)] = clampi(SaveSafe.i((owned as Dictionary)[raw]), 0, MAX_COPIES)
 				continue
 			var n: int = clampi(SaveSafe.i((owned as Dictionary)[raw]), 0,
 				MAX_WALL_COPIES if GarageDecor.is_wall_piece(id) else MAX_COPIES)
@@ -748,6 +804,8 @@ func reset() -> void:
 	_surfaces.clear()
 	_tiles.clear()
 	_walls.clear()
+	_dormant_owned.clear()
+	_dormant_instances.clear()
 	_next_iid = 1
 	_list_exclusives()
 	placement_changed.emit()
@@ -763,7 +821,11 @@ func _load_instance(raw: Variant) -> void:
 	if iid == "" or _index_of(iid) >= 0:
 		push_warning("DecorManager: kimliksiz ya da yinelenen örnek atlandı (%s)" % iid)
 		return
-	if not GarageDecor.exists(item) or not GarageDecor.is_placeable(item):
+	if not GarageDecor.exists(item):
+		if _dormant_owned.has(String(item)) and _dormant_instances.size() < DORMANT_MAX:
+			_dormant_instances.append(rec.duplicate(true))   # paketi inince yerine konur (revive_dormant)
+		return
+	if not GarageDecor.is_placeable(item):
 		return
 	if available_of(item) <= 0:
 		push_warning("DecorManager: '%s' sahip olunandan fazla yerleştirilmiş, fazlası atlandı" % item)
@@ -857,8 +919,12 @@ func _new_iid() -> String:
 
 func _max_iid_number() -> int:
 	var best: int = 0
+	var ids: Array = []
 	for inst: Dictionary in _instances:
-		var text: String = String(inst["iid"])
+		ids.append(String(inst["iid"]))
+	for rec: Variant in _dormant_instances:   # bekleyen örneklerin kimlikleri de dolu sayılır
+		ids.append(SaveSafe.s((rec as Dictionary).get("instance_id", "")))
+	for text: String in ids:
 		if text.begins_with("dec_") and text.substr(4).is_valid_int():
 			best = maxi(best, int(text.substr(4)))
 	return best

@@ -1,9 +1,12 @@
 class_name ModWorkshop
 extends Node
-## ARAÇLAR → MODİFİYE: garaj ekranının (GarageScreen) modifiye kipi. Lifteki araç yerinde döner. İki seviye
-## (CSR2 / Forza / NFS'teki gibi: kategori → o kategorinin bütün parçaları, kazanç önceden görünür):
+## ARAÇLAR → MODİFİYE: garaj ekranının (GarageScreen) modifiye kipi. Lifteki araç yerinde döner. Önce ana menü,
+## PERFORMANS'ta iki seviye (CSR2 / Forza / NFS'teki gibi: kategori → o kategorinin bütün parçaları, kazanç önceden görünür):
 ##
-## GENEL BAKIŞ
+## MENÜ (açılış)
+##   ALTTA  iki geniş kart: PERFORMANS (motor + turbo resmi, takılı parça sayısı, süren takma) genel bakışa girer;
+##          KOZMETİK (boya kutuları + jant resmi) henüz yok: basılamaz, ÇOK YAKINDA.
+## GENEL BAKIŞ (PERFORMANS)
 ##   ALTTA  6 kategori kartı: sıradaki parçanın 3D ikonu (Blender — tools/parts/part_icons.py), kategori adı, takılı
 ##          kademe çentikleri, sıradaki parçanın 0-100 kazancı ("−0,18 sn"), bu araçta ₺ başına en çok kazandıranda
 ##          ÖNERİLEN rozeti. Karta dokunmak kategoriye girer.
@@ -15,7 +18,7 @@ extends Node
 ##   SOLDA  DİNAMOMETRE (ModDyno): fabrikadan FULL'e değer çubukları, seçilen kademenin yeşil kazancı, kategorinin
 ##          potansiyeli; MOTOR / TURBO / HAVA'da güç eğrisi; altında teknik satır (tork, vites geçişi, tutuş, ağırlık).
 ##   SAĞDA  seçilen parçanın plakası: kademe, ad, ne yaptığı (fizik), süre, fiyat, YÜKSELT / HEMEN BİTİR / TAK.
-##   GERİ   genel bakışa döner (GarageScreen._on_exit_pressed).
+##   GERİ   kategoriden genel bakışa, genel bakıştan menüye döner (back; GarageScreen._on_exit_pressed).
 ## Önizlemeler simülasyonla ölçülür (PerformanceMods.measure, ~5 ms): ölçülmemiş yapılar kare başına bir tane
 ## hesaplanır, kartlar o sırada "…" gösterir (telefonda dokunuş takılmasın).
 ## YÜKSELT → upgrade_requested: satın alma ve ana dünyadaki sinematik HUD'dadır. Mantık yoktur.
@@ -30,7 +33,7 @@ signal layout_changed
 ## Görünen kategori değişti (&"" = genel bakış): modifiye garajının kamerası o parçaya gider (ModGarageView.focus).
 signal focus_changed(category: StringName)
 
-enum View { OVERVIEW, CATEGORY }
+enum View { MENU, OVERVIEW, CATEGORY }
 
 const CARD_WIDTH: float = 118.0
 const CARD_HEIGHT: float = 136.0
@@ -44,6 +47,11 @@ const STAGE_BAND: float = 17.0
 const PANEL_WIDTH: float = 214.0
 const STATS_WIDTH: float = 196.0
 const DYNO_WIDTH: float = 296.0
+## Menü kartı: parça kartı boyunda, geniş; solda iki üst üste resim, sağda başlık / alt yazı / durum.
+const MENU_CARD_WIDTH: float = 330.0
+const MENU_ICON: float = 92.0
+const MENU_ICON_SMALL: float = 60.0
+const MENU_TEXT_LEFT: float = 146.0
 const GAIN: Color = Color("3FA45F")
 ## Parça rafı: kartların oturduğu koyu, yuvarlak köşeli şerit (zeminin çizgileri kartların arasından görünmesin).
 const TRAY_COLOR: Color = Color(0.11, 0.12, 0.14, 0.84)
@@ -54,9 +62,10 @@ var vehicle_id: StringName = &""
 var category: StringName = &"motor"
 ## Kategori ekranında seçili kademe (1..5).
 var selected_stage: int = 1
-var view: View = View.OVERVIEW
+var view: View = View.MENU
 
 ## Kurulan kontroller (GarageScreen bunları kendi gruplarında gösterir / gizler).
+var menu: PanelContainer
 var strip: PanelContainer
 var stage_strip: PanelContainer
 var detail: PlatePanel
@@ -65,6 +74,7 @@ var stats: PlatePanel
 var dyno_panel: PlatePanel
 
 var _cards: Dictionary = {}    # kategori → PlateButton
+var _menu_cards: Dictionary = {}   # &"performance" / &"cosmetic" → PlateButton
 var _stages: Array[PlateButton] = []
 var _stage_group: ButtonGroup = ButtonGroup.new()
 var _stat_values: Dictionary = {}
@@ -112,6 +122,8 @@ func _connect() -> void:
 
 ## Kontrolleri kurar ve verilen gruplara ekler (hepsi gizli başlar).
 func build(bottom: Control, left: Control, right: Control) -> void:
+	menu = _tray(_build_menu(), _tray_label(Loc.t("ATÖLYE"), 1.0), _tray_label(Loc.t("Dokun, içine gir"), 0.6))
+	bottom.add_child(menu)
 	_strip_header = _tray_label(Loc.t("PARÇA KATEGORİLERİ"), 1.0)
 	strip = _tray(_build_strip(), _strip_header, _tray_label(Loc.t("Dokun, içine gir"), 0.6))
 	bottom.add_child(strip)
@@ -138,15 +150,20 @@ func in_category() -> bool:
 	return _active and view == View.CATEGORY
 
 
-## Sol sütunda görünen panel (garaj yerleşimi boyunu buna göre verir).
+## Sol sütunda görünen panel (garaj yerleşimi boyunu buna göre verir); menüde sol sütun boş (null).
 func left_panel() -> Control:
-	return dyno_panel if view == View.CATEGORY else stats
+	match view:
+		View.CATEGORY:
+			return dyno_panel
+		View.OVERVIEW:
+			return stats
+	return null
 
 
 func open(id: StringName) -> void:
 	vehicle_id = id
 	_active = true
-	view = View.OVERVIEW
+	view = View.MENU
 	_show_controls()
 	title_changed.emit(Loc.t("MODİFİYE"))
 	refresh()
@@ -178,17 +195,40 @@ func open_category(c: StringName) -> void:
 	layout_changed.emit()
 
 
-## Kategoriden genel bakışa döner.
+## PERFORMANS genel bakışı (menüdeki PERFORMANS kartı; kategoriden GERİ).
 func show_overview() -> void:
 	if not _active:
 		return
 	view = View.OVERVIEW
 	_show_controls()
-	title_changed.emit(Loc.t("MODİFİYE"))
+	title_changed.emit(Loc.t("PERFORMANS"))
 	focus_changed.emit(&"")
 	refresh()
 	_warm()
 	layout_changed.emit()
+
+
+## Ana menüye döner (PERFORMANS / KOZMETİK).
+func show_menu() -> void:
+	if not _active:
+		return
+	view = View.MENU
+	_show_controls()
+	title_changed.emit(Loc.t("MODİFİYE"))
+	focus_changed.emit(&"")
+	refresh()
+	layout_changed.emit()
+
+
+## GERİ: bir üst görünüme çıkar. Menüdeyse false (garaj modifiye kipini kapatır).
+func back() -> bool:
+	if not _active or view == View.MENU:
+		return false
+	if view == View.CATEGORY:
+		show_overview()
+	else:
+		show_menu()
+	return true
 
 
 func _show_controls() -> void:
@@ -196,6 +236,7 @@ func _show_controls() -> void:
 		return
 	var overview: bool = _active and view == View.OVERVIEW
 	var inside: bool = _active and view == View.CATEGORY
+	menu.visible = _active and view == View.MENU
 	strip.visible = overview
 	stats.visible = overview
 	advice.visible = overview and _recommended != &""
@@ -213,12 +254,12 @@ func _process(delta: float) -> void:
 
 # --- Ölçüm ısıtma -------------------------------------------------------------------------------
 
-## Görünen önizlemelerin yapıları: genel bakışta her kategorinin sıradaki kademesi, kategoride o kategorinin
-## 0..5 kademeleri; ayrıca fabrika ve FULL (çubuk ölçeği).
+## Görünen önizlemelerin yapıları: genel bakışta (menüde de: PERFORMANS'a girince hazır olsun) her kategorinin
+## sıradaki kademesi, kategoride o kategorinin 0..5 kademeleri; ayrıca fabrika ve FULL (çubuk ölçeği).
 func _needed_builds() -> Array[Dictionary]:
 	var build: Dictionary = PerformanceMods.build_of(vehicle_id)
 	var out: Array[Dictionary] = [build, {}, _full_build()]
-	if view == View.OVERVIEW:
+	if view != View.CATEGORY:
 		for c: StringName in PerformanceMods.CATEGORIES:
 			var next: int = PerformanceMods.stage_of(vehicle_id, c) + 1
 			if next <= PerformanceMods.STAGES:
@@ -296,6 +337,34 @@ func _tray_label(text: String, alpha: float) -> Label:
 	var label: Label = _label(&"HudInkCaption", text)
 	label.add_theme_color_override(&"font_color", Color(HudPalette.TEXT_LIGHT, alpha))
 	return label
+
+
+## Ana menü: PERFORMANS genel bakışa girer; KOZMETİK henüz yok (basılamaz, ÇOK YAKINDA).
+func _build_menu() -> ScrollContainer:
+	var scroll: ScrollContainer = _scroll("ModMenuScroll")
+	var row: HBoxContainer = scroll.get_node("Row") as HBoxContainer
+	# Kart → [büyük resim, önüne binen küçük resim] (ICON_DIR; boya kutuları tools/parts/part_icons.py cosmetic_paint)
+	var pictures: Dictionary = {&"performance": ["motor_block", "turbo_big"], &"cosmetic": ["cosmetic_paint", "tire_slick"]}
+	for id: StringName in pictures:
+		var card: PlateButton = _plate_card("Menu_%s" % id, Vector2(MENU_CARD_WIDTH, CARD_HEIGHT))
+		card.draw.connect(_draw_menu_card.bind(card, id))
+		var names: Array = pictures[id]
+		var big: TextureRect = _icon_rect(Vector2(14.0, 22.0), MENU_ICON)
+		big.texture = load(PerformanceMods.ICON_DIR + String(names[0]) + ".png") as Texture2D
+		card.add_child(big)
+		var small: TextureRect = _icon_rect(Vector2(76.0, CARD_HEIGHT - MENU_ICON_SMALL - 10.0), MENU_ICON_SMALL)
+		small.name = "Icon2"
+		small.texture = load(PerformanceMods.ICON_DIR + String(names[1]) + ".png") as Texture2D
+		card.add_child(small)
+		if id == &"cosmetic":
+			card.disabled = true
+			big.modulate = Color(1.0, 1.0, 1.0, 0.55)
+			small.modulate = Color(1.0, 1.0, 1.0, 0.55)
+		else:
+			card.pressed.connect(show_overview)
+		row.add_child(card)
+		_menu_cards[id] = card
+	return scroll
 
 
 func _build_strip() -> ScrollContainer:
@@ -438,10 +507,14 @@ func _build_advice() -> PlatePanel:
 func refresh() -> void:
 	if not _active or vehicle_id == &"":
 		return
-	if view == View.OVERVIEW:
-		_refresh_overview()
-	else:
-		_refresh_category()
+	match view:
+		View.MENU:
+			for card: PlateButton in _menu_cards.values():
+				card.queue_redraw()
+		View.OVERVIEW:
+			_refresh_overview()
+		View.CATEGORY:
+			_refresh_category()
 	_refresh_job()
 
 
@@ -602,6 +675,8 @@ func _refresh_buy() -> void:
 	var s: int = selected_stage
 	_buy.kind = HudIcon.Kind.WRENCH
 	_price.text = "%s ₺" % Hud.format_thousands(PerformanceMods.price(vehicle_id, category, s))
+	if LiveEvent.sale_percent(&"mods") > 0:   # canlı etkinlik indirimi (fiyat zaten indirimli)
+		_price.text += "  " + ShowroomScreen.sale_tag(LiveEvent.sale_percent(&"mods"))
 	if s <= current:
 		_buy.disabled = true
 		_buy.highlight = false
@@ -677,6 +752,8 @@ func _refresh_job() -> void:
 			for card: PlateButton in _stages:
 				card.queue_redraw()
 		_refresh_buy()
+	elif view == View.MENU and has_job:   # PERFORMANS kartındaki sayaç
+		(_menu_cards[&"performance"] as PlateButton).queue_redraw()
 	if not has_job:
 		_status.text = ""
 		_status.visible = false
@@ -691,6 +768,52 @@ func _refresh_job() -> void:
 
 
 # --- Çizim --------------------------------------------------------------------------------------
+
+## Menü kartı: üstte renk şeridi, solda resimler (ayrı düğümler), sağda başlık, alt yazı ve durum çipi. PERFORMANS:
+## takılı parça sayısı + süren takma, sağda ok; KOZMETİK: soluk, kilit, ÇOK YAKINDA.
+func _draw_menu_card(card: PlateButton, id: StringName) -> void:
+	var w: float = card.size.x
+	var performance: bool = id == &"performance"
+	var ink: Color = card.get_theme_color(&"font_color")
+	if not performance:   # basılamaz ama okunur (temanın soluk yazısı 0,4: soluk plakada seçilmiyordu)
+		ink.a = 0.6
+	card.draw_rect(Rect2(8.0, 5.0, w - 16.0, 4.0), HudPalette.COIN if performance else Color(HudPalette.INK_SOFT, 0.4))
+	var font: Font = card.get_theme_font(&"font")
+	var text_width: float = w - MENU_TEXT_LEFT - 30.0
+	var title: String = Loc.t("PERFORMANS") if performance else Loc.t("KOZMETİK")
+	var title_size: int = 22
+	while title_size > 14 and font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size).x > text_width:
+		title_size -= 1
+	card.draw_string(font, Vector2(MENU_TEXT_LEFT, 50.0), title, HORIZONTAL_ALIGNMENT_LEFT, text_width, title_size, ink)
+	var caption: String = Loc.t("Motor, turbo, şanzıman, lastik") if performance else Loc.t("Boya, jant")
+	card.draw_multiline_string(font, Vector2(MENU_TEXT_LEFT, 70.0), caption, HORIZONTAL_ALIGNMENT_LEFT, text_width, 11, 2,
+		Color(HudPalette.INK_SOFT, ink.a))
+	if not performance:
+		_pill(card, Vector2(MENU_TEXT_LEFT, 98.0), Loc.t("ÇOK YAKINDA"), HudPalette.COIN_DARK, 11)
+		HudIcon.draw_icon(card, HudIcon.Kind.LOCK, Vector2(w - 22.0, 28.0), 16.0, HudPalette.INK_SOFT,
+			Color(0.0, 0.0, 0.0, 0.0))
+		return
+	var installed: int = 0
+	if vehicle_id != &"":
+		for c: StringName in PerformanceMods.CATEGORIES:
+			installed += PerformanceMods.stage_of(vehicle_id, c)
+	var total: int = PerformanceMods.CATEGORIES.size() * PerformanceMods.STAGES
+	var chip: String = Loc.t("%d / %d PARÇA TAKILI") % [installed, total]
+	_pill(card, Vector2(MENU_TEXT_LEFT, 98.0), chip, GAIN if installed < total else HudPalette.COIN_DARK, 11)
+	var mods: PerformanceModManager = _mods()
+	if mods and mods.has_job(vehicle_id):   # süren takma: anahtar + sayaç (ya da HAZIR)
+		var timer: String = Loc.t("HAZIR") if mods.is_ready(vehicle_id) \
+			else "⏱ " + PerformanceBayDisplay.countdown(mods.remaining(vehicle_id))
+		HudIcon.draw_icon(card, HudIcon.Kind.WRENCH, Vector2(w - 22.0, 28.0), 16.0, HudPalette.COIN_DARK,
+			Color(0.0, 0.0, 0.0, 0.0))
+		var chip_width: float = card.get_theme_font(&"font", &"Label").get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			11).x + 10.0   # _pill'in genişliği
+		card.draw_string(font, Vector2(MENU_TEXT_LEFT + chip_width + 8.0, 98.0 + 12.5), timer, HORIZONTAL_ALIGNMENT_LEFT,
+			-1, 11, HudPalette.COIN_DARK)
+	var mid: float = card.size.y * 0.5
+	card.draw_polyline(PackedVector2Array([Vector2(w - 24.0, mid - 9.0), Vector2(w - 15.0, mid),
+		Vector2(w - 24.0, mid + 9.0)]), ink, 3.0, true)
+
 
 ## Kategori kartı: üstte kademe şeridi, ikon, çentikler, ad; sıradaki parçanın 0-100 kazancı; ÖNERİLEN rozeti.
 func _draw_card(card: PlateButton, c: StringName) -> void:
@@ -887,7 +1010,7 @@ func _scroll(scroll_name: String) -> ScrollContainer:
 ## Rafları verilen genişliğe (garajın alt bandı; yan sütunlar düşülmüş) sığdırır: sığan raf içeriği kadar,
 ## sığmayanın kartları kaydırılır.
 func fit_trays(available: float) -> void:
-	for tray: PanelContainer in [strip, stage_strip]:
+	for tray: PanelContainer in [menu, strip, stage_strip]:
 		if tray == null:
 			continue
 		var scroll: ScrollContainer = tray.find_child("Mod*Scroll", true, false) as ScrollContainer

@@ -91,6 +91,8 @@ var camera_menu: CameraMenu
 var photo_mode: PhotoMode
 ## Kodla kurulan GÖREVLER tabelası ve onu açan plaka.
 var quest_screen: MissionScreen
+## ETKİNLİK PANOSU: canlı etkinlik tabelasına dokununca (modüller ve düğmeleri).
+var event_screen: EventScreen
 var quest_button: PlateButton
 ## Kodla kurulan ARKADAŞLAR tabelası ve onu açan plaka (GÖREVLER'in altında).
 var friends_screen: FriendsScreen
@@ -1227,6 +1229,8 @@ func _on_race_completed(won: bool, player_time: float, rival_time: float) -> voi
 		int(reward["money"]), int(reward["xp"]), player_id if won else rival, rematch)
 	if int(reward.get("friend_bonus", 0)) > 0:
 		race_result_screen.show_friend_bonus(int(reward["friend_bonus"]))
+	if reward.get("event_bonus") is Dictionary:
+		race_result_screen.show_event_bonus(LiveEvent.reward_text(reward["event_bonus"]))
 	race_result_screen.offer_rematch(not won and _race != null and _race.can_rematch())
 	var record: Dictionary = drag_race_screen.record_result()
 	race_result_screen.show_record(bool(record["finished"]), bool(record["new"]),
@@ -1829,6 +1833,10 @@ func _setup_gem_store() -> void:
 	add_child(FounderRewardNotice.new(self, purchases))   # ön kayıt ödülü: oyun sakinleşince ödül penceresi
 	# CANLI ETKİNLİK tabelası (üst orta): POSTA / yasak pencerelerinden ÖNCE eklenir, onlar üstünde kalsın
 	garage_screen.get_parent().add_child(EventBanner.new(self))
+	event_screen = EventScreen.new()
+	garage_screen.get_parent().add_child(event_screen)
+	router.register(&"event", event_screen, UiRouter.Kind.MODAL)
+	event_screen.action_requested.connect(_on_event_action)
 	var mail: MailService = get_tree().get_first_node_in_group("mail") as MailService
 	if mail:
 		garage_screen.get_parent().add_child(MailNotice.new(self, mail))   # yönetim panelinin hediyeleri (temalı kök)
@@ -2298,6 +2306,32 @@ func _refresh_lot_counter() -> void:
 	var cars: int = garages.waiting_ids().size()
 	lot_button.visible = cars > 0 and not GarageVisit.is_visiting()
 	lot_button.set_state(cars, garages.daily_fee())
+
+
+## ETKİNLİK PANOSU düğmeleri: mağaza (etkinlik kasası seçili), dekor, ETKİNLİK görevleri, özel rakip yarışı.
+func _on_event_action(kind: StringName, arg: StringName) -> void:
+	match kind:
+		&"showroom":
+			if arg != &"":
+				showroom.open_on_crate(arg)
+			router.open(&"showroom")
+		&"decor":
+			router.open(&"garage_edit")
+		&"missions":
+			quest_screen.open_on_event()
+			router.open(&"quests")
+		&"race":
+			start_event_race()
+
+
+## ÖZEL RAKİP: canlı etkinliğin rakibine karşı pist doğrudan açılır (yoldaki davet kapanır; RaceManager.start_event_rival).
+func start_event_race() -> bool:
+	if _race == null or not _race.start_event_rival():
+		return false
+	router.close_all()
+	_race.set_racing(true)
+	router.open(&"drag_race")
+	return true
 
 
 ## İNTİKAM AL (yarış haberi): arkadaşın senin aracını yendiği aracına karşı pist doğrudan açılır. Haber kullanılınca

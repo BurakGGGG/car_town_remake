@@ -381,8 +381,13 @@ func _save_load() -> void:
 		"45° dönüş kayıtta")
 
 	print("== 10–11) YÜKLEME ==")
+	# Döndürmenin başlattığı gecikmeli otomatik kayıt (0,5 sn) temizlikten hemen sonra denk gelirse BOŞ dekoru diske
+	# yazıyordu: yükleme 0 örnek okuyordu (4 koşuda 1 FAIL, 2026-10-23). Bekleyen kayıt durdurulur, temizlik yazılmaz.
+	(save.get("_timer") as Timer).stop()
+	save.auto_save = false
 	decor.reset()
 	await frames(2)
+	save.auto_save = true
 	check(10, decor.instance_count() == 0 and view.body_of(chair_iid) == null, "bellek temizlendi")
 	check(10, save.load_game(), "load_game")
 	await frames(2)

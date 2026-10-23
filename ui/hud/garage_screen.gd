@@ -132,9 +132,9 @@ func _place_car_list() -> void:
 	_strip_top = strip_top
 	var left_inset: float = 0.0
 	for group: Control in [exit_group, left_group]:
-		if group == left_group and (not is_modding() or COLUMN_TOP + _workshop.left_panel() \
-				.get_combined_minimum_size().y <= strip_top - SIDE_GAP):
-			continue   # bilgi bloğu (ve modifiyede değer plakası) rafın üstünde bitiyor: raf sola kadar uzanır
+		if group == left_group and (not is_modding() or _workshop.left_panel() == null or COLUMN_TOP \
+				+ _workshop.left_panel().get_combined_minimum_size().y <= strip_top - SIDE_GAP):
+			continue   # bilgi bloğu (ve modifiyede değer plakası) rafın üstünde bitiyor ya da yok: raf sola kadar uzanır
 		if group and group.is_visible_in_tree():
 			left_inset = maxf(left_inset, maxf(group.size.x, group.get_combined_minimum_size().x))
 	if left_inset > 0.0:
@@ -1370,7 +1370,8 @@ func _build_exhibit() -> void:
 
 
 ## Rafın sağındaki MODİFİYE plakası (ekranın tek amber düğmesi): lifteki aracın performans modifiyesi
-## (ModWorkshop) — raf yerine parça kartları gelir, sağda seçilen parçanın plakası ve YÜKSELT. GERİ araç listesine döner.
+## (ModWorkshop) — raf yerine modifiye menüsü gelir (PERFORMANS / KOZMETİK), PERFORMANS'ta parça kartları, sağda
+## seçilen parçanın plakası ve YÜKSELT. GERİ bir üst görünüme, menüden araç listesine döner.
 func _build_performance_button() -> void:
 	_modify_button = PlateButton.new()
 	_modify_button.name = "ModifyButton"
@@ -1453,11 +1454,11 @@ func is_modding() -> bool:
 	return _workshop != null and _workshop.is_active()
 
 
-## GERİ: modifiye kategorisindeyse genel bakışa, modifiye kipindeyse araç listesine, değilse garajdan çık.
+## GERİ: modifiyede bir üst görünüme (kategori → PERFORMANS → menü), menüdeyse araç listesine, değilse garajdan çık.
 func _on_exit_pressed() -> void:
-	if is_modding() and _workshop.in_category():
-		_workshop.show_overview()
-	elif is_modding() and not _home_mods:
+	if is_modding() and _workshop.back():
+		return
+	if is_modding() and not _home_mods:
 		_close_mods()
 	else:
 		close()   # sergideki aracın modifiyesinden GERİ: dünyaya dönülür
@@ -1471,7 +1472,8 @@ func _fit_mod_column() -> void:
 	left_group.offset_left = 0.0
 	left_group.offset_top = COLUMN_TOP
 	left_group.offset_right = left_group.get_combined_minimum_size().x
-	left_group.offset_bottom = COLUMN_TOP + _workshop.left_panel().get_combined_minimum_size().y
+	var panel: Control = _workshop.left_panel()   # menüde yok
+	left_group.offset_bottom = COLUMN_TOP + (panel.get_combined_minimum_size().y if panel else 0.0)
 	if _group_targets.has(left_group):
 		_group_targets[left_group] = left_group.position
 	# Sağ sütun üste sabit: dikey ortalıyken uzun parça plakası alttaki rafa biniyordu

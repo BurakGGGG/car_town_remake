@@ -1,6 +1,7 @@
 class_name MissionScreen
 extends Control
-## GÖREVLER tabelası: GÜNLÜK · HAFTALIK · BAŞARIMLAR (+ başlangıç zinciri bitene kadar REHBER).
+## GÖREVLER tabelası: GÜNLÜK · HAFTALIK · BAŞARIMLAR (+ başlangıç zinciri bitene kadar REHBER, canlı etkinliğin görevi
+## varken en başta ETKİNLİK).
 ## Tasarım: docs/gorevler_tasarimi.md §9. Ekran TAMAMEN KODLA kurulur (.tscn yok); HUD onu temalı Root'un
 ## altına ekler. Mantık burada değil: görevler MissionManager'da ("missions" grubu), rehber zinciri
 ## QuestManager'da ("quests" grubu); bu ekran yalnızca gösterir ve ÖDÜLÜ AL'ı onlara iletir.
@@ -10,7 +11,8 @@ extends Control
 signal opened
 signal closed
 
-enum Tab { DAILY, WEEKLY, ACHIEVEMENTS, GUIDE }
+enum Tab { DAILY, WEEKLY, ACHIEVEMENTS, GUIDE, EVENT }
+const TAB_NAMES: Array[String] = ["GÜNLÜK", "HAFTALIK", "BAŞARIMLAR", "REHBER", "ETKİNLİK"]
 
 const PLATE_WIDTH: float = 480.0
 const TIER_NAMES: Array[String] = ["KOLAY", "ORTA", "ZOR"]
@@ -32,6 +34,8 @@ var _countdown: Label
 var _closing: bool = false
 var _tick: Timer
 var _reward_popup: RewardPopup
+## Bir sonraki açılışta seçilecek sekme (-1: kendiliğinden; ETKİNLİK panosu ETKİNLİK sekmesiyle açtırır).
+var _forced_tab: int = -1
 
 
 func _ready() -> void:
@@ -45,12 +49,20 @@ func _ready() -> void:
 
 func open() -> void:
 	_select_default_tab()
+	if _forced_tab >= 0:
+		_set_tab(_forced_tab)
+		_forced_tab = -1
 	_refresh()
 	if visible:
 		return
 	PlateAnim.pop_in(self, _column)
 	_tick.start()
 	opened.emit()
+
+
+## Bir sonraki açılış ETKİNLİK sekmesinde (etkinlik panosundaki GÖREVLER düğmesi).
+func open_on_event() -> void:
+	_forced_tab = Tab.EVENT
 
 
 ## Ödül penceresi paraları bu HUD'ın sayaçlarına uçurur.
@@ -99,7 +111,7 @@ func _build() -> void:
 	_tab_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_tab_row.add_theme_constant_override(&"separation", 6)
 	_column.add_child(_tab_row)
-	for entry: Array in [[Tab.DAILY, Loc.t("GÜNLÜK")], [Tab.WEEKLY, Loc.t("HAFTALIK")], [Tab.ACHIEVEMENTS, Loc.t("BAŞARIMLAR")], [Tab.GUIDE, Loc.t("REHBER")]]:
+	for entry: Array in [[Tab.EVENT, Loc.t("ETKİNLİK")], [Tab.DAILY, Loc.t("GÜNLÜK")], [Tab.WEEKLY, Loc.t("HAFTALIK")], [Tab.ACHIEVEMENTS, Loc.t("BAŞARIMLAR")], [Tab.GUIDE, Loc.t("REHBER")]]:
 		var tab: PlateButton = PlateButton.new()
 		tab.theme_type_variation = &"HudPlateSmall"
 		tab.text = entry[1]
@@ -179,7 +191,9 @@ func _guide_active() -> bool:
 ## Açılışta: ödülü alınabilir ilk sekme; yoksa GÜNLÜK (görevler kilitliyse REHBER).
 func _select_default_tab() -> void:
 	var pick: int = Tab.DAILY
-	if _guide_active() and (_missions == null or not _missions.is_unlocked()):
+	if _missions and _missions.claimable_event() > 0:
+		pick = Tab.EVENT
+	elif _guide_active() and (_missions == null or not _missions.is_unlocked()):
 		pick = Tab.GUIDE   # yeni oyuncu: günlük / haftalık henüz kilitli, rehber zinciri yol gösterir
 	elif _missions and _missions.claimable_daily() > 0:
 		pick = Tab.DAILY
@@ -215,6 +229,11 @@ func _refresh() -> void:
 	(_tabs[Tab.GUIDE] as PlateButton).visible = _guide_active()
 	if _tab == Tab.GUIDE and not _guide_active():
 		_set_tab(Tab.DAILY)
+	var event_on: bool = _missions != null and not _missions.event_tasks().is_empty()
+	(_tabs[Tab.EVENT] as PlateButton).visible = event_on
+	if _tab == Tab.EVENT and not event_on:
+		_set_tab(Tab.DAILY)
+	_badge(Tab.EVENT, _missions.claimable_event() if _missions else 0)
 	_badge(Tab.DAILY, _missions.claimable_daily() if _missions else 0)
 	_badge(Tab.WEEKLY, _missions.claimable_weekly() if _missions else 0)
 	_badge(Tab.ACHIEVEMENTS, _missions.claimable_achievements() if _missions else 0)
@@ -232,6 +251,8 @@ func _refresh() -> void:
 			_render_achievements()
 		Tab.GUIDE:
 			_render_guide()
+		Tab.EVENT:
+			_render_event()
 	# HEPSİNİ AL bütün sekmeleri toplar (günlük + haftalık + başarım): açık sekmede ödül olmasa da başka sekmede varsa
 	# görünür, kaç ödül alınacağını yazar. REHBER ayrı zincirdir (adım adım açılır), toplanmaz.
 	var claimable: int = _missions.claimable_count() if _missions else 0
@@ -245,7 +266,7 @@ func _refresh() -> void:
 
 func _badge(tab: int, count: int) -> void:
 	var button: PlateButton = _tabs[tab]
-	var base: String = [Loc.t("GÜNLÜK"), Loc.t("HAFTALIK"), Loc.t("BAŞARIMLAR"), Loc.t("REHBER")][tab]
+	var base: String = Loc.t(TAB_NAMES[tab])
 	button.text = "%s (%d)" % [base, count] if count > 0 else base
 	button.highlight = tab == _tab
 
@@ -466,6 +487,9 @@ func _claimed(ok: Variant) -> void:
 func _update_countdown() -> void:
 	if _countdown == null or not is_instance_valid(_countdown) or _missions == null:
 		return
+	if _tab == Tab.EVENT:
+		_countdown.text = Loc.t("ETKİNLİK %s SONRA BİTİYOR") % EventBanner.countdown(LiveEvent.seconds_left())
+		return
 	var seconds: int = _missions.seconds_to_week_reset() if _tab == Tab.WEEKLY else _missions.seconds_to_reset()
 	var hours: int = seconds / 3600
 	var minutes: int = (seconds % 3600) / 60
@@ -473,6 +497,68 @@ func _update_countdown() -> void:
 		_countdown.text = Loc.t("HAFTALIK GÖREVLER %d GÜN %02d SAAT SONRA YENİLENİR") % [hours / 24, hours % 24]
 	else:
 		_countdown.text = Loc.t("GÜNLÜK GÖREVLER %02d:%02d SONRA YENİLENİR") % [hours, minutes]
+
+
+# --- ETKİNLİK ------------------------------------------------------------------------
+
+func _render_event() -> void:
+	if _missions == null:
+		return
+	var tasks: Array[Dictionary] = _missions.event_tasks()
+	var title: String = SaveSafe.s(LiveEvent.current().get("title", ""))
+	_body.add_child(_note(Loc.upper(title) if not title.is_empty() else Loc.t("CANLI ETKİNLİK"),
+		Loc.t("Bu görevler yalnızca etkinlik süresince sayılır. Biten görevin ödülünü almayı unutursan etkinlik sonunda kendiliğinden verilir.")))
+	for task: Dictionary in tasks:
+		_body.add_child(_event_plate(task))
+	_countdown = _label(&"HudInkCaption", "")
+	_countdown.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_body.add_child(_countdown)
+	_update_countdown()
+
+
+## Etkinlik görevi plakası (günlük plakasıyla aynı düzen; ödülde kasa / eşya da olabilir).
+func _event_plate(task: Dictionary) -> PlatePanel:
+	var target: int = int(task["target"])
+	var value: int = int(task["progress"])
+	var done: bool = bool(task["done"])
+	var claimed: bool = bool(task["claimed"])
+	var plate: PlatePanel = PlatePanel.new()
+	plate.theme_type_variation = &"HudCarPlate"
+	plate.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override(&"separation", 10)
+	plate.add_child(row)
+	var texts: VBoxContainer = VBoxContainer.new()
+	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	texts.add_theme_constant_override(&"separation", 2)
+	var title: Label = _label(&"HudPlateTitle", LiveEvent.mission_text(StringName(task["metric"]), target))
+	texts.add_child(title)
+	var gauge_row: HBoxContainer = HBoxContainer.new()
+	gauge_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gauge_row.add_theme_constant_override(&"separation", 8)
+	var gauge: XpLane = XpLane.new()
+	gauge.custom_minimum_size = Vector2(150.0, 8.0)
+	gauge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	gauge.segments = 10
+	gauge.ratio = float(value) / float(maxi(target, 1))
+	gauge_row.add_child(gauge)
+	gauge_row.add_child(_label(&"HudInkCaption", "%s / %s" % [Hud.format_thousands(value), Hud.format_thousands(target)]))
+	texts.add_child(gauge_row)
+	var reward: Label = _label(&"HudInkCaption", LiveEvent.reward_text(task))
+	reward.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
+	texts.add_child(reward)
+	row.add_child(texts)
+	var button: PlateButton = _claim_button(done, claimed)
+	if done and not claimed and not MissionManager._event_reward_ready(task):
+		button.text = Loc.t("EŞYA İNİYOR")   # ödüldeki eşyanın içerik paketi henüz inmedi
+		button.disabled = true
+	var mission_id: String = String(task["id"])
+	button.pressed.connect(func() -> void: _claimed(_missions.claim_event(mission_id)))
+	row.add_child(button)
+	_mark(plate, Mark.CLAIMED if claimed else (Mark.READY if done else Mark.NORMAL), title)
+	return plate
 
 
 # --- BAŞARIMLAR -----------------------------------------------------------------------

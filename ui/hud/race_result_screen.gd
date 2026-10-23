@@ -48,6 +48,8 @@ func show_result(won: bool, player_time: float, rival_time: float, money: int, x
 	var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager if is_inside_tree() else null
 	if race and race.is_revenge():
 		_head.text = Loc.t("İNTİKAM")
+	elif race and race.is_event_rival():
+		_head.text = Loc.t("ETKİNLİK YARIŞI")
 	offer_rematch(false)
 	_title.text = Loc.t("KAZANDIN!") if won else Loc.t("KAYBETTİN")
 	var parts: PackedStringArray = PackedStringArray()
@@ -65,6 +67,11 @@ func show_result(won: bool, player_time: float, rival_time: float, money: int, x
 ## Gerçek arkadaşı yenince eklenen +%20 (ödül satırına not düşülür; para zaten RaceManager'da eklendi).
 func show_friend_bonus(amount: int) -> void:
 	_reward.text = Loc.t("%s   (+%s ₺ ARKADAŞ BONUSU)") % [_reward.text, Hud.format_thousands(amount)]
+
+
+## Etkinlik rakibinin özel ödülü (ilk galibiyette; ₺ / XP yukarıdaki toplamın içinde).
+func show_event_bonus(text: String) -> void:
+	_reward.text = Loc.t("%s\nETKİNLİK ÖDÜLÜ: %s") % [_reward.text, text]
 
 
 ## Arkadaş rakipse fotoğraf + sonuç cümlesi; isimsiz rakipte satır gizli.

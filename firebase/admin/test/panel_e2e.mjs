@@ -174,8 +174,18 @@ try {
   const st = await call("GET", "/api/stats");
   check(st.data.live?.players === 2 && st.data.live.push === 1 && st.data.days?.map((d) => d.day).join(",") === "2026-10-19,2026-10-20" && st.data.langs.en === 1,
     "istatistik: anlık sayılar, gecelik kayıt, dil dağılımı");
-  const ev = await call("POST", "/api/config", { min_code: 0, latest_code: 0, event: { id: "hs1", money_mult: 2, xp_mult: 1, start: 1, end: 4_000_000_000 } });
-  check(ev.status === 200 && (await db.doc("config/app").get()).data().event?.money_mult === 2, "etkinlik config/app'e yazıldı");
+  const ev = await call("POST", "/api/event", { event: { id: "hs1", money_mult: 2, xp_mult: 1, start: 1, end: 4_000_000_000,
+    sale: { crates: 30 }, missions: [{ metric: "repairs", target: 10, gems: 5 }], rival: { car: "ford_focus", stage: 2, money: 1000 } },
+    packs: [{ id: "kis", url: "https://x.example/kis.pck", sha256: "c".repeat(64), size: 1234 }] });
+  const evDoc = (await db.doc("config/app").get()).data();
+  check(ev.status === 200 && evDoc.event?.money_mult === 2 && evDoc.event.sale.crates === 30 && evDoc.event.missions.length === 1
+    && evDoc.packs[0].id === "kis", "etkinlik modülleri ve paket listesi config/app'e yazıldı");
+  const keep = await call("POST", "/api/config", { min_code: 0, latest_code: 0, maintenance: false });
+  check(keep.status === 200 && (await db.doc("config/app").get()).data().event?.id === "hs1", "sürüm / bakım kaydı etkinliği korur");
+  check((await call("POST", "/api/event", { event: { id: "x", start: 1, end: 2, pack: "yok" }, packs: [] })).status === 400,
+    "listede olmayan paket: 400");
+  const local = await call("GET", "/api/packs/local");
+  check(local.status === 200 && Array.isArray(local.data.packs), "bilgisayardaki paketler listelenir");
 
   console.log("== yarış öğrenmesi ==");
   await db.doc("config/race_learning").set({ table: { LL: { 0: { s: 40, n: 50 } } }, events: 50, days: 1, at: 9 });

@@ -73,7 +73,7 @@ func buy_block_reason(crate_id: StringName) -> String:
 	# Yolda (garajda yer bekleyen) kasa artık görünür ve mağazadan açılabilir: yalnızca üst sınır engeller.
 	if pending_count() >= MAX_PENDING:
 		return "full"
-	if progress and not progress.can_afford_gems(CrateCatalog.price(crate_id)):
+	if progress and not progress.can_afford_gems(CrateCatalog.sale_price(crate_id)):
 		return "gems"
 	return ""
 
@@ -126,7 +126,7 @@ func buy(crate_id: StringName) -> int:
 		purchase_failed.emit(crate_id, reason)
 		return 0
 	var progress: PlayerProgress = _progress()
-	if progress and not progress.spend_gems(CrateCatalog.price(crate_id)):
+	if progress and not progress.spend_gems(CrateCatalog.sale_price(crate_id)):   # etkinlik indirimi dahil
 		purchase_failed.emit(crate_id, "gems")
 		return 0
 	return _add(crate_id, "gems")

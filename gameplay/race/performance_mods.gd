@@ -334,12 +334,14 @@ static func tier_color(stage: int) -> Color:
 	return TIER_COLORS[clampi(stage, 1, STAGES) - 1]
 
 
-## Bu kademenin parçasının fiyatı (₺).
+## Bu kademenin parçasının fiyatı (₺), canlı etkinlik indirimi düşülmüş (50'nin katı; parça geri satılmaz).
 static func price(vehicle_id: StringName, category: StringName, stage: int) -> int:
 	var i: int = clampi(stage, 1, STAGES) - 1
 	var car_price: float = float(CarCatalog.get_entry(vehicle_id).get("price", 0))
 	var raw: float = maxf(float(PRICE_FLOOR[i]), car_price * PRICE_RATE[i]) * float(PRICE_WEIGHT.get(category, 1.0))
-	return int(roundf(raw / 50.0)) * 50
+	var base: int = int(roundf(raw / 50.0)) * 50
+	var sale: int = LiveEvent.sale_price(&"mods", base)
+	return base if sale == base else maxi(int(roundf(float(sale) / 50.0)) * 50, 50)
 
 
 static func install_time(stage: int) -> float:

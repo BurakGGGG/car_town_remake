@@ -3,7 +3,9 @@ extends Control
 ## CANLI ETKİNLİK TABELASI (kullanıcı kararı 2026-10-21, taslak B): ekranın üst ortasında koyu, amber kenarlı tabela —
 ## "×2 · HAFTA SONU ETKİNLİĞİ · ÇİFTE PARA · ÇİFTE XP · 23:41:05". Etkinlik AppConfig.active_event'ten (config/app.event,
 ## yönetim paneli); süresi bitince kendiliğinden söner. Yalnızca şehirdeyken görünür (açık ekran, ders, kasa panosu,
-## ziyaret yok). Dokununca etkinliğin açıklaması HUD bildirimiyle gösterilir. Hud kurar (temalı kök). Kodla kurulur.
+## ziyaret yok). Dokununca ETKİNLİK PANOSU açılır (EventScreen: modüller ve düğmeleri). Ana satır etkinliğin modüllerini
+## özetler (ÇİFTE PARA · KASALAR −%30 · ÖZEL RAKİP …); rozet çarpan (×2), yoksa en büyük indirim, yoksa ★.
+## Hud kurar (temalı kök). Kodla kurulur.
 
 const TICK_SEC: float = 1.0
 ## Tabelanın genişliği: dar tuvalde (853) sol üst / sağ üst kümelere değmesin.
@@ -19,6 +21,9 @@ var _title: Label
 var _main: Label
 var _clock: Label
 var _event_id: String = ""
+var _event_key: int = 0
+## Ana satırın parçaları (ÇİFTE PARA, İNDİRİM −%30 …): sığmayanlar "+2" olur (_fit_main).
+var _parts: PackedStringArray = PackedStringArray()
 var _timer: Timer
 
 
@@ -56,8 +61,10 @@ func _tick() -> void:
 	visible = not event.is_empty() and calm
 	if event.is_empty():
 		_event_id = ""
+		_event_key = 0
 		return
-	if SaveSafe.s(event["id"]) != _event_id:
+	if event.hash() != _event_key:   # panel etkinliği sürerken düzeltebilir: kimlik aynı, modüller değişmiş olabilir
+		_event_key = event.hash()
 		_event_id = SaveSafe.s(event["id"])
 		_fill(event)
 	_clock.text = countdown(int(event["end"]) - int(Time.get_unix_time_from_system()))
@@ -66,7 +73,16 @@ func _tick() -> void:
 func _fill(event: Dictionary) -> void:
 	var money: float = float(event["money_mult"])
 	var xp: float = float(event["xp_mult"])
-	_chip.text = "×" + Loc.decimal(maxf(money, xp), 1).trim_suffix(",0").trim_suffix(".0")
+	var sale: Dictionary = event["sale"]
+	var best_sale: int = 0
+	for kind: StringName in sale:
+		best_sale = maxi(best_sale, int(sale[kind]))
+	if money > 1.0 or xp > 1.0:
+		_chip.text = "×" + Loc.decimal(maxf(money, xp), 1).trim_suffix(",0").trim_suffix(".0")
+	elif best_sale > 0:
+		_chip.text = ShowroomScreen.sale_tag(best_sale)
+	else:
+		_chip.text = "★"
 	var title: String = SaveSafe.s(event.get("title", ""))
 	_title.text = Loc.upper(title) if not title.is_empty() else Loc.t("CANLI ETKİNLİK")
 	var parts: PackedStringArray = PackedStringArray()
@@ -74,7 +90,37 @@ func _fill(event: Dictionary) -> void:
 		parts.append(Loc.t("ÇİFTE PARA") if is_equal_approx(money, 2.0) else Loc.t("PARA ×%s") % Loc.decimal(money, 1))
 	if xp > 1.0:
 		parts.append(Loc.t("ÇİFTE XP") if is_equal_approx(xp, 2.0) else Loc.t("XP ×%s") % Loc.decimal(xp, 1))
-	_main.text = " · ".join(parts)
+	if best_sale > 0:
+		parts.append(Loc.t("İNDİRİM %s") % ShowroomScreen.sale_tag(best_sale))
+	if not (event["crate_boost"] as Dictionary).is_empty():
+		parts.append(Loc.t("ETKİNLİK KASASI"))
+	if not (event["missions"] as Array).is_empty():
+		parts.append(Loc.t("GÖREVLER"))
+	if not (event["rival"] as Dictionary).is_empty():
+		parts.append(Loc.t("ÖZEL RAKİP"))
+	if not String(event["pack"]).is_empty():
+		parts.append(Loc.t("YENİ EŞYALAR"))
+	_parts = parts
+	_fit_main()
+	_fit_main.call_deferred()   # ilk dolumda satırın genişliği yerleşimden sonra belli olur
+
+
+## Ana satıra sığdığı kadar parça; kalanı "+N" (dokununca pano hepsini gösterir).
+func _fit_main() -> void:
+	var width: float = _main.size.x
+	_main.text = " · ".join(_parts)
+	if width <= 0.0 or _parts.size() <= 1:
+		return
+	var font: Font = _main.get_theme_font(&"font")
+	var font_size: int = _main.get_theme_font_size(&"font_size")
+	for n: int in range(_parts.size(), 0, -1):
+		var text: String = " · ".join(_parts.slice(0, n))
+		if n < _parts.size():
+			text += " · +%d" % (_parts.size() - n)
+		if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= width:
+			_main.text = text
+			return
+	_main.text = _parts[0]
 
 
 ## Kalan süre: 24 saatten azsa "23:41:05", çoksa "2g 04s".
@@ -98,9 +144,7 @@ func _gui_input(event: InputEvent) -> void:
 	if not tapped:
 		return
 	accept_event()
-	var config: AppConfig = AppConfig.of(get_tree())
-	var text: String = SaveSafe.s((config.active_event() if config else {}).get("text", ""))
-	_hud._show_notice(text if not text.is_empty() else Loc.t("Etkinlik süresince tamir ve yarış ödülleri artıyor."), HudPalette.INK, 3.0)
+	_hud.router.open(&"event")   # ETKİNLİK PANOSU
 
 
 func _build() -> void:
@@ -151,6 +195,7 @@ func _build() -> void:
 	texts.add_child(_title)
 	_main = _label(17, HudPalette.TEXT_LIGHT)
 	_main.clip_text = true
+	_main.resized.connect(_fit_main)
 	texts.add_child(_main)
 	row.add_child(texts)
 

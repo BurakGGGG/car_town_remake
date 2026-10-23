@@ -100,9 +100,14 @@ func owned_count() -> int:
 	return _owned.size()
 
 
-## Katalogdaki fiyat (araç yoksa 0). Fiyat başka hiçbir yerde tanımlanmaz.
+## Katalogdaki fiyat (araç yoksa 0). Fiyat başka hiçbir yerde tanımlanmaz. Satış fiyatı bundan türer.
 func price(vehicle_id: StringName) -> int:
 	return int(CarCatalog.get_entry(vehicle_id).get("price", 0))
+
+
+## GERİ AL fiyatı: canlı etkinlik indirimi düşülmüş (en çok %50 > satış oranı %40: alıp satmak kâr etmez).
+func buy_price(vehicle_id: StringName) -> int:
+	return LiveEvent.sale_price(&"cars", price(vehicle_id))
 
 
 ## Satın alınabilir mi: katalogda var, sahip değil ve bakiye yetiyor.
@@ -124,7 +129,7 @@ func status(vehicle_id: StringName) -> Status:
 	if not is_discovered(vehicle_id):
 		return Status.UNDISCOVERED
 	var economy: EconomyManager = _economy()
-	if economy and not economy.can_afford(price(vehicle_id)):
+	if economy and not economy.can_afford(buy_price(vehicle_id)):
 		return Status.TOO_EXPENSIVE
 	return Status.PURCHASABLE
 
@@ -144,7 +149,7 @@ func purchase_vehicle(vehicle_id: StringName) -> bool:
 	if gate != Status.PURCHASABLE and gate != Status.TOO_EXPENSIVE:
 		purchase_failed.emit(vehicle_id, int(entry["price"]))
 		return false
-	var cost: int = int(entry["price"])
+	var cost: int = buy_price(vehicle_id)
 	var economy: EconomyManager = _economy()
 	if economy and not economy.spend_money(cost):   # bakiye yetmezse para değişmez
 		purchase_failed.emit(vehicle_id, cost)

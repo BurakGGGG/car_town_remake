@@ -267,6 +267,19 @@ func _run() -> void:
 	garage.open_mods()
 	await frames(5)
 	check(garage.is_modding(), "MODİFİYE kipi açıldı")
+	var workshop: ModWorkshop = garage.find_child("ModWorkshop", true, false)
+	var performance_card: PlateButton = garage.find_child("Menu_performance", true, false)
+	var cosmetic_card: PlateButton = garage.find_child("Menu_cosmetic", true, false)
+	check(workshop.view == ModWorkshop.View.MENU and performance_card != null and performance_card.is_visible_in_tree()
+		and cosmetic_card != null and cosmetic_card.is_visible_in_tree(), "önce menü: PERFORMANS + KOZMETİK kartları")
+	check(cosmetic_card.disabled and not performance_card.disabled, "KOZMETİK basılamaz (ÇOK YAKINDA)")
+	check((performance_card.get_node("Icon") as TextureRect).texture != null
+		and (cosmetic_card.get_node("Icon") as TextureRect).texture != null
+		and (cosmetic_card.get_node("Icon2") as TextureRect).texture != null, "menü kartlarında resimler")
+	check(not (garage.find_child("Part_motor", true, false) as Control).is_visible_in_tree(), "menüde parça kartları gizli")
+	performance_card.pressed.emit()
+	await frames(3)
+	check(workshop.view == ModWorkshop.View.OVERVIEW and not performance_card.is_visible_in_tree(), "PERFORMANS: parça kategorileri")
 	var cards: int = 0
 	for c: StringName in PerformanceMods.CATEGORIES:
 		var card: PlateButton = garage.find_child("Part_%s" % c, true, false)
@@ -282,7 +295,6 @@ func _run() -> void:
 	check(PerformanceMods.CATEGORIES.has(PerformanceMods.recommend(passat)), "öneri: %s" % PerformanceMods.recommend(passat))
 	(garage.find_child("Part_gear", true, false) as PlateButton).pressed.emit()
 	await frames(2)
-	var workshop: ModWorkshop = garage.find_child("ModWorkshop", true, false)
 	check(workshop.in_category() and workshop.category == &"gear", "ŞANZIMAN kategorisine girildi")
 	var stage_cards: int = 0
 	for s: int in range(1, 6):
@@ -330,6 +342,10 @@ func _run() -> void:
 	await frames(2)
 	check(not upgrade.disabled and upgrade.text == "HEMEN BİTİR", "takılan parçanın kartında HEMEN BİTİR")
 	garage.call(&"_on_exit_pressed")
+	garage.call(&"_on_exit_pressed")
+	await frames(3)
+	check(garage.is_modding() and workshop.view == ModWorkshop.View.MENU and performance_card.is_visible_in_tree(),
+		"GERİ: genel bakıştan menüye")
 	garage.call(&"_on_exit_pressed")
 	await frames(3)
 	check(not garage.is_modding() and garage.visible and list_scroll.is_visible_in_tree(), "GERİ: araç listesine döndü")

@@ -8,8 +8,11 @@ extends Node
 ##   update_text       {tr, en, es, de, fr} güncelleme penceresindeki açıklama (isteğe bağlı)
 ##   maintenance       true → BAKIMDAYIZ (kapanmaz, TEKRAR DENE); maintenance_text {dil: metin}, maintenance_until (unix sn)
 ##   notice            {id, title: {dil}, text: {dil}, until (unix sn, 0 = süresiz)} DUYURU, kimlik başına bir kez
-##   event             {id, title: {dil}, text: {dil}, money_mult, xp_mult, start, end (unix sn)} CANLI ETKİNLİK: etkinken
-##                     tamir (iş başlarken sabitlenir: balondaki tutar doğru kalır) ve yarış ödülleri çarpılır; çarpan 1–3
+##   event             CANLI ETKİNLİK {id, title: {dil}, text: {dil}, start, end (unix sn), money_mult, xp_mult, sale,
+##                     crate_boost, missions, rival, pack} — modüller ve sınırları LiveEvent'te. Çarpan: tamir (iş başlarken
+##                     sabitlenir: balondaki tutar doğru kalır) ve yarış ödülleri; 1–3
+##   packs             [{id, url, sha256, size}] İÇERİK PAKETLERİ (LivePacks indirir, doğrular, cihazda saklar; kalıcıdır:
+##                     etkinlik bitince de listede kalır, paketten alınmış eşya hep yüklenebilsin)
 ## Metin alanları dil sözlüğüdür; oyuncunun dili yoksa İngilizce, o da yoksa Türkçe gösterilir (text_of).
 ##
 ## YARIŞ ÖĞRENMESİ (2026-10-22, docs/KOSU_ESLESTIRME.md Faz 2): ikinci belge config/race_learning — gece fonksiyonunun
@@ -54,6 +57,13 @@ var _last_fetch: float = -1.0e9
 var _learning_http: HTTPRequest
 var _learning_busy: bool = false
 var _last_learning_fetch: float = -1.0e9
+## Etkinlik saniyede bir kez çözülür (fiyatlar, oranlar, tabela aynı karede defalarca sorar).
+var _event_cache: Dictionary = {}
+var _event_cache_at: int = -1
+var _event_cache_config: Dictionary = {}
+
+## Kökteki AppConfig (statik erişim: fiyat / oran hesapları ağaçsız sınıflardan da etkinliği okur — LiveEvent).
+static var _current: AppConfig
 
 
 ## Kökte bir tane kurar (LoadingScreen açılışta çağırır).
@@ -69,11 +79,25 @@ static func of(tree: SceneTree) -> AppConfig:
 	return tree.root.get_node_or_null(NODE_NAME) as AppConfig if tree else null
 
 
+## Ağaçtaki AppConfig (yoksa null). Testlerin ağaca eklediği de buraya yazılır.
+static func current() -> AppConfig:
+	return _current if is_instance_valid(_current) else null
+
+
 func _init(load_cache: bool = true) -> void:
 	if load_cache:
 		_state = _read()
 		var cached: Variant = _state.get("config")
 		_config = cached if cached is Dictionary else {}
+
+
+func _enter_tree() -> void:
+	_current = self
+
+
+func _exit_tree() -> void:
+	if _current == self:
+		_current = null
 
 
 func _ready() -> void:
@@ -93,6 +117,7 @@ func _ready() -> void:
 	add_child(_timer)
 	_timer.start()
 	add_child(AppGate.new(self))
+	add_child(LivePacks.new(self))   # içerik paketleri: listedekileri indirir / bağlar
 	refresh()
 
 
@@ -252,23 +277,31 @@ func maintenance_until() -> int:
 
 # --- Canlı etkinlik ------------------------------------------------------------------
 
-## Şu an süren etkinlik {id, title, text, money_mult, xp_mult, start, end} ya da boş. Geliştirme sürümünde de geçerli.
+## Şu an süren etkinlik (LiveEvent.normalize: id, title, text, start, end, money_mult, xp_mult, sale, crate_boost,
+## missions, rival, pack) ya da boş. Geliştirme sürümünde de geçerli.
 func active_event() -> Dictionary:
-	var raw: Variant = _config.get("event")
-	if not raw is Dictionary:
-		return {}
-	var e: Dictionary = raw
-	var now: int = int(Time.get_unix_time_from_system())
-	var start: int = SaveSafe.i(e.get("start", 0))
-	var end: int = SaveSafe.i(e.get("end", 0))
-	if SaveSafe.s(e.get("id", "")).is_empty() or end <= now or start > now:
-		return {}
-	var money: float = clampf(SaveSafe.f(e.get("money_mult", 1.0)), 1.0, 3.0)
-	var xp: float = clampf(SaveSafe.f(e.get("xp_mult", 1.0)), 1.0, 3.0)
-	if money <= 1.0 and xp <= 1.0:
-		return {}
-	return {"id": SaveSafe.s(e["id"]), "title": text_of(e.get("title")), "text": text_of(e.get("text")),
-		"money_mult": money, "xp_mult": xp, "start": start, "end": end}
+	var at: int = LiveEvent.now()
+	if at != _event_cache_at or not is_same(_event_cache_config, _config):
+		_event_cache = LiveEvent.normalize(_config.get("event"), at)
+		_event_cache_at = at
+		_event_cache_config = _config
+	return _event_cache
+
+
+## İçerik paketleri (config/app.packs): [{id, url, sha256, size}], bozuk kayıt atlanır.
+func packs() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var raw: Variant = _config.get("packs", [])
+	for v: Variant in (raw if raw is Array else []):
+		if not v is Dictionary:
+			continue
+		var pack_id: String = SaveSafe.s((v as Dictionary).get("id", ""))
+		var url_text: String = SaveSafe.s((v as Dictionary).get("url", ""))
+		var sha: String = SaveSafe.s((v as Dictionary).get("sha256", "")).to_lower()
+		if not LivePacks.valid_id(pack_id) or not url_text.begins_with("https://") or sha.length() != 64:
+			continue
+		out.append({"id": pack_id, "url": url_text, "sha256": sha, "size": SaveSafe.i((v as Dictionary).get("size", 0))})
+	return out
 
 
 ## Etkinliğin para çarpanı (etkinlik yoksa / AppConfig kurulmamışsa 1). Tamir işi başlarken ve yarış ödülünde.

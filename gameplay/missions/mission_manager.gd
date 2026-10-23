@@ -8,6 +8,10 @@ extends Node
 ## ödül mevcut API'lerle verilir (EconomyManager.add_money, PlayerProgress.add_xp / add_gems,
 ## CrateManager.grant_free). Kalıcılık SaveManager'ın "missions" alanıdır (state / load_state / reset).
 ##
+## ETKİNLİK GÖREVLERİ (2026-10-23): canlı etkinliğin görevleri (LiveEvent.missions, yönetim panelinden) aynı sayaçlardan
+## beslenir ama yalnızca etkinlik sürerken sayar; ilerleme etkinlik kimliğine bağlıdır. Etkinlik bitince bitmiş ama
+## alınmamış ödüller (günlükteki gibi) otomatik verilir. HEPSİNİ AL bunları da toplar.
+##
 ## SAAT: gün / hafta anahtarı GemRewards'ın saatinden gelir (tek kaynak: test_now, geri alma koruması).
 ## Gün yalnızca İLERİ gider: saat geri alınırsa görevler yeniden üretilmez / sıfırlanmaz.
 ## Gece yarısı (yerel 00:00): dünün alınmamış ödülleri OTOMATİK verilir, sayaçlar geçmişe yazılır,
@@ -62,6 +66,9 @@ var _timer: Timer
 var _wired: bool = false
 var _tally_depth: int = 0
 var _tally: Dictionary = {}
+## Etkinlik görevleri: {id: etkinlik, c: {metrik: sayı}, done: {görev: true}, claimed: {görev: true}, defs: son görülen
+## görev tanımları (etkinlik bitince ödemek için)}. Etkinlik yoksa boş.
+var _event: Dictionary = {}
 
 
 func _ready() -> void:
@@ -90,6 +97,7 @@ func _connect() -> void:
 			count(&"races", 1)
 			if won:
 				count(&"race_wins", 1))
+		race.event_rival_won.connect(func() -> void: count(&"event_rival_wins", 1))
 	var crates: CrateManager = get_tree().get_first_node_in_group("crates") as CrateManager
 	if crates:
 		crates.crate_opened.connect(func(_uid: int, result: Dictionary) -> void:
@@ -266,6 +274,8 @@ func ensure_current() -> void:
 	if _unlocked() and _weekly.is_empty():
 		_generate_weekly(week)
 		changed = true
+	if _sync_event():
+		changed = true
 	if changed:
 		_request_save()
 		missions_changed.emit()
@@ -394,6 +404,7 @@ func count(metric: StringName, amount: int = 1) -> void:
 	_life[metric] = int(_life.get(metric, 0)) + amount
 	_day_c[metric] = int(_day_c.get(metric, 0)) + amount
 	_week_c[metric] = int(_week_c.get(metric, 0)) + amount
+	_event_count(metric, amount)
 	_check_completions()
 	_request_save()
 	missions_changed.emit()
@@ -574,7 +585,7 @@ func _reached_stars_total() -> int:
 
 ## Ödülü alınmayı bekleyen öğe sayısı (HUD plakası rozeti).
 func claimable_count() -> int:
-	return claimable_daily() + claimable_weekly() + claimable_achievements()
+	return claimable_daily() + claimable_weekly() + claimable_achievements() + claimable_event()
 
 
 func claimable_daily() -> int:
@@ -749,14 +760,14 @@ func claim_all_achievements() -> int:
 	return n
 
 
-## HEPSİNİ AL (kullanıcı 2026-10-22: hangi sekmede basılırsa basılsın HEPSİ): günlük + haftalık + başarımların bütün
-## hazır ödülleri, tek ödül penceresi. Ödül almak başka ödülü açabilir (günlük görev → "günlük görev tamamla" başarımı):
-## yeni ödül çıkmayana kadar tekrar edilir.
+## HEPSİNİ AL (kullanıcı 2026-10-22: hangi sekmede basılırsa basılsın HEPSİ): günlük + haftalık + başarımların (ve
+## etkinlik görevlerinin) bütün hazır ödülleri, tek ödül penceresi. Ödül almak başka ödülü açabilir (günlük görev →
+## "günlük görev tamamla" başarımı): yeni ödül çıkmayana kadar tekrar edilir.
 func claim_all() -> int:
 	_begin_tally()
 	var n: int = 0
 	for _pass: int in 4:
-		var got: int = claim_all_daily() + claim_all_weekly() + claim_all_achievements()
+		var got: int = claim_all_daily() + claim_all_weekly() + claim_all_achievements() + claim_all_event()
 		n += got
 		if got == 0:
 			break
@@ -820,6 +831,182 @@ func _pay_weekly_bonus(announce: bool) -> void:
 	if announce:
 		reward_granted.emit(Loc.t("HAFTALIK BÜYÜK ÖDÜL\n+%d GEM%s  +%d XP") % [MissionCatalog.WEEKLY_BONUS_GEMS,
 			("  +1 %s" % crate_name) if crate_name != "" else "", xp])
+
+
+# --- Etkinlik görevleri ------------------------------------------------------------------------
+
+## Kayıttaki etkinliği süren etkinlikle eşitler: etkinlik değiştiyse (bitti / yenisi başladı) öncekinin bitmiş ama
+## alınmamış ödülleri verilir. Görev tanımları her seferinde tazelenir (panel etkinlik sürerken görevi düzeltebilir).
+## Dönen: kayıt değişti mi.
+func _sync_event() -> bool:
+	var event_id: String = LiveEvent.id()
+	var changed: bool = false
+	if SaveSafe.s(_event.get("id", "")) != event_id:
+		_finish_event()
+		_event = {"id": event_id, "c": {}, "done": {}, "claimed": {}, "defs": []} if not event_id.is_empty() else {}
+		changed = true
+	if not _event.is_empty():
+		var defs: Array = _defs_out(LiveEvent.missions())
+		if defs != _event["defs"]:
+			_event["defs"] = defs
+			changed = true
+	return changed
+
+
+func _event_count(metric: StringName, amount: int) -> void:
+	_sync_event()
+	if _event.is_empty():
+		return
+	for def: Dictionary in _event["defs"]:
+		if def["metric"] == String(metric):
+			var c: Dictionary = _event["c"]
+			c[String(metric)] = int(c.get(String(metric), 0)) + amount
+			_check_event()
+			return
+
+
+## Biten etkinlik görevleri bir kez duyurulur.
+func _check_event() -> void:
+	for def: Dictionary in _event.get("defs", []):
+		var done: Dictionary = _event["done"]
+		if not done.has(def["id"]) and event_progress(def) >= int(def["target"]):
+			done[def["id"]] = true
+			task_completed.emit(&"event", Loc.t("ETKİNLİK GÖREVİ TAMAM\n%s") % LiveEvent.mission_text(
+				StringName(def["metric"]), int(def["target"])))
+
+
+## Süren etkinliğin görevleri: tanım + {progress, done, claimed}. Etkinlik yoksa boş.
+func event_tasks() -> Array[Dictionary]:
+	_sync_event()
+	var out: Array[Dictionary] = []
+	for def: Dictionary in _event.get("defs", []):
+		var task: Dictionary = def.duplicate()
+		task["progress"] = event_progress(def)
+		task["done"] = (_event["done"] as Dictionary).has(def["id"])
+		task["claimed"] = (_event["claimed"] as Dictionary).has(def["id"])
+		out.append(task)
+	return out
+
+
+func event_progress(def: Dictionary) -> int:
+	var c: Dictionary = _event.get("c", {})
+	return clampi(int(c.get(String(def["metric"]), 0)), 0, int(def["target"]))
+
+
+func claimable_event() -> int:
+	var n: int = 0
+	for task: Dictionary in event_tasks():
+		if bool(task["done"]) and not bool(task["claimed"]) and _event_reward_ready(task):
+			n += 1
+	return n
+
+
+func claim_event(mission_id: String) -> bool:
+	_begin_tally()
+	var ok: bool = _claim_event(mission_id)
+	if ok:
+		_tally["count"] = int(_tally["count"]) + 1
+	_end_tally()
+	return ok
+
+
+func claim_all_event() -> int:
+	_begin_tally()
+	var n: int = 0
+	for task: Dictionary in event_tasks():
+		if claim_event(String(task["id"])):
+			n += 1
+	_end_tally()
+	return n
+
+
+func _claim_event(mission_id: String) -> bool:
+	for task: Dictionary in event_tasks():
+		if task["id"] != mission_id:
+			continue
+		if not bool(task["done"]) or bool(task["claimed"]) or not _event_reward_ready(task):
+			return false
+		(_event["claimed"] as Dictionary)[mission_id] = true
+		_pay_event(task, true)
+		_request_save()
+		missions_changed.emit()
+		return true
+	return false
+
+
+## Ödüldeki eşya paketten geliyorsa paket inene kadar beklenir (yoksa eşya kaybolurdu).
+static func _event_reward_ready(def: Dictionary) -> bool:
+	var decor: String = SaveSafe.s(def.get("decor", ""))
+	return decor.is_empty() or GarageDecor.exists(StringName(decor))
+
+
+## Etkinlik görevinin ödülü: ₺ / XP / gem + kasa + eşya (yalnızca yerleştirilebilir eşya; DecorManager.grant).
+func _pay_event(def: Dictionary, announce: bool) -> void:
+	var label: String = Loc.t("ETKİNLİK GÖREVİ")
+	var extras: PackedStringArray = PackedStringArray()
+	var crate: StringName = StringName(SaveSafe.s(def.get("crate", "")))
+	var crates: CrateManager = get_tree().get_first_node_in_group("crates") as CrateManager
+	if crate != &"" and crates and crates.grant_free(crate, "event") > 0:
+		var crate_name: String = Loc.t(String(CrateCatalog.get_entry(crate).get("display_name", Loc.t("KASA"))))
+		if _tally_depth > 0:
+			(_tally["crates"] as Array).append(crate_name)
+		extras.append("+1 %s" % crate_name)
+	var decor_id: StringName = StringName(SaveSafe.s(def.get("decor", "")))
+	var decor: DecorManager = get_tree().get_first_node_in_group("decor") as DecorManager
+	if decor_id != &"" and decor and decor.grant(decor_id, 1):
+		var title: String = Loc.t(SaveSafe.s(GarageDecor.get_item(decor_id).get("title", ""))).to_upper()
+		if _tally_depth > 0:
+			(_tally["crates"] as Array).append(title)   # ödül penceresi kasa satırında adıyla gösterir
+		extras.append("+" + title)
+	_pay(SaveSafe.i(def.get("money", 0)), SaveSafe.i(def.get("xp", 0)), SaveSafe.i(def.get("gems", 0)), announce, label)
+	if announce and _tally_depth == 0 and not extras.is_empty():
+		reward_granted.emit("%s\n%s" % [label, "  ".join(extras)])
+
+
+## Etkinlik bitti: tamamlanmış ama alınmamış ödüller verilir (görev ekranı artık göstermez).
+func _finish_event() -> void:
+	if _event.is_empty() or not is_inside_tree():
+		return
+	for def: Dictionary in _event.get("defs", []):
+		var id: String = def["id"]
+		if (_event["done"] as Dictionary).has(id) and not (_event["claimed"] as Dictionary).has(id):
+			(_event["claimed"] as Dictionary)[id] = true
+			_pay_event(def, true)
+
+
+static func _defs_out(missions: Array[Dictionary]) -> Array:
+	var out: Array = []
+	for m: Dictionary in missions:
+		out.append({"id": String(m["id"]), "metric": String(m["metric"]), "target": int(m["target"]),
+			"money": int(m["money"]), "gems": int(m["gems"]), "xp": int(m["xp"]), "crate": String(m["crate"]),
+			"decor": String(m["decor"])})
+	return out
+
+
+static func _event_in(raw: Variant) -> Dictionary:
+	if not raw is Dictionary or SaveSafe.s((raw as Dictionary).get("id", "")).is_empty():
+		return {}
+	var e: Dictionary = raw
+	var out: Dictionary = {"id": SaveSafe.s(e["id"]), "c": {}, "done": {}, "claimed": {}, "defs": []}
+	for key: String in ["c"]:
+		if e.get(key) is Dictionary:
+			for metric: Variant in (e[key] as Dictionary):
+				out[key][SaveSafe.s(metric)] = maxi(SaveSafe.i((e[key] as Dictionary)[metric]), 0)
+	for key: String in ["done", "claimed"]:
+		if e.get(key) is Dictionary:
+			for mission: Variant in (e[key] as Dictionary):
+				out[key][SaveSafe.s(mission)] = true
+	if e.get("defs") is Array:
+		for v: Variant in (e["defs"] as Array):
+			if v is Dictionary and LiveEvent.MISSION_TEXTS.has(StringName(SaveSafe.s((v as Dictionary).get("metric", "")))):
+				var d: Dictionary = v
+				out["defs"].append({"id": SaveSafe.s(d.get("id", "")), "metric": SaveSafe.s(d.get("metric", "")),
+					"target": clampi(SaveSafe.i(d.get("target", 1)), 1, LiveEvent.TARGET_MAX),
+					"money": clampi(SaveSafe.i(d.get("money", 0)), 0, LiveEvent.REWARD_MONEY_MAX),
+					"gems": clampi(SaveSafe.i(d.get("gems", 0)), 0, LiveEvent.REWARD_GEMS_MAX),
+					"xp": clampi(SaveSafe.i(d.get("xp", 0)), 0, LiveEvent.REWARD_XP_MAX),
+					"crate": SaveSafe.s(d.get("crate", "")), "decor": SaveSafe.s(d.get("decor", ""))})
+	return out
 
 
 ## Seviyeye açık en pahalı kasa (haftalık büyük ödül).
@@ -1066,6 +1253,7 @@ func state() -> Dictionary:
 		"weekly": {"week": _weekly_week, "tasks": _tasks_out(_weekly), "final": _weekly_final_claimed, "all_counted": _weekly_all_counted},
 		"ach": _ach_claimed.duplicate(), "ach_seen": _ach_announced.duplicate(),
 		"yesterday": _yesterday_ids.duplicate(), "last_week": _last_week_ids.duplicate(),
+		"event": _event.duplicate(true),
 	}
 
 
@@ -1116,6 +1304,7 @@ func load_state(data: Dictionary) -> void:
 				_ach_announced[SaveSafe.s(key)] = clampi(SaveSafe.i((seen as Dictionary)[key]), 0, (seen_line["tiers"] as Array).size())
 	_yesterday_ids = _strings_in(data.get("yesterday"))
 	_last_week_ids = _strings_in(data.get("last_week"))
+	_event = _event_in(data.get("event"))
 	_mark_announced()
 	missions_changed.emit()
 

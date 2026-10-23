@@ -5,7 +5,7 @@ import { gzipSync } from "node:zlib";
 import {
   PanelError, loadCatalog, buildInfo, buildMail, mailId, buildConfig, buildNews, classifyQuery, unpackSave, texts, MAX_GEMS,
   statsFromSave, buildBan, banActive, moderatedName, groupReports, buildAdjust, buildRestore,
-  buildPromo, buildEvent, buildSegment, matchSegment, buildLearning,
+  buildPromo, buildEvent, buildSegment, matchSegment, buildLearning, buildPacks, buildEventDoc, SALE_MAX, MISSION_METRICS,
 } from "../lib.mjs";
 
 const catalog = loadCatalog(new URL("../../../", import.meta.url));
@@ -16,6 +16,10 @@ test("katalog: satılan kasalar, garaja konan eşyalar (kaplama / karo / hediye 
   assert.ok(!catalog.crates.some((c) => c.id === "welcome_crate"), "HOŞ GELDİN KUTUSU panelden verilmez");
   assert.ok(catalog.decor.some((d) => d.id === "tool_cabinet"));
   assert.ok(!catalog.decor.some((d) => d.id === "floor_tile"), "kaplama verilmez");
+  assert.ok(catalog.crates.find((c) => c.id === "city_crate").pool.includes("ford_focus"), "kasanın havuzu (etkinlik kasası)");
+  assert.ok(catalog.cars.some((c) => c.id === "ford_focus") && !catalog.cars.some((c) => c.id === "police_vito"),
+    "rakip olabilecek araçlar: edinilemeyen polis yok");
+  assert.ok("event_rival_wins" in catalog.metrics, "etkinlik görevi türleri");
 });
 
 test("sürüm: export_presets.cfg", () => {
@@ -166,7 +170,50 @@ test("etkinlik: çarpan 1–3, zaman sırası, ×1 = etkinlik yok", () => {
   assert.equal(buildEvent({ id: "x", money_mult: 1, xp_mult: 1, start: 1, end: 2 }), null);
   assert.throws(() => buildEvent({ id: "x", money_mult: 5, start: 1, end: 2 }), /1 ile 3/);
   assert.throws(() => buildEvent({ id: "x", money_mult: 2, start: 5, end: 5 }), /sonra/);
-  assert.equal(buildConfig({ event: { id: "hs1", money_mult: 2, start: 1, end: 2 } }, NOW).event.money_mult, 2);
+  assert.equal(buildConfig({ event: { id: "hs1", money_mult: 2, start: 1, end: 2 } }, NOW).event, undefined,
+    "sürüm / bakım kaydı etkinliğe dokunmaz");
+});
+
+test("etkinlik modülleri: indirim, kasa, görev, rakip, paket", () => {
+  const packs = buildPacks([{ id: "kis_2026", url: "https://x.example/kis.pck", sha256: "A".repeat(64), size: 9000 }]);
+  assert.equal(packs[0].sha256, "a".repeat(64), "özet küçük harfe");
+  const e = buildEvent({ id: "k1", start: 1, end: 9, sale: { crates: 30, decor: 0 },
+    crate_boost: { crate: "city_crate", cars: ["ford_focus", "ford_focus"], mult: 3 },
+    missions: [{ metric: "repairs", target: 20, money: 5000, crate: "city_crate" }, { metric: "" }],
+    rival: { car: "ford_focus", stage: 3, name: "Kral Rıza", paint: "#2255ff", gems: 30 }, pack: "kis_2026" }, catalog, packs);
+  assert.deepEqual(e.sale, { crates: 30 }, "0 indirim yazılmaz");
+  assert.deepEqual(e.crate_boost, { crate: "city_crate", cars: ["ford_focus"], mult: 3 });
+  assert.equal(e.missions.length, 1, "türsüz satır atlanır");
+  assert.equal(e.missions[0].id, "m1");
+  assert.equal(e.rival.stage, 3);
+  assert.equal(e.pack, "kis_2026");
+  assert.equal(e.money_mult, 1, "çarpansız etkinlik de geçerli (oyun 1'i yok sayar)");
+  assert.throws(() => buildEvent({ id: "k", start: 1, end: 2, sale: { cars: SALE_MAX + 1 } }, catalog), /0 ile 50/);
+  assert.throws(() => buildEvent({ id: "k", start: 1, end: 2, crate_boost: { crate: "city_crate", cars: ["bugatti_veyron"], mult: 3 } }, catalog), /havuzunda/);
+  assert.throws(() => buildEvent({ id: "k", start: 1, end: 2, crate_boost: { crate: "city_crate", cars: ["ford_focus"], mult: 9 } }, catalog), /2 ile 5/);
+  assert.throws(() => buildEvent({ id: "k", start: 1, end: 2, missions: [{ metric: "uydurma", target: 1 }] }, catalog), /bilinmeyen/);
+  assert.throws(() => buildEvent({ id: "k", start: 1, end: 2, missions: Array.from({ length: 7 }, () => ({ metric: "repairs", target: 1 })) }, catalog), /en çok 6/i);
+  assert.throws(() => buildEvent({ id: "k", start: 1, end: 2, rival: { car: "police_vito" } }, catalog), /edinilemeyen/);
+  assert.throws(() => buildEvent({ id: "k", start: 1, end: 2, rival: { car: "ford_focus", stage: 6 } }, catalog), /kademesi/);
+  assert.throws(() => buildEvent({ id: "k", start: 1, end: 2, pack: "yok" }, catalog, packs), /paket listesinde yok/);
+  assert.equal(buildEvent({ id: "k", start: 1, end: 2, sale: {}, missions: [] }, catalog), null, "modülsüz = etkinlik yok");
+  assert.ok(Object.keys(MISSION_METRICS).length >= 15);
+});
+
+test("paket listesi ve etkinlik belgesi (öbür alanlar korunur)", () => {
+  assert.throws(() => buildPacks([{ id: "a", url: "http://x/a.pck", sha256: "a".repeat(64), size: 1 }]), /https/);
+  assert.throws(() => buildPacks([{ id: "a", url: "https://x/a.pck", sha256: "abc", size: 1 }]), /sha256/);
+  const one = { id: "a", url: "https://x/a.pck", sha256: "b".repeat(64), size: 10 };
+  assert.throws(() => buildPacks([one, one]), /iki kez/);
+  const current = { min_code: 11, maintenance: false, notice: { id: "n1", text: { tr: "x" } }, event: { id: "old", money_mult: 2 } };
+  const doc = buildEventDoc({ event: { id: "e2", start: 1, end: 2, sale: { mods: 20 } }, packs: [one] }, catalog, current, NOW);
+  assert.equal(doc.min_code, 11, "sürüm alanı korunur");
+  assert.equal(doc.notice.id, "n1", "duyuru korunur");
+  assert.deepEqual(doc.event.sale, { mods: 20 }, "eski etkinliğin alanı (money_mult 2) taşınmaz");
+  assert.equal(doc.event.money_mult, 1);
+  assert.equal(doc.packs.length, 1);
+  const off = buildEventDoc({ event: null, packs: [] }, catalog, doc, NOW);
+  assert.ok(!("event" in off) && !("packs" in off), "etkinlik bitir: alan silinir");
 });
 
 test("hedefli gönderim süzgeci", () => {
