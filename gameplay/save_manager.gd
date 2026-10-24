@@ -77,6 +77,7 @@ var _repairs: RepairManager
 var _away: OfflineEarnings
 var _car_garages: CarGarageManager
 var _referral: ReferralManager
+var _community: CommunityLinks
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -116,6 +117,7 @@ func _setup() -> void:
 	_away = get_tree().get_first_node_in_group("offline_earnings") as OfflineEarnings
 	_car_garages = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
 	_referral = get_tree().get_first_node_in_group("referral") as ReferralManager
+	_community = get_tree().get_first_node_in_group("community") as CommunityLinks
 	if visit_mode:
 		_loading = true
 		_apply(GarageVisit.garage())
@@ -245,6 +247,8 @@ func new_game() -> void:
 		_away.reset()
 	if _referral:
 		_referral.reset()
+	if _community:
+		_community.reset()
 	if _repairs:
 		_repairs.load_jobs([])
 	if _crates:
@@ -284,6 +288,7 @@ func _progress_json() -> String:
 	data.erase("tutorial")   # ders atlamak / izlemek bulut kaydını "ilerlemiş" göstermesin
 	data.erase("away")   # son görülme saati her yazımda değişir; kasa zamanla dolar
 	data.erase("repairs")   # süren tamirler geçicidir
+	data.erase("community")   # takip ödülünün gemi oyuncu kaydında sayılır; değerlendirme sorusu günle kayar
 	# DEPOLARIM: park yerleri / otopark sahipliğin yansımasıdır (araçlar "vehicles"ta sayılır); ilerleme yalnız alınan
 	# depo, seviye, inşaat ve iştir. Yoksa HOŞ GELDİN KUTUSU'ndan çıkan araç otoparka girince "ilerleme" olurdu. Ücret
 	# dönemi saatle kayar, faturalar da onun sonucudur.
@@ -417,6 +422,9 @@ func _collect() -> Dictionary:
 		# ARKADAŞ DAVETİ: bu hesabın davet sonucu, seviye işareti gitti mi, cihaz özeti, efsanevi araç seçme hakları.
 		# Eski kayıtta yoktur: davetsiz.
 		"referral": _referral.state() if _referral else {},
+		# TOPLULUK: Instagram / TikTok takip ödülleri (açıldı / alındı), BİZİ DEĞERLENDİR sorusu (kaç kez, sıradaki gün).
+		# Eski kayıtta yoktur: hiçbiri alınmamış, hiç sorulmamış.
+		"community": _community.state() if _community else {},
 	}
 
 
@@ -567,6 +575,9 @@ func _apply(data: Dictionary) -> void:
 	if _referral:
 		var referral_data: Variant = data.get("referral", {})
 		_referral.load_state(referral_data if referral_data is Dictionary else {})
+	if _community:
+		var community_data: Variant = data.get("community", {})
+		_community.load_state(community_data if community_data is Dictionary else {})
 	if legacy:
 		if _missions:
 			_missions.mark_legacy_repairs_passed()   # geçilmiş tamir yıldızları ödenmiş sayılır

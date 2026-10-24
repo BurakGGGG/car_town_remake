@@ -47,6 +47,9 @@ var _login_day: int = -1
 ## Bugünün giriş ödülünün reklamla ikiye katlandığı gün (-1 = hiç).
 var _login_doubled_day: int = -1
 var _streak: int = 0
+## Oyunun açıldığı FARKLI gün sayısı (ardışık olması gerekmez; seri bozulunca sıfırlanmaz). BİZİ DEĞERLENDİR penceresi
+## buna bakar (CommunityLinks).
+var _play_days: int = 0
 ## MERDİVEN: ödülün alındığı giriş günü (-1 = hiç), alınan elmas / ₺ (×2 bunları bir kez daha verir), tamamlanan ay.
 var _claimed_day: int = -1
 var _claimed_gems: int = 0
@@ -118,6 +121,7 @@ func check_day() -> void:
 		if can_claim():
 			_claim(true)   # önceki giriş günün basamağı alınmamıştı: kaybolmasın
 		_streak = _streak + 1 if today == _login_day + 1 else 1
+		_play_days += 1
 		_login_day = today
 		daily_changed.emit()
 		ladder_ready.emit(ladder_day())
@@ -126,6 +130,11 @@ func check_day() -> void:
 
 func streak() -> int:
 	return _streak
+
+
+## Oyunun açıldığı farklı gün sayısı (bugün dahil).
+func play_days() -> int:
+	return _play_days
 
 
 # --- Günlük giriş merdiveni ------------------------------------------------------------
@@ -253,7 +262,7 @@ func legacy_repair_step() -> int:
 func state() -> Dictionary:
 	return {
 		"login": {"day": _login_day, "streak": _streak, "doubled": _login_doubled_day, "claimed": _claimed_day,
-			"cg": _claimed_gems, "cm": _claimed_money, "months": _months},
+			"cg": _claimed_gems, "cm": _claimed_money, "months": _months, "days": _play_days},
 		"max_seen": _max_seen,
 		"day": _day,
 		"tips": {"day": _tip_day, "count": _tip_count, "carry": _tip_carry},
@@ -271,6 +280,7 @@ func load_state(data: Dictionary) -> void:
 	_claimed_gems = maxi(SaveSafe.i(login.get("cg", 0)), 0)
 	_claimed_money = maxi(SaveSafe.i(login.get("cm", 0)), 0)
 	_months = maxi(SaveSafe.i(login.get("months", 0)), 0)
+	_play_days = maxi(SaveSafe.i(login.get("days", 0)), 0)
 	_max_seen = maxi(SaveSafe.i(data.get("max_seen", 0)), 0)
 	# Eski kayıt: günlük görev bölümündeki gün (geriye dönük uyum); yeni kayıt "day" yazar
 	var legacy: Dictionary = data.get("daily", {}) if data.get("daily") is Dictionary else {}

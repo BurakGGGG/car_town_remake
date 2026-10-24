@@ -64,3 +64,29 @@ yüksek çaba, açılış resmi / simge RGB. Hepsi kayıpsız; 303 kaynağın i�
 - Garaj arayüzü (~260 çizim çağrısı) ve HUD (~175): daha da azaltmak arayüzü dokuya önceden çizmeyi gerektirir
   (büyük mimari değişiklik).
 - LOD1 taban mesh, R8, müzik sıkıştırma: kullanıcı daha önce istemedi.
+
+---
+
+## MARKET ekranı FPS (2026-10-24)
+
+Kullanıcı: "market ekranı FPS düşürüyor". Ölçüm `qa/market_perf.gd` (1152x648, masaüstü): dünya 385 çizim çağrısı; MARKET
+GEM AL sekmesi **1262**, kart çizimleri gizlenince 392 → kartlar tek başına ~870 çizim çağrısı. Sebep: `GemPackArt` kartları
+koddan çiziliyor ve her çokgen / çember / çizgi ayrı komuttu (kasa kartında ~40 gem × 8 komut, her parıltı 6 üst üste daire).
+Telefonda (GL Compatibility) darboğaz tam olarak çizim çağrısı.
+
+Düzeltme (`ui/hud/gem_pack_art.gd`): kartın bütün şekilleri tek üçgen dizisinde toplanıp
+`RenderingServer.canvas_item_add_triangle_array` ile kart başına tek komutla gönderilir (yazılar, stil kutusu ve dokulu
+Instagram simgesi araya girer; sıra korunur). Çember / çizgi kenar yumuşatması eskisi gibi dışa 1 px saydamlaşan şeritle.
+Parıltı 6 üst üste daire yerine tek katman (merkez + 3 halka, aynı birikimli saydamlık) → doldurma (overdraw) de 6 kat
+azaldı. Birim çember tabloları önbellekte, sıcak döngülerde işlev çağrısı yok; yeniden çizim 30 → 20 Hz (hareketler yavaş).
+GEM AL düğmesinin `_Piece`'i aynı gem şekil verisini (`gem_parts`) doğrudan çizer.
+
+| | önce | sonra |
+|---|---|---|
+| MARKET GEM AL çizim çağrısı | 1262 | 401 (dünya 372) |
+| PARAYA ÇEVİR | 731 | 414 |
+| 26 kartlık sayfa (`qa/gem_art_sheet.gd`) | 2703 | 119 |
+| 36 kart her karede yeniden çizim (betik + çizim) | 31 ms/kare | 10,6 ms/kare |
+
+Görünüm: önce / sonra sayfaları piksel kıyası — piksellerin %1'inde ≥16, %0,2'sinde ≥48 fark (kenar yumuşatma ve parıltı
+bantlaşmasının kalkması); gözle aynı.

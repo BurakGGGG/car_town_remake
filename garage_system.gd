@@ -179,6 +179,11 @@ func _ensure_social() -> void:
 		var referral: ReferralManager = ReferralManager.new()
 		referral.name = "ReferralManager"
 		add_child(referral)
+	# TOPLULUK (CommunityLinks, "community"): MARKET takip ödülleri + BİZİ DEĞERLENDİR zamanlaması (SaveManager'dan ÖNCE)
+	if get_tree().get_first_node_in_group("community") == null:
+		var community: CommunityLinks = CommunityLinks.new()
+		community.name = "CommunityLinks"
+		add_child(community)
 	# MODERASYON (ModerationWatch, "moderation"): yönetim panelinin yasak / ad / fotoğraf kararları
 	if get_tree().get_first_node_in_group("moderation") == null:
 		var moderation: ModerationWatch = ModerationWatch.new()

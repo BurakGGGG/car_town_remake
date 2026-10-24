@@ -79,6 +79,8 @@ var showroom: ShowroomScreen
 var login_screen: LoginScreen
 ## İlk yarıştan sonra bir kez: "Seni kim yendi, ilk sen duy!" → TAMAM → bildirim izni (PushPrompt).
 var push_prompt: PushPrompt
+## Birkaç farklı günde oyuna giren oyuncuya bir kez: BİZİ DEĞERLENDİR → Play mağaza sayfası (RatePrompt, ödülsüz).
+var rate_prompt: RatePrompt
 ## Oyuna girişte "sen yokken neler oldu" gazetesi (OTO MANŞET, NewsScreen) ve ne zaman açılacağı (NewsFlow).
 var news_screen: NewsScreen
 var news_flow: NewsFlow
@@ -259,6 +261,7 @@ func _ready() -> void:
 	_build_showroom()
 	_build_login_screen()
 	_build_push_prompt()
+	_build_rate_prompt()
 	_build_news()
 	_build_invites()
 	_build_settings()
@@ -1591,6 +1594,7 @@ func _register_screens() -> void:
 	router.register(&"profile", profile_screen, UiRouter.Kind.MODAL)
 	router.register(&"account", login_screen, UiRouter.Kind.MODAL)
 	router.register(&"push_prompt", push_prompt, UiRouter.Kind.MODAL)
+	router.register(&"rate_prompt", rate_prompt, UiRouter.Kind.MODAL)
 	router.register(&"news", news_screen, UiRouter.Kind.MODAL)
 	router.register(&"invite", invite_screen, UiRouter.Kind.MODAL)
 	router.register(&"settings", settings_screen, UiRouter.Kind.PLACE)   # tam ekran: oyun arkada görünmez
@@ -2251,8 +2255,7 @@ func _tick_push_prompt(push: PushService) -> void:
 	if not push.should_ask():
 		_push_prompt_timer.queue_free()
 		return
-	if not router.top().is_empty() or (tutorial and tutorial.is_running()) or (crate_panel and crate_panel.visible) \
-			or (restoration_result and restoration_result.visible) or get_tree().root.get_node_or_null("LoadingScreen") != null:
+	if not _is_quiet():
 		_push_prompt_idle = 0.0
 		return
 	_push_prompt_idle += _push_prompt_timer.wait_time
@@ -2260,6 +2263,72 @@ func _tick_push_prompt(push: PushService) -> void:
 		return
 	_push_prompt_timer.queue_free()
 	router.open(&"push_prompt")
+
+
+## Kendiliğinden açılan öneri pencereleri için sakin an: açık ekran, ders, kasa / restorasyon plakası, SEVİYE ATLADIN
+## (yönlendiricide değil), yükleme yok.
+func _is_quiet() -> bool:
+	return router.top().is_empty() and not (tutorial and tutorial.is_running()) and not (crate_panel and crate_panel.visible) \
+		and not (restoration_result and restoration_result.visible) and not (level_up_screen and level_up_screen.visible) \
+		and get_tree().root.get_node_or_null("LoadingScreen") == null
+
+
+## BİZİ DEĞERLENDİR (kullanıcı kararı 2026-10-24): oyuncu CommunityLinks.RATE_FIRST_DAY farklı günde oyuna girince, o
+## oturumda RATE_PROMPT_SESSION sn oynadıktan sonra oyun RATE_PROMPT_IDLE sn sakin kalınca açılır (açılışta merdiven,
+## gazete, ders üst üste binmesin). Gün oturum içinde dönerse (gece yarısı) yeniden denenir. Ziyarette yok.
+const RATE_PROMPT_SESSION: float = 180.0
+const RATE_PROMPT_IDLE: float = 1.5
+var _rate_prompt_timer: Timer
+var _rate_prompt_idle: float = 0.0
+
+
+func _build_rate_prompt() -> void:
+	rate_prompt = RatePrompt.new()
+	garage_screen.get_parent().add_child(rate_prompt)
+	if GarageVisit.is_visiting():
+		return
+	var wait: float = maxf(RATE_PROMPT_SESSION - Time.get_ticks_msec() / 1000.0, 1.0)
+	get_tree().create_timer(wait).timeout.connect(_arm_rate_prompt)
+	var rewards: GemRewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
+	if rewards:
+		rewards.day_changed.connect(_on_rate_day)
+
+
+func _on_rate_day(_day: int) -> void:
+	if Time.get_ticks_msec() >= RATE_PROMPT_SESSION * 1000.0:
+		_arm_rate_prompt()
+
+
+func _wants_rating() -> bool:
+	var community: CommunityLinks = get_tree().get_first_node_in_group("community") as CommunityLinks
+	var rewards: GemRewards = get_tree().get_first_node_in_group("gem_rewards") as GemRewards
+	return community != null and rewards != null and community.wants_rating(rewards.play_days())
+
+
+func _arm_rate_prompt() -> void:
+	if is_instance_valid(_rate_prompt_timer) or not _wants_rating():
+		return
+	_rate_prompt_idle = 0.0
+	_rate_prompt_timer = Timer.new()
+	_rate_prompt_timer.name = "RatePromptTimer"
+	_rate_prompt_timer.wait_time = 0.5
+	add_child(_rate_prompt_timer)
+	_rate_prompt_timer.timeout.connect(_tick_rate_prompt)
+	_rate_prompt_timer.start()
+
+
+func _tick_rate_prompt() -> void:
+	if not _wants_rating():
+		_rate_prompt_timer.queue_free()
+		return
+	if not _is_quiet():
+		_rate_prompt_idle = 0.0
+		return
+	_rate_prompt_idle += _rate_prompt_timer.wait_time
+	if _rate_prompt_idle < RATE_PROMPT_IDLE:
+		return
+	_rate_prompt_timer.queue_free()
+	router.open(&"rate_prompt")
 
 
 func _on_profile_button_pressed() -> void:

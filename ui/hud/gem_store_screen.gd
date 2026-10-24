@@ -1,7 +1,8 @@
 class_name GemStoreScreen
 extends Control
-## MARKET (eski adıyla GEM MAĞAZASI) — üç sekme: GEM AL (gerçek parayla gem paketleri), PARAYA ÇEVİR
-## (gem → ₺, tek yön; GemExchange) ve KOD GİR (kupon kodu, PromoService; kullanıcı kararı 2026-10-21). Sol üstteki gem sayacına / MARKET düğmesine dokununca ya da "GEM YETERSİZ"
+## MARKET (eski adıyla GEM MAĞAZASI) — dört sekme: GEM AL (gerçek parayla gem paketleri), ÜCRETSİZ (Instagram / TikTok
+## takibine bir kerelik gem; CommunityLinks, 2026-10-24), PARAYA ÇEVİR (gem → ₺, tek yön; GemExchange) ve KOD GİR
+## (kupon kodu, PromoService; kullanıcı kararı 2026-10-21). Sol üstteki gem sayacına / MARKET düğmesine dokununca ya da "GEM YETERSİZ"
 ## plakalarından açılır (MODAL, UiRouter id &"gem_store"). Her açılışta GEM AL sekmesiyle başlar. Kodla
 ## kurulur (.tscn yok).
 ##
@@ -25,6 +26,7 @@ const MAX_CARDS: int = 6   # GEM AL: ÜCRETSİZ ELMAS + 5 paket
 ## Panonun kaplayacağı ekran oranı (genişlik, yükseklik): hangisi önce dolarsa ölçek odur.
 const FILL: Vector2 = Vector2(0.86, 0.80)
 const TAB_GEMS: StringName = &"gems"
+const TAB_FREE: StringName = &"free"
 const TAB_CASH: StringName = &"cash"
 const TAB_CODE: StringName = &"code"
 ## Kupon kodu kabul edildi metninin rengi (taslaktaki yeşil; HUD paletinde yeşil yok).
@@ -38,6 +40,7 @@ const NOTICE_TIME: float = 2.6
 var hud: Hud
 
 var _purchases: PurchaseManager
+var _community: CommunityLinks
 var _list: HBoxContainer
 ## Ölçeklenen sahne: ekranı kaplar, ortasından ölçeklenir; içindeki CenterContainer sütunu ortalar. Ölçek bir
 ## KAP çocuğuna verilemez (Container her yerleştirmede çocuğun ölçeğini 1'e sıfırlar); açılış animasyonu da
@@ -96,7 +99,15 @@ func close() -> void:
 
 func _bind() -> void:
 	_purchases = get_tree().get_first_node_in_group("purchases") as PurchaseManager
+	_community = get_tree().get_first_node_in_group("community") as CommunityLinks
 	_reward_popup.hud = hud
+	if _community:
+		_community.changed.connect(func() -> void:
+			if visible and _tab == TAB_FREE:
+				_refresh()
+			else:
+				_update_free_badge())
+	_update_free_badge()
 	if _purchases == null:
 		return
 	_purchases.products_changed.connect(func() -> void:
@@ -139,13 +150,14 @@ func _build() -> void:
 	sign.add_child(title)
 	column.add_child(sign)
 
-	# Sekmeler: GEM AL · PARAYA ÇEVİR (seçili olan amber)
+	# Sekmeler: GEM AL · ÜCRETSİZ · PARAYA ÇEVİR · KOD GİR (seçili olan amber)
 	var tabs: HBoxContainer = HBoxContainer.new()
 	tabs.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tabs.alignment = BoxContainer.ALIGNMENT_CENTER
 	tabs.add_theme_constant_override(&"separation", 8)
 	column.add_child(tabs)
-	for entry: Array in [[TAB_GEMS, Loc.t("GEM AL")], [TAB_CASH, Loc.t("PARAYA ÇEVİR")], [TAB_CODE, Loc.t("KOD GİR")]]:
+	for entry: Array in [[TAB_GEMS, Loc.t("GEM AL")], [TAB_FREE, Loc.t("ÜCRETSİZ")], [TAB_CASH, Loc.t("PARAYA ÇEVİR")],
+			[TAB_CODE, Loc.t("KOD GİR")]]:
 		var tab: PlateButton = PlateButton.new()
 		tab.theme_type_variation = &"HudPlateSmall"
 		tab.text = entry[1]
@@ -230,10 +242,14 @@ func _refresh() -> void:
 	for child: Node in _list.get_children():
 		_list.remove_child(child)
 		child.queue_free()
+	_update_free_badge()
 	if _tab == TAB_CODE:
 		_list.add_child(_code_panel())
 		return
-	if _tab == TAB_CASH:
+	if _tab == TAB_FREE:
+		for link: Dictionary in CommunityLinks.LINKS:
+			_list.add_child(_follow_card(link))
+	elif _tab == TAB_CASH:
 		var player: PlayerProgress = _player()
 		for i: int in GemExchange.OFFERS.size():
 			_list.add_child(_cash_card(i, player.level if player else 1))
@@ -427,6 +443,66 @@ func _free_card() -> PlatePanel:
 			_refresh())
 	box.add_child(button)
 	return card
+
+
+## TAKİP KARTI (ÜCRETSİZ sekmesi): marka simgesi, +10 GEM, marka adı, durum düğmesi. TAKİP ET bağlantıyı açar; oyuncu
+## dönünce düğme amber ÖDÜLÜ AL olur; alınınca soluk ALINDI.
+func _follow_card(link: Dictionary) -> PlatePanel:
+	var id: StringName = link["id"]
+	var card: PlatePanel = PlatePanel.new()
+	card.name = "Follow_" + String(id)
+	card.theme_type_variation = &"HudCarPlate"
+	card.custom_minimum_size = Vector2(CARD_WIDTH, 0.0)
+	var box: VBoxContainer = VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override(&"separation", 2)
+	card.add_child(box)
+	var art: GemPackArt = GemPackArt.new()
+	art.kind = link["art"]
+	art.custom_minimum_size = ART_SIZE
+	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	box.add_child(art)
+	var amount: Label = _label(&"HudInkValue", Loc.t("+%d GEM") % CommunityLinks.FOLLOW_GEMS)
+	amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	amount.add_theme_font_size_override(&"font_size", 24)
+	amount.add_theme_color_override(&"font_color", HudPalette.GEM_DARK)
+	box.add_child(amount)
+	var caption: Label = _label(&"HudInkCaption", String(link["name"]))
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(caption)
+	var state: CommunityLinks.Follow = _community.follow_state(id) if _community else CommunityLinks.Follow.NONE
+	var button: PlateButton = PlateButton.new()
+	button.name = "FollowButton"
+	button.theme_type_variation = &"HudPlateSmall"
+	button.focus_mode = Control.FOCUS_NONE
+	button.kind = HudIcon.Kind.NONE
+	match state:
+		CommunityLinks.Follow.OPENED:
+			button.text = Loc.t("ÖDÜLÜ AL")
+			button.highlight = true
+			button.pressed.connect(_on_follow_claim.bind(id))
+		CommunityLinks.Follow.CLAIMED:
+			button.text = Loc.t("ALINDI")
+			button.disabled = true
+		_:
+			button.text = Loc.t("TAKİP ET")
+			button.disabled = _community == null
+			button.pressed.connect(func() -> void: _community.open_link(id))
+	box.add_child(button)
+	return card
+
+
+func _on_follow_claim(id: StringName) -> void:
+	var gems: int = _community.claim(id) if _community else 0
+	if gems > 0:
+		_reward_popup.show_rewards({"gems": gems, "title": Loc.t("TEŞEKKÜRLER!")})
+
+
+## ÜCRETSİZ sekmesinde ödülü alınmamış takip kartı sayısı (kırmızı rozet; hepsi alınınca kalkar).
+func _update_free_badge() -> void:
+	var tab: PlateButton = _tab_buttons.get(TAB_FREE)
+	if tab:
+		tab.badge = _community.unclaimed() if _community else 0
 
 
 func _on_free_gems() -> void:
