@@ -58,6 +58,9 @@ func _run() -> void:
 		"perspektif kamera; anahtar ışık aynalı kopyayı aydınlatmaz")
 	var top: MeshInstance3D = view.interior.part("TableTop") as MeshInstance3D
 	check(top != null and top.get_surface_override_material(0) is ShaderMaterial, "tablanın üstü yarı saydam yansıma malzemesiyle")
+	var top_y: float = (top.global_transform * top.get_aabb()).end.y if top else INF
+	check(absf(car.global_position.y - top_y) < 0.0005 and absf(plane_y - top_y) < 0.0005,
+		"araç tablanın görünen üstünde (kök %.4f, tabla %.4f): lastiklerin altı tablaya gömülmez" % [car.global_position.y, top_y])
 
 	print("== 2) Kategoriler: kamera odada ve hedefe bakıyor ==")
 	var room: AABB = view.get("_room")

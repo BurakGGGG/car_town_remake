@@ -599,3 +599,75 @@ ayrılmıyordu → `CarRig.GLASS_SHADE` 0,7, `GLASS_ROUGHNESS` 0,3. Küçük res
 QA: `qa/uzak_arac_qa.gd` (oyunun kendi kamerasıyla en uzak zoom, trafikteki her modeli ayrı PNG'ye kırpar). Ölçüm /
 teşhis betikleri `~/Projects/ct_shots/uzak/` (uzak_probe: varyantlar game / lod0 / nomip / clamp; roles2: rol render'ı).
 Testler: vehicle_display 23, vehicle_wheel 75, car_thumbs 5, police_lights 26, vehicle_asset 1637, exotic_traffic 49 — 0 FAIL.
+
+---
+
+# Lastiğin altı boş görünüyordu — teker LOD sınırı + dar dolgu yayları (2026-10-24)
+
+Kullanıcı: "bazı araçların tekerlerinin altı boş duruyor, sadece jant varmış gibi". İki ayrı sebep çıktı.
+
+**1. En kaba LOD kademesi lastiği deliyordu (asıl sebep, 50 araç / 135 lastik).** Godot'nun içe aktarmada ürettiği
+LOD zincirinin son kademesinde lastiklerin hatası (edge_length) lastik yarıçapının 0,8–2 katı: alt yay ya da yarısı
+siliniyor, jant açıkta kalıyor (BMW E46 ön, Murat 131 ön, Stratos, Charger, Civic…; Toros'un teker silindiri altıgene
+dönüyordu). Ekrandaki boyuna göre seçimde bu kademe ancak lastik ekranda ≤ 2 px iken seçiliyor (ölçüldü: bias 0,5'te
+r ≤ 2 px, 1,0'da ≤ 1 px), yani şehir / trafik / yarış etkilenmiyor. Etkilenen: GARAJLARIM iç mekânı — kameraya en
+yakın 6 araç dışındakiler `LOD_BIAS_FAR = 0` ile ZORLA en kaba kademede çiziliyor (birleşik mesh, tekerler dahil).
+Çözüm `CarRig.WHEEL_LOD_ERROR = 0,25`: teker parçası, hatası lastik yarıçapının 0,25 katını aşan kademeye inmez —
+`CarMeshMerger._read` o kademeleri atar (birleşik yol), `set_lod_bias` tekerlere en az 0,5 verir (parçalı yol; birleşme
+bitene kadar). 600 üçgenden az teker parçası (Toros) LOD'a hiç inmez. Maliyet: en kaba kademede araç başına teker
+üçgeni ~11,9k → ~16,1k; HANGAR sv.3, 24 araç 834k → 872k üçgen (yakın zoom 1,04 M → 1,10 M), çizim çağrısı aynı.
+Eşik seçimi: 0,3 ve 0,5 de denendi (görsel aynı, maliyet farkı ~%1); hata dağılımında boşluk yok, 0,25 güvenli taraf.
+
+**2. Kaynakta lastik tepesi eksik tekerlerde fill_arc yayı dar kalmıştı (4 araç).** Dolgunun iki kenarında 10–40°'lik
+delik vardı; dururken çamurluğun içinde, teker dönünce alta geliyordu: GT3 sağ-ön (285–320°, 40–65°), Murat 124 arka,
+T1 arka, Bel Air dört teker. Araç kaynaktan yeniden üretilmedi (doku yeniden kodlanır, debadge armaları geri gelebilir):
+`tools/tire_fill.py` optimize GLB'deki lastiğe yalnızca eksik yayın karşı yaydan 180° döndürülmüş kopyasını ekler
+(jant kopyalanmaz, gömülü doku baytları aynı — içe aktarma sonrası albedo JPEG md5'i değişmedi). CarPartMap fill_arc
+yayları da aynı genişliğe çekildi (kaynaktan yeniden üretim aynı sonucu verir). 4 aracın küçük resmi yenilendi.
+Yedek: `~/Projects/ct_builds/glb_yedek_2026-10-24_teker_dolgu/`.
+
+**Denetim aracı** `qa/teker_tarama.gd`: her teker grubu tek başına, pembe zeminde, dışarıdan; halkadaki pembe oranı açı
+dilimlerinde raporlanır (`BOSLUK <id> <teker> <açı>:<%>`). Anahtarlar: `lod=0` (zorla kaba kademe, parçalı),
+`merge` / `merge_old` (garajdaki birleşik yol, sınırlı / eski), `ince` (5° dilim), `spin=` (dönmüş teker), `govde`.
+Yeni araçta: tam detay + `merge` taraması → BOSLUK satırı yok ya da yalnız oval lastik (aşağıda) olmalı.
+
+**Bilinen, düzeltilmedi (kullanıcıya soruldu):** Charger (dört teker), Jaguar (arka belirgin), 300SL (sağ-ön) lastikleri
+OVAL (dikey yarıçap yatayın ~%88'i, kaynakta yüklü lastik gibi ezik) ve Jaguar / Charger lastik mesh'inde lastikten taşan
+parçalar var (yarıçapın %15'ine kadar, çamurluk astarı gibi); dururken doğal görünüyor, teker dönünce (yalnız oyuncunun drag yarışı — klasikler trafikte / rakipte yok)
+yumurta gibi döner. Bel Air / T1 / Murat 124'te eski dolgunun kopyaladığı alt yay hafif şişkin: dönünce altta küçük çıkıntı.
+
+**Önden / arkadan "lastik yok" ve modifiye ekranında "lastik içi boş" (2026-10-24, ikinci tur).** Kullanıcı en çok kırmızı
+BMW'yi (F30 / M3 E30) gösterdi. Ölçüm (pembe zeminli yakın çekimler + modifiye garajı kamerası):
+- Önden / arkadan görünen tekerin büyük kısmı karşı tekerin İÇ yanağı ve jantın arkası. Tripo bunları dokuda gri / beyaza
+  yakın doldurmuş (sRGB parlaklık iç yanak 0,2–0,45, jant arkası 0,8'e kadar; dış yanak ~0,1) → tamponun altında gri bir yay,
+  jant sanılıyor. Çözüm `tools/tire_inner_paint.py`: teker grubundaki, normali aracın ortasına bakan üçgenlerin YALNIZ
+  kendilerinin kullandığı texel'leri koyu kauçuğa (jant arkası biraz açık koyu) boyar; başka üçgenle paylaşılan texel'e,
+  başka adaya 3 texel'den yakın dolguya dokunmaz. 73 araç (Toros'un tekeri dokusuz, atlandı). Dışarıdan yan görünümde fark
+  en çok ~100 piksel / 240² karede (JPEG yeniden kodlama), küçük resimlerde ≤ 2 piksel → küçük resimler yenilenmedi.
+  Özgün dokular `~/Projects/ct_builds/doku_yedek_2026-10-24_ic_yanak/`. JPEG yorumundaki `autoyard_tire_inner` işareti ikinci
+  uygulamayı engeller. **Sıra:** tools/debadge `apply` dokuyu kendi özgününden yeniden kurar → ardından bu betik yeniden
+  koşulmalı; araç kaynaktan yeniden üretilirse de (gömülü doku değişir, JPEG yeniden çıkarılır) debadge + bu betik.
+- Modifiye tablasında araç kökü `Car` işaretindeydi; tablanın görünen (yarı saydam) üstü ~3 mm yukarıda → lastiklerin altı
+  tablanın içinde kalıyordu. `ModGarageView` artık aracı ve ayna düzlemini TableTop'un üstüne oturtur (mod_garage_test yeni
+  kontrol).
+- Asıl görünürlük sınırı geometri: modern araçlarda lastik çamurlukla aynı hizada ama tamponun alt köşesi lastiğin hemen
+  önünde neredeyse lastik kadar geniş — önden lastik sırtının yalnız %5–15'i açıkta (F30 %9; ölçüm betiği
+  `~/Projects/ct_shots/teker/camurluk.py`). Tekerleri dışa almak (B ~4,5 cm / C ~7,5 cm) denendi ve gösterildi;
+  **kullanıcı kararı: dışa alma YOK** (duruş değişmesin).
+
+**Aracın altında / çamurluğun içinde kalan iç yanak ve sırt (2026-10-24, üçüncü tur).** Kullanıcı: "iç yanaklar — yere
+değen yer değil, aracın altının içinde kalan yerler". İçeriden tarama (`qa/teker_tarama.gd bakis=180,0`) 74 aracın 172
+tekerinde iç yanağın üst yarısının (çamurlukta kalan 120–160°) hiç modellenmediğini gösterdi; birçok araçta sırtın tepesi de
+yok (Tripo çamurluğun içini görmüyor). Teker dönünce ya da önden / alttan bakınca bu yay boştu.
+`tools/tire_auto_fill.py` eksik yayları kendisi bulur (iç yanak: yandan izdüşüm, 0,80–0,95 R halkasında 5°'lik dilim
+kapsaması; sırt: silindir açılımında genişlik kapsaması; < %50 ve ≥ 10° süren dilim eksik) ve sağlam bir dilimin döndürülmüş
+kopyasıyla doldurur (önce 180°, yoksa 90 / 270 / 135 / 225 / 45 / 315° — Veyron arka, LaFerrari, Passat B8'de iki yan birden
+eksikti). Sırt yalnız tepeye ±100° dilimlerde doldurulur. Dış yanağa dokunulmaz. Kopya tekerin özgün en alt noktasının
+altına inemez (oval Jaguar lastiğinde yandan alta döndürülen yanak tekeri 6 mm gömmüş, vehicle_wheel_test zemin
+denetimi yakalamıştı). 64 araç değişti; içeriden boşluk puanı
+191 bin → 222 (kalan: Volvo sol-ön üç dilimde ~%50, GT3 sağ-ön tek dilim). Yukarıdan / çapraz üstten önce-sonra
+karşılaştırmasında kaportadan taşan dolgu yok (farklar yalnız teker kenarında, yeni LOD kademeleri). Gömülü doku aynı, boyalı
+iç yanak dokusu kopyalara da geçer. 74 küçük resim yenilendi. Yedek: `~/Projects/ct_builds/glb_yedek_2026-10-24_ic_dolgu/`.
+`tools/wheel_parts.gd` artık ikinci satırda `AXES` (teker grupları + eksenler) basar; iki betik onu okur.
+**Yeni araç sırası (teker):** wheel_fit → fill_arc (dış yanak) → `tire_auto_fill.py` → debadge → `tire_inner_paint.py`
+→ --import → make_car_thumbs; denetim `qa/teker_tarama.gd` (dıştan, `bakis=180,0` içten, `merge` garaj kademesi).

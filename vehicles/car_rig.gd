@@ -81,6 +81,18 @@ const LOD_BIAS_NPC: float = 0.5     # LOD2–LOD3: trafik araçları (uzaktakile
 ## Ölçüldü (dekorlu garaj): 1,0 → 704k, 0,6 → 542k, birleştirme öncesi 598k; 0,7 eşdeğerin
 ## biraz üstünde kalır (kalite payı).
 static var MERGED_LOD_SCALE: float = 0.7
+## Teker parçalarının LOD sınırı. Godot'nun import'ta ürettiği en kaba kademe lastiklerde çöküyor: hatası
+## (edge_length) lastik yarıçapını aşıyor, alt yay siliniyor ve araç yalnız jantın üstünde duruyor gibi görünüyordu
+## (garajın uzak sergi araçları lod_bias 0 = zorla en kaba kademe; kullanıcı 2026-10-24). Teker parçası, hatası
+## lastik yarıçapının bu katını aşan kademeye inmez. qa/teker_tarama.gd merge_old / merge (74 araç, en kaba kademe):
+## 50 araçta 135 lastik delinmişti → kalan yalnız birkaç kenar pürüzü; HANGAR'da 24 araç 834k → 872k üçgen. Ekrandaki
+## boyuna göre seçimde (bias ≥ 0,5) bozuk kademe ancak lastik ≤ 2 px iken seçiliyor (ölçüldü) — sorun zorla kaba kademede.
+const WHEEL_LOD_ERROR: float = 0.25
+## Bundan az üçgenli teker parçası LOD'a hiç inmez: Toros'un Blender'da kurulan teker silindiri (288) yarıçapın 0,08'i
+## hatalı kademede bile çokgen görünüyordu; Tripo tekerleri binlerce üçgen, küçük göbek parçaları birkaç yüz.
+const WHEEL_LOD_MIN_TRIS: int = 600
+## Teker parçalarının en düşük LOD katsayısı: 0 (zorla en kaba kademe) tekerlere uygulanmaz.
+const WHEEL_MIN_LOD_BIAS: float = LOD_BIAS_NPC
 
 ## Görünümden bağımsız sabit materyaller (rol → StandardMaterial3D), tüm rig'ler paylaşır.
 static var _fixed_materials: Dictionary = {}
@@ -106,6 +118,7 @@ var _paint_materials: Dictionary = {}  # rol → ShaderMaterial (dokulu model: b
 var _textured_materials: Dictionary = {}  # rol → ShaderMaterial (dokulu model, car_textured; "base" = GLB'nin yerine)
 var _wheel_dropped: PackedStringArray = PackedStringArray()  # gruptan elenen parçalar (denetim)
 var _wheel_materials: Array[ShaderMaterial] = []  # tek mesh tekerler için (bu instance'a özel)
+var _wheel_lod_limit: Dictionary = {}  # teker parçası (MeshInstance3D) → izin verilen en büyük LOD hatası (mesh uzayı)
 var _last_applied: CarAppearance
 var _albedo: Texture2D               # GLB'nin albedo dokusu (dokusuz modelde null)
 var _paint_mask: Texture2D           # UV paint mask (yoksa null → boyama kapalı)
@@ -463,7 +476,7 @@ static func _wheel_extent(mesh: MeshInstance3D) -> float:
 func set_lod_bias(bias: float) -> void:
 	for mesh: MeshInstance3D in _all_meshes:
 		if is_instance_valid(mesh):
-			mesh.lod_bias = bias
+			mesh.lod_bias = maxf(bias, WHEEL_MIN_LOD_BIAS) if _wheel_lod_limit.has(mesh) else bias
 	if is_instance_valid(_merged):
 		_merged.lod_bias = bias * MERGED_LOD_SCALE
 
@@ -524,7 +537,7 @@ func _request_merge() -> void:
 			if not group_of.has(id):
 				group_of[id] = materials.size()
 				materials.append(material)
-			parts.append([mesh.mesh, surface, xf, group_of[id]])
+			parts.append([mesh.mesh, surface, xf, group_of[id], _wheel_lod_limit.get(mesh, INF)])
 			signature.append("%s:%d:%d" % [mesh.name, surface, group_of[id]])
 	var key: String = ",".join(signature)
 	if key == _merge_key and is_instance_valid(_merged):
@@ -754,9 +767,11 @@ func _resolve_parts() -> void:
 			"front": String(item["key"]).begins_with("f"),
 			"tyre_index": maxi(kept.find(tyre), 0),
 			"pivot": axis,   # EBEVEYN uzayında LASTİĞİN ekseni
+			"radius": tyre_extent * 0.5,
 			"meshes": kept,
 			"bases": bases,
 		})
+	_limit_wheel_lods()
 
 
 ## Ölçülmüş teker grubu (CarPartMap "wheel_axes", tools/wheel_fit.gd): eksen lastiğin geometrisinden
@@ -774,9 +789,38 @@ func _add_measured_group(item: Dictionary, axis: Array) -> void:
 		"front": String(item["key"]).begins_with("f"),
 		"tyre_index": 0,
 		"pivot": Vector3(x, float(axis[0]), float(axis[1])),
+		"radius": float(axis[2]),
 		"meshes": meshes,
 		"bases": bases,
 	})
+
+
+## Teker parçalarının LOD hata sınırı (bkz. WHEEL_LOD_ERROR): grup üyeleri kendi lastiğinin yarıçapıyla, gruba
+## girmeyen teker rolündeki parçalar (kaliper) en küçük lastiğinkiyle. Mesh uzayında, edge_length gibi.
+func _limit_wheel_lods() -> void:
+	var smallest: float = INF
+	for group: Dictionary in _wheel_groups:
+		var radius: float = group["radius"]
+		smallest = minf(smallest, radius)
+		for mesh: MeshInstance3D in group["meshes"]:
+			_wheel_lod_limit[mesh] = _wheel_lod_error(mesh, radius)
+	if smallest == INF:
+		return
+	for role: StringName in [&"wheels", &"tires", &"rims"]:
+		for mesh: MeshInstance3D in get_meshes(role):
+			if not _wheel_lod_limit.has(mesh):
+				_wheel_lod_limit[mesh] = _wheel_lod_error(mesh, smallest)
+
+
+static func _wheel_lod_error(mesh: MeshInstance3D, radius: float) -> float:
+	var array_mesh: ArrayMesh = mesh.mesh as ArrayMesh
+	var triangles: int = 0
+	if array_mesh:
+		for surface: int in array_mesh.get_surface_count():
+			triangles += array_mesh.surface_get_array_index_len(surface) / 3
+	if array_mesh and triangles < WHEEL_LOD_MIN_TRIS:
+		return 0.0
+	return WHEEL_LOD_ERROR * radius / maxf(mesh.transform.basis.get_scale().x, 0.0001)
 
 
 func _add_surface_part(role: StringName, mesh: MeshInstance3D, surface: int) -> void:

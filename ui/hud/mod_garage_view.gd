@@ -341,13 +341,16 @@ func _spawn_car() -> bool:
 	if scene == null:
 		return false
 	var at: Transform3D = interior.marker("Car")
-	_plane_y = at.origin.y
+	# Araç tablanın GÖRÜNEN üstüne oturur: işaret ~3 mm aşağıda, lastiklerin altı yarı saydam tabla diskinin içinde
+	# kalıyordu (önden / arkadan lastik yokmuş gibi; 2026-10-24). Ayna düzlemi de aynı yükseklik.
+	var top: MeshInstance3D = interior.part("TableTop") as MeshInstance3D
+	_plane_y = maxf(at.origin.y, (top.global_transform * top.get_aabb()).end.y) if top else at.origin.y
 	_base_yaw = rad_to_deg(atan2(at.basis.z.x, at.basis.z.z))
 	_yaw = 0.0
 	_pivot = Node3D.new()
 	_pivot.name = "Turntable"
 	_stage.add_child(_pivot)
-	_pivot.global_position = at.origin
+	_pivot.global_position = Vector3(at.origin.x, _plane_y, at.origin.z)
 	_car = scene.instantiate() as Node3D
 	_car.name = String(vehicle_id)
 	_pivot.add_child(_car)

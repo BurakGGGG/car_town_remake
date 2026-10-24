@@ -47,7 +47,9 @@ static var _lock: Mutex = Mutex.new()
 
 
 ## Birleşik mesh'i ister; hazır olunca `callback.call(mesh)` ANA iş parçacığında çağrılır (önbellekte
-## varsa hemen). `parts`: [[Mesh, yüzey, köke göre Transform3D, grup], …] — düğüm DEĞİL kaynak.
+## varsa hemen). `parts`: [[Mesh, yüzey, köke göre Transform3D, grup, LOD hata sınırı], …] — düğüm DEĞİL kaynak.
+## Hata sınırı (isteğe bağlı, mesh uzayında): parçanın edge_length'i bunu aşan kademeleri kullanılmaz (tekerler,
+## bkz. CarRig.WHEEL_LOD_ERROR).
 ## `threaded` false ise aynı karede kurulur (test / araç).
 static func request(key: String, parts: Array, group_count: int, callback: Callable,
 		threaded: bool = true) -> void:
@@ -175,8 +177,11 @@ static func _read(part: Array) -> Dictionary:
 	var xf: Transform3D = part[2]
 	var raw: Dictionary = RenderingServer.mesh_get_surface(source.get_rid(), surface)
 	var scale: float = maxf(xf.basis.get_scale().abs().x, 0.0001)
+	var limit: float = float(part[4]) if part.size() > 4 else INF
 	var lods: Array = []
 	for lod: Dictionary in raw.get("lods", []):
+		if float(lod["edge_length"]) > limit:
+			continue
 		lods.append([float(lod["edge_length"]) * scale, lod["index_data"]])
 	return {"arrays": source.surface_get_arrays(surface), "lods": lods, "xf": xf, "group": part[3],
 		"wide": int(raw.get("vertex_count", 0)) > 65536}

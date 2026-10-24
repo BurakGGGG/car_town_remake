@@ -25,7 +25,9 @@ class_name CarPartMap
 ##   kullanır; yoksa eski davranış (kutu merkezi + boyut / eksen elemesi).
 ## split_z: tek mesh'te iki rol (Fluence ön cam + tavan): z > z eşiği → front rolü, gerisi → back.
 ## fill_arc: lastiğin modellenmemiş yayı ({part, center, from, to} derece; 0 = yukarı, 90 = ön): karşı yay
-##   180° döndürülüp eklenir (tools/optimize_car.gd)
+##   180° döndürülüp eklenir (tools/optimize_car.gd). 2026-10-24: GT3 / Bel Air / Murat 124 / T1 yayları dar kalmıştı
+##   (kenarlarda delik, teker dönünce alta geliyordu) → genişletildi; mevcut optimize GLB'lere fark tools/tire_fill.py ile
+##   eklendi. Yeni araçta yay qa/teker_tarama.gd (ince) ile 5°'lik dilimlerden seçilir, kenara ~5° pay.
 ## paint_whole: boya maskesinde texel anahtarı atlanıp TAMAMI boyanan gövde parçaları (dokuda parlama fırınlanmış,
 ##   rengi boyadan sapan tavan gibi; tools/make_paint_mask.gd).
 ## extract: kaynakta başka parçaya kaynamış teker; tools/optimize_car.gd silindir bölgesini yeni parçaya ayırır
@@ -413,7 +415,7 @@ const MAPS: Dictionary = {
 		"black_trim": [0, 19, 54, 60],
 		"extract": [{"part": 11, "new_part": 62, "center": [-0.1803, 0.0826, 0.2873], "radius": 0.0915, "half_width": 0.0498}],
 		# Sağ-ön lastiğin üstü (~80°, çamurluğun içi) kaynakta hiç yok: karşı yay döndürülüp eklenir
-		"fill_arc": [{"part": 62, "center": [-0.1803, 0.0826, 0.2873], "from": 318, "to": 42}],
+		"fill_arc": [{"part": 62, "center": [-0.1803, 0.0826, 0.2873], "from": 278, "to": 68}],
 		"wheel_groups": {"fl": [15, 6], "fr": [62, 4, 33, 49], "rl": [7, 3], "rr": [8, 2, 41]},
 		"wheel_axes": {"fl": [0.0826, 0.2873, 0.0861], "fr": [0.0826, 0.2873, 0.0861], "rl": [0.0844, -0.2712, 0.0863], "rr": [0.0844, -0.2714, 0.0863]},
 	},
@@ -525,10 +527,10 @@ const MAPS: Dictionary = {
 		"grille": [19, 22, 25, 30, 31],
 		"black_trim": [0, 16, 18, 46, 48, 53],
 		# Lastiklerin üstü (çamurluğun içi) kaynakta yok: karşı yay döndürülüp eklenir
-		"fill_arc": [{"part": 3, "center": [-0.1596, 0.0876, -0.2428], "from": 290, "to": 60},
-			{"part": 4, "center": [0.1602, 0.0876, -0.2427], "from": 290, "to": 60},
-			{"part": 5, "center": [0.1767, 0.088, 0.3284], "from": 300, "to": 50},
-			{"part": 6, "center": [-0.1766, 0.0876, 0.3288], "from": 300, "to": 50}],
+		"fill_arc": [{"part": 3, "center": [-0.1596, 0.0876, -0.2428], "from": 273, "to": 72},
+			{"part": 4, "center": [0.1602, 0.0876, -0.2427], "from": 273, "to": 72},
+			{"part": 5, "center": [0.1767, 0.088, 0.3284], "from": 278, "to": 68},
+			{"part": 6, "center": [-0.1766, 0.0876, 0.3288], "from": 278, "to": 50}],
 		"wheel_groups": {"fl": [5, 56], "fr": [6, 57], "rl": [4], "rr": [3]},
 		"wheel_axes": {"fl": [0.0876, 0.3285, 0.0866], "fr": [0.0876, 0.3286, 0.0865], "rl": [0.0873, -0.2424, 0.0861], "rr": [0.0876, -0.2427, 0.0863]},
 	},
@@ -727,8 +729,8 @@ const MAPS: Dictionary = {
 		"taillights": [11, 26, 27],
 		"black_trim": [0, 20, 30, 31],
 		# Arka lastiklerin tepesi kaynakta yok
-		"fill_arc": [{"part": 3, "center": [0.2147, 0.0925, -0.2811], "from": 350, "to": 10},
-			{"part": 4, "center": [-0.2112, 0.0925, -0.2816], "from": 350, "to": 10}],
+		"fill_arc": [{"part": 3, "center": [0.2147, 0.0925, -0.2811], "from": 322, "to": 38},
+			{"part": 4, "center": [-0.2112, 0.0925, -0.2816], "from": 322, "to": 38}],
 		"wheel_groups": {"fl": [9], "fr": [5], "rl": [3], "rr": [4]},
 		"wheel_axes": {"fl": [0.0869, 0.3194, 0.0912], "fr": [0.0875, 0.3198, 0.0908], "rl": [0.0927, -0.2812, 0.0914], "rr": [0.0930, -0.2809, 0.0906]},
 	},
@@ -783,8 +785,8 @@ const MAPS: Dictionary = {
 		"taillights": [17, 39, 46, 64, 65, 66, 69],
 		"black_trim": [4, 7, 16, 18, 29, 34],
 		# Arka lastiklerin üstü kaynakta yok
-		"fill_arc": [{"part": 2, "center": [-0.1825, 0.0903, -0.2848], "from": 330, "to": 30},
-			{"part": 3, "center": [0.1828, 0.0908, -0.2846], "from": 330, "to": 30}],
+		"fill_arc": [{"part": 2, "center": [-0.1825, 0.0903, -0.2848], "from": 313, "to": 45},
+			{"part": 3, "center": [0.1828, 0.0908, -0.2846], "from": 313, "to": 45}],
 		"wheel_groups": {"fl": [5], "fr": [6], "rl": [3], "rr": [2]},
 		"wheel_axes": {"fl": [0.0861, 0.2779, 0.0896], "fr": [0.0864, 0.2780, 0.0897], "rl": [0.0902, -0.2839, 0.0856], "rr": [0.0903, -0.2853, 0.0871]},
 	},
