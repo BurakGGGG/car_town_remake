@@ -26,6 +26,18 @@ signal level_changed(level: int)
 	300000
 ]
 
+@export_group("Şehir önizlemesi (editör)")
+## Oyunun kodla kurduğu şehri (yol uzantıları, showroom binası, ağaçlar, kavşak çizgileri, trafik lambaları, billboard)
+## editörün 3B görünümünde gösterir; sahneye kaydedilmez, oyunda etkisizdir. Kayda bağlı olanlar (garajın içi, araçlar,
+## trafik) yok. Bkz. world/city_preview.gd.
+@export var city_preview: bool = false:
+	set(value):
+		city_preview = value
+		if Engine.is_editor_hint() and is_inside_tree():
+			_sync_city_preview()
+## Önizlemeyi baştan pişirir (kaynaklar değişince açılışta kendiliğinden de yapılır).
+@export_tool_button("Şehir önizlemesini yenile", "Reload") var refresh_city_preview: Callable = _refresh_city_preview
+
 # Fiziksel ölçüler
 # Tamir alanları taşınabilir (RepairBayManager.DEFAULT_POSITIONS): her alanın varsayılan yeri kendi
 # seviyesinde açılan zemin şeridine düşer (Sv.3'te x ≥ -4,4 → genişlik ≥ 4,6).
@@ -39,6 +51,10 @@ const FIXED_FRONT_Z := -0.2
 const LEFT_WALL_DEPTH := 1.5
 const BACK_WALL_WIDTH := 2.0
 const WALL_THICKNESS := 0.05   # sahnedeki duvar mesh'lerinin kalınlığı
+## Oyunda gizlenen yerleştirme ızgarası (bkz. _hide_build_grid; şehir önizlemesi de gizler).
+const RUNTIME_HIDDEN: Array[NodePath] = [^"BuildGrid/BuildGrid", ^"BuildGrid/BuildGrid/GridPreview"]
+
+var _city_preview: CityPreview
 
 
 
@@ -46,6 +62,7 @@ const WALL_THICKNESS := 0.05   # sahnedeki duvar mesh'lerinin kalınlığı
 func _ready():
 	update_garage()
 	if Engine.is_editor_hint():
+		_sync_city_preview()
 		return
 	add_to_group("garage_system")
 	_ensure_decor_manager()
@@ -223,12 +240,35 @@ func _ensure_world_dressing() -> void:
 ## gösterilecek bir görsel değil. Sahnede DURUYOR (ileride yerleştirme modunda açılacak),
 ## yalnızca oyunda gizleniyor.
 func _hide_build_grid() -> void:
-	var grid: Node = get_node_or_null("BuildGrid")
-	if grid == null:
+	for path: NodePath in RUNTIME_HIDDEN:
+		var node: Node3D = get_node_or_null(path) as Node3D
+		if node:
+			node.visible = false
+
+
+# --- Şehir önizlemesi (yalnız editör) --------------------------------------------------------------
+
+func _sync_city_preview(rebuild: bool = false) -> void:
+	if not city_preview:
+		if is_instance_valid(_city_preview):
+			_city_preview.dispose()
+		_city_preview = null
 		return
-	for node: Node in [grid.get_node_or_null("BuildGrid"), grid.get_node_or_null("BuildGrid/GridPreview")]:
-		if node is Node3D:
-			(node as Node3D).visible = false
+	if not is_instance_valid(_city_preview):
+		_city_preview = get_node_or_null(^"CityPreview") as CityPreview   # betik yeniden yüklendiyse eskisi duruyor
+	if not is_instance_valid(_city_preview):
+		_city_preview = CityPreview.new()
+		_city_preview.name = "CityPreview"
+		_city_preview.top_level = true   # şehir Main kökünün uzayında
+		add_child(_city_preview, false, Node.INTERNAL_MODE_BACK)   # sahibi yok: sahneye kaydedilmez
+	_city_preview.show_preview(owner if owner else get_tree().edited_scene_root, rebuild)
+
+
+func _refresh_city_preview() -> void:
+	if not city_preview:
+		push_warning("Şehir önizlemesi kapalı: önce Inspector'da City Preview'ı aç")
+		return
+	_sync_city_preview(true)
 
 
 ## Seviyeyi "garage_level" geliştirmesinden alır ve satın alındıkça büyür.
