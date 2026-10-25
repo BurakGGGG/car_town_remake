@@ -213,6 +213,8 @@ var crate_panel: CratePanel
 var restoration_result: RestorationResult
 ## SEVİYE ATLADIN ekranı: seviye atlayınca oyun sakinleşince büyük açılır (açılan müşteri / depo / kasa / dekor).
 var level_up_screen: LevelUpScreen
+## SET TAMAMLANDI! ekranı: koleksiyon seti / kilometre taşı ödülü, oyun sakinleşince (CollectionRewards.rewarded).
+var collection_reward_screen: CollectionRewardScreen
 ## Garajdaki eşyaya basılı tutmak düzenleyiciyi o eşya tutulmuş açar.
 var decor_hold: DecorHoldGesture
 ## SERGİ PLAKASI: ana garajda sergilenen araca dokununca (docs/GARAJLAR_TASARIM.md §10).
@@ -1875,9 +1877,22 @@ func _setup_gem_store() -> void:
 		mail_notice = MailNotice.new(self, mail)
 		garage_screen.get_parent().add_child(mail_notice)   # yönetim panelinin hediyeleri: AL → ödül penceresi
 		_build_inbox(mail)
+	var event_car: EventCar = get_tree().get_first_node_in_group("event_car") as EventCar
+	if event_car:
+		event_car.won.connect(_on_event_car_won)
+	var event_spot: EventCarSpot = get_tree().get_first_node_in_group("event_car_spot") as EventCarSpot
+	if event_spot:
+		event_spot.clicked.connect(func() -> void:
+			if router.top().is_empty():
+				router.open(&"event"))   # garajdaki ödünç araç → ETKİNLİK PANOSU
 	var moderation: ModerationWatch = get_tree().get_first_node_in_group("moderation") as ModerationWatch
 	if moderation:
 		garage_screen.get_parent().add_child(BanNotice.new(self, moderation))   # yasak: sebep + bitiş penceresi
+	var collection: CollectionRewards = get_tree().get_first_node_in_group("collection_rewards") as CollectionRewards
+	if collection:
+		collection_reward_screen = CollectionRewardScreen.new(self)
+		get_node("Root").add_child(collection_reward_screen)   # Root temayı taşır (krem plaka, konturlu yazı)
+		collection.rewarded.connect(collection_reward_screen.add_reward)
 
 
 ## HABERLER (2026-10-25, docs/HABERLER.md): sağ üst tabela sırasında kamera ile ayarların arasında gazete tabelası
@@ -2331,6 +2346,7 @@ func _tick_push_prompt(push: PushService) -> void:
 func _is_quiet() -> bool:
 	return router.top().is_empty() and not (tutorial and tutorial.is_running()) and not (crate_panel and crate_panel.visible) \
 		and not (restoration_result and restoration_result.visible) and not (level_up_screen and level_up_screen.visible) \
+		and not (collection_reward_screen and collection_reward_screen.visible) \
 		and get_tree().root.get_node_or_null("LoadingScreen") == null
 
 
@@ -2482,6 +2498,8 @@ func _on_event_action(kind: StringName, arg: StringName) -> void:
 			router.open(&"quests")
 		&"race":
 			start_event_race()
+		&"car_race":
+			start_event_car_race()
 
 
 ## ÖZEL RAKİP: canlı etkinliğin rakibine karşı pist doğrudan açılır (yoldaki davet kapanır; RaceManager.start_event_rival).
@@ -2492,6 +2510,45 @@ func start_event_race() -> bool:
 	_race.set_racing(true)
 	router.open(&"drag_race")
 	return true
+
+
+## ETKİNLİK YARIŞI: süren etkinliğin aracıyla (ödünç ya da zaten oyuncunun) o aracın havuzundan isimsiz rakibe karşı pist
+## doğrudan açılır; günde EventCar.DAILY_RACES hak (+ reklamla 1), hak yarış başlarken düşer.
+func start_event_car_race() -> bool:
+	var event_car: EventCar = get_tree().get_first_node_in_group("event_car") as EventCar
+	if _race == null or event_car == null or not event_car.active():
+		return false
+	if event_car.tries_left() <= 0:
+		_show_notice(Loc.t("BUGÜNKÜ ETKİNLİK YARIŞI HAKLARIN BİTTİ\nYARIN YENİLENİR"), HudPalette.INK, 2.4)
+		return false
+	if not _race.start_event_car_race(EventCar.car_id()):
+		return false
+	if not event_car.use_try():
+		_race.release_challenger()
+		return false
+	router.close_all()
+	_race.set_racing(true)
+	router.open(&"drag_race")
+	return true
+
+
+## ETKİNLİK ARACI KAZANILDI (EventCar.won): HEDİYEN GELDİ! ekranının diliyle, oyun sakinleşince. Araç zaten varsa
+## teselli ödülü (elmas + kasa) aynı ekranla.
+func _on_event_car_won(entry: Dictionary) -> void:
+	if mail_notice == null:
+		return
+	var cards: Array = []
+	if not bool(entry["owned"]):
+		cards.append({"kind": "car", "id": String(entry["car"]), "owned": false})
+	elif StringName(entry["crate"]) != &"":
+		cards.append({"kind": "crate", "id": String(entry["crate"]), "count": 1})
+	var title: String = String(entry.get("title", ""))
+	mail_notice.gift_screen().show_when_calm({
+		"headline": Loc.t("ETKİNLİK ARACI SENİN!") if not bool(entry["owned"]) else Loc.t("ETKİNLİK TAMAMLANDI!"),
+		"subtitle": Loc.upper(title) if not title.is_empty() else "",
+		"line": Loc.t("BÜTÜN ETKİNLİK GÖREVLERİ TAMAM"),
+		"money": 0, "gems": int(entry["gems"]), "cards": cards,
+	})
 
 
 ## İNTİKAM AL (yarış haberi): arkadaşın senin aracını yendiği aracına karşı pist doğrudan açılır. Haber kullanılınca

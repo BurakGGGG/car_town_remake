@@ -5,7 +5,9 @@ ekle". Bu sürümden (1.1.0) itibaren etkinlik ve yeni dekor içeriği Play'e g�
 
 ## Nasıl çalışır
 
-- Etkinlik Firestore `config/app.event` belgesindedir; yönetim paneli **Etkinlik** sekmesi yazar.
+- Etkinlikler Firestore `config/app.events` listesindedir (takvim, 2026-10-26); yönetim paneli **Etkinlik** sekmesi yazar. Takvimi
+  bilmeyen eski sürümler yalnız `config/app.event` okur: panel ve `eventsTick` orayı süren / sıradaki etkinliğin AYNASI olarak
+  tutar (aşağıda "Takvim ve etkinlik aracı").
 - Oyun belgeyi açılışta, öne gelince ve 15 dakikada bir okur (misafir de). Başlangıç saatinde kendiliğinden başlar, bitişte söner.
 - Okunan son belge cihazda saklanır: internet yokken de etkinlik süresince geçerlidir.
 - Üst ortada geri sayımlı **tabela** çıkar ("×2 · KIŞ ETKİNLİĞİ · ÇİFTE PARA · İNDİRİM −%30 · +3 · 23:41:05"). Sığmayan
@@ -23,21 +25,103 @@ ekle". Bu sürümden (1.1.0) itibaren etkinlik ve yeni dekor içeriği Play'e g�
 | 4 · Etkinlik görevleri | GÖREVLER'de en başta ETKİNLİK sekmesi. Yalnız etkinlik sürerken sayar. Bitip alınmayan ödül etkinlik sonunda kendiliğinden verilir. HEPSİNİ AL bunları da toplar. | en çok 6 görev; ödül ₺ ≤ 5 M, elmas ≤ 1000, XP ≤ 100 b, + kasa, + eşya |
 | 5 · Özel rakip | Panodaki YARIŞ pisti doğrudan açar. Araç, her kategoride aynı modifiye kademesi, boya ve ad panelden. Yarışılabilir (sınırsız); özel ödül ilk galibiyette, etkinlik başına bir kez. Görev türü "Etkinlik rakibini yen" bunu sayar. | kademe 0–5; polis gibi edinilemeyen araç olmaz |
 | 6 · İçerik paketi | Etkinliğin paketi: paketin "yalnız etkinlikte" eşyaları bu etkinlik sürerken dekor mağazasında "ETKİNLİK" etiketiyle satılır; afiş panonun başında. | paket, paket listesinde olmalı |
+| 7 · Etkinlik aracı | Bütün görevleri bitiren aracı kalıcı alır; o zamana kadar ödünç (yalnız etkinlik yarışları). Ayrıntı aşağıda. | edinilebilir araç; en az bir görev; teselli elması 0–1000 + satılan kasa |
 
 Görev türleri: tamir, tamirden ₺, uzun iş, yarışa katıl, yarış kazan, etkinlik rakibini yen, kasa aç, kasa sipariş et, eşya
 yerleştir, eşya satın al, araç boya, modifiye tak, hurdalık yığını, hurdalık parçası, arkadaş yarışı, arkadaş yarışı kazan,
-₺ harca. Metinler oyunda 5 dilde hazırdır.
+₺ harca; 2026-10-26: etkinlik aracıyla yarış kazan (`event_car_wins`), etkinlik aracıyla yarışa katıl (`event_car_races`), arkadaş
+garajı ziyaret et (`garage_visits`). Metinler oyunda 5 dilde hazırdır. Etkinlik aracı görevleri yalnız araçlı etkinlikte yazılabilir.
 
-**Etkinlik kimliği:** panel her yeni etkinliğe yeni kimlik verir. "YENİ etkinlik olarak yayınla" işaretliyse görev ilerlemesi
-ve özel rakip ödülü herkes için sıfırlanır. İşaretsiz kaydetmek süren etkinliği düzeltir; ilerleme korunur.
-**Etkinliği bitir:** alan silinir. Biten ama alınmamış görev ödülleri oyunculara kendiliğinden verilir.
+**Etkinlik kimliği:** panel her yeni (ve kopyalanan) etkinliğe yeni kimlik verir. Düzenlemek kimliği korur: süren etkinliği
+düzeltir, ilerleme korunur. Düzenlerken "YENİ etkinlik olarak kaydet" işaretlenirse yeni kimlik alır: görev ilerlemesi, özel rakip
+ödülü ve etkinlik aracı ilerlemesi herkes için sıfırlanır.
+**Süren etkinliği silmek** onu hemen bitirir. Biten ama alınmamış görev ödülleri oyunculara kendiliğinden verilir; görevleri
+bitmemiş etkinlik aracı geri alınır.
 
 ## Hafta sonu etkinliği: adım adım
 
 1. Paneli aç (`cd firebase/admin && npm start`, terminaldeki bağlantı) → **Etkinlik**.
-2. Başlangıç / bitiş: ör. Cuma 18:00 → Pazar 23:59. Başlık: KIŞ ETKİNLİĞİ (+ İngilizce). İsteğe bağlı açıklama.
-3. İstediğin modülleri doldur (ör. para ×2, kasalar %30, 3 görev, özel rakip).
-4. **Kaydet ve yayınla.** Başlık yanındaki rozet "başlayacak / SÜRÜYOR / bitti" gösterir.
+2. **+ Yeni etkinlik.** Başlangıç / bitiş: ör. Cuma 18:00 → Pazar 23:59 (yeni etkinlik varsayılan olarak takvimdeki son
+   etkinliğin bitişinden başlar). Başlık: KIŞ ETKİNLİĞİ (+ İngilizce). İsteğe bağlı açıklama.
+3. İstediğin modülleri doldur (ör. para ×2, kasalar %30, 3 görev, özel rakip, etkinlik aracı).
+4. **Kaydet ve yayınla.** Bütün takvim hemen yayınlanır; listedeki rozet "başlayacak / SÜRÜYOR / bitti" gösterir.
+
+## Takvim ve etkinlik aracı (2026-10-26)
+
+### Takvim
+
+- Panel **Etkinlik** sekmesi bir **liste**dir: en çok **12** etkinlik önceden planlanır, başlangıca göre sıralı. Her satırda başlık,
+  tarih, durum rozeti (başlayacak / SÜRÜYOR / bitti), modül özeti, varsa araç adı ve "bildirimli" işareti. Düğmeler: **+ Yeni
+  etkinlik**, **Düzenle**, **Kopyala** (yeni kimlik, aynı süre, ilk gelecek haftaya kaydırılır), **Sil**.
+- Her kaydet / sil işlemi listenin TAMAMINI yazar (`POST /api/events` → `config/app.events`, tek işlemde; öbür alanlar —
+  `min_code`, bakım, duyuru, `ads` — korunur). Paket listesi değişikliği **Paket listesini yayınla** ile ya da bir etkinliği
+  kaydedince yayınlanır.
+- **Çakışma yasak:** oyun aynı anda tek etkinlik gösterir; zaman aralıkları kesişen iki etkinlik kaydedilmez (hata iki etkinliği
+  adı ve tarihiyle söyler). Art arda gelmek serbest: biri biterken (`end`) öbürü başlayabilir (`start` = önceki `end`).
+- Kimlikler listede tekildir. Modülsüz etkinlik kaydedilmez.
+- Biten etkinlik listede soluk kalır; bitişinin üzerinden **30 gün** geçmişse sonraki kayıtta listeden düşer.
+- Takvim hiç kaydedilmemişse (eski tek etkinlik düzeni) panel `config/app.event`'i listenin ilk öğesi olarak gösterir; ilk kayıtta
+  takvime geçer.
+
+### Etkinlik aracı (modül 7)
+
+`car = {id, owned_gems, owned_crate}`:
+- `id`: edinilebilir araç (katalogdan; polis gibi edinilemeyen olmaz — özel rakiple aynı kural).
+- Etkinliğin **bütün görevlerini** bitiren oyuncu aracı **kalıcı** alır. O zamana kadar araç ÖDÜNÇTÜR: yalnız etkinlik
+  yarışlarında kullanılır (günde 3 yarış, ödüllü reklamla +1: reklam türü `event_race`, panel **Reklamlar** sekmesi). Etkinlik
+  görevler bitmeden sona ererse araç geri alınır, ilerleme kaybolur.
+- Araçlı etkinlikte **en az bir görev şart** ("Etkinlik aracı için en az bir görev gerekli"). Araç + görev tek başına geçerli
+  bir etkinliktir. `event_car_wins` / `event_car_races` görevleri yalnız araçlı etkinlikte yazılabilir.
+- `owned_gems` (0–1000) ve `owned_crate` (boş ya da SATILAN bir kasa; hediye kasası olmaz): oyuncuda araç zaten varsa
+  görevler bitince verilen teselli ödülü.
+- `reveal_days` (0–14, varsayılan 3; araçlı etkinlikte hep yazılır): oyundaki takvim yaklaşan etkinliğin aracını başlangıçtan bu
+  kadar gün önce gösterir.
+
+### Başlayınca bildirim
+
+`notify: true` ("Başlayınca bildirim gönder"): etkinlik başlayınca `eventsTick` dil konularına (`news_tr` … `news_fr`, misafir de
+abone) BİR KEZ bildirim yollar. Başlık = etkinlik başlığı (o dilde yoksa İngilizce, o da yoksa Türkçe), metin araçlı / araçsız
+şablondan ("Etkinlik başladı! Görevleri bitir, etkinlik aracı senin olsun." / "Etkinlik başladı! Kaçırma."); veri
+`{kind: "event", id}`. Başlangıçtan en geç 10 dakika sonra gider. 6 saatten eski başlamış etkinliğe hiç gitmez (dağıtımdan hemen
+sonra eski etkinliğe bildirim gitmesin). Gönderilenler `ops/event_push = {etkinlikKimliği: unix sn}` belgesinde (istemciye kapalı);
+aynı kimliğe ikinci kez gitmez, düzenleme yeniden göndermez ("YENİ etkinlik olarak kaydet" yeni kimlik = yeni bildirim). Hiçbir
+dile gidemezse işaretlenmez, sonraki turda yeniden denenir.
+
+### Belge biçimi
+
+```json
+{
+  "events": [
+    {
+      "id": "e_mvod153h", "title": {"tr": "SÜPER HAFTA", "en": "SUPER WEEK"}, "text": {},
+      "start": 1793400000, "end": 1793572800, "money_mult": 2, "xp_mult": 1,
+      "missions": [{"id": "m1_ab12", "metric": "event_car_wins", "target": 3, "money": 0, "gems": 20, "xp": 0, "crate": "", "decor": ""}],
+      "car": {"id": "ford_focus", "owned_gems": 150, "owned_crate": "city_crate"},
+      "reveal_days": 3, "notify": true
+    }
+  ],
+  "event": { "…": "süren, yoksa sıradaki etkinliğin aynısı (eski sürümler)" }
+}
+```
+
+Modül alanları (`sale`, `crate_boost`, `missions`, `rival`, `pack`, `car`) yalnız doluysa yazılır; `notify` yalnız `true` ise.
+
+### Eski sürümler: `config/app.event` aynası
+
+1.1.1 ve öncesi yalnız `config/app.event` okur. Takvim her yazıldığında aynı işlemde `event` = **süren** etkinlik (start ≤ şimdi
+< end), yoksa **sıradaki** (en küçük start > şimdi; eski sürüm başlangıç saatinde kendisi açar), o da yoksa alan silinir. Tek
+kod: `functions/events_tick.js` `mirrorEvent` (panel `lib.mjs` üzerinden aynısını kullanır). Eski sürüm bilmediği görev türlerini
+(`event_car_*`, `garage_visits`) ve `car`'ı yok sayar: yalnız araç + araç görevi olan etkinlik eski sürümde görünmez.
+
+### eventsTick (Cloud Function, 10 dakikada bir)
+
+- `config/app`'i okur (1 okuma). `events` yoksa (takvim hiç kaydedilmemiş) hiçbir şey yazmaz.
+- Ayna değiştiyse (etkinlik bitti → sıradakine geçiş, son etkinlik bitti → silme) İŞLEM içinde yeniden okuyup yalnız `event` +
+  `updated_at` günceller; panelin aynı anda yazdığı listeyi ezmez. Kimse panele dokunmasa da eski sürümler en geç 10 dakikada
+  sıradaki etkinliği görür.
+- Bildirim adayı varsa `ops/event_push`'u okur, yukarıdaki kuralla gönderir.
+- Bölge europe-west4, saat dilimi Europe/Istanbul, en çok 1 örnek. Dağıtım: `firebase deploy --only functions:eventsTick
+  --project car-town-remake`.
 
 ## İçerik paketi (yeni dekor eşyası + afiş)
 
@@ -103,5 +187,6 @@ trafik, garaj, yarış ve kayıt sistemlerine bağlı. Sınırlı süreli araç 
 | Özel rakip | `RaceManager.start_event_rival` / `_pay_event_rival`, `Hud.start_event_race` |
 | Tabela / pano | `ui/hud/event_banner.gd`, `ui/hud/event_screen.gd` |
 | Paket kurucu | `tools/live_pack/` (`build_pack.sh`, `LivePackBuilder`) |
-| Panel | `firebase/admin/lib.mjs` (`buildEvent`, `buildPacks`, `buildEventDoc`), `server.mjs` (`/api/event`, `/api/packs/*`), `public/index.html` |
-| Testler | `tests/live_event_test.gd`; panel `npm test` + `npm run e2e`; görsel `qa/live_ops_shots.gd` |
+| Panel | `firebase/admin/lib.mjs` (`buildEvent`, `buildEvents`, `buildPacks`, `buildEventsDoc`, `eventsOf`), `server.mjs` (`/api/events`, `/api/packs/*`), `public/index.html` |
+| Ayna + başlangıç bildirimi | `firebase/functions/events_tick.js` (`mirrorEvent`, `eventsTick`), `index.js` `eventsTick` |
+| Testler | `tests/live_event_test.gd`; panel `npm test` + `npm run e2e`; functions `npm test` (`test/events_tick.test.js`); görsel `qa/live_ops_shots.gd` |

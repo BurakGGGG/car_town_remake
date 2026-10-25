@@ -94,6 +94,9 @@ static func visit(tree: SceneTree, uid: String) -> bool:
 	var cloud: CloudSaveManager = tree.get_first_node_in_group("cloud_save") as CloudSaveManager
 	if cloud and cloud.is_busy():
 		return false
+	var missions: MissionManager = tree.get_first_node_in_group("missions") as MissionManager
+	if missions:
+		missions.count(&"garage_visits", 1)   # etkinlik görevi "ARKADAŞ GARAJI ZİYARET ET" (kayıttan önce)
 	var save: SaveManager = tree.get_first_node_in_group("save_manager") as SaveManager
 	if save:
 		save.save_game()

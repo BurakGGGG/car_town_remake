@@ -19,7 +19,7 @@
 | Seviye | 5, her 5.'de +25 | 2, her 5.'de +10 | `PlayerProgress.LEVEL_GEMS*` |
 | Keşif (C/R/E/L) | 3/8/20/40 | 1/3/8/15 | `CrateManager.DISCOVERY_GEMS` |
 | Kopya hurdası | 2/5/12/30 | 1/2/5/12 | `CrateManager.DUP_SCRAP` |
-| Koleksiyon taşları | 15/30/50/100 | 5/10/20/40 | `CrateManager.COLLECTION_MILESTONES` |
+| Koleksiyon taşları | 15/30/50/100 | 5/10/20/40 → 2026-10-25: 10/20/40/80/150 (10/20/35/50/72 araç) + set ödülleri | `CollectionRewards.MILESTONES` (docs/KOLEKSIYON.md) |
 
 Başarımların ₺ ve XP ödülü DEĞİŞMEDİ: artık gemden değil başarımın "değer"inden türer
 (`ach_value × 60 ₺`, `× 6 XP`). Başlangıç gemi (40) ve hikâye görevleri (125) ilk kasalar için aynen kaldı.

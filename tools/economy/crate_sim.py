@@ -20,7 +20,7 @@ Gem kaynaklarının oyundaki karşılıkları (değer değişirse burası da gü
   başarım yıldızları ...................... MissionCatalog.ACHIEVEMENTS / ACH_GEMS (ölçülebilen çizgiler)
   bahşiş 20 tamirde 1, günde en çok 40 .... GemRewards.TIP_EVERY / TIP_DAILY_CAP
   ustalık yıldızı 10 ...................... GemRewards.MASTERY_STAR_GEMS
-  keşif / koleksiyon / kopya hurdası ...... CrateManager.DISCOVERY_GEMS / COLLECTION_MILESTONES / DUP_SCRAP
+  keşif / koleksiyon / kopya hurdası ...... CrateManager.DISCOVERY_GEMS / DUP_SCRAP, CollectionRewards.MILESTONES
 Oynanış dakikası → seviye / ustalık / tamir eğrileri ölçülmüş simülasyondan (docs/AUDIT_2026_09.md §6).
 """
 import argparse
@@ -66,7 +66,7 @@ WEEKLY_GEMS, WEEKLY_BONUS_GEMS = 0, 40
 TIP_EVERY, TIP_DAILY_CAP = 50, 3
 MASTERY_STAR_GEMS = 3
 DISCOVERY_GEMS = {"common": 1, "rare": 3, "epic": 8, "legendary": 15}
-COLLECTION_MILESTONES = {5: 5, 10: 10, 14: 20, 16: 40}
+COLLECTION_MILESTONES = {10: 10, 20: 20, 35: 40, 50: 80, 72: 150}   # set ödülleri benzetilmez (2026-10-25)
 DUP_SCRAP = {"common": 1, "rare": 2, "epic": 5, "legendary": 12}
 STAR_THRESHOLDS = [1, 3, 6, 10, 15]
 
@@ -181,6 +181,7 @@ def sync_check():
     import re
     gr, cm, pp, qc, mc = _gd("gameplay/gem_rewards.gd"), _gd("gameplay/crate_manager.gd"), \
         _gd("gameplay/player_progress.gd"), _gd("gameplay/quest_catalog.gd"), _gd("gameplay/missions/mission_catalog.gd")
+    cr = _gd("gameplay/collection_rewards.gd")
     ints = lambda s: [int(x) for x in re.findall(r"-?\d+", s)]
     game = {
         "LOGIN_CYCLE": ints(_const(gr, "LOGIN_CYCLE")),
@@ -193,7 +194,7 @@ def sync_check():
     }
     for name in ("DUP_SCRAP", "DISCOVERY_GEMS"):
         game[name] = {k: int(v) for k, v in re.findall(r'&"(\w+)":\s*(\d+)', _const(cm, name))}
-    game["COLLECTION_MILESTONES"] = {int(k): int(v) for k, v in re.findall(r"(\d+):\s*(\d+)", _const(cm, "COLLECTION_MILESTONES"))}
+    game["COLLECTION_MILESTONES"] = {int(k): int(v) for k, v in re.findall(r"(\d+):\s*(\d+)", _const(cr, "MILESTONES"))}
     sim = {"LOGIN_CYCLE": LOGIN_CYCLE, "DAILY_BONUS_GEMS": DAILY_BONUS_GEMS, "TASK_MIN_LEVEL": TASK_MIN_LEVEL,
            "WEEKLY_GEMS": WEEKLY_GEMS, "WEEKLY_BONUS_GEMS": WEEKLY_BONUS_GEMS,
            "TIP_EVERY": TIP_EVERY, "TIP_DAILY_CAP": TIP_DAILY_CAP, "MASTERY_STAR_GEMS": MASTERY_STAR_GEMS,

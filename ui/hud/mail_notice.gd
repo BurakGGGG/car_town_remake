@@ -26,16 +26,16 @@ func claim_now(id: String) -> bool:
 	return true
 
 
-## Hediye ekranı (tek kopya; açıkken gelen ikinci hediye sırada bekler).
+## Hediye ekranı (tek kopya; açıkken gelen ikinci hediye sırada bekler). İlk istekte kurulur.
 func gift_screen() -> GiftScreen:
-	return _screen
-
-
-func _show_rewards(summary: Dictionary) -> void:
 	if _screen == null:
 		_screen = GiftScreen.new(_hud)
 		_screen.finished.connect(func(car_choice: bool) -> void:
 			if car_choice:
 				_hud.router.open(&"legendary_pick"))
 		_hud.get_node("Root").add_child(_screen)   # tam ekran; Root temayı taşır (açılınca en üste çıkar)
-	_screen.show_gift(summary)
+	return _screen
+
+
+func _show_rewards(summary: Dictionary) -> void:
+	gift_screen().show_gift(summary)

@@ -2464,6 +2464,17 @@
       "desc": "Arkadaş daveti ödülü: 5 arkadaşını Auto Yard'a getiren ustalara. Mağazada yok."
     },
     {
+      "id": "collector_trophy",
+      "title": "KOLEKSİYONER KUPASI",
+      "kind": "luxury",
+      "placement": "floor",
+      "price": 0,
+      "value": 60000,
+      "min_level": 1,
+      "exclusive": true,
+      "desc": "Koleksiyon ödülü: bütün araçları toplayan ustalara. Mağazada yok."
+    },
+    {
       "id": "lux_trophy_wall",
       "title": "KUPA DUVARI",
       "kind": "luxury",

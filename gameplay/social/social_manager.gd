@@ -723,6 +723,9 @@ func visit(uid: String) -> bool:
 	if garage.is_empty():
 		notice.emit(Loc.t("Bu garaj oyunun daha yeni bir sürümüyle kaydedilmiş. Oyunu güncelle."))
 		return false
+	var missions: MissionManager = get_tree().get_first_node_in_group("missions") as MissionManager
+	if missions:
+		missions.count(&"garage_visits", 1)   # etkinlik görevi "ARKADAŞ GARAJI ZİYARET ET" (kayıttan önce)
 	if _save:
 		_save.save_game()   # kendi garajın donmadan önce son durum diskte olsun
 	return GarageVisit.begin(get_tree(), {
@@ -1405,6 +1408,7 @@ static func profile_fields(doc: Dictionary) -> Dictionary:
 	var frame: String = SaveSafe.s(doc.get("frame", ""))
 	var flag: String = SaveSafe.s(doc.get("flag", ""))
 	var title: String = SaveSafe.s(doc.get("title", ""))
+	var honor: String = SaveSafe.s(doc.get("honor", ""))
 	var car: String = SaveSafe.s(doc.get("car", ""))
 	var raw_stats: Dictionary = doc.get("stats", {}) if doc.get("stats") is Dictionary else {}
 	var races: int = clampi(SaveSafe.i(raw_stats.get("races", 0)), 0, STAT_MAX)
@@ -1413,6 +1417,7 @@ static func profile_fields(doc: Dictionary) -> Dictionary:
 		"frame": frame if ProfileCatalog.is_frame(frame) else ProfileCatalog.DEFAULT_FRAME,
 		"flag": flag if ProfileCatalog.is_flag(flag) else "",
 		"title": title if SocialNames.is_valid_title(title) else "",
+		"honor": honor if ProfileCatalog.is_honor(honor) else "",
 		"car": car if not CarCatalog.get_entry(StringName(car)).is_empty() else "",
 		"stats": {
 			"wins": clampi(SaveSafe.i(raw_stats.get("wins", 0)), 0, races),

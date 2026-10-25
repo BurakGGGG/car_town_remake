@@ -401,7 +401,8 @@ service cloud.firestore {
 
     function isValidGarage(data) {
       return data.keys().hasOnly(['name', 'code', 'level', 'value', 'garage_json', 'updated_at', 'ask',
-          'av', 'frame', 'flag', 'title', 'car', 'stats'])
+          'av', 'frame', 'flag', 'title', 'car', 'stats', 'honor'])
+        && (!('honor' in data) || (data.honor is string && data.honor.matches('^[a-z_]{1,16}$')))   // unvan (2026-10-25)
         && (!('ask' in data) || isValidAsk(data.ask))
         && (!('av' in data) || isValidAv(data.av))
         && (!('frame' in data) || (data.frame is string && data.frame.matches('^[a-z_]{1,16}$')))

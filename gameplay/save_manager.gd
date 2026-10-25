@@ -78,6 +78,8 @@ var _away: OfflineEarnings
 var _car_garages: CarGarageManager
 var _referral: ReferralManager
 var _community: CommunityLinks
+var _collection: CollectionRewards
+var _event_car: EventCar
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -118,6 +120,8 @@ func _setup() -> void:
 	_car_garages = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
 	_referral = get_tree().get_first_node_in_group("referral") as ReferralManager
 	_community = get_tree().get_first_node_in_group("community") as CommunityLinks
+	_collection = get_tree().get_first_node_in_group("collection_rewards") as CollectionRewards
+	_event_car = get_tree().get_first_node_in_group("event_car") as EventCar
 	if visit_mode:
 		_loading = true
 		_apply(GarageVisit.garage())
@@ -249,6 +253,10 @@ func new_game() -> void:
 		_referral.reset()
 	if _community:
 		_community.reset()
+	if _collection:
+		_collection.reset()
+	if _event_car:
+		_event_car.reset()
 	if _repairs:
 		_repairs.load_jobs([])
 	if _crates:
@@ -425,6 +433,10 @@ func _collect() -> Dictionary:
 		# TOPLULUK: Instagram / TikTok takip ödülleri (açıldı / alındı), BİZİ DEĞERLENDİR sorusu (kaç kez, sıradaki gün).
 		# Eski kayıtta yoktur: hiçbiri alınmamış, hiç sorulmamış.
 		"community": _community.state() if _community else {},
+		# KOLEKSİYON ÖDÜLLERİ: ödenmiş setler ve kilometre taşları. Eski kayıtta yoktur: bugün tamam olanlar ödülsüz sayılır.
+		"collection": _collection.state() if _collection else {},
+		# ETKİNLİK ARACI: hangi etkinliğin durumu, araç verildi mi, bugünkü etkinlik yarışı hakları. Eski kayıtta yoktur.
+		"event_car": _event_car.state() if _event_car else {},
 	}
 
 
@@ -578,11 +590,18 @@ func _apply(data: Dictionary) -> void:
 	if _community:
 		var community_data: Variant = data.get("community", {})
 		_community.load_state(community_data if community_data is Dictionary else {})
+	if _collection:
+		# Araçlar yukarıda yüklendi: bölümü olmayan kayıtta bugün tamam olan set / taş ödülsüz işaretlenir
+		var collection_data: Variant = data.get("collection", {})
+		_collection.load_state(collection_data if collection_data is Dictionary else {})
+		if not data.has("collection"):
+			_collection.mark_existing()
+	if _event_car:
+		var event_car_data: Variant = data.get("event_car", {})
+		_event_car.load_state(event_car_data if event_car_data is Dictionary else {})
 	if legacy:
 		if _missions:
 			_missions.mark_legacy_repairs_passed()   # geçilmiş tamir yıldızları ödenmiş sayılır
-		if _crates and _ownership:
-			_crates.mark_passed_milestones(_ownership.discovered_count())
 
 
 # --- Otomatik kayıt (debounce) -----------------------------------------------------

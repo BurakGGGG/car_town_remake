@@ -315,11 +315,9 @@ func _run() -> void:
 	# 2026-10-23: günlük giriş merdiveni girişte ödül vermez (AL ile alınır); günün basamağı alınabilir durumda bekler
 	check(pp.gems == 7 and g(&"gem_rewards").can_claim(), "eski kayıt: geriye dönük tamir/koleksiyon gemi yok, günün basamağı bekliyor (%d)" % pp.gems)
 	check(quests.is_claimed(&"first_crate") and not quests.claim(&"first_crate") and crates.pending_count() == 0, "eski oyuncuya bedava İLK KASA verilmez")
-	var legacy_gems: int = pp.gems
-	own.add_vehicle(&"hyundai_accent_blue")   # 6. araç: 5'lik koleksiyon taşı eski kayıtta ödenmiş sayılır
-	crates.mark_passed_milestones(0)
-	check(crates._pay_milestones(own.discovered_count()) == 0 and pp.gems == legacy_gems, "geçilmiş koleksiyon taşı yeni keşifte geriye dönük ödenmez")
-	check(own.is_owned(&"bmw_e46") and own.is_discovered(&"bmw_e46") and own.is_discovered(&"hyundai_era") and own.owned_count() == 6, "v9: sahiplik korundu, sahip olunanlar keşfedilmiş sayıldı")
+	# Koleksiyon set / kilometre taşı ödülleri artık CollectionRewards'ta (tests/collection_rewards_test.gd)
+	check(not crates.has_method("mark_passed_milestones") and not crates.open(-1).has("milestone_gems"), "kasada eski koleksiyon taşı yok")
+	check(own.is_owned(&"bmw_e46") and own.is_discovered(&"bmw_e46") and own.is_discovered(&"hyundai_era") and own.owned_count() == 5, "v9: sahiplik korundu, sahip olunanlar keşfedilmiş sayıldı")
 	check(not own.is_owned(&"tofas_sahin"), "eski oyuncuya Şahin sonradan verilmez")
 	check(crates.pending_count() == 0 and int(disk()["version"]) == 10, "bekleyen kasa yok, v10 olarak yeniden yazıldı")
 

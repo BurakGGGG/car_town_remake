@@ -35,6 +35,8 @@ var photo_hash: String = ""
 var use_google: bool = false
 var frame_id: String = ProfileCatalog.DEFAULT_FRAME
 var frames_owned: Array[String] = []
+## Kazanılmış unvanlar (ProfileCatalog.HONORS); ilki profil kartında ve açık garajda görünür.
+var honors: Array[String] = []
 var flag: String = ""
 var title: String = ""
 var showcase: StringName = &""
@@ -64,7 +66,7 @@ func _ready() -> void:
 func state() -> Dictionary:
 	return {
 		"avatar": avatar, "photo_hash": photo_hash, "google_photo": use_google, "frame": frame_id,
-		"frames": frames_owned.duplicate(), "flag": flag, "title": title, "showcase": String(showcase),
+		"frames": frames_owned.duplicate(), "honors": honors.duplicate(), "flag": flag, "title": title, "showcase": String(showcase),
 		"blocked": blocked.duplicate(), "hidden": hidden.duplicate(), "likes": likes,
 	}
 
@@ -84,6 +86,10 @@ func load_state(data: Dictionary) -> void:
 			if ProfileCatalog.is_frame(frame) and (int(ProfileCatalog.frame(frame)["gems"]) > 0
 					or ProfileCatalog.frame_exclusive(frame)) and not frames_owned.has(frame):
 				frames_owned.append(frame)
+	for id: Variant in (data.get("honors", []) if data.get("honors") is Array else []):
+		var honor: String = SaveSafe.s(id)
+		if ProfileCatalog.is_honor(honor) and not honors.has(honor):
+			honors.append(honor)
 	var chosen: String = SaveSafe.s(data.get("frame", ProfileCatalog.DEFAULT_FRAME))
 	frame_id = chosen if ProfileCatalog.is_frame(chosen) else ProfileCatalog.DEFAULT_FRAME
 	var code: String = SaveSafe.s(data.get("flag", ""))
@@ -112,6 +118,7 @@ func reset() -> void:
 	use_google = false
 	frame_id = ProfileCatalog.DEFAULT_FRAME
 	frames_owned.clear()
+	honors.clear()
 	flag = ""
 	title = ""
 	showcase = &""
@@ -280,6 +287,15 @@ func grant_frame(id: String) -> bool:
 	return true
 
 
+## Unvan verilir (tam koleksiyon). Zaten varsa ya da böyle bir unvan yoksa false.
+func grant_honor(id: String) -> bool:
+	if not ProfileCatalog.is_honor(id) or honors.has(id):
+		return false
+	honors.append(id)
+	_changed(false)
+	return true
+
+
 func set_flag(code: String) -> void:
 	var value: String = code if ProfileCatalog.is_flag(code) else ""
 	if flag != value:
@@ -354,7 +370,7 @@ func is_hidden(uid: String, hash: String) -> bool:
 
 ## Açık garaj belgesine eklenen alanlar (firestore.rules isValidGarage ile aynı anahtarlar).
 func public_fields() -> Dictionary:
-	return {
+	var out: Dictionary = {
 		"av": my_av(),
 		"frame": frame_id,
 		"flag": flag,
@@ -362,6 +378,9 @@ func public_fields() -> Dictionary:
 		"car": String(showcase_vehicle()),
 		"stats": stats(),
 	}
+	if not honors.is_empty():
+		out["honor"] = honors[0]   # yalnız kazanılınca: kuralı tanımayan eski kurallarda unvansız oyuncunun yayını bozulmaz
+	return out
 
 
 ## Profil kartındaki istatistikler (kendi oyunumdan): yarış galibiyeti / sayısı, koleksiyon, en iyi 300 m.

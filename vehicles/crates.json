@@ -22,19 +22,27 @@
   ],
   "world_size": [0.72, 0.38, 0.46],
   "sets": [
-    {"id": "yerli_klasikler", "name": "YERLİ KLASİKLER", "cars": ["tofas_sahin", "renault_toros"]},
+    {"id": "yerli_klasikler", "name": "YERLİ KLASİKLER", "cars": ["tofas_sahin", "renault_toros", "tofas_murat_124", "tofas_murat_131", "anadol_a1"]},
     {"id": "kore_hatti", "name": "KORE HATTI", "cars": ["hyundai_era", "hyundai_getz", "hyundai_accent_blue"]},
     {"id": "vw_grubu", "name": "WULF GRUBU", "cars": ["vw_passat_b55", "vw_golf_7", "vw_beetle", "skoda_kamiq", "seat_leon", "audi_a3", "vw_passat_b8", "skoda_superb"]},
-    {"id": "sicak_kompakt", "name": "SICAK KOMPAKT", "cars": ["ford_focus", "vw_golf_7", "seat_leon", "honda_civic"]},
+    {"id": "sicak_kompakt", "name": "SICAK KOMPAKT", "cars": ["ford_focus", "vw_golf_7", "seat_leon", "honda_civic", "cupra_formentor"]},
     {"id": "aile_sedani", "name": "AİLE SEDANI", "cars": ["hyundai_era", "vw_passat_b55", "renault_fluence", "volvo_s60", "toyota_corolla", "renault_megane_4"]},
-    {"id": "bavyera", "name": "BAVYERA", "cars": ["bmw_e46", "bmw_e60", "bmw_f30"]},
+    {"id": "bavyera", "name": "BAVYERA", "cars": ["bmw_e46", "bmw_e60", "bmw_f30", "bmw_m3_e30"]},
     {"id": "premium", "name": "PREMIUM", "cars": ["bmw_e46", "audi_a3", "volvo_s60", "bmw_e60", "mercedes_cls", "mercedes_s400", "audi_a6", "mercedes_g"]},
     {"id": "italyan", "name": "İTALYAN", "cars": ["alfa_romeo_159", "lambo_huracan", "ferrari_488_pista", "ferrari_laferrari"]},
     {"id": "super_spor", "name": "SÜPER SPOR", "cars": ["audi_rs6", "porsche_gt3", "lambo_huracan", "ferrari_488_pista", "porsche_taycan"]},
     {"id": "amerikan", "name": "AMERİKAN", "cars": ["chevrolet_camaro", "tesla_model_y"]},
     {"id": "togg", "name": "ŞİMŞEK", "cars": ["togg_t10x", "togg_t10f"]},
     {"id": "hiper", "name": "HİPER", "cars": ["bugatti_veyron", "bugatti_chiron", "ferrari_laferrari"]},
-    {"id": "ticari", "name": "TİCARİ", "cars": ["ford_transit", "mercedes_sprinter"]}
+    {"id": "ticari", "name": "TİCARİ", "cars": ["ford_transit", "mercedes_sprinter"]},
+    {"id": "sehir_arabalari", "name": "ŞEHİR ARABALARI", "cars": ["opel_corsa", "hyundai_getz", "hyundai_accent_blue", "toyota_corolla"]},
+    {"id": "suv_dunyasi", "name": "SUV DÜNYASI", "cars": ["chery_tiggo_8", "skoda_kamiq", "togg_t10x", "tesla_model_y", "mercedes_g"]},
+    {"id": "dolmus_duragi", "name": "DOLMUŞ DURAĞI", "cars": ["chevrolet_bel_air_1956", "peugeot_404", "mercedes_w123"]},
+    {"id": "avrupa_minikleri", "name": "AVRUPA MİNİKLERİ", "cars": ["fiat_500_1965", "mini_cooper_1965", "vw_beetle_1967"]},
+    {"id": "yol_ve_macera", "name": "YOL VE MACERA", "cars": ["willys_jeep_mb", "land_rover_series3", "vw_t1_bus"]},
+    {"id": "amerikan_kaslilari", "name": "AMERİKAN KASLILARI", "cars": ["ford_mustang_1967", "chevrolet_corvette_c2", "dodge_charger_1970", "chevrolet_camaro"]},
+    {"id": "altin_cag_gt", "name": "ALTIN ÇAĞ GT", "cars": ["jaguar_e_type", "aston_martin_db5", "mercedes_300sl", "lamborghini_miura", "porsche_911_1973"]},
+    {"id": "ralli_efsaneleri", "name": "RALLİ EFSANELERİ", "cars": ["ford_escort_rs1600", "lancia_stratos", "audi_quattro_s1", "ford_rs200", "lancia_delta_integrale", "toyota_celica_gt4", "mitsubishi_evo6"]}
   ],
   "crates": [
     {

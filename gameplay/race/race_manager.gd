@@ -57,6 +57,12 @@ extends Node
 ## normal ödülün üstüne panelin ÖZEL ÖDÜLÜnü verir — etkinlik başına bir kez ("event_paid" kayıtta). Arkadaş haberi /
 ## skoru yazılmaz.
 ##
+## ETKİNLİK ARACI YARIŞI (2026-10-26, EventCar): oyuncu süren etkinliğin aracıyla (ödünç ya da zaten kendisinin) yarışır;
+## pist doğrudan açılır (start_event_car_race, rövanş yok). Rakip o aracın performans havuzundan isimsiz yapay zekâ
+## (fabrika yapısı, gün formu). Oyuncunun aracı yarış süresince etkinlik aracıdır (player_vehicle_id); koşusu arkadaşlara
+## gitmez, rekor / araç sayaçları / öğrenen zorluk yazılmaz (ödünç araç oyuncunun değil). Normal yarış ödülü verilir;
+## event_car_race_finished görev sayaçlarını (event_car_races / event_car_wins) besler. Günlük hakkı EventCar tutar.
+##
 ## SÜPER ARABA TANITIMI (2026-10-23, kullanıcı: "ilk 2 dragını yapsın, 3. dragında süper araç gelsin, ezici üstünlükle
 ## yensin, sonra ileride senin de araçların böyle olacak ekranı gelsin; sadece yeni başlayanlarda"): 2 yarışı biten
 ## (SHOWCASE_AFTER) ve tanıtımı görmemiş oyuncuya sıradaki rakip öne çıkan arkadaşın (Emre / Elif) BEYAZ OVALE ÉCLAIR'i
@@ -90,6 +96,8 @@ signal rematch_started(count: int)
 signal friend_race_finished(owner: Dictionary, won: bool, player_vehicle: StringName, rival_vehicle: StringName, revenge: bool)
 ## Etkinlik rakibi yenildi (görev sayacı: event_rival_wins).
 signal event_rival_won
+## Etkinlik aracıyla yarış bitti (görev sayaçları: event_car_races / event_car_wins).
+signal event_car_race_finished(won: bool)
 
 ## Bir rakip gittikten sonra yenisi ne kadar sonra gelir (sn).
 ## 2026-10-21 zorluk turu: 5–10 sn idi (ardı ardına yarış tamirden çok kazandırıyordu) → 25–45 sn denendi, kullanıcı
@@ -205,6 +213,8 @@ var _revenge: bool = false
 ## Pistteki rakip canlı etkinliğin rakibi (start_event_rival); özel ödülü alınmış etkinlikler: kimlik → true.
 var _event_rival: bool = false
 var _event_paid: Dictionary = {}
+## Etkinlik aracı yarışı: oyuncunun pistteki aracı (&"" = normal yarış, oyuncunun yarış aracı).
+var _event_car: StringName = &""
 ## KOŞU EŞLEŞTİRME — oyuncunun koşuları: araç id (String) → DragRaceSim.Recording.to_dict sözlükleri, eskiden yeniye.
 var _runs: Dictionary = {}
 ## Son yarışlar, en yenisi sonda: {"w": kazandı mı, "a": RivalSelector.Arm (-1: ilk yarış), "p": seçilen koşuya karşı şans}.
@@ -379,7 +389,7 @@ func rival_recording(player_id: StringName) -> DragRaceSim.Recording:
 	if is_first_race():
 		_rival_recording = DragRaceSim.ai_recording(_rival_id, rival_build(), DragRaceSim.roll_form(_rival_id, null), _rng)
 		return _rival_recording
-	if _event_rival:   # etkinlik rakibi: panelin verdiği yapıyla yapay zekâ koşusu (seçici / havuz yok)
+	if _event_rival or _event_car != &"":   # etkinlik rakibi / aracı: yapay zekâ koşusu (seçici / havuz yok)
 		_rival_recording = DragRaceSim.ai_recording(_rival_id, rival_build(), DragRaceSim.roll_form(_rival_id, _rng), _rng)
 		_chance = RivalSelector.win_chance(my_samples(player_id), _rival_recording.time)
 		return _rival_recording
@@ -410,6 +420,8 @@ func rival_recording(player_id: StringName) -> DragRaceSim.Recording:
 func add_run(recording: DragRaceSim.Recording) -> void:
 	if recording == null or recording.launch_step < 0 or recording.time < RECORD_MIN or recording.time > RECORD_MAX:
 		return
+	if _event_car != &"":
+		return   # etkinlik aracının (ödünç) koşusu arkadaşlara gitmez
 	if recording.at <= 0:
 		recording.at = int(Time.get_unix_time_from_system())
 	_player_time = recording.time
@@ -634,6 +646,8 @@ static func rival_pool(player_id: StringName) -> Array[StringName]:
 ## seçilmemişse başlangıç aracı Tofaş Şahin. (Eskiden sahip olunan ilk araç dönüyordu: o da E46'ydı,
 ## oyuncu ilk dakikadan A sınıfıyla yarışıyordu.)
 func player_vehicle_id() -> StringName:
+	if _event_car != &"":
+		return _event_car
 	var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 	if ownership == null:
 		return FALLBACK_VEHICLE
@@ -736,6 +750,32 @@ func is_event_rival() -> bool:
 	return _event_rival
 
 
+## ETKİNLİK ARACI YARIŞI: oyuncu `car` ile (süren etkinliğin aracı) o aracın havuzundan isimsiz rakibe karşı; pist
+## doğrudan açılır. Hakkı çağıran düşer (EventCar.use_try). Araç edinilemeyense false.
+func start_event_car_race(car: StringName) -> bool:
+	if not CarCatalog.is_obtainable(car):
+		return false
+	release_challenger()
+	_direct = true
+	_event_car = car
+	_rival_id = rival_id_for(car)
+	if _rival_id == &"" or _rival_id == car:
+		var pool: Array[StringName] = rival_pool(car)
+		pool.erase(car)
+		_rival_id = pool.pick_random() if not pool.is_empty() else car
+	_rival_owner = {"name": Loc.t("ETKİNLİK RAKİBİ"), "event": true}
+	_arm = -1
+	_arm_used = false
+	_rival_appearance = _appearance_for(_rival_id, _rival_owner)
+	_reward_paid = false
+	_rematches = 0
+	return true
+
+
+func is_event_car_race() -> bool:
+	return _event_car != &""
+
+
 ## Süren etkinliğin rakibinin özel ödülü bu oyuncuya verildi mi.
 func event_reward_taken() -> bool:
 	return _event_paid.has(LiveEvent.id())
@@ -800,17 +840,18 @@ func finish_race(won: bool) -> Dictionary:
 	if _showcase:
 		_showcase_done = true   # tanıtım bir kez; öğrenen zorluğa yazılmaz (senaryolu yarış)
 		_showcase_tease = not won
-	else:
+	elif _event_car == &"":
 		_learning.race_finished(_learning_event(won))   # bağlam bu yarıştan ÖNCEKİ geçmişle (kol o geçmişle çekildi)
 	_races += 1
 	if won:
 		_wins += 1
-	var car: StringName = player_vehicle_id()
-	var counts: Vector2i = _car_counts.get(car, Vector2i.ZERO)
-	_car_counts[car] = counts + Vector2i(1, 1 if won else 0)
-	_history.append({"w": won, "a": _arm, "p": snappedf(_chance, 0.001)})
-	if _history.size() > HISTORY_MAX:
-		_history = _history.slice(_history.size() - HISTORY_MAX)
+	if _event_car == &"":   # ödünç aracın sayacı / seri kırıcı geçmişi yazılmaz
+		var car: StringName = player_vehicle_id()
+		var counts: Vector2i = _car_counts.get(car, Vector2i.ZERO)
+		_car_counts[car] = counts + Vector2i(1, 1 if won else 0)
+		_history.append({"w": won, "a": _arm, "p": snappedf(_chance, 0.001)})
+		if _history.size() > HISTORY_MAX:
+			_history = _history.slice(_history.size() - HISTORY_MAX)
 	records_changed.emit()   # kayıt (ödülsüz rövanş kaybında para / XP değişmez, sayaç yine yazılsın)
 	# Gerçek arkadaşı yendin: +%20, arkadaş başına günde bir
 	if won and int(reward["money"]) > 0 and friend_bonus_available():
@@ -834,6 +875,8 @@ func finish_race(won: bool) -> Dictionary:
 	race_finished.emit(won, int(reward["money"]), int(reward["xp"]))
 	if _event_rival and won:
 		event_rival_won.emit()
+	if _event_car != &"":
+		event_car_race_finished.emit(won)
 	if not _rival_owner.is_empty() and not _event_rival:
 		var uid: String = SaveSafe.s(_rival_owner.get("uid", ""))
 		var r: Dictionary = _rivals.get(uid, {})
@@ -927,6 +970,7 @@ func release_challenger(fled: bool = false) -> void:
 	_direct = false
 	_revenge = false
 	_event_rival = false
+	_event_car = &""
 	_showcase = false
 	_arm = -1
 	_arm_used = false
@@ -1027,8 +1071,8 @@ func _record() -> Dictionary:
 ## Bitmiş bir koşuyu bildirir. Rekoru (hangi araçla kırılmış olursa) geçtiyse onun yerine geçer ve true döner;
 ## ilk koşu da rekordur.
 func submit_time(vehicle_id: StringName, time: float, trace: PackedFloat32Array) -> bool:
-	if vehicle_id == &"" or time < RECORD_MIN or time > RECORD_MAX:
-		return false
+	if vehicle_id == &"" or time < RECORD_MIN or time > RECORD_MAX or _event_car != &"":
+		return false   # etkinlik aracıyla (ödünç) rekor yazılmaz
 	var previous: float = best_time()
 	if previous > 0.0 and time >= previous:
 		return false

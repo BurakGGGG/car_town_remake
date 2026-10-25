@@ -5,6 +5,9 @@ extends Control
 ## yönetim paneli); süresi bitince kendiliğinden söner. Yalnızca şehirdeyken görünür (açık ekran, ders, kasa panosu,
 ## ziyaret yok). Dokununca ETKİNLİK PANOSU açılır (EventScreen: modüller ve düğmeleri). Ana satır etkinliğin modüllerini
 ## özetler (ÇİFTE PARA · KASALAR −%30 · ÖZEL RAKİP …); rozet çarpan (×2), yoksa en büyük indirim, yoksa ★.
+## ETKİNLİK ARACI (2026-10-26, taslak B2): araçlı etkinlikte rozetin yerinde aracın resmi, ana satırda adı ve görev
+## ilerlemesi ("VIER SPORT 85 · 2 / 5 GÖREV"). Süren etkinlik yokken SOON_DAYS gün içinde başlayacak etkinlik varsa
+## "YAKINDA" hâli: başlangıca geri sayım; dokununca pano takvimle açılır.
 ## Hud kurar (temalı kök). Kodla kurulur.
 
 const TICK_SEC: float = 1.0
@@ -13,10 +16,17 @@ const MAX_WIDTH: float = 460.0
 const MIN_WIDTH: float = 340.0
 const SIDE_RESERVE: float = 250.0
 const DARK: Color = Color("2D2A26")
+## Yaklaşan etkinlik bu kadar gün kala tabelada görünür.
+const SOON_DAYS: int = 3
+## Ana satırın puntosu; sığmayan ilk parça en çok bu kadar küçülür.
+const MAIN_SIZE: int = 17
+const MIN_MAIN_SIZE: int = 12
 
 var _hud: Hud
 var _plate: PanelContainer
 var _chip: Label
+var _chip_box: PanelContainer
+var _thumb: TextureRect
 var _title: Label
 var _main: Label
 var _clock: Label
@@ -55,22 +65,64 @@ func event_id() -> String:
 func _tick() -> void:
 	var config: AppConfig = AppConfig.of(get_tree())
 	var event: Dictionary = config.active_event() if config else {}
+	var soon: Dictionary = _soon() if event.is_empty() else {}
 	var tutorial: TutorialDirector = _hud.tutorial
 	var calm: bool = _hud.router.top().is_empty() and not (tutorial and tutorial.is_running()) \
 		and not (_hud.crate_panel and _hud.crate_panel.visible) and not GarageVisit.is_visiting()
-	visible = not event.is_empty() and calm
-	if event.is_empty():
+	visible = (not event.is_empty() or not soon.is_empty()) and calm
+	if event.is_empty() and soon.is_empty():
 		_event_id = ""
 		_event_key = 0
 		return
-	if event.hash() != _event_key:   # panel etkinliği sürerken düzeltebilir: kimlik aynı, modüller değişmiş olabilir
-		_event_key = event.hash()
-		_event_id = SaveSafe.s(event["id"])
-		_fill(event)
-	_clock.text = countdown(int(event["end"]) - int(Time.get_unix_time_from_system()))
+	var event_car: EventCar = get_tree().get_first_node_in_group("event_car") as EventCar
+	var car_key: Array = [event_car.active(), event_car.progress()] if event_car and not event.is_empty() else []
+	# Panel etkinliği sürerken düzeltebilir (kimlik aynı, modüller değişmiş olabilir); araç ilerlemesi de satırda
+	var key: int = [event, soon, car_key].hash()
+	if key != _event_key:
+		_event_key = key
+		if not event.is_empty():
+			_event_id = SaveSafe.s(event["id"])
+			_fill(event, event_car)
+		else:
+			_event_id = SaveSafe.s(soon["id"])
+			_fill_soon(soon)
+	var now: int = LiveEvent.now()
+	_clock.text = countdown((int(event["end"]) if not event.is_empty() else int(soon["start"])) - now)
 
 
-func _fill(event: Dictionary) -> void:
+## SOON_DAYS gün içinde başlayacak ilk etkinlik (takvimden) ya da boş.
+func _soon() -> Dictionary:
+	var now: int = LiveEvent.now()
+	for entry: Dictionary in LiveEvent.upcoming():
+		if not bool(entry["active"]) and int(entry["start"]) - now <= SOON_DAYS * 86400:
+			return entry
+	return {}
+
+
+## Yaklaşan etkinlik: YAKINDA · başlık (· açıklandıysa araç), başlangıca geri sayım.
+func _fill_soon(entry: Dictionary) -> void:
+	var car: StringName = entry["car"]
+	_show_thumb(car)
+	_chip.text = "★"
+	_title.text = Loc.t("YAKINDA")
+	var title: String = String(entry["title"])
+	_parts = PackedStringArray([Loc.upper(title) if not title.is_empty() else Loc.t("CANLI ETKİNLİK")])
+	if car != &"":
+		_parts.append(String(CarCatalog.get_entry(car).get("display_name", car)).to_upper())
+	_fit_main()
+	_fit_main.call_deferred()
+
+
+## Rozetin yerinde araç resmi (car boşsa rozet).
+func _show_thumb(car: StringName) -> void:
+	var path: String = ProfileCard.THUMB_DIR + String(car) + ".png" if car != &"" else ""
+	var texture: Texture2D = load(path) as Texture2D if path != "" and ResourceLoader.exists(path) else null
+	_thumb.texture = texture
+	_thumb.visible = texture != null
+	_chip_box.visible = texture == null
+
+
+func _fill(event: Dictionary, event_car: EventCar = null) -> void:
 	var money: float = float(event["money_mult"])
 	var xp: float = float(event["xp_mult"])
 	var sale: Dictionary = event["sale"]
@@ -85,34 +137,36 @@ func _fill(event: Dictionary) -> void:
 		_chip.text = "★"
 	var title: String = SaveSafe.s(event.get("title", ""))
 	_title.text = Loc.upper(title) if not title.is_empty() else Loc.t("CANLI ETKİNLİK")
-	var parts: PackedStringArray = PackedStringArray()
-	if money > 1.0:
-		parts.append(Loc.t("ÇİFTE PARA") if is_equal_approx(money, 2.0) else Loc.t("PARA ×%s") % Loc.decimal(money, 1))
-	if xp > 1.0:
-		parts.append(Loc.t("ÇİFTE XP") if is_equal_approx(xp, 2.0) else Loc.t("XP ×%s") % Loc.decimal(xp, 1))
-	if best_sale > 0:
-		parts.append(Loc.t("İNDİRİM %s") % ShowroomScreen.sale_tag(best_sale))
-	if not (event["crate_boost"] as Dictionary).is_empty():
-		parts.append(Loc.t("ETKİNLİK KASASI"))
-	if not (event["missions"] as Array).is_empty():
-		parts.append(Loc.t("GÖREVLER"))
-	if not (event["rival"] as Dictionary).is_empty():
-		parts.append(Loc.t("ÖZEL RAKİP"))
-	if not String(event["pack"]).is_empty():
-		parts.append(Loc.t("YENİ EŞYALAR"))
-	_parts = parts
+	_parts = LiveEvent.summary_parts(event)
+	var car: StringName = EventCar.car_id() if event_car and event_car.active() else &""
+	_show_thumb(car)
+	if car != &"":
+		# Görev ilerlemesi üst satırda (dar tuvalde ana satır aracın adıyla doluyordu), ana satırın başında araç
+		var p: Vector2i = event_car.progress()
+		_title.text += " · " + Loc.t("%d / %d GÖREV") % [p.x, p.y]
+		var lead: PackedStringArray = PackedStringArray([String(CarCatalog.get_entry(car).get("display_name", car)).to_upper()])
+		lead.append_array(_parts)
+		_parts = lead
 	_fit_main()
 	_fit_main.call_deferred()   # ilk dolumda satırın genişliği yerleşimden sonra belli olur
 
 
-## Ana satıra sığdığı kadar parça; kalanı "+N" (dokununca pano hepsini gösterir).
+## Ana satıra sığdığı kadar parça; kalanı "+N" (dokununca pano hepsini gösterir). İlk parça da sığmıyorsa (dar tuvalde
+## araç adı + görev) yazı MIN_MAIN_SIZE'a dek küçülür.
 func _fit_main() -> void:
 	var width: float = _main.size.x
 	_main.text = " · ".join(_parts)
-	if width <= 0.0 or _parts.size() <= 1:
+	if width <= 0.0 or _parts.is_empty():
 		return
 	var font: Font = _main.get_theme_font(&"font")
-	var font_size: int = _main.get_theme_font_size(&"font_size")
+	var font_size: int = MAIN_SIZE
+	while font_size > MIN_MAIN_SIZE and font.get_string_size(_parts[0], HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > width:
+		font_size -= 1
+	# Yalnız değişince: punto satırın boyunu değiştirir → resized → yeniden buraya (sonsuz döngüydü)
+	if _main.get_theme_font_size(&"font_size") != font_size:
+		_main.add_theme_font_size_override(&"font_size", font_size)
+	if _parts.size() <= 1:
+		return
 	for n: int in range(_parts.size(), 0, -1):
 		var text: String = " · ".join(_parts.slice(0, n))
 		if n < _parts.size():
@@ -179,13 +233,22 @@ func _build() -> void:
 	row.add_theme_constant_override(&"separation", 12)
 	_plate.add_child(row)
 
-	var chip_box: PanelContainer = PanelContainer.new()
-	chip_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	chip_box.add_theme_stylebox_override(&"panel", _chip_style(HudPalette.PLATE_SELECTED))
+	_chip_box = PanelContainer.new()
+	_chip_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chip_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_chip_box.add_theme_stylebox_override(&"panel", _chip_style(HudPalette.PLATE_SELECTED))
 	_chip = _label(22, DARK)
-	chip_box.add_child(_chip)
-	row.add_child(chip_box)
+	_chip_box.add_child(_chip)
+	row.add_child(_chip_box)
+	_thumb = TextureRect.new()
+	_thumb.name = "CarThumb"
+	_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_thumb.custom_minimum_size = Vector2(64.0, 40.0)
+	_thumb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_thumb.visible = false
+	row.add_child(_thumb)
 
 	var texts: VBoxContainer = VBoxContainer.new()
 	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -193,7 +256,7 @@ func _build() -> void:
 	texts.add_theme_constant_override(&"separation", -2)
 	_title = _label(11, HudPalette.PLATE_SELECTED)
 	texts.add_child(_title)
-	_main = _label(17, HudPalette.TEXT_LIGHT)
+	_main = _label(MAIN_SIZE, HudPalette.TEXT_LIGHT)
 	_main.clip_text = true
 	_main.resized.connect(_fit_main)
 	texts.add_child(_main)

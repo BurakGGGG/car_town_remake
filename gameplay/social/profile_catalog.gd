@@ -38,7 +38,11 @@ const FRAMES: Array[Dictionary] = [
 	{"id": "rainbow", "name": "GÖKKUŞAĞI", "level": 1, "gems": 600, "animated": true},
 	{"id": "inviter", "name": "DAVETÇİ", "level": 1, "gems": 0, "exclusive": true},
 	{"id": "envoy", "name": "ELÇİ", "level": 1, "gems": 0, "exclusive": true},
+	{"id": "collector", "name": "KOLEKSİYONER", "level": 1, "gems": 0, "exclusive": true},   # tam koleksiyon (CollectionRewards)
 ]
+## UNVANLAR (2026-10-25): kazanılınca profil kartında adın altında amber şerit; açık garajda "honor" (arkadaşlar da görür).
+## Kimlik → ad (çeviri anahtarı). Yalnız verilir (CollectionRewards: tam koleksiyon).
+const HONORS: Dictionary = {"collector": "KOLEKSİYONER"}
 const DEFAULT_FRAME: String = "plate"
 
 ## BAYRAKLAR: kod → ad (FlagIcon hepsini kodla çizer; resim dosyası yok). Sıra = seçicideki sıra.
@@ -204,6 +208,14 @@ static func frame_animated(id: String) -> bool:
 
 
 ## Yalnız verilerek açılan çerçeve (satılmaz, seviyeyle açılmaz).
+static func is_honor(id: String) -> bool:
+	return HONORS.has(id)
+
+
+static func honor_name(id: String) -> String:
+	return Loc.t(String(HONORS.get(id, "")))
+
+
 static func frame_exclusive(id: String) -> bool:
 	return bool(frame(id).get("exclusive", false))
 

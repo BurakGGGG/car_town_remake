@@ -19,6 +19,7 @@ const TIME_SKIP: StringName = &"time_skip"            # modifiye / depo inşası
 const DAILY_DOUBLE: StringName = &"daily_double"      # günlük giriş elması ×2
 const MISSION_REROLL: StringName = &"mission_reroll"  # beğenilmeyen günlük görevi değiştir
 const JUNK_REFILL: StringName = &"junk_refill"        # hurdalıkta boş bir yığını hemen doldur
+const EVENT_RACE: StringName = &"event_race"          # ETKİNLİK YARIŞI: bugün +1 hak (EventCar)
 
 ## daily_cap: o türden günde en çok · min_level: bu seviyeden önce teklif yok (ilk deneyim reklamsız).
 ## slot: hangi reklam yuvasından (AdConfig) gösterilir · cooldown_sec: aynı türden iki izleme arası bekleme (kayıtta,
@@ -33,6 +34,7 @@ const RULES: Dictionary = {
 	DAILY_DOUBLE: {"daily_cap": 1, "min_level": 3, "slot": &"race"},
 	MISSION_REROLL: {"daily_cap": 1, "min_level": 3, "slot": &"race"},
 	JUNK_REFILL: {"daily_cap": 2, "min_level": 3, "slot": &"repair"},
+	EVENT_RACE: {"daily_cap": 1, "min_level": 3, "slot": &"race"},
 }
 
 ## Bütün türler toplamı günde en çok.

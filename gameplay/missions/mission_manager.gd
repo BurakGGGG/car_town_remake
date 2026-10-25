@@ -98,6 +98,10 @@ func _connect() -> void:
 			if won:
 				count(&"race_wins", 1))
 		race.event_rival_won.connect(func() -> void: count(&"event_rival_wins", 1))
+		race.event_car_race_finished.connect(func(won: bool) -> void:
+			count(&"event_car_races", 1)
+			if won:
+				count(&"event_car_wins", 1))
 	var crates: CrateManager = get_tree().get_first_node_in_group("crates") as CrateManager
 	if crates:
 		crates.crate_opened.connect(func(_uid: int, result: Dictionary) -> void:

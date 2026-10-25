@@ -117,6 +117,19 @@ func _ensure_crate_system() -> void:
 		add_child(missions)
 	if get_tree().get_first_node_in_group("crate_delivery") == null:
 		add_child(CrateDelivery.new())
+	# Ödünç etkinlik aracı showroom'un karşısındaki kaldırımda park eder (EventCarSpot)
+	if get_tree().get_first_node_in_group("event_car_spot") == null:
+		add_child(EventCarSpot.new())
+	# ETKİNLİK ARACI (EventCar, "event_car"): ödünç araç, günlük etkinlik yarışı hakkı, görevler bitince araç (SaveManager'dan ÖNCE)
+	if get_tree().get_first_node_in_group("event_car") == null:
+		var event_car: EventCar = EventCar.new()
+		event_car.name = "EventCar"
+		add_child(event_car)
+	# KOLEKSİYON ÖDÜLLERİ (CollectionRewards, "collection_rewards"): set + kilometre taşı, keşifte ödenir (SaveManager'dan ÖNCE)
+	if get_tree().get_first_node_in_group("collection_rewards") == null:
+		var collection: CollectionRewards = CollectionRewards.new()
+		collection.name = "CollectionRewards"
+		add_child(collection)
 	# HURDALIK: parça envanteri ve restorasyon projeleri (kayıt SaveManager'da). SaveManager'dan ÖNCE hazır olmalı.
 	if get_tree().get_first_node_in_group("junkyard") == null:
 		var junkyard: JunkyardManager = JunkyardManager.new()

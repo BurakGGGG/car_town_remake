@@ -80,6 +80,14 @@ static func sets() -> Array[Dictionary]:
 	return _sets
 
 
+## Tek set (yoksa boş sözlük).
+static func get_set(set_id: StringName) -> Dictionary:
+	for entry: Dictionary in sets():
+		if entry["id"] == set_id:
+			return entry
+	return {}
+
+
 ## Aracın hangi kasadan çıktığı (yoksa &"").
 static func crate_of(vehicle_id: StringName) -> StringName:
 	for entry: Dictionary in all():

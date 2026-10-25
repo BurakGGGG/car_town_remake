@@ -149,6 +149,10 @@ await check("uzun garaj adı reddedilir", assertFails(setDoc(doc(alice, "garages
 await check("garaj adında < reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), prof({ title: "<b>" }))));
 await check("istatistiğe ek alan reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), prof({ stats: { wins: 1, races: 1, cars: 1, best: 1, best_car: "", gems: 9 } }))));
 await check("sayı yerine metin reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), prof({ stats: { wins: "1", races: 1, cars: 1, best: 1, best_car: "" } }))));
+await check("unvan (collector) kabul", assertSucceeds(setDoc(doc(alice, "garages/g_alice"), prof({ honor: "collector" }))));
+await check("büyük harfli unvan reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), prof({ honor: "KOLEKSIYONER" }))));
+await check("uzun unvan reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), prof({ honor: "a".repeat(17) }))));
+await check("metin olmayan unvan reddedilir", assertFails(setDoc(doc(alice, "garages/g_alice"), prof({ honor: 1 }))));
 
 console.log("== avatars ==");
 const av = (over = {}) => ({ img: "QUJD".repeat(100), hash: "0a1b2c3d", at: 1, ...over });

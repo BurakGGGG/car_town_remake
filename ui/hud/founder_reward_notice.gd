@@ -59,6 +59,7 @@ func _is_calm() -> bool:
 		and not (_hud.crate_panel and _hud.crate_panel.visible) \
 		and not (_hud.restoration_result and _hud.restoration_result.visible) \
 		and not (_hud.level_up_screen and _hud.level_up_screen.visible) \
+		and not (_hud.collection_reward_screen and _hud.collection_reward_screen.visible) \
 		and get_tree().root.get_node_or_null("LoadingScreen") == null
 
 

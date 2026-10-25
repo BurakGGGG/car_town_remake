@@ -15,6 +15,13 @@ class_name LiveEvent
 ##                            açılır (RaceManager.start_event_rival), özel ödül etkinlik başına bir kez
 ##   pack                     İÇERİK PAKETİ kimliği (config/app.packs'ten biri, LivePacks indirir): o paketin "event_only"
 ##                            eşyaları yalnızca etkinlik sürerken satılır
+##   car                      {id, owned_gems, owned_crate}: ETKİNLİK ARACI (2026-10-26) — etkinlik sürerken ÖDÜNÇ verilir
+##                            (yalnız etkinlik yarışında), etkinlik görevlerinin HEPSİ bitince oyuncunun olur; zaten varsa
+##                            teselli ödülü (elmas + kasa). Görevsiz etkinlikte araç yok sayılır. EventCar yürütür.
+##   reveal_days              0–REVEAL_DAYS_MAX: takvimde aracın başlangıçtan kaç gün önce görüneceği (varsayılan 3)
+## TAKVİM (2026-10-26): panel etkinlikleri LİSTE olarak planlar (config/app.events, en çok EVENTS_MAX, çakışmaz); süren
+## etkinlik listeden seçilir (active_raw), yaklaşanlar takvimde görünür (calendar). Eski tek alan (config/app.event) yine
+## okunur: eski sürümler için panel ve eventsTick süren / sıradaki etkinliği oraya da yazar (aynı kimlik bir kez sayılır).
 ## Bozuk / bilinmeyen alan sessizce atlanır (panel de aynı sınırları uygular: firebase/admin/lib.mjs buildEvent).
 ## Saat: cihaz saati (AppConfig'in eski kuralıyla aynı; test_now testler için).
 
@@ -29,6 +36,11 @@ const REWARD_MONEY_MAX: int = 5_000_000
 const REWARD_GEMS_MAX: int = 1000
 const REWARD_XP_MAX: int = 100_000
 const TARGET_MAX: int = 1_000_000
+const EVENTS_MAX: int = 12
+const REVEAL_DAYS_DEFAULT: int = 3
+const REVEAL_DAYS_MAX: int = 14
+## Takvimde en çok bu kadar etkinlik (süren + yaklaşanlar).
+const CALENDAR_MAX: int = 4
 
 ## Etkinlik görevlerinin sayabileceği metrikler (MissionManager.count) ve metinleri. Metinler günlük / haftalık görevlerle
 ## aynı (çevirileri hazır); "%s" hedeftir.
@@ -50,6 +62,9 @@ const MISSION_TEXTS: Dictionary = {
 	&"friend_races": "%s ARKADAŞ YARIŞINA KATIL",
 	&"friend_wins": "%s ARKADAŞ YARIŞI KAZAN",
 	&"money_spent": "%s ₺ HARCA",
+	&"event_car_wins": "ETKİNLİK ARACIYLA %s YARIŞ KAZAN",
+	&"event_car_races": "ETKİNLİK ARACIYLA %s YARIŞA KATIL",
+	&"garage_visits": "%s ARKADAŞ GARAJI ZİYARET ET",
 }
 
 ## Testler: -1 değilse cihaz saati yerine bu unix zamanı.
@@ -127,6 +142,17 @@ static func pack_id() -> String:
 	return SaveSafe.s(current().get("pack", ""))
 
 
+## Süren etkinliğin aracı {id, owned_gems, owned_crate} ya da boş.
+static func car() -> Dictionary:
+	return current().get("car", {})
+
+
+## TAKVİM: süren ve yaklaşan etkinlikler (AppConfig'ten; kurulmamışsa boş).
+static func upcoming() -> Array[Dictionary]:
+	var config: AppConfig = AppConfig.current()
+	return calendar(config.config(), now()) if config else ([] as Array[Dictionary])
+
+
 ## Görev metni (hedefle): "12 TAMİR YAP".
 static func mission_text(metric: StringName, target: int) -> String:
 	var text: String = Loc.tn(String(MISSION_TEXTS.get(metric, "%s")), target)
@@ -137,13 +163,95 @@ static func mission_text(metric: StringName, target: int) -> String:
 
 ## config/app.event → normalize edilmiş etkinlik; süresi dışında, kimliksiz ya da hiçbir modülü dolu değilse boş.
 static func normalize(raw: Variant, at: int) -> Dictionary:
+	var e: Dictionary = parse(raw)
+	if e.is_empty() or int(e["end"]) <= at or int(e["start"]) > at:
+		return {}
+	return e
+
+
+## config/app'ten şu an süren etkinliğin HAM kaydı: takvimde (events) penceresi şimdiyi kapsayanların en erken başlayanı;
+## eski tek alan (event) da adaydır. Yoksa null.
+static func active_raw(config: Dictionary, at: int) -> Variant:
+	var best: Variant = null
+	var best_start: int = 0
+	for raw: Dictionary in _raw_list(config):
+		var start: int = SaveSafe.i(raw.get("start", 0))
+		if start <= at and SaveSafe.i(raw.get("end", 0)) > at and (best == null or start < best_start):
+			best = raw
+			best_start = start
+	return best
+
+
+## TAKVİM: bitmemiş etkinlikler başlangıca göre, en çok CALENDAR_MAX: {id, title, start, end, active, car (gizliyse &""),
+## car_hidden, parts (modül özeti), missions (görev sayısı)}. Araç başlangıçtan reveal_days gün önce görünür.
+static func calendar(config: Dictionary, at: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for raw: Dictionary in _raw_list(config):
+		var e: Dictionary = parse(raw)
+		if e.is_empty() or int(e["end"]) <= at:
+			continue
+		var start: int = int(e["start"])
+		var car: Dictionary = e["car"]
+		var shown: bool = not car.is_empty() and (start <= at or start - at <= int(e["reveal_days"]) * 86400)
+		out.append({"id": e["id"], "title": e["title"], "start": start, "end": int(e["end"]), "active": start <= at,
+			"car": car.get("id", &"") if shown else &"", "car_hidden": not car.is_empty() and not shown,
+			"parts": summary_parts(e), "missions": (e["missions"] as Array).size()})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["start"]) < int(b["start"]))
+	return out.slice(0, CALENDAR_MAX)
+
+
+## Takvim (events) + eski tek alan (event); aynı kimlik bir kez (panel süreni eski alana da yazar).
+static func _raw_list(config: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var seen: Dictionary = {}
+	var list: Variant = config.get("events")
+	var raws: Array = (list as Array).slice(0, EVENTS_MAX) if list is Array else []
+	raws.append(config.get("event"))
+	for raw: Variant in raws:
+		if not raw is Dictionary:
+			continue
+		var event_id: String = SaveSafe.s((raw as Dictionary).get("id", "")).strip_edges()
+		if event_id.is_empty() or seen.has(event_id):
+			continue
+		seen[event_id] = true
+		out.append(raw)
+	return out
+
+
+## Modüllerin kısa özeti (tabela, takvim): ÇİFTE PARA · İNDİRİM −%30 · ETKİNLİK KASASI · GÖREVLER · ÖZEL RAKİP …
+static func summary_parts(e: Dictionary) -> PackedStringArray:
+	var parts: PackedStringArray = PackedStringArray()
+	var money: float = float(e.get("money_mult", 1.0))
+	var xp: float = float(e.get("xp_mult", 1.0))
+	if money > 1.0:
+		parts.append(Loc.t("ÇİFTE PARA") if is_equal_approx(money, 2.0) else Loc.t("PARA ×%s") % Loc.decimal(money, 1))
+	if xp > 1.0:
+		parts.append(Loc.t("ÇİFTE XP") if is_equal_approx(xp, 2.0) else Loc.t("XP ×%s") % Loc.decimal(xp, 1))
+	var best_sale: int = 0
+	for kind: StringName in e.get("sale", {}):
+		best_sale = maxi(best_sale, int(e["sale"][kind]))
+	if best_sale > 0:
+		parts.append(Loc.t("İNDİRİM %s") % ShowroomScreen.sale_tag(best_sale))
+	if not (e.get("crate_boost", {}) as Dictionary).is_empty():
+		parts.append(Loc.t("ETKİNLİK KASASI"))
+	if not (e.get("missions", []) as Array).is_empty():
+		parts.append(Loc.t("GÖREVLER"))
+	if not (e.get("rival", {}) as Dictionary).is_empty():
+		parts.append(Loc.t("ÖZEL RAKİP"))
+	if not String(e.get("pack", "")).is_empty():
+		parts.append(Loc.t("YENİ EŞYALAR"))
+	return parts
+
+
+## Ham kaydı doğrular (süreye bakmadan): kimliksiz, süresi ters ya da hiçbir modülü dolu değilse boş.
+static func parse(raw: Variant) -> Dictionary:
 	if not raw is Dictionary:
 		return {}
 	var e: Dictionary = raw
 	var event_id: String = SaveSafe.s(e.get("id", "")).strip_edges()
 	var start: int = SaveSafe.i(e.get("start", 0))
 	var end: int = SaveSafe.i(e.get("end", 0))
-	if event_id.is_empty() or end <= at or start > at:
+	if event_id.is_empty() or end <= start:
 		return {}
 	var out: Dictionary = {
 		"id": event_id, "start": start, "end": end,
@@ -155,7 +263,11 @@ static func normalize(raw: Variant, at: int) -> Dictionary:
 		"missions": _missions(e.get("missions")),
 		"rival": _rival(e.get("rival")),
 		"pack": SaveSafe.s(e.get("pack", "")).strip_edges(),
+		"car": _car(e.get("car")),
+		"reveal_days": clampi(SaveSafe.i(e.get("reveal_days", REVEAL_DAYS_DEFAULT)), 0, REVEAL_DAYS_MAX),
 	}
+	if (out["missions"] as Array).is_empty():
+		out["car"] = {}   # görevsiz etkinlikte araç kazanılamaz
 	var any: bool = float(out["money_mult"]) > 1.0 or float(out["xp_mult"]) > 1.0 \
 		or not (out["sale"] as Dictionary).is_empty() or not (out["crate_boost"] as Dictionary).is_empty() \
 		or not (out["missions"] as Array).is_empty() or not (out["rival"] as Dictionary).is_empty() \
@@ -214,6 +326,17 @@ static func _missions(raw: Variant) -> Array[Dictionary]:
 		mission["target"] = target
 		out.append(mission)
 	return out
+
+
+static func _car(raw: Variant) -> Dictionary:
+	if not raw is Dictionary:
+		return {}
+	var car: StringName = StringName(SaveSafe.s((raw as Dictionary).get("id", "")))
+	if not CarCatalog.is_obtainable(car):
+		return {}   # polis gibi edinilemeyen araç verilemez
+	var crate: StringName = StringName(SaveSafe.s((raw as Dictionary).get("owned_crate", "")))
+	return {"id": car, "owned_gems": clampi(SaveSafe.i((raw as Dictionary).get("owned_gems", 0)), 0, REWARD_GEMS_MAX),
+		"owned_crate": crate if CrateCatalog.exists(crate) and not CrateCatalog.is_gift(crate) else &""}
 
 
 static func _rival(raw: Variant) -> Dictionary:

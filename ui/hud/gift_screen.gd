@@ -7,6 +7,8 @@ extends RewardScreen
 ## dekor (küçük resim), profil çerçevesi (oyuncunun avatarıyla), efsanevi araç seçimi. TOPLA'ya ya da boş yere dokununca
 ## kapanır; paralar sayaçlara uçar (RewardPopup gibi: sayaç paralar varana dek eski değeri gösterir). Ekran açıkken gelen
 ## ikinci hediye sıraya girer. Özet MailService._grant'tan ("cards"). MailNotice kurar.
+## ETKİNLİK ARACI da bu ekranla verilir (2026-10-26): başlık "headline", alt satır "line" ile değişir; kendiliğinden gelen
+## ödül show_when_calm ile oyun sakinleşince açılır (SEVİYE ATLADIN kuralı: pano / ders / kasa plakası yokken).
 
 ## Kapandı; car_choice: alınan hediyede efsanevi araç seçimi vardı (seçim ekranı açılmalı).
 signal finished(car_choice: bool)
@@ -17,6 +19,13 @@ var _queue: Array[Dictionary] = []
 var _pending_money: int = 0
 var _pending_gems: int = 0
 var _choice: bool = false
+## Sakin anı bekleyen kendiliğinden ödüller (sayaçları geldiği an bekletilmiş).
+var _calm_queue: Array[Dictionary] = []
+var _calm: float = 0.0
+var _calm_timer: Timer
+
+const CHECK_SEC: float = 0.4
+const CALM_SEC: float = 0.8
 
 
 func _init(hud: Hud) -> void:
@@ -33,18 +42,46 @@ func _ready() -> void:
 	_column.add_child(_subtitle)
 	_column.move_child(_subtitle, _title.get_index() + 1)
 	_divider_label.text = Loc.t("İÇİNDEKİLER")
+	_calm_timer = Timer.new()
+	_calm_timer.wait_time = CHECK_SEC
+	_calm_timer.timeout.connect(_calm_tick)
+	add_child(_calm_timer)
 
 
-## Alınan postanın özeti (MailService.claim): {title, subtitle, from, money, gems, items, cards, choice}. Ekran açıksa sıraya
-## girer, kapanınca açılır.
-func show_gift(summary: Dictionary) -> void:
+## Kendiliğinden gelen ödül (etkinlik aracı): ödül hesapta, sayaçlar şimdiden bekler; ekran oyun sakinleşince açılır.
+func show_when_calm(summary: Dictionary) -> void:
+	if _hud:
+		_hud.hold_reward(int(summary.get("money", 0)), int(summary.get("gems", 0)))
+	_calm_queue.append(summary)
+	_calm = 0.0
+	_calm_timer.start()
+
+
+func _calm_tick() -> void:
+	if _calm_queue.is_empty():
+		_calm_timer.stop()
+		return
+	if visible or not _game_calm():
+		_calm = 0.0
+		return
+	_calm += CHECK_SEC
+	if _calm >= CALM_SEC:
+		show_gift(_calm_queue.pop_front(), true)
+
+
+## Alınan postanın özeti (MailService.claim): {title, subtitle, from, money, gems, items, cards, choice; isteğe bağlı
+## headline (başlık), line (alt satır)}. Ekran açıksa sıraya girer, kapanınca açılır. held: sayaçlar zaten bekletildi.
+func show_gift(summary: Dictionary, held: bool = false) -> void:
 	if visible:
+		if held:
+			summary["_held"] = true
 		_queue.append(summary)
 		return
 	var money: int = int(summary.get("money", 0))
 	var gems: int = int(summary.get("gems", 0))
 	_set_amounts(money, gems)
-	if _hud:
+	_title.text = SaveSafe.s(summary.get("headline", "")) if summary.has("headline") else Loc.t("HEDİYEN GELDİ!")
+	if _hud and not held and not summary.get("_held", false):
 		_hud.hold_reward(money, gems)   # ödül hesapta; sayaç paralar varana dek eski değeri gösterir
 	_pending_money += money
 	_pending_gems += gems
@@ -54,7 +91,10 @@ func show_gift(summary: Dictionary) -> void:
 	if not mail_title.is_empty():
 		parts.append(mail_title)
 	var from: String = SaveSafe.s(summary.get("from", ""))
-	parts.append(Loc.t("%s gönderdi") % (from if not from.is_empty() else "AUTO YARD"))
+	if summary.has("line"):
+		parts.append(SaveSafe.s(summary["line"]))
+	else:
+		parts.append(Loc.t("%s gönderdi") % (from if not from.is_empty() else "AUTO YARD"))
 	_subtitle.text = "  ·  ".join(parts)
 	_clear_cards()
 	for card: Variant in summary.get("cards", []):
@@ -71,7 +111,9 @@ func is_busy() -> bool:
 
 
 func _on_closing() -> void:
-	_fly_rewards()
+	_fly(_pending_money, _pending_gems)
+	_pending_money = 0
+	_pending_gems = 0
 
 
 func _on_closed() -> void:
@@ -80,23 +122,9 @@ func _on_closed() -> void:
 	finished.emit(choice)
 	if not _queue.is_empty():
 		show_gift(_queue.pop_front())
-
-
-func _fly_rewards() -> void:
-	var money: int = _pending_money
-	var gems: int = _pending_gems
-	_pending_money = 0
-	_pending_gems = 0
-	if _hud == null:
-		return
-	if money > 0:
-		var from: Vector2 = _money_chip.get_global_rect().get_center()
-		CoinFlight.fly(_hud, HudIcon.Kind.COIN, from, _hud.coin_label, CoinFlight.coin_count(money),
-			func() -> void: _hud.land_reward(money, 0), _sfx.coin)
-	if gems > 0:
-		var from: Vector2 = _gem_chip.get_global_rect().get_center()
-		CoinFlight.fly(_hud, HudIcon.Kind.GEM, from, _hud.gem_label, clampi(gems / 10 + 3, 3, 8),
-			func() -> void: _hud.land_reward(0, gems), _sfx.gem)
+	elif not _calm_queue.is_empty():
+		_calm = 0.0
+		_calm_timer.start()
 
 
 # --- Kartlar -----------------------------------------------------------------
@@ -109,7 +137,7 @@ func _gift_card(card: Dictionary) -> Control:
 	match SaveSafe.s(card.get("kind", "")):
 		"car":
 			var owned: bool = card.get("owned", false) == true
-			var rarity: StringName = CrateCatalog.rarity_of(id)
+			var rarity: StringName = CollectionRewards.car_rarity(id)   # hurdalık klasiği: kademesinin nadirliği
 			return _card_from(Loc.t("ARAÇ") if owned else Loc.t("YENİ ARAÇ"), _car_photo(id), MailService.car_name(id),
 				CrateCatalog.rarity_label(rarity) if rarity != &"" else Loc.t("GARAJINA EKLENDİ"),
 				Loc.t("ZATEN VARDI · +%s ₺") % Hud.format_thousands(SaveSafe.i(card.get("money", 0))) if owned else "")

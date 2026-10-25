@@ -83,25 +83,13 @@ func _on_closed() -> void:
 func _tick() -> void:
 	if _to_level == 0 or visible:
 		return
-	if not _is_calm():
+	if not _game_calm():
 		_calm = 0.0
 		return
 	_calm += CHECK_SEC
 	if _calm >= CALM_SEC:
 		_timer.stop()
 		_open()
-
-
-func _is_calm() -> bool:
-	var tutorial: TutorialDirector = _hud.tutorial
-	if not _hud.visible or not _hud.router.top().is_empty() or (tutorial and tutorial.is_running()):
-		return false
-	if (_hud.crate_panel and _hud.crate_panel.visible) or (_hud.restoration_result and _hud.restoration_result.visible):
-		return false
-	for child: Node in get_parent().get_children():   # posta / ön kayıt ödülü pencereleri de Root'ta
-		if (child is RewardPopup or child is RewardScreen) and child != self and (child as Control).visible:
-			return false
-	return get_tree().root.get_node_or_null("LoadingScreen") == null
 
 
 func _open() -> void:

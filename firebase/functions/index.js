@@ -4,6 +4,8 @@
 //   newsPush        panel HABERLER'e bildirimli haber yazınca, haber görünürse dil konularına bir kez bildirim (news_feed.js)
 //   newsPushScheduled 10 dakikada bir: başlangıcı gelen zamanlı haberlerin bildirimi + biten haberi oyunun okuduğu yayın
 //                   belgesinden (config/news) düşürme (news_feed.js)
+//   eventsTick      10 dakikada bir: etkinlik takviminden (config/app.events) eski sürümlerin okuduğu config/app.event aynasını
+//                   ilerletir + "başlayınca bildirim gönder" işaretli etkinlik başlayınca dil konularına bir kez bildirim (events_tick.js)
 //   promoRedeem     oyuncu kupon kodu girince doğrular, ödülü postaya bırakır (mantık promo.js)
 //   referralJoin    davetle gelen yeni oyuncunun talebini doğrular: arkadaşlık + hoş geldin postası (mantık referral.js)
 //   referralQualify davetli 3. seviyeye ulaşınca davet edenin sayacı +1, basamak ödülü postaya (mantık referral.js)
@@ -24,11 +26,12 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const { getAuth } = require("firebase-admin/auth");
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { handleRaceNews } = require("./news");
 const { handleMailCreated } = require("./mail");
 const { handleNewsWritten, pushScheduled, refreshFeed } = require("./news_feed");
+const { eventsTick } = require("./events_tick");
 const { handleRedeem } = require("./promo");
 const { handleJoin, handleQualify } = require("./referral");
 const { writeDailyStats } = require("./stats");
@@ -171,6 +174,16 @@ exports.newsPushScheduled = onSchedule(
     const result = await pushScheduled({ db, messaging: messaging(), now });
     const feed = await refreshFeed({ db, now });
     if (result.pending || feed.ended) console.log(`newsPushScheduled: ${JSON.stringify({ ...result, feed })}`);
+  },
+);
+
+// ETKİNLİK TAKVİMİ (docs/CANLI_ETKINLIK.md "Takvim ve etkinlik aracı"): okuma 1 (config/app); ayna değişince işlemle yazılır,
+// bildirim adayı varsa ops/event_push da okunur. Takvim hiç kaydedilmemişse (config/app.events yok) hiçbir şey yazılmaz.
+exports.eventsTick = onSchedule(
+  { schedule: "every 10 minutes", region: "europe-west4", timeZone: "Europe/Istanbul", maxInstances: 1 },
+  async () => {
+    const result = await eventsTick({ db: getFirestore(), messaging: messaging(), now: Date.now(), deleteField: () => FieldValue.delete() });
+    if (result.mirror !== "same" || result.pushed.length || result.failed) console.log(`eventsTick: ${JSON.stringify(result)}`);
   },
 );
 

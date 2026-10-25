@@ -5,7 +5,8 @@ import { gzipSync } from "node:zlib";
 import {
   PanelError, loadCatalog, buildInfo, buildMail, hasReward, mailId, buildConfig, buildNews, classifyQuery, unpackSave, texts, MAX_GEMS,
   statsFromSave, buildBan, banActive, moderatedName, groupReports, buildAdjust, buildRestore,
-  buildPromo, buildEvent, buildSegment, matchSegment, buildLearning, buildPacks, buildEventDoc, SALE_MAX, MISSION_METRICS,
+  buildPromo, buildEvent, buildSegment, matchSegment, buildLearning, buildPacks, buildEventsDoc, buildEvents, mirrorEvent, eventsOf,
+  EVENTS_MAX, EVENTS_KEEP_ENDED, SALE_MAX, MISSION_METRICS,
   buildAds, AD_KINDS, buildNewsPost, newsId, NEWS_ID_RE, newsImage, newsAction, newsTarget, decodeNewsImage, imageKind,
   bucketCandidates, isMissingBucket, storageUrl, NEWS_IMAGE_BYTES, buildNewsFeed, NEWS_FEED_DOC, NEWS_FEED_MAX,
 } from "../lib.mjs";
@@ -221,23 +222,126 @@ test("ödüllü reklam ayarı: varsayılanlar, sınırlar, bilinmeyen tür", () 
   assert.throws(() => buildAds({ free_gems_cooldown: 4000 }), /0 ile 3600/);
   assert.throws(() => buildAds({ caps: { uydurma: 3 } }), /Bilinmeyen/);
   assert.equal(AD_KINDS.free_gems.cap, 5);
-  assert.equal(Object.keys(AD_KINDS).length, 9, "oyundaki 9 teklif türü");
+  assert.deepEqual(AD_KINDS.event_race, { label: "Etkinlik yarışı +1 hak", cap: 1 }, "etkinlik yarışı: günde 3 + reklamla 1");
+  assert.equal(buildAds({ caps: { event_race: 0 } }).caps.event_race, 0);
+  assert.equal(Object.keys(AD_KINDS).length, 10, "oyundaki 10 teklif türü");
 });
 
-test("paket listesi ve etkinlik belgesi (öbür alanlar korunur)", () => {
+test("paket listesi ve takvim belgesi (öbür alanlar korunur, ayna yazılır)", () => {
   assert.throws(() => buildPacks([{ id: "a", url: "http://x/a.pck", sha256: "a".repeat(64), size: 1 }]), /https/);
   assert.throws(() => buildPacks([{ id: "a", url: "https://x/a.pck", sha256: "abc", size: 1 }]), /sha256/);
   const one = { id: "a", url: "https://x/a.pck", sha256: "b".repeat(64), size: 10 };
   assert.throws(() => buildPacks([one, one]), /iki kez/);
-  const current = { min_code: 11, maintenance: false, notice: { id: "n1", text: { tr: "x" } }, event: { id: "old", money_mult: 2 } };
-  const doc = buildEventDoc({ event: { id: "e2", start: 1, end: 2, sale: { mods: 20 } }, packs: [one] }, catalog, current, NOW);
-  assert.equal(doc.min_code, 11, "sürüm alanı korunur");
-  assert.equal(doc.notice.id, "n1", "duyuru korunur");
+  const S = Math.floor(NOW / 1000);
+  const current = { min_code: 11, maintenance: true, notice: { id: "n1", text: { tr: "x" } }, ads: { total_cap: 7 },
+    event: { id: "old", money_mult: 2, start: 1, end: 2 } };
+  const live = { id: "e_live", start: S - 3600, end: S + 3600, sale: { mods: 20 }, pack: "a" };
+  const next = { id: "e_next", start: S + 86400, end: S + 2 * 86400, money_mult: 2 };
+  const doc = buildEventsDoc({ events: [next, live], packs: [one] }, catalog, current, NOW);
+  assert.deepEqual([doc.min_code, doc.maintenance, doc.notice.id, doc.ads.total_cap], [11, true, "n1", 7], "sürüm / bakım / duyuru / reklam korunur");
+  assert.deepEqual(doc.events.map((e) => e.id), ["e_live", "e_next"], "başlangıca göre sıralı");
+  assert.equal(doc.event.id, "e_live", "ayna: süren etkinlik");
+  assert.deepEqual(doc.event, doc.events[0], "ayna listedeki öğenin aynısı");
   assert.deepEqual(doc.event.sale, { mods: 20 }, "eski etkinliğin alanı (money_mult 2) taşınmaz");
-  assert.equal(doc.event.money_mult, 1);
   assert.equal(doc.packs.length, 1);
-  const off = buildEventDoc({ event: null, packs: [] }, catalog, doc, NOW);
-  assert.ok(!("event" in off) && !("packs" in off), "etkinlik bitir: alan silinir");
+  assert.equal(doc.updated_at, S);
+  const upcoming = buildEventsDoc({ events: [next], packs: [one] }, catalog, doc, NOW);
+  assert.equal(upcoming.event.id, "e_next", "süren yoksa sıradaki (eski sürüm başlangıçta kendisi açar)");
+  const off = buildEventsDoc({ events: [], packs: [] }, catalog, doc, NOW);
+  assert.ok(!("event" in off) && !("packs" in off), "boş takvim: ayna ve paketler silinir");
+  assert.deepEqual(off.events, [], "takvim boş dizi olarak kalır (eventsTick yönetilen sayar)");
+  assert.throws(() => buildEventsDoc({ events: [live], packs: [] }, catalog, current, NOW), /paket listesinde yok/,
+    "etkinliğin kullandığı paket listeden çıkarılamaz");
+  assert.throws(() => buildEventsDoc({ events: { id: "x" } }, catalog, current, NOW), /dizi/);
+  // Takvim hiç kaydedilmemiş: eski tek etkinlik listede görünür
+  assert.deepEqual(eventsOf({ event: { id: "old" } }), [{ id: "old" }]);
+  assert.deepEqual(eventsOf({ events: [], event: { id: "x" } }), [], "takvim varsa ayna ikinci kez gösterilmez");
+  assert.deepEqual(eventsOf(null), []);
+});
+
+const carEvent = (over = {}) => ({ id: "e_car", title: { tr: "SÜPER HAFTA" }, start: 100, end: 200,
+  car: { id: "ford_focus", owned_gems: 150, owned_crate: "city_crate" },
+  missions: [{ metric: "event_car_wins", target: 3, gems: 20 }, { metric: "garage_visits", target: 5 }], ...over });
+
+test("etkinlik aracı: alanlar, reveal_days varsayılanı, bildirim", () => {
+  const e = buildEvent(carEvent({ notify: true }), catalog, []);
+  assert.deepEqual(e.car, { id: "ford_focus", owned_gems: 150, owned_crate: "city_crate" });
+  assert.equal(e.reveal_days, 3, "araçlı etkinlikte reveal_days hep yazılır (varsayılan 3)");
+  assert.equal(e.notify, true);
+  assert.deepEqual(e.missions.map((m) => m.metric), ["event_car_wins", "garage_visits"]);
+  assert.deepEqual(Object.keys(e), ["id", "title", "text", "start", "end", "money_mult", "xp_mult", "missions", "car", "reveal_days", "notify"]);
+  assert.equal(buildEvent(carEvent({ reveal_days: 0 }), catalog).reveal_days, 0);
+  assert.equal(buildEvent(carEvent({ reveal_days: "14" }), catalog).reveal_days, 14);
+  assert.throws(() => buildEvent(carEvent({ reveal_days: 15 }), catalog), /0 ile 14/);
+  assert.equal(buildEvent(carEvent({ car: { id: "ford_focus" } }), catalog).car.owned_crate, "", "teselli kasası isteğe bağlı");
+  assert.equal(buildEvent(carEvent({ car: { id: "ford_focus" } }), catalog).car.owned_gems, 0);
+  // Araçsız etkinlik: car / reveal_days yazılmaz, notify yalnız true ise
+  const plain = buildEvent({ id: "p", start: 1, end: 2, money_mult: 2, reveal_days: 5, notify: false }, catalog);
+  assert.ok(!("car" in plain) && !("reveal_days" in plain) && !("notify" in plain));
+  assert.equal(buildEvent({ id: "p", start: 1, end: 2, money_mult: 2, notify: "true" }, catalog).notify, undefined, "yalnız gerçek true");
+  assert.ok(!("car" in buildEvent({ id: "p", start: 1, end: 2, money_mult: 2, car: { id: "" } }, catalog)), "boş araç seçimi = araç yok");
+});
+
+test("etkinlik aracı: doğrulama", () => {
+  assert.throws(() => buildEvent(carEvent({ missions: [] }), catalog), /Etkinlik aracı için en az bir görev gerekli/);
+  assert.throws(() => buildEvent(carEvent({ missions: [], money_mult: 2 }), catalog), /en az bir görev/, "başka modül olsa da");
+  assert.throws(() => buildEvent(carEvent({ car: { id: "police_vito" } }), catalog), /edinilemeyen/);
+  assert.throws(() => buildEvent(carEvent({ car: { id: "uydurma_araba" } }), catalog), /bilinmeyen/);
+  assert.throws(() => buildEvent(carEvent({ car: { id: "ford_focus", owned_gems: 1001 } }), catalog), /0 ile 1000/);
+  assert.throws(() => buildEvent(carEvent({ car: { id: "ford_focus", owned_gems: 1.5 } }), catalog), /tam sayı/);
+  assert.throws(() => buildEvent(carEvent({ car: { id: "ford_focus", owned_crate: "welcome_crate" } }), catalog), /satılan kasalar/,
+    "hediye kasası teselli olamaz");
+  assert.throws(() => buildEvent({ id: "x", start: 1, end: 2, missions: [{ metric: "event_car_races", target: 2 }] }, catalog),
+    /etkinlik aracı seç/, "araçsız etkinlikte araç görevi tamamlanamaz");
+  // Yalnız araç + görev: geçerli etkinlik (araç da modül)
+  const only = buildEvent({ id: "o", start: 1, end: 2, car: { id: "ford_focus" }, missions: [{ metric: "event_car_races", target: 1 }] }, catalog);
+  assert.equal(only.car.id, "ford_focus");
+});
+
+test("görev türleri: etkinlik aracı ve garaj ziyareti (oyundaki metinle aynı)", () => {
+  assert.equal(MISSION_METRICS.event_car_wins, "ETKİNLİK ARACIYLA %s YARIŞ KAZAN");
+  assert.equal(MISSION_METRICS.event_car_races, "ETKİNLİK ARACIYLA %s YARIŞA KATIL");
+  assert.equal(MISSION_METRICS.garage_visits, "%s ARKADAŞ GARAJI ZİYARET ET");
+  assert.equal(catalog.metrics.garage_visits, MISSION_METRICS.garage_visits, "panel kataloğunda");
+  assert.equal(buildEvent({ id: "g", start: 1, end: 2, missions: [{ metric: "garage_visits", target: 3 }] }, catalog).missions[0].target, 3);
+});
+
+test("takvim: sıralama, çakışma, tekil kimlik, en çok 12, eski etkinlik düşer", () => {
+  const S = 2_000_000_000;
+  const D = 86400;
+  const e = (id, start, end, over = {}) => ({ id, title: { tr: `ETKİNLİK ${id}` }, start, end, money_mult: 2, ...over });
+  const list = buildEvents([e("c", S + 4 * D, S + 5 * D), e("a", S, S + D), e("b", S + D, S + 2 * D)], catalog, [], S);
+  assert.deepEqual(list.map((x) => x.id), ["a", "b", "c"], "başlangıca göre; art arda (a.end == b.start) serbest");
+  const overlap = () => buildEvents([e("a", S, S + 2 * D), e("b", S + D, S + 3 * D)], catalog, [], S);
+  assert.throws(overlap, /Etkinlikler çakışıyor: "ETKİNLİK a" \(a, .* → .*\) ile "ETKİNLİK b" \(b, /, "hata iki etkinliği de adlandırır");
+  assert.throws(() => buildEvents([e("big", S, S + 9 * D), e("in", S + D, S + 2 * D)], catalog, [], S), /çakışıyor/, "içinde kalan");
+  assert.throws(() => buildEvents([e("a", S, S + D), e("a", S + 2 * D, S + 3 * D)], catalog, [], S), /iki kez listede: a/);
+  const twelve = Array.from({ length: EVENTS_MAX }, (_, i) => e(`k${i}`, S + i * D, S + i * D + 3600));
+  assert.equal(buildEvents(twelve, catalog, [], S).length, 12);
+  assert.throws(() => buildEvents([...twelve, e("k12", S + 20 * D, S + 21 * D)], catalog, [], S), /en çok 12/);
+  // Bitişinin üzerinden 30 günden fazla geçen düşer (bitmiş ama yakın olan soluk görünsün diye kalır)
+  const kept = buildEvents([e("old", S - 40 * D, S - EVENTS_KEEP_ENDED - 1), e("recent", S - 10 * D, S - 9 * D), e("now", S, S + D)], catalog, [], S);
+  assert.deepEqual(kept.map((x) => x.id), ["recent", "now"]);
+  assert.equal(buildEvents([...twelve, e("old", S - 40 * D, S - 35 * D)], catalog, [], S).length, 12, "düşen eski etkinlik sınıra sayılmaz");
+  // Öğenin kendi hatası etkinlik adıyla
+  assert.throws(() => buildEvents([e("x", S, S + D, { money_mult: 9 })], catalog, [], S), /Etkinlik "ETKİNLİK x" \(x\): Çarpan/);
+  assert.throws(() => buildEvents([{ id: "bos", start: S, end: S + D }], catalog, [], S), /en az bir modül/);
+  assert.deepEqual(buildEvents(undefined, catalog, [], S), []);
+  // Kendi çıktısını yeniden kabul eder (panel listeyi olduğu gibi geri gönderir)
+  const full = buildEvents([carEvent({ start: S, end: S + D, notify: true, reveal_days: 5 })], catalog, [], S);
+  assert.deepEqual(buildEvents(JSON.parse(JSON.stringify(full)), catalog, [], S), full);
+});
+
+test("ayna (functions/events_tick.js ile aynı kod)", () => {
+  const S = 2_000_000_000;
+  const a = { id: "a", start: S - 100, end: S + 100 };
+  const b = { id: "b", start: S + 200, end: S + 300 };
+  const c = { id: "c", start: S + 400, end: S + 500 };
+  assert.equal(mirrorEvent([b, a, c], S).id, "a", "süren");
+  assert.equal(mirrorEvent([c, b], S).id, "b", "sıradaki: en küçük start");
+  assert.equal(mirrorEvent([a], S + 100), null, "end == şimdi: bitti, sıradaki yok");
+  assert.equal(mirrorEvent([a, b], S + 150).id, "b", "arada: sıradaki");
+  assert.equal(mirrorEvent([], S), null);
 });
 
 test("hedefli gönderim süzgeci", () => {

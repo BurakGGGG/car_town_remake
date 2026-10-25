@@ -16,7 +16,8 @@ herkese açık olduğu için yönetim yalnızca buradan yapılır (karar 2026-10
 | İstatistik | hesaplı oyuncu, aktif 1 / 7 / 30 gün, yeni hesap, bildirim oranı, son 30 gün grafiği, dil / seviye dağılımı; **yarış öğrenmesi** tablosu (son iki yarış × kolay / dengeli / zor → yarıştan sonra kalış oranı) ve ayarı (kapat, kalış penceresi, genel tablo ağırlığı) | `stats_daily`, `players`, `config/race_learning`, `race_learning_daily` |
 
 Hediye ve duyuruda **Filtreli** hedef: seviye, son oynama, kaç gündür oynamadığı ("geri dön hediyesi"), sürüm kodu,
-dil. Sürüm ve bakım sekmesinde **canlı etkinlik** (para / XP çarpanı, başlangıç / bitiş, tabela başlığı). Oyuncu
+dil. **Etkinlik** sekmesinde **etkinlik takvimi** (en çok 12 etkinlik, modüller, etkinlik aracı, başlayınca bildirim;
+`config/app.events` + eski sürümler için `config/app.event` aynası; docs/CANLI_ETKINLIK.md "Takvim ve etkinlik aracı"). Oyuncu
 sekmesinde **Destek**: bakiye düzeltme (eksi dahil) ve kayıt geçmişinden geri yükleme.
 
 ## Haberler (2026-10-25)

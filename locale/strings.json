@@ -9,10 +9,10 @@
   "ui/hud/restoration_panel.gd:306"
  ],
  "  ·  AUTO YARD USTASI": [
-  "ui/hud/profile_card.gd:153"
+  "ui/hud/profile_card.gd:174"
  ],
  "  ·  GARAJ %s ₺": [
-  "ui/hud/profile_card.gd:151"
+  "ui/hud/profile_card.gd:172"
  ],
  "  ·  MODİFİYELİ": [
   "ui/hud/race_challenge_screen.gd:190"
@@ -20,8 +20,8 @@
  "  ·  PARA YETERSİZ": [
   "ui/hud/garage_edit_screen.gd:661",
   "ui/hud/garage_edit_screen.gd:685",
-  "ui/hud/hud.gd:983",
-  "ui/hud/hud.gd:1014"
+  "ui/hud/hud.gd:985",
+  "ui/hud/hud.gd:1016"
  ],
  "  ·  USTALIK %s": [
   "ui/hud/repair_panel.gd:463"
@@ -38,20 +38,34 @@
  "%d  ·  %s SINIFI  ·  %s": [
   "ui/hud/junkyard_screen.gd:525"
  ],
+ "%d %s": [
+  "ui/hud/event_screen.gd:506",
+  "ui/hud/news_digest.gd:461"
+ ],
  "%d %s %d": [
   "ui/hud/news_digest.gd:483"
  ],
  "%d %s için %d GEM ödensin mi?": [
   "ui/hud/restoration_panel.gd:347"
  ],
+ "%d / %d GÖREV": [
+  "ui/hud/event_banner.gd:145"
+ ],
  "%d / %d PARÇA TAKILI": [
   "ui/hud/mod_workshop.gd:819"
  ],
+ "%d ARAÇ": [
+  "ui/hud/collection_reward_screen.gd:179",
+  "ui/hud/collection_reward_screen.gd:195"
+ ],
  "%d ARAÇ OTOPARKTAN DEPOYA GEÇTİ": [
-  "ui/hud/hud.gd:694"
+  "ui/hud/hud.gd:696"
  ],
  "%d ARAÇ · GÜNLÜK %s ₺": [
   "ui/hud/car_garages_screen.gd:700"
+ ],
+ "%d ARAÇLIK SET": [
+  "ui/hud/collection_reward_screen.gd:151"
  ],
  "%d ARKADAŞIN PARÇA BEKLİYOR": [
   "ui/hud/news_digest.gd:264"
@@ -63,7 +77,7 @@
   "ui/hud/supercar_tease_screen.gd:159"
  ],
  "%d DEPO": [
-  "ui/hud/profile_card.gd:190"
+  "ui/hud/profile_card.gd:211"
  ],
  "%d DEPO AÇILDI": [
   "ui/hud/news_digest.gd:415"
@@ -82,7 +96,7 @@
  ],
  "%d GALİBİYET": [
   "gameplay/vehicle_sort.gd:79",
-  "ui/hud/profile_card.gd:161"
+  "ui/hud/profile_card.gd:182"
  ],
  "%d GEM": [
   "ui/hud/restoration_panel.gd:321",
@@ -104,7 +118,7 @@
   "ui/hud/restoration_panel.gd:362"
  ],
  "%d GÜN KALDI": [
-  "ui/hud/login_ladder_screen.gd:207"
+  "ui/hud/login_ladder_screen.gd:209"
  ],
  "%d GÜN ÖNCE": [
   "ui/hud/inbox_screen.gd:304"
@@ -125,7 +139,7 @@
   "ui/hud/car_garage_upgrade_screen.gd:248"
  ],
  "%d PARK YERİ · %s ₺": [
-  "ui/hud/level_up_screen.gd:183"
+  "ui/hud/level_up_screen.gd:171"
  ],
  "%d SA %d DK KALDI": [
   "ui/hud/inbox_screen.gd:321"
@@ -133,20 +147,26 @@
  "%d SA ÖNCE": [
   "ui/hud/inbox_screen.gd:301"
  ],
+ "%d SET": [
+  "ui/hud/collection_reward_screen.gd:168"
+ ],
+ "%d SET TAMAMLANDI!": [
+  "ui/hud/collection_reward_screen.gd:96"
+ ],
  "%d YARIŞ": [
   "gameplay/vehicle_sort.gd:78"
  ],
  "%d YARIŞ · %s KAZANMA": [
-  "ui/hud/profile_card.gd:170"
+  "ui/hud/profile_card.gd:191"
  ],
  "%d YENİ": [
   "ui/hud/inbox_screen.gd:132"
  ],
  "%d YENİ EŞYA": [
-  "ui/hud/level_up_screen.gd:212"
+  "ui/hud/level_up_screen.gd:200"
  ],
  "%d YER": [
-  "ui/hud/profile_card.gd:190"
+  "ui/hud/profile_card.gd:211"
  ],
  "%d arkadaşın garajını gezdi, %d tanesi beğendi.": [
   "ui/hud/news_digest.gd:343"
@@ -158,11 +178,11 @@
   "ui/hud/news_digest.gd:468"
  ],
  "%d dk": [
-  "gameplay/social/social_manager.gd:1168",
+  "gameplay/social/social_manager.gd:1171",
   "ui/hud/mod_workshop.gd:992"
  ],
  "%d etkinlik eşyası yalnızca etkinlik süresince satışta.": [
-  "ui/hud/event_screen.gd:223"
+  "ui/hud/event_screen.gd:577"
  ],
  "%d km/sa": [
   "ui/hud/mod_workshop.gd:541"
@@ -179,9 +199,6 @@
  "%d ÖDÜLÜN TOPLAMI": [
   "ui/hud/reward_popup.gd:53"
  ],
- "%d ödül hazır": [
-  "ui/hud/event_screen.gd:201"
- ],
  "%d. ALAN → %s AÇILIR": [
   "gameplay/progression_effects.gd:135"
  ],
@@ -192,13 +209,13 @@
   "ui/hud/referral_tab.gd:382"
  ],
  "%d. AY": [
-  "ui/hud/login_ladder_screen.gd:172"
+  "ui/hud/login_ladder_screen.gd:174"
  ],
  "%d. GÜN ÖDÜLÜ": [
-  "ui/hud/login_ladder_screen.gd:240"
+  "ui/hud/login_ladder_screen.gd:242"
  ],
  "%d. HAFTA": [
-  "ui/hud/login_ladder_screen.gd:180"
+  "ui/hud/login_ladder_screen.gd:182"
  ],
  "%d. RÜTBE": [
   "ui/hud/profile_screen.gd:182"
@@ -225,7 +242,7 @@
   "ui/hud/car_placement_screen.gd:154"
  ],
  "%dg %02ds": [
-  "ui/hud/event_banner.gd:130"
+  "ui/hud/event_banner.gd:174"
  ],
  "%s\n%d GEM": [
   "ui/hud/showroom_screen.gd:943"
@@ -257,7 +274,7 @@
  ],
  "%s  ·  %s SINIFI": [
   "ui/hud/all_cars_screen.gd:312",
-  "ui/hud/collection_screen.gd:314",
+  "ui/hud/collection_screen.gd:323",
   "ui/hud/crate_panel.gd:130"
  ],
  "%s %d KEZ KAZANDI": [
@@ -285,15 +302,18 @@
   "ui/hud/friends_screen.gd:686"
  ],
  "%s ARAÇ BOYA": [
-  "gameplay/backend/live_event.gd:46"
+  "gameplay/backend/live_event.gd:58"
+ ],
+ "%s ARKADAŞ GARAJI ZİYARET ET": [
+  "gameplay/backend/live_event.gd:67"
  ],
  "%s ARKADAŞ YARIŞI KAZAN": [
   "gameplay/missions/mission_catalog.gd:99",
-  "gameplay/backend/live_event.gd:51"
+  "gameplay/backend/live_event.gd:63"
  ],
  "%s ARKADAŞ YARIŞINA KATIL": [
   "gameplay/missions/mission_catalog.gd:71",
-  "gameplay/backend/live_event.gd:50"
+  "gameplay/backend/live_event.gd:62"
  ],
  "%s ARKADAŞIN OLDU": [
   "ui/hud/news_digest.gd:396"
@@ -327,12 +347,12 @@
   "ui/hud/news_digest.gd:234"
  ],
  "%s EŞYA SATIN AL": [
-  "gameplay/backend/live_event.gd:45"
+  "gameplay/backend/live_event.gd:57"
  ],
  "%s EŞYA YERLEŞTİR": [
   "gameplay/missions/mission_catalog.gd:64",
   "gameplay/missions/mission_catalog.gd:89",
-  "gameplay/backend/live_event.gd:44"
+  "gameplay/backend/live_event.gd:56"
  ],
  "%s GARAJA YOLA ÇIKTI": [
   "ui/hud/junkyard_screen.gd:633"
@@ -341,7 +361,7 @@
   "ui/hud/junkyard_screen.gd:649"
  ],
  "%s GARAJINA GELİYOR": [
-  "ui/hud/hud.gd:1946"
+  "ui/hud/hud.gd:1961"
  ],
  "%s GARAJINA HAYRAN KALDI!": [
   "ui/hud/news_digest.gd:252"
@@ -350,13 +370,13 @@
   "ui/hud/news_digest.gd:253"
  ],
  "%s GARAJINDA": [
-  "ui/hud/hud.gd:1368"
+  "ui/hud/hud.gd:1370"
  ],
  "%s GARAJINI BEĞENDİ": [
-  "gameplay/social/social_manager.gd:1353"
+  "gameplay/social/social_manager.gd:1356"
  ],
  "%s GARAJINI GEZDİ": [
-  "gameplay/social/social_manager.gd:1355",
+  "gameplay/social/social_manager.gd:1358",
   "ui/hud/news_digest.gd:394"
  ],
  "%s GÖNDER": [
@@ -372,7 +392,7 @@
   "ui/hud/mod_workshop.gd:783"
  ],
  "%s HAZIR!": [
-  "ui/hud/hud.gd:700"
+  "ui/hud/hud.gd:702"
  ],
  "%s HEDİYE YOLLADI": [
   "ui/hud/news_digest.gd:392"
@@ -381,15 +401,15 @@
   "ui/hud/login_screen.gd:337"
  ],
  "%s KADEMESİ": [
-  "ui/hud/level_up_screen.gd:195"
+  "ui/hud/level_up_screen.gd:183"
  ],
  "%s KASA AÇ": [
   "gameplay/missions/mission_catalog.gd:61",
   "gameplay/missions/mission_catalog.gd:86",
-  "gameplay/backend/live_event.gd:42"
+  "gameplay/backend/live_event.gd:54"
  ],
  "%s KASA SİPARİŞ ET": [
-  "gameplay/backend/live_event.gd:43"
+  "gameplay/backend/live_event.gd:55"
  ],
  "%s KAZANDI": [
   "ui/hud/race_result_screen.gd:89",
@@ -403,7 +423,7 @@
  ],
  "%s MODİFİYE TAK": [
   "gameplay/missions/mission_catalog.gd:98",
-  "gameplay/backend/live_event.gd:47"
+  "gameplay/backend/live_event.gd:59"
  ],
  "%s MODİFİYESİ BİTTİ": [
   "ui/hud/news_digest.gd:409"
@@ -412,7 +432,7 @@
   "ui/hud/news_digest.gd:272"
  ],
  "%s OTOPARKTAN DEPOYA GEÇTİ": [
-  "ui/hud/hud.gd:693"
+  "ui/hud/hud.gd:695"
  ],
  "%s PARÇA İSTİYOR": [
   "ui/hud/news_digest.gd:402"
@@ -457,23 +477,23 @@
   "ui/hud/ad_offer_button.gd:87"
  ],
  "%s TAKILIYOR": [
-  "ui/hud/hud.gd:1083"
+  "ui/hud/hud.gd:1085"
  ],
  "%s TAMİR YAP": [
   "gameplay/missions/mission_catalog.gd:46",
   "gameplay/missions/mission_catalog.gd:47",
   "gameplay/missions/mission_catalog.gd:48",
   "gameplay/missions/mission_catalog.gd:80",
-  "gameplay/backend/live_event.gd:36"
+  "gameplay/backend/live_event.gd:48"
  ],
  "%s USTALIK %d★\n+%s ₺   ÖDÜL +%%%d": [
-  "ui/hud/hud.gd:1203"
+  "ui/hud/hud.gd:1205"
  ],
  "%s UZUN İŞ TAMAMLA": [
   "gameplay/missions/mission_catalog.gd:53",
   "gameplay/missions/mission_catalog.gd:54",
   "gameplay/missions/mission_catalog.gd:87",
-  "gameplay/backend/live_event.gd:38"
+  "gameplay/backend/live_event.gd:50"
  ],
  "%s VE %d ARKADAŞIN": [
   "ui/hud/news_digest.gd:499"
@@ -491,12 +511,12 @@
   "gameplay/missions/mission_catalog.gd:57",
   "gameplay/missions/mission_catalog.gd:58",
   "gameplay/missions/mission_catalog.gd:85",
-  "gameplay/backend/live_event.gd:40"
+  "gameplay/backend/live_event.gd:52"
  ],
  "%s YARIŞA KATIL": [
   "gameplay/missions/mission_catalog.gd:55",
   "gameplay/missions/mission_catalog.gd:56",
-  "gameplay/backend/live_event.gd:39"
+  "gameplay/backend/live_event.gd:51"
  ],
  "%s YARIŞMAK İSTİYOR!": [
   "ui/hud/race_challenge_screen.gd:171"
@@ -524,7 +544,7 @@
  ],
  "%s artık arkadaşın!": [
   "gameplay/social/social_manager.gd:647",
-  "gameplay/social/social_manager.gd:1260",
+  "gameplay/social/social_manager.gd:1263",
   "ui/hud/invite_screen.gd:202"
  ],
  "%s bağlanamadı": [
@@ -540,7 +560,7 @@
   "gameplay/missions/mission_catalog.gd:140"
  ],
  "%s engellendi, artık sana görünmez.": [
-  "gameplay/social/social_manager.gd:1831"
+  "gameplay/social/social_manager.gd:1836"
  ],
  "%s farklı araç keşfet": [
   "gameplay/missions/mission_catalog.gd:123"
@@ -555,7 +575,7 @@
   "ui/hud/news_digest.gd:346"
  ],
  "%s gönderdi": [
-  "ui/hud/gift_screen.gd:57",
+  "ui/hud/gift_screen.gd:97",
   "ui/hud/inbox_screen.gd:164",
   "ui/hud/inbox_screen.gd:166"
  ],
@@ -606,10 +626,10 @@
   "gameplay/missions/mission_catalog.gd:136"
  ],
  "%s oyuncusuna 1 %s gönderdin.": [
-  "gameplay/social/social_manager.gd:1091"
+  "gameplay/social/social_manager.gd:1094"
  ],
  "%s oyuncusuna istek gönderildi.": [
-  "gameplay/social/social_manager.gd:1240"
+  "gameplay/social/social_manager.gd:1243"
  ],
  "%s sana %s gönderdi. Hurdalıkta işine yarayacak.": [
   "ui/hud/news_digest.gd:339"
@@ -635,7 +655,7 @@
   "ui/hud/repair_panel.gd:325",
   "ui/hud/repair_panel.gd:422",
   "ui/hud/friends_screen.gd:891",
-  "ui/hud/profile_card.gd:164"
+  "ui/hud/profile_card.gd:185"
  ],
  "%s tamir alanına sahip ol": [
   "gameplay/missions/mission_catalog.gd:128"
@@ -665,10 +685,10 @@
   "ui/hud/invite_screen.gd:207"
  ],
  "%s · %d. KADEME MODİFİYE": [
-  "ui/hud/event_screen.gd:210"
+  "ui/hud/event_screen.gd:564"
  ],
  "%s · %s %d. SEVİYE": [
-  "ui/hud/hud.gd:702"
+  "ui/hud/hud.gd:704"
  ],
  "%s · DOKUN: ODAYI DOLDUR": [
   "ui/hud/garage_edit_screen.gd:1414"
@@ -698,7 +718,8 @@
   "ui/hud/car_garage_upgrade_screen.gd:163"
  ],
  "%s ÇERÇEVE": [
-  "ui/hud/level_up_screen.gd:206"
+  "ui/hud/level_up_screen.gd:194",
+  "ui/hud/collection_reward_screen.gd:189"
  ],
  "%s ÇERÇEVESİ": [
   "gameplay/backend/mail_service.gd:382"
@@ -710,7 +731,7 @@
   "ui/hud/profile_edit_screen.gd:407"
  ],
  "%s çıkma şansı ×%s": [
-  "ui/hud/event_screen.gd:190"
+  "ui/hud/event_screen.gd:555"
  ],
  "%s İSTİYOR": [
   "ui/hud/friends_screen.gd:477"
@@ -738,19 +759,19 @@
   "gameplay/progression_effects.gd:83"
  ],
  "%s ₺ GEREKLİ": [
-  "ui/hud/hud.gd:1054"
+  "ui/hud/hud.gd:1056"
  ],
  "%s ₺ HARCA": [
   "gameplay/missions/mission_catalog.gd:59",
   "gameplay/missions/mission_catalog.gd:90",
-  "gameplay/backend/live_event.gd:52"
+  "gameplay/backend/live_event.gd:64"
  ],
  "%s ₺ · %s İNŞAAT · %d → %d YER": [
   "ui/hud/car_garages_screen.gd:791"
  ],
  "%s → %s SINIFI!": [
   "ui/hud/mod_workshop.gd:641",
-  "ui/hud/hud.gd:715"
+  "ui/hud/hud.gd:717"
  ],
  "%s, %s ARACINI YENDİ!\nİNTİKAM İÇİN: ARKADAŞLAR": [
   "ui/hud/friends_screen.gd:700"
@@ -762,7 +783,7 @@
   "ui/hud/news_digest.gd:283"
  ],
  "(şerit noktası %s, verilen %s)": [
-  "gameplay/race/race_manager.gd:1241"
+  "gameplay/race/race_manager.gd:1285"
  ],
  "*.png, *.jpg, *.jpeg, *.webp": [
   "ui/hud/photo_picker.gd:8"
@@ -781,19 +802,24 @@
  ],
  "+%d GEM": [
   "gameplay/gem_rewards.gd:223",
-  "gameplay/missions/mission_manager.gd:829",
-  "gameplay/backend/live_event.gd:253",
+  "gameplay/missions/mission_manager.gd:833",
+  "gameplay/backend/live_event.gd:376",
   "gameplay/social/referral_rewards.gd:65",
-  "ui/hud/login_ladder_screen.gd:205",
-  "ui/hud/login_ladder_screen.gd:272",
+  "ui/hud/login_ladder_screen.gd:207",
+  "ui/hud/login_ladder_screen.gd:274",
+  "ui/hud/event_screen.gd:403",
   "ui/hud/mission_screen.gd:315",
   "ui/hud/mission_screen.gd:483",
   "ui/hud/mission_screen.gd:782",
+  "ui/hud/collection_reward_screen.gd:149",
+  "ui/hud/collection_reward_screen.gd:179",
+  "ui/hud/collection_reward_screen.gd:195",
+  "ui/hud/collection_screen.gd:566",
   "ui/hud/gem_store_screen.gd:428",
   "ui/hud/gem_store_screen.gd:465",
   "ui/hud/inbox_screen.gd:219",
   "ui/hud/inbox_screen.gd:251",
-  "ui/hud/hud.gd:1280",
+  "ui/hud/hud.gd:1282",
   "ui/hud/reward_popup.gd:65",
   "ui/hud/reward_screen.gd:111",
   "ui/hud/crate_panel.gd:129"
@@ -810,19 +836,22 @@
  "+%d RÜTBE DAHA": [
   "ui/hud/garage_value_screen.gd:161"
  ],
+ "+%d SET DAHA": [
+  "ui/hud/collection_reward_screen.gd:168"
+ ],
  "+%d XP": [
-  "gameplay/missions/mission_manager.gd:832",
-  "gameplay/backend/live_event.gd:255",
+  "gameplay/missions/mission_manager.gd:836",
+  "gameplay/backend/live_event.gd:378",
   "ui/hud/race_result_screen.gd:59",
   "ui/hud/repair_panel.gd:427",
   "ui/hud/mission_screen.gd:485",
   "ui/hud/mission_screen.gd:780",
-  "ui/hud/hud.gd:1191",
+  "ui/hud/hud.gd:1193",
   "ui/hud/reward_popup.gd:69"
  ],
  "+%s ₺   +%d XP": [
   "ui/hud/repair_panel.gd:222",
-  "ui/hud/hud.gd:895"
+  "ui/hud/hud.gd:897"
  ],
  "+%s ₺  +%d XP": [
   "ui/hud/repair_panel.gd:302"
@@ -833,8 +862,12 @@
  "+1 EŞZAMANLI TAMİR": [
   "gameplay/progression_effects.gd:50"
  ],
+ "+1 HAK": [
+  "ui/hud/event_screen.gd:189"
+ ],
  "+1 KASA": [
-  "gameplay/backend/live_event.gd:257"
+  "gameplay/backend/live_event.gd:380",
+  "ui/hud/event_screen.gd:405"
  ],
  "+750 ₺   +35 XP": [
   "ui/hud/repair_panel.gd:167"
@@ -885,7 +918,7 @@
   "gameplay/quest_catalog.gd:44"
  ],
  "28. GÜN · %d. AY ÖDÜLÜ": [
-  "ui/hud/login_ladder_screen.gd:202"
+  "ui/hud/login_ladder_screen.gd:204"
  ],
  "3 FOTOĞRAF ÇEK": [
   "gameplay/missions/mission_catalog.gd:102"
@@ -918,10 +951,10 @@
   "gameplay/social/social_names.gd:8"
  ],
  "ABD": [
-  "gameplay/social/profile_catalog.gd:48"
+  "gameplay/social/profile_catalog.gd:52"
  ],
  "AE": [
-  "gameplay/social/profile_catalog.gd:53",
+  "gameplay/social/profile_catalog.gd:57",
   "ui/hud/flag_icon.gd:230"
  ],
  "AHŞAP": [
@@ -943,7 +976,7 @@
   "decor/decorations.json:battery_charger.title"
  ],
  "AL": [
-  "ui/hud/login_ladder_screen.gd:465",
+  "ui/hud/login_ladder_screen.gd:467",
   "ui/hud/referral_tab.gd:319",
   "ui/hud/referral_tab.gd:406",
   "ui/hud/inbox_screen.gd:193"
@@ -977,10 +1010,10 @@
   "ui/hud/inbox_screen.gd:310"
  ],
  "ALINDI · %d. GÜN": [
-  "ui/hud/login_ladder_screen.gd:210"
+  "ui/hud/login_ladder_screen.gd:212"
  ],
  "ALMANYA": [
-  "gameplay/social/profile_catalog.gd:47"
+  "gameplay/social/profile_catalog.gd:51"
  ],
  "ALTIGEN KARO": [
   "decor/decorations.json:hex_tile.title"
@@ -1009,18 +1042,24 @@
  "ALTIN V12 MOTOR": [
   "decor/decorations.json:lux_gold_engine.title"
  ],
+ "ALTIN ÇAĞ GT": [
+  "vehicles/crates.json:set.altin_cag_gt"
+ ],
  "ALTIN ÇERÇEVELİ TABLO": [
   "decor/decorations.json:lux_gold_painting.title"
  ],
  "AMERİKAN": [
   "vehicles/crates.json:set.amerikan"
  ],
+ "AMERİKAN KASLILARI": [
+  "vehicles/crates.json:set.amerikan_kaslilari"
+ ],
  "ANLADIM": [
   "ui/tutorial/tutorial_director.gd:866",
   "ui/tutorial/tutorial_director.gd:995"
  ],
  "AR": [
-  "gameplay/social/profile_catalog.gd:48",
+  "gameplay/social/profile_catalog.gd:52",
   "ui/hud/flag_icon.gd:111"
  ],
  "ARACI SAT": [
@@ -1036,6 +1075,7 @@
   "ui/hud/referral_tab.gd:410"
  ],
  "ARALIK": [
+  "ui/hud/event_screen.gd:505",
   "ui/hud/news_digest.gd:480"
  ],
  "ARANABİLİR YIĞIN  %d": [
@@ -1045,7 +1085,7 @@
   "ui/hud/friends_screen.gd:887"
  ],
  "ARAÇ": [
-  "ui/hud/gift_screen.gd:113"
+  "ui/hud/gift_screen.gd:141"
  ],
  "ARAÇ DEPOLARI": [
   "ui/hud/garage_value_screen.gd:146"
@@ -1061,6 +1101,9 @@
  ],
  "ARAÇ TESLİMAT KASASI  ·  SV %d+": [
   "ui/hud/showroom_screen.gd:1213"
+ ],
+ "ARAÇ YAKINDA AÇIKLANACAK": [
+  "ui/hud/event_screen.gd:493"
  ],
  "ARAÇ YILDIZI İLERLEDİ": [
   "ui/hud/crate_panel.gd:123"
@@ -1088,7 +1131,7 @@
   "decor/decorations.json:diagnostic_cart.title"
  ],
  "ARJANTİN": [
-  "gameplay/social/profile_catalog.gd:48"
+  "gameplay/social/profile_catalog.gd:52"
  ],
  "ARKADAN İTİŞ": [
   "ui/hud/garage_screen.gd:1102"
@@ -1106,7 +1149,7 @@
   "ui/hud/visit_bar.gd:48"
  ],
  "ARKADAŞ HEDİYESİ  +%d PARÇA\n%s": [
-  "gameplay/social/social_manager.gd:1132"
+  "gameplay/social/social_manager.gd:1135"
  ],
  "ARKADAŞIN DEPOLARI": [
   "ui/hud/visit_depots_screen.gd:115"
@@ -1120,8 +1163,8 @@
  ],
  "ARKADAŞLAR": [
   "ui/hud/invite_screen.gd:230",
-  "ui/hud/hud.gd:2426",
-  "ui/hud/hud.gd:2599",
+  "ui/hud/hud.gd:2442",
+  "ui/hud/hud.gd:2656",
   "ui/hud/friends_screen.gd:963"
  ],
  "ARKADAŞLAR %d": [
@@ -1143,7 +1186,7 @@
   "decor/decorations.json:lux_bonsai.title"
  ],
  "AT": [
-  "gameplay/social/profile_catalog.gd:50",
+  "gameplay/social/profile_catalog.gd:54",
   "ui/hud/flag_icon.gd:82"
  ],
  "ATARİ MAKİNESİ": [
@@ -1161,11 +1204,11 @@
   "ui/hud/news_digest.gd:271"
  ],
  "AU": [
-  "gameplay/social/profile_catalog.gd:54",
+  "gameplay/social/profile_catalog.gd:58",
   "ui/hud/flag_icon.gd:239"
  ],
  "AUTO YARD": [
-  "ui/hud/gift_screen.gd:57",
+  "ui/hud/gift_screen.gd:97",
   "ui/hud/inbox_screen.gd:166"
  ],
  "AUTO YARD  ·  SÜRÜM %s\n%s": [
@@ -1186,17 +1229,20 @@
  "AVLU ZEMİNİ": [
   "gameplay/garage_decor.gd:300"
  ],
+ "AVRUPA MİNİKLERİ": [
+  "vehicles/crates.json:set.avrupa_minikleri"
+ ],
  "AVUSTRALYA": [
-  "gameplay/social/profile_catalog.gd:54"
+  "gameplay/social/profile_catalog.gd:58"
  ],
  "AVUSTURYA": [
-  "gameplay/social/profile_catalog.gd:50"
+  "gameplay/social/profile_catalog.gd:54"
  ],
  "AY": [
   "gameplay/social/social_names.gd:43"
  ],
  "AY ÖDÜLÜ!": [
-  "ui/hud/login_ladder_screen.gd:242"
+  "ui/hud/login_ladder_screen.gd:244"
  ],
  "AY-": [
   "gameplay/social/social_names.gd:77"
@@ -1214,11 +1260,11 @@
   "decor/decorations.json:sunflowers.title"
  ],
  "AZ": [
-  "gameplay/social/profile_catalog.gd:47",
+  "gameplay/social/profile_catalog.gd:51",
   "ui/hud/flag_icon.gd:70"
  ],
  "AZERBAYCAN": [
-  "gameplay/social/profile_catalog.gd:47"
+  "gameplay/social/profile_catalog.gd:51"
  ],
  "Ahşap kasada beş ayçiçeği.": [
   "decor/decorations.json:sunflowers.desc"
@@ -1342,10 +1388,10 @@
   "ui/hud/profile_edit_screen.gd:506"
  ],
  "Arkadaşlarından %s istedin.": [
-  "gameplay/social/social_manager.gd:1043"
+  "gameplay/social/social_manager.gd:1046"
  ],
  "Arkadaşlarından istemek için hesabınla giriş yap.": [
-  "gameplay/social/social_manager.gd:1028"
+  "gameplay/social/social_manager.gd:1031"
  ],
  "Arkadaşın oyuna girip %d. seviyeye ulaşınca bir ödül açılır. %d. arkadaşta EFSANEVİ ARACINI SEÇ!": [
   "ui/hud/referral_tab.gd:73"
@@ -1354,7 +1400,7 @@
   "ui/hud/referral_tab.gd:204"
  ],
  "Arkadaşının isteği değişti.": [
-  "gameplay/social/social_manager.gd:1096"
+  "gameplay/social/social_manager.gd:1099"
  ],
  "Arıza yok": [
   "ui/hud/repair_panel.gd:117"
@@ -1400,7 +1446,7 @@
  "AÇIK": [
   "ui/hud/settings_screen.gd:535",
   "ui/hud/garage_edit_screen.gd:687",
-  "ui/hud/hud.gd:986"
+  "ui/hud/hud.gd:988"
  ],
  "AÇIK BETON": [
   "decor/decorations.json:concrete_light.title"
@@ -1415,7 +1461,7 @@
   "decor/decorations.json:wood_light.title"
  ],
  "AÇILANLAR": [
-  "ui/hud/level_up_screen.gd:130"
+  "ui/hud/level_up_screen.gd:118"
  ],
  "AÇILDI": [
   "ui/hud/garage_value_screen.gd:154",
@@ -1438,6 +1484,7 @@
   "ui/hud/mod_workshop.gd:668"
  ],
  "AĞUSTOS": [
+  "ui/hud/event_screen.gd:505",
   "ui/hud/news_digest.gd:480"
  ],
  "Ağırlık −%%%s": [
@@ -1459,7 +1506,7 @@
   "vehicles/crates.json:set.aile_sedani"
  ],
  "BAE": [
-  "gameplay/social/profile_catalog.gd:53"
+  "gameplay/social/profile_catalog.gd:57"
  ],
  "BAKIMDAYIZ": [
   "ui/gate/app_gate.gd:98"
@@ -1513,7 +1560,7 @@
   "ui/hud/inbox_screen.gd:33"
  ],
  "BAŞARIM\n%s ★%d": [
-  "gameplay/missions/mission_manager.gd:1063"
+  "gameplay/missions/mission_manager.gd:1067"
  ],
  "BAŞARIMLAR": [
   "ui/hud/mission_screen.gd:17",
@@ -1529,10 +1576,10 @@
   "ui/tutorial/chapter_card.gd:66"
  ],
  "BAŞLANGIÇ": [
-  "ui/hud/collection_screen.gd:171"
+  "ui/hud/collection_screen.gd:183"
  ],
  "BAŞLANGIÇ ARACI": [
-  "ui/hud/collection_screen.gd:344"
+  "ui/hud/collection_screen.gd:353"
  ],
  "BAŞLANGIÇ PAKETİ": [
   "gameplay/purchases/gem_products.gd:16"
@@ -1544,7 +1591,7 @@
   "ui/tutorial/tutorial_director.gd:601"
  ],
  "BE": [
-  "gameplay/social/profile_catalog.gd:50",
+  "gameplay/social/profile_catalog.gd:54",
   "ui/hud/flag_icon.gd:98"
  ],
  "BEBEK MAVİSİ": [
@@ -1557,7 +1604,7 @@
   "decor/decorations.json:certificates.title"
  ],
  "BELÇİKA": [
-  "gameplay/social/profile_catalog.gd:50"
+  "gameplay/social/profile_catalog.gd:54"
  ],
  "BENZİN BİDONLARI": [
   "decor/decorations.json:jerry_cans.title"
@@ -1599,10 +1646,10 @@
   "ui/hud/visit_bar.gd:122"
  ],
  "BEĞENİ": [
-  "ui/hud/profile_card.gd:99"
+  "ui/hud/profile_card.gd:117"
  ],
  "BG": [
-  "gameplay/social/profile_catalog.gd:50",
+  "gameplay/social/profile_catalog.gd:54",
   "ui/hud/flag_icon.gd:80"
  ],
  "BIRAK": [
@@ -1632,11 +1679,11 @@
   "ui/hud/junkyard_screen.gd:546"
  ],
  "BR": [
-  "gameplay/social/profile_catalog.gd:49",
+  "gameplay/social/profile_catalog.gd:53",
   "ui/hud/flag_icon.gd:138"
  ],
  "BREZİLYA": [
-  "gameplay/social/profile_catalog.gd:49"
+  "gameplay/social/profile_catalog.gd:53"
  ],
  "BRONZ": [
   "gameplay/social/profile_catalog.gd:30"
@@ -1660,13 +1707,16 @@
   "ui/hud/junkyard_screen.gd:458"
  ],
  "BUGÜN · %d. GÜN": [
-  "ui/hud/login_ladder_screen.gd:210"
+  "ui/hud/login_ladder_screen.gd:212"
+ ],
+ "BUGÜNKÜ ETKİNLİK YARIŞI HAKLARIN BİTTİ\nYARIN YENİLENİR": [
+  "ui/hud/hud.gd:2522"
  ],
  "BUJİ": [
   "vehicles/restorations.json:parts.spark_plug"
  ],
  "BULGARİSTAN": [
-  "gameplay/social/profile_catalog.gd:50"
+  "gameplay/social/profile_catalog.gd:54"
  ],
  "BULUT KAYDI": [
   "ui/hud/login_screen.gd:145"
@@ -1861,9 +1911,9 @@
   "gameplay/backend/promo_service.gd:68"
  ],
  "Bu kodla bir oyuncu bulunamadı.": [
-  "gameplay/social/social_manager.gd:1205",
-  "gameplay/social/social_manager.gd:1211",
-  "gameplay/social/social_manager.gd:1226"
+  "gameplay/social/social_manager.gd:1208",
+  "gameplay/social/social_manager.gd:1214",
+  "gameplay/social/social_manager.gd:1229"
  ],
  "Bu kodu zaten kullandın.": [
   "gameplay/backend/promo_service.gd:62"
@@ -1875,23 +1925,23 @@
   "gameplay/backend/promo_service.gd:66"
  ],
  "Bu oyuncunun engeli kaldırıldı.": [
-  "gameplay/social/social_manager.gd:1218"
+  "gameplay/social/social_manager.gd:1221"
  ],
  "Bu oyuncunun garajı bulunamadı.": [
   "gameplay/social/social_manager.gd:719"
  ],
  "Bu oyuncuya zaten istek gönderdin.": [
-  "gameplay/social/social_manager.gd:1220"
+  "gameplay/social/social_manager.gd:1223"
  ],
  "Bu senin kendi davet linkin. Arkadaşına gönder, o açınca arkadaş olursunuz.": [
   "ui/hud/invite_screen.gd:212"
  ],
  "Bu senin kendi kodun.": [
   "gameplay/social/social_manager.gd:489",
-  "gameplay/social/social_manager.gd:1211"
+  "gameplay/social/social_manager.gd:1214"
  ],
  "Bu takma ad kullanılamaz. Harf, rakam, boşluk ve . _ - kullanabilirsin.": [
-  "gameplay/social/social_manager.gd:1932"
+  "gameplay/social/social_manager.gd:1937"
  ],
  "Bu telefondan daha önce davetle gelinmiş.": [
   "gameplay/social/referral_manager.gd:157"
@@ -1900,7 +1950,7 @@
   "decor/decorations.json:hedge.desc"
  ],
  "Bugün bu arkadaşına zaten hediye gönderdin.": [
-  "gameplay/social/social_manager.gd:1094"
+  "gameplay/social/social_manager.gd:1097"
  ],
  "Bugün seni geçti ama yolun daha başında. Tamir et, para biriktir, garajını büyüt: bir gün böyle bir araba da senin garajında duracak.": [
   "ui/hud/supercar_tease_screen.gd:133"
@@ -1928,6 +1978,9 @@
  ],
  "Burada iki aracı ve kazanırsan alacağın ödülü görürsün. YARIŞ'a bas!": [
   "ui/tutorial/tutorial_director.gd:893"
+ ],
+ "BÜTÜN ETKİNLİK GÖREVLERİ TAMAM": [
+  "ui/hud/hud.gd:2549"
  ],
  "BÜTÜN GÖREVLER": [
   "ui/hud/mission_screen.gd:315"
@@ -2021,7 +2074,7 @@
   "ui/hud/junkyard_screen.gd:469"
  ],
  "BİRLEŞİK KRALLIK": [
-  "gameplay/social/profile_catalog.gd:47"
+  "gameplay/social/profile_catalog.gd:51"
  ],
  "BİTKİ": [
   "gameplay/garage_decor.gd:307"
@@ -2044,13 +2097,13 @@
   "ui/hud/drag_race_screen.gd:1101"
  ],
  "BİTİŞE %s": [
-  "ui/hud/event_screen.gd:135"
+  "ui/hud/event_screen.gd:253"
  ],
  "BİZİ DEĞERLENDİR": [
   "ui/hud/rate_prompt.gd:68"
  ],
  "CA": [
-  "gameplay/social/profile_catalog.gd:53",
+  "gameplay/social/profile_catalog.gd:57",
   "ui/hud/flag_icon.gd:236"
  ],
  "CAM BÖLME": [
@@ -2058,9 +2111,11 @@
  ],
  "CANLI ETKİNLİK": [
   "gameplay/backend/inbox.gd:191",
-  "ui/hud/event_screen.gd:78",
-  "ui/hud/event_screen.gd:141",
-  "ui/hud/event_banner.gd:87",
+  "ui/hud/event_screen.gd:124",
+  "ui/hud/event_screen.gd:267",
+  "ui/hud/event_screen.gd:463",
+  "ui/hud/event_banner.gd:106",
+  "ui/hud/event_banner.gd:136",
   "ui/hud/mission_screen.gd:571"
  ],
  "CAR PARTS": [
@@ -2071,22 +2126,22 @@
   "Main.tscn:597"
  ],
  "CH": [
-  "gameplay/social/profile_catalog.gd:51",
+  "gameplay/social/profile_catalog.gd:55",
   "ui/hud/flag_icon.gd:158"
  ],
  "CIVATA": [
   "vehicles/restorations.json:parts.bolt"
  ],
  "CL": [
-  "gameplay/social/profile_catalog.gd:48",
+  "gameplay/social/profile_catalog.gd:52",
   "ui/hud/flag_icon.gd:122"
  ],
  "CN": [
-  "gameplay/social/profile_catalog.gd:52",
+  "gameplay/social/profile_catalog.gd:56",
   "ui/hud/flag_icon.gd:215"
  ],
  "CO": [
-  "gameplay/social/profile_catalog.gd:48",
+  "gameplay/social/profile_catalog.gd:52",
   "ui/hud/flag_icon.gd:114"
  ],
  "Cam fanuslu jetonlu sakız makinesi.": [
@@ -2129,7 +2184,7 @@
   "ui/hud/garage_edit_screen.gd:1412"
  ],
  "DANİMARKA": [
-  "gameplay/social/profile_catalog.gd:51"
+  "gameplay/social/profile_catalog.gd:55"
  ],
  "DART TAHTASI": [
   "decor/decorations.json:dartboard.title"
@@ -2164,19 +2219,20 @@
   "decor/decorations.json:drum_kit.title"
  ],
  "DE": [
-  "gameplay/social/profile_catalog.gd:47",
+  "gameplay/social/profile_catalog.gd:51",
   "ui/hud/flag_icon.gd:74"
  ],
  "DEBRİYAJ ": [
   "ui/hud/drag_race_screen.gd:1152"
  ],
  "DEKOR": [
-  "ui/hud/event_screen.gd:176",
-  "ui/hud/gift_screen.gd:122"
+  "ui/hud/event_screen.gd:541",
+  "ui/hud/gift_screen.gd:150",
+  "ui/hud/collection_reward_screen.gd:190"
  ],
  "DEKORA GİT": [
-  "ui/hud/event_screen.gd:181",
-  "ui/hud/event_screen.gd:224"
+  "ui/hud/event_screen.gd:546",
+  "ui/hud/event_screen.gd:578"
  ],
  "DEKORATÖR": [
   "gameplay/missions/mission_catalog.gd:125"
@@ -2211,7 +2267,7 @@
   "ui/hud/car_garages_screen.gd:232",
   "ui/hud/garage_screen.gd:2165",
   "ui/hud/garage_screen.gd:2174",
-  "ui/hud/hud.gd:262",
+  "ui/hud/hud.gd:264",
   "ui/tutorial/tutorial_director.gd:587"
  ],
  "DEPOLARIM   %d / %d YER": [
@@ -2265,7 +2321,7 @@
   "ui/hud/mission_screen.gd:493"
  ],
  "DEVAM ET": [
-  "ui/hud/level_up_screen.gd:147",
+  "ui/hud/level_up_screen.gd:135",
   "ui/hud/login_screen.gd:371"
  ],
  "DEVİR SINIRI": [
@@ -2302,12 +2358,15 @@
   "decor/decorations.json:dj_booth.title"
  ],
  "DK": [
-  "gameplay/social/profile_catalog.gd:51",
+  "gameplay/social/profile_catalog.gd:55",
   "ui/hud/flag_icon.gd:172"
  ],
  "DOKUN": [
   "ui/hud/drag_race_screen.gd:321",
   "ui/hud/drag_race_screen.gd:542"
+ ],
+ "DOLMUŞ DURAĞI": [
+  "vehicles/crates.json:set.dolmus_duragi"
  ],
  "DOLU": [
   "ui/hud/car_garages_screen.gd:786",
@@ -2528,13 +2587,13 @@
   "ui/hud/inbox_screen.gd:303"
  ],
  "DÜNKÜ GİRİŞ ÖDÜLÜ ALINDI": [
-  "ui/hud/hud.gd:1283"
+  "ui/hud/hud.gd:1285"
  ],
  "DÜNYA HARİTASI": [
   "decor/decorations.json:world_map.title"
  ],
  "DÜNÜN GÖREV ÖDÜLLERİ": [
-  "gameplay/missions/mission_manager.gd:336"
+  "gameplay/missions/mission_manager.gd:340"
  ],
  "DÜZ DUVAR": [
   "decor/decorations.json:wall_plain.title"
@@ -2646,14 +2705,14 @@
   "gameplay/garage_value.gd:57"
  ],
  "EFSANEVİ": [
-  "gameplay/crate_catalog.gd:103"
+  "gameplay/crate_catalog.gd:111"
  ],
  "EFSANEVİ ARACINI SEÇ": [
   "ui/hud/legendary_pick_screen.gd:141"
  ],
  "EFSANEVİ ARAÇ": [
   "ui/hud/referral_tab.gd:399",
-  "ui/hud/gift_screen.gd:129"
+  "ui/hud/gift_screen.gd:157"
  ],
  "EFSANEVİ ARAÇ SEÇİMİ": [
   "gameplay/backend/mail_service.gd:227",
@@ -2661,7 +2720,7 @@
   "ui/hud/inbox_screen.gd:233"
  ],
  "EG": [
-  "gameplay/social/profile_catalog.gd:53",
+  "gameplay/social/profile_catalog.gd:57",
   "ui/hud/flag_icon.gd:233"
  ],
  "EGZOZ ASKISI": [
@@ -2678,6 +2737,7 @@
   "ui/hud/restoration_panel.gd:263"
  ],
  "EKİM": [
+  "ui/hud/event_screen.gd:505",
   "ui/hud/news_digest.gd:480"
  ],
  "ELEKTRİK": [
@@ -2722,13 +2782,13 @@
  ],
  "EN İYİ 300 M": [
   "ui/hud/friends_screen.gd:891",
-  "ui/hud/profile_card.gd:98"
+  "ui/hud/profile_card.gd:116"
  ],
  "EN İYİ DEĞER": [
   "ui/hud/gem_store_screen.gd:393"
  ],
  "ENDONEZYA": [
-  "gameplay/social/profile_catalog.gd:53"
+  "gameplay/social/profile_catalog.gd:57"
  ],
  "ENDÜSTRİYEL APLİK": [
   "decor/decorations.json:wall_lamp.title"
@@ -2741,7 +2801,7 @@
   "ui/hud/restoration_panel.gd:304"
  ],
  "EPİK": [
-  "gameplay/crate_catalog.gd:103"
+  "gameplay/crate_catalog.gd:111"
  ],
  "ERKEN": [
   "gameplay/race/drag_race_sim.gd:842"
@@ -2750,7 +2810,7 @@
   "ui/hud/drag_race_screen.gd:1232"
  ],
  "ES": [
-  "gameplay/social/profile_catalog.gd:48",
+  "gameplay/social/profile_catalog.gd:52",
   "ui/hud/flag_icon.gd:106"
  ],
  "ETKİLEYİCİ GARAJ": [
@@ -2765,30 +2825,51 @@
  "ETKİNLİK %s SONRA BİTİYOR": [
   "ui/hud/mission_screen.gd:553"
  ],
- "ETKİNLİK GÖREVLERİ · %d / %d": [
-  "ui/hud/event_screen.gd:200"
+ "ETKİNLİK ARACI": [
+  "ui/hud/event_banner.gd:142"
+ ],
+ "ETKİNLİK ARACI SENİN!": [
+  "ui/hud/hud.gd:2547"
+ ],
+ "ETKİNLİK ARACIYLA %s YARIŞ KAZAN": [
+  "gameplay/backend/live_event.gd:65"
+ ],
+ "ETKİNLİK ARACIYLA %s YARIŞA KATIL": [
+  "gameplay/backend/live_event.gd:66"
  ],
  "ETKİNLİK GÖREVİ": [
-  "gameplay/missions/mission_manager.gd:968"
+  "gameplay/missions/mission_manager.gd:972"
  ],
  "ETKİNLİK GÖREVİ TAMAM\n%s": [
-  "gameplay/missions/mission_manager.gd:897"
+  "gameplay/missions/mission_manager.gd:901"
  ],
  "ETKİNLİK KASASI": [
-  "ui/hud/event_banner.gd:96"
+  "gameplay/backend/live_event.gd:236",
+  "ui/hud/event_screen.gd:332"
  ],
  "ETKİNLİK KASASI · %s": [
-  "ui/hud/event_screen.gd:189"
+  "ui/hud/event_screen.gd:554"
  ],
  "ETKİNLİK RAKİBİ": [
-  "gameplay/race/race_manager.gd:725",
-  "ui/hud/event_screen.gd:207"
+  "gameplay/race/race_manager.gd:739",
+  "gameplay/race/race_manager.gd:766",
+  "ui/hud/event_screen.gd:337",
+  "ui/hud/event_screen.gd:561"
  ],
  "ETKİNLİK RAKİBİNİ %s KEZ YEN": [
-  "gameplay/backend/live_event.gd:41"
+  "gameplay/backend/live_event.gd:53"
+ ],
+ "ETKİNLİK TAKVİMİ": [
+  "ui/hud/event_screen.gd:292"
+ ],
+ "ETKİNLİK TAMAMLANDI!": [
+  "ui/hud/hud.gd:2547"
  ],
  "ETKİNLİK YARIŞI": [
   "ui/hud/race_result_screen.gd:52"
+ ],
+ "ETKİNLİK YARIŞI · %d / %d HAK": [
+  "ui/hud/event_screen.gd:284"
  ],
  "ETKİNLİK İNDİRİMİ %s · %d → %d GEM": [
   "ui/hud/showroom_screen.gd:1198"
@@ -2807,6 +2888,7 @@
   "ui/hud/login_screen.gd:362"
  ],
  "EYLÜL": [
+  "ui/hud/event_screen.gd:505",
   "ui/hud/news_digest.gd:480"
  ],
  "Ekranlı teker balans makinesi.": [
@@ -2840,7 +2922,7 @@
   "decor/decorations.json:coffee_station.desc"
  ],
  "Etkinlik içeriği iniyor…": [
-  "ui/hud/event_screen.gd:221"
+  "ui/hud/event_screen.gd:575"
  ],
  "Etkinlikler ve yeni sürümler.": [
   "ui/hud/settings_screen.gd:639"
@@ -2855,7 +2937,7 @@
   "decor/decorations.json:drafting_table.desc"
  ],
  "EŞYA": [
-  "gameplay/backend/live_event.gd:261"
+  "gameplay/backend/live_event.gd:384"
  ],
  "EŞYA İNİYOR": [
   "ui/hud/mission_screen.gd:617"
@@ -2882,7 +2964,7 @@
   "ui/hud/login_screen.gd:431"
  ],
  "FI": [
-  "gameplay/social/profile_catalog.gd:51",
+  "gameplay/social/profile_catalog.gd:55",
   "ui/hud/flag_icon.gd:176"
  ],
  "FIRÇA": [
@@ -2908,11 +2990,11 @@
   "gameplay/missions/mission_catalog.gd:146"
  ],
  "FR": [
-  "gameplay/social/profile_catalog.gd:47",
+  "gameplay/social/profile_catalog.gd:51",
   "ui/hud/flag_icon.gd:90"
  ],
  "FRANSA": [
-  "gameplay/social/profile_catalog.gd:47"
+  "gameplay/social/profile_catalog.gd:51"
  ],
  "FREN": [
   "gameplay/repair/repair_type.gd:60"
@@ -3000,7 +3082,13 @@
   "gameplay/missions/mission_catalog.gd:139"
  ],
  "FİNLANDİYA": [
-  "gameplay/social/profile_catalog.gd:51"
+  "gameplay/social/profile_catalog.gd:55"
+ ],
+ "FİNİŞ": [
+  "ui/hud/event_road.gd:266"
+ ],
+ "FİNİŞTE ARAÇ SENİN": [
+  "ui/hud/event_screen.gd:408"
  ],
  "FİYATI: 1 CIVATA": [
   "ui/hud/news_screen.gd:382"
@@ -3040,14 +3128,14 @@
   "ui/hud/news_digest.gd:240"
  ],
  "GARAJ RÜTBESİ %d\n%s": [
-  "ui/hud/hud.gd:1219"
+  "ui/hud/hud.gd:1221"
  ],
  "GARAJ RÜTBESİ %d GEREKLİ (şu an %d)": [
   "gameplay/progression_effects.gd:78"
  ],
  "GARAJ SEVİYE %d": [
   "ui/hud/garage_edit_screen.gd:707",
-  "ui/hud/hud.gd:1043"
+  "ui/hud/hud.gd:1045"
  ],
  "GARAJ SEVİYESİ": [
   "gameplay/garage_upgrade.gd:62"
@@ -3057,7 +3145,7 @@
   "ui/hud/garage_panel.gd:93"
  ],
  "GARAJ SV.%d + %d ALAN GEREKİR": [
-  "ui/hud/level_up_screen.gd:177"
+  "ui/hud/level_up_screen.gd:165"
  ],
  "GARAJ TABELASI": [
   "decor/decorations.json:garage_sign.title"
@@ -3085,16 +3173,17 @@
  ],
  "GARAJI DÜZENLE": [
   "ui/hud/garage_edit_screen.gd:302",
-  "ui/hud/hud.gd:261",
+  "ui/hud/hud.gd:263",
   "ui/tutorial/tutorial_director.gd:1006"
  ],
  "GARAJI DÜZENLE'DE YERLEŞTİR": [
-  "ui/hud/login_ladder_screen.gd:244",
-  "ui/hud/gift_screen.gd:123"
+  "ui/hud/login_ladder_screen.gd:246",
+  "ui/hud/gift_screen.gd:151",
+  "ui/hud/collection_reward_screen.gd:192"
  ],
  "GARAJI GENİŞLET": [
   "ui/hud/garage_edit_screen.gd:656",
-  "ui/hud/hud.gd:1017"
+  "ui/hud/hud.gd:1019"
  ],
  "GARAJIM": [
   "ui/hud/all_cars_screen.gd:340",
@@ -3124,7 +3213,7 @@
   "ui/hud/news_digest.gd:252"
  ],
  "GARAJINA EKLENDİ": [
-  "ui/hud/gift_screen.gd:114"
+  "ui/hud/gift_screen.gd:142"
  ],
  "GARAJINA GERİ DÖNDÜ": [
   "ui/hud/crate_panel.gd:125"
@@ -3137,10 +3226,10 @@
   "ui/tutorial/tutorial_director.gd:806"
  ],
  "GARAJINA TESLİM EDİLECEK": [
-  "ui/hud/gift_screen.gd:119"
+  "ui/hud/gift_screen.gd:147"
  ],
  "GARAJINDA": [
-  "ui/hud/collection_screen.gd:337"
+  "ui/hud/collection_screen.gd:346"
  ],
  "GARAJINDA  ·  SATIŞ %s ₺": [
   "gameplay/progression_effects.gd:67"
@@ -3149,10 +3238,10 @@
   "ui/hud/exhibit_plate.gd:106"
  ],
  "GARAJINDA YER YOK\nEŞYALARI TAŞI YA DA GARAJI BÜYÜT": [
-  "ui/hud/hud.gd:2050"
+  "ui/hud/hud.gd:2065"
  ],
  "GARAJINDA YER YOK · GÖRMEK İÇİN DOKUN": [
-  "ui/hud/hud.gd:2092"
+  "ui/hud/hud.gd:2107"
  ],
  "GARAJINI BÜYÜT": [
   "ui/tutorial/tutorial_director.gd:863"
@@ -3167,11 +3256,11 @@
   "decor/decorations.json:soda_machine.title"
  ],
  "GB": [
-  "gameplay/social/profile_catalog.gd:47",
+  "gameplay/social/profile_catalog.gd:51",
   "ui/hud/flag_icon.gd:126"
  ],
  "GE": [
-  "gameplay/social/profile_catalog.gd:52",
+  "gameplay/social/profile_catalog.gd:56",
   "ui/hud/flag_icon.gd:180"
  ],
  "GELİŞTİRMELER": [
@@ -3206,7 +3295,7 @@
  ],
  "GEM YETMİYOR\n%d GEM gerekiyor, %d GEM'in var.": [
   "ui/hud/restoration_panel.gd:371",
-  "ui/hud/hud.gd:1115"
+  "ui/hud/hud.gd:1117"
  ],
  "GEM: GÜNLÜK GİRİŞ · GÖREVLER · SEVİYE · USTALIK": [
   "ui/hud/showroom_screen.gd:1211"
@@ -3227,7 +3316,7 @@
   "ui/hud/garage_edit_screen.gd:609",
   "ui/hud/garage_edit_screen.gd:668",
   "ui/hud/garage_panel.gd:93",
-  "ui/hud/hud.gd:1018"
+  "ui/hud/hud.gd:1020"
  ],
  "GEREKEN PARÇALAR": [
   "ui/hud/junkyard_screen.gd:331"
@@ -3241,7 +3330,7 @@
  ],
  "GERİ AL": [
   "ui/hud/garage_edit_screen.gd:377",
-  "ui/hud/event_screen.gd:176",
+  "ui/hud/event_screen.gd:541",
   "ui/hud/showroom_screen.gd:961",
   "ui/hud/friend_card_screen.gd:172",
   "ui/hud/friends_screen.gd:512"
@@ -3259,7 +3348,7 @@
   "ui/hud/drag_race_screen.gd:1226"
  ],
  "GEÇEN HAFTANIN GÖREV ÖDÜLLERİ": [
-  "gameplay/missions/mission_manager.gd:368"
+  "gameplay/missions/mission_manager.gd:372"
  ],
  "GEÇİŞ ": [
   "ui/hud/drag_race_screen.gd:1151"
@@ -3292,7 +3381,7 @@
   "ui/hud/profile_edit_screen.gd:304"
  ],
  "GR": [
-  "gameplay/social/profile_catalog.gd:50",
+  "gameplay/social/profile_catalog.gd:54",
   "ui/hud/flag_icon.gd:152"
  ],
  "GRAFİK VE PERFORMANS": [
@@ -3441,23 +3530,23 @@
   "gameplay/missions/mission_catalog.gd:151"
  ],
  "GÖREV TAMAM\n%s": [
-  "gameplay/missions/mission_manager.gd:506"
+  "gameplay/missions/mission_manager.gd:510"
  ],
  "GÖREV TAMAMLANDI!": [
   "ui/tutorial/tutorial_director.gd:943"
  ],
  "GÖREV TAMAMLANDI: %s": [
-  "ui/hud/hud.gd:2624"
+  "ui/hud/hud.gd:2681"
  ],
  "GÖREVLER": [
-  "ui/hud/event_screen.gd:202",
-  "ui/hud/event_banner.gd:98",
-  "ui/hud/level_up_screen.gd:200",
+  "gameplay/backend/live_event.gd:238",
+  "ui/hud/event_screen.gd:334",
+  "ui/hud/level_up_screen.gd:188",
   "ui/hud/mission_screen.gd:109",
   "ui/hud/profile_screen.gd:198",
   "ui/hud/news_digest.gd:203",
-  "ui/hud/hud.gd:2418",
-  "ui/hud/hud.gd:2617",
+  "ui/hud/hud.gd:2434",
+  "ui/hud/hud.gd:2674",
   "ui/tutorial/tutorial_director.gd:859"
  ],
  "GÖREVLER  %d / %d": [
@@ -3465,6 +3554,9 @@
  ],
  "GÖREVLERE GİT": [
   "ui/hud/inbox_screen.gd:32"
+ ],
+ "GÖREVLERİ BİTİR": [
+  "ui/hud/event_screen.gd:394"
  ],
  "GÖRÜNÜM + GARAJ DEĞERİ": [
   "ui/hud/car_garage_upgrade_screen.gd:250"
@@ -3494,7 +3586,7 @@
   "ui/gate/app_gate.gd:92"
  ],
  "GÜNEY KORE": [
-  "gameplay/social/profile_catalog.gd:52"
+  "gameplay/social/profile_catalog.gd:56"
  ],
  "GÜNLÜK": [
   "ui/hud/mission_screen.gd:17",
@@ -3516,23 +3608,23 @@
   "ui/hud/news_digest.gd:413"
  ],
  "GÜNLÜK GİRİŞ": [
-  "ui/hud/login_ladder_screen.gd:324"
+  "ui/hud/login_ladder_screen.gd:326"
  ],
  "GÜNLÜK GİRİŞ MERDİVENİ  %d / %d": [
   "ui/hud/mission_screen.gd:433"
  ],
  "GÜNLÜK GİRİŞ ×2": [
   "gameplay/gem_rewards.gd:223",
-  "ui/hud/login_ladder_screen.gd:255"
+  "ui/hud/login_ladder_screen.gd:257"
  ],
  "GÜNLÜK VE HAFTALIK ÖDÜLLER": [
-  "ui/hud/level_up_screen.gd:201"
+  "ui/hud/level_up_screen.gd:189"
  ],
  "GÜNÜN ARABALARI": [
   "ui/tutorial/tutorial_director.gd:749"
  ],
  "GÜRCİSTAN": [
-  "gameplay/social/profile_catalog.gd:52"
+  "gameplay/social/profile_catalog.gd:56"
  ],
  "GÜÇ": [
   "ui/hud/mod_workshop.gd:411",
@@ -3543,9 +3635,6 @@
  ],
  "Gönderiliyor…": [
   "ui/hud/email_code_panel.gd:241"
- ],
- "Görevleri bitir, ödülleri topla.": [
-  "ui/hud/event_screen.gd:201"
  ],
  "Göstergeli, maşalı akü şarj cihazı.": [
   "decor/decorations.json:battery_charger.desc"
@@ -3615,18 +3704,18 @@
   "gameplay/missions/mission_catalog.gd:153"
  ],
  "HAFTA ÖDÜLÜ!": [
-  "ui/hud/login_ladder_screen.gd:242"
+  "ui/hud/login_ladder_screen.gd:244"
  ],
  "HAFTALIK": [
   "ui/hud/mission_screen.gd:17",
   "ui/hud/mission_screen.gd:119"
  ],
  "HAFTALIK BÜYÜK ÖDÜL\n+%d GEM%s  +%d XP": [
-  "gameplay/missions/mission_manager.gd:855"
+  "gameplay/missions/mission_manager.gd:859"
  ],
  "HAFTALIK GÖREV TAMAM\n%s": [
-  "gameplay/missions/mission_manager.gd:516",
-  "gameplay/missions/mission_manager.gd:537"
+  "gameplay/missions/mission_manager.gd:520",
+  "gameplay/missions/mission_manager.gd:541"
  ],
  "HAFTALIK GÖREVLER %d GÜN %02d SAAT SONRA YENİLENİR": [
   "ui/hud/mission_screen.gd:559"
@@ -3655,7 +3744,7 @@
  "HARİTA": [
   "ui/hud/junkyard_screen.gd:236",
   "ui/hud/map_screen.gd:148",
-  "ui/hud/hud.gd:1555"
+  "ui/hud/hud.gd:1557"
  ],
  "HARİTA'dan hurdalığa git, Necati'yle tanış": [
   "gameplay/quest_catalog.gd:40"
@@ -3707,6 +3796,7 @@
   "ui/loading/loading_screen.gd:214"
  ],
  "HAZİRAN": [
+  "ui/hud/event_screen.gd:505",
   "ui/hud/news_digest.gd:480"
  ],
  "HEDEFİM BU!": [
@@ -3727,10 +3817,11 @@
  ],
  "HEDİYEN GELDİ!": [
   "gameplay/backend/mail_service.gd:231",
-  "ui/hud/gift_screen.gd:29"
+  "ui/hud/gift_screen.gd:38",
+  "ui/hud/gift_screen.gd:83"
  ],
  "HEDİYEN VAR!\nHABERLER'DEN AL": [
-  "ui/hud/hud.gd:1889"
+  "ui/hud/hud.gd:1904"
  ],
  "HEMEN BİTİR": [
   "ui/hud/mod_workshop.gd:715"
@@ -3783,7 +3874,7 @@
   "gameplay/quest_catalog.gd:30"
  ],
  "HOLLANDA": [
-  "gameplay/social/profile_catalog.gd:47"
+  "gameplay/social/profile_catalog.gd:51"
  ],
  "HORTUM MAKARASI": [
   "decor/decorations.json:hose_reel.title"
@@ -3792,7 +3883,7 @@
   "ui/tutorial/tutorial_director.gd:736"
  ],
  "HOŞ GELDİN HEDİYEN GARAJINDA\nKUTUYA DOKUN VE AÇ": [
-  "ui/hud/hud.gd:2127"
+  "ui/hud/hud.gd:2142"
  ],
  "HOŞ GELDİN HEDİYESİ": [
   "ui/tutorial/tutorial_director.gd:783"
@@ -3838,13 +3929,13 @@
   "world/junkyard_world.gd:243"
  ],
  "HURDALIK AÇILDI\nHARİTA'DAN NECATİ'YE GİT": [
-  "ui/hud/hud.gd:778"
+  "ui/hud/hud.gd:780"
  ],
  "HURDALIK DERSİ": [
   "ui/tutorial/tutorial_director.gd:615"
  ],
  "HURDALIK PARÇASI  +%d %s": [
-  "ui/hud/hud.gd:774"
+  "ui/hud/hud.gd:776"
  ],
  "HURDALIK, 2. TAMİR ALANINI AÇINCA YOLA ÇIKAR": [
   "ui/hud/map_screen.gd:271"
@@ -3852,18 +3943,18 @@
  "HURDALIKTA %s YIĞIN ARA": [
   "gameplay/missions/mission_catalog.gd:68",
   "gameplay/missions/mission_catalog.gd:95",
-  "gameplay/backend/live_event.gd:48"
+  "gameplay/backend/live_event.gd:60"
  ],
  "HURDALIKTA BAYRAM: YIĞINLAR DOLDU!": [
   "ui/hud/news_digest.gd:267"
  ],
  "HURDALIKTA RESTORE ET": [
-  "ui/hud/collection_screen.gd:339"
+  "ui/hud/collection_screen.gd:348"
  ],
  "HURDALIKTAN %s PARÇA TOPLA": [
   "gameplay/missions/mission_catalog.gd:69",
   "gameplay/missions/mission_catalog.gd:96",
-  "gameplay/backend/live_event.gd:49"
+  "gameplay/backend/live_event.gd:61"
  ],
  "HURDALIĞA GİDİLİYOR": [
   "ui/hud/map_screen.gd:282"
@@ -3896,7 +3987,7 @@
   "ui/hud/settings_screen.gd:634"
  ],
  "Hediye gönderilemedi. İnternet bağlantını kontrol et.": [
-  "gameplay/social/social_manager.gd:1098"
+  "gameplay/social/social_manager.gd:1101"
  ],
  "Hediyeler ve ödüller hesabı olan oyunculara gelir. Hesabını bağla, ilerlemen de güvende olsun.": [
   "gameplay/backend/inbox.gd:134"
@@ -3914,7 +4005,7 @@
   "ui/tutorial/tutorial_director.gd:763"
  ],
  "Her gün bir basamak çık. Bir gün kaçırırsan merdiven 1. güne döner!": [
-  "ui/hud/login_ladder_screen.gd:351"
+  "ui/hud/login_ladder_screen.gd:353"
  ],
  "Hesabın oyundan silinir. Bulut kaydın ve bu cihazdaki tüm ilerlemen (para, elmas, araçlar, garaj, görevler) kalıcı olarak silinir ve oyun baştan başlar.\n\nBu işlem GERİ ALINAMAZ. Devam edersen e-postana gelecek kodu girmen istenecek.": [
   "ui/hud/login_screen.gd:359"
@@ -4001,7 +4092,7 @@
   "gameplay/missions/mission_catalog.gd:134"
  ],
  "HİNDİSTAN": [
-  "gameplay/social/profile_catalog.gd:53"
+  "gameplay/social/profile_catalog.gd:57"
  ],
  "HİPER": [
   "vehicles/crates.json:set.hiper"
@@ -4010,22 +4101,22 @@
   "gameplay/race/performance_mods.gd:88"
  ],
  "ID": [
-  "gameplay/social/profile_catalog.gd:53",
+  "gameplay/social/profile_catalog.gd:57",
   "ui/hud/flag_icon.gd:88"
  ],
  "IE": [
-  "gameplay/social/profile_catalog.gd:51",
+  "gameplay/social/profile_catalog.gd:55",
   "ui/hud/flag_icon.gd:94"
  ],
  "IN": [
-  "gameplay/social/profile_catalog.gd:53",
+  "gameplay/social/profile_catalog.gd:57",
   "ui/hud/flag_icon.gd:220"
  ],
  "INSTAGRAM": [
   "gameplay/social/community_links.gd:22"
  ],
  "IT": [
-  "gameplay/social/profile_catalog.gd:49",
+  "gameplay/social/profile_catalog.gd:53",
   "ui/hud/flag_icon.gd:92"
  ],
  "IZGARA": [
@@ -4095,10 +4186,10 @@
   "decor/decorations.json:rim_stack.title"
  ],
  "JAPONYA": [
-  "gameplay/social/profile_catalog.gd:52"
+  "gameplay/social/profile_catalog.gd:56"
  ],
  "JP": [
-  "gameplay/social/profile_catalog.gd:52",
+  "gameplay/social/profile_catalog.gd:56",
   "ui/hud/flag_icon.gd:200"
  ],
  "JUKEBOX": [
@@ -4143,7 +4234,7 @@
   "ui/hud/profile_edit_screen.gd:266"
  ],
  "KANADA": [
-  "gameplay/social/profile_catalog.gd:53"
+  "gameplay/social/profile_catalog.gd:57"
  ],
  "KANEPE": [
   "decor/decorations.json:sofa.title"
@@ -4156,8 +4247,7 @@
   "ui/hud/junkyard_screen.gd:347",
   "ui/hud/junkyard_screen.gd:382",
   "ui/hud/restoration_panel.gd:178",
-  "ui/hud/login_ladder_screen.gd:341",
-  "ui/hud/event_screen.gd:105",
+  "ui/hud/login_ladder_screen.gd:343",
   "ui/hud/car_garages_screen.gd:267",
   "ui/hud/all_cars_screen.gd:187",
   "ui/hud/garage_screen.gd:1069",
@@ -4165,7 +4255,7 @@
   "ui/hud/mission_screen.gd:156",
   "ui/hud/friend_card_screen.gd:128",
   "ui/hud/visit_depots_screen.gd:142",
-  "ui/hud/collection_screen.gd:141",
+  "ui/hud/collection_screen.gd:152",
   "ui/hud/map_screen.gd:158",
   "ui/hud/profile_screen.gd:128",
   "ui/hud/gem_store_screen.gd:180",
@@ -4207,14 +4297,14 @@
   "decor/decorations.json:reception_desk.title"
  ],
  "KASA": [
-  "gameplay/missions/mission_manager.gd:849",
-  "gameplay/missions/mission_manager.gd:973",
+  "gameplay/missions/mission_manager.gd:853",
+  "gameplay/missions/mission_manager.gd:977",
   "ui/hud/showroom_screen.gd:934",
   "ui/hud/showroom_screen.gd:1111",
-  "ui/hud/gift_screen.gd:118",
+  "ui/hud/gift_screen.gd:146",
   "ui/hud/mission_screen.gd:772",
   "ui/hud/mission_screen.gd:786",
-  "ui/hud/hud.gd:1946",
+  "ui/hud/hud.gd:1961",
   "ui/hud/crate_panel.gd:95",
   "world/crate_visual.gd:309"
  ],
@@ -4231,28 +4321,29 @@
   "ui/tutorial/tutorial_director.gd:955"
  ],
  "KASA YOLDA: GARAJDA YER YOK\nSHOWROOM'DAN AÇABİLİRSİN": [
-  "ui/hud/hud.gd:2165"
+  "ui/hud/hud.gd:2180"
  ],
  "KASA ŞU AN AÇILAMIYOR": [
-  "ui/hud/hud.gd:2145"
+  "ui/hud/hud.gd:2160"
  ],
  "KASADAN ÇIKAR": [
   "ui/hud/showroom_screen.gd:1274"
  ],
  "KASALAR": [
-  "ui/hud/event_screen.gd:176"
+  "ui/hud/event_screen.gd:541"
  ],
  "KASAYA DOKUN": [
   "ui/tutorial/tutorial_director.gd:960"
  ],
  "KASAYA GİT": [
-  "ui/hud/event_screen.gd:190"
+  "ui/hud/event_screen.gd:555"
  ],
  "KASAYI AÇ": [
   "ui/hud/showroom_screen.gd:1090",
   "ui/tutorial/tutorial_director.gd:966"
  ],
  "KASIM": [
+  "ui/hud/event_screen.gd:505",
   "ui/hud/news_digest.gd:480"
  ],
  "KASK RAFI": [
@@ -4292,14 +4383,14 @@
   "decor/decorations.json:welding_set.title"
  ],
  "KAZAKİSTAN": [
-  "gameplay/social/profile_catalog.gd:52"
+  "gameplay/social/profile_catalog.gd:56"
  ],
  "KAZANAN: %s": [
   "ui/hud/race_result_screen.gd:63"
  ],
  "KAZANDIN!": [
   "ui/hud/race_result_screen.gd:54",
-  "ui/hud/login_ladder_screen.gd:207",
+  "ui/hud/login_ladder_screen.gd:209",
   "ui/hud/drag_race_screen.gd:1384"
  ],
  "KAZANIRSAN  +%s ₺  ·  +%d XP\nKAYBEDERSEN  +%d XP": [
@@ -4366,25 +4457,39 @@
  "KOLEKSİYON": [
   "ui/hud/junkyard_screen.gd:238",
   "ui/hud/showroom_screen.gd:795",
-  "ui/hud/collection_screen.gd:112",
+  "ui/hud/collection_screen.gd:120",
   "ui/hud/friends_screen.gd:889",
-  "ui/hud/profile_card.gd:98"
+  "ui/hud/profile_card.gd:116"
  ],
  "KOLEKSİYON   %d / %d": [
-  "ui/hud/collection_screen.gd:162"
+  "ui/hud/collection_screen.gd:173"
  ],
  "KOLEKSİYON  %d / %d": [
+  "ui/hud/collection_reward_screen.gd:102",
   "ui/hud/restoration_result.gd:48"
  ],
+ "KOLEKSİYON BÜYÜYOR!": [
+  "ui/hud/collection_reward_screen.gd:100"
+ ],
  "KOLEKSİYON SETLERİ": [
-  "ui/hud/collection_screen.gd:189"
+  "ui/hud/collection_screen.gd:201"
  ],
  "KOLEKSİYONCU": [
   "gameplay/quest_catalog.gd:42",
   "gameplay/missions/mission_catalog.gd:123"
  ],
+ "KOLEKSİYONER": [
+  "gameplay/social/profile_catalog.gd:41",
+  "gameplay/social/profile_catalog.gd:45"
+ ],
+ "KOLEKSİYONER KUPASI": [
+  "decor/decorations.json:collector_trophy.title"
+ ],
+ "KOLEKSİYONUNDA %d ARAÇ VAR": [
+  "ui/hud/collection_reward_screen.gd:179"
+ ],
  "KOLOMBİYA": [
-  "gameplay/social/profile_catalog.gd:48"
+  "gameplay/social/profile_catalog.gd:52"
  ],
  "KOMPRESÖR": [
   "gameplay/race/performance_mods.gd:68",
@@ -4416,7 +4521,7 @@
   "ui/hud/mod_workshop.gd:801"
  ],
  "KR": [
-  "gameplay/social/profile_catalog.gd:52",
+  "gameplay/social/profile_catalog.gd:56",
   "ui/hud/flag_icon.gd:203"
  ],
  "KROM V8 HEYKELİ": [
@@ -4446,6 +4551,9 @@
  "KUM TORBALARI": [
   "decor/decorations.json:sandbags.title"
  ],
+ "KUPA + %d GEM": [
+  "ui/hud/collection_screen.gd:564"
+ ],
  "KUPA DUVARI": [
   "decor/decorations.json:lux_trophy_wall.title"
  ],
@@ -4474,7 +4582,7 @@
   "decor/decorations.json:grand_piano.title"
  ],
  "KZ": [
-  "gameplay/social/profile_catalog.gd:52",
+  "gameplay/social/profile_catalog.gd:56",
   "ui/hud/flag_icon.gd:186"
  ],
  "Kabartmalı kauçuk zemin.": [
@@ -4631,6 +4739,9 @@
  "Kodun süresi doldu. Yeni kod iste.": [
   "gameplay/cloud_save_manager.gd:477"
  ],
+ "Koleksiyon ödülü: bütün araçları toplayan ustalara. Mağazada yok.": [
+  "decor/decorations.json:collector_trophy.desc"
+ ],
  "Kompresör Kiti": [
   "gameplay/race/performance_mods.gd:83"
  ],
@@ -4684,6 +4795,9 @@
  ],
  "Küçük kareli klasik dama.": [
   "decor/decorations.json:checker_bw.desc"
+ ],
+ "KİLOMETRE TAŞI": [
+  "ui/hud/collection_reward_screen.gd:178"
  ],
  "KİTAPLIK": [
   "decor/decorations.json:bookcase.title"
@@ -4838,7 +4952,7 @@
  ],
  "MAKSİMUM": [
   "ui/hud/garage_edit_screen.gd:647",
-  "ui/hud/hud.gd:1006"
+  "ui/hud/hud.gd:1008"
  ],
  "MANGAL": [
   "decor/decorations.json:bbq.title"
@@ -4851,6 +4965,7 @@
   "ui/hud/inbox_screen.gd:32"
  ],
  "MART": [
+  "ui/hud/event_screen.gd:504",
   "ui/hud/news_digest.gd:479"
  ],
  "MASA TENİSİ": [
@@ -4872,22 +4987,24 @@
   "decor/decorations.json:poster_blue.title"
  ],
  "MAYIS": [
+  "ui/hud/event_screen.gd:504",
   "ui/hud/news_digest.gd:479"
  ],
  "MAĞAZA": [
   "ui/hud/showroom_screen.gd:42"
  ],
  "MAĞAZADA YOK": [
-  "ui/hud/login_ladder_screen.gd:207"
+  "ui/hud/login_ladder_screen.gd:209",
+  "ui/hud/collection_reward_screen.gd:192"
  ],
  "MAĞAZAYA GİT": [
-  "ui/hud/event_screen.gd:181"
+  "ui/hud/event_screen.gd:546"
  ],
  "MAĞAZAYA ŞU AN ULAŞILAMIYOR\nİNTERNET BAĞLANTINI VE GOOGLE PLAY'İ KONTROL ET": [
   "ui/hud/gem_store_screen.gd:238"
  ],
  "MEKSİKA": [
-  "gameplay/social/profile_catalog.gd:48"
+  "gameplay/social/profile_catalog.gd:52"
  ],
  "MERDİVEN": [
   "ui/hud/mission_screen.gd:443"
@@ -4911,13 +5028,13 @@
   "ui/hud/paint_panel.gd:155"
  ],
  "MISIR": [
-  "gameplay/social/profile_catalog.gd:53"
+  "gameplay/social/profile_catalog.gd:57"
  ],
  "MODİFİYE": [
   "ui/hud/mod_workshop.gd:170",
   "ui/hud/mod_workshop.gd:219",
-  "ui/hud/event_screen.gd:176",
-  "ui/hud/level_up_screen.gd:193",
+  "ui/hud/event_screen.gd:541",
+  "ui/hud/level_up_screen.gd:181",
   "ui/hud/exhibit_plate.gd:134",
   "ui/hud/garage_screen.gd:1392",
   "ui/hud/garage_screen.gd:1417"
@@ -4949,7 +5066,7 @@
   "decor/decorations.json:motorcycle.title"
  ],
  "MX": [
-  "gameplay/social/profile_catalog.gd:48",
+  "gameplay/social/profile_catalog.gd:52",
   "ui/hud/flag_icon.gd:102"
  ],
  "Magnezyum Jant & Slik": [
@@ -5004,7 +5121,7 @@
   "ui/hud/settings_screen.gd:360"
  ],
  "MÜŞTERİ BEKLEMEKTEN SIKILIP GİTTİ": [
-  "ui/hud/hud.gd:662"
+  "ui/hud/hud.gd:664"
  ],
  "MÜŞTERİ YOLDA": [
   "ui/tutorial/tutorial_director.gd:825"
@@ -5047,7 +5164,7 @@
   "ui/hud/news_digest.gd:253"
  ],
  "NADİR": [
-  "gameplay/crate_catalog.gd:103"
+  "gameplay/crate_catalog.gd:111"
  ],
  "NADİRLİK: %s": [
   "ui/hud/all_cars_screen.gd:234"
@@ -5114,15 +5231,15 @@
   "ui/hud/garage_screen.gd:2266"
  ],
  "NL": [
-  "gameplay/social/profile_catalog.gd:47",
+  "gameplay/social/profile_catalog.gd:51",
   "ui/hud/flag_icon.gd:76"
  ],
  "NO": [
-  "gameplay/social/profile_catalog.gd:51",
+  "gameplay/social/profile_catalog.gd:55",
   "ui/hud/flag_icon.gd:166"
  ],
  "NORVEÇ": [
-  "gameplay/social/profile_catalog.gd:51"
+  "gameplay/social/profile_catalog.gd:55"
  ],
  "Ne yapacağını bilmiyorsan GÖREVLER'e bak. Görevler sana yol gösterir ve her biri ödül verir; günlük ve haftalık görevler her gün yenilenir.": [
   "ui/tutorial/tutorial_director.gd:860"
@@ -5137,9 +5254,11 @@
   "ui/hud/friend_card_screen.gd:156"
  ],
  "NİSAN": [
+  "ui/hud/event_screen.gd:504",
   "ui/hud/news_digest.gd:479"
  ],
  "OCAK": [
+  "ui/hud/event_screen.gd:504",
   "ui/hud/news_digest.gd:479"
  ],
  "OLUKLU SAC": [
@@ -5180,7 +5299,7 @@
   "ui/hud/exhibit_plate.gd:246",
   "ui/hud/parking_badge.gd:29",
   "ui/hud/garage_screen.gd:2060",
-  "ui/hud/hud.gd:2090",
+  "ui/hud/hud.gd:2105",
   "ui/hud/car_placement_screen.gd:156",
   "ui/tutorial/tutorial_director.gd:686"
  ],
@@ -5195,7 +5314,7 @@
   "ui/hud/news_digest.gd:424"
  ],
  "OTOPARK FATURASI: %d ARAÇ · −%s ₺": [
-  "ui/hud/hud.gd:697"
+  "ui/hud/hud.gd:699"
  ],
  "OTOPARK SAYACI DÖNDÜ: −%s": [
   "ui/hud/news_digest.gd:294"
@@ -5225,9 +5344,9 @@
   "ui/hud/settings_screen.gd:392"
  ],
  "OYUNCU": [
-  "gameplay/social/social_manager.gd:1831",
+  "gameplay/social/social_manager.gd:1836",
   "ui/hud/profile_edit_screen.gd:254",
-  "ui/hud/profile_card.gd:143"
+  "ui/hud/profile_card.gd:161"
  ],
  "OYUNCU %s\n  devir %5.0f / %.0f   vites %d/%d   %6.1f km/s  %5.1f m\n  %s%s%s%s  isabet %d (kusursuz %d)  sınır %.2f sn  patinaj %.2f sn\nRAKİP  %s  devir %5.0f  vites %d  %6.1f km/s  %5.1f m  hedef %.0f": [
   "ui/hud/drag_race_screen.gd:1149"
@@ -5278,8 +5397,9 @@
   "world/garage_editor.gd:1082"
  ],
  "PARA ×%s": [
-  "ui/hud/event_screen.gd:169",
-  "ui/hud/event_banner.gd:90"
+  "gameplay/backend/live_event.gd:227",
+  "ui/hud/event_screen.gd:320",
+  "ui/hud/event_screen.gd:534"
  ],
  "PARANI TOPLA": [
   "ui/tutorial/tutorial_director.gd:848"
@@ -5306,7 +5426,7 @@
   "gameplay/missions/mission_catalog.gd:134"
  ],
  "PARÇA HAZIR: %s\nTAMİR ALANINDAKİ ARACA DOKUN": [
-  "ui/hud/hud.gd:709"
+  "ui/hud/hud.gd:711"
  ],
  "PARÇA KATEGORİLERİ": [
   "ui/hud/mod_workshop.gd:129"
@@ -5337,7 +5457,7 @@
   "ui/hud/drag_race_screen.gd:1151"
  ],
  "PE": [
-  "gameplay/social/profile_catalog.gd:48",
+  "gameplay/social/profile_catalog.gd:52",
   "ui/hud/flag_icon.gd:96"
  ],
  "PEMBE": [
@@ -5358,13 +5478,13 @@
   "ui/hud/mod_workshop.gd:801"
  ],
  "PERMISSION": [
-  "gameplay/social/social_manager.gd:1986"
+  "gameplay/social/social_manager.gd:1991"
  ],
  "PERU": [
-  "gameplay/social/profile_catalog.gd:48"
+  "gameplay/social/profile_catalog.gd:52"
  ],
  "PL": [
-  "gameplay/social/profile_catalog.gd:50",
+  "gameplay/social/profile_catalog.gd:54",
   "ui/hud/flag_icon.gd:86"
  ],
  "PLAKA": [
@@ -5382,10 +5502,10 @@
   "ui/hud/login_screen.gd:334"
  ],
  "POLONYA": [
-  "gameplay/social/profile_catalog.gd:50"
+  "gameplay/social/profile_catalog.gd:54"
  ],
  "PORTEKİZ": [
-  "gameplay/social/profile_catalog.gd:49"
+  "gameplay/social/profile_catalog.gd:53"
  ],
  "POSTA KUTUSU": [
   "decor/decorations.json:mailbox.title"
@@ -5412,6 +5532,9 @@
   "ui/hud/hud.tscn:317",
   "ui/hud/profile_screen.gd:79"
  ],
+ "PROFİL KARTINDA GÖRÜNÜR": [
+  "ui/hud/collection_reward_screen.gd:194"
+ ],
  "PROFİLİ DÜZENLE": [
   "ui/hud/profile_edit_screen.gd:106"
  ],
@@ -5419,8 +5542,9 @@
   "ui/hud/friends_screen.gd:572"
  ],
  "PROFİLİNDE KULLANABİLİRSİN": [
-  "ui/hud/level_up_screen.gd:207",
-  "ui/hud/gift_screen.gd:126"
+  "ui/hud/level_up_screen.gd:195",
+  "ui/hud/gift_screen.gd:154",
+  "ui/hud/collection_reward_screen.gd:189"
  ],
  "PROJEKTÖR DİREĞİ": [
   "decor/decorations.json:floodlight.title"
@@ -5429,7 +5553,7 @@
   "ui/hud/restoration_panel.gd:176"
  ],
  "PT": [
-  "gameplay/social/profile_catalog.gd:49",
+  "gameplay/social/profile_catalog.gd:53",
   "ui/hud/flag_icon.gd:146"
  ],
  "Pamuk Garaj": [
@@ -5559,6 +5683,9 @@
  "RAKİP GELDİ": [
   "ui/tutorial/tutorial_director.gd:886"
  ],
+ "RALLİ EFSANELERİ": [
+  "vehicles/crates.json:set.ralli_efsaneleri"
+ ],
  "REHBER": [
   "ui/hud/mission_screen.gd:17",
   "ui/hud/mission_screen.gd:119"
@@ -5583,7 +5710,7 @@
   "ui/hud/drag_race_screen.gd:299"
  ],
  "REKOR: %s": [
-  "ui/hud/profile_card.gd:172"
+  "ui/hud/profile_card.gd:193"
  ],
  "REKORTMEN": [
   "gameplay/missions/mission_catalog.gd:145"
@@ -5598,7 +5725,7 @@
   "ui/hud/restoration_panel.gd:245"
  ],
  "RESTORASYON  ·  %s SINIFI": [
-  "ui/hud/collection_screen.gd:313"
+  "ui/hud/collection_screen.gd:322"
  ],
  "RESTORATÖR": [
   "gameplay/missions/mission_catalog.gd:135"
@@ -5615,7 +5742,7 @@
   "gameplay/repair/repair_type.gd:66"
  ],
  "RIFF": [
-  "gameplay/social/profile_catalog.gd:143",
+  "gameplay/social/profile_catalog.gd:147",
   "ui/hud/inbox_images.gd:79"
  ],
  "RIZA USTA": [
@@ -5625,18 +5752,18 @@
   "ui/hud/crate_panel.gd:97"
  ],
  "RO": [
-  "gameplay/social/profile_catalog.gd:50",
+  "gameplay/social/profile_catalog.gd:54",
   "ui/hud/flag_icon.gd:100"
  ],
  "ROMANYA": [
-  "gameplay/social/profile_catalog.gd:50"
+  "gameplay/social/profile_catalog.gd:54"
  ],
  "RU": [
-  "gameplay/social/profile_catalog.gd:49",
+  "gameplay/social/profile_catalog.gd:53",
   "ui/hud/flag_icon.gd:78"
  ],
  "RUSYA": [
-  "gameplay/social/profile_catalog.gd:49"
+  "gameplay/social/profile_catalog.gd:53"
  ],
  "ReferralManager: %s": [
   "gameplay/social/referral_manager.gd:383"
@@ -5665,7 +5792,7 @@
   "decor/decorations.json:founder_wrench.desc"
  ],
  "SA": [
-  "gameplay/social/profile_catalog.gd:53",
+  "gameplay/social/profile_catalog.gd:57",
   "ui/hud/flag_icon.gd:224"
  ],
  "SABIRLI USTA": [
@@ -5718,18 +5845,18 @@
   "ui/hud/exhibit_plate.gd:182"
  ],
  "SATILDI · HURDALIKTA YENİDEN RESTORE ET": [
-  "ui/hud/collection_screen.gd:339"
+  "ui/hud/collection_screen.gd:348"
  ],
  "SATILDI · SHOWROOM'DA GERİ AL": [
-  "ui/hud/collection_screen.gd:341"
+  "ui/hud/collection_screen.gd:350"
  ],
  "SATIN AL": [
   "ui/hud/garage_edit_screen.gd:416",
   "ui/hud/garage_edit_screen.gd:673",
   "ui/hud/car_garages_screen.gd:864",
-  "ui/hud/hud.gd:945",
-  "ui/hud/hud.gd:971",
-  "ui/hud/hud.gd:1025",
+  "ui/hud/hud.gd:947",
+  "ui/hud/hud.gd:973",
+  "ui/hud/hud.gd:1027",
   "ui/tutorial/tutorial_director.gd:697"
  ],
  "SATIN AL\n%d GEM": [
@@ -5745,7 +5872,7 @@
   "ui/hud/gem_store_screen.gd:617"
  ],
  "SATIN ALMA TAMAMLANDI\n+%d GEM": [
-  "ui/hud/hud.gd:1861"
+  "ui/hud/hud.gd:1863"
  ],
  "SATIN ALMA TAMAMLANDI!": [
   "ui/hud/gem_store_screen.gd:628"
@@ -5766,7 +5893,7 @@
   "ui/hud/garage_edit_screen.gd:814"
  ],
  "SE": [
-  "gameplay/social/profile_catalog.gd:51",
+  "gameplay/social/profile_catalog.gd:55",
   "ui/hud/flag_icon.gd:162"
  ],
  "SEHPA": [
@@ -5817,15 +5944,22 @@
   "gameplay/missions/mission_catalog.gd:150"
  ],
  "SERİ %d GÜN": [
-  "ui/hud/login_ladder_screen.gd:173"
+  "ui/hud/login_ladder_screen.gd:175"
  ],
  "SES VE BİLDİRİMLER": [
   "ui/hud/settings_screen.gd:205",
   "ui/hud/settings_screen.gd:283"
  ],
+ "SET TAMAM": [
+  "ui/hud/collection_reward_screen.gd:150",
+  "ui/hud/collection_reward_screen.gd:169"
+ ],
+ "SET TAMAMLANDI!": [
+  "ui/hud/collection_reward_screen.gd:98"
+ ],
  "SEVİYE": [
   "gameplay/missions/mission_catalog.gd:148",
-  "ui/hud/level_up_screen.gd:240"
+  "ui/hud/level_up_screen.gd:228"
  ],
  "SEVİYE %d": [
   "ui/hud/mod_workshop.gd:913",
@@ -5833,10 +5967,10 @@
   "ui/hud/garage_edit_screen.gd:1337",
   "ui/hud/profile_edit_screen.gd:395",
   "ui/hud/profile_screen.gd:173",
-  "ui/hud/hud.gd:1005",
-  "ui/hud/hud.gd:1009",
+  "ui/hud/hud.gd:1007",
+  "ui/hud/hud.gd:1011",
   "ui/hud/friends_screen.gd:464",
-  "ui/hud/profile_card.gd:148"
+  "ui/hud/profile_card.gd:169"
  ],
  "SEVİYE %d\nGEREKLİ": [
   "ui/hud/showroom_screen.gd:1224",
@@ -5872,10 +6006,10 @@
   "ui/hud/profile_edit_screen.gd:392"
  ],
  "SEÇİLMEDİ": [
-  "ui/hud/profile_card.gd:179"
+  "ui/hud/profile_card.gd:200"
  ],
  "SEÇİM HAKKI": [
-  "ui/hud/gift_screen.gd:128"
+  "ui/hud/gift_screen.gd:156"
  ],
  "SHOWROOM": [
   "ui/hud/hud.tscn:306",
@@ -5886,7 +6020,7 @@
   "ui/hud/inbox_screen.gd:32"
  ],
  "SHOWROOM'DA · %d GEM": [
-  "ui/hud/level_up_screen.gd:190"
+  "ui/hud/level_up_screen.gd:178"
  ],
  "SHOWROOM'dan gemle bir araç kasası sipariş et": [
   "gameplay/quest_catalog.gd:33"
@@ -5917,7 +6051,7 @@
   "ui/hud/garage_value_screen.gd:136"
  ],
  "SIRADAKİ: SEVİYE %d": [
-  "ui/hud/level_up_screen.gd:128"
+  "ui/hud/level_up_screen.gd:116"
  ],
  "SIRALA: %s": [
   "ui/hud/all_cars_screen.gd:235"
@@ -5957,7 +6091,7 @@
   "ui/hud/mod_workshop.gd:610"
  ],
  "SON PARÇA  ·  ": [
-  "ui/hud/collection_screen.gd:346"
+  "ui/hud/collection_screen.gd:355"
  ],
  "SON VİTES  ·  %d / %d İSABET": [
   "ui/hud/drag_race_screen.gd:1235"
@@ -6014,7 +6148,10 @@
   "decor/decorations.json:turf.title"
  ],
  "SUUDİ ARABİSTAN": [
-  "gameplay/social/profile_catalog.gd:53"
+  "gameplay/social/profile_catalog.gd:57"
+ ],
+ "SUV DÜNYASI": [
+  "vehicles/crates.json:set.suv_dunyasi"
  ],
  "Sahadaki arabalar bugünün malı. Birine dokun, neye ihtiyacı var bak.": [
   "ui/tutorial/tutorial_director.gd:750"
@@ -6229,7 +6366,7 @@
   "ui/hud/mod_workshop.gd:709"
  ],
  "TAKILDI: %s · %s": [
-  "ui/hud/hud.gd:712"
+  "ui/hud/hud.gd:714"
  ],
  "TAKILI": [
   "ui/hud/profile_edit_screen.gd:390"
@@ -6260,10 +6397,14 @@
   "vehicles/paint_catalog.gd:28"
  ],
  "TAKVİM": [
+  "ui/hud/event_screen.gd:208",
   "decor/decorations.json:wall_calendar.title"
  ],
  "TAKİP ET": [
   "ui/hud/gem_store_screen.gd:488"
+ ],
+ "TAM KOLEKSİYON!": [
+  "ui/hud/collection_reward_screen.gd:94"
  ],
  "TAMAM": [
   "ui/hud/restoration_panel.gd:304",
@@ -6312,7 +6453,7 @@
  ],
  "TAMİR ALANI %d": [
   "ui/hud/garage_edit_screen.gd:678",
-  "ui/hud/hud.gd:991"
+  "ui/hud/hud.gd:993"
  ],
  "TAMİR ALANI %d\nAL %s ₺": [
   "ui/hud/garage_edit_screen.gd:619",
@@ -6326,7 +6467,7 @@
   "ui/hud/garage_edit_screen.gd:717"
  ],
  "TAMİR ALANI %d AÇILDI\nGARAJI DÜZENLE'DEN TAŞIYABİLİRSİN": [
-  "ui/hud/hud.gd:1050"
+  "ui/hud/hud.gd:1052"
  ],
  "TAMİR ALANI %d · SÜRÜKLE: TAŞI, ↻: DÖNDÜR": [
   "ui/hud/garage_edit_screen.gd:1372"
@@ -6340,7 +6481,7 @@
  ],
  "TAMİR ALANI İÇİN YER YOK\nBİR EŞYAYI TAŞI": [
   "ui/hud/garage_edit_screen.gd:251",
-  "ui/hud/hud.gd:643"
+  "ui/hud/hud.gd:645"
  ],
  "TAMİR ALANLARI": [
   "ui/hud/garage_value_screen.gd:144"
@@ -6382,7 +6523,7 @@
   "gameplay/missions/mission_catalog.gd:50",
   "gameplay/missions/mission_catalog.gd:51",
   "gameplay/missions/mission_catalog.gd:81",
-  "gameplay/backend/live_event.gd:37"
+  "gameplay/backend/live_event.gd:49"
  ],
  "TAMİRE AL": [
   "ui/hud/repair_panel.gd:179",
@@ -6429,6 +6570,7 @@
   "decor/decorations.json:phone_booth.title"
  ],
  "TEMMUZ": [
+  "ui/hud/event_screen.gd:505",
   "ui/hud/news_digest.gd:480"
  ],
  "TEPKİ": [
@@ -6441,7 +6583,7 @@
   "decor/decorations.json:terrazzo.title"
  ],
  "TEST: +%s ₺": [
-  "ui/hud/hud.gd:611"
+  "ui/hud/hud.gd:613"
  ],
  "TEŞEKKÜRLER!": [
   "ui/hud/gem_store_screen.gd:498"
@@ -6453,10 +6595,11 @@
   "decor/decorations.json:topiary.title"
  ],
  "TOPLA": [
-  "ui/hud/gift_screen.gd:150"
+  "ui/hud/gift_screen.gd:178",
+  "ui/hud/collection_reward_screen.gd:239"
  ],
  "TOPLA'YA BASINCA ARACINI SEÇ": [
-  "ui/hud/gift_screen.gd:129"
+  "ui/hud/gift_screen.gd:157"
  ],
  "TOPLAM %d BAŞARIM YILDIZI": [
   "ui/hud/mission_screen.gd:638"
@@ -6471,7 +6614,7 @@
   "ui/hud/mod_workshop.gd:650"
  ],
  "TR": [
-  "gameplay/social/profile_catalog.gd:47",
+  "gameplay/social/profile_catalog.gd:51",
   "gameplay/social/featured_friends.gd:21",
   "gameplay/social/featured_friends.gd:23",
   "ui/hud/flag_icon.gd:66"
@@ -6512,7 +6655,7 @@
   "ui/hud/friends_screen.gd:566"
  ],
  "Takma ad %d–%d karakter olmalı.": [
-  "gameplay/social/social_manager.gd:1929"
+  "gameplay/social/social_manager.gd:1934"
  ],
  "Takma ad değiştirilemedi. Tekrar dene.": [
   "gameplay/social/social_manager.gd:456"
@@ -6548,7 +6691,7 @@
   "gameplay/garage_upgrade.gd:60"
  ],
  "Tamir ve yarış ödülleri etkinlik süresince artıyor.": [
-  "ui/hud/event_screen.gd:172"
+  "ui/hud/event_screen.gd:537"
  ],
  "Tamirlerden 3.000 ₺ kazan": [
   "gameplay/quest_catalog.gd:35"
@@ -6649,7 +6792,7 @@
   "ui/hud/garage_edit_screen.gd:676"
  ],
  "TÜRKİYE": [
-  "gameplay/social/profile_catalog.gd:47"
+  "gameplay/social/profile_catalog.gd:51"
  ],
  "Tüm araçlar, garaj Sv.4, 3 alan, 10. rütbe ve 35 ustalık yıldızı": [
   "gameplay/missions/mission_catalog.gd:155"
@@ -6658,14 +6801,17 @@
   "vehicles/crates.json:set.ticari"
  ],
  "UA": [
-  "gameplay/social/profile_catalog.gd:49",
+  "gameplay/social/profile_catalog.gd:53",
   "ui/hud/flag_icon.gd:84"
  ],
  "UKRAYNA": [
-  "gameplay/social/profile_catalog.gd:49"
+  "gameplay/social/profile_catalog.gd:53"
+ ],
+ "UNVAN": [
+  "ui/hud/collection_reward_screen.gd:193"
  ],
  "US": [
-  "gameplay/social/profile_catalog.gd:48",
+  "gameplay/social/profile_catalog.gd:52",
   "ui/hud/flag_icon.gd:128"
  ],
  "USTA": [
@@ -6707,7 +6853,7 @@
   "ui/hud/garage_edit_screen.gd:1306"
  ],
  "UZ": [
-  "gameplay/social/profile_catalog.gd:52",
+  "gameplay/social/profile_catalog.gd:56",
   "ui/hud/flag_icon.gd:193"
  ],
  "UZAY GEMİSİ BİNEĞİ": [
@@ -6756,16 +6902,16 @@
   "ui/hud/invite_screen.gd:200",
   "ui/hud/invite_screen.gd:227",
   "ui/hud/invite_screen.gd:231",
-  "ui/hud/hud.gd:951",
+  "ui/hud/hud.gd:953",
   "ui/hud/login_screen.gd:364",
   "ui/hud/crate_panel.gd:47"
  ],
  "VE": [
-  "gameplay/social/profile_catalog.gd:49",
+  "gameplay/social/profile_catalog.gd:53",
   "ui/hud/flag_icon.gd:116"
  ],
  "VENEZUELA": [
-  "gameplay/social/profile_catalog.gd:49"
+  "gameplay/social/profile_catalog.gd:53"
  ],
  "VIP KADİFE KORDON": [
   "decor/decorations.json:lux_vip_rope.title"
@@ -6794,13 +6940,13 @@
  ],
  "VİTRİN": [
   "ui/hud/profile_edit_screen.gd:162",
-  "ui/hud/profile_card.gd:113"
+  "ui/hud/profile_card.gd:131"
  ],
  "VİTRİN DEPOSU": [
   "gameplay/car_garage_catalog.gd:41"
  ],
  "WEBP": [
-  "gameplay/social/profile_catalog.gd:143",
+  "gameplay/social/profile_catalog.gd:147",
   "ui/hud/inbox_images.gd:79"
  ],
  "WULF GRUBU": [
@@ -6810,10 +6956,12 @@
   "gameplay/race/performance_mods.gd:84"
  ],
  "XP ×%s": [
-  "ui/hud/event_screen.gd:171",
-  "ui/hud/event_banner.gd:92"
+  "gameplay/backend/live_event.gd:229",
+  "ui/hud/event_screen.gd:322",
+  "ui/hud/event_screen.gd:536"
  ],
  "YAKINDA": [
+  "ui/hud/event_banner.gd:104",
   "ui/hud/map_screen.gd:247"
  ],
  "YAKIT POMPASI": [
@@ -6848,13 +6996,13 @@
   "ui/hud/ad_offer_button.gd:89"
  ],
  "YARIN: %s  ·  %s": [
-  "ui/hud/login_ladder_screen.gd:229"
+  "ui/hud/login_ladder_screen.gd:231"
  ],
  "YARIŞ": [
   "gameplay/race/performance_mods.gd:17",
   "ui/hud/race_challenge_screen.gd:98",
-  "ui/hud/event_screen.gd:213",
-  "ui/hud/profile_card.gd:98"
+  "ui/hud/event_screen.gd:567",
+  "ui/hud/profile_card.gd:116"
  ],
  "YARIŞ ARACI": [
   "ui/hud/all_cars_screen.gd:333",
@@ -6863,7 +7011,7 @@
   "ui/tutorial/tutorial_director.gd:984"
  ],
  "YARIŞ ARACINA YENİ PARÇALAR": [
-  "ui/hud/level_up_screen.gd:196"
+  "ui/hud/level_up_screen.gd:184"
  ],
  "YARIŞ BİTTİ": [
   "ui/hud/race_result_screen.gd:47",
@@ -6876,10 +7024,10 @@
   "ui/hud/settings_screen.gd:378"
  ],
  "YARIŞ KAYBEDİLDİ": [
-  "ui/hud/hud.gd:1186"
+  "ui/hud/hud.gd:1188"
  ],
  "YARIŞ KAZANILDI": [
-  "ui/hud/hud.gd:1186"
+  "ui/hud/hud.gd:1188"
  ],
  "YARIŞ KÜRSÜSÜ": [
   "decor/decorations.json:podium.title"
@@ -6911,7 +7059,7 @@
   "gameplay/missions/mission_catalog.gd:120"
  ],
  "YAYGIN": [
-  "gameplay/crate_catalog.gd:103"
+  "gameplay/crate_catalog.gd:111"
  ],
  "YAZI": [
   "ui/hud/garage_edit_screen.gd:519"
@@ -6935,7 +7083,7 @@
   "decor/decorations.json:spare_doors.title"
  ],
  "YENİ": [
-  "ui/hud/level_up_screen.gd:198",
+  "ui/hud/level_up_screen.gd:186",
   "ui/hud/inbox_cover.gd:140"
  ],
  "YENİ ARACIN": [
@@ -6951,7 +7099,7 @@
   "ui/tutorial/tutorial_director.gd:972"
  ],
  "YENİ ARAÇ": [
-  "ui/hud/gift_screen.gd:113"
+  "ui/hud/gift_screen.gd:141"
  ],
  "YENİ ARAÇLAR": [
   "ui/tutorial/tutorial_director.gd:989"
@@ -6960,18 +7108,19 @@
   "ui/hud/junkyard_screen.gd:721"
  ],
  "YENİ DEKOR": [
-  "ui/hud/level_up_screen.gd:210"
+  "ui/hud/level_up_screen.gd:198"
  ],
  "YENİ DEPO": [
-  "ui/hud/level_up_screen.gd:180"
+  "ui/hud/level_up_screen.gd:168"
  ],
  "YENİ DEPO HAZIR: %s": [
   "ui/hud/news_digest.gd:279"
  ],
  "YENİ EŞYALAR": [
-  "ui/hud/event_screen.gd:221",
-  "ui/hud/event_screen.gd:223",
-  "ui/hud/event_banner.gd:102"
+  "gameplay/backend/live_event.gd:242",
+  "ui/hud/event_screen.gd:340",
+  "ui/hud/event_screen.gd:575",
+  "ui/hud/event_screen.gd:577"
  ],
  "YENİ GÖREVLER MASADA!": [
   "ui/hud/news_digest.gd:274"
@@ -6980,10 +7129,10 @@
   "ui/hud/friends_screen.gd:538"
  ],
  "YENİ KASA": [
-  "ui/hud/level_up_screen.gd:187"
+  "ui/hud/level_up_screen.gd:175"
  ],
  "YENİ MÜŞTERİ": [
-  "ui/hud/level_up_screen.gd:172"
+  "ui/hud/level_up_screen.gd:160"
  ],
  "YENİ OYUNCU": [
   "ui/hud/referral_tab.gd:462"
@@ -7078,6 +7227,9 @@
  "YOL TARİFİ HESAPLANIYOR": [
   "ui/hud/map_screen.gd:276"
  ],
+ "YOL VE MACERA": [
+  "vehicles/crates.json:set.yol_ve_macera"
+ ],
  "YOLDA  ·  GARAJDA YER YOK": [
   "ui/hud/showroom_screen.gd:1088"
  ],
@@ -7085,7 +7237,7 @@
   "ui/hud/showroom_screen.gd:931"
  ],
  "YUNANİSTAN": [
-  "gameplay/social/profile_catalog.gd:50"
+  "gameplay/social/profile_catalog.gd:54"
  ],
  "YUVARLAK AĞAÇ": [
   "decor/decorations.json:tree_round.title"
@@ -7174,7 +7326,7 @@
   "ui/loading/loading_screen.gd:78"
  ],
  "Yeniden istemek için %s bekle.": [
-  "gameplay/social/social_manager.gd:1034"
+  "gameplay/social/social_manager.gd:1037"
  ],
  "Yeşil gövdeli sütunlu matkap.": [
   "decor/decorations.json:drill_press.desc"
@@ -7217,11 +7369,17 @@
  "Yığınları ara, tamir işlerinden ve arkadaşlarından parça topla.": [
   "ui/hud/junkyard_screen.gd:379"
  ],
+ "ZATEN SENDE": [
+  "ui/hud/event_screen.gd:407"
+ ],
+ "ZATEN SENDE · %s": [
+  "ui/hud/event_screen.gd:407"
+ ],
  "ZATEN SERGİLENİYOR — GARAJDAN SEÇİP TAŞI": [
   "ui/hud/garage_edit_screen.gd:1190"
  ],
  "ZATEN VARDI · +%s ₺": [
-  "ui/hud/gift_screen.gd:115"
+  "ui/hud/gift_screen.gd:143"
  ],
  "ZEMİN": [
   "gameplay/garage_decor.gd:298",
@@ -7236,7 +7394,7 @@
  ],
  "Zaten arkadaşsınız.": [
   "gameplay/social/social_manager.gd:620",
-  "gameplay/social/social_manager.gd:1214"
+  "gameplay/social/social_manager.gd:1217"
  ],
  "Zaten bir arkadaşının davetiyle geldin.": [
   "gameplay/social/referral_manager.gd:161"
@@ -7371,9 +7529,10 @@
   "decor/decorations.json:office_safe.title"
  ],
  "ÇERÇEVE": [
-  "ui/hud/level_up_screen.gd:204",
+  "ui/hud/level_up_screen.gd:192",
   "ui/hud/profile_edit_screen.gd:161",
-  "ui/hud/gift_screen.gd:125"
+  "ui/hud/gift_screen.gd:153",
+  "ui/hud/collection_reward_screen.gd:188"
  ],
  "ÇERÇEVELİ PLAKA": [
   "decor/decorations.json:plate_frame.title"
@@ -7442,13 +7601,13 @@
   "decor/decorations.json:dumpster.title"
  ],
  "ÇİFTE PARA": [
-  "ui/hud/event_banner.gd:90"
+  "gameplay/backend/live_event.gd:227"
  ],
  "ÇİFTE XP": [
-  "ui/hud/event_banner.gd:92"
+  "gameplay/backend/live_event.gd:229"
  ],
  "ÇİN": [
-  "gameplay/social/profile_catalog.gd:52"
+  "gameplay/social/profile_catalog.gd:56"
  ],
  "ÇİT BİTKİ": [
   "decor/decorations.json:hedge.title"
@@ -7460,7 +7619,7 @@
   "decor/decorations.json:flower_bed.title"
  ],
  "Çıkmak için tekrar GERİ'ye bas": [
-  "ui/hud/hud.gd:1435"
+  "ui/hud/hud.gd:1437"
  ],
  "Çıkış yapılamadı": [
   "gameplay/cloud_save_manager.gd:725"
@@ -7485,16 +7644,26 @@
  "ÖDÜL YOK": [
   "ui/hud/race_result_screen.gd:60"
  ],
+ "ÖDÜLLER": [
+  "ui/hud/collection_reward_screen.gd:104"
+ ],
  "ÖDÜLLER TOPLANDI!": [
   "ui/hud/reward_popup.gd:50"
  ],
  "ÖDÜLÜ AL": [
+  "ui/hud/event_road.gd:378",
   "ui/hud/mission_screen.gd:493",
   "ui/hud/gem_store_screen.gd:481",
   "ui/tutorial/tutorial_director.gd:949"
  ],
  "ÖDÜLÜ AL'a bas. Bu görevin ödülü bir ARAÇ KASASI!": [
   "ui/tutorial/tutorial_director.gd:950"
+ ],
+ "ÖDÜNÇ": [
+  "ui/hud/event_road.gd:402"
+ ],
+ "ÖDÜNÇ · ETKİNLİK ARACI\nYARIŞ ▶ %d / %d": [
+  "world/event_car_spot.gd:156"
  ],
  "ÖN / ARKA": [
   "ui/hud/camera_capture.gd:141"
@@ -7516,7 +7685,7 @@
  ],
  "ÖNCE GARAJI SEVİYE %d'E GENİŞLET": [
   "ui/hud/garage_edit_screen.gd:683",
-  "ui/hud/hud.gd:980"
+  "ui/hud/hud.gd:982"
  ],
  "ÖNDEN ÇEKİŞ": [
   "ui/hud/garage_screen.gd:1101"
@@ -7528,19 +7697,20 @@
   "decor/decorations.json:parquet_basket.title"
  ],
  "ÖZBEKİSTAN": [
-  "gameplay/social/profile_catalog.gd:52"
+  "gameplay/social/profile_catalog.gd:56"
  ],
  "ÖZEL HELİKOPTER": [
   "decor/decorations.json:lux_helicopter.title"
  ],
  "ÖZEL RAKİP": [
-  "ui/hud/event_banner.gd:100"
+  "gameplay/backend/live_event.gd:240"
  ],
  "ÖZEL RAKİP · %s": [
-  "ui/hud/event_screen.gd:213"
+  "ui/hud/event_screen.gd:338",
+  "ui/hud/event_screen.gd:567"
  ],
  "ÖZEL ÖDÜL ALINDI": [
-  "ui/hud/event_screen.gd:212"
+  "ui/hud/event_screen.gd:566"
  ],
  "Ödül: %s ₺": [
   "ui/hud/repair_panel.gd:221",
@@ -7556,7 +7726,7 @@
   "ui/hud/mod_workshop.gd:601"
  ],
  "Önce ARKADAŞLAR'dan bir arkadaş ekle.": [
-  "gameplay/social/social_manager.gd:1031"
+  "gameplay/social/social_manager.gd:1034"
  ],
  "Önce ARKADAŞLAR'dan takma adını seç; sonra davet yeniden açılır.": [
   "ui/hud/invite_screen.gd:229"
@@ -7641,7 +7811,7 @@
   "ui/hud/profile_edit_screen.gd:499"
  ],
  "İADE EDİLEN SATIN ALMA\n−%d GEM GERİ ALINDI": [
-  "ui/hud/hud.gd:1865"
+  "ui/hud/hud.gd:1867"
  ],
  "İKİNCİ ALAN": [
   "gameplay/quest_catalog.gd:37"
@@ -7662,10 +7832,10 @@
   "ui/tutorial/tutorial_director.gd:1027"
  ],
  "İLK ARAÇ KASAN GARAJINA GELDİ\nKASAYA DOKUN VE AÇ": [
-  "ui/hud/hud.gd:1965"
+  "ui/hud/hud.gd:1980"
  ],
  "İLK GALİBİYETE: %s": [
-  "ui/hud/event_screen.gd:212"
+  "ui/hud/event_screen.gd:566"
  ],
  "İLK KASA": [
   "gameplay/quest_catalog.gd:27"
@@ -7704,10 +7874,11 @@
   "ui/hud/mod_workshop.gd:512"
  ],
  "İNDİRİM": [
-  "ui/hud/event_screen.gd:181"
+  "ui/hud/event_screen.gd:546"
  ],
  "İNDİRİM %s": [
-  "ui/hud/event_banner.gd:94"
+  "gameplay/backend/live_event.gd:234",
+  "ui/hud/event_screen.gd:329"
  ],
  "İNTİKAM": [
   "ui/hud/race_result_screen.gd:50"
@@ -7729,10 +7900,10 @@
   "ui/hud/car_garages_screen.gd:788"
  ],
  "İRLANDA": [
-  "gameplay/social/profile_catalog.gd:51"
+  "gameplay/social/profile_catalog.gd:55"
  ],
  "İSPANYA": [
-  "gameplay/social/profile_catalog.gd:48"
+  "gameplay/social/profile_catalog.gd:52"
  ],
  "İSTE": [
   "ui/hud/restoration_panel.gd:311"
@@ -7741,10 +7912,10 @@
   "ui/hud/friends_screen.gd:383"
  ],
  "İSVEÇ": [
-  "gameplay/social/profile_catalog.gd:51"
+  "gameplay/social/profile_catalog.gd:55"
  ],
  "İSVİÇRE": [
-  "gameplay/social/profile_catalog.gd:51"
+  "gameplay/social/profile_catalog.gd:55"
  ],
  "İSİM": [
   "ui/hud/profile_edit_screen.gd:162"
@@ -7754,7 +7925,7 @@
   "decor/decorations.json:name_sign.title"
  ],
  "İTALYA": [
-  "gameplay/social/profile_catalog.gd:49"
+  "gameplay/social/profile_catalog.gd:53"
  ],
  "İTALYAN": [
   "vehicles/crates.json:set.italyan"
@@ -7820,13 +7991,13 @@
   "ui/hud/push_prompt.gd:85"
  ],
  "İstek gönderilemedi. İnternet bağlantını kontrol et.": [
-  "gameplay/social/social_manager.gd:1044",
-  "gameplay/social/social_manager.gd:1206",
-  "gameplay/social/social_manager.gd:1227",
-  "gameplay/social/social_manager.gd:1234"
+  "gameplay/social/social_manager.gd:1047",
+  "gameplay/social/social_manager.gd:1209",
+  "gameplay/social/social_manager.gd:1230",
+  "gameplay/social/social_manager.gd:1237"
  ],
  "İstek kabul edilemedi. Tekrar dene.": [
-  "gameplay/social/social_manager.gd:1251"
+  "gameplay/social/social_manager.gd:1254"
  ],
  "İstenenler: %s. ARKADAŞLAR'dan bedavaya gönderebilirsin.": [
   "ui/hud/news_digest.gd:356"
@@ -7853,7 +8024,7 @@
   "ui/hud/crate_panel.gd:98"
  ],
  "İÇİNDEKİLER": [
-  "ui/hud/gift_screen.gd:35"
+  "ui/hud/gift_screen.gd:44"
  ],
  "İç yükseltmeler hazır: deposun artık daha değerli.": [
   "ui/hud/news_digest.gd:367"
@@ -7905,6 +8076,9 @@
   "ui/hud/map_screen.gd:131",
   "vehicles/crates.json:city_crate.short_name"
  ],
+ "ŞEHİR ARABALARI": [
+  "vehicles/crates.json:set.sehir_arabalari"
+ ],
  "ŞEHİR KASASI": [
   "vehicles/crates.json:city_crate.display_name"
  ],
@@ -7929,6 +8103,9 @@
  "ŞOK! %s SENİ YENDİ": [
   "ui/hud/news_digest.gd:227"
  ],
+ "ŞU AN": [
+  "ui/hud/event_road.gd:351"
+ ],
  "ŞU AN BURADA": [
   "ui/hud/car_placement_screen.gd:176"
  ],
@@ -7936,6 +8113,7 @@
   "ui/hud/garage_value_screen.gd:216"
  ],
  "ŞUBAT": [
+  "ui/hud/event_screen.gd:504",
   "ui/hud/news_digest.gd:479"
  ],
  "Şehir önizlemesi (editör)": [
@@ -7957,17 +8135,17 @@
   "decor/decorations.json:office_safe.desc"
  ],
  "Şikâyet gönderilemedi. İnternet bağlantını kontrol et.": [
-  "gameplay/social/social_manager.gd:1813"
+  "gameplay/social/social_manager.gd:1818"
  ],
  "Şikâyetin alındı, inceleyeceğiz. Teşekkürler!": [
-  "gameplay/social/social_manager.gd:1812"
+  "gameplay/social/social_manager.gd:1817"
  ],
  "ŞİKAYET ET": [
   "ui/hud/friend_card_screen.gd:163",
   "ui/hud/friend_card_screen.gd:169"
  ],
  "ŞİLİ": [
-  "gameplay/social/profile_catalog.gd:48"
+  "gameplay/social/profile_catalog.gd:52"
  ],
  "ŞİMDİ": [
   "ui/hud/inbox_screen.gd:297"
@@ -7977,6 +8155,12 @@
  ],
  "ŞİMDİ DOKUN": [
   "ui/hud/drag_race_screen.gd:838"
+ ],
+ "ŞİMDİ VE YAKLAŞANLAR": [
+  "ui/hud/event_screen.gd:251"
+ ],
+ "ŞİMDİ · %s": [
+  "ui/hud/event_screen.gd:456"
  ],
  "ŞİMDİ!": [
   "ui/hud/drag_race_screen.gd:946",
@@ -8006,6 +8190,13 @@
  ],
  "★ ETKİNLİK KASASI: işaretli araçların şansı ×%s": [
   "ui/hud/showroom_screen.gd:1201"
+ ],
+ "✔ ALINDI": [
+  "ui/hud/collection_screen.gd:418",
+  "ui/hud/collection_screen.gd:562"
+ ],
+ "✔ ARAÇ SENİN!": [
+  "ui/hud/event_screen.gd:399"
  ],
  "✔ TAKILI": [
   "ui/hud/mod_workshop.gd:907"

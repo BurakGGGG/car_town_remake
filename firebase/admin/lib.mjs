@@ -6,6 +6,8 @@
 //   bildirim konusu        gameplay/social/push_service.gd (news_<dil>)
 //   news/{id}              HABERLER (yalnız sunucu; bildirimi functions/news_feed.js gönderir)
 //   config/news            oyunun okuduğu HABERLER yayını (buildNewsFeed: functions/news_feed.js ile AYNI kod)
+//   config/app.events      etkinlik takvimi; config/app.event = eski sürümlerin aynası (mirrorEvent: functions/events_tick.js
+//                          ile AYNI kod; zamanla ilerletmeyi eventsTick yapar)
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { createRequire } from "node:module";
@@ -514,7 +516,7 @@ export function buildPromo(input, catalog) {
   };
 }
 
-// --- Canlı etkinlik (config/app.event) ve içerik paketleri (config/app.packs) ---------------
+// --- Canlı etkinlik takvimi (config/app.events + eski sürümlerin aynası config/app.event) ve içerik paketleri (config/app.packs)
 
 export const SALE_KINDS = ["crates", "cars", "decor", "mods"];
 export const SALE_MAX = 50;
@@ -531,7 +533,18 @@ export const MISSION_METRICS = {
   decor_placed: "Eşya yerleştir", decor_bought: "Eşya satın al", paints: "Araç boya", mods_installed: "Modifiye tak",
   junk_searches: "Hurdalıkta yığın ara", junk_parts: "Hurdalıktan parça topla", friend_races: "Arkadaş yarışına katıl",
   friend_wins: "Arkadaş yarışı kazan", money_spent: "₺ harca",
+  // 2026-10-26 etkinlik aracı / takvim: oyundaki metinle aynı (%s = hedef)
+  event_car_wins: "ETKİNLİK ARACIYLA %s YARIŞ KAZAN", event_car_races: "ETKİNLİK ARACIYLA %s YARIŞA KATIL",
+  garage_visits: "%s ARKADAŞ GARAJI ZİYARET ET",
 };
+// Yalnız etkinlik aracıyla sayılan görevler: etkinlikte araç (car) yoksa tamamlanamaz
+const CAR_METRICS = ["event_car_wins", "event_car_races"];
+export const EVENTS_MAX = 12;
+export const REVEAL_DAYS_MAX = 14;
+export const REVEAL_DAYS_DEFAULT = 3;
+export const OWNED_GEMS_MAX = 1000;
+// Kaydederken listeden düşen etkinlik: bitişinin üzerinden bu kadar geçmiş (panel bitenleri bir süre soluk gösterir)
+export const EVENTS_KEEP_ENDED = 30 * 86400;
 
 const num = (v, lo, hi, what) => {
   const n = v === "" || v === undefined || v === null ? lo : Number(v);
@@ -572,8 +585,11 @@ export function buildPacks(input) {
 /**
  * Panel formundan canlı etkinlik (oyundaki LiveEvent.normalize ile aynı sınırlar). Modüller: money_mult / xp_mult (1–3),
  * sale {crates, cars, decor, mods: 0–50}, crate_boost {crate, cars (havuzdan), mult 2–5}, missions [{metric, target, ödül}]
- * (en çok 6), rival {car, stage 0–5, name, paint, ödül}, pack (packs listesinden). Hiçbir modül yoksa null (etkinlik yok).
- * catalog verilmezse kimlikler katalogla sınanmaz (eski testler).
+ * (en çok 6), rival {car, stage 0–5, name, paint, ödül}, pack (packs listesinden), car {id, owned_gems 0–1000, owned_crate}
+ * (ETKİNLİK ARACI: bütün görevleri bitiren kalıcı alır; en az bir görev şart; oyuncuda zaten varsa owned_gems / owned_crate
+ * teselli ödülü). Hiçbir modül yoksa null (etkinlik yok). Ek alanlar: reveal_days (0–14, varsayılan 3; yalnız araçlı etkinlikte
+ * yazılır: oyundaki takvim aracı başlangıçtan bu kadar gün önce gösterir), notify (yalnız true yazılır: başlayınca bildirim,
+ * functions/events_tick.js). catalog verilmezse kimlikler katalogla sınanmaz (eski testler).
  */
 export function buildEvent(input, catalog = null, packs = []) {
   if (!input) return null;
@@ -626,14 +642,86 @@ export function buildEvent(input, catalog = null, packs = []) {
     if (!packs.some((p) => p.id === pack)) throw new PanelError(`İçerik paketi "${pack}" paket listesinde yok`);
     event.pack = pack;
   }
+  const car = input.car && typeof input.car === "object" ? input.car : null;
+  const carId = car ? String(car.id || "").trim() : "";
+  if (carId) {
+    if (catalog && !catalog.cars.some((c) => c.id === carId)) throw new PanelError(`Etkinlik aracı: bilinmeyen ya da edinilemeyen araç "${carId}"`);
+    if (!ID_RE.test(carId)) throw new PanelError("Etkinlik aracı kimliği geçersiz");
+    const ownedCrate = String(car.owned_crate || "").trim();
+    if (ownedCrate && catalog && !catalog.crates.some((c) => c.id === ownedCrate)) {
+      throw new PanelError(`Etkinlik aracı teselli kasası: bilinmeyen kasa "${ownedCrate}" (yalnız satılan kasalar)`);
+    }
+    if (ownedCrate && !ID_RE.test(ownedCrate)) throw new PanelError("Etkinlik aracı teselli kasası geçersiz");
+    if (!missions.length) throw new PanelError("Etkinlik aracı için en az bir görev gerekli");
+    event.car = { id: carId, owned_gems: int(car.owned_gems, 0, OWNED_GEMS_MAX, "Etkinlik aracı teselli elması"), owned_crate: ownedCrate };
+  }
+  const carMission = missions.findIndex((m) => CAR_METRICS.includes(m.metric));
+  if (carMission >= 0 && !event.car) {
+    throw new PanelError(`Görev ${carMission + 1}: "${MISSION_METRICS[missions[carMission].metric].replace("%s ", "")}" için etkinlik aracı seç (7)`);
+  }
   if (empty(event)) return null;
   const start = int(input.start, 0, 4_000_000_000, "Etkinlik başlangıcı");
   const end = int(input.end, 1, 4_000_000_000, "Etkinlik bitişi");
   if (end <= start) throw new PanelError("Etkinlik bitişi başlangıçtan sonra olmalı");
   const id = String(input.id || "").trim();
   if (!ID_RE.test(id)) throw new PanelError("Etkinlik kimliği: küçük harf / rakam / _");
-  return { id, title: texts(input.title, MAX_TITLE, "Etkinlik başlığı"), text: texts(input.text, MAX_TEXT, "Etkinlik metni"),
+  const out = { id, title: texts(input.title, MAX_TITLE, "Etkinlik başlığı"), text: texts(input.text, MAX_TEXT, "Etkinlik metni"),
     start, end, money_mult: event.money_mult || 1, xp_mult: event.xp_mult || 1, ...event };
+  if (event.car) {
+    const reveal = input.reveal_days;
+    out.reveal_days = reveal === undefined || reveal === null || reveal === ""
+      ? REVEAL_DAYS_DEFAULT : int(reveal, 0, REVEAL_DAYS_MAX, "Takvimde araç gösterimi (gün)");
+  }
+  if (input.notify === true) out.notify = true;
+  return out;
+}
+
+/** Hata iletisindeki saat: İstanbul saatiyle gg.aa.yyyy ss:dd. */
+const clock = (sec) => new Date(sec * 1000).toLocaleString("tr-TR", { timeZone: "Europe/Istanbul", day: "2-digit", month: "2-digit",
+  year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+/** Etkinliğin paneldeki adı (hata iletileri): Türkçe başlık, yoksa İngilizce, o da yoksa kimlik; when: tarih aralığı da. */
+function eventName(e, when = false) {
+  const t = e && e.title && typeof e.title === "object" ? e.title : {};
+  const title = String(t.tr || t.en || "").trim();
+  const id = String((e && e.id) || "").trim();
+  const extra = [title ? id || "yeni" : "", when ? `${clock(e.start)} → ${clock(e.end)}` : ""].filter(Boolean).join(", ");
+  return `"${title || id || "yeni etkinlik"}"` + (extra ? ` (${extra})` : "");
+}
+
+/**
+ * Etkinlik takvimi (config/app.events): her öğe buildEvent ile doğrulanır (modülsüz öğe hata), bitişinin üzerinden 30 günden
+ * fazla geçmiş olanlar düşer, kimlikler tekil, en çok 12, başlangıca göre sıralı, zaman pencereleri ÇAKIŞMAZ (oyun aynı anda tek
+ * etkinlik gösterir; art arda gelmek — biri bitince öbürü başlar — serbest). nowS: unix sn.
+ */
+export function buildEvents(input, catalog, packs, nowS) {
+  if (input !== undefined && input !== null && !Array.isArray(input)) throw new PanelError("Etkinlik listesi bir dizi olmalı");
+  const out = [];
+  for (const raw of input || []) {
+    let e;
+    try {
+      e = buildEvent(raw, catalog, packs);
+    } catch (err) {
+      if (err instanceof PanelError) throw new PanelError(`Etkinlik ${eventName(raw)}: ${err.message}`);
+      throw err;
+    }
+    if (!e) throw new PanelError(`Etkinlik ${eventName(raw)}: en az bir modül doldur (çarpan, indirim, kasa, görev, rakip, paket ya da araç)`);
+    if (e.end < nowS - EVENTS_KEEP_ENDED) continue;
+    const dup = out.find((x) => x.id === e.id);
+    if (dup) throw new PanelError(`Etkinlik kimliği iki kez listede: ${e.id} (${eventName(dup)} ve ${eventName(e)})`);
+    out.push(e);
+  }
+  if (out.length > EVENTS_MAX) throw new PanelError(`Takvimde en çok ${EVENTS_MAX} etkinlik olabilir (${out.length} var): biten ya da uzak etkinliği sil`);
+  out.sort((a, b) => a.start - b.start || a.end - b.end || (a.id < b.id ? -1 : 1));
+  for (let i = 1; i < out.length; i++) {
+    const a = out[i - 1];
+    const b = out[i];
+    if (b.start < a.end) {
+      throw new PanelError(`Etkinlikler çakışıyor: ${eventName(a, true)} ile ${eventName(b, true)}. Oyun aynı anda tek etkinlik ` +
+        "gösterir: tarihleri ayır (biri bitince öbürü başlayabilir).");
+    }
+  }
+  return out;
 }
 
 // --- Ödüllü reklam ayarları (config/app.ads; oyundaki AdPolicy.normalize_remote ile aynı sınırlar) -------------
@@ -649,6 +737,7 @@ export const AD_KINDS = {
   time_skip: { label: "Modifiye / depo / iç yükseltme süresi yarıya", cap: 8 },
   mission_reroll: { label: "Günlük görevi değiştir", cap: 1 },
   junk_refill: { label: "Hurdalık yığınını doldur", cap: 2 },
+  event_race: { label: "Etkinlik yarışı +1 hak", cap: 1 },
 };
 export const AD_DEFAULTS = { total_cap: 20, free_gems: 5, free_gems_cooldown: 180 };
 
@@ -673,16 +762,34 @@ export function buildAds(input) {
   };
 }
 
-/** config/app'in etkinlik + paket kısmı (POST /api/event): mevcut belgenin öbür alanlarına dokunulmaz. */
-export function buildEventDoc(input, catalog, current, now) {
-  const packs = buildPacks(input.packs);
-  const event = buildEvent(input.event, catalog, packs);
+// Ayna kurucusu functions/events_tick.js'te (zamanlayıcı da kullanır): tek kaynak, panel aynısını çağırır
+export const { mirrorEvent } = createRequire(import.meta.url)("../functions/events_tick.js");
+
+/** Panelin göstereceği takvim: config/app.events; takvim hiç kaydedilmemişse eski tek etkinlik (config/app.event) listede. */
+export function eventsOf(config) {
+  const c = config || {};
+  if (Array.isArray(c.events)) return c.events;
+  return c.event && typeof c.event === "object" ? [c.event] : [];
+}
+
+/**
+ * config/app'in takvim + paket kısmı (POST /api/events): input {events, packs}. events (buildEvents) ve eski sürümlerin aynası
+ * event (mirrorEvent: süren, yoksa sıradaki, yoksa alan silinir) birlikte yazılır; boş takvim events: [] olarak kalır (eventsTick
+ * takvimi yönetilen sayar). Mevcut belgenin öbür alanlarına (min_code, maintenance, notice, ads …) dokunulmaz. now: unix ms.
+ */
+export function buildEventsDoc(input, catalog, current, now) {
+  const src = input || {};
+  const nowS = Math.floor(now / 1000);
+  const packs = buildPacks(src.packs);
+  const events = buildEvents(src.events, catalog, packs, nowS);
   const doc = { ...(current || {}) };
-  delete doc.event;
-  if (event) doc.event = event;
+  doc.events = events;
+  const mirror = mirrorEvent(events, nowS);
+  if (mirror) doc.event = mirror;
+  else delete doc.event;
   if (packs.length) doc.packs = packs;
   else delete doc.packs;
-  doc.updated_at = Math.floor(now / 1000);
+  doc.updated_at = nowS;
   return doc;
 }
 

@@ -112,6 +112,34 @@ func _set_amounts(money: int, gems: int) -> void:
 	_gem_chip.visible = gems > 0
 
 
+## Kapanışta paralar haplardan sayaçlara uçar; Hud.hold_reward ile bekletilen sayaç paralar varınca sayarak artar.
+func _fly(money: int, gems: int) -> void:
+	if _hud == null:
+		return
+	if money > 0:
+		var from: Vector2 = _money_chip.get_global_rect().get_center()
+		CoinFlight.fly(_hud, HudIcon.Kind.COIN, from, _hud.coin_label, CoinFlight.coin_count(money),
+			func() -> void: _hud.land_reward(money, 0), _sfx.coin)
+	if gems > 0:
+		var from: Vector2 = _gem_chip.get_global_rect().get_center()
+		CoinFlight.fly(_hud, HudIcon.Kind.GEM, from, _hud.gem_label, clampi(gems / 10 + 3, 3, 8),
+			func() -> void: _hud.land_reward(0, gems), _sfx.gem)
+
+
+## Kendiliğinden açılan ödül ekranı için sakin an (FounderRewardNotice'teki kural): HUD görünür, pano yok, ders yok, kasa /
+## restorasyon plakası yok, başka ödül penceresi yok, yükleme yok.
+func _game_calm() -> bool:
+	var tutorial: TutorialDirector = _hud.tutorial
+	if not _hud.visible or not _hud.router.top().is_empty() or (tutorial and tutorial.is_running()):
+		return false
+	if (_hud.crate_panel and _hud.crate_panel.visible) or (_hud.restoration_result and _hud.restoration_result.visible):
+		return false
+	for child: Node in get_parent().get_children():   # posta / ön kayıt ödülü pencereleri de Root'ta
+		if (child is RewardPopup or child is RewardScreen) and child != self and (child as Control).visible:
+			return false
+	return get_tree().root.get_node_or_null("LoadingScreen") == null
+
+
 # --- Kurulum -----------------------------------------------------------------
 
 func _build() -> void:

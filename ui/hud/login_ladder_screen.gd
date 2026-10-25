@@ -138,6 +138,8 @@ func _is_calm() -> bool:
 		return false
 	if _hud.level_up_screen and _hud.level_up_screen.is_pending():
 		return false
+	if _hud.collection_reward_screen and _hud.collection_reward_screen.is_pending():
+		return false
 	for child: Node in get_parent().get_children():
 		if (child is RewardPopup or child is RewardScreen) and child != self and (child as Control).visible:
 			return false

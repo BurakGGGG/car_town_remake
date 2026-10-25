@@ -1,9 +1,10 @@
 class_name CollectionScreen
 extends Control
-## KOLEKSİYON tabelası — 16 aracın hepsi kasalarına göre gruplu: sahip olunanlar, keşfedilmiş ama
-## satılmış olanlar ve henüz keşfedilmemişler (siluet). Her kartta nadirlik, sınıf, kasa kaynağı,
-## o kasadaki gerçek olasılık ve kopya yıldızları; altta koleksiyon setleri.
-## Ekran TAMAMEN KODLA kurulur (.tscn yok); mantık yoktur — VehicleOwnership ve CrateCatalog okunur.
+## KOLEKSİYON tabelası — edinilebilir bütün araçlar (kasalar + hurdalık klasikleri) kasalarına / restorasyon kademelerine
+## göre gruplu: sahip olunanlar, keşfedilmiş ama satılmış olanlar ve henüz keşfedilmemişler (siluet). Her kartta nadirlik,
+## sınıf, kasa kaynağı, o kasadaki gerçek olasılık ve kopya yıldızları. Üstte kilometre taşı şeridi (10 / 20 / 35 / 50 / 72
+## araç, ödülleri), altta koleksiyon setleri (ilerleme, ödül ya da ALINDI). Ödülleri CollectionRewards öder (2026-10-25).
+## Ekran TAMAMEN KODLA kurulur (.tscn yok); mantık yoktur — VehicleOwnership, CrateCatalog ve CollectionRewards okunur.
 ##
 ## Yeni görsel asset yok: siluet, aracın mevcut küçük render'ının (CarGallery önbelleği) siyaha
 ## boyanmış hâlidir; nadirlik çerçevesi StyleBoxFlat, Legendary'nin parlaması bir tween'dir.
@@ -24,12 +25,19 @@ const EDGE: float = 16.0
 const RESTORATION_COLOR: Color = Color("B5652A")
 ## İlk açılışta hemen kurulan bölüm sayısı (kalanı kare başına bir bölüm).
 const GROUPS_FIRST: int = 2
+## Set satırları geniş plakada iki sütun.
+const SET_COLUMNS: int = 2
+const SET_ROW_MIN: float = 330.0
+## Set satırının sağındaki ödül sütunu (en uzunu "+280.000").
+const REWARD_COLUMN: float = 84.0
 
 var _title: Label
 var _body: PlatePanel
 var _grids: Array[GridContainer] = []
 var _grid_box: VBoxContainer
 var _sets_box: VBoxContainer
+var _sets_grid: GridContainer
+var _track: _MilestoneTrack
 var _column: VBoxContainer
 var _thumb_host: CarGallery
 var _thumbs: Dictionary = {}   # araç id → {"rect": TextureRect, "silhouette": bool}
@@ -128,11 +136,14 @@ func _build() -> void:
 	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	inner.add_theme_constant_override(&"separation", 10)
 	scroll.add_child(inner)
+	_track = _MilestoneTrack.new()
+	_track.custom_minimum_size = Vector2(0.0, 52.0)
+	inner.add_child(_track)
 	_grid_box = VBoxContainer.new()
 	_grid_box.add_theme_constant_override(&"separation", 6)
 	inner.add_child(_grid_box)
 	_sets_box = VBoxContainer.new()
-	_sets_box.add_theme_constant_override(&"separation", 2)
+	_sets_box.add_theme_constant_override(&"separation", 4)
 	inner.add_child(_sets_box)
 	_column.add_child(body)
 
@@ -157,9 +168,10 @@ func _rebuild() -> void:
 	for child: Node in _sets_box.get_children():
 		child.queue_free()
 	var own: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
-	var total: int = VehicleOwnership.collection_ids().size()
-	var found: int = own.discovered_count() if own else 0
-	_title.text = Loc.t("KOLEKSİYON   %d / %d") % [found, total]
+	var rewards: CollectionRewards = get_tree().get_first_node_in_group("collection_rewards") as CollectionRewards
+	var found: int = CollectionRewards.found_count(own)
+	_title.text = Loc.t("KOLEKSİYON   %d / %d") % [found, CollectionRewards.total_count()]
+	_track.setup(found, rewards)
 
 	# Başlangıç aracı ve kasalar, kasa sırasıyla
 	var groups: Array[Dictionary] = []
@@ -187,23 +199,12 @@ func _rebuild() -> void:
 		_add_groups_later(groups.slice(GROUPS_FIRST), own, last_missing, _build_gen)
 
 	_sets_box.add_child(_label(&"HudPlateTitle", Loc.t("KOLEKSİYON SETLERİ")))
+	_sets_grid = GridContainer.new()
+	_sets_grid.add_theme_constant_override(&"h_separation", int(CARD_GAP))
+	_sets_grid.add_theme_constant_override(&"v_separation", int(CARD_GAP))
+	_sets_box.add_child(_sets_grid)
 	for set_entry: Dictionary in CrateCatalog.sets():
-		var cars: Array = set_entry["cars"]
-		var have: int = 0
-		var names: PackedStringArray = PackedStringArray()
-		for id: StringName in cars:
-			var known: bool = own != null and own.is_discovered(id)
-			if known:
-				have += 1
-			names.append(String(CarCatalog.get_entry(id).get("display_name", id)).to_upper() if known else "???")
-		var done: bool = have == cars.size()
-		var line: Label = _label(&"HudInkCaption", "%s %s   %d / %d   ·   %s" % [
-			"✔" if done else "•", Loc.t(String(set_entry["name"])), have, cars.size(), "  ".join(names)])
-		if done:
-			line.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
-		# Uzun set satırı plakayı genişletmesin: dar tuvalde alt satıra kayar
-		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_sets_box.add_child(line)
+		_sets_grid.add_child(_set_row(set_entry, own, rewards))
 	_fit_width()
 	_apply_thumbnails()
 
@@ -219,6 +220,9 @@ func _content_key() -> String:
 			ids.append(entry["id"])
 	for id: StringName in ids:
 		parts.append("%d%d%d" % [int(own.is_owned(id)) + 2 * int(own.is_discovered(id)), own.stars(id), own.duplicate_count(id)])
+	var rewards: CollectionRewards = get_tree().get_first_node_in_group("collection_rewards") as CollectionRewards
+	if rewards:
+		parts.append(JSON.stringify(rewards.state()))
 	return "|".join(parts)
 
 
@@ -262,6 +266,11 @@ func _fit_width() -> void:
 	for grid: GridContainer in _grids:
 		if is_instance_valid(grid):
 			grid.columns = columns
+	if is_instance_valid(_sets_grid):
+		_sets_grid.columns = SET_COLUMNS if inner >= SET_ROW_MIN * float(SET_COLUMNS) + CARD_GAP else 1
+		for row: Node in _sets_grid.get_children():
+			(row as Control).custom_minimum_size.x = (inner - CARD_GAP * float(_sets_grid.columns - 1)) \
+				/ float(_sets_grid.columns) - 1.0
 	_body.custom_minimum_size.x = minf(PLATE_WIDTH, room)
 
 
@@ -354,6 +363,84 @@ func _card(id: StringName, own: VehicleOwnership, last_piece: bool) -> Control:
 	return frame
 
 
+## Set satırı: ad + ilerleme, çubuk, araç adları (bilinmeyen ???), sağda ödül (₺ / GEM) ya da ALINDI.
+func _set_row(set_entry: Dictionary, own: VehicleOwnership, rewards: CollectionRewards) -> Control:
+	var cars: Array = set_entry["cars"]
+	var have: int = 0
+	var names: PackedStringArray = PackedStringArray()
+	for id: StringName in cars:
+		var known: bool = own != null and own.is_discovered(id)
+		if known:
+			have += 1
+		names.append(String(CarCatalog.get_entry(id).get("display_name", id)).to_upper() if known else "???")
+	var done: bool = have == cars.size()
+	var paid: bool = rewards != null and rewards.is_set_paid(set_entry["id"])
+
+	var row: PanelContainer = PanelContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color("FBF1D6") if done else Color("EADFC4")
+	style.set_corner_radius_all(6)
+	style.set_border_width_all(2 if done else 1)
+	style.border_color = HudPalette.PLATE_SELECTED_EDGE if done else HudPalette.PLATE_EDGE
+	style.content_margin_left = 8.0
+	style.content_margin_right = 8.0
+	style.content_margin_top = 5.0
+	style.content_margin_bottom = 6.0
+	row.add_theme_stylebox_override(&"panel", style)
+	var line: HBoxContainer = HBoxContainer.new()
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	line.add_theme_constant_override(&"separation", 8)
+	row.add_child(line)
+
+	var left: VBoxContainer = VBoxContainer.new()
+	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left.add_theme_constant_override(&"separation", 2)
+	line.add_child(left)
+	var head: Label = _label(&"HudInkValue", "%s   %d / %d" % [Loc.t(String(set_entry["name"])), have, cars.size()])
+	head.clip_text = true
+	head.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	left.add_child(head)
+	var bar: _Bar = _Bar.new()
+	bar.value = float(have) / float(maxi(cars.size(), 1))
+	bar.custom_minimum_size = Vector2(0.0, 6.0)
+	left.add_child(bar)
+	left.add_child(_wrap(_label(&"HudInkCaption", "  ".join(names))))
+
+	var right: VBoxContainer = VBoxContainer.new()
+	right.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	right.custom_minimum_size.x = REWARD_COLUMN   # çubuklar her satırda aynı boyda
+	right.alignment = BoxContainer.ALIGNMENT_CENTER
+	right.add_theme_constant_override(&"separation", 1)
+	line.add_child(right)
+	if paid:
+		var got: Label = _label(&"HudInkValue", Loc.t("✔ ALINDI"))
+		got.add_theme_color_override(&"font_color", HudPalette.COIN_DARK)
+		right.add_child(got)
+	else:
+		var reward: Dictionary = CollectionRewards.set_reward(set_entry)
+		right.add_child(_amount(HudIcon.Kind.COIN, Hud.format_thousands(int(reward["money"]))))
+		right.add_child(_amount(HudIcon.Kind.GEM, str(int(reward["gems"]))))
+	return row
+
+
+## Ödül satırı: küçük ikon + sayı.
+func _amount(kind: HudIcon.Kind, text: String) -> HBoxContainer:
+	var box: HBoxContainer = HBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.alignment = BoxContainer.ALIGNMENT_END
+	box.add_theme_constant_override(&"separation", 3)
+	var icon: HudIcon = HudIcon.new()
+	icon.kind = kind
+	icon.icon_size = 14.0
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	box.add_child(icon)
+	box.add_child(_label(&"HudInkCaption", "+" + text))
+	return box
+
+
 func _apply_thumbnails() -> void:
 	for id: StringName in _thumbs:
 		var rect: TextureRect = _thumbs[id]["rect"]
@@ -392,3 +479,92 @@ func _label(variation: StringName, text: String) -> Label:
 	label.text = text
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
+
+
+## Set ilerleme çubuğu: koyu zemin, altın dolgu.
+class _Bar extends Control:
+	var value: float = 0.0
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var rect: Rect2 = Rect2(Vector2.ZERO, size)
+		draw_rect(rect, Color(HudPalette.INK, 0.18), true)
+		if value > 0.0:
+			draw_rect(Rect2(rect.position, Vector2(size.x * clampf(value, 0.0, 1.0), size.y)),
+				HudPalette.COIN if value < 1.0 else HudPalette.COIN_DARK, true)
+
+
+## KİLOMETRE TAŞLARI şeridi: 10 / 20 / 35 / 50 / 72 araç eşit aralıklı duraklar, keşfedilen sayıya göre dolan yol; durağın
+## altında ödülü (+GEM, sonda KUPA) ya da alındıysa onay. Yazılar temanın yazı tipiyle çizilir.
+class _MilestoneTrack extends Control:
+	const RADIUS: float = 13.0
+	const LINE_Y: float = 16.0
+	const SIDE: float = 22.0
+
+	var _found: int = 0
+	var _counts: Array[int] = []
+	var _paid: Array[bool] = []
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func setup(found: int, rewards: CollectionRewards) -> void:
+		_found = found
+		_counts = CollectionRewards.milestone_list()
+		_paid.clear()
+		for count: int in _counts:
+			_paid.append(rewards != null and rewards.is_milestone_paid(count))
+		queue_redraw()
+
+	func _stop_x(index: int) -> float:
+		return SIDE + (size.x - SIDE * 2.0) * float(index + 1) / float(_counts.size())
+
+	func _draw() -> void:
+		if _counts.is_empty():
+			return
+		var font: Font = get_theme_default_font()
+		var start: Vector2 = Vector2(SIDE * 0.5, LINE_Y)
+		var end: Vector2 = Vector2(_stop_x(_counts.size() - 1), LINE_Y)
+		draw_line(start, end, Color(HudPalette.INK, 0.2), 6.0, true)
+		# Dolan yol: iki durak arasında doğrusal
+		var fill_x: float = start.x
+		var prev_count: int = 0
+		var prev_x: float = start.x
+		for i: int in _counts.size():
+			var x: float = _stop_x(i)
+			if _found >= _counts[i]:
+				fill_x = x
+			else:
+				if _found > prev_count:
+					fill_x = lerpf(prev_x, x, float(_found - prev_count) / float(_counts[i] - prev_count))
+				break
+			prev_count = _counts[i]
+			prev_x = x
+		if fill_x > start.x:
+			draw_line(start, Vector2(fill_x, LINE_Y), HudPalette.COIN, 6.0, true)
+		for i: int in _counts.size():
+			var center: Vector2 = Vector2(_stop_x(i), LINE_Y)
+			var reached: bool = _found >= _counts[i]
+			var last: bool = i == _counts.size() - 1
+			var radius: float = RADIUS + (3.0 if last else 0.0)
+			draw_circle(center + Vector2(0.0, 2.0), radius, HudPalette.SHADOW, true, -1.0, true)
+			draw_circle(center, radius, HudPalette.INK, true, -1.0, true)
+			draw_circle(center, radius - 2.5, HudPalette.COIN if reached else HudPalette.PLATE, true, -1.0, true)
+			var number: String = str(_counts[i])
+			var number_size: int = 12
+			var text_w: float = font.get_string_size(number, HORIZONTAL_ALIGNMENT_LEFT, -1, number_size).x
+			draw_string(font, center + Vector2(-text_w * 0.5, number_size * 0.36), number, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				number_size, HudPalette.INK)
+			var caption: String
+			if _paid[i]:
+				caption = Loc.t("✔ ALINDI")
+			elif last:
+				caption = Loc.t("KUPA + %d GEM") % int(CollectionRewards.MILESTONES[_counts[i]])
+			else:
+				caption = Loc.t("+%d GEM") % int(CollectionRewards.MILESTONES[_counts[i]])
+			var caption_w: float = font.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+			var caption_x: float = clampf(center.x - caption_w * 0.5, 0.0, maxf(size.x - caption_w, 0.0))
+			draw_string(font, Vector2(caption_x, LINE_Y + radius + 14.0), caption, HORIZONTAL_ALIGNMENT_LEFT, -1, 10,
+				HudPalette.COIN_DARK if _paid[i] else HudPalette.INK_SOFT)

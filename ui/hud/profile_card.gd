@@ -22,6 +22,7 @@ var _avatar: AvatarView
 var _name: Label
 var _flag: FlagIcon
 var _title: Label
+var _honor: PanelContainer   # unvan şeridi (KOLEKSİYONER): ProfileCatalog.HONORS
 var _level: Label
 var _garage_row: HBoxContainer
 var _garage_label: Label
@@ -63,6 +64,23 @@ func _init() -> void:
 	_flag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	name_row.add_child(_flag)
 	info.add_child(name_row)
+	_honor = PanelContainer.new()
+	_honor.name = "Honor"
+	_honor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_honor.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	var honor_box: StyleBoxFlat = StyleBoxFlat.new()
+	honor_box.bg_color = HudPalette.PLATE_SELECTED
+	honor_box.set_corner_radius_all(5)
+	honor_box.content_margin_left = 7.0
+	honor_box.content_margin_right = 7.0
+	honor_box.content_margin_top = 1.0
+	honor_box.content_margin_bottom = 1.0
+	_honor.add_theme_stylebox_override(&"panel", honor_box)
+	var honor_label: Label = _label(&"HudInkCaption", "")
+	honor_label.add_theme_font_size_override(&"font_size", 11)
+	_honor.add_child(honor_label)
+	_honor.visible = false
+	info.add_child(_honor)
 	_title = _label(&"HudInkCaption", "")
 	_title.add_theme_color_override(&"font_color", HudPalette.PLATE_SELECTED_EDGE)
 	info.add_child(_title)
@@ -142,6 +160,9 @@ func show_person(entry: Dictionary) -> void:
 	var name: String = SaveSafe.s(entry.get("name", ""))
 	_name.text = Loc.upper(name) if not name.is_empty() else Loc.t("OYUNCU")
 	_flag.code = SaveSafe.s(entry.get("flag", ""))
+	var honor: String = SaveSafe.s(entry.get("honor", ""))
+	(_honor.get_child(0) as Label).text = "★ " + ProfileCatalog.honor_name(honor) if ProfileCatalog.is_honor(honor) else ""
+	_honor.visible = ProfileCatalog.is_honor(honor)
 	var title: String = SaveSafe.s(entry.get("title", ""))
 	_title.text = title   # yazıldığı gibi: Türkçe büyük harf İngilizce adı "RACİNG" yapıyordu
 	_title.visible = not title.is_empty()

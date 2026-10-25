@@ -45,14 +45,12 @@ enum State { PURCHASED, DELIVERED, WAITING_TO_OPEN, OPENING, REVEALED, CLAIMED }
 const DUP_SCRAP: Dictionary = {&"common": 1, &"rare": 2, &"epic": 5, &"legendary": 12}
 ## İlk keşif ödülü (gem) — nadirliğe göre.
 const DISCOVERY_GEMS: Dictionary = {&"common": 1, &"rare": 3, &"epic": 8, &"legendary": 15}
-## Koleksiyon kilometre taşları: keşfedilen araç sayısı → gem (Şahin dahil, 16'da).
-const COLLECTION_MILESTONES: Dictionary = {5: 5, 10: 10, 14: 20, 16: 40}
+## Koleksiyon kilometre taşları ve set ödülleri 2026-10-25'ten beri CollectionRewards'ta (kasa + hurdalık, 10–72 araç).
 ## Aynı anda bekleyebilecek kasa sayısı (teslimat noktası sayısından bağımsız bir üst sınır).
 const MAX_PENDING: int = 6
 
 var _crates: Array[Dictionary] = []   # {uid, crate, vehicle, state, source, pos (Vector2 / null), yaw, result}
 var _next_uid: int = 1
-var _milestones: Array[int] = []      # ödenmiş koleksiyon kilometre taşları
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 
@@ -214,8 +212,8 @@ func waiting_for_room(uid: int) -> bool:
 ## KASAYI AÇ: kayıtlı sonuç koleksiyona yazılır (bir kez) ve REVEALED hemen kaydedilir. Dünyadaki kasa
 ## (can_open) ya da garajda yer bulamamış yoldaki kasa (waiting_for_room — mağazadan açılış) açılabilir.
 ## Dönen sözlük: {uid, crate, vehicle, rarity, gift, duplicate, reacquired, discovered, stars,
-## scrap_gems, discovery_gems, milestone_gems, gems}. Açılamıyorsa boş sözlük.
-## gift: hediye kasası (HOŞ GELDİN KUTUSU) — keşif elması ve kilometre taşı ödenmez.
+## scrap_gems, discovery_gems, gems}. Açılamıyorsa boş sözlük.
+## gift: hediye kasası (HOŞ GELDİN KUTUSU) — keşif elması ödenmez.
 func open(uid: int) -> Dictionary:
 	var c: Dictionary = _find(uid)
 	if c.is_empty() or not (can_open(uid) or waiting_for_room(uid)):
@@ -227,7 +225,7 @@ func open(uid: int) -> Dictionary:
 	var gift: bool = CrateCatalog.is_gift(c["crate"])
 	var result: Dictionary = {"uid": uid, "crate": c["crate"], "vehicle": vehicle, "rarity": rarity, "gift": gift,
 		"duplicate": false, "reacquired": false, "discovered": false, "stars": 0,
-		"scrap_gems": 0, "discovery_gems": 0, "milestone_gems": 0, "gems": 0}
+		"scrap_gems": 0, "discovery_gems": 0, "gems": 0}
 	if ownership:
 		if ownership.is_owned(vehicle):
 			result["duplicate"] = true
@@ -241,8 +239,7 @@ func open(uid: int) -> Dictionary:
 			result["stars"] = ownership.stars(vehicle)
 			if not known and not gift:
 				result["discovery_gems"] = int(DISCOVERY_GEMS.get(rarity, 0))
-				result["milestone_gems"] = _pay_milestones(ownership.discovered_count())
-	result["gems"] = int(result["scrap_gems"]) + int(result["discovery_gems"]) + int(result["milestone_gems"])
+	result["gems"] = int(result["scrap_gems"]) + int(result["discovery_gems"])
 	var progress: PlayerProgress = _progress()
 	if progress and int(result["gems"]) > 0:
 		progress.add_gems(int(result["gems"]))
@@ -265,26 +262,9 @@ func claim(uid: int) -> void:
 	crates_changed.emit()
 
 
-## Kasa sisteminden ÖNCEKİ kayıt (v9-): mevcut koleksiyonun geçtiği kilometre taşları ödenmiş sayılır,
-## gem verilmez (eski ilerlemeye geriye dönük ödül yok). SaveManager göçte çağırır.
-func mark_passed_milestones(count: int) -> void:
-	for threshold: int in COLLECTION_MILESTONES:
-		if count >= threshold and not _milestones.has(threshold):
-			_milestones.append(threshold)
-
-
-func _pay_milestones(count: int) -> int:
-	var total: int = 0
-	for threshold: int in COLLECTION_MILESTONES:
-		if count >= threshold and not _milestones.has(threshold):
-			_milestones.append(threshold)
-			total += int(COLLECTION_MILESTONES[threshold])
-	return total
-
-
 # --- Kayıt -------------------------------------------------------------------------
 
-## {"next_uid", "items": [{uid, crate, vehicle, state, source, pos, yaw}], "milestones": [..]}
+## {"next_uid", "items": [{uid, crate, vehicle, state, source, pos, yaw}]}
 func state() -> Dictionary:
 	var items: Array = []
 	for c: Dictionary in _crates:
@@ -292,17 +272,13 @@ func state() -> Dictionary:
 		items.append({"uid": int(c["uid"]), "crate": String(c["crate"]), "vehicle": String(c["vehicle"]),
 			"state": int(c["state"]), "source": String(c["source"]),
 			"pos": [pos.x, pos.y] if pos is Vector2 else null, "yaw": float(c["yaw"])})
-	var paid: Array = []
-	for m: int in _milestones:
-		paid.append(m)
-	return {"next_uid": _next_uid, "items": items, "milestones": paid}
+	return {"next_uid": _next_uid, "items": items}
 
 
 ## Kayıttan. Geçersiz kasa / araç atlanır. REVEALED kasalar (ödülü verilmiş, sahnesi yarım kalmış)
 ## ödül verilmeden kapatılır. OPENING diske hiç yazılmaz; gelirse açılmamış sayılır.
 func load_state(data: Dictionary) -> void:
 	_crates.clear()
-	_milestones.clear()
 	_next_uid = maxi(SaveSafe.i(data.get("next_uid", 1)), 1)
 	var items: Variant = data.get("items", [])
 	if items is Array:
@@ -331,17 +307,11 @@ func load_state(data: Dictionary) -> void:
 			_crates.append({"uid": uid, "crate": crate_id, "vehicle": vehicle, "state": st,
 				"source": SaveSafe.s(d.get("source", "")), "pos": pos, "yaw": SaveSafe.f(d.get("yaw", 0.0)), "result": {}})
 			_next_uid = maxi(_next_uid, uid + 1)
-	var paid: Variant = data.get("milestones", [])
-	if paid is Array:
-		for raw: Variant in paid:
-			if COLLECTION_MILESTONES.has(SaveSafe.i(raw)) and not _milestones.has(SaveSafe.i(raw)):
-				_milestones.append(SaveSafe.i(raw))
 	crates_changed.emit()
 
 
 func reset() -> void:
 	_crates.clear()
-	_milestones.clear()
 	_next_uid = 1
 	crates_changed.emit()
 

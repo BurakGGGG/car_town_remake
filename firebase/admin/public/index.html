@@ -220,72 +220,95 @@
   </section>
 
   <section id="event">
-    <h2>Canlı etkinlik <span class="live off" id="e-live">yok</span></h2>
-    <p class="hint">Güncelleme atmadan hafta sonu / bayram etkinliği. Oyun bu ayarı açılışta, öne gelince ve 15 dakikada bir okur;
-      başlangıç saatinde kendiliğinden başlar, bitişte söner. Üst ortada geri sayımlı tabela çıkar, dokununca ETKİNLİK PANOSU açılır.
-      Doldurmadığın modül yok sayılır; en az bir modül dolu olmalı.</p>
-    <div class="row3">
-      <div><label>Başlangıç</label><input id="e-start" type="datetime-local"></div>
-      <div><label>Bitiş</label><input id="e-end" type="datetime-local"></div>
-      <div><label>Etkinlik kimliği</label><input id="e-id" readonly></div>
-    </div>
-    <div class="check"><input id="e-new" type="checkbox"><label for="e-new" style="margin:0">YENİ etkinlik olarak yayınla (görev ilerlemesi ve özel rakip ödülü herkes için sıfırlanır)</label></div>
-    <label>Tabela başlığı (ör. HAFTA SONU ETKİNLİĞİ)</label><div data-langs="e-title" data-kind="input"></div>
-    <label>Pano açıklaması (isteğe bağlı)</label><div data-langs="e-text" data-kind="textarea"></div>
-
-    <div class="module"><h3>1 · Çifte para / XP</h3>
-      <p class="hint">Tamir ve yarış ödülleri çarpılır (1–3; 1 = kapalı). Tamir işi başlarken çarpan sabitlenir.</p>
-      <div class="row4"><div><label>Para çarpanı</label><input id="e-money" type="number" min="1" max="3" step="0.25" value="1"></div>
-        <div><label>XP çarpanı</label><input id="e-xp" type="number" min="1" max="3" step="0.25" value="1"></div></div></div>
-
-    <div class="module"><h3>2 · İndirim (%0–50)</h3>
-      <p class="hint">Görünen fiyat = düşen fiyat. En çok %50: GERİ AL'ınan araç %40'a satılır, indirimle alıp satmak kâr etmesin.</p>
-      <div class="row4">
-        <div><label>Kasalar (gem)</label><input id="e-sale-crates" type="number" min="0" max="50" value="0"></div>
-        <div><label>GERİ AL araçlar (₺)</label><input id="e-sale-cars" type="number" min="0" max="50" value="0"></div>
-        <div><label>Dekor (₺ ve elmas)</label><input id="e-sale-decor" type="number" min="0" max="50" value="0"></div>
-        <div><label>Modifiye parçaları</label><input id="e-sale-mods" type="number" min="0" max="50" value="0"></div>
-      </div></div>
-
-    <div class="module"><h3>3 · Etkinlik kasası</h3>
-      <p class="hint">Seçili kasada işaretli araçların çıkma şansı çarpılır. Oyunda gösterilen oran yine gerçek orandır.</p>
-      <div class="row"><div><label>Kasa</label><select id="e-boost-crate"></select></div>
-        <div><label>Şans çarpanı (2–5)</label><input id="e-boost-mult" type="number" min="2" max="5" step="0.5" value="3"></div></div>
-      <div id="e-boost-cars" class="carlist"></div></div>
-
-    <div class="module"><h3>4 · Etkinlik görevleri (en çok 6)</h3>
-      <p class="hint">Yalnız etkinlik sürerken sayılır. Biten ama alınmayan ödül etkinlik sonunda kendiliğinden verilir. Eşya: oyunun ya da içerik paketinin eşya kimliği.</p>
-      <div class="mrow head"><span>Görev</span><span>Hedef</span><span>₺</span><span>Elmas</span><span>XP</span><span>Kasa</span><span>Eşya</span><span></span></div>
-      <div id="e-missions"></div>
-      <button class="ghost" id="e-add-mission" style="margin-top:8px">+ Görev ekle</button></div>
-
-    <div class="module"><h3>5 · Özel rakip</h3>
-      <p class="hint">ETKİNLİK PANOSUNDAKİ YARIŞ düğmesi pisti doğrudan açar. Modifiye kademesi her kategoride aynı (0 = fabrika). Özel ödül ilk galibiyette, etkinlik başına bir kez.</p>
-      <div class="row3"><div><label>Araç</label><select id="e-rival-car"></select></div>
-        <div><label>Modifiye kademesi</label><select id="e-rival-stage"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
-        <div><label>Ad (en çok 24, ör. KRAL RIZA)</label><input id="e-rival-name" maxlength="24"></div></div>
-      <div class="row4"><div><label>Boya</label><input id="e-rival-paint" type="color" value="#cc241f">
-          <label class="check-inline" style="font-weight:500"><input id="e-rival-factory" type="checkbox" checked> fabrika rengi</label></div>
-        <div><label>Ödül ₺</label><input id="e-rival-money" type="number" min="0" value="0"></div>
-        <div><label>Ödül elmas</label><input id="e-rival-gems" type="number" min="0" value="0"></div>
-        <div><label>Ödül XP</label><input id="e-rival-xp" type="number" min="0" value="0"></div></div>
-      <div class="row"><div><label>Ödül kasası</label><select id="e-rival-crate"></select></div>
-        <div><label>Ödül eşyası (kimlik)</label><input id="e-rival-decor" placeholder="ör. event_tree"></div></div></div>
-
-    <div class="module"><h3>6 · İçerik paketi</h3>
-      <p class="hint">Paketin "yalnız etkinlikte" eşyaları bu etkinlik sürerken dekor mağazasında satılır (ETKİNLİK etiketiyle); afişi panonun başında görünür. Paket aşağıdaki listede olmalı.</p>
-      <div class="row"><div><label>Paket</label><select id="e-pack"></select></div></div></div>
-
-    <button class="act" id="e-save">Kaydet ve yayınla</button>
-    <button class="act danger" id="e-stop">Etkinliği bitir</button>
+    <h2>Etkinlik takvimi <span class="live off" id="e-live">yok</span></h2>
+    <p class="hint">Güncelleme atmadan hafta sonu / bayram etkinliği; en çok 12 etkinlik önceden planlanır. Oyun takvimi açılışta, öne
+      gelince ve 15 dakikada bir okur; her etkinlik başlangıç saatinde kendiliğinden başlar, bitişte söner. Oyun aynı anda TEK etkinlik
+      gösterir: tarih aralıkları çakışamaz (biri bitince öbürü başlayabilir). Biten etkinlik 30 gün soluk görünür, sonraki kayıtta
+      listeden düşer. Takvimi bilmeyen eski sürümler yalnız süren (yoksa sıradaki) etkinliği görür. Her işlem (kaydet / sil) bütün
+      takvimi hemen yayınlar.</p>
+    <button class="act" id="e-add">+ Yeni etkinlik</button>
+    <button class="ghost" id="e-reload" style="margin-left:8px">Listeyi yenile</button>
     <div class="status" id="e-status"></div>
+    <div id="e-list" style="margin-top:12px">yükleniyor…</div>
+
+    <div class="card" id="e-form" style="display:none;margin-top:16px">
+      <h2 id="e-form-title">Yeni etkinlik</h2>
+      <p class="hint">Doldurmadığın modül yok sayılır; en az bir modül dolu olmalı.</p>
+      <div class="row3">
+        <div><label>Başlangıç</label><input id="e-start" type="datetime-local"></div>
+        <div><label>Bitiş</label><input id="e-end" type="datetime-local"></div>
+        <div><label>Etkinlik kimliği</label><input id="e-id" readonly placeholder="kaydedince verilir"></div>
+      </div>
+      <div class="check" id="e-new-box"><input id="e-new" type="checkbox"><label for="e-new" style="margin:0">YENİ etkinlik olarak kaydet (yeni kimlik: görev ilerlemesi, özel rakip ödülü ve etkinlik aracı ilerlemesi herkes için sıfırlanır)</label></div>
+      <div class="check"><input id="e-notify" type="checkbox"><label for="e-notify" style="margin:0">Başlayınca bildirim gönder (bütün dillere bir kez, başlangıçtan en geç 10 dakika sonra)</label></div>
+      <label>Tabela başlığı (ör. HAFTA SONU ETKİNLİĞİ)</label><div data-langs="e-title" data-kind="input"></div>
+      <label>Pano açıklaması (isteğe bağlı)</label><div data-langs="e-text" data-kind="textarea"></div>
+
+      <div class="module"><h3>1 · Çifte para / XP</h3>
+        <p class="hint">Tamir ve yarış ödülleri çarpılır (1–3; 1 = kapalı). Tamir işi başlarken çarpan sabitlenir.</p>
+        <div class="row4"><div><label>Para çarpanı</label><input id="e-money" type="number" min="1" max="3" step="0.25" value="1"></div>
+          <div><label>XP çarpanı</label><input id="e-xp" type="number" min="1" max="3" step="0.25" value="1"></div></div></div>
+
+      <div class="module"><h3>2 · İndirim (%0–50)</h3>
+        <p class="hint">Görünen fiyat = düşen fiyat. En çok %50: GERİ AL'ınan araç %40'a satılır, indirimle alıp satmak kâr etmesin.</p>
+        <div class="row4">
+          <div><label>Kasalar (gem)</label><input id="e-sale-crates" type="number" min="0" max="50" value="0"></div>
+          <div><label>GERİ AL araçlar (₺)</label><input id="e-sale-cars" type="number" min="0" max="50" value="0"></div>
+          <div><label>Dekor (₺ ve elmas)</label><input id="e-sale-decor" type="number" min="0" max="50" value="0"></div>
+          <div><label>Modifiye parçaları</label><input id="e-sale-mods" type="number" min="0" max="50" value="0"></div>
+        </div></div>
+
+      <div class="module"><h3>3 · Etkinlik kasası</h3>
+        <p class="hint">Seçili kasada işaretli araçların çıkma şansı çarpılır. Oyunda gösterilen oran yine gerçek orandır.</p>
+        <div class="row"><div><label>Kasa</label><select id="e-boost-crate"></select></div>
+          <div><label>Şans çarpanı (2–5)</label><input id="e-boost-mult" type="number" min="2" max="5" step="0.5" value="3"></div></div>
+        <div id="e-boost-cars" class="carlist"></div></div>
+
+      <div class="module"><h3>4 · Etkinlik görevleri (en çok 6)</h3>
+        <p class="hint">Yalnız etkinlik sürerken sayılır. Biten ama alınmayan ödül etkinlik sonunda kendiliğinden verilir. Eşya: oyunun ya da içerik paketinin eşya kimliği. "Etkinlik aracıyla …" görevleri için 7. modülde araç seçilmeli.</p>
+        <div class="mrow head"><span>Görev (N = hedef)</span><span>Hedef</span><span>₺</span><span>Elmas</span><span>XP</span><span>Kasa</span><span>Eşya</span><span></span></div>
+        <div id="e-missions"></div>
+        <button class="ghost" id="e-add-mission" style="margin-top:8px">+ Görev ekle</button></div>
+
+      <div class="module"><h3>5 · Özel rakip</h3>
+        <p class="hint">ETKİNLİK PANOSUNDAKİ YARIŞ düğmesi pisti doğrudan açar. Modifiye kademesi her kategoride aynı (0 = fabrika). Özel ödül ilk galibiyette, etkinlik başına bir kez.</p>
+        <div class="row3"><div><label>Araç</label><select id="e-rival-car"></select></div>
+          <div><label>Modifiye kademesi</label><select id="e-rival-stage"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+          <div><label>Ad (en çok 24, ör. KRAL RIZA)</label><input id="e-rival-name" maxlength="24"></div></div>
+        <div class="row4"><div><label>Boya</label><input id="e-rival-paint" type="color" value="#cc241f">
+            <label class="check-inline" style="font-weight:500"><input id="e-rival-factory" type="checkbox" checked> fabrika rengi</label></div>
+          <div><label>Ödül ₺</label><input id="e-rival-money" type="number" min="0" value="0"></div>
+          <div><label>Ödül elmas</label><input id="e-rival-gems" type="number" min="0" value="0"></div>
+          <div><label>Ödül XP</label><input id="e-rival-xp" type="number" min="0" value="0"></div></div>
+        <div class="row"><div><label>Ödül kasası</label><select id="e-rival-crate"></select></div>
+          <div><label>Ödül eşyası (kimlik)</label><input id="e-rival-decor" placeholder="ör. event_tree"></div></div></div>
+
+      <div class="module"><h3>6 · İçerik paketi</h3>
+        <p class="hint">Paketin "yalnız etkinlikte" eşyaları bu etkinlik sürerken dekor mağazasında satılır (ETKİNLİK etiketiyle); afişi panonun başında görünür. Paket aşağıdaki listede olmalı.</p>
+        <div class="row"><div><label>Paket</label><select id="e-pack"></select></div></div></div>
+
+      <div class="module"><h3>7 · Etkinlik aracı</h3>
+        <p class="hint">Etkinliğin BÜTÜN görevlerini bitiren oyuncu aracı kalıcı olarak alır. O zamana kadar araç ödünçtür: yalnız etkinlik
+          yarışlarında kullanılır (günde 3 yarış, reklamla +1). Etkinlik görevler bitmeden sona ererse araç geri alınır, ilerleme kaybolur.
+          En az bir görev şart (ör. "Etkinlik aracıyla N yarış kazan"). Araç oyuncuda zaten varsa görevler bitince aşağıdaki teselli ödülü
+          verilir. Oyundaki takvim aracı başlangıçtan belirtilen gün kadar önce gösterir.</p>
+        <div class="row"><div><label>Araç</label><select id="e-car"></select></div>
+          <div><label>Takvimde göster (başlangıçtan kaç gün önce, 0–14)</label><input id="e-car-reveal" type="number" min="0" max="14" value="3"></div></div>
+        <div class="row"><div><label>Araç zaten varsa: elmas (0–1000)</label><input id="e-car-gems" type="number" min="0" max="1000" value="0"></div>
+          <div><label>Araç zaten varsa: kasa</label><select id="e-car-crate"></select></div></div></div>
+
+      <button class="act" id="e-save">Kaydet ve yayınla</button>
+      <button class="ghost" id="e-cancel" style="margin-left:8px">Vazgeç</button>
+      <div class="status" id="e-form-status"></div>
+    </div>
 
     <h2 style="margin-top:32px">İçerik paketleri</h2>
     <p class="hint">Güncellemesiz içerik (yeni dekor eşyası, afiş). Paket kurmak: <code>tools/live_pack/build_pack.sh &lt;kimlik&gt;</code>
       (kaynak <code>tools/live_pack/content/&lt;kimlik&gt;/</code>, ayrıntı docs/CANLI_ETKINLIK.md). Listede kalan paketi her oyuncu bir kez indirir
       ve hep saklar; paketten alınmış eşya ancak paket listedeyken görünür, <b>yayındaki paketi listeden çıkarma</b>.
-      Liste değişikliği "Kaydet ve yayınla" ile yayınlanır.</p>
+      Liste değişikliği <b>Paket listesini yayınla</b> ile (ya da bir etkinliği kaydedince) yayınlanır.</p>
     <table id="pk-list"></table>
+    <button class="act" id="pk-save">Paket listesini yayınla</button>
     <h3>Bilgisayardaki paketler</h3>
     <div id="pk-local">yükleniyor…</div>
     <h3>Adresten ekle (başka yerde barındırılan paket)</h3>
@@ -699,6 +722,7 @@ function describe(e) {
   if (e.kind === "news") return `duyuru: ${e.body}`;
   if (e.kind === "config") return `min ${e.min_code} · son ${e.latest_code} · bakım ${e.maintenance ? "AÇIK" : "kapalı"}${e.notice ? " · duyuru " + e.notice : ""}`;
   if (e.kind === "mail_delete") return `posta silindi ${e.uid}/${e.id}`;
+  if (e.kind === "events") return `etkinlik takvimi kaydedildi: ${e.count} etkinlik${e.mirror ? " · eski sürümler " + e.mirror : ""}${e.events ? " · " + e.events : ""}${e.packs ? " · paketler " + e.packs : ""}`;
   if (e.kind === "event") return e.id ? `etkinlik ${e.id} yayınlandı (${e.modules || "-"})${e.packs ? " · paketler " + e.packs : ""}` : `etkinlik kaldırıldı${e.packs ? " · paketler " + e.packs : ""}`;
   if (e.kind === "pack_upload") return `paket yüklendi ${e.id} (${Math.round(e.size / 1024)} KB)`;
   if (e.kind === "ads") return e.reset ? "reklam ayarı varsayılana döndü" : `reklam ayarı: günde ${e.total_cap}, ücretsiz elmas ${e.free_gems}`;
@@ -765,18 +789,65 @@ $("c-save").onclick = async () => {
   } catch (e) { status("c-status", e.message, false); }
 };
 
-// --- Canlı etkinlik + içerik paketleri ---
-let eventDoc = null;
+// --- Etkinlik takvimi + içerik paketleri ---
+let calEvents = [];        // sunucudaki takvim (config/app.events, başlangıca göre sıralı)
+let calMirror = "";        // takvimi bilmeyen eski sürümlerin gördüğü etkinlik (config/app.event)
 let eventPacks = [];
+let editingEvent = null;   // düzenlenen etkinliğin kimliği (yeni / kopya: null)
+const DAY = 86400;
 const crateOptions = () => `<option value="">— yok —</option>` + info.catalog.crates.map((c) => `<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.id)}</option>`).join("");
 const carName = (id) => (info.catalog.cars.find((c) => c.id === id) || { name: id }).name;
-function eventStatus(ev) {
+const carOptions = () => `<option value="">— yok —</option>` + info.catalog.cars.slice().sort((a, b) => (a.class + a.name).localeCompare(b.class + b.name))
+  .map((c) => `<option value="${esc(c.id)}">${esc(c.class)} · ${esc(c.name)}</option>`).join("");
+// Görev adı: oyundaki metin, %s yerine N (hedef)
+const metricName = (k) => String(info.catalog.metrics[k] || k).replace("%s", "N");
+const eventTitle = (ev) => (ev.title && (ev.title.tr || ev.title.en)) || ev.id;
+const SALE_NAMES = { crates: "kasa", cars: "GERİ AL", decor: "dekor", mods: "modifiye" };
+function eventState(ev, now) {
+  if (ev.end <= now) return { cls: "off", text: "bitti" };
+  if (ev.start > now) return { cls: "soon", text: "başlayacak" };
+  return { cls: "on", text: "SÜRÜYOR" };
+}
+function eventStatus() {
   const now = Date.now() / 1000;
   const el = $("e-live");
-  if (!ev) { el.className = "live off"; el.textContent = "yok"; return; }
-  if (ev.end <= now) { el.className = "live off"; el.textContent = "bitti " + when(ev.end); return; }
-  if (ev.start > now) { el.className = "live soon"; el.textContent = "başlayacak " + when(ev.start); return; }
-  el.className = "live on"; el.textContent = "SÜRÜYOR · bitiş " + when(ev.end);
+  const live = calEvents.find((e) => e.start <= now && now < e.end);
+  const next = calEvents.filter((e) => e.start > now).sort((a, b) => a.start - b.start)[0];
+  if (live) { el.className = "live on"; el.textContent = `SÜRÜYOR: ${eventTitle(live)} · bitiş ${when(live.end)}`; return; }
+  if (next) { el.className = "live soon"; el.textContent = `sıradaki: ${eventTitle(next)} · ${when(next.start)}`; return; }
+  el.className = "live off"; el.textContent = "yok";
+}
+const span = (sec) => (sec >= 2 * DAY ? `${Math.round(sec / DAY * 10) / 10} gün` : `${Math.round(sec / 3600 * 10) / 10} saat`);
+function moduleSummary(ev) {
+  const out = [];
+  if (ev.money_mult > 1) out.push(`para ×${ev.money_mult}`);
+  if (ev.xp_mult > 1) out.push(`XP ×${ev.xp_mult}`);
+  for (const [k, p] of Object.entries(ev.sale || {})) out.push(`${SALE_NAMES[k] || k} −%${p}`);
+  if (ev.crate_boost) out.push(`★ ${ev.crate_boost.crate} ×${ev.crate_boost.mult}`);
+  if (ev.missions && ev.missions.length) out.push(`${ev.missions.length} görev`);
+  if (ev.rival) out.push(`rakip ${carName(ev.rival.car)}`);
+  if (ev.pack) out.push(`paket ${ev.pack}`);
+  return out.join(" · ") || "–";
+}
+function renderEvents() {
+  const now = Date.now() / 1000;
+  eventStatus();
+  $("e-list").innerHTML = calEvents.length ? `<table><tr><th>Etkinlik</th><th>Tarih</th><th>Durum</th><th>Modüller</th><th></th></tr>` +
+    calEvents.map((ev, i) => {
+      const st = eventState(ev, now);
+      return `<tr${st.cls === "off" ? ' style="opacity:.55"' : ""}><td><b>${esc(eventTitle(ev))}</b><div class="hint">${esc(ev.id)}</div></td>` +
+        `<td>${esc(when(ev.start))}<br>→ ${esc(when(ev.end))}<div class="hint">${span(ev.end - ev.start)}</div></td>` +
+        `<td><span class="live ${st.cls}">${st.text}</span>` +
+        `${ev.id === calMirror ? '<div class="hint" title="Takvimi bilmeyen eski sürümler yalnız bu etkinliği görür">eski sürümler bunu görür</div>' : ""}</td>` +
+        `<td>${esc(moduleSummary(ev))}` +
+        `${ev.car ? `<div><span class="pill amber">ARAÇ: ${esc(carName(ev.car.id))}</span><span class="hint">takvimde ${esc(ev.reveal_days ?? 3)} gün önce</span></div>` : ""}` +
+        `${ev.notify ? '<div><span class="pill">bildirimli</span></div>' : ""}</td>` +
+        `<td style="white-space:nowrap"><button class="ghost" data-eedit="${i}">Düzenle</button> <button class="ghost" data-ecopy="${i}">Kopyala</button> ` +
+        `<button class="ghost" data-edel="${i}">Sil</button></td></tr>`;
+    }).join("") + "</table>" : "<p class='hint'>Takvimde etkinlik yok.</p>";
+  for (const b of $("e-list").querySelectorAll("[data-eedit]")) b.onclick = () => openEventForm(calEvents[Number(b.dataset.eedit)], "edit");
+  for (const b of $("e-list").querySelectorAll("[data-ecopy]")) b.onclick = () => copyEvent(calEvents[Number(b.dataset.ecopy)]);
+  for (const b of $("e-list").querySelectorAll("[data-edel]")) b.onclick = () => deleteEvent(calEvents[Number(b.dataset.edel)]);
 }
 function boostCars(selected) {
   const crate = info.catalog.crates.find((c) => c.id === $("e-boost-crate").value);
@@ -786,7 +857,7 @@ function missionRow(m = {}) {
   if ($("e-missions").children.length >= 6) return;
   const row = document.createElement("div");
   row.className = "mrow";
-  row.innerHTML = `<select data-f="metric">${Object.entries(info.catalog.metrics).map(([k, v]) => `<option value="${k}"${m.metric === k ? " selected" : ""}>${esc(v)}</option>`).join("")}</select>` +
+  row.innerHTML = `<select data-f="metric">${Object.keys(info.catalog.metrics).map((k) => `<option value="${k}"${m.metric === k ? " selected" : ""}>${esc(metricName(k))}</option>`).join("")}</select>` +
     `<input data-f="target" type="number" min="1" value="${m.target || 10}"><input data-f="money" type="number" min="0" value="${m.money || 0}">` +
     `<input data-f="gems" type="number" min="0" value="${m.gems || 0}"><input data-f="xp" type="number" min="0" value="${m.xp || 0}">` +
     `<select data-f="crate">${crateOptions()}</select><input data-f="decor" value="${esc(m.decor || "")}" placeholder="eşya kimliği"><button class="ghost" title="kaldır">✕</button>`;
@@ -803,12 +874,12 @@ function renderPacks() {
   for (const b of $("pk-list").querySelectorAll("button[data-i]")) {
     b.onclick = () => {
       const p = eventPacks[Number(b.dataset.i)];
-      if (!confirm(`"${p.id}" listeden çıkarılsın mı?\nBu paketten eşya almış oyuncular eşyayı GÖREMEZ (silinmez, paket yeniden eklenince geri gelir).\nDeğişiklik "Kaydet ve yayınla" ile yayınlanır.`)) return;
+      if (!confirm(`"${p.id}" listeden çıkarılsın mı?\nBu paketten eşya almış oyuncular eşyayı GÖREMEZ (silinmez, paket yeniden eklenince geri gelir).\nDeğişiklik "Paket listesini yayınla" ile yayınlanır.`)) return;
       eventPacks.splice(Number(b.dataset.i), 1);
       renderPacks();
     };
   }
-  const current = $("e-pack").value || (eventDoc && eventDoc.pack) || "";
+  const current = $("e-pack").value;
   $("e-pack").innerHTML = `<option value="">— yok —</option>` + eventPacks.map((p) => `<option value="${esc(p.id)}">${esc(p.id)}</option>`).join("");
   $("e-pack").value = eventPacks.some((p) => p.id === current) ? current : "";
 }
@@ -817,30 +888,47 @@ function addPack(pack) {
   if (i >= 0) eventPacks[i] = pack; else eventPacks.push(pack);
   renderPacks();
 }
-function fillEvent(r) {
-  const ev = r.event || {};
-  eventDoc = r.event;
+function fillEvents(r) {
+  calEvents = r.events || [];
+  calMirror = r.mirror || "";
   eventPacks = (r.packs || []).slice();
-  eventStatus(r.event);
-  $("e-id").value = ev.id || "";
-  $("e-new").checked = !ev.id;
-  const now = Math.floor(Date.now() / 1000);
-  $("e-start").value = toLocal(ev.start || now);
-  $("e-end").value = toLocal(ev.end || now + 2 * 86400);
-  writeLangs("e-title", ev.title);
-  writeLangs("e-text", ev.text);
-  $("e-money").value = ev.money_mult || 1;
-  $("e-xp").value = ev.xp_mult || 1;
-  for (const k of ["crates", "cars", "decor", "mods"]) $(`e-sale-${k}`).value = (ev.sale && ev.sale[k]) || 0;
+  renderEvents();
+  renderPacks();
+}
+/** Yeni etkinliğin varsayılan başlangıcı: sonraki tam saat, takvimdeki son bitişten önce değil (çakışmasın). */
+function defaultStart() {
+  const hour = Math.ceil(Date.now() / 1000 / 3600) * 3600;
+  return Math.max(hour, ...calEvents.map((e) => e.end));
+}
+function closeEventForm() {
+  $("e-form").style.display = "none";
+  editingEvent = null;
+}
+/** Düzenleyici: mode "edit" (kimlik korunur), "copy" ya da "new" (kaydedince yeni kimlik). */
+function openEventForm(ev, mode, title) {
+  const d = ev || {};
+  editingEvent = mode === "edit" ? d.id : null;
+  $("e-form-title").textContent = title || (mode === "edit" ? `Etkinliği düzenle · ${d.id}` : "Yeni etkinlik");
+  $("e-id").value = mode === "edit" ? d.id : "";
+  $("e-new").checked = false;
+  $("e-new-box").style.display = mode === "edit" ? "flex" : "none";
+  $("e-notify").checked = !!d.notify;
+  const start = d.start || defaultStart();
+  $("e-start").value = toLocal(start);
+  $("e-end").value = toLocal(d.end || start + 2 * DAY);
+  writeLangs("e-title", d.title);
+  writeLangs("e-text", d.text);
+  $("e-money").value = d.money_mult || 1;
+  $("e-xp").value = d.xp_mult || 1;
+  for (const k of ["crates", "cars", "decor", "mods"]) $(`e-sale-${k}`).value = (d.sale && d.sale[k]) || 0;
   $("e-boost-crate").innerHTML = crateOptions();
-  $("e-boost-crate").value = (ev.crate_boost && ev.crate_boost.crate) || "";
-  $("e-boost-mult").value = (ev.crate_boost && ev.crate_boost.mult) || 3;
-  boostCars((ev.crate_boost && ev.crate_boost.cars) || []);
+  $("e-boost-crate").value = (d.crate_boost && d.crate_boost.crate) || "";
+  $("e-boost-mult").value = (d.crate_boost && d.crate_boost.mult) || 3;
+  boostCars((d.crate_boost && d.crate_boost.cars) || []);
   $("e-missions").innerHTML = "";
-  for (const m of ev.missions || []) missionRow(m);
-  const rv = ev.rival || {};
-  $("e-rival-car").innerHTML = `<option value="">— yok —</option>` + info.catalog.cars.slice().sort((a, b) => (a.class + a.name).localeCompare(b.class + b.name))
-    .map((c) => `<option value="${esc(c.id)}">${esc(c.class)} · ${esc(c.name)}</option>`).join("");
+  for (const m of d.missions || []) missionRow(m);
+  const rv = d.rival || {};
+  $("e-rival-car").innerHTML = carOptions();
   $("e-rival-car").value = rv.car || "";
   $("e-rival-stage").value = String(rv.stage || 0);
   $("e-rival-name").value = rv.name || "";
@@ -851,10 +939,28 @@ function fillEvent(r) {
   $("e-rival-crate").value = rv.crate || "";
   $("e-rival-decor").value = rv.decor || "";
   renderPacks();
-  $("e-pack").value = ev.pack || "";
+  $("e-pack").value = d.pack || "";
+  const car = d.car || {};
+  $("e-car").innerHTML = carOptions();
+  $("e-car").value = car.id || "";
+  $("e-car-gems").value = car.owned_gems || 0;
+  $("e-car-crate").innerHTML = crateOptions();
+  $("e-car-crate").value = car.owned_crate || "";
+  $("e-car-reveal").value = d.reveal_days ?? 3;
+  $("e-form-status").className = "status";
+  $("e-form").style.display = "block";
+  $("e-form").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+/** Kopya: yeni kimlikle, aynı süre, ilk gelecek haftaya kaydırılmış. */
+function copyEvent(ev) {
+  const now = Date.now() / 1000;
+  let shift = 7 * DAY;
+  while (ev.start + shift < now) shift += 7 * DAY;
+  openEventForm({ ...ev, id: "", start: ev.start + shift, end: ev.end + shift }, "copy",
+    `Kopya: ${eventTitle(ev)} (${shift / (7 * DAY)} hafta sonrasına kondu, tarihleri kontrol et)`);
 }
 function readEvent() {
-  const id = $("e-new").checked || !$("e-id").value ? "e_" + Date.now().toString(36) : $("e-id").value;
+  const id = editingEvent && !$("e-new").checked ? editingEvent : "e_" + Date.now().toString(36);
   const missions = [...$("e-missions").querySelectorAll(".mrow")].map((row, i) => {
     const f = (k) => row.querySelector(`[data-f="${k}"]`).value;
     return { id: row.dataset.id || `m${i + 1}_${Date.now().toString(36).slice(-4)}`, metric: f("metric"), target: Number(f("target")),
@@ -862,6 +968,7 @@ function readEvent() {
   });
   const sale = Object.fromEntries(["crates", "cars", "decor", "mods"].map((k) => [k, Number($(`e-sale-${k}`).value || 0)]));
   const boostCrate = $("e-boost-crate").value;
+  const carId = $("e-car").value;
   return {
     id, start: fromLocal($("e-start").value), end: fromLocal($("e-end").value), title: readLangs("e-title"), text: readLangs("e-text"),
     money_mult: Number($("e-money").value || 1), xp_mult: Number($("e-xp").value || 1), sale,
@@ -871,12 +978,27 @@ function readEvent() {
       paint: $("e-rival-factory").checked ? "" : $("e-rival-paint").value, money: Number($("e-rival-money").value), gems: Number($("e-rival-gems").value),
       xp: Number($("e-rival-xp").value), crate: $("e-rival-crate").value, decor: $("e-rival-decor").value.trim() } : null,
     pack: $("e-pack").value,
+    car: carId ? { id: carId, owned_gems: Number($("e-car-gems").value || 0), owned_crate: $("e-car-crate").value } : null,
+    reveal_days: $("e-car-reveal").value === "" ? 3 : Number($("e-car-reveal").value),
+    notify: $("e-notify").checked,
   };
 }
-async function loadEvent() {
-  if (!info) { setTimeout(loadEvent, 300); return; }   // katalog (araç / kasa listesi) özetle gelir
+/** Bütün takvimi (+ paket listesini) yayınlar; hata olursa statusId'de gösterir, liste değişmez. */
+async function saveEvents(list, statusId) {
   try {
-    fillEvent(await api("GET", "/api/event"));
+    const r = await api("POST", "/api/events", { events: list, packs: eventPacks });
+    fillEvents(r);
+    loadOverview();
+    return r;
+  } catch (e) {
+    status(statusId, e.message, false);
+    return null;
+  }
+}
+async function loadEvents() {
+  if (!info) { setTimeout(loadEvents, 300); return; }   // katalog (araç / kasa listesi) özetle gelir
+  try {
+    fillEvents(await api("GET", "/api/events"));
   } catch (e) { status("e-status", e.message, false); }
   loadLocalPacks();
 }
@@ -891,7 +1013,7 @@ async function loadLocalPacks() {
         b.disabled = true;
         try {
           addPack((await api("POST", "/api/packs/upload", { id: b.dataset.up })).pack);
-          status("pk-status", `"${b.dataset.up}" yüklendi ve listeye eklendi. Yayınlamak için yukarıda "Kaydet ve yayınla".`, true);
+          status("pk-status", `"${b.dataset.up}" yüklendi ve listeye eklendi. Yayınlamak için "Paket listesini yayınla".`, true);
         } catch (e) { status("pk-status", e.message, false); }
         b.disabled = false;
       };
@@ -900,36 +1022,53 @@ async function loadLocalPacks() {
 }
 $("e-boost-crate").onchange = () => boostCars([]);
 $("e-add-mission").onclick = () => missionRow();
+$("e-add").onclick = () => openEventForm(null, "new");
+$("e-cancel").onclick = closeEventForm;
+$("e-reload").onclick = loadEvents;
 $("pk-inspect").onclick = async () => {
   const id = $("pk-id").value.trim();
   const url = $("pk-url").value.trim();
   try {
     const r = await api("POST", "/api/packs/inspect", { url });
     addPack({ id, url, sha256: r.sha256, size: r.size });
-    status("pk-status", `"${id}" eklendi (${Math.round(r.size / 1024)} KB). Yayınlamak için "Kaydet ve yayınla".`, true);
+    status("pk-status", `"${id}" eklendi (${Math.round(r.size / 1024)} KB). Yayınlamak için "Paket listesini yayınla".`, true);
   } catch (e) { status("pk-status", e.message, false); }
 };
-async function publishEvent(event) {
-  try {
-    const r = await api("POST", "/api/event", { event, packs: eventPacks });
-    fillEvent(r);
-    status("e-status", r.event ? `Yayınlandı (${r.event.id}). Oyuncular en geç 15 dakika içinde (açılışta hemen) görür.` : "Etkinlik kaldırıldı. Paket listesi kaydedildi.", true);
-    loadOverview();
-  } catch (e) { status("e-status", e.message, false); }
-}
-$("e-save").onclick = () => {
+$("pk-save").onclick = async () => {
+  if (await saveEvents(calEvents, "pk-status")) status("pk-status", `Paket listesi yayınlandı (${eventPacks.length} paket).`, true);
+};
+$("e-save").onclick = async () => {
   const ev = readEvent();
   if (ev.crate_boost && !ev.crate_boost.cars.length && !confirm("Etkinlik kasasında işaretli araç yok: kasa modülü yayınlanmaz. Devam?")) return;
   if (ev.crate_boost && !ev.crate_boost.cars.length) ev.crate_boost = null;
-  const changedId = eventDoc && eventDoc.id && ev.id !== eventDoc.id;
-  if (changedId && !confirm("YENİ etkinlik: görev ilerlemesi ve özel rakip ödülü herkes için sıfırlanır. Devam?")) return;
-  publishEvent(ev);
+  if (editingEvent && ev.id !== editingEvent && !confirm("YENİ etkinlik: görev ilerlemesi, özel rakip ödülü ve etkinlik aracı ilerlemesi herkes için sıfırlanır. Devam?")) return;
+  const now = Date.now() / 1000;
+  const warn = [];
+  if (ev.end && ev.end <= now) warn.push("Bitiş geçmişte: etkinlik oyunda GÖRÜNMEYECEK.");
+  else if (ev.notify && ev.start < now - 6 * 3600) warn.push("Başlangıç 6 saatten eski: başlangıç bildirimi GİTMEZ.");
+  else if (ev.notify && ev.start > now) warn.push(`Telefon bildirimi başlangıçta gidecek: ${when(ev.start)} (bütün diller, bir kez).`);
+  else if (ev.notify) warn.push("Etkinlik sürüyor: telefon bildirimi en geç 10 dakika içinde gidecek (daha önce gitmediyse).");
+  if (warn.length && !confirm(warn.join("\n") + "\n\nKaydedilsin mi?")) return;
+  const list = calEvents.filter((e) => e.id !== editingEvent).concat([ev]);
+  const r = await saveEvents(list, "e-form-status");
+  if (!r) return;
+  const wasEdit = !!editingEvent;
+  closeEventForm();
+  status("e-status", `${wasEdit ? "Güncellendi" : "Eklendi"} (${ev.id}). ${r.mirror ? `Eski sürümler: ${r.mirror}. ` : ""}` +
+    "Oyuncular en geç 15 dakika içinde (açılışta hemen) görür.", true);
 };
-$("e-stop").onclick = () => {
-  if (!eventDoc || !confirm("Etkinlik hemen bitsin mi? Biten ama alınmamış görev ödülleri oyunculara kendiliğinden verilir.")) return;
-  publishEvent(null);
-};
-document.querySelector('#tabs button[data-tab="event"]').addEventListener("click", loadEvent);
+async function deleteEvent(ev) {
+  const now = Date.now() / 1000;
+  const running = ev.start <= now && now < ev.end;
+  const msg = running ? `"${eventTitle(ev)}" SÜRÜYOR: silinirse hemen biter. Biten ama alınmamış görev ödülleri oyunculara kendiliğinden verilir; ` +
+    "görevleri bitmemiş etkinlik aracı geri alınır.\n\nSilinsin mi?" : `"${eventTitle(ev)}" takvimden silinsin mi?`;
+  if (!confirm(msg)) return;
+  if (await saveEvents(calEvents.filter((e) => e.id !== ev.id), "e-status")) {
+    if (editingEvent === ev.id) closeEventForm();
+    status("e-status", `Silindi (${ev.id}).`, true);
+  }
+}
+document.querySelector('#tabs button[data-tab="event"]').addEventListener("click", loadEvents);
 
 // --- Ödüllü reklamlar ---
 function fillAds(ads) {
@@ -1104,7 +1243,7 @@ $("p-find").onclick = async () => {
         <p class="hint" style="margin:2px 0 0">Eksi de olabilir (oyun 0'ın altına indirmez). Oyuncu açınca POSTA'da açıklamayla görür.</p>
         <div class="row3">
           <div><label>₺ (+ / −)</label><input id="a-money" type="number" value="0"></div>
-          <div><label>Elmas (+ / −)</label><input id="a-gems" type="number" value="0"></div>
+          <div><label>Elmas (+ / −)</label><input id="adj-gems" type="number" value="0"></div>
           <div><label>Açıklama (oyuncu görür)</label><input id="a-text" maxlength="500" placeholder="ör. hatalı satın alma iadesi"></div>
         </div>
         <button class="act" id="a-send">Düzeltmeyi gönder</button>
@@ -1134,7 +1273,7 @@ $("p-find").onclick = async () => {
     $("p-note-save").onclick = () => mod("/api/notes", { text: $("p-note").value }, "Not kaydedildi.");
     $("a-send").onclick = () => {
       const money = Number($("a-money").value || 0);
-      const gems = Number($("a-gems").value || 0);
+      const gems = Number($("adj-gems").value || 0);
       if (!confirm(`Düzeltme: ${money >= 0 ? "+" : ""}${money.toLocaleString("tr-TR")} ₺, ${gems >= 0 ? "+" : ""}${gems} elmas → ${p.name || p.uid}`)) return;
       mod("/api/adjust", { money, gems, text: { tr: $("a-text").value } }, "Düzeltme postaya bırakıldı.");
     };

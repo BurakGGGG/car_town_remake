@@ -175,20 +175,62 @@ try {
   const st = await call("GET", "/api/stats");
   check(st.data.live?.players === 2 && st.data.live.push === 1 && st.data.days?.map((d) => d.day).join(",") === "2026-10-19,2026-10-20" && st.data.langs.en === 1,
     "istatistik: anlık sayılar, gecelik kayıt, dil dağılımı");
-  const ev = await call("POST", "/api/event", { event: { id: "hs1", money_mult: 2, xp_mult: 1, start: 1, end: 4_000_000_000,
-    sale: { crates: 30 }, missions: [{ metric: "repairs", target: 10, gems: 5 }], rival: { car: "ford_focus", stage: 2, money: 1000 } },
-    packs: [{ id: "kis", url: "https://x.example/kis.pck", sha256: "c".repeat(64), size: 1234 }] });
+  // ETKİNLİK TAKVİMİ: takvim hiç kaydedilmemişken eski tek etkinlik listede görünür
+  const nowS = Math.floor(Date.now() / 1000);
+  const DAY = 86400;
+  await db.doc("config/app").update({ event: { id: "legacy1", title: { tr: "ESKİ" }, start: 1, end: 4_000_000_000, money_mult: 2, xp_mult: 1 } });
+  const legacy = await call("GET", "/api/events");
+  check(legacy.status === 200 && legacy.data.events?.length === 1 && legacy.data.events[0].id === "legacy1" && legacy.data.now > 0,
+    "takvim yokken eski config/app.event listede");
+  const kis = { id: "kis", url: "https://x.example/kis.pck", sha256: "c".repeat(64), size: 1234 };
+  const hs1 = { id: "hs1", title: { tr: "HAFTA SONU", en: "WEEKEND" }, money_mult: 2, xp_mult: 1, start: nowS - 3600, end: nowS + 2 * DAY,
+    sale: { crates: 30 }, missions: [{ metric: "repairs", target: 10, gems: 5 }], rival: { car: "ford_focus", stage: 2, money: 1000 }, pack: "kis" };
+  const car1 = { id: "car1", title: { tr: "SÜPER HAFTA" }, start: nowS + 3 * DAY, end: nowS + 5 * DAY, notify: true,
+    car: { id: "ford_focus", owned_gems: 200, owned_crate: "city_crate" }, reveal_days: 4,
+    missions: [{ metric: "event_car_wins", target: 3, gems: 20 }, { metric: "garage_visits", target: 2 }] };
+  const old40 = { id: "old40", title: { tr: "ÇOK ESKİ" }, start: nowS - 45 * DAY, end: nowS - 40 * DAY, money_mult: 2 };
+  const ev = await call("POST", "/api/events", { events: [car1, old40, hs1], packs: [kis] });
   const evDoc = (await db.doc("config/app").get()).data();
-  check(ev.status === 200 && evDoc.event?.money_mult === 2 && evDoc.event.sale.crates === 30 && evDoc.event.missions.length === 1
-    && evDoc.packs[0].id === "kis", "etkinlik modülleri ve paket listesi config/app'e yazıldı");
+  check(ev.status === 200 && evDoc.events?.map((e) => e.id).join(",") === "hs1,car1" && ev.data.mirror === "hs1",
+    `takvim yazıldı: başlangıca göre, 30 günden eski düştü (${ev.data.error || evDoc.events?.map((e) => e.id)})`);
+  check(evDoc.event?.id === "hs1" && evDoc.event.money_mult === 2 && evDoc.event.sale.crates === 30 && evDoc.event.missions.length === 1
+    && evDoc.packs?.[0]?.id === "kis", "eski sürümlerin aynası (config/app.event) = süren etkinlik, paket listesi yazıldı");
+  const c1 = evDoc.events?.[1] || {};
+  check(c1.car?.id === "ford_focus" && c1.car.owned_gems === 200 && c1.car.owned_crate === "city_crate" && c1.reveal_days === 4
+    && c1.notify === true && c1.missions?.[0]?.metric === "event_car_wins", "etkinlik aracı + bildirim + takvimde gösterim");
+  check(evDoc.min_code === 10 && evDoc.notice?.id === "n_test" && evDoc.updated_at >= nowS, "öbür alanlar (sürüm, duyuru) korundu, updated_at");
+  const back = await call("GET", "/api/events");
+  check(JSON.stringify(back.data.events) === JSON.stringify(evDoc.events) && back.data.packs?.length === 1 && back.data.mirror === "hs1",
+    "GET /api/events: yazılanın aynısı");
+  const again = await call("POST", "/api/events", { events: back.data.events, packs: back.data.packs });
+  check(again.status === 200 && JSON.stringify((await db.doc("config/app").get()).data().events) === JSON.stringify(evDoc.events),
+    "liste olduğu gibi geri gönderilince değişmez (gidiş-dönüş)");
+  const ov = await call("POST", "/api/events", { events: [hs1, { ...car1, id: "car2", start: nowS + DAY }], packs: [kis] });
+  check(ov.status === 400 && /çakışıyor/.test(ov.data.error || "") && /HAFTA SONU/.test(ov.data.error) && /SÜPER HAFTA/.test(ov.data.error),
+    `çakışan etkinlikler: 400, ikisi de adıyla (${ov.data.error})`);
+  const nm = await call("POST", "/api/events", { events: [{ ...car1, missions: [] }], packs: [kis] });
+  check(nm.status === 400 && /Etkinlik aracı için en az bir görev gerekli/.test(nm.data.error || ""), "görevsiz etkinlik aracı: 400");
+  check((await db.doc("config/app").get()).data().events?.length === 2, "hatalı kayıt yazılmadı");
+  check((await call("POST", "/api/events", { events: [{ ...hs1, pack: "yok" }], packs: [] })).status === 400, "listede olmayan paket: 400");
   const keep = await call("POST", "/api/config", { min_code: 0, latest_code: 0, maintenance: false });
-  check(keep.status === 200 && (await db.doc("config/app").get()).data().event?.id === "hs1", "sürüm / bakım kaydı etkinliği korur");
-  check((await call("POST", "/api/event", { event: { id: "x", start: 1, end: 2, pack: "yok" }, packs: [] })).status === 400,
-    "listede olmayan paket: 400");
-  const ads = await call("POST", "/api/ads", { total_cap: 25, free_gems: 6, free_gems_cooldown: 120, caps: { free_gems: 6 } });
+  const kept = (await db.doc("config/app").get()).data();
+  check(keep.status === 200 && kept.event?.id === "hs1" && kept.events?.length === 2 && kept.packs?.length === 1,
+    "sürüm / bakım kaydı takvimi, aynayı ve paketleri korur");
+    const ads = await call("POST", "/api/ads", { total_cap: 25, free_gems: 6, free_gems_cooldown: 120, caps: { free_gems: 6 } });
   const adsDoc = (await db.doc("config/app").get()).data();
-  check(ads.status === 200 && adsDoc.ads?.free_gems === 6 && adsDoc.ads.caps.free_gems === 6 && adsDoc.event?.id === "hs1",
-    "reklam ayarı yazıldı, etkinlik korundu");
+  check(ads.status === 200 && adsDoc.ads?.free_gems === 6 && adsDoc.ads.caps.free_gems === 6 && adsDoc.event?.id === "hs1"
+    && adsDoc.events?.length === 2, "reklam ayarı yazıldı, takvim ve ayna korundu");
+  const upcoming = await call("POST", "/api/events", { events: [car1], packs: [] });
+  const upDoc = (await db.doc("config/app").get()).data();
+  check(upcoming.status === 200 && upDoc.event?.id === "car1" && upDoc.ads?.total_cap === 25 && !("packs" in upDoc),
+    "süren yoksa ayna sıradaki etkinlik; reklam ayarı korundu");
+  const cleared = await call("POST", "/api/events", { events: [], packs: [] });
+  const clDoc = (await db.doc("config/app").get()).data();
+  check(cleared.status === 200 && Array.isArray(clDoc.events) && clDoc.events.length === 0 && !("event" in clDoc),
+    "takvim boşaltıldı: ayna silindi");
+  check((await call("GET", "/api/events")).data.events?.length === 0, "boş takvimde eski etkinlik geri gelmez");
+  check((await call("GET", "/api/log")).data.log.some((e) => e.kind === "events" && /car1\(missions,car:ford_focus:bildirim\)/.test(e.events || "")),
+    "takvim işlemi günlükte (modüller, araç, bildirim)");
   await call("POST", "/api/config", { min_code: 0, latest_code: 0, maintenance: false });
   check((await db.doc("config/app").get()).data().ads?.total_cap === 25, "sürüm / bakım kaydı reklam ayarını korur");
   check((await call("POST", "/api/ads", { caps: { uydurma: 1 } })).status === 400, "bilinmeyen reklam türü: 400");

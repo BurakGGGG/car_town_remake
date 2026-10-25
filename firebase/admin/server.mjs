@@ -9,7 +9,7 @@
 //   • yalnızca 127.0.0.1'de dinler; Host başlığı 127.0.0.1 / localhost değilse 403 (DNS rebinding)
 //   • her açılışta yeni rastgele anahtar: API isteği x-admin-key başlığı ister (özel başlık → başka köken ön uçuşa takılır,
 //     panel CORS izni vermez); bağlantıdaki anahtar #k= parçasında durur, sunucuya hiç gitmez
-//   • Origin başlığı varsa panelin kendi kökeni olmalı; gövde en çok 64 KB JSON (haber kapağı yükleme: 2,2 MB)
+//   • Origin başlığı varsa panelin kendi kökeni olmalı; gövde en çok 64 KB JSON (haber kapağı yükleme: 2,2 MB, takvim 256 KB)
 // Her gönderim admin_log koleksiyonuna yazılır (istemciye kapalı: firestore.rules "başka her yol kapalı").
 //
 // Başlatma: cd firebase/admin && npm install && npm start   (ayrıntı: README.md)
@@ -28,7 +28,7 @@ import { getStorage } from "firebase-admin/storage";
 import {
   PanelError, loadCatalog, buildInfo, buildMail, mailId, buildConfig, buildNews, classifyQuery, unpackSave, hasReward,
   statsFromSave, buildBan, banActive, moderatedName, groupReports, UID_PATTERN, BAN_REASONS, buildAdjust, buildRestore,
-  buildPromo, PROMO_RE, buildSegment, matchSegment, buildLearning, buildEventDoc, buildAds,
+  buildPromo, PROMO_RE, buildSegment, matchSegment, buildLearning, buildEventsDoc, eventsOf, buildAds,
   buildNewsPost, newsId, NEWS_ID_RE, decodeNewsImage, STORAGE_OFF, bucketCandidates, isMissingBucket, storageUrl,
   buildNewsFeed, NEWS_FEED_DOC,
 } from "./lib.mjs";
@@ -252,38 +252,43 @@ const routes = {
 
   "POST /api/config": async (body) => {
     const doc = buildConfig(body, Date.now());
-    // Etkinlik ve içerik paketleri kendi sekmesinden yazılır (POST /api/event): burada olduğu gibi korunur
-    const current = await db.doc("config/app").get();
-    const old = current.exists ? current.data() : {};
-    if (old.event) doc.event = old.event;
-    if (old.packs) doc.packs = old.packs;
-    if (old.ads) doc.ads = old.ads;
-    await db.doc("config/app").set(doc);
+    // Etkinlik takvimi (+ aynası), içerik paketleri ve reklam ayarı kendi sekmelerinden yazılır (POST /api/events, /api/ads):
+    // burada olduğu gibi korunur. İşlem: eventsTick aynayı aynı anda ilerletirse eski ayna geri yazılmaz.
+    const ref = db.doc("config/app");
+    await db.runTransaction(async (tx) => {
+      const current = await tx.get(ref);
+      const old = current.exists ? current.data() : {};
+      for (const k of ["events", "event", "packs", "ads"]) if (old[k] !== undefined) doc[k] = old[k];
+      tx.set(ref, doc);
+    });
     await log({ kind: "config", min_code: doc.min_code, latest_code: doc.latest_code, maintenance: doc.maintenance,
       notice: doc.notice ? doc.notice.id : "" });
     return { config: doc };
   },
 
-  // --- Canlı etkinlik + içerik paketleri (config/app.event / packs; öbür alanlara dokunulmaz) ---
-  "GET /api/event": async () => {
+  // --- Etkinlik takvimi + içerik paketleri (config/app.events, aynası config/app.event, packs; öbür alanlara dokunulmaz) ---
+  // Takvim hiç kaydedilmemişse eski tek etkinlik listede görünür (ilk kayıtta takvime geçer).
+  "GET /api/events": async () => {
     const snap = await db.doc("config/app").get();
     const c = snap.exists ? snap.data() : {};
-    return { event: c.event || null, packs: c.packs || [] };
+    return { events: eventsOf(c), packs: c.packs || [], mirror: c.event ? c.event.id : "", now: Math.floor(Date.now() / 1000) };
   },
 
-  "POST /api/event": async (body) => {
+  // Bütün liste birlikte yazılır (panel her ekle / düzenle / sil / kopyala işleminde listenin tamamını gönderir)
+  "POST /api/events": async (body) => {
     const ref = db.doc("config/app");
     const doc = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
-      const next = buildEventDoc(body, catalog, snap.exists ? snap.data() : {}, Date.now());
+      const next = buildEventsDoc(body, catalog, snap.exists ? snap.data() : {}, Date.now());
       tx.set(ref, next);
       return next;
     });
-    const e = doc.event;
-    await log({ kind: "event", id: e ? e.id : "", modules: e ? Object.keys(e).filter((k) =>
-      ["sale", "crate_boost", "missions", "rival", "pack"].includes(k) || (k.endsWith("_mult") && e[k] > 1)).join(",") : "",
+    const modules = (e) => Object.keys(e).filter((k) => ["sale", "crate_boost", "missions", "rival", "pack", "car"].includes(k)
+      || (k.endsWith("_mult") && e[k] > 1)).join(",");
+    await log({ kind: "events", count: doc.events.length, mirror: doc.event ? doc.event.id : "",
+      events: doc.events.map((e) => `${e.id}(${modules(e) || "-"}${e.car ? ":" + e.car.id : ""}${e.notify ? ":bildirim" : ""})`).join(" "),
       packs: (doc.packs || []).map((p) => p.id).join(",") });
-    return { event: doc.event || null, packs: doc.packs || [] };
+    return { events: doc.events, packs: doc.packs || [], mirror: doc.event ? doc.event.id : "", now: Math.floor(Date.now() / 1000) };
   },
 
   // --- Ödüllü reklam ayarları (config/app.ads; öbür alanlara dokunulmaz) ---
@@ -741,9 +746,10 @@ function keyOk(header) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-// Gövde sınırı: 64 KB; haber kapağı yükleme (1,5 MB resim base64 ile ~2 MB) için daha büyük
+// Gövde sınırı: 64 KB; haber kapağı yükleme (1,5 MB resim base64 ile ~2 MB) ve etkinlik takvimi (12 etkinlik × 5 dilde metin)
+// için daha büyük
 const BODY_MAX = 64 * 1024;
-const BODY_MAX_BY_ROUTE = { "POST /api/news/upload": 2_200_000 };
+const BODY_MAX_BY_ROUTE = { "POST /api/news/upload": 2_200_000, "POST /api/events": 256 * 1024 };
 
 async function readBody(req, limit = BODY_MAX) {
   let size = 0;

@@ -12,6 +12,9 @@ extends Node
 ##   event             CANLI ETKİNLİK {id, title: {dil}, text: {dil}, start, end (unix sn), money_mult, xp_mult, sale,
 ##                     crate_boost, missions, rival, pack} — modüller ve sınırları LiveEvent'te. Çarpan: tamir (iş başlarken
 ##                     sabitlenir: balondaki tutar doğru kalır) ve yarış ödülleri; 1–3
+##   events            ETKİNLİK TAKVİMİ (2026-10-26): event'le aynı biçimde kayıtlar listesi (+ car, reveal_days, notify);
+##                     süren etkinlik listeden seçilir, yaklaşanlar takvimde (LiveEvent.active_raw / calendar). event
+##                     alanı eski sürümler için süren / sıradaki etkinliğin kopyasıdır (panel ve eventsTick yazar)
 ##   packs             [{id, url, sha256, size}] İÇERİK PAKETLERİ (LivePacks indirir, doğrular, cihazda saklar; kalıcıdır:
 ##                     etkinlik bitince de listede kalır, paketten alınmış eşya hep yüklenebilsin)
 ## Metin alanları dil sözlüğüdür; oyuncunun dili yoksa İngilizce, o da yoksa Türkçe gösterilir (text_of).
@@ -290,7 +293,7 @@ func maintenance_until() -> int:
 func active_event() -> Dictionary:
 	var at: int = LiveEvent.now()
 	if at != _event_cache_at or not is_same(_event_cache_config, _config):
-		_event_cache = LiveEvent.normalize(_config.get("event"), at)
+		_event_cache = LiveEvent.normalize(LiveEvent.active_raw(_config, at), at)
 		_event_cache_at = at
 		_event_cache_config = _config
 	return _event_cache

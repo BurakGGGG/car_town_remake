@@ -269,6 +269,13 @@ func _draw_ring(c: Vector2, rr: float, w: float) -> void:
 			_metal(c, rr, w, Color("2FA597"), Color("A8F0E6"), Color("17675E"))
 			for k: int in 2:
 				_gem(c + Vector2.from_angle(PI * k) * rr, w * 0.85)
+		"collector":   # KOLEKSİYONER (tam koleksiyon): lacivert halka, altın kenar, dört altın yıldız
+			_canvas.draw_arc(c, rr, 0.0, TAU, SEGMENTS, Color("1F2A4A"), w, true)
+			_canvas.draw_arc(c, rr - w * 0.32, 0.0, TAU, SEGMENTS, Color("F5BE4C"), maxf(w * 0.22, 1.0), true)
+			_canvas.draw_arc(c, rr + w * 0.32, 0.0, TAU, SEGMENTS, Color("F5BE4C"), maxf(w * 0.22, 1.0), true)
+			for k: int in 4:
+				_star(c + Vector2.from_angle(-PI * 0.5 + TAU * k / 4.0) * rr, w * 0.95)
+			_edge(c, rr, w, Color("10162A"))
 		"envoy":   # ELÇİ (10. davet): parlak altın, çevresinde altı elmas
 			_metal(c, rr, w, Color("D9A520"), Color("FFF0B0"), Color("8A5F0A"))
 			for k: int in 6:
@@ -290,6 +297,17 @@ func _metal(c: Vector2, rr: float, w: float, base: Color, light: Color, dark: Co
 func _edge(c: Vector2, rr: float, w: float, color: Color) -> void:
 	_canvas.draw_arc(c, rr + w * 0.5, 0.0, TAU, SEGMENTS, color, 1.0, true)
 	_canvas.draw_arc(c, rr - w * 0.5, 0.0, TAU, SEGMENTS, color, 1.0, true)
+
+
+## Koleksiyoner çerçevesindeki altın yıldız.
+func _star(at: Vector2, s: float) -> void:
+	var pts: PackedVector2Array = PackedVector2Array()
+	for i: int in 10:
+		var r: float = s if i % 2 == 0 else s * 0.45
+		pts.append(at + Vector2.from_angle(-PI * 0.5 + PI * float(i) / 5.0) * r)
+	_canvas.draw_colored_polygon(pts, Color("FFD24A"))
+	pts.append(pts[0])
+	_canvas.draw_polyline(pts, Color("8A5F0A"), 1.0, true)
 
 
 ## Platin çerçevedeki küçük elmas.
