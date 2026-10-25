@@ -1,5 +1,6 @@
 // Panel uçtan uca (YEREL EMÜLATÖR, canlı projeye dokunmaz: "demo-" projesi). server.mjs'i çalıştırır, HTTP ile sınar:
-// güvenlik kapıları (anahtar / Host / Origin), config/app, tek oyuncuya ve herkese posta, oyuncu arama, kayıt açma, duyuru.
+// güvenlik kapıları (anahtar / Host / Origin), config/app, tek oyuncuya ve herkese posta, oyuncu arama, kayıt açma, duyuru,
+// HABERLER (kaydet / listele / düzenle / sil, kapak yükleme: kova yokken anlaşılır hata, emülatörde Storage taklidi).
 // firebase/ klasöründen: firebase emulators:exec --only firestore,auth --project demo-cartown "node admin/test/panel_e2e.mjs"
 import { spawn } from "node:child_process";
 import http from "node:http";
@@ -217,6 +218,102 @@ try {
   check(log.data.log.some((e) => e.kind === "mail_all") && log.data.log.some((e) => e.kind === "news"), "işlem günlüğü");
   const builds = await call("GET", "/api/builds");
   check(builds.data.builds["10"] === 1 && builds.data.total === 2, "sürüm dağılımı");
+
+  console.log("== haberler ==");
+  const nw = (over = {}) => ({ kind: "event", title: { tr: "Hafta sonu çifte para!", en: "Double money!" },
+    text: { tr: "Cumartesi ve pazar\niki kat para." }, image: "", action: { kind: "event", url: "" }, start: 0, end: 0,
+    pinned: false, code: 0, target: { langs: [], min_level: 0, max_level: 0, min_code: 0, max_code: 0 }, notify: false, ...over });
+  const created = await call("POST", "/api/news/save", { news: nw({ pinned: true }) });
+  const nid = created.data.id;
+  const ndoc = nid ? (await db.doc(`news/${nid}`).get()).data() : null;
+  check(created.status === 200 && /^n_[a-z0-9]+_[0-9a-f]{6}$/.test(nid || "") && ndoc?.pinned === true && ndoc.pushed_at === 0
+    && ndoc.at > 0 && ndoc.text.tr === "Cumartesi ve pazar\niki kat para." && ndoc.action.kind === "event",
+    `haber yazıldı (${nid}): sabit, pushed_at 0, satır sonu korundu`);
+  check(Object.keys(ndoc || {}).sort().join(",") === "action,at,code,end,image,kind,notify,pinned,pushed_at,start,target,text,title",
+    "belgede yalnız sözleşmedeki alanlar");
+  await call("POST", "/api/news/save", { news: nw({ kind: "update", code: 12, title: { tr: "1.2.0 yenilikleri" } }) });
+  const nlist = await call("GET", "/api/news");
+  check(nlist.status === 200 && nlist.data.items?.length === 2 && nlist.data.items.some((n) => n.id === nid) && nlist.data.now > 0,
+    "haber listesi (2 haber, sunucu saatiyle)");
+  check((await call("POST", "/api/news/save", { news: nw({ title: { en: "No Turkish" } }) })).status === 400, "Türkçe başlıksız: 400");
+  check((await call("POST", "/api/news/save", { news: nw({ image: "https://evil.example/x.jpg" }) })).status === 400, "izinsiz kapak sunucusu: 400");
+  check((await call("POST", "/api/news/save", { news: nw({ notify: true, target: { min_level: 5 } }) })).status === 400,
+    "seviye hedefli + bildirim: 400");
+  check((await call("POST", "/api/news/save", { id: "n_yok_abcdef", news: nw() })).status === 400, "olmayan haber düzenlenemez: 400");
+  check((await call("POST", "/api/news/save", { id: "../config/app", news: nw() })).status === 400, "geçersiz kimlik: 400");
+  // Bildirim fonksiyonu gönderdi + haber 1 gün önce yazılmış gibi: düzenleme ikisini de korur, "en üste taşı" zamanı yeniler
+  await db.doc(`news/${nid}`).update({ pushed_at: 4242, at: 1000 });
+  const ed = await call("POST", "/api/news/save", { id: nid, news: nw({ title: { tr: "Düzeltildi" }, pinned: true }) });
+  const ed1 = (await db.doc(`news/${nid}`).get()).data();
+  check(ed.status === 200 && ed1.title.tr === "Düzeltildi" && ed1.at === 1000 && ed1.pushed_at === 4242, "düzenleme: at ve pushed_at korundu");
+  await call("POST", "/api/news/save", { id: nid, news: nw({ title: { tr: "Düzeltildi" }, bump: true }) });
+  const ed2 = (await db.doc(`news/${nid}`).get()).data();
+  check(ed2.at > 1000 && ed2.pushed_at === 4242 && ed2.pinned === false, "en üste taşı: at = şimdi");
+  // Kapak yükleme: Storage açık değil (kova yok) → anlaşılır hata; kova açılınca indirme adresi döner
+  const jpg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(2000, 7)]);
+  const noBucket = await call("POST", "/api/news/upload", { data: "data:image/jpeg;base64," + jpg.toString("base64"), id: nid });
+  check(noBucket.status === 400 && /Firebase Storage açık değil/.test(noBucket.data.error || ""), `kova yok: ${noBucket.data.error}`);
+  check((await call("POST", "/api/news/upload", { data: Buffer.from("GIF89a-----").toString("base64") })).status === 400, "GIF reddedilir");
+  const huge = await call("POST", "/api/news/upload", { data: Buffer.concat([jpg, Buffer.alloc(1_600_000)]).toString("base64") });
+  check(huge.status === 400 && /1,5 MB/.test(huge.data.error || ""), `1,5 MB'tan büyük resim: 400 (${huge.data.error})`);
+  const tooBig = await call("POST", "/api/news/upload", { data: Buffer.alloc(1_700_000, 1).toString("base64") });
+  check(tooBig.status === 400, `yükleme gövdesi sınırı (2,2 MB): 400 (${tooBig.data.error})`);
+  await db.doc("_e2e_buckets/demo-cartown.firebasestorage.app").set({ on: true });
+  const up = await call("POST", "/api/news/upload", { data: jpg.toString("base64"), id: nid });
+  const stored1 = (await db.collection("_e2e_storage").get()).docs.map((d) => d.data());
+  check(up.status === 200 && up.data.url?.startsWith("https://firebasestorage.googleapis.com/v0/b/demo-cartown.firebasestorage.app/o/news%2F" + nid)
+    && up.data.contentType === "image/jpeg" && stored1.length === 1 && stored1[0].contentType === "image/jpeg"
+    && up.data.url.endsWith("token=" + stored1[0].token), `kova açılınca yüklendi: ${up.data.path}`);
+  const withImg = await call("POST", "/api/news/save", { id: nid, news: nw({ image: up.data.url }) });
+  check(withImg.status === 200 && (await db.doc(`news/${nid}`).get()).data().image === up.data.url, "yüklenen kapak haberde kullanılır");
+  const ndel = await call("POST", "/api/news/delete", { id: nid });
+  check(ndel.status === 200 && !(await db.doc(`news/${nid}`).get()).exists, "haber silindi");
+  check((await call("POST", "/api/news/delete", { id: nid })).status === 400, "silinmiş haber yeniden silinemez: 400");
+  const nlog = (await call("GET", "/api/log")).data.log.map((e) => e.kind);
+  check(["news_create", "news_update", "news_delete", "news_upload"].every((k) => nlog.includes(k)), "haber işlemleri günlükte");
+  // OYUNUN OKUDUĞU YAYIN (config/news): her kaydet / sil aynı işlemde yazar
+  const feedIds = async () => ((await db.doc("config/news").get()).data()?.items || []).map((i) => i.id);
+  const f1 = await call("POST", "/api/news/save", { news: nw({ title: { tr: "Yayın denemesi" }, notify: true }) });
+  const feed1 = (await db.doc("config/news").get()).data();
+  const fItem = (feed1?.items || []).find((i) => i.id === f1.data.id);
+  check(f1.status === 200 && fItem?.title?.tr === "Yayın denemesi" && !("notify" in fItem) && !("pushed_at" in fItem) && feed1.at > 0,
+    "kaydet → config/news'te (yalnız herkese açık alanlar)");
+  check(Object.keys(fItem || {}).join(",") === "id,kind,title,text,image,action,start,end,pinned,code,target,at", "yayın öğesinin alanları");
+  check(!(await feedIds()).includes(nid), "silinen haber yayında yok");
+  const nowS2 = Math.floor(Date.now() / 1000);
+  const fut = await call("POST", "/api/news/save", { news: nw({ title: { tr: "Yarın" }, start: nowS2 + 86400 }) });
+  check((await feedIds()).includes(fut.data.id), "başlamamış haber yayında (oyun start'ı süzer)");
+  // Bitişi geçen haber: koleksiyona doğrudan yazılır (panel geçmiş bitişe izin verir ama burada saat ilerlemiş gibi)
+  await db.doc("news/n_ended_e2e000").set({ ...nw({ title: { tr: "Bitti" }, start: nowS2 - 7200, end: nowS2 - 60 }), pushed_at: 0, at: nowS2 - 7200 });
+  const pub = await call("POST", "/api/news/publish", {});
+  check(pub.status === 200 && !(await feedIds()).includes("n_ended_e2e000") && (await feedIds()).includes(f1.data.id),
+    "Yayını yenile: biten haber düşer, öbürleri kalır");
+  const pinOld = await call("POST", "/api/news/save", { news: nw({ title: { tr: "Eski sabit" }, pinned: true }) });
+  await db.doc(`news/${pinOld.data.id}`).update({ at: 5 });
+  const batch = db.batch();
+  for (let i = 0; i < 42; i++) batch.set(db.doc(`news/n_bulk${String(i).padStart(2, "0")}_000000`), { ...nw({ title: { tr: `Toplu ${i}` } }), pushed_at: 0, at: nowS2 + 100 + i });
+  await batch.commit();
+  await call("POST", "/api/news/publish", {});
+  const capped = await feedIds();
+  // 46 bitmemiş haber: eski SABİT + en yeni 39 (bulk41…bulk03); bulk00–02 ve daha eski haberler düşer
+  check(capped.length === 40 && capped.includes(pinOld.data.id) && capped.includes("n_bulk41_000000") && capped.includes("n_bulk03_000000")
+    && !capped.includes("n_bulk02_000000") && !capped.includes(f1.data.id), `en çok 40 (${capped.length}); eski SABİT kalır, en eskiler düşer`);
+  const glist = await call("GET", "/api/news");
+  check(glist.data.feed?.ids?.length === 40 && glist.data.feed.at > 0, "liste yayının özetini de döner");
+  await call("POST", "/api/news/delete", { id: "n_bulk41_000000" });
+  const afterDel = await feedIds();
+  check(!afterDel.includes("n_bulk41_000000") && afterDel.includes("n_bulk02_000000") && afterDel.length === 40,
+    "sil → yayından çıktı, sıradaki haber (bulk02) yer aldı (40 dolu)");
+  check((await call("GET", "/api/log")).data.log.some((e) => e.kind === "news_publish"), "yayın yenileme günlükte");
+
+  // Tek oyuncuya haber: ödülsüz posta, resim + düğme
+  const pm = await call("POST", "/api/mail/send", { target: "one", query: "abc234", mail: { title: { tr: "Sana özel" },
+    text: { tr: "Garajın haftanın garajı seçildi!" }, image: "https://autoyard.online/haber/hafta.jpg", action: { kind: "showroom" } } });
+  const pmDoc = pm.data.id ? (await db.doc(`users/alice_uid_1/mail/${pm.data.id}`).get()).data() : null;
+  check(pm.status === 200 && pmDoc?.image === "https://autoyard.online/haber/hafta.jpg" && pmDoc.action.kind === "showroom" && pmDoc.gems === 0,
+    "tek oyuncuya haber: ödülsüz posta, resim + düğme");
+  check((await call("POST", "/api/mail/send", { target: "one", query: "abc234", mail: { text: "x", action: { kind: "url", url: "http://x.com" } } })).status === 400,
+    "postada https olmayan bağlantı: 400");
 } finally {
   server.kill();
 }

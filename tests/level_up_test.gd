@@ -157,7 +157,7 @@ func _screen() -> void:
 	for node: Node in cards.find_children("*", "Control", true, false):
 		if node.get_script() != null and node.get("texture") is Texture2D and not node is TextureRect:
 			swatches += 1
-	check(swatches == LevelUpScreen.DECOR_THUMBS, "dekor kartında karo önizlemesi (%d)" % swatches)
+	check(swatches == RewardScreen.DECOR_THUMBS, "dekor kartında karo önizlemesi (%d)" % swatches)
 	(screen.get("_continue") as PlateButton).pressed.emit()
 	await seconds(0.4)
 	check(not screen.visible and not screen.is_pending(), "DEVAM ile kapandı")

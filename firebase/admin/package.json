@@ -1,7 +1,7 @@
 {
   "name": "autoyard-admin",
   "private": true,
-  "description": "AUTO YARD yerel yönetim paneli: zorunlu güncelleme / bakım / duyuru (config/app), hediye postası, duyuru bildirimi, oyuncu arama",
+  "description": "AUTO YARD yerel yönetim paneli: HABERLER (news), zorunlu güncelleme / bakım / duyuru (config/app), hediye postası, duyuru bildirimi, oyuncu arama",
   "type": "module",
   "main": "server.mjs",
   "engines": {

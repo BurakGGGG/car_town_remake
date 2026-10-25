@@ -3,10 +3,11 @@ import test from "node:test";
 import assert from "node:assert";
 import { gzipSync } from "node:zlib";
 import {
-  PanelError, loadCatalog, buildInfo, buildMail, mailId, buildConfig, buildNews, classifyQuery, unpackSave, texts, MAX_GEMS,
+  PanelError, loadCatalog, buildInfo, buildMail, hasReward, mailId, buildConfig, buildNews, classifyQuery, unpackSave, texts, MAX_GEMS,
   statsFromSave, buildBan, banActive, moderatedName, groupReports, buildAdjust, buildRestore,
   buildPromo, buildEvent, buildSegment, matchSegment, buildLearning, buildPacks, buildEventDoc, SALE_MAX, MISSION_METRICS,
-  buildAds, AD_KINDS,
+  buildAds, AD_KINDS, buildNewsPost, newsId, NEWS_ID_RE, newsImage, newsAction, newsTarget, decodeNewsImage, imageKind,
+  bucketCandidates, isMissingBucket, storageUrl, NEWS_IMAGE_BYTES, buildNewsFeed, NEWS_FEED_DOC, NEWS_FEED_MAX,
 } from "../lib.mjs";
 
 const catalog = loadCatalog(new URL("../../../", import.meta.url));
@@ -46,6 +47,15 @@ test("posta: sınırlar ve doğrulama", () => {
   assert.throws(() => buildMail({}, catalog, NOW), PanelError);
   assert.throws(() => buildMail({ text: "x".repeat(501) }, catalog, NOW), /500/);
   assert.equal(buildMail({ text: "x", notify: false }, catalog, NOW).notify, false);
+});
+
+test("posta: araç hediyesi", () => {
+  const doc = buildMail({ title: "Araç hediyesi", cars: { ford_focus: 3 } }, catalog, NOW);
+  assert.deepEqual(doc.cars, { ford_focus: 1 }, "her araç bir adet");
+  assert.ok(hasReward(doc), "araç ödül sayılır");
+  assert.ok(!("cars" in buildMail({ text: "x" }, catalog, NOW)), "araçsız postada alan yok");
+  assert.throws(() => buildMail({ text: "x", cars: { police_vito: 1 } }, catalog, NOW), /bilinmeyen/, "edinilemeyen araç verilmez");
+  assert.throws(() => buildMail({ text: "x", cars: { yok_arac: 1 } }, catalog, NOW), /bilinmeyen/);
 });
 
 test("posta kimliği: tek / herkes", () => {
@@ -252,4 +262,176 @@ test("yarış öğrenmesi ayarı: varsayılan, sınırlar", () => {
   assert.equal(buildLearning({ off: "evet" }).off, false, "yalnız true kapatır");
   assert.throws(() => buildLearning({ window: 30 }), PanelError);
   assert.throws(() => buildLearning({ weight: 500 }), PanelError);
+});
+
+// --- HABERLER ------------------------------------------------------------------------------------------------------
+
+const news = (over = {}) => ({ kind: "notice", title: { tr: "Yeni garajlar!" }, text: { tr: "Beş yeni depo açıldı." }, ...over });
+
+test("haber: tam belge, varsayılanlar, tr zorunlu", () => {
+  const d = buildNewsPost(news({ title: { tr: "  Yeni   garajlar! ", en: "New garages!", de: "" }, text: { tr: "Satır 1\r\nSatır 2" } }), NOW);
+  assert.deepEqual(Object.keys(d), ["kind", "title", "text", "image", "action", "start", "end", "pinned", "code", "target", "notify",
+    "pushed_at", "at"], "sözleşmedeki alanlar, başka alan yok");
+  assert.deepEqual(d.title, { tr: "Yeni garajlar!", en: "New garages!" }, "başlık tek satır, boş dil yazılmaz");
+  assert.equal(d.text.tr, "Satır 1\nSatır 2", "metinde satır sonu kalır (\\r\\n → \\n)");
+  assert.deepEqual([d.image, d.action, d.start, d.end, d.pinned, d.code, d.notify, d.pushed_at], ["", { kind: "", url: "" }, 0, 0, false, 0, false, 0]);
+  assert.deepEqual(d.target, { langs: [], min_level: 0, max_level: 0, min_code: 0, max_code: 0 });
+  assert.equal(d.at, Math.floor(NOW / 1000));
+  assert.throws(() => buildNewsPost(news({ title: { en: "Only English" } }), NOW), /Başlık: Türkçe metin zorunlu/);
+  assert.throws(() => buildNewsPost(news({ text: { tr: "   " } }), NOW), /Metin: Türkçe metin zorunlu/);
+  assert.throws(() => buildNewsPost(news({ kind: "promo" }), NOW), /Haber türü/);
+  assert.throws(() => buildNewsPost(null, NOW), PanelError);
+  assert.equal(buildNewsPost(news({ pinned: "true", notify: 1 }), NOW).pinned, false, "yalnız gerçek true");
+});
+
+test("haber: uzunluk sınırları (karakter = kod noktası)", () => {
+  assert.equal(buildNewsPost(news({ title: { tr: "x".repeat(60) } }), NOW).title.tr.length, 60);
+  assert.throws(() => buildNewsPost(news({ title: { tr: "x".repeat(61) } }), NOW), /Başlık \(tr\): en çok 60/);
+  assert.throws(() => buildNewsPost(news({ title: { tr: "ok", fr: "x".repeat(61) } }), NOW), /\(fr\)/);
+  assert.equal([...buildNewsPost(news({ text: { tr: "🏁".repeat(600) } }), NOW).text.tr].length, 600, "emoji tek karakter");
+  assert.throws(() => buildNewsPost(news({ text: { tr: "x".repeat(601) } }), NOW), /600/);
+});
+
+test("haber: kapak adresi yalnız izinli sunuculardan", () => {
+  const ok = "https://firebasestorage.googleapis.com/v0/b/car-town-remake.firebasestorage.app/o/news%2Fn_x_abc123.jpg?alt=media&token=1-2";
+  assert.equal(newsImage(ok), ok);
+  assert.equal(newsImage(" https://autoyard.online/haber/kis.webp "), "https://autoyard.online/haber/kis.webp");
+  assert.equal(newsImage("https://storage.googleapis.com/b/x.png"), "https://storage.googleapis.com/b/x.png");
+  assert.equal(newsImage(""), "");
+  for (const bad of ["http://autoyard.online/x.jpg", "https://evil.com/x.jpg", "https://autoyard.online.evil.com/x.jpg",
+    "https://autoyard.online@evil.com/x.jpg", "https://autoyard.online:8443/x.jpg", "https://www.autoyard.online/x.jpg",
+    "https://autoyard.online", "https://autoyard.online/a b.jpg", "https://autoyard.online/\"onerror=", "javascript:alert(1)",
+    "https://AUTOYARD.ONLINE/x.jpg", `https://autoyard.online/${"x".repeat(500)}`]) {
+    assert.throws(() => newsImage(bad), PanelError, bad);
+  }
+  assert.equal(buildNewsPost(news({ image: ok }), NOW).image, ok);
+});
+
+test("haber: düğme türleri, adres yalnız bağlantıda", () => {
+  for (const kind of ["", "market", "event", "quests", "showroom", "friends", "invite", "store"]) {
+    assert.deepEqual(newsAction({ kind }), { kind, url: "" });
+  }
+  assert.deepEqual(newsAction(undefined), { kind: "", url: "" });
+  assert.deepEqual(newsAction({ kind: "url", url: " https://www.instagram.com/autoyard?x=1 " }),
+    { kind: "url", url: "https://www.instagram.com/autoyard?x=1" });
+  assert.throws(() => newsAction({ kind: "garage" }), /bilinmeyen tür/);
+  assert.throws(() => newsAction({ kind: "__proto__" }), /bilinmeyen tür/);
+  assert.throws(() => newsAction({ kind: "market", url: "https://x.com" }), /yalnız Bağlantı/);
+  assert.throws(() => newsAction({ kind: "url", url: "" }), /boş/);
+  assert.throws(() => newsAction({ kind: "url", url: "http://x.com" }), /https/);
+  assert.throws(() => newsAction({ kind: "url", url: "javascript:alert(1)" }), /https/);
+  assert.throws(() => newsAction({ kind: "url", url: "https://user:pw@x.com/" }), /https/);
+  assert.throws(() => newsAction({ kind: "url", url: "https://localhost/" }), /https/);
+  assert.throws(() => newsAction({ kind: "url", url: `https://x.com/${"a".repeat(300)}` }), /300/);
+});
+
+test("haber: hedef aralıkları ve dilleri", () => {
+  assert.deepEqual(newsTarget({ langs: ["fr", "tr", "tr"], min_level: "5", max_level: 10, min_code: 12 }),
+    { langs: ["tr", "fr"], min_level: 5, max_level: 10, min_code: 12, max_code: 0 }, "dil sırası sabit, yinelenen atılır");
+  assert.throws(() => newsTarget({ langs: ["it"] }), /Hedef dil/);
+  assert.throws(() => newsTarget({ min_level: 10, max_level: 5 }), /seviye aralığı ters/);
+  assert.throws(() => newsTarget({ min_code: 14, max_code: 12 }), /sürüm aralığı ters/);
+  assert.throws(() => newsTarget({ min_level: -1 }), /0 ile/);
+  assert.throws(() => newsTarget({ max_code: 1.5 }), /tam sayı/);
+  assert.equal(newsTarget({ min_level: 5, max_level: 0 }).max_level, 0, "0 = sınır yok (ters sayılmaz)");
+});
+
+test("haber: başlangıç < bitiş, sürüm kodu yalnız GÜNCELLEME'de", () => {
+  assert.deepEqual([buildNewsPost(news({ start: 100, end: 200 }), NOW).start, buildNewsPost(news({ end: 200 }), NOW).end], [100, 200]);
+  assert.throws(() => buildNewsPost(news({ start: 200, end: 200 }), NOW), /sonra/);
+  assert.throws(() => buildNewsPost(news({ start: 300, end: 200 }), NOW), /sonra/);
+  assert.equal(buildNewsPost(news({ start: 300 }), NOW).end, 0, "yalnız başlangıç: süresiz");
+  assert.equal(buildNewsPost(news({ kind: "update", code: 12 }), NOW).code, 12);
+  assert.throws(() => buildNewsPost(news({ kind: "update" }), NOW), /sürüm kodu gerekli/);
+  assert.throws(() => buildNewsPost(news({ kind: "event", code: 12 }), NOW), /yalnız GÜNCELLEME/);
+  assert.throws(() => buildNewsPost(news({ start: -5 }), NOW), PanelError);
+});
+
+test("haber: bildirim seviye / sürüm hedefiyle birlikte olmaz (konu bildirimi süzemez)", () => {
+  assert.equal(buildNewsPost(news({ notify: true, target: { langs: ["de"] } }), NOW).notify, true, "dil hedefi olur");
+  assert.throws(() => buildNewsPost(news({ notify: true, target: { min_level: 5 } }), NOW), /bildirimi gönderilemez/);
+  assert.throws(() => buildNewsPost(news({ notify: true, target: { max_code: 20 } }), NOW), /bildirimi gönderilemez/);
+  assert.equal(buildNewsPost(news({ notify: false, target: { min_level: 5 } }), NOW).target.min_level, 5);
+});
+
+test("haber düzenleme: at korunur (en üste taşı = şimdi), pushed_at korunur", () => {
+  const current = { ...buildNewsPost(news({ notify: true }), NOW - 86_400_000), pushed_at: 1234 };
+  const edited = buildNewsPost(news({ title: { tr: "Düzeltildi" }, notify: true }), NOW, current);
+  assert.equal(edited.at, current.at, "zaman değişmez");
+  assert.equal(edited.pushed_at, 1234, "gönderilmiş bildirim yeniden gitmez");
+  assert.equal(edited.title.tr, "Düzeltildi");
+  assert.equal(buildNewsPost(news({ bump: true }), NOW, current).at, Math.floor(NOW / 1000), "en üste taşı");
+  assert.equal(buildNewsPost(news({ pushed_at: 99, at: 5 }), NOW).pushed_at, 0, "yeni haberde formdan pushed_at / at alınmaz");
+  assert.equal(buildNewsPost(news({ pushed_at: 99, at: 5 }), NOW).at, Math.floor(NOW / 1000));
+});
+
+test("haber kimliği", () => {
+  const id = newsId(NOW, "A1B2C3D4");
+  assert.match(id, /^n_[a-z0-9]+_a1b2c3$/);
+  assert.ok(NEWS_ID_RE.test(id));
+  assert.ok(!NEWS_ID_RE.test("n_x_zzzzzz") && !NEWS_ID_RE.test("../n_x_abcdef") && !NEWS_ID_RE.test("m_x_abcdef"));
+});
+
+test("posta: isteğe bağlı resim + düğme (tek oyuncuya haber)", () => {
+  const plain = buildMail({ text: "Selam" }, catalog, NOW);
+  assert.ok(!("image" in plain) && !("action" in plain), "boşsa alan yazılmaz (eski posta biçimi aynen)");
+  const m = buildMail({ title: { tr: "Sana özel" }, text: "Garajın çok güzel!", image: "https://autoyard.online/x.jpg",
+    action: { kind: "showroom" } }, catalog, NOW);
+  assert.equal(m.image, "https://autoyard.online/x.jpg");
+  assert.deepEqual(m.action, { kind: "showroom", url: "" });
+  assert.ok(!("action" in buildMail({ text: "x", action: { kind: "" } }, catalog, NOW)), "düğme yok = alan yok");
+  assert.throws(() => buildMail({ text: "x", image: "https://evil.com/x.jpg" }, catalog, NOW), /Kapak resmi/);
+  assert.throws(() => buildMail({ text: "x", action: { kind: "url", url: "http://x.com" } }, catalog, NOW), /https/);
+  assert.throws(() => buildMail({ text: "x", action: { kind: "hack" } }, catalog, NOW), /bilinmeyen tür/);
+});
+
+test("kapak yükleme: tür baytlardan, en çok 1,5 MB", () => {
+  const jpg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]);
+  const webp = Buffer.concat([Buffer.from("RIFF"), Buffer.from([1, 2, 3, 4]), Buffer.from("WEBPVP8 ")]);
+  assert.deepEqual(imageKind(jpg), { ext: "jpg", contentType: "image/jpeg" });
+  assert.equal(imageKind(png).ext, "png");
+  assert.equal(imageKind(webp).ext, "webp");
+  assert.equal(imageKind(Buffer.from("GIF89a....")), null, "GIF yok");
+  assert.equal(imageKind(Buffer.from("<svg xmlns=")), null, "SVG yok");
+  const d = decodeNewsImage("data:image/png;base64," + png.toString("base64"));
+  assert.equal(d.contentType, "image/png");
+  assert.ok(d.buf.equals(png));
+  assert.equal(decodeNewsImage(jpg.toString("base64")).ext, "jpg", "öneksiz base64 de olur");
+  assert.throws(() => decodeNewsImage(Buffer.from("GIF89a....").toString("base64")), /JPEG, PNG ya da WebP/);
+  assert.throws(() => decodeNewsImage("data:image/jpeg;base64,"), /seçilmedi/);
+  assert.throws(() => decodeNewsImage("bu base64 değil!"), /base64/);
+  assert.throws(() => decodeNewsImage(undefined), /seçilmedi/);
+  const big = Buffer.concat([jpg, Buffer.alloc(NEWS_IMAGE_BYTES)]);
+  assert.throws(() => decodeNewsImage(big.toString("base64")), /1,5 MB/);
+  const max = Buffer.concat([jpg, Buffer.alloc(NEWS_IMAGE_BYTES - jpg.length)]);
+  assert.equal(decodeNewsImage(max.toString("base64")).buf.length, NEWS_IMAGE_BYTES, "tam 1,5 MB olur");
+});
+
+test("Storage: kova adayları, kova yok hatası, indirme adresi", () => {
+  assert.deepEqual(bucketCandidates("car-town-remake"), ["car-town-remake.firebasestorage.app", "car-town-remake.appspot.com"]);
+  assert.deepEqual(bucketCandidates("p", " ozel-kova "), ["ozel-kova"]);
+  assert.equal(isMissingBucket({ code: 404, message: "The specified bucket does not exist." }), true);
+  assert.equal(isMissingBucket(new Error("The specified bucket does not exist.")), true);
+  assert.equal(isMissingBucket({ code: 403, message: "Permission denied" }), false);
+  assert.equal(isMissingBucket(null), false);
+  assert.equal(storageUrl("b.firebasestorage.app", "news/n_x_abc123_ff00aa.jpg", "tok-1"),
+    "https://firebasestorage.googleapis.com/v0/b/b.firebasestorage.app/o/news%2Fn_x_abc123_ff00aa.jpg?alt=media&token=tok-1");
+  assert.equal(newsImage(storageUrl("b.firebasestorage.app", "news/a.jpg", "t")).length > 0, true, "yüklenen adres haberde geçerli");
+});
+
+test("yayın belgesi (config/news): panelin haberinden, herkese açık alanlar, bitenler atılır, en çok 40", () => {
+  assert.equal(NEWS_FEED_DOC, "config/news");
+  const nowS = Math.floor(NOW / 1000);
+  const a = { id: "n_a_000001", ...buildNewsPost(news({ notify: true }), NOW - 5000) };
+  const future = { id: "n_b_000002", ...buildNewsPost(news({ start: nowS + 3600 }), NOW - 3000) };
+  const ended = { id: "n_c_000003", ...buildNewsPost(news({ start: nowS - 100, end: nowS - 1 }), NOW - 1000) };
+  const feed = buildNewsFeed([a, future, ended], NOW);
+  assert.deepEqual(feed.items.map((i) => i.id), ["n_b_000002", "n_a_000001"], "yeniden eskiye; başlamamış kalır, biten düşer");
+  assert.equal(feed.at, nowS);
+  const { id: _id, notify: _n, pushed_at: _p, ...pub } = a;
+  assert.deepEqual(feed.items[1], { id: "n_a_000001", ...pub }, "haberin herkese açık alanları aynen");
+  assert.ok(!("notify" in feed.items[1]) && !("pushed_at" in feed.items[1]));
+  const many = Array.from({ length: 50 }, (_, i) => ({ id: `n_${i}_abcdef`, ...buildNewsPost(news(), NOW - i * 1000) }));
+  assert.equal(buildNewsFeed(many, NOW).items.length, NEWS_FEED_MAX);
 });

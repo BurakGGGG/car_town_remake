@@ -7,7 +7,8 @@ extends Node
 ##   latest_code       altındakilere YENİ SÜRÜM VAR (kapatılabilir; sürüm başına bir kez)
 ##   update_text       {tr, en, es, de, fr} güncelleme penceresindeki açıklama (isteğe bağlı)
 ##   maintenance       true → BAKIMDAYIZ (kapanmaz, TEKRAR DENE); maintenance_text {dil: metin}, maintenance_until (unix sn)
-##   notice            {id, title: {dil}, text: {dil}, until (unix sn, 0 = süresiz)} DUYURU, kimlik başına bir kez
+##   notice            {id, title: {dil}, text: {dil}, until (unix sn, 0 = süresiz)} DUYURU — 2026-10-25'ten beri pencere
+##                     değil, HABERLER kutusunda bir haber (Inbox); 1.1.0 ve öncesi pencere olarak gösterir
 ##   event             CANLI ETKİNLİK {id, title: {dil}, text: {dil}, start, end (unix sn), money_mult, xp_mult, sale,
 ##                     crate_boost, missions, rival, pack} — modüller ve sınırları LiveEvent'te. Çarpan: tamir (iş başlarken
 ##                     sabitlenir: balondaki tutar doğru kalır) ve yarış ödülleri; 1–3
@@ -49,11 +50,12 @@ var url: String = URL
 var learning_url: String = LEARNING_URL
 
 var _config: Dictionary = {}
-var _state: Dictionary = {}       # {config, fetched_at, seen: {duyuru kimliği: true}, dismissed_latest}
+var _state: Dictionary = {}       # {config, fetched_at, dismissed_latest}
 var _http: HTTPRequest
 var _timer: Timer
 var _busy: bool = false
 var _last_fetch: float = -1.0e9
+var _answered: bool = false   # bu açılışta ilk okuma bitti (başarılı ya da değil): yükleme ekranı bunu bekler
 var _learning_http: HTTPRequest
 var _learning_busy: bool = false
 var _last_learning_fetch: float = -1.0e9
@@ -118,6 +120,10 @@ func _ready() -> void:
 	_timer.start()
 	add_child(AppGate.new(self))
 	add_child(LivePacks.new(self))   # içerik paketleri: listedekileri indirir / bağlar
+	var feed: NewsFeed = NewsFeed.new()   # HABERLER kutusunun yayın akışı (news/{id}): aynı yolla oturumsuz okunur
+	if url.is_empty():
+		feed.url = ""   # testler: ağ yok
+	add_child(feed)
 	refresh()
 
 
@@ -130,6 +136,7 @@ func _notification(what: int) -> void:
 ## Belgeyi yeniden okur (BAKIMDAYIZ → TEKRAR DENE de bunu çağırır). Öğrenme tablosu vakti geldiyse o da.
 func refresh() -> void:
 	if url.is_empty():
+		_answered = true   # testler: ağ yok, cihazdaki / verilen belge geçerli
 		return
 	_refresh_learning()
 	if _busy or _http == null:
@@ -138,6 +145,7 @@ func refresh() -> void:
 	_last_fetch = _seconds()
 	if _http.request(url) != OK:
 		_busy = false
+		_answered = true
 
 
 func _refresh_learning() -> void:
@@ -184,8 +192,15 @@ func is_busy() -> bool:
 	return _busy
 
 
+## Bu açılışta belge en az bir kez okunmaya çalışıldı mı (cevap geldi ya da ağ hatası). Yükleme ekranı oyunu kurmadan
+## önce bunu bekler (LoadingScreen.CONFIG_WAIT): kapı, cihazdaki eski belgeyle değil güncel belgeyle karar versin.
+func is_answered() -> bool:
+	return _answered
+
+
 func _on_request_completed(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	_busy = false
+	_answered = true
 	if result != HTTPRequest.RESULT_SUCCESS:
 		return
 	if code == 404:
@@ -240,26 +255,19 @@ func dismiss_soft_update() -> void:
 	_write()
 
 
-## Gösterilmemiş, süresi dolmamış duyuru: {id, title, text} ya da boş.
-func pending_notice() -> Dictionary:
-	var notice: Variant = _config.get("notice")
-	if not notice is Dictionary:
+## Süresi dolmamış duyuru: {id, title, text} ya da boş. HABERLER kutusu gösterir (Inbox; görüldü bilgisi orada).
+func notice() -> Dictionary:
+	var raw: Variant = _config.get("notice")
+	if not raw is Dictionary:
 		return {}
-	var id: String = SaveSafe.s((notice as Dictionary).get("id", ""))
-	var text: String = text_of((notice as Dictionary).get("text"))
-	if id.is_empty() or text.is_empty() or _seen().has(id):
+	var id: String = SaveSafe.s((raw as Dictionary).get("id", ""))
+	var text: String = text_of((raw as Dictionary).get("text"))
+	if id.is_empty() or text.is_empty():
 		return {}
-	var until: int = SaveSafe.i((notice as Dictionary).get("until", 0))
+	var until: int = SaveSafe.i((raw as Dictionary).get("until", 0))
 	if until > 0 and int(Time.get_unix_time_from_system()) > until:
 		return {}
-	return {"id": id, "title": text_of((notice as Dictionary).get("title")), "text": text}
-
-
-func mark_notice_seen(id: String) -> void:
-	var seen: Dictionary = _seen()
-	seen[id] = true
-	_state["seen"] = seen
-	_write()
+	return {"id": id, "title": text_of((raw as Dictionary).get("title")), "text": text}
 
 
 func update_text() -> String:
@@ -370,11 +378,6 @@ static func decode_value(value: Dictionary) -> Variant:
 
 
 # --- Cihaz durumu --------------------------------------------------------------------
-
-func _seen() -> Dictionary:
-	var seen: Variant = _state.get("seen", {})
-	return seen if seen is Dictionary else {}
-
 
 func _seconds() -> float:
 	return Time.get_ticks_msec() / 1000.0

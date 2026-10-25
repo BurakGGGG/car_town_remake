@@ -122,32 +122,25 @@ func _run() -> void:
 	router.close_all()
 	await create_timer(0.4).timeout
 
-	print("4) POSTA: hoş geldin")
-	var notice: MailNotice = hud.mail_notice
+	print("4) POSTA: hoş geldin ve basamak ödülleri HABERLER kutusunda")
 	referral.status = "ok"
 	referral.referrer = "f0"
-	var welcome: Dictionary = MailService.normalize("ref_welcome", {"title": "Davet hediyen!",
+	var service: MailService = get_first_node_in_group("mail") as MailService
+	service._pending = [MailService.normalize("ref_welcome", {"title": "Davet hediyen!",
 		"text": "Mert seni Auto Yard'a çağırdı. Hoş geldin usta!", "from": "AUTO YARD", "gems": 50, "money": 5000,
-		"referral": "welcome", "at": 500})
-	notice._open(welcome)
-	await create_timer(0.5).timeout
-	check((notice.find_child("SignTitle", true, false) as Label).text == Loc.t("DAVETLE GELDİN!"), "tabela DAVETLE GELDİN!")
-	await shot("04_hos_geldin")
-	notice.hide()
-	notice._current = ""
-
-	print("5) POSTA: basamak ödülü")
-	notice._open(_tier_mail(4, "f3", "Ece"))
-	await create_timer(0.5).timeout
-	check(notice.find_child("ReferralDots", true, false) != null, "basamak ilerlemesi")
-	await shot("05_basamak")
-	notice.hide()
-	notice._current = ""
-	notice._open(_tier_mail(10, "f4", "Kaan"))
-	await create_timer(0.5).timeout
-	await shot("05b_basamak_10")
-	notice.hide()
-	notice._current = ""
+		"referral": "welcome", "at": 500}), _tier_mail(4, "f3", "Ece"), _tier_mail(10, "f4", "Kaan")]
+	service.arrived.emit()
+	router.open(&"inbox")
+	await create_timer(0.6).timeout
+	check(hud.inbox.gift_count() == 3, "üç davet postası kutuda")
+	for pair: Array in [["ref_welcome", "04_hos_geldin"], ["ref_4", "05_basamak"], ["ref_10", "05b_basamak_10"]]:
+		hud.inbox_screen.select(pair[0])
+		await create_timer(0.3).timeout
+		await shot(pair[1])
+	router.close_all()
+	service._pending = []
+	service.arrived.emit()
+	await create_timer(0.4).timeout
 
 	print("6) Efsanevi araç seçimi")
 	router.open(&"legendary_pick")

@@ -26,6 +26,12 @@ extends CanvasLayer
 ## durur, sıradaki KENDİ iş parçacığında yüklenir (bkz. _rotate_slide). Yavaş telefon benzetimiyle ölçüm:
 ## qa/yukleme_slayt_zaman.gd. Slaytlar tools/make_loading_scenes.gd ile çizilir (aynı yerleşim).
 ##
+## UZAKTAN AYAR KAPISI (2026-10-25, kullanıcı: "bakım ve güncelleme ekranı yükleme ekranında, hiç oyuna giremeden gelsin"):
+## Main yüklenince oyun KURULMADAN önce config/app'in bu açılıştaki ilk cevabı beklenir (en çok CONFIG_WAIT; ağ yoksa
+## cihazdaki son belge geçerli — uçak moduyla atlatılamaz). Zorunlu güncelleme / bakım ya da YENİ SÜRÜM VAR varsa ekran
+## burada bekler (at_gate): çubuk ve ipucu söner, AppGate'in kepengi slaytın üstüne iner. Bakım bitince kepenk kalkar ve oyun
+## kurulur; YENİ SÜRÜM VAR'da SONRA denince devam edilir.
+##
 ## Sahne dosyası elle yazılmaz: tools/make_loading_scene.gd üretir.
 
 const MAIN_SCENE: String = "res://Main.tscn"
@@ -61,6 +67,8 @@ const FADE_TIME: float = 0.35
 ## Çubuk %100'de bu kadar durur, sonra giriş seçeneklerine yer açmak için söner (sn).
 const GATE_HOLD: float = 0.2
 const GATE_SWAP_TIME: float = 0.25
+## Main yüklendikten sonra uzaktan ayarın ilk cevabı en çok bu kadar beklenir (sn); gelmezse cihazdaki son belge karar verir.
+const CONFIG_WAIT: float = 4.0
 
 ## Oyun yüklenirken gösterilen ipuçları (Türkçe = çeviri anahtarı). Oyunun gerçek kurallarıyla
 ## uyumlu olmalı: kural değişirse buradaki metin de değişir.
@@ -94,6 +102,9 @@ var _tip_index: int = 0
 var _main: Node
 var _settle: int = -1
 var _gate_open: bool = false
+## Oyun kurulmadan uzaktan ayar kapısında bekleniyor (kepenk açık): AppGate YENİ SÜRÜM VAR'ı burada açar.
+var at_gate: bool = false
+var _loaded_at: float = -1.0     # Main'in arka plan yüklemesinin bittiği an (_elapsed)
 var _art: TextureRect            # görünen görsel
 var _art_next: TextureRect       # üstünde belirerek gelen sıradaki
 var _slides: Array[String] = []  # var olan SLIDES
@@ -168,11 +179,33 @@ func _process(delta: float) -> void:
 			if _elapsed < simulate_load_seconds:
 				_show(minf(1.0 - exp(-_elapsed / ESTIMATE_TIME), 1.0) * 0.9, delta)   # benzetim: yükleme sürüyormuş gibi
 				return
+			if _hold_at_gate():
+				return
 			_start_game(ResourceLoader.load_threaded_get(MAIN_SCENE) as PackedScene)
 		_:
 			push_warning("LoadingScreen: arka plan yüklemesi başarısız, doğrudan geçiliyor")
 			set_process(false)
 			get_tree().change_scene_to_file(MAIN_SCENE)
+
+
+## Oyun kurulmadan önce: uzaktan ayarın ilk cevabı beklenir; kapı (güncelleme / bakım) ya da YENİ SÜRÜM VAR varsa beklenir.
+## Bekleme başlayınca çubuk ve ipucu söner (kepenk iner), bitince geri gelir. true = bekle.
+func _hold_at_gate() -> bool:
+	var config: AppConfig = AppConfig.of(get_tree())
+	if config == null:
+		return false
+	if _loaded_at < 0.0:
+		_loaded_at = _elapsed
+	if not config.is_answered() and _elapsed - _loaded_at < CONFIG_WAIT:
+		return true   # cevap bekleniyor: çubuk %90'da durur
+	var gate: AppGate = config.get_node_or_null("AppGate") as AppGate
+	var hold: bool = config.gate() != AppConfig.GATE_NONE or config.soft_update() \
+		or (gate != null and gate.dialog_kind() != &"")
+	if hold != at_gate:
+		at_gate = hold
+		var tween: Tween = create_tween()
+		tween.tween_property(_bottom, "modulate:a", 0.0 if hold else 1.0, GATE_SWAP_TIME)
+	return hold
 
 
 ## Sahne hazır: oyun eklenir, geçerli sahne olur; ekran ilk ağır kareler boyunca üstte kalır.

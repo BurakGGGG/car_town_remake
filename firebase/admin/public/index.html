@@ -65,6 +65,16 @@
   .live.on { background: #e2f2e7; color: var(--green); }
   .live.soon { background: #fff3cd; color: #8a6d1c; }
   .live.off { background: #e8dcc2; color: var(--muted); }
+  .pill.green { background: #d3ecd9; color: var(--green); }
+  .pill.amber { background: #fff3cd; color: #8a6d1c; }
+  .cover { max-width: 320px; max-height: 160px; border-radius: 10px; border: 1px solid var(--line); display: block; margin-top: 8px; object-fit: cover; }
+  .newscard { display: grid; grid-template-columns: 120px 1fr; gap: 12px; background: #2b3038; color: #f4e9d4; border-radius: 12px; padding: 12px; max-width: 560px; }
+  .newscard .art { width: 120px; height: 80px; border-radius: 8px; object-fit: cover; background: #3a4048; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; letter-spacing: 0.06em; }
+  .newscard .art.update { background: #2f7fb3; } .newscard .art.event { background: #c98f1c; } .newscard .art.notice { background: #7a7064; }
+  .newscard h4 { margin: 0 0 4px; font-size: 16px; }
+  .newscard p { margin: 0; font-size: 13px; white-space: pre-wrap; color: #d8cfbd; }
+  .newscard .meta { font-size: 11px; color: #aab; margin-bottom: 4px; letter-spacing: 0.04em; }
+  .newscard .btn { display: inline-block; margin-top: 8px; background: var(--amber); color: var(--ink); font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 6px; }
 </style>
 </head>
 <body>
@@ -74,6 +84,7 @@
 </header>
 <nav id="tabs">
   <button data-tab="overview" class="on">Özet</button>
+  <button data-tab="feed">Haberler</button>
   <button data-tab="config">Sürüm ve bakım</button>
   <button data-tab="event">Etkinlik</button>
   <button data-tab="ads">Reklamlar</button>
@@ -102,6 +113,81 @@
     <table id="o-log"><tr><td>yükleniyor…</td></tr></table>
   </section>
 
+  <section id="feed">
+    <h2>Haberler</h2>
+    <p class="hint">Oyunun HABERLER kutusu (1.1.0'dan sonraki sürümler). Oyun haberleri tek bir yayın belgesinden okur (misafir de):
+      kaydet / sil / en üste taşı yayını hemen yeniler, bitişi geçen haber en geç 10 dakikada yayından kendiliğinden düşer. Yayında
+      en çok 40 haber durur (SABİT'ler önce). Haber başlangıçtan önce ve bitişten sonra görünmez; SABİT haberler listenin başında
+      durur. Boş bırakılan dil oyunda İngilizce, o da yoksa Türkçe gösterilir. Tek oyuncuya haber: <b>Hediye gönder</b> › Tek
+      oyuncu, ödülsüz mesaj (resim ve düğme orada da var).</p>
+    <button class="act" id="f-new">+ Yeni haber</button>
+    <button class="ghost" id="f-reload" style="margin-left:8px">Listeyi yenile</button>
+    <button class="ghost" id="f-publish" style="margin-left:8px" title="Yayın belgesini koleksiyondan yeniden kurar">Yayını yenile</button>
+    <span class="hint" id="f-feed" style="margin-left:8px"></span>
+    <div class="status" id="f-status"></div>
+
+    <div class="card" id="f-form" style="display:none;margin-top:16px">
+      <h2 id="f-form-title">Yeni haber</h2>
+      <div class="row3">
+        <div><label>Tür</label><select id="f-kind"><option value="notice">DUYURU</option><option value="event">ETKİNLİK</option>
+          <option value="update">GÜNCELLEME (sürüm notları)</option></select></div>
+        <div id="f-code-box"><label>Sürüm kodu (notlar hangi sürümün)</label><input id="f-code" type="number" min="1">
+          <p class="hint">Yalnız bu sürümü ya da yenisini kurmuş oyuncu görür.</p></div>
+      </div>
+      <label>Başlık (Türkçe zorunlu, en çok 60 karakter)</label><div data-langs="f-title" data-kind="input"></div>
+      <label>Metin (Türkçe zorunlu, en çok 600 karakter, satır sonu korunur)</label><div data-langs="f-text" data-kind="textarea"></div>
+
+      <h3>Kapak</h3>
+      <div class="row3">
+        <div><label>Kapak resmi</label><select id="f-cover"><option value="builtin">Hazır kapak (türe göre, oyun çizer)</option>
+          <option value="upload">Resim yükle</option><option value="url">Resim adresi</option></select></div>
+        <div id="f-file-box"><label>Resim (JPEG / PNG / WebP, en çok 1,5 MB)</label><input id="f-file" type="file" accept="image/jpeg,image/png,image/webp"></div>
+        <div id="f-image-box"><label>Resim adresi (Firebase Storage ya da autoyard.online, https)</label><input id="f-image" placeholder="https://autoyard.online/…"></div>
+      </div>
+      <img id="f-cover-img" class="cover" alt="" style="display:none">
+
+      <h3>Düğme</h3>
+      <div class="row">
+        <div><label>Düğme</label><select id="f-action" data-actions></select></div>
+        <div id="f-action-url-box"><label>Bağlantı (https, en çok 300)</label><input id="f-action-url" maxlength="300" placeholder="https://autoyard.online/…"></div>
+      </div>
+
+      <h3>Yayın</h3>
+      <div class="row3">
+        <div><label>Başlangıç (boş = hemen)</label><input id="f-start" type="datetime-local"></div>
+        <div><label>Bitiş (boş = süresiz)</label><input id="f-end" type="datetime-local"></div>
+        <div><div class="check" style="margin-top:34px"><input id="f-pinned" type="checkbox"><label for="f-pinned" style="margin:0">SABİT (listenin başında)</label></div></div>
+      </div>
+
+      <h3>Hedef</h3>
+      <label>Diller (hiçbiri işaretli değilse hepsi)</label><div id="f-langs" class="carlist"></div>
+      <div class="row4">
+        <div><label>Seviye en az (0 = sınır yok)</label><input id="f-lmin" type="number" min="0" value="0"></div>
+        <div><label>Seviye en çok</label><input id="f-lmax" type="number" min="0" value="0"></div>
+        <div><label>Sürüm kodu en az</label><input id="f-cmin" type="number" min="0" value="0"></div>
+        <div><label>Sürüm kodu en çok</label><input id="f-cmax" type="number" min="0" value="0"></div>
+      </div>
+
+      <h3>Bildirim</h3>
+      <div class="check"><input id="f-notify" type="checkbox"><label for="f-notify" style="margin:0">Haber görünür olunca telefon bildirimi gönder</label>
+        <span class="hint" id="f-pushed"></span></div>
+      <p class="hint">Bir kez gider: başlangıç boşsa kaydedince hemen, ileri bir saatse o saatte (en geç 10 dakika gecikmeyle).
+        Bildirimleri açmış herkese (misafir dahil) dil konusundan, yalnız seçili dillere. Başlık = haber başlığı, metin = haberin ilk
+        ~120 karakteri. Seviye / sürüm hedefli haberde gönderilemez (konu bildirimi bu hedefleri süzemez). Gönderilmiş bildirim
+        düzenlemeyle yeniden gitmez.</p>
+      <div class="check" id="f-bump-box"><input id="f-bump" type="checkbox"><label for="f-bump" style="margin:0">En üste taşı (haberin zamanı şimdi olur)</label></div>
+
+      <h3>Önizleme (Türkçe)</h3>
+      <div id="f-preview"></div>
+      <button class="act" id="f-save">Kaydet ve yayınla</button>
+      <button class="ghost" id="f-cancel" style="margin-left:8px">Vazgeç</button>
+      <div class="status" id="f-form-status"></div>
+    </div>
+
+    <h3>Haberler (yeniden eskiye)</h3>
+    <div id="f-list">yükleniyor…</div>
+  </section>
+
   <section id="config">
     <h2>Sürüm ve bakım</h2>
     <p class="hint">Oyun bu ayarları açılışta, öne gelince ve 15 dakikada bir okur (misafir de). Geliştirme sürümü (editör) etkilenmez.</p>
@@ -120,8 +206,10 @@
     </div>
     <label>Bakım metni (isteğe bağlı)</label>
     <div data-langs="c-mtext" data-kind="textarea"></div>
-    <h3>Oyun içi duyuru</h3>
-    <p class="hint">Oyun sakinken bir kez açılan pencere. Metni değiştirince yeni duyuru sayılır (herkese yeniden gösterilir). Metni boşaltmak duyuruyu kaldırır.</p>
+    <h3>Duyuru penceresi · eski sürümler (1.1.0 ve öncesi)</h3>
+    <p class="hint">1.1.0 (11) ve öncesi bu duyuruyu oyun sakinken bir kez açılan pencere olarak gösterir; HABERLER'li yeni sürümler aynı
+      duyuruyu haber kutusunda da gösterir. Yeni haberleri <b>Haberler</b> sekmesinden yaz; bu alan eski sürümdeki oyunculara ulaşmak
+      için. Metni değiştirince yeni duyuru sayılır (herkese yeniden gösterilir). Metni boşaltmak duyuruyu kaldırır.</p>
     <label>Başlık</label><div data-langs="c-ntitle" data-kind="input"></div>
     <label>Metin</label><div data-langs="c-ntext" data-kind="textarea"></div>
     <div class="row"><div><label>Bitiş (isteğe bağlı)</label><input id="c-nuntil" type="datetime-local"></div>
@@ -242,7 +330,19 @@
     </div>
     <label>Kasa</label><div id="m-crates"></div><button class="ghost" id="m-add-crate" style="margin-top:6px">+ kasa ekle</button>
     <label>Dekor eşyası</label><div id="m-decor"></div><button class="ghost" id="m-add-decor" style="margin-top:6px">+ eşya ekle</button>
+    <label>Araç <span class="muted">(her biri bir adet; oyuncuda varsa satış değeri ₺ olarak verilir)</span></label><div id="m-cars"></div><button class="ghost" id="m-add-car" style="margin-top:6px">+ araç ekle</button>
     <div class="row"><div><label>Gönderen adı</label><input id="m-from" value="AUTO YARD" maxlength="24"></div></div>
+    <details><summary>Resim ve düğme (isteğe bağlı) · ödülsüz mesaj = tek oyuncuya haber</summary>
+      <p class="hint" style="margin:6px 0 0">Haberlerdeki gibi: resim yalnız Firebase Storage ya da autoyard.online adresinden, düğme oyundaki bir ekranı ya da bir https bağlantısını açar.</p>
+      <div class="row">
+        <div><label>Resim adresi</label><input id="m-image" placeholder="https://firebasestorage.googleapis.com/…"></div>
+        <div><label>ya da resim yükle (JPEG / PNG / WebP, en çok 1,5 MB)</label><input id="m-file" type="file" accept="image/jpeg,image/png,image/webp"></div>
+      </div>
+      <div class="row">
+        <div><label>Düğme</label><select id="m-action" data-actions></select></div>
+        <div id="m-action-url-box"><label>Bağlantı (https, en çok 300)</label><input id="m-action-url" maxlength="300" placeholder="https://autoyard.online/…"></div>
+      </div>
+    </details>
     <div class="check"><input id="m-notify" type="checkbox" checked><label for="m-notify" style="margin:0">Telefona "Hediyen var" bildirimi de gönder</label></div>
     <button class="act" id="m-send">Gönder</button>
     <div class="status" id="m-status"></div>
@@ -382,6 +482,199 @@ for (const b of document.querySelectorAll("#tabs button")) {
   };
 }
 
+// --- Haberler (news/{id}) ---
+const NEWS_KINDS = { update: "GÜNCELLEME", event: "ETKİNLİK", notice: "DUYURU" };
+const ACTIONS = { "": "Düğme yok", market: "MARKET", event: "ETKİNLİK PANOSU", quests: "GÖREVLER", showroom: "SHOWROOM",
+  friends: "ARKADAŞLAR", invite: "ARKADAŞ DAVET ET", store: "Play Store (güncelleme)", url: "Bağlantı (https)" };
+const IMAGE_MAX = 1.5 * 1024 * 1024;
+for (const sel of document.querySelectorAll("select[data-actions]")) {
+  sel.innerHTML = Object.entries(ACTIONS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
+}
+for (const l of LANGS) { $(`f-title-${l}`).maxLength = 60; $(`f-text-${l}`).maxLength = 600; }
+$("f-langs").innerHTML = LANGS.map((l) => `<label><input type="checkbox" value="${l}"> ${NAMES[l]}</label>`).join("");
+let newsItems = [];
+let newsNow = 0;
+let newsFeed = null;   // oyundaki yayın: {at, ids}
+let editingNews = null;   // düzenlenen haberin kimliği (yeni haberde null)
+
+/** Resmi Storage'a yükler (panel sunucusu üzerinden), indirme adresini döner. */
+async function uploadImage(file, newsId) {
+  if (!file) throw new Error("Resim seçilmedi");
+  if (file.size > IMAGE_MAX) throw new Error("Resim en çok 1,5 MB olmalı");
+  const data = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(new Error("Dosya okunamadı"));
+    r.readAsDataURL(file);
+  });
+  return (await api("POST", "/api/news/upload", { data, id: newsId || "" })).url;
+}
+function newsState(n, now) {
+  if (n.end && n.end <= now) return '<span class="pill">bitti</span>';
+  if (n.start && n.start > now) return '<span class="pill amber">bekliyor</span>';
+  return '<span class="pill green">yayında</span>';
+}
+function targetText(t) {
+  const x = t || {};
+  const parts = [x.langs && x.langs.length ? x.langs.join(", ") : "bütün diller"];
+  if (x.min_level || x.max_level) parts.push(`seviye ${x.min_level || 1}–${x.max_level || "∞"}`);
+  if (x.min_code || x.max_code) parts.push(`sürüm ${x.min_code || 0}–${x.max_code || "∞"}`);
+  return parts.join(" · ");
+}
+function renderNews() {
+  $("f-list").innerHTML = newsItems.length ? `<table><tr><th>Tür</th><th>Başlık</th><th>Yayın</th><th>Hedef</th><th>Bildirim</th><th></th></tr>` +
+    newsItems.map((n, i) => `<tr><td><span class="pill">${esc(NEWS_KINDS[n.kind] || n.kind)}</span>${n.kind === "update" ? `<div class="hint">sürüm ${esc(n.code)}</div>` : ""}</td>` +
+      `<td><b>${esc((n.title && n.title.tr) || "")}</b>${n.pinned ? ' <span class="pill amber">SABİT</span>' : ""}${n.image ? ' <span class="pill">resimli</span>' : ""}` +
+      `${n.action && n.action.kind ? ` <span class="pill">${esc(ACTIONS[n.action.kind] || n.action.kind)}</span>` : ""}` +
+      `<div class="hint">${esc(when(n.at))} · ${esc(Object.keys(n.title || {}).join(", "))}</div></td>` +
+      `<td>${newsState(n, newsNow)}${newsFeed && !(n.end && n.end <= newsNow) && !newsFeed.ids.includes(n.id) ? ' <span class="pill red" title="40 haber sınırı ya da yayın eski: Yayını yenile">yayında değil</span>' : ""}<div class="hint">${n.start ? esc(when(n.start)) : "hemen"} → ${n.end ? esc(when(n.end)) : "süresiz"}</div></td>` +
+      `<td>${esc(targetText(n.target))}</td>` +
+      `<td>${!n.notify ? "–" : n.pushed_at ? `gönderildi<div class="hint">${esc(when(n.pushed_at))}</div>` : '<span class="pill amber">bekliyor</span>'}</td>` +
+      `<td><button class="ghost" data-nedit="${i}">Düzenle</button> <button class="ghost" data-ndel="${i}">Sil</button></td></tr>`).join("") + "</table>"
+    : "<p class='hint'>Henüz haber yok.</p>";
+  for (const b of $("f-list").querySelectorAll("[data-nedit]")) b.onclick = () => openNewsForm(newsItems[Number(b.dataset.nedit)]);
+  for (const b of $("f-list").querySelectorAll("[data-ndel]")) {
+    b.onclick = async () => {
+      const n = newsItems[Number(b.dataset.ndel)];
+      if (!confirm(`"${(n.title && n.title.tr) || n.id}" silinsin mi?\nOyunculardan bir sonraki okumada kalkar.`)) return;
+      try {
+        await api("POST", "/api/news/delete", { id: n.id });
+        if (editingNews === n.id) closeNewsForm();
+        status("f-status", "Haber silindi.", true);
+        loadNews();
+      } catch (e) { status("f-status", e.message, false); }
+    };
+  }
+}
+async function loadNews() {
+  try {
+    const r = await api("GET", "/api/news");
+    newsItems = r.items;
+    newsNow = r.now;
+    newsFeed = r.feed;
+    $("f-feed").textContent = r.feed ? `Oyundaki yayın: ${r.feed.ids.length} haber · ${when(r.feed.at)}` : "Yayın henüz yazılmadı.";
+    renderNews();
+  } catch (e) { $("f-list").textContent = e.message; }
+}
+function readNews() {
+  const kind = $("f-kind").value;
+  const action = $("f-action").value;
+  return {
+    kind, title: readLangs("f-title"), text: readLangs("f-text"),
+    image: $("f-cover").value === "builtin" ? "" : $("f-image").value.trim(),
+    action: { kind: action, url: action === "url" ? $("f-action-url").value.trim() : "" },
+    start: fromLocal($("f-start").value), end: fromLocal($("f-end").value), pinned: $("f-pinned").checked,
+    code: kind === "update" ? Number($("f-code").value || 0) : 0,
+    target: { langs: [...$("f-langs").querySelectorAll("input:checked")].map((x) => x.value),
+      min_level: Number($("f-lmin").value || 0), max_level: Number($("f-lmax").value || 0),
+      min_code: Number($("f-cmin").value || 0), max_code: Number($("f-cmax").value || 0) },
+    notify: $("f-notify").checked, bump: !!editingNews && $("f-bump").checked,
+  };
+}
+function renderNewsPreview() {
+  const n = readNews();
+  const old = editingNews && newsItems.find((x) => x.id === editingNews);
+  const art = n.image ? `<img class="art" alt="" src="${esc(n.image)}">` : `<div class="art ${esc(n.kind)}">${esc(NEWS_KINDS[n.kind])}</div>`;
+  $("f-preview").innerHTML = `<div class="newscard">${art}<div><div class="meta">${esc(NEWS_KINDS[n.kind])}${n.pinned ? " · SABİT" : ""} · ` +
+    `${old && !n.bump ? esc(when(old.at)) : "ŞİMDİ"}</div><h4>${esc(n.title.tr || "(başlık)")}</h4><p>${esc(n.text.tr || "")}</p>` +
+    `${n.action.kind ? `<span class="btn">${esc(ACTIONS[n.action.kind])}</span>` : ""}</div></div>`;
+}
+function syncNewsForm() {
+  $("f-code-box").style.visibility = $("f-kind").value === "update" ? "visible" : "hidden";
+  const cover = $("f-cover").value;
+  $("f-file-box").style.display = cover === "upload" ? "block" : "none";
+  $("f-image-box").style.display = cover === "builtin" ? "none" : "block";
+  $("f-image").readOnly = cover === "upload";
+  $("f-action-url-box").style.visibility = $("f-action").value === "url" ? "visible" : "hidden";
+  const img = cover === "builtin" ? "" : $("f-image").value.trim();
+  $("f-cover-img").style.display = img ? "block" : "none";
+  if (img && $("f-cover-img").getAttribute("src") !== img) $("f-cover-img").src = img;
+  renderNewsPreview();
+}
+function closeNewsForm() {
+  $("f-form").style.display = "none";
+  editingNews = null;
+}
+function openNewsForm(n) {
+  editingNews = n ? n.id : null;
+  const build = info ? info.build.code : 0;
+  const d = n || { kind: "notice", title: {}, text: {}, image: "", action: { kind: "", url: "" }, start: 0, end: 0, pinned: false,
+    code: build, target: {}, notify: false };
+  const t = d.target || {};
+  $("f-form-title").textContent = n ? `Haberi düzenle · ${n.id}` : "Yeni haber";
+  $("f-kind").value = d.kind;
+  $("f-code").value = d.code || build || "";
+  writeLangs("f-title", d.title);
+  writeLangs("f-text", d.text);
+  $("f-cover").value = !d.image ? "builtin" : /^https:\/\/firebasestorage\.googleapis\.com\//.test(d.image) ? "upload" : "url";
+  $("f-image").value = d.image || "";
+  $("f-file").value = "";
+  $("f-action").value = (d.action && d.action.kind) || "";
+  $("f-action-url").value = (d.action && d.action.url) || "";
+  $("f-start").value = toLocal(d.start);
+  $("f-end").value = toLocal(d.end);
+  $("f-pinned").checked = !!d.pinned;
+  for (const x of $("f-langs").querySelectorAll("input")) x.checked = (t.langs || []).includes(x.value);
+  $("f-lmin").value = t.min_level || 0;
+  $("f-lmax").value = t.max_level || 0;
+  $("f-cmin").value = t.min_code || 0;
+  $("f-cmax").value = t.max_code || 0;
+  $("f-notify").checked = !!d.notify;
+  $("f-pushed").textContent = n && n.pushed_at ? ` · bildirim ${when(n.pushed_at)} gönderildi (yeniden gitmez)` : "";
+  $("f-bump").checked = false;
+  $("f-bump-box").style.display = n ? "flex" : "none";
+  $("f-form-status").className = "status";
+  $("f-form").style.display = "block";
+  syncNewsForm();
+  $("f-form").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+$("f-form").addEventListener("input", syncNewsForm);
+$("f-form").addEventListener("change", syncNewsForm);
+$("f-file").onchange = async () => {
+  const file = $("f-file").files[0];
+  if (!file) return;
+  status("f-form-status", "Resim yükleniyor…", true);
+  try {
+    $("f-image").value = await uploadImage(file, editingNews);
+    status("f-form-status", "Resim yüklendi. Haberi kaydetmeyi unutma.", true);
+  } catch (e) {
+    $("f-file").value = "";
+    status("f-form-status", e.message, false);
+  }
+  syncNewsForm();
+};
+$("f-new").onclick = () => openNewsForm(null);
+$("f-cancel").onclick = closeNewsForm;
+$("f-reload").onclick = loadNews;
+$("f-publish").onclick = async () => {
+  try {
+    const r = await api("POST", "/api/news/publish", {});
+    status("f-status", `Yayın yenilendi: ${r.feed} haber.`, true);
+    loadNews();
+  } catch (e) { status("f-status", e.message, false); }
+};
+$("f-save").onclick = async () => {
+  const news = readNews();
+  const now = Date.now() / 1000;
+  const visible = (!news.start || news.start <= now) && (!news.end || news.end > now);
+  const old = editingNews && newsItems.find((x) => x.id === editingNews);
+  const warn = [];
+  if (news.end && news.end <= now) warn.push("Bitiş geçmişte: haber oyunda GÖRÜNMEYECEK.");
+  if (news.notify && !(old && old.pushed_at) && (!news.end || news.end > now)) {
+    const langs = news.target.langs.length ? news.target.langs.join(", ") : "bütün diller";
+    warn.push(visible ? `Telefon bildirimi HEMEN gidecek (${langs}).` : `Telefon bildirimi başlangıçta gidecek: ${when(news.start)} (${langs}).`);
+  }
+  if (warn.length && !confirm(warn.join("\n") + "\n\nKaydedilsin mi?")) return;
+  try {
+    const r = await api("POST", "/api/news/save", { id: editingNews || undefined, news });
+    status("f-status", `${editingNews ? "Güncellendi" : "Yayınlandı"} (${r.id}).`, true);
+    closeNewsForm();
+    loadNews();
+    loadOverview();
+  } catch (e) { status("f-form-status", e.message, false); }
+};
+document.querySelector('#tabs button[data-tab="feed"]').addEventListener("click", loadNews);
+
 // --- Özet ---
 async function loadOverview() {
   info = await api("GET", "/api/info");
@@ -419,6 +712,11 @@ function describe(e) {
   if (e.kind === "promo_toggle") return `kupon ${e.code} ${e.active ? "açıldı" : "kapatıldı"}`;
   if (e.kind === "adjust") return `bakiye düzeltme ${e.uid}: ${e.money}₺ ${e.gems} elmas ${e.text ? "· " + e.text : ""}`;
   if (e.kind === "restore") return `kayıt geri yükleme ${e.uid}: ${e.slot} (${when(e.save_at)})`;
+  if (e.kind === "news_create") return `haber yayınlandı ${e.id}: ${e.title || ""}${e.notify ? " · bildirimli" : ""}`;
+  if (e.kind === "news_update") return `haber güncellendi ${e.id}: ${e.title || ""}${e.bump ? " · en üste taşındı" : ""}`;
+  if (e.kind === "news_delete") return `haber silindi ${e.id}: ${e.title || ""}`;
+  if (e.kind === "news_publish") return `haber yayını yenilendi (${e.feed} haber)`;
+  if (e.kind === "news_upload") return `haber resmi yüklendi ${e.path} (${Math.round(e.size / 1024)} KB)`;
   if (e.kind === "reports_closed") return `${e.count} şikâyet kapatıldı ${e.uid}${e.action ? " (" + e.action + ")" : ""}`;
   return JSON.stringify(e);
 }
@@ -668,11 +966,11 @@ $("a-reset").onclick = async () => {
 document.querySelector('#tabs button[data-tab="ads"]').addEventListener("click", loadAds);
 
 // --- Hediye ---
-function catalogRow(container, list, kind) {
+function catalogRow(container, list, kind, single = false) {
   const row = document.createElement("div");
   row.className = "items";
-  row.innerHTML = `<select>${list.map((x) => `<option value="${esc(x.id)}">${esc(x.name)}${x.exclusive ? " (kurucu)" : ""} · ${esc(x.id)}</option>`).join("")}</select>` +
-    `<input type="number" min="1" max="20" value="1"><button class="ghost" title="kaldır">✕</button>`;
+  row.innerHTML = `<select>${list.map((x) => `<option value="${esc(x.id)}">${esc(x.name)}${x.exclusive ? " (kurucu)" : ""}${x.class ? " · " + esc(x.class) : ""} · ${esc(x.id)}</option>`).join("")}</select>` +
+    `<input type="number" min="1" max="${single ? 1 : 20}" value="1"${single ? ' hidden' : ""}><button class="ghost" title="kaldır">✕</button>`;
   row.querySelector("button").onclick = () => row.remove();
   row.dataset.kind = kind;
   container.appendChild(row);
@@ -680,6 +978,7 @@ function catalogRow(container, list, kind) {
 function fillCatalogRows() {
   $("m-add-crate").onclick = () => catalogRow($("m-crates"), info.catalog.crates, "crate");
   $("m-add-decor").onclick = () => catalogRow($("m-decor"), info.catalog.decor, "decor");
+  $("m-add-car").onclick = () => catalogRow($("m-cars"), info.catalog.cars, "car", true);
   $("k-add-crate").onclick = () => catalogRow($("k-crates"), info.catalog.crates, "crate");
   $("k-add-decor").onclick = () => catalogRow($("k-decor"), info.catalog.decor, "decor");
 }
@@ -699,21 +998,39 @@ $("m-send").onclick = async () => {
   const mail = {
     title: readLangs("m-title"), text: readLangs("m-text"), from: $("m-from").value, money: Number($("m-money").value || 0),
     gems: Number($("m-gems").value || 0), crates: readItems($("m-crates")), decor: readItems($("m-decor")),
-    expires_days: Number($("m-days").value || 0), notify: $("m-notify").checked,
+    cars: readItems($("m-cars")), expires_days: Number($("m-days").value || 0), notify: $("m-notify").checked, image: $("m-image").value.trim(),
+    action: { kind: $("m-action").value, url: $("m-action").value === "url" ? $("m-action-url").value.trim() : "" },
   };
   const target = $("m-target").value;
   const body = { target, query: $("m-query").value, mail, segment: target === "segment" ? readSegment("m-seg") : undefined };
   try {
     const dry = await api("POST", "/api/mail/send", { ...body, dry: true });
     const parts = [mail.money ? `${mail.money.toLocaleString("tr-TR")} ₺` : "", mail.gems ? `${mail.gems} elmas` : "",
-      ...Object.entries(mail.crates).map(([k, n]) => `${n}× ${k}`), ...Object.entries(mail.decor).map(([k, n]) => `${n}× ${k}`)].filter(Boolean);
+      ...Object.entries(mail.crates).map(([k, n]) => `${n}× ${k}`), ...Object.entries(mail.decor).map(([k, n]) => `${n}× ${k}`),
+      ...Object.keys(mail.cars).map((k) => `araç ${k}`)].filter(Boolean);
     const who = target === "all" ? `HERKESE (${dry.count} hesap)` : target === "segment" ? `süzgece uyan ${dry.count} hesaba` : `tek oyuncuya (${dry.uid})`;
     if (target === "segment" && !dry.count) { status("m-status", "Süzgece uyan oyuncu yok.", false); return; }
-    if (!confirm(`${who} gönderilsin mi?\n\nÖdül: ${parts.join(", ") || "yok (yalnız mesaj)"}\nBildirim: ${mail.notify ? "evet" : "hayır"}`)) return;
+    const extra = [mail.image ? "resimli" : "", mail.action.kind ? `düğme ${ACTIONS[mail.action.kind]}` : ""].filter(Boolean).join(", ");
+    if (!confirm(`${who} gönderilsin mi?\n\nÖdül: ${parts.join(", ") || "yok (yalnız mesaj)"}\nBildirim: ${mail.notify ? "evet" : "hayır"}${extra ? "\n" + extra : ""}`)) return;
     const r = await api("POST", "/api/mail/send", body);
     status("m-status", `Gönderildi: ${r.count} posta (kimlik ${r.id}).`, true);
     loadOverview();
   } catch (e) { status("m-status", e.message, false); }
+};
+
+$("m-action").onchange = () => { $("m-action-url-box").style.visibility = $("m-action").value === "url" ? "visible" : "hidden"; };
+$("m-action").onchange();
+$("m-file").onchange = async () => {
+  const file = $("m-file").files[0];
+  if (!file) return;
+  status("m-status", "Resim yükleniyor…", true);
+  try {
+    $("m-image").value = await uploadImage(file, "");
+    status("m-status", "Resim yüklendi.", true);
+  } catch (e) {
+    $("m-file").value = "";
+    status("m-status", e.message, false);
+  }
 };
 
 // --- Duyuru bildirimi ---

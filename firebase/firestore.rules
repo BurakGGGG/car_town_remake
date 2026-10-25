@@ -30,6 +30,9 @@ service cloud.firestore {
     // UZAKTAN AYAR (2026-10-21): config/app = {min_code, latest_code, maintenance, notice…}. Oyun açılışta OTURUMSUZ
     // okur (misafir de: zorunlu güncelleme / bakım herkesi kapsar; firebase/admin paneli yazar, yönetici SDK'sı kurallardan
     // bağımsızdır). Gizli bir şey yoktur; yalnızca kimlikle okunur, istemci hiçbir zaman yazamaz.
+    // HABERLER (2026-10-25): oyun config/news = {items, at} belgesini aynı kuralla okur (bitmemiş haberlerin herkese açık
+    // alanları, en çok 40; panel ve functions/news_feed.js yazar). Haberlerin kendisi (news/{id}: bildirim durumu dahil)
+    // istemciye tamamen kapalıdır ("başka her yol kapalı"): oyuncu başına okuma tek belge, liste ile okuma çoğaltılamaz.
     match /config/{configId} {
       allow get: if true;
     }

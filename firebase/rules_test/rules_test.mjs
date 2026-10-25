@@ -4,7 +4,7 @@
 //   firebase emulators:exec --only firestore --project demo-cartown "node rules_test/rules_test.mjs"
 import { readFileSync } from "node:fs";
 import { initializeTestEnvironment, assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
-import { doc, setDoc, getDoc, deleteDoc, getDocs, collection } from "firebase/firestore";
+import { doc, setDoc, getDoc, deleteDoc, getDocs, collection, updateDoc } from "firebase/firestore";
 
 const env = await initializeTestEnvironment({
   projectId: "demo-cartown",
@@ -297,6 +297,26 @@ await check("istemci yazamaz", assertFails(setDoc(doc(alice, "config/app"), { mi
 await check("misafir yazamaz", assertFails(setDoc(doc(anon, "config/app"), { min_code: 0 })));
 await check("silinemez", assertFails(deleteDoc(doc(alice, "config/app"))));
 await check("listelenemez", assertFails(getDocs(collection(anon, "config"))));
+
+console.log("== haberler (news yalnız sunucu, oyun config/news okur) ==");
+const newsItem = { kind: "notice", title: { tr: "Duyuru" }, text: { tr: "Metin" }, image: "", action: { kind: "", url: "" },
+  start: 0, end: 0, pinned: false, code: 0, target: { langs: [], min_level: 0, max_level: 0, min_code: 0, max_code: 0 },
+  notify: true, pushed_at: 0, at: 1 };
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), "news/n_test_abc123"), newsItem);
+  await setDoc(doc(ctx.firestore(), "config/news"), { items: [{ id: "n_test_abc123", ...newsItem }], at: 1 });
+});
+await check("misafir yayını (config/news) okur", assertSucceeds(getDoc(doc(anon, "config/news"))));
+await check("giriş yapmış yayını okur", assertSucceeds(getDoc(doc(alice, "config/news"))));
+await check("istemci yayını yazamaz", assertFails(setDoc(doc(alice, "config/news"), { items: [], at: 2 })));
+await check("misafir yayını yazamaz", assertFails(setDoc(doc(anon, "config/news"), { items: [], at: 2 })));
+for (const [who, ctx] of [["misafir", anon], ["giriş yapmış", alice]]) {
+  await check(`${who} haberi okuyamaz`, assertFails(getDoc(doc(ctx, "news/n_test_abc123"))));
+  await check(`${who} haberleri listeleyemez`, assertFails(getDocs(collection(ctx, "news"))));
+  await check(`${who} haber yazamaz`, assertFails(setDoc(doc(ctx, "news/n_eve_000000"), newsItem)));
+  await check(`${who} haberi değiştiremez`, assertFails(updateDoc(doc(ctx, "news/n_test_abc123"), { pushed_at: 9 })));
+  await check(`${who} haberi silemez`, assertFails(deleteDoc(doc(ctx, "news/n_test_abc123"))));
+}
 
 console.log("== posta kutusu (mail) ==");
 await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "users/alice/mail/m1"), { gems: 50, at: 1 }));

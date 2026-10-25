@@ -9,7 +9,7 @@
 //   • yalnızca 127.0.0.1'de dinler; Host başlığı 127.0.0.1 / localhost değilse 403 (DNS rebinding)
 //   • her açılışta yeni rastgele anahtar: API isteği x-admin-key başlığı ister (özel başlık → başka köken ön uçuşa takılır,
 //     panel CORS izni vermez); bağlantıdaki anahtar #k= parçasında durur, sunucuya hiç gitmez
-//   • Origin başlığı varsa panelin kendi kökeni olmalı; gövde en çok 64 KB JSON
+//   • Origin başlığı varsa panelin kendi kökeni olmalı; gövde en çok 64 KB JSON (haber kapağı yükleme: 2,2 MB)
 // Her gönderim admin_log koleksiyonuna yazılır (istemciye kapalı: firestore.rules "başka her yol kapalı").
 //
 // Başlatma: cd firebase/admin && npm install && npm start   (ayrıntı: README.md)
@@ -29,6 +29,8 @@ import {
   PanelError, loadCatalog, buildInfo, buildMail, mailId, buildConfig, buildNews, classifyQuery, unpackSave, hasReward,
   statsFromSave, buildBan, banActive, moderatedName, groupReports, UID_PATTERN, BAN_REASONS, buildAdjust, buildRestore,
   buildPromo, PROMO_RE, buildSegment, matchSegment, buildLearning, buildEventDoc, buildAds,
+  buildNewsPost, newsId, NEWS_ID_RE, decodeNewsImage, STORAGE_OFF, bucketCandidates, isMissingBucket, storageUrl,
+  buildNewsFeed, NEWS_FEED_DOC,
 } from "./lib.mjs";
 
 // Gecelik istatistiğin aynısı (functions/stats.js, saf mantık): panel anlık sayıları da onunla hesaplar
@@ -92,6 +94,21 @@ const fcm = EMULATOR ? {
   },
 } : getMessaging();
 const catalog = loadCatalog(REPO);
+
+// FIREBASE STORAGE (haber kapağı). Kova adı keşfedilir: AUTOYARD_BUCKET ya da <proje>.firebasestorage.app, sonra
+// <proje>.appspot.com; ilk başarılı yüklemenin kovası hatırlanır. Hiçbiri yoksa (Storage konsoldan açılmamış) STORAGE_OFF.
+// EMÜLATÖR: Storage'a hiç gidilmez; kova yalnız _e2e_buckets/{ad} belgesi varsa "var" sayılır (test Storage'ı açmayı böyle
+// taklit eder), yüklenen dosyanın yalnız özeti _e2e_storage'a yazılır.
+const storage = EMULATOR ? {
+  async save(bucket, path, data, opts) {
+    if (!(await db.doc(`_e2e_buckets/${bucket}`).get()).exists) {
+      throw Object.assign(new Error("The specified bucket does not exist."), { code: 404 });
+    }
+    await db.collection("_e2e_storage").add({ bucket, path, size: data.length, contentType: opts.metadata.contentType,
+      token: opts.metadata.metadata.firebaseStorageDownloadTokens });
+  },
+} : { save: (bucket, path, data, opts) => getStorage().bucket(bucket).file(path).save(data, opts) };
+let storageBucket = "";
 
 // --- Yardımcılar -----------------------------------------------------------------------------
 
@@ -181,6 +198,38 @@ async function fanOut(uids, id, doc) {
     for (const uid of uids.slice(i, i + BATCH)) batch.create(db.doc(`users/${uid}/mail/${id}`), doc);
     await batch.commit();
   }
+}
+
+/** Dosyayı Storage'a indirme anahtarıyla yazar, kullanılan kovayı döner. */
+async function saveToStorage(path, data, { contentType, cacheControl, token }) {
+  const names = storageBucket ? [storageBucket] : bucketCandidates(PROJECT, process.env.AUTOYARD_BUCKET);
+  for (const name of names) {
+    try {
+      await storage.save(name, path, data, { resumable: false,
+        metadata: { contentType, cacheControl, metadata: { firebaseStorageDownloadTokens: token } } });
+      storageBucket = name;
+      return name;
+    } catch (e) {
+      if (!isMissingBucket(e)) throw new PanelError(`Storage'a yüklenemedi (${String(e && e.message || e).slice(0, 200)})`);
+    }
+  }
+  throw new PanelError(STORAGE_OFF);
+}
+
+/**
+ * Haber değişikliği + oyunun okuduğu yayın (config/news) TEK İŞLEMDE: koleksiyon işlem içinde okunur, fn değişikliği
+ * işleme yazar ve `docs` haritasını günceller, yayın haritadan kurulur. Yayın koleksiyondan hiç sapmaz.
+ */
+async function mutateNews(fn) {
+  return db.runTransaction(async (tx) => {
+    const now = Date.now();
+    const snap = await tx.get(db.collection("news"));
+    const docs = new Map(snap.docs.map((d) => [d.id, d.data()]));
+    const result = fn(tx, docs, now);
+    const feed = buildNewsFeed([...docs].map(([id, d]) => ({ id, ...d })), now);
+    tx.set(db.doc(NEWS_FEED_DOC), feed);
+    return { ...result, feed };
+  });
 }
 
 async function log(entry) {
@@ -307,6 +356,82 @@ const routes = {
     const data = Buffer.from(await res.arrayBuffer());
     if (!data.length || data.length > PACK_MAX) throw new PanelError("Paket boş ya da 64 MB'tan büyük");
     return { sha256: crypto.createHash("sha256").update(data).digest("hex"), size: data.length };
+  },
+
+  // --- HABERLER (news/{id}; oyun oturumsuz listeler, bildirimi functions/news_feed.js gönderir) ---
+  // Liste + oyundaki yayının özeti (config/news: hangi haberler, ne zaman yazıldı)
+  "GET /api/news": async () => {
+    const [snap, feedSnap] = await Promise.all([db.collection("news").get(), db.doc(NEWS_FEED_DOC).get()]);
+    const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.at || 0) - (a.at || 0) || (a.id < b.id ? 1 : -1));
+    const feed = feedSnap.exists ? feedSnap.data() : null;
+    return { items, now: Math.floor(Date.now() / 1000),
+      feed: feed ? { at: feed.at || 0, ids: (feed.items || []).map((i) => i.id) } : null };
+  },
+
+  // Yeni haber (id yok) ya da düzenleme (id var olan haber): at / pushed_at korunur; yayın (config/news) aynı işlemde yenilenir
+  "POST /api/news/save": async (body) => {
+    const editId = body.id ? String(body.id) : "";
+    if (editId && !NEWS_ID_RE.test(editId)) throw new PanelError("Geçersiz haber kimliği");
+    if (!editId) {
+      buildNewsPost(body.news, Date.now());   // doğrulama işlemden önce: hatalı formda koleksiyon okunmaz
+      const id = newsId(Date.now(), crypto.randomBytes(3).toString("hex"));
+      const r = await mutateNews((tx, docs, now) => {
+        const doc = buildNewsPost(body.news, now);
+        tx.create(db.doc(`news/${id}`), doc);
+        docs.set(id, doc);
+        return { doc };
+      });
+      await log({ kind: "news_create", id, news_kind: r.doc.kind, title: r.doc.title.tr, notify: r.doc.notify, start: r.doc.start,
+        end: r.doc.end, pinned: r.doc.pinned, feed: r.feed.items.length });
+      return { id, news: r.doc, feed: r.feed.items.length };
+    }
+    const r = await mutateNews((tx, docs, now) => {
+      const current = docs.get(editId);
+      if (!current) throw new PanelError("Haber bulunamadı (silinmiş olabilir)");
+      const doc = buildNewsPost(body.news, now, current);
+      tx.set(db.doc(`news/${editId}`), doc);
+      docs.set(editId, doc);
+      return { doc };
+    });
+    await log({ kind: "news_update", id: editId, news_kind: r.doc.kind, title: r.doc.title.tr, notify: r.doc.notify,
+      bump: body.news && body.news.bump === true, feed: r.feed.items.length });
+    return { id: editId, news: r.doc, feed: r.feed.items.length };
+  },
+
+  "POST /api/news/delete": async (body) => {
+    const id = String(body.id || "");
+    if (!NEWS_ID_RE.test(id)) throw new PanelError("Geçersiz haber kimliği");
+    const r = await mutateNews((tx, docs) => {
+      const current = docs.get(id);
+      if (!current) throw new PanelError("Haber bulunamadı");
+      tx.delete(db.doc(`news/${id}`));
+      docs.delete(id);
+      return { title: (current.title || {}).tr || "" };
+    });
+    await log({ kind: "news_delete", id, title: r.title, feed: r.feed.items.length });
+    return { ok: true, feed: r.feed.items.length };
+  },
+
+  // YAYINI YENİLE: config/news koleksiyondan yeniden kurulur (biten haber zamanlayıcıyı beklemeden düşer; elle düzeltme sonrası)
+  "POST /api/news/publish": async () => {
+    const r = await mutateNews(() => ({}));
+    await log({ kind: "news_publish", feed: r.feed.items.length });
+    return { feed: r.feed.items.length, at: r.feed.at };
+  },
+
+  // Kapak resmi: base64 gövde (en çok 1,5 MB, JPEG / PNG / WebP baytlardan sınanır) → Storage news/… → indirme adresi.
+  // Adres forma yazılır; haberi kaydetmek ayrı adımdır.
+  "POST /api/news/upload": async (body) => {
+    const img = decodeNewsImage(body.data);
+    const id = String(body.id || "");
+    const base = NEWS_ID_RE.test(id) ? id : `u_${Date.now().toString(36)}`;
+    const path = `news/${base}_${crypto.randomBytes(3).toString("hex")}.${img.ext}`;
+    const token = crypto.randomUUID();
+    const bucket = await saveToStorage(path, img.buf, { contentType: img.contentType,
+      cacheControl: "public, max-age=31536000, immutable", token });
+    await log({ kind: "news_upload", path, size: img.buf.length, type: img.contentType });
+    return { url: storageUrl(bucket, path, token), path, size: img.buf.length, contentType: img.contentType };
   },
 
   "POST /api/player": async (body) => playerSummary(await resolvePlayer(body.query)),
@@ -603,7 +728,8 @@ function send(res, status, body, type = "application/json; charset=utf-8") {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
-    "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; " +
+    "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: " +
+      "https://firebasestorage.googleapis.com https://storage.googleapis.com https://autoyard.online; " +
       "connect-src 'self'; frame-ancestors 'none'; form-action 'none'; base-uri 'none'",
   });
   res.end(typeof body === "string" ? body : JSON.stringify(body));
@@ -615,12 +741,16 @@ function keyOk(header) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-async function readBody(req) {
+// Gövde sınırı: 64 KB; haber kapağı yükleme (1,5 MB resim base64 ile ~2 MB) için daha büyük
+const BODY_MAX = 64 * 1024;
+const BODY_MAX_BY_ROUTE = { "POST /api/news/upload": 2_200_000 };
+
+async function readBody(req, limit = BODY_MAX) {
   let size = 0;
   const chunks = [];
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > 64 * 1024) throw new PanelError("İstek çok büyük");
+    if (size > limit) throw new PanelError("İstek çok büyük");
     chunks.push(chunk);
   }
   if (!chunks.length) return {};
@@ -636,14 +766,15 @@ const server = http.createServer(async (req, res) => {
   if (req.headers.origin && !ORIGINS.has(req.headers.origin)) return send(res, 403, { error: "origin" });
   const url = new URL(req.url, `http://${HOST}:${PORT}`);
   if (req.method === "GET" && url.pathname === "/") return send(res, 200, PAGE, "text/html; charset=utf-8");
-  const route = routes[`${req.method} ${url.pathname}`];
+  const routeKey = `${req.method} ${url.pathname}`;
+  const route = routes[routeKey];
   if (!route) return send(res, 404, { error: "yok" });
   if (!keyOk(req.headers["x-admin-key"])) return send(res, 401, { error: "Panel anahtarı geçersiz: terminaldeki bağlantıyla aç" });
   if (req.method === "POST" && !String(req.headers["content-type"] || "").startsWith("application/json")) {
     return send(res, 415, { error: "json" });
   }
   try {
-    const body = req.method === "POST" ? await readBody(req) : {};
+    const body = req.method === "POST" ? await readBody(req, BODY_MAX_BY_ROUTE[routeKey] || BODY_MAX) : {};
     send(res, 200, await route(body));
   } catch (e) {
     if (e instanceof PanelError) return send(res, 400, { error: e.message });

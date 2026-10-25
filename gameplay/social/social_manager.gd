@@ -250,13 +250,26 @@ func delete_push_token() -> void:
 
 ## POSTA KUTUSU (MailService): users/{uid}/mail — yalnızca sunucu yazar. Oturum açıksa listelenir (takma ad / garaj şart
 ## değil). Kuyruktan geçer: eklenti koleksiyon sonucunu kimliksiz bildirir, başka bir listeyle karışmasın.
-## Dönüş: {"ok": bool, "docs": {kimlik: belge}}.
+## Liste YALNIZ KİMLİK verir, her posta ayrıca okunur (2026-10-25, 1.1.0 telefonda hiçbir posta gelmiyordu): eklentinin
+## koleksiyon okuması iç içe alanları (title / text dil sözlüğü, crates, decor, adjust, restore) Godot sözlüğüne
+## çevirmez, motor java.util.HashMap'i JavaObject yapar → posta boş sayılıp atlanıyordu. Tek belge okuması çevirir.
+## Okunamayan posta bu turda atlanır (sonraki okumada gelir). Dönüş: {"ok": bool, "docs": {kimlik: belge}}.
 func list_mail() -> Dictionary:
 	if _uid.is_empty() or _fb == null:
 		return {"ok": false, "docs": {}}
-	var result: Dictionary = await _call(&"list", _mail_of(_uid))
+	var path: String = _mail_of(_uid)
+	var result: Dictionary = await _call(&"list", path)
 	var data: Variant = result.get("data", {})
-	return {"ok": _ok(result), "docs": data if data is Dictionary else {}}
+	if not _ok(result) or not data is Dictionary:
+		return {"ok": false, "docs": {}}
+	var docs: Dictionary = {}
+	for key: Variant in data:
+		var id: String = SaveSafe.s(key)
+		var read: Dictionary = await _call(&"get", path, id)
+		var fields: Variant = read.get("data", {})
+		if _ok(read) and fields is Dictionary:
+			docs[id] = fields
+	return {"ok": true, "docs": docs}
 
 
 ## İADE (PurchaseManager): users/{uid}/refunds — yalnızca sunucu yazar (functions/refunds.js, Play'in iade listesi).

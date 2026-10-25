@@ -65,10 +65,15 @@ class FakeFB extends Object:
 		if not (p.size() == 3 and p[0] == "users" and p[1] == uid()):
 			_later("firestore_get_task_completed", {"status": false, "error": "PERMISSION_DENIED: Missing or insufficient permissions."})
 			return
+		# Gerçek eklenti gibi: koleksiyon okuması iç içe alanları çevirmez (motorda JavaObject olur); get çevirir
 		var data: Dictionary = {}
 		for path: String in store:
 			if path.get_base_dir() == col:
-				data[path.get_file()] = (store[path] as Dictionary).duplicate(true)
+				var doc: Dictionary = {}
+				for field: Variant in store[path]:
+					var value: Variant = (store[path] as Dictionary)[field]
+					doc[field] = RefCounted.new() if value is Dictionary or value is Array else value
+				data[path.get_file()] = doc
 		_later("firestore_get_task_completed", {"status": true, "data": data})
 
 	## firestore.rules (sadeleştirilmiş): oyuncu kendi kaydını ve garajını yazar; POSTAYI istemci HİÇ yazamaz.
@@ -148,6 +153,9 @@ var w: Dictionary = {}
 var fails: int = 0
 var crate_id: StringName = &""
 var decor_id: StringName = &""
+var car_id: StringName = &""       # edinilebilir bir araç (araç hediyesi)
+var other_car: StringName = &""
+var locked_car: StringName = &""   # edinilemeyen (polis gibi)
 
 
 func _initialize() -> void:
@@ -187,6 +195,15 @@ func until(cond: Callable, limit: float = 5.0) -> bool:
 func _run() -> void:
 	Loc.use("tr")
 	crate_id = StringName(String(CrateCatalog.all()[0]["id"]))
+	for entry: Dictionary in CarCatalog.all():
+		var id: StringName = StringName(String(entry.get("id", "")))
+		if CarCatalog.is_obtainable(id):
+			if car_id == &"":
+				car_id = id
+			elif other_car == &"":
+				other_car = id
+		elif locked_car == &"":
+			locked_car = id
 	for item: Dictionary in GarageDecor.all():
 		var id: StringName = StringName(String(item.get("id", "")))
 		if GarageDecor.is_placeable(id) and not GarageDecor.is_exclusive(id) and not GarageDecor.is_gem_item(id):
@@ -214,6 +231,11 @@ func _normalize() -> void:
 		"kaplama (floor_tile) ve katalogda olmayan eşya atılır")
 	check(mail["title"] == "Hoş geldin!" and mail["text"] == "Garajına hediye.", "dil sözlüğü / düz metin")
 	check(MailService.normalize("m2", {"money": 0}).is_empty(), "metinsiz, ödülsüz posta yok sayılır")
+	var cars: Dictionary = MailService.normalize("m_car", {"title": "Araç", "cars": {String(car_id): 1, String(locked_car): 1,
+		"yok_boyle_arac": 1, String(other_car): 0}})
+	check(cars["cars"] == [car_id] and MailService.has_reward(cars), "araç: edinilemeyen / bilinmeyen / adedi 0 atılır")
+	check(MailService.normalize("m_car2", {"title": "Araç", "cars": [String(car_id), String(car_id)]})["cars"] == [car_id],
+		"araç listesi de olur, aynı araç bir kez")
 	check(not MailService.normalize("m3", {"text": "Sadece mesaj"}).is_empty()
 		and not MailService.has_reward(MailService.normalize("m3", {"text": "Sadece mesaj"})), "ödülsüz mesaj geçer")
 	check(MailService.normalize("m4", {"crates": {String(crate_id): 99}})["crates"][crate_id] == MailService.MAX_COUNT,
@@ -455,7 +477,7 @@ func _promo() -> void:
 
 
 func _hud_popup() -> void:
-	print("== 5) HUD penceresi ==")
+	print("== 5) HABERLER kutusu (HUD) ==")
 	for f: String in ["savegame.json", "cloud_sync.json", "social.json"]:
 		DirAccess.remove_absolute(OS.get_user_data_dir().path_join(f))
 	var main: Node = (load("res://Main.tscn") as PackedScene).instantiate()
@@ -464,25 +486,78 @@ func _hud_popup() -> void:
 	await frames(12)
 	var hud: Hud = main.find_child("HUD", true, false) as Hud
 	var service: MailService = get_first_node_in_group("mail") as MailService
-	var notice: MailNotice = hud.find_child("MailNotice", true, false) as MailNotice
-	check(service != null and notice != null, "MailService + POSTA penceresi kurulu")
-	if service == null or notice == null:
+	var notice: MailNotice = hud.mail_notice
+	check(service != null and notice != null and hud.inbox != null and hud.inbox_screen != null and hud.inbox_button != null,
+		"MailService + HABERLER tabelası ve kutusu kurulu")
+	if service == null or notice == null or hud.inbox == null:
 		return
+	check(hud.inbox_button.get_parent() == hud.camera_button.get_parent()
+		and hud.inbox_button.get_index() == hud.camera_button.get_index() + 1, "tabela kameranın hemen sağında")
 	var economy: EconomyManager = get_first_node_in_group("economy")
 	var money0: int = economy.money
 	service._pending = [MailService.normalize("m_ui", gift({"money": 2500, "gems": 0}))]
 	service.arrived.emit()
-	await until(func() -> bool: return notice.current() == "m_ui", 6.0)
-	check(notice.current() == "m_ui" and notice.visible, "oyun sakinken POSTA penceresi açıldı")
-	var button: PlateButton = notice.find_child("TakeButton", true, false) as PlateButton
-	check(button != null and button.text == Loc.t("AL"), "ödüllü postada AL")
-	var texts: String = " ".join(notice.find_children("*", "Label", true, false).map(func(n: Node) -> String: return (n as Label).text))
+	await frames(3)
+	check(hud.inbox_button.badge == 1, "rozette 1 (alınmamış hediye)")
+	await seconds(2.5)
+	check(hud.router.top() == &"", "posta penceresi kendiliğinden açılmaz (kullanıcı kararı)")
+	hud.router.open(&"inbox")
+	await seconds(0.5)
+	var screen: InboxScreen = hud.inbox_screen
+	check(screen.visible and screen.selected() == "m_ui", "kutu açıldı, alınmamış hediye seçili")
+	var texts: String = " ".join(screen.find_children("*", "Label", true, false).map(func(n: Node) -> String: return (n as Label).text))
 	check(texts.contains("Açılış hediyesi") and texts.contains("Hoş geldin usta!") and texts.contains("AUTO YARD"),
 		"başlık, mesaj, gönderen")
+	var button: PlateButton = screen.find_child("ActionButton", true, false) as PlateButton
+	check(button != null and button.visible and button.text == Loc.t("AL"), "ödüllü postada AL")
 	button.pressed.emit()
 	await seconds(0.5)
-	var popup: RewardPopup = notice.get("_popup") as RewardPopup
+	var gift: GiftScreen = notice.gift_screen()
 	check(economy.money == money0 + 2500, "AL: ₺ hesaba geçti (%d → %d)" % [money0, economy.money])
-	check(not notice.visible and popup != null and popup.visible, "POSTA kapandı, ödül penceresi açıldı")
+	check(gift != null and gift.visible and gift.get_index() > screen.get_index(), "HEDİYEN GELDİ! ekranı kutunun üstünde açıldı")
+	var gift_cards: HBoxContainer = gift.get("_cards")
+	check(gift_cards.get_child_count() == 2 and (gift.get("_money_label") as Label).text == "+2.500 ₺",
+		"kartlar: kasa + dekor (%d), ₺ hapı" % gift_cards.get_child_count())
+	(gift.find_child("CollectButton", true, false) as PlateButton).pressed.emit()
+	await seconds(0.5)
+	check(not gift.visible, "TOPLA: ekran kapandı")
+	check(bool(hud.inbox.item("m_ui").get("claimed", false)) and hud.inbox_button.badge == 0, "hediye ALINDI, rozet söndü")
+	check(not service.history().is_empty() and service.history()[0]["id"] == "m_ui" and int(service.history()[0]["money"]) == 2500,
+		"geçmişte ödülüyle duruyor")
+	check(not button.visible, "alınmış hediyede düğme yok")
+
+	print("-- araç hediyesi --")
+	var ownership: VehicleOwnership = get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+	if ownership.is_owned(car_id):
+		ownership.remove_vehicle(car_id)
+	var owned_before: bool = ownership.is_owned(car_id)
+	service._pending = [MailService.normalize("m_car", {"title": {"tr": "Araç hediyesi"}, "cars": {String(car_id): 1}})]
+	service.arrived.emit()
+	await frames(2)
+	screen.select("m_car")
+	await frames(2)
+	button.pressed.emit()
+	await seconds(0.5)
+	check(not owned_before and ownership.is_owned(car_id), "araç garaja eklendi")
+	var labels: String = " ".join(gift.find_children("*", "Label", true, false).map(func(n: Node) -> String: return (n as Label).text))
+	check(gift.visible and gift_cards.get_child_count() == 1 and labels.contains(MailService.car_name(car_id)),
+		"HEDİYEN GELDİ!: araç kartı (%s)" % MailService.car_name(car_id))
+	check(gift_cards.get_child(0).find_children("*", "TextureRect", true, false).any(
+		func(n: Node) -> bool: return (n as TextureRect).texture != null), "kartta aracın fotoğrafı")
+	gift.close()
+	await seconds(0.5)
+	var money1: int = economy.money
+	service._pending = [MailService.normalize("m_car_again", {"title": {"tr": "Yine aynı araç"}, "cars": {String(car_id): 1}})]
+	service.arrived.emit()
+	await frames(2)
+	screen.select("m_car_again")
+	await frames(2)
+	button.pressed.emit()
+	await seconds(0.5)
+	check(economy.money == money1 + ownership.sell_price(car_id), "zaten olan araç: satış değeri ₺ (+%d)" % ownership.sell_price(car_id))
+	labels = " ".join(gift.find_children("*", "Label", true, false).map(func(n: Node) -> String: return (n as Label).text))
+	check(labels.contains(Loc.t("ZATEN VARDI · +%s ₺").split(" ·")[0]), "kartta ZATEN VARDI")
+	gift.close()
+	await seconds(0.5)
 	main.queue_free()
 	await frames(4)

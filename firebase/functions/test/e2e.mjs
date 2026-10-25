@@ -1,6 +1,7 @@
 // Uçtan uca (YEREL EMÜLATÖR, gerçek projeye dokunmaz): haber belgesi yazılınca raceNewsPush tetiklenir mi, bildirim
 // iletisi FCM'nin kabul edeceği biçimde mi (emülatörde FCM yerine _e2e_fcm koleksiyonuna yazılır, index.js), 6 saatlik
-// çift kaydı (push_log) yalnızca GÖNDERİLEN bildirimle mi yazılır. 2026-10-21: posta bildirimi (mailPush).
+// çift kaydı (push_log) yalnızca GÖNDERİLEN bildirimle mi yazılır. 2026-10-21: posta bildirimi (mailPush). 2026-10-25: HABERLER
+// bildirimi (newsPush; zamanlayıcı mantığı pushScheduled doğrudan çağrılır).
 // firebase/ klasöründen: firebase emulators:exec --only firestore,functions --project demo-cartown "node functions/test/e2e.mjs"
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
@@ -74,5 +75,50 @@ check((await db.doc("users/B/mail/p_reels50").get()).data()?.gems === 50, "kupon
 await db.doc("users/C/redeem/REELS50").set({ at: nowS });
 check(await waitFor(async () => (await db.doc("users/C/redeem/REELS50").get()).data()?.status === "used_up"), "kullanım sınırı dolu: used_up");
 check((await db.doc("promo/REELS50").get()).data()?.uses === 1, "sayaç 1");
+
+// HABERLER (newsPush): panel news/{id} yazınca görünür + bildirimli haber dil konularına BİR KEZ gider, pushed_at yazılır.
+const newsDoc = (over = {}) => ({ kind: "event", title: { tr: "Hafta sonu çifte para!", en: "Double money weekend!" },
+  text: { tr: "Cumartesi ve pazar\ntamirden iki kat para." }, image: "", action: { kind: "event", url: "" }, start: 0, end: 0,
+  pinned: false, code: 0, target: { langs: [], min_level: 0, max_level: 0, min_code: 0, max_code: 0 }, notify: true, pushed_at: 0,
+  at: nowS, ...over });
+const newsSent = async (id) => (await db.collection("_e2e_fcm").where("data.id", "==", id).get()).docs.map((d) => d.data());
+await db.doc("news/n_e2e_1").set(newsDoc());
+check(await waitFor(async () => (await newsSent("n_e2e_1")).length === 5), "haber: newsPush tetiklendi, 5 dil konusu");
+const nmsgs = await newsSent("n_e2e_1");
+const ntr = nmsgs.find((m) => m.topic === "news_tr") || {};
+check(nmsgs.every((m) => badKeys(m.data).length === 0 && m.data.type === "news") && ntr.notification?.title === "Hafta sonu çifte para!"
+  && ntr.notification?.body === "Cumartesi ve pazar tamirden iki kat para.", `haber bildirimi FCM'ye uygun, dilinde: ${JSON.stringify(ntr.notification)}`);
+check((nmsgs.find((m) => m.topic === "news_de") || {}).notification?.title === "Double money weekend!", "eksik dil (de) → en");
+check(await waitFor(async () => (await db.doc("news/n_e2e_1").get()).data()?.pushed_at > 0), "pushed_at yazıldı");
+await db.doc("news/n_e2e_1").update({ title: { tr: "Düzenlendi" } });
+await db.doc("news/n_e2e_2").set(newsDoc({ start: nowS + 3600 }));
+await db.doc("news/n_e2e_3").set(newsDoc({ notify: false }));
+await db.doc("news/n_e2e_4").set(newsDoc({ target: { langs: ["de", "fr"], min_level: 0, max_level: 0, min_code: 0, max_code: 0 } }));
+check(await waitFor(async () => (await newsSent("n_e2e_4")).length === 2), "hedef diller: yalnız news_de + news_fr");
+await sleep(4000);
+check((await newsSent("n_e2e_1")).length === 5, "düzenleme bildirimi yeniden göndermez");
+check((await newsSent("n_e2e_2")).length === 0 && (await db.doc("news/n_e2e_2").get()).data()?.pushed_at === 0,
+  "başlangıcı ileride: şimdi gitmez (zamanlayıcıya kalır)");
+check((await newsSent("n_e2e_3")).length === 0, "bildirimsiz haber: gitmez");
+// newsPushScheduled emülatörde çalışmaz (pubsub emülatörü yok): aynı mantık gerçek Firestore sorgusuyla doğrudan çağrılır
+const { pushScheduled } = require("../news_feed.js");
+const early = await pushScheduled({ db, messaging: { send: async () => { throw new Error("erken gönderim"); } }, now: Date.now() });
+check(early.pending === 1 && early.sent === 0, `zamanlayıcı: bekleyen 1 haber, başlangıç gelmedi (${JSON.stringify(early)})`);
+const sched = [];
+const late = await pushScheduled({ db, messaging: { send: async (m) => { sched.push(m); } }, now: (nowS + 3700) * 1000 });
+check(late.sent === 1 && sched.length === 5 && sched.every((m) => m.data.id === "n_e2e_2")
+  && (await db.doc("news/n_e2e_2").get()).data()?.pushed_at === nowS + 3700, "zamanlayıcı: başlangıçta gönderdi, pushed_at yazıldı");
+// Yayın belgesi (config/news): zamanlayıcının refreshFeed'i bitişi geçen haberi düşürür (koleksiyondan yeniden kurar)
+const { refreshFeed, buildNewsFeed } = require("../news_feed.js");
+await db.doc("news/n_e2e_5").set(newsDoc({ notify: false, end: nowS + 1800 }));
+const allNews = (await db.collection("news").get()).docs.map((d) => ({ id: d.id, ...d.data() }));
+await db.doc("config/news").set(buildNewsFeed(allNews, Date.now()));
+const fresh = await refreshFeed({ db, now: Date.now() });
+check(fresh.ended === 0, "yayın güncel: yalnız config/news okundu, yazılmadı");
+const pruned = await refreshFeed({ db, now: (nowS + 3700) * 1000 });
+const feedNow = (await db.doc("config/news").get()).data();
+const feedIdsNow = feedNow.items.map((i) => i.id);
+check(pruned.ended === 1 && !feedIdsNow.includes("n_e2e_5") && feedIdsNow.includes("n_e2e_1") && feedNow.at === nowS + 3700
+  && !("pushed_at" in feedNow.items[0]), `zamanlayıcı biten haberi yayından düşürdü (${JSON.stringify(pruned)})`);
 console.log(fails === 0 ? "RESULT fails=0" : "RESULT fails=" + fails);
 process.exit(fails === 0 ? 0 : 1);

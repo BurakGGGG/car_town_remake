@@ -106,6 +106,9 @@ var friends_screen: FriendsScreen
 ## ödülleri; DAVET ET sekmesinin AL'ı claim_now).
 var legendary_pick_screen: LegendaryPickScreen
 var mail_notice: MailNotice
+var inbox: Inbox
+var inbox_screen: InboxScreen
+var inbox_button: PlateButton
 var friends_button: PlateButton
 ## OTOPARK SAYACI: otoparkta araç varken sağ üst sütunda P plakası (docs/GARAJLAR_TASARIM.md §10, depo isteği).
 var lot_button: ParkingBadge
@@ -1870,10 +1873,68 @@ func _setup_gem_store() -> void:
 	var mail: MailService = get_tree().get_first_node_in_group("mail") as MailService
 	if mail:
 		mail_notice = MailNotice.new(self, mail)
-		garage_screen.get_parent().add_child(mail_notice)   # yönetim panelinin hediyeleri (temalı kök)
+		garage_screen.get_parent().add_child(mail_notice)   # yönetim panelinin hediyeleri: AL → ödül penceresi
+		_build_inbox(mail)
 	var moderation: ModerationWatch = get_tree().get_first_node_in_group("moderation") as ModerationWatch
 	if moderation:
 		garage_screen.get_parent().add_child(BanNotice.new(self, moderation))   # yasak: sebep + bitiş penceresi
+
+
+## HABERLER (2026-10-25, docs/HABERLER.md): sağ üst tabela sırasında kamera ile ayarların arasında gazete tabelası
+## (rozette okunmamış haber + alınmamış hediye sayısı), dokununca HABERLER panosu. Hediye gelince kısa HEDİYEN VAR yazısı
+## (dokununca pano açılır); posta penceresi kendiliğinden açılmaz (kullanıcı kararı).
+func _build_inbox(mail: MailService) -> void:
+	inbox = Inbox.new(mail)
+	inbox.gift_arrived.connect(func(_count: int) -> void:
+		_show_notice(Loc.t("HEDİYEN VAR!\nHABERLER'DEN AL"), HudPalette.COIN_DARK, 2.6, func() -> void: router.open(&"inbox")))
+	add_child(inbox)
+	inbox_screen = InboxScreen.new(self, inbox)
+	garage_screen.get_parent().add_child(inbox_screen)
+	router.register(&"inbox", inbox_screen, UiRouter.Kind.MODAL)
+	inbox_screen.claim_requested.connect(func(id: String) -> void: mail_notice.claim_now(id))
+	inbox_screen.action_requested.connect(_on_inbox_action)
+	inbox_button = PlateButton.new()
+	inbox_button.name = "InboxButton"
+	inbox_button.theme_type_variation = camera_button.theme_type_variation
+	inbox_button.shape = PlateButton.Shape.ROUND
+	inbox_button.kind = HudIcon.Kind.NEWSPAPER
+	inbox_button.icon_size = camera_button.icon_size
+	inbox_button.custom_minimum_size = camera_button.custom_minimum_size
+	inbox_button.bolts = false
+	inbox_button.lift_when_pressed = 0.0
+	inbox_button.focus_mode = Control.FOCUS_NONE
+	inbox_button.pressed.connect(func() -> void: router.open(&"inbox"))
+	var sign_row: Node = camera_button.get_parent()
+	sign_row.add_child(inbox_button)
+	sign_row.move_child(inbox_button, camera_button.get_index() + 1)   # kamera · HABERLER · (ses) · ayarlar
+	inbox.changed.connect(func() -> void: inbox_button.badge = inbox.unread())
+	inbox_button.badge = inbox.unread()
+
+
+## HABERLER'deki düğme: hedef panelde seçilir (NewsFeed.ACTIONS); misafir kartı hesap panosunu açar.
+func _on_inbox_action(kind: String, url: String) -> void:
+	match kind:
+		"market":
+			router.open(&"gem_store")
+		"event":
+			router.open(&"event")
+		"quests":
+			router.open(&"quests")
+		"showroom":
+			router.open(&"showroom")
+		"friends":
+			router.open(&"friends")
+		"invite":
+			router.open(&"invite")
+		"account":
+			router.open(&"account")
+		"store":
+			var config: AppConfig = AppConfig.of(get_tree())
+			if config:
+				config.open_store()
+		"url":
+			if url.begins_with("https://"):
+				OS.shell_open(url)
 
 
 ## Showroom'dan kasa alındı: showroom kapanır, kamera garajın teslimat alanına, kasanın gelişine gider.

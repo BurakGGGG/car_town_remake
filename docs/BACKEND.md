@@ -28,12 +28,22 @@ kalır: internet yokken de son kural geçerli. Geliştirme sürümü (sürüm ko
 | `latest_code` | altındakilere **YENİ SÜRÜM VAR** (sürüm başına bir kez, kapatılabilir) |
 | `update_text` | `{tr, en, es, de, fr}` güncelleme açıklaması |
 | `maintenance`, `maintenance_text`, `maintenance_until` | **BAKIMDAYIZ** (kapanmaz, TEKRAR DENE) |
-| `notice` | `{id, title, text, until}` **DUYURU** penceresi, kimlik başına bir kez |
+| `notice` | `{id, title, text, until}` **DUYURU** — 1.1.0 ve öncesi pencere; yeni sürüm HABERLER kutusunda gösterir |
+
+**Görünüm ve sıra (2026-10-25):** kapı ekranları garaj KEPENGİ (`ui/gate/gate_shutter.gd`): bakımda kepenk tam iner (koni,
+takım çantası, uyarı şeridi, TAHMİNİ DÖNÜŞ hapı, 45 sn'de bir kendiliğinden yoklama), güncellemede yarı açık durur. Yükleme
+ekranı oyunu kurmadan önce `config/app`'in ilk cevabını en çok 4 sn bekler (`AppConfig.is_answered`); kapı ya da YENİ SÜRÜM
+VAR varsa oyun KURULMADAN yükleme slaytının üstünde bekler (`LoadingScreen.at_gate`), bakım bitince kepenk kalkar ve oyun
+açılır. Görsel denetim: `qa/kepenk_qa.gd` (bakim / guncelle / yeni_surum).
 
 Sürüm kodu pakete dışa aktarma anında gömülür (`addons/autoyard_android` → `res://build_info.json` → `AppInfo`);
 AYARLAR'daki sürüm yazısı `1.0.9 (10)` biçimindedir, telefonda buradan doğrulanır.
 
 ## Posta / hediye — `users/{uid}/mail/{id}` (`MailService`, `MailNotice`)
+
+**2026-10-25:** posta artık kendi penceresinde açılmaz, **HABERLER kutusunda** bekler (rozet + HEDİYEN VAR); ayrıntı
+`docs/HABERLER.md`. Postada isteğe bağlı `image` / `action`; ödülsüz posta = tek oyuncuya haber.
+Araç hediyesi: `cars: {araç: 1}` (edinilebilir araç; oyuncuda varsa satış değeri ₺). Alınınca HEDİYEN GELDİ! ekranı (GiftScreen).
 
 Yalnızca sunucu (panel) yazar; sahibi listeler ve aldıktan sonra siler.
 `{title, text, from, money, gems, crates: {kasa: adet}, decor: {eşya: adet}, at, expires, notify}`.
@@ -51,6 +61,12 @@ olduğundan ikinci kez verilmez. Değerler oyunda da sınırlanır (50 M ₺, 50
 
 İzin ilk yarıştan sonra genel öneriyle istenir; AYARLAR → SES VE BİLDİRİMLER: ana anahtar + üç tür. Çıkışta cihaz
 jetonu yenilenir (eski hesabın bildirimleri gelmez, duyuru sürer).
+
+## HABERLER — `config/news` + `news/{id}` (`NewsFeed`, `Inbox`)
+
+Panel haberleri `news/{id}`'ye yazar (yalnız sunucu), her kayıtta yayındakileri `config/news = {items, at}` belgesine
+toplar; oyun yalnız o belgeyi oturumsuz okur. Bildirim `newsPush` / `newsPushScheduled` (dil konuları). Ayrıntı:
+`docs/HABERLER.md`.
 
 ## Moderasyon — `moderation/m_{uid}` (`ModerationWatch`, `BanNotice`)
 

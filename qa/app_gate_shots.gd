@@ -1,5 +1,6 @@
 extends SceneTree
-## UZAKTAN AYAR PENCERELERİ görsel QA — GÜNCELLEME GEREKLİ, BAKIMDAYIZ, YENİ SÜRÜM VAR, DUYURU (oyunun üstünde).
+## UZAKTAN AYAR PENCERELERİ görsel QA — GÜNCELLEME GEREKLİ, BAKIMDAYIZ, YENİ SÜRÜM VAR (oyunun üstünde); DUYURU ve
+## POSTA 2026-10-25'ten beri HABERLER kutusunda.
 ## Telefon oranı (20:9) için 1404x648. Ağ kullanılmaz: belge apply() ile verilir.
 ## Kullanım: tools/qa_isolated.sh res://qa/app_gate_shots.gd --resolution 1404x648 -- <çıktı klasörü>
 var _out: String = "/home/burak/Projects/ct_shots/app_gate/"
@@ -54,27 +55,28 @@ func _run() -> void:
 	await frames(20)
 	config.apply({"latest_code": 12, "notice": {"id": "qa1", "title": {"tr": "Hafta sonu etkinliği!"},
 		"text": {"tr": "Cumartesi ve pazar tüm tamirlerden çifte para kazan. Garajında görüşürüz!"}}})
-	await create_timer(AppGate.CALM_SEC + 1.5).timeout
 	await frames(30)
-	await shot("notice")
-	for node: Node in gate.find_children("*", "PlateButton", true, false):
-		if (node as PlateButton).text == Loc.t("TAMAM"):
-			(node as PlateButton).pressed.emit()
-	config.apply({})
-	await frames(20)
-	# POSTA: yönetim panelinden hediye (sahte belge, ağ yok)
+	# DUYURU + POSTA: HABERLER kutusunda (sahte belge, ağ yok)
 	var service: MailService = get_first_node_in_group("mail") as MailService
 	var crate: String = String(CrateCatalog.all()[0]["id"])
 	service._pending = [MailService.normalize("qa_mail", {"from": "AUTO YARD", "title": {"tr": "Açılış hediyesi!"},
 		"text": {"tr": "AUTO YARD'a hoş geldin usta! Garajın için küçük bir hediye bıraktık."},
 		"money": 25000, "gems": 100, "crates": {crate: 1}, "decor": {"tool_cabinet": 2}})]
 	service.arrived.emit()
-	await create_timer(3.0).timeout
-	await frames(20)
-	await shot("mail")
-	var notice: MailNotice = current_scene.find_child("MailNotice", true, false) as MailNotice
-	(notice.find_child("TakeButton", true, false) as PlateButton).pressed.emit()
+	await create_timer(1.0).timeout
+	await shot("mail")   # tabela rozeti + HEDİYEN VAR
+	var hud: Hud = current_scene.find_child("HUD", true, false) as Hud
+	hud.router.open(&"inbox")
+	await create_timer(0.8).timeout
+	await shot("mail_inbox")
+	hud.inbox_screen.select("cfg_qa1")
+	await create_timer(0.3).timeout
+	await shot("notice")
+	hud.inbox_screen.select("qa_mail")
+	await create_timer(0.3).timeout
+	(hud.inbox_screen.find_child("ActionButton", true, false) as PlateButton).pressed.emit()
 	await create_timer(1.6).timeout
 	await shot("mail_reward")
+	config.apply({})
 	AppInfo.override_code = 0
 	quit()

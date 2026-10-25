@@ -106,8 +106,14 @@ func _gates() -> void:
 	screen = _top_screen()
 	check(gate.blocker_kind() == AppConfig.GATE_MAINTENANCE and _has_text(screen, "Yeni garaj geliyor."),
 		"BAKIMDAYIZ + paneldeki metin")
-	check(_button(screen, Loc.t("TEKRAR DENE")) != null and _has_text(screen, Loc.t("Tahmini dönüş: %s").split(":")[0]),
-		"TEKRAR DENE + tahmini dönüş saati")
+	check(_button(screen, Loc.t("TEKRAR DENE")) != null and _has_text(screen, Loc.t("TAHMİNİ DÖNÜŞ %s").split(" %")[0])
+		and _has_text(screen, Loc.t("Bakım bitince oyun kendiliğinden açılır")), "TEKRAR DENE + tahmini dönüş saati + not")
+	check(screen is GateShutter and (screen as GateShutter).mode == GateShutter.Mode.MAINTENANCE, "bakım kepengi (tam iner)")
+	_button(screen, Loc.t("TEKRAR DENE")).pressed.emit()
+	await frames(2)
+	check(_button(screen, Loc.t("KONTROL EDİLİYOR…")) != null, "TEKRAR DENE: düğme kontrol ettiğini söyler")
+	await seconds(AppGate.RETRY_FEEDBACK_SEC + 0.3)
+	check(_button(screen, Loc.t("TEKRAR DENE")) != null, "sonra yeniden TEKRAR DENE")
 	config.apply({"maintenance": true, "min_code": 11})
 	await frames(3)
 	check(gate.blocker_kind() == AppConfig.GATE_UPDATE, "güncelleme bakımdan önce gelir")
@@ -138,23 +144,16 @@ func _soft_update() -> void:
 
 
 func _notice() -> void:
-	print("== 4) DUYURU ==")
+	print("== 4) DUYURU (2026-10-25'ten beri pencere değil, HABERLER kutusunda) ==")
 	var now: int = int(Time.get_unix_time_from_system())
 	config.apply({"notice": {"id": "n_eski", "text": {"tr": "Geçti"}, "until": now - 10}})
-	check(config.pending_notice().is_empty(), "süresi dolan duyuru gösterilmez")
+	check(config.notice().is_empty(), "süresi dolan duyuru yok sayılır")
 	config.apply({"notice": {"id": "n1", "title": {"tr": "Hafta sonu etkinliği"}, "text": {"tr": "Tamirlerde çifte para!"}}})
-	check(SaveSafe.s(config.pending_notice().get("text")) == "Tamirlerde çifte para!", "duyuru bekliyor")
-	hud.router.open(&"settings")
-	await seconds(AppGate.CALM_SEC + 1.0)
-	check(gate.dialog_kind() == &"", "HUD'da ekran açıkken beklenir")
+	check(SaveSafe.s(config.notice().get("text")) == "Tamirlerde çifte para!"
+		and SaveSafe.s(config.notice().get("title")) == "Hafta sonu etkinliği", "duyuru okunur (başlık + metin)")
 	hud.router.close_all()
 	await seconds(AppGate.CALM_SEC + 1.5)
-	check(gate.dialog_kind() == &"notice", "ekran kapanınca duyuru açıldı")
-	var screen: Control = _top_screen()
-	check(_has_text(screen, "Hafta sonu etkinliği") and _has_text(screen, "Tamirlerde çifte para!"), "başlık + metin")
-	_button(screen, Loc.t("TAMAM")).pressed.emit()
-	await seconds(0.4)
-	check(gate.dialog_kind() == &"" and config.pending_notice().is_empty(), "TAMAM: bir daha gösterilmez")
+	check(gate.dialog_kind() == &"", "oyun sakinken de duyuru penceresi açılmaz")
 
 
 func _cache() -> void:
@@ -162,7 +161,7 @@ func _cache() -> void:
 	config.apply({"min_code": 11, "notice": {"id": "n1", "text": {"tr": "Tamirlerde çifte para!"}}})
 	var fresh: AppConfig = AppConfig.new()   # yeni açılış: ağ yok, cihazdaki belge
 	check(fresh.gate() == AppConfig.GATE_UPDATE, "internet yokken de son kural geçerli (uçak moduyla atlatılmaz)")
-	check(fresh.pending_notice().is_empty(), "görülen duyuru yeni açılışta da görülmüş")
+	check(SaveSafe.s(fresh.notice().get("id")) == "n1", "duyuru da cihazdaki belgeden okunur")
 	fresh.free()
 	config.apply({})
 
@@ -240,7 +239,7 @@ func _top_screen() -> Control:
 	var host: Control = gate.get_node("Root") as Control
 	for i: int in range(host.get_child_count() - 1, -1, -1):
 		var child: Control = host.get_child(i) as Control
-		if child and not child.is_queued_for_deletion():
+		if child and not child.is_queued_for_deletion() and not bool(child.get("leaving")):   # kalkan kepenk sayılmaz
 			return child
 	return null
 

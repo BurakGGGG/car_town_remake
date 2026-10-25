@@ -139,7 +139,7 @@ func _is_calm() -> bool:
 	if _hud.level_up_screen and _hud.level_up_screen.is_pending():
 		return false
 	for child: Node in get_parent().get_children():
-		if (child is RewardPopup or child is MailNotice) and (child as Control).visible:
+		if (child is RewardPopup or child is RewardScreen) and child != self and (child as Control).visible:
 			return false
 	return get_tree().root.get_node_or_null("LoadingScreen") == null
 

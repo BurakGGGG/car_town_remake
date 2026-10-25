@@ -4,8 +4,11 @@
 //                          live_packs.gd (aynı sınırlar: SALE_MAX, BOOST, MISSION_MAX, RIVAL_STAGE_MAX, ödül sınırları)
 //   users/{uid}/mail/{id}  gameplay/backend/mail_service.gd (MailService.normalize aynı sınırları uygular)
 //   bildirim konusu        gameplay/social/push_service.gd (news_<dil>)
+//   news/{id}              HABERLER (yalnız sunucu; bildirimi functions/news_feed.js gönderir)
+//   config/news            oyunun okuduğu HABERLER yayını (buildNewsFeed: functions/news_feed.js ile AYNI kod)
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
+import { createRequire } from "node:module";
 
 export const LANGS = ["tr", "en", "es", "de", "fr"];
 // Oyundaki MailService sınırları (istemci de sınırlar; panel yanlış yazılmış sıfırı baştan reddeder).
@@ -91,7 +94,9 @@ function itemMap(raw, allowed, what) {
 
 /**
  * Panel formundan posta belgesi. input: {title, text: dil sözlüğü, from, money, gems, crates: {id: adet},
- * decor: {id: adet}, expires_days, notify}. now: unix ms.
+ * decor: {id: adet}, cars: {araç: 1}, expires_days, notify, image, action}. now: unix ms. Araç (2026-10-25) edinilebilir
+ * araçlardan (katalog), her biri BİR adet; oyuncuda zaten varsa oyun satış değerini ₺ verir. Yalnız seçildiyse yazılır. image / action (HABERLER'le aynı biçim,
+ * newsImage / newsAction) isteğe bağlıdır ve yalnız doluysa yazılır: ödülsüz posta = tek oyuncuya kişisel haber.
  */
 export function buildMail(input, catalog, now) {
   const doc = {
@@ -106,15 +111,22 @@ export function buildMail(input, catalog, now) {
     expires: 0,
     notify: input.notify !== false,
   };
+  const cars = Object.fromEntries(Object.keys(itemMap(input.cars, new Set(catalog.cars.map((c) => c.id)), "Araç"))
+    .map((id) => [id, 1]));
+  if (!empty(cars)) doc.cars = cars;
   const days = int(input.expires_days, 0, 365, "Geçerlilik (gün)");
   if (days > 0) doc.expires = doc.at + days * 86400;
+  const image = newsImage(input.image);
+  if (image) doc.image = image;
+  const action = newsAction(input.action);
+  if (action.kind) doc.action = action;
   if (empty(doc.title) && empty(doc.text) && !hasReward(doc)) throw new PanelError("Postada ne mesaj ne ödül var");
   if (empty(doc.title) && empty(doc.text)) throw new PanelError("Hediyeye en az bir başlık ya da mesaj yaz");
   return doc;
 }
 
 export function hasReward(doc) {
-  return doc.money > 0 || doc.gems > 0 || !empty(doc.crates) || !empty(doc.decor);
+  return doc.money > 0 || doc.gems > 0 || !empty(doc.crates) || !empty(doc.decor) || !empty(doc.cars || {});
 }
 
 /** Posta kimliği: tek oyuncuya m_<zaman>_<rastgele>, herkese c_<kampanya> (aynı kampanya bir oyuncuya iki kez yazılmaz). */
@@ -169,6 +181,210 @@ export function buildNews(input) {
     android: { priority: "high", notification: { tag: "news", icon: "icon_monochrome", color: "#F5BE4C" } },
     data: { type: "news" },
   }));
+}
+
+// --- HABERLER (news/{id}; bildirimi functions/news_feed.js gönderir) ---------------------------------------------------
+// Belge: {kind, title, text, image, action {kind, url}, start, end, pinned, code, target {langs, min_level, max_level,
+// min_code, max_code}, notify, pushed_at, at}. Koleksiyon yalnız sunucunundur (panel yazar, istemci okuyamaz). Oyun tek belge
+// okur: config/news = buildNewsFeed(haberler) = {items: bitmemiş haberlerin herkese açık alanları (en çok 40), at}. Panel
+// her kaydet / sil işleminde yayını haberle aynı işlemde yazar; biten haberi newsPushScheduled (10 dk) yayından düşürür.
+
+// Yayın kurucusu functions/news_feed.js'te (zamanlayıcı da kullanır): tek kaynak, panel aynısını çağırır
+export const { buildNewsFeed, FEED_DOC: NEWS_FEED_DOC, FEED_MAX: NEWS_FEED_MAX } =
+  createRequire(import.meta.url)("../functions/news_feed.js");
+
+export const NEWS_KINDS = ["update", "event", "notice"];
+export const NEWS_KIND_NAMES = { update: "GÜNCELLEME", event: "ETKİNLİK", notice: "DUYURU" };
+// Haber / posta düğmesi: "" = düğme yok; url = https bağlantısı; ötekiler oyundaki ekranlar (store = Play Store sayfası)
+export const NEWS_ACTIONS = ["", "market", "event", "quests", "showroom", "friends", "invite", "store", "url"];
+export const NEWS_TITLE_MAX = 60;
+export const NEWS_TEXT_MAX = 600;
+export const NEWS_URL_MAX = 300;
+export const NEWS_IMAGE_URL_MAX = 500;
+// Kapak resmi yalnız bu adreslerden (oyun da aynı listeyle sınar): Firebase Storage ve oyunun sitesi
+export const NEWS_IMAGE_HOSTS = ["firebasestorage.googleapis.com", "storage.googleapis.com", "autoyard.online"];
+export const NEWS_IMAGE_BYTES = 1.5 * 1024 * 1024;
+export const NEWS_ID_RE = /^n_[a-z0-9]{1,12}_[0-9a-f]{6}$/;
+const LEVEL_MAX = 999;
+const CODE_MAX = 1_000_000;
+const TIME_MAX = 4_000_000_000;
+// Adres: boşluk / tırnak / ters bölü yok (oyun ve panel sayfası adresi olduğu gibi kullanır)
+const URL_CHARS = /^https:\/\/[^\s"'<>\\`]+$/;
+
+/** Uzunluk karakter (kod noktası) olarak: oyundaki String.length ile aynı sayar (emoji 1). */
+const chars = (s) => [...s].length;
+
+/** {tr, en, …} haber metni: tr zorunlu, boş diller yazılmaz. Başlık tek satır (boşluklar teke iner), metinde satır sonu kalır. */
+function newsTexts(value, max, what, singleLine) {
+  const out = {};
+  const src = value && typeof value === "object" ? value : {};
+  for (const lang of LANGS) {
+    let t = typeof src[lang] === "string" ? src[lang].replace(/\r\n?/g, "\n").trim() : "";
+    if (singleLine) t = t.replace(/\s+/g, " ");
+    if (!t) continue;
+    if (chars(t) > max) throw new PanelError(`${what} (${lang}): en çok ${max} karakter`);
+    out[lang] = t;
+  }
+  if (!out.tr) throw new PanelError(`${what}: Türkçe metin zorunlu`);
+  return out;
+}
+
+/** Kapak resmi adresi: "" (oyun türe göre hazır kapak çizer) ya da izinli sunucudan https adresi. Posta da kullanır. */
+export function newsImage(value) {
+  const s = String(value ?? "").trim();
+  if (!s) return "";
+  if (s.length > NEWS_IMAGE_URL_MAX) throw new PanelError(`Kapak resmi adresi en çok ${NEWS_IMAGE_URL_MAX} karakter`);
+  // Sunucu adı tam eşleşir ve hemen "/" gelir: kullanıcı@sunucu, :port, sahte alt alan adı geçmez
+  const m = /^https:\/\/([^/]+)\//.exec(s);
+  if (!m || !URL_CHARS.test(s) || !NEWS_IMAGE_HOSTS.includes(m[1])) {
+    throw new PanelError(`Kapak resmi adresi https:// ile başlamalı ve yalnız ${NEWS_IMAGE_HOSTS.join(" / ")} olabilir`);
+  }
+  try {
+    new URL(s);
+  } catch {
+    throw new PanelError("Kapak resmi adresi geçersiz");
+  }
+  return s;
+}
+
+/** Düğme: {kind, url}. url yalnız "url" türünde (https, en çok 300 karakter), öbür türlerde "". Posta da kullanır. */
+export function newsAction(value) {
+  const a = value && typeof value === "object" ? value : {};
+  const kind = String(a.kind ?? "").trim();
+  if (!NEWS_ACTIONS.includes(kind)) throw new PanelError(`Düğme: bilinmeyen tür "${kind}"`);
+  const url = String(a.url ?? "").trim();
+  if (kind !== "url") {
+    if (url) throw new PanelError("Düğme adresi yalnız Bağlantı türünde yazılır");
+    return { kind, url: "" };
+  }
+  if (!url) throw new PanelError("Bağlantı düğmesinin adresi boş");
+  if (url.length > NEWS_URL_MAX) throw new PanelError(`Bağlantı adresi en çok ${NEWS_URL_MAX} karakter`);
+  let parsed = null;
+  try {
+    parsed = URL_CHARS.test(url) ? new URL(url) : null;
+  } catch {
+    parsed = null;
+  }
+  if (!parsed || parsed.username || parsed.password || !parsed.hostname.includes(".")) {
+    throw new PanelError("Bağlantı adresi https:// ile başlayan geçerli bir adres olmalı");
+  }
+  return { kind, url };
+}
+
+/** Hedef: {langs (boş = hepsi), min_level, max_level, min_code, max_code (0 = sınır yok)}. */
+export function newsTarget(value) {
+  const t = value && typeof value === "object" ? value : {};
+  const raw = Array.isArray(t.langs) ? t.langs.map(String) : [];
+  for (const l of raw) if (!LANGS.includes(l)) throw new PanelError(`Hedef dil geçersiz: "${l}"`);
+  const target = {
+    langs: LANGS.filter((l) => raw.includes(l)),
+    min_level: int(t.min_level, 0, LEVEL_MAX, "Hedef seviye en az"),
+    max_level: int(t.max_level, 0, LEVEL_MAX, "Hedef seviye en çok"),
+    min_code: int(t.min_code, 0, CODE_MAX, "Hedef sürüm kodu en az"),
+    max_code: int(t.max_code, 0, CODE_MAX, "Hedef sürüm kodu en çok"),
+  };
+  if (target.min_level && target.max_level && target.min_level > target.max_level) throw new PanelError("Hedef seviye aralığı ters");
+  if (target.min_code && target.max_code && target.min_code > target.max_code) throw new PanelError("Hedef sürüm aralığı ters");
+  return target;
+}
+
+/** Seviye / sürüm hedefi var mı (bildirim dil konusuna gider, bu hedefleri süzemez). */
+export function newsTargeted(target) {
+  return !!(target && (target.min_level || target.max_level || target.min_code || target.max_code));
+}
+
+/**
+ * Panel formundan haber belgesi. input: {kind, title, text, image, action, start, end, pinned, code, target, notify, bump}.
+ * now: unix ms. current: düzenlenen belgenin şimdiki hâli (yeni haberde null) — `at` korunur ("en üste taşı" = bump
+ * işaretliyse şimdi olur), pushed_at korunur (gönderilmiş bildirim düzenlemeyle yeniden gitmez).
+ */
+export function buildNewsPost(input, now, current = null) {
+  const src = input || {};
+  const kind = String(src.kind || "");
+  if (!NEWS_KINDS.includes(kind)) throw new PanelError("Haber türü: GÜNCELLEME, ETKİNLİK ya da DUYURU");
+  const start = int(src.start, 0, TIME_MAX, "Başlangıç");
+  const end = int(src.end, 0, TIME_MAX, "Bitiş");
+  if (start && end && end <= start) throw new PanelError("Bitiş başlangıçtan sonra olmalı");
+  const code = int(src.code, 0, CODE_MAX, "Sürüm kodu");
+  if (kind === "update" && !code) throw new PanelError("GÜNCELLEME haberinde sürüm kodu gerekli (notlar hangi sürümün?)");
+  if (kind !== "update" && code) throw new PanelError("Sürüm kodu yalnız GÜNCELLEME haberinde yazılır");
+  const target = newsTarget(src.target);
+  const notify = src.notify === true;
+  if (notify && newsTargeted(target)) {
+    throw new PanelError("Seviye / sürüm hedefli habere telefon bildirimi gönderilemez: bildirim dil konusuna gider, " +
+      "hedef dışındaki oyunculara da ulaşırdı. Bildirimi kapat ya da hedefi yalnız dille sınırla.");
+  }
+  const nowS = Math.floor(now / 1000);
+  return {
+    kind,
+    title: newsTexts(src.title, NEWS_TITLE_MAX, "Başlık", true),
+    text: newsTexts(src.text, NEWS_TEXT_MAX, "Metin", false),
+    image: newsImage(src.image),
+    action: newsAction(src.action),
+    start,
+    end,
+    pinned: src.pinned === true,
+    code,
+    target,
+    notify,
+    pushed_at: current ? Number(current.pushed_at) || 0 : 0,
+    at: current && src.bump !== true && Number.isInteger(current.at) ? current.at : nowS,
+  };
+}
+
+/** Haber kimliği: n_<zaman (ms, 36 tabanı)>_<6 onaltılık>. */
+export function newsId(now, randHex) {
+  const suffix = String(randHex).toLowerCase().replace(/[^0-9a-f]/g, "").padEnd(6, "0").slice(0, 6);
+  return `n_${now.toString(36)}_${suffix}`;
+}
+
+/** Yüklenen resmin türü dosyanın ilk baytlarından (uzantıya / tarayıcının söylediğine güvenilmez). */
+export function imageKind(buf) {
+  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return { ext: "jpg", contentType: "image/jpeg" };
+  if (buf.length >= 8 && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return { ext: "png", contentType: "image/png" };
+  }
+  if (buf.length >= 12 && buf.toString("latin1", 0, 4) === "RIFF" && buf.toString("latin1", 8, 12) === "WEBP") {
+    return { ext: "webp", contentType: "image/webp" };
+  }
+  return null;
+}
+
+/** Panelin gönderdiği base64 (isteğe bağlı data: önekiyle) → {buf, ext, contentType}; en çok 1,5 MB, JPEG / PNG / WebP. */
+export function decodeNewsImage(data) {
+  let s = typeof data === "string" ? data.trim() : "";
+  const prefix = /^data:[a-z0-9/+.-]*;base64,/i.exec(s);
+  if (prefix) s = s.slice(prefix[0].length);
+  if (!s) throw new PanelError("Resim seçilmedi");
+  if (s.length > Math.ceil(NEWS_IMAGE_BYTES / 3) * 4 + 4) throw new PanelError("Resim en çok 1,5 MB olmalı");
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(s)) throw new PanelError("Resim verisi okunamadı (base64 değil)");
+  const buf = Buffer.from(s, "base64");
+  if (!buf.length) throw new PanelError("Resim boş");
+  if (buf.length > NEWS_IMAGE_BYTES) throw new PanelError("Resim en çok 1,5 MB olmalı");
+  const kind = imageKind(buf);
+  if (!kind) throw new PanelError("Yalnız JPEG, PNG ya da WebP resim yüklenebilir");
+  return { buf, ...kind };
+}
+
+// --- Firebase Storage (haber kapağı; içerik paketleri) -------------------------------------------------------------
+
+export const STORAGE_OFF = "Firebase Storage açık değil: konsolda Storage › Başlayın'a bas (bir kez). " +
+  "O zamana kadar kapak için 'Resim adresi' kullanılabilir.";
+
+/** Denenecek kovalar: AUTOYARD_BUCKET verilmişse yalnız o; yoksa yeni varsayılan (.firebasestorage.app), sonra eski (.appspot.com). */
+export function bucketCandidates(project, override) {
+  const o = String(override || "").trim();
+  return o ? [o] : [`${project}.firebasestorage.app`, `${project}.appspot.com`];
+}
+
+/** Yükleme hatası "kova yok" mu (Storage hiç açılmamış): öbür adayı dene, hepsi yoksa STORAGE_OFF. */
+export function isMissingBucket(e) {
+  return !!e && (e.code === 404 || /bucket does not exist/i.test(String(e.message || "")));
+}
+
+/** İndirme anahtarlı herkese açık adres (Storage güvenlik kurallarından bağımsız; anahtarı bilen indirir). */
+export function storageUrl(bucket, path, token) {
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
 }
 
 // --- Oyuncu arama / kayıt ------------------------------------------------------------------

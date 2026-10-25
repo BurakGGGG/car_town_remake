@@ -53,6 +53,7 @@ enum Kind {
 	PLAY,      ## ekranda oynat üçgeni (ödüllü reklam: REKLAM İZLE) — sona eklendi
 	TASKS,     ## onay işaretli pano (alt sekme GÖREVLER) — sona eklendi
 	FRIENDS,   ## iki kişi (alt sekme ARKADAŞLAR) — sona eklendi
+	NEWSPAPER, ## katlanmış gazete (sağ üst HABERLER tabelası) — sona eklendi
 }
 
 const HEART_RED: Color = Color("D7342A")
@@ -195,8 +196,20 @@ static func add_icon(ci: TriBatch, kind: Kind, c: Vector2, s: float, ink: Color,
 			_tasks(ci, c, s, ink, cutout, w)
 		Kind.FRIENDS:
 			_friends(ci, c, s, ink, cutout)
+		Kind.NEWSPAPER:
+			_newspaper(ci, c, s, ink, cutout, w)
 		_:
 			pass
+
+
+## Gazete: ön sayfa + sağda katlanmış arka yaprak; sayfada manşet bandı, fotoğraf kutusu ve üç satır.
+static func _newspaper(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+	_round_rect(ci, c, s, Vector2(0.16, -0.16), Vector2(0.26, 0.50), 0.08, ink)   # arka yaprak
+	_round_rect(ci, c, s, Vector2(-0.42, -0.32), Vector2(0.70, 0.66), 0.06, ink)
+	_rect(ci, c, s, Vector2(-0.31, -0.21), Vector2(0.48, 0.11), cutout)        # manşet
+	_rect(ci, c, s, Vector2(-0.31, -0.02), Vector2(0.19, 0.25), cutout)        # fotoğraf
+	for y: float in [0.01, 0.12, 0.23]:
+		ci.draw_line(c + Vector2(-0.03, y) * s, c + Vector2(0.17, y) * s, cutout, w * 0.6, true)
 
 
 ## Görevler: kıskaçlı pano, üstünde iki işaretli satır ve bir boş satır.

@@ -1,6 +1,9 @@
 // AUTO YARD Cloud Functions (car-town-remake).
 //   raceNewsPush    yarış haberi yazılınca alıcıya telefon bildirimi (mantık news.js)
 //   mailPush        yönetim paneli postaya hediye bırakınca alıcıya "hediyen var" bildirimi (mantık mail.js)
+//   newsPush        panel HABERLER'e bildirimli haber yazınca, haber görünürse dil konularına bir kez bildirim (news_feed.js)
+//   newsPushScheduled 10 dakikada bir: başlangıcı gelen zamanlı haberlerin bildirimi + biten haberi oyunun okuduğu yayın
+//                   belgesinden (config/news) düşürme (news_feed.js)
 //   promoRedeem     oyuncu kupon kodu girince doğrular, ödülü postaya bırakır (mantık promo.js)
 //   referralJoin    davetle gelen yeni oyuncunun talebini doğrular: arkadaşlık + hoş geldin postası (mantık referral.js)
 //   referralQualify davetli 3. seviyeye ulaşınca davet edenin sayacı +1, basamak ödülü postaya (mantık referral.js)
@@ -25,6 +28,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { handleRaceNews } = require("./news");
 const { handleMailCreated } = require("./mail");
+const { handleNewsWritten, pushScheduled, refreshFeed } = require("./news_feed");
 const { handleRedeem } = require("./promo");
 const { handleJoin, handleQualify } = require("./referral");
 const { writeDailyStats } = require("./stats");
@@ -137,6 +141,36 @@ exports.mailPush = onDocumentCreated(
       mail: event.data ? event.data.data() : null,
     });
     console.log(`mailPush: ${result}`);
+  },
+);
+
+// HABERLER: panel news/{id} yazınca (yeni / düzenleme). Bildirim haber başına BİR KEZ (pushed_at işlemle ayrılır).
+exports.newsPush = onDocumentWritten(
+  { document: "news/{newsId}", region: "europe-west4", maxInstances: 2 },
+  async (event) => {
+    const result = await handleNewsWritten({
+      db: getFirestore(),
+      messaging: messaging(),
+      id: event.params.newsId,
+      before: event.data && event.data.before.exists ? event.data.before.data() : null,
+      after: event.data && event.data.after.exists ? event.data.after.data() : null,
+      now: Date.now(),
+    });
+    console.log(`newsPush ${event.params.newsId}: ${result}`);
+  },
+);
+
+// Zamanlı yayın: başlangıcı ileri bir saate kurulmuş haberin bildirimi o saatte (en geç 10 dk gecikmeyle); başarısız
+// gönderim de burada yeniden denenir. Okuma: bildirimi bekleyen haber sayısı kadar (çoğu zaman 0 → 1 okuma).
+// Ayrıca config/news (oyunun okuduğu yayın) okunur (1 okuma): bitişi geçmiş haber varsa yayın koleksiyondan yeniden kurulur.
+exports.newsPushScheduled = onSchedule(
+  { schedule: "every 10 minutes", region: "europe-west4", timeZone: "Europe/Istanbul", maxInstances: 1 },
+  async () => {
+    const db = getFirestore();
+    const now = Date.now();
+    const result = await pushScheduled({ db, messaging: messaging(), now });
+    const feed = await refreshFeed({ db, now });
+    if (result.pending || feed.ended) console.log(`newsPushScheduled: ${JSON.stringify({ ...result, feed })}`);
   },
 );
 
