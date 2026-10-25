@@ -9,6 +9,8 @@ import {
   EVENTS_MAX, EVENTS_KEEP_ENDED, SALE_MAX, MISSION_METRICS,
   buildAds, AD_KINDS, buildNewsPost, newsId, NEWS_ID_RE, newsImage, newsAction, newsTarget, decodeNewsImage, imageKind,
   bucketCandidates, isMissingBucket, storageUrl, NEWS_IMAGE_BYTES, buildNewsFeed, NEWS_FEED_DOC, NEWS_FEED_MAX,
+  lbQuery, lbRows, lbCuts, lbWeekLabel, lbWeekOf, lbParseId, lbRewardsFrom, buildLbRewards, LB_CLASSES, LB_DEFAULT_REWARDS,
+  LB_LIMITS, LB_WEEKS_BACK,
 } from "../lib.mjs";
 
 const catalog = loadCatalog(new URL("../../../", import.meta.url));
@@ -538,4 +540,58 @@ test("yayın belgesi (config/news): panelin haberinden, herkese açık alanlar, 
   assert.ok(!("notify" in feed.items[1]) && !("pushed_at" in feed.items[1]));
   const many = Array.from({ length: 50 }, (_, i) => ({ id: `n_${i}_abcdef`, ...buildNewsPost(news(), NOW - i * 1000) }));
   assert.equal(buildNewsFeed(many, NOW).items.length, NEWS_FEED_MAX);
+});
+
+test("lider tablosu: liste isteği (hafta, sınıf, ülke)", () => {
+  const nowS = Date.UTC(2026, 9, 26, 9, 0, 0) / 1000;   // Pazartesi → hafta 2965 (functions/leaderboard.js ile aynı hesap)
+  assert.equal(lbWeekOf(nowS), 2965);
+  assert.deepEqual(lbQuery({ cls: "a" }, nowS), { wk: 2965, cls: "A", cc: "", current: 2965 }, "boş hafta = bu hafta, büyük harf");
+  assert.deepEqual(lbQuery({ wk: "2964", cls: "S", cc: " tr " }, nowS), { wk: 2964, cls: "S", cc: "TR", current: 2965 });
+  assert.equal(lbQuery({ wk: 2965 - LB_WEEKS_BACK, cls: "D" }, nowS).wk, 2965 - LB_WEEKS_BACK);
+  assert.throws(() => lbQuery({ wk: 2966, cls: "A" }, nowS), /Hafta/, "gelecek hafta yok");
+  assert.throws(() => lbQuery({ wk: 2965 - LB_WEEKS_BACK - 1, cls: "A" }, nowS), /Hafta/);
+  assert.throws(() => lbQuery({ wk: 2964.5, cls: "A" }, nowS), /tam sayı/);
+  assert.throws(() => lbQuery({ cls: "X" }, nowS), /Sınıf/);
+  assert.throws(() => lbQuery({ cls: "" }, nowS), /Sınıf/);
+  assert.throws(() => lbQuery({ cls: "A", cc: "TUR" }, nowS), /Ülke/);
+  assert.throws(() => lbQuery({ cls: "A", cc: "T1" }, nowS), /Ülke/);
+  assert.deepEqual(LB_CLASSES, ["D", "C", "B", "A", "S"]);
+  assert.equal(lbWeekLabel(2965), "26.10.2026 – 01.11.2026");
+});
+
+test("lider tablosu: satırlar (sıra, kısa UID, katalog adı, sınırda işareti), ödül kesimi", () => {
+  const focus = catalog.cars.find((c) => c.id === "ford_focus");
+  const limit = LB_LIMITS.ford_focus;
+  assert.ok(limit > 4, "hile sınırı dosyası yüklü");
+  const rows = lbRows([
+    { id: "2965_C_abcdefghijk", data: { uid: "abcdefghijk", name: "Usta Ali", flag: "TR", car: "ford_focus", paint: "#ff0000",
+      stage: 5, level: 12, time: limit * 1.01, at: 1_792_970_000, run: "{}" } },
+    { id: "2965_C_zz9", data: { uid: "zz9", name: "Bob", flag: "", car: "yeni_arac", stage: 0, level: 1, time: 12.5, at: 1 } },
+  ], catalog);
+  assert.deepEqual(rows[0], { rank: 1, id: "2965_C_abcdefghijk", uid: "abcdefghijk", uid_short: "abcdefgh", name: "Usta Ali", flag: "TR",
+    av: "", car: "ford_focus", car_name: focus.name, paint: "#ff0000", stage: 5, level: 12, time: limit * 1.01, at: 1_792_970_000,
+    limit, near: true });
+  assert.ok(!("run" in rows[0]), "koşu kaydı listeye gelmez");
+  assert.deepEqual([rows[1].rank, rows[1].car_name, rows[1].limit, rows[1].near], [2, "yeni_arac", 0, false], "katalogda / sınırda yok");
+  assert.deepEqual(lbCuts(25), { n10: 3, n50: 13 });
+  assert.deepEqual(lbCuts(1), { n10: 1, n50: 1 });
+  assert.deepEqual(lbCuts(0), { n10: 0, n50: 0 });
+  assert.deepEqual(lbParseId("2965_C_zz9"), { wk: 2965, cls: "C", uid: "zz9" });
+  assert.equal(lbParseId("../x"), null);
+});
+
+test("lider tablosu: ödül ayarı doğrulama (elmas 0–1000, yalnız satılan kasa), varsayılan", () => {
+  const r = buildLbRewards({ top3: { gems: "200", crate: "super_crate" }, p10: { gems: 40, crate: "sport_crate" }, p50: { gems: 0, crate: "" } }, catalog);
+  assert.deepEqual(r, { top3: { gems: 200, crate: "super_crate" }, p10: { gems: 40, crate: "sport_crate" }, p50: { gems: 0, crate: "" } });
+  assert.deepEqual(buildLbRewards({}, catalog), { top3: { gems: 0, crate: "" }, p10: { gems: 0, crate: "" }, p50: { gems: 0, crate: "" } });
+  assert.throws(() => buildLbRewards({ top3: { gems: 1001 } }, catalog), /0 ile 1000/);
+  assert.throws(() => buildLbRewards({ top3: { gems: -1 } }, catalog), /0 ile 1000/);
+  assert.throws(() => buildLbRewards({ p10: { gems: 1.5 } }, catalog), /tam sayı/);
+  assert.throws(() => buildLbRewards({ p50: { crate: "welcome_crate" } }, catalog), /satılan kasa/, "hediye kasası verilmez");
+  assert.throws(() => buildLbRewards({ p50: { crate: "yok" } }, catalog), /bilinmeyen kasa/);
+  assert.throws(() => buildLbRewards({ top10: { gems: 5 } }, catalog), /kademesi/);
+  assert.deepEqual(LB_DEFAULT_REWARDS, { top3: { gems: 150, crate: "super_crate" }, p10: { gems: 50, crate: "sport_crate" }, p50: { gems: 15, crate: "" } });
+  for (const t of Object.values(LB_DEFAULT_REWARDS)) assert.ok(!t.crate || catalog.crates.some((c) => c.id === t.crate), "varsayılan kasa satılıyor");
+  assert.deepEqual(lbRewardsFrom({}), LB_DEFAULT_REWARDS, "functions'ın okuduğu ayar: kayıt yoksa varsayılan");
+  assert.deepEqual(lbRewardsFrom({ leaderboard: { rewards: r } }), r, "panelin yazdığını functions aynen okur");
 });

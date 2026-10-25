@@ -98,6 +98,8 @@ signal friend_race_finished(owner: Dictionary, won: bool, player_vehicle: String
 signal event_rival_won
 ## Etkinlik aracıyla yarış bitti (görev sayaçları: event_car_races / event_car_wins).
 signal event_car_race_finished(won: bool)
+## Oyuncunun geçerli koşusu kaydedildi (haftalık drag tablosu: Leaderboard yazar). Etkinlik aracı yarışında yayılmaz.
+signal run_recorded(recording: DragRaceSim.Recording)
 
 ## Bir rakip gittikten sonra yenisi ne kadar sonra gelir (sn).
 ## 2026-10-21 zorluk turu: 5–10 sn idi (ardı ardına yarış tamirden çok kazandırıyordu) → 25–45 sn denendi, kullanıcı
@@ -421,9 +423,10 @@ func add_run(recording: DragRaceSim.Recording) -> void:
 	if recording == null or recording.launch_step < 0 or recording.time < RECORD_MIN or recording.time > RECORD_MAX:
 		return
 	if _event_car != &"":
-		return   # etkinlik aracının (ödünç) koşusu arkadaşlara gitmez
+		return   # etkinlik aracının (ödünç) koşusu arkadaşlara da tabloya da gitmez
 	if recording.at <= 0:
 		recording.at = int(Time.get_unix_time_from_system())
+	run_recorded.emit(recording)
 	_player_time = recording.time
 	var key: String = String(recording.vehicle_id)
 	var list: Array = _runs.get(key, [])

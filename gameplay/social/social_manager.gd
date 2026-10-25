@@ -53,6 +53,8 @@ extends Node
 ## farkı), gelen hediye parçalar, yeni arkadaş, gelen istek, arkadaşın yeni parça isteği. Taban social.json "news"
 ## anahtarında (cihaza özel), news_shown() ile ilerler. Gazete toplanırken (quiet) hediye bildirimi gösterilmez, hediye
 ## "gift_log"a yazılır; oyun içinde bildirimi görülen yarış haberi tabana hemen işlenir (gazete tekrarlamasın).
+## HAFTALIK TABLO (2026-10-26): arkadaşın seni drag tablosunda geçince sunucu (functions lbRun) users/{uid}/lbnews'e haber
+## yazar; girişte okunur (lb_news), gazetede LB_PASSED olarak çıkar, gösterilince sunucudan silinir.
 
 ## Profil / listeler / durum değişti (ekran yenilensin).
 signal changed
@@ -98,6 +100,8 @@ const PUSH: String = "push"
 const MODERATION: String = "moderation"
 ## YARIŞ GÜNLÜĞÜ: race_log/{uid}_{UTC gün} (RaceLearning yazar; kimse okumaz, gece fonksiyonu toplar).
 const RACE_LOG: String = "race_log"
+## Haftalık drag tablosu kayıtları (Leaderboard; docs/LIDER_TABLOSU.md).
+const LB_RUNS: String = "lb_runs"
 ## ARKADAŞ DAVETİ: koleksiyon, ömür (sn; kural aynı süreyi sunucu saatiyle uygular) ve paylaşılan linkin başı. Web
 ## sayfası (auto_yard_website /d/<jeton>) oyunu autoyard://davet/<jeton> ile açar; oyun yüklü değilse mağazaya yollar.
 const INVITES: String = "invites"
@@ -129,6 +133,8 @@ var friends: Array[Dictionary] = []   ## {uid, name, code, level, value, ask_par
 var incoming: Array[Dictionary] = []  ## {uid, name, code, at} + profil (garajı okunabildiyse)
 ## Yarış haberleri: {uid (gönderen), name, car, paint, build, their_car, won, revenge, mw, ml, at} + arkadaşın profili.
 var race_events: Array[Dictionary] = []
+## Drag tablosunda beni geçen arkadaşlar: {id (belge), uid, name, car, cls, time, my_time, wk, at} + arkadaşın profili.
+var lb_news: Array[Dictionary] = []
 var outgoing: Array[Dictionary] = []  ## {uid, name, code, at}
 
 var _fb: Object
@@ -157,6 +163,7 @@ var _avatar_pending: Dictionary = {}   # uid → hash (indiriliyor)
 var _news_next: Dictionary = {}        # gazetede gösterilen durum (news_shown tabana yazar)
 var _news_gifts: int = 0               # gösterilen hediye kaydı sayısı
 var _news_visits: int = 0              # gösterilen ziyaret kaydı sayısı
+var _news_lb: Array[String] = []       # gazetede gösterilen tablo haberlerinin belge kimlikleri (news_shown siler)
 
 
 func _ready() -> void:
@@ -221,6 +228,14 @@ func is_busy() -> bool:
 ## Oturumun Firebase kimliği (yoksa boş).
 func uid() -> String:
 	return _uid
+
+
+## HAFTALIK DRAG TABLOSU: oyuncunun haftalık en iyi koşusu lb_runs/{wk}_{sınıf}_{uid} (Leaderboard hazırlar; kural yalnız
+## sahibine, şimdiki haftaya ve daha iyi süreye izin verir). Başarılıysa true.
+func write_lb_run(id: String, doc: Dictionary) -> bool:
+	if _uid.is_empty() or _fb == null or not id.ends_with("_" + _uid):
+		return false
+	return _ok(await _call(&"set", LB_RUNS, id, doc))
 
 
 ## Telefon bildirimi jetonunu yazar (PushService). prefs: {race, gift} (kapatılan tür sunucudan gönderilmez).
@@ -1308,6 +1323,7 @@ func _load_lists() -> bool:
 	# haberler silinirdi)
 	await _load_race_events()
 	await _load_visits()
+	await _load_lb_news()
 	return true
 
 
@@ -1603,6 +1619,39 @@ func _load_race_events() -> void:
 		_write_meta()
 
 
+## Drag tablosunda beni geçenler (sunucu yazar). Engellenen / artık arkadaş olmayan ya da iki haftadan eski haber sessizce
+## silinir. Aynı arkadaştan birkaç sınıfta geçme ayrı haberdir (gazete kişi başına birleştirir).
+func _load_lb_news() -> void:
+	var result: Dictionary = await _call(&"list", _lb_news_of(_uid))
+	if not _ok(result):
+		return
+	var data: Dictionary = result.get("data", {}) if result.get("data") is Dictionary else {}
+	var oldest: int = Leaderboard.current_week() - 1
+	var loaded: Array[Dictionary] = []
+	for key: Variant in data:
+		var id: String = SaveSafe.s(key)
+		var doc: Dictionary = data[key] if data[key] is Dictionary else {}
+		var from: String = SaveSafe.s(doc.get("uid", ""))
+		var car: StringName = StringName(SaveSafe.s(doc.get("car", "")))
+		var cls: StringName = StringName(SaveSafe.s(doc.get("cls", "")))
+		if from.is_empty() or (_profile and _profile.is_blocked(from)) or not is_friend(from) \
+				or SaveSafe.i(doc.get("wk", 0)) < oldest or CarCatalog.get_entry(car).is_empty() \
+				or not Leaderboard.CLASSES.has(cls):
+			await _call(&"delete", _lb_news_of(_uid), id)
+			continue
+		var entry: Dictionary = {"id": id, "uid": from, "name": their_name(doc.get("name", ""), from), "car": car, "cls": cls,
+			"time": maxf(SaveSafe.f(doc.get("time", 0.0)), 0.0), "my_time": maxf(SaveSafe.f(doc.get("my_time", 0.0)), 0.0),
+			"wk": SaveSafe.i(doc.get("wk", 0)), "at": SaveSafe.i(doc.get("at", 0))}
+		var friend: Dictionary = person(from)
+		for field: String in ["av", "frame", "flag"]:
+			entry[field] = SaveSafe.s(friend.get(field, ""))
+		if SaveSafe.s(friend.get("name", "")) != "":
+			entry["name"] = friend["name"]
+		loaded.append(entry)
+	loaded.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["at"]) > int(b["at"]))
+	lb_news = loaded
+
+
 # --- OTO MANŞET ------------------------------------------------------------------------------------
 
 ## Son gazeteden bu yana arkadaş haberleri (NewsDigest ham haberleri). `since`: tabanı olmayan olay (ilk gazete) bu
@@ -1613,6 +1662,7 @@ func news_items(since: int) -> Array[Dictionary]:
 	_news_next = {}
 	_news_gifts = 0
 	_news_visits = 0
+	_news_lb = []
 	if not is_ready():
 		return out
 	var base: Dictionary = _meta.get("news", {}) if _meta.get("news") is Dictionary else {}
@@ -1652,6 +1702,10 @@ func news_items(since: int) -> Array[Dictionary]:
 			out.append({"kind": NewsDigest.VISIT, "people": [_news_person(from, {"name": SaveSafe.s(visit.get("name", ""))})],
 				"likes": 1 if bool(visit.get("liked", false)) else 0})
 	_news_visits = visits.size()
+	for entry: Dictionary in lb_news:
+		out.append({"kind": NewsDigest.LB_PASSED, "people": [_news_person(String(entry["uid"]), entry)], "car": entry["car"],
+			"cls": entry["cls"], "time": entry["time"], "my_time": entry["my_time"]})
+		_news_lb.append(String(entry["id"]))
 	var friend_ids: Array = friends.map(func(f: Dictionary) -> String: return String(f["uid"]))
 	var request_ids: Array = incoming.map(func(r: Dictionary) -> String: return String(r["uid"]))
 	if base.get("friends") is Array:
@@ -1726,6 +1780,11 @@ func news_shown() -> void:
 	_news_gifts = 0
 	_news_visits = 0
 	_write_meta()
+	var shown: Array[String] = _news_lb
+	_news_lb = []
+	lb_news = lb_news.filter(func(entry: Dictionary) -> bool: return not shown.has(String(entry["id"])))
+	for id: String in shown:
+		await _call(&"delete", _lb_news_of(_uid), id)
 
 
 ## Gazeteye girmeyen (oyun içinde bildirimi görülen) yarış haberi: tabanı hemen ilerler.
@@ -1972,6 +2031,10 @@ static func _refunds_of(uid: String) -> String:
 
 static func _races_of(uid: String) -> String:
 	return "users/%s/races" % uid
+
+
+static func _lb_news_of(uid: String) -> String:
+	return "users/%s/lbnews" % uid
 
 
 static func _visits_of(uid: String) -> String:

@@ -13,6 +13,7 @@ herkese açık olduğu için yönetim yalnızca buradan yapılır (karar 2026-10
 | Oyuncu | hesabın özeti, para / elmas / seviye, bekleyen posta (silme), kaydın tamamı; **yasakla / kaldır**, adı sıfırla, fotoğrafı kaldır, not | `moderation`, `admin_notes` |
 | Şikâyetler | oyuncu şikâyetleri hedefe göre (fotoğraf, ad, sayı); adı sıfırla / fotoğrafı kaldır / kapat | `reports` |
 | Kuponlar | kupon kodu oluştur (ödül, kullanım sınırı, bitiş), aç / kapat, kullanım sayısı | `promo` |
+| Lider tablosu | haftalık drag tablosu: hafta / sınıf / ülke seçip ilk 100 (sınıra yakın süre işaretli), kayıt **silme** (özeti `lbRun` düzeltir), haftalık ödül kademeleri (elmas + kasa) | `lb_runs`, `lb`, `config/app.leaderboard` |
 | İstatistik | hesaplı oyuncu, aktif 1 / 7 / 30 gün, yeni hesap, bildirim oranı, son 30 gün grafiği, dil / seviye dağılımı; **yarış öğrenmesi** tablosu (son iki yarış × kolay / dengeli / zor → yarıştan sonra kalış oranı) ve ayarı (kapat, kalış penceresi, genel tablo ağırlığı) | `stats_daily`, `players`, `config/race_learning`, `race_learning_daily` |
 
 Hediye ve duyuruda **Filtreli** hedef: seviye, son oynama, kaç gündür oynamadığı ("geri dön hediyesi"), sürüm kodu,

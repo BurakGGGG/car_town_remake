@@ -436,6 +436,70 @@ await check("silinemez (hesap silinince sunucu siler)", assertFails(deleteDoc(do
 await check("öğrenme tablosu herkese okunur", assertSucceeds(getDoc(doc(anon, "config/race_learning"))));
 await check("öğrenme tablosu yazılamaz", assertFails(setDoc(doc(alice, "config/race_learning"), { off: true })));
 
+console.log("== haftalık drag lider tablosu (lb_runs / lb / lbnews) ==");
+// Hafta: Pazartesi 00:00 TR (functions/leaderboard.js weekOf ile aynı)
+const lbWk = Math.floor((Math.floor((Date.now() + 10800000) / 86400000) + 3) / 7);
+const lbRun = (over = {}) => ({ uid: "alice", wk: lbWk, cls: "C", time: 9.5, car: "ford_focus", paint: "#1a2B3c", stage: 2,
+  level: 7, name: "Usta Ali", av: "p03", flag: "TR", run: JSON.stringify({ v: 3, car: "ford_focus", s: [12, 30] }), at: nowS, ...over });
+const lbId = (uid = "alice", cls = "C", wk = lbWk) => `lb_runs/${wk}_${cls}_${uid}`;
+await check("sahibi bu haftanın koşusunu yazar", assertSucceeds(setDoc(doc(alice, lbId()), lbRun())));
+await check("daha iyi süreyle günceller", assertSucceeds(setDoc(doc(alice, lbId()), lbRun({ time: 9.25 }))));
+await check("aynı süre reddedilir (yalnız kısalır)", assertFails(setDoc(doc(alice, lbId()), lbRun({ time: 9.25 }))));
+await check("daha yavaş süre reddedilir", assertFails(setDoc(doc(alice, lbId()), lbRun({ time: 9.9 }))));
+await check("tam sayı süre de olur (sayı)", assertSucceeds(setDoc(doc(alice, lbId("alice", "S")), lbRun({ cls: "S", time: 6 }))));
+await check("başkasının kimliğine yazılamaz", assertFails(setDoc(doc(eve, lbId()), lbRun({ uid: "eve" }))));
+await check("başkası adına (uid alice) kendi kimliğiyle de yazılamaz", assertFails(setDoc(doc(eve, lbId("eve")), lbRun())));
+await check("oturumsuz yazılamaz", assertFails(setDoc(doc(anon, lbId()), lbRun({ time: 9 }))));
+await check("geçen hafta reddedilir", assertFails(setDoc(doc(bob, lbId("bob", "C", lbWk - 1)), lbRun({ uid: "bob", wk: lbWk - 1 }))));
+await check("gelecek hafta reddedilir", assertFails(setDoc(doc(bob, lbId("bob", "C", lbWk + 1)), lbRun({ uid: "bob", wk: lbWk + 1 }))));
+await check("kimlikteki sınıf belgeyle aynı olmalı", assertFails(setDoc(doc(bob, lbId("bob", "A")), lbRun({ uid: "bob" }))));
+await check("bilinmeyen sınıf reddedilir", assertFails(setDoc(doc(bob, lbId("bob", "X")), lbRun({ uid: "bob", cls: "X" }))));
+await check("ek alan reddedilir", assertFails(setDoc(doc(bob, lbId("bob")), lbRun({ uid: "bob", gems: 5 }))));
+const { flag: _f, ...noFlag } = lbRun({ uid: "bob" });
+await check("eksik alan reddedilir", assertFails(setDoc(doc(bob, lbId("bob")), noFlag)));
+for (const [what, over] of [
+  ["4 sn altı", { time: 3.99 }], ["30 sn üstü", { time: 30.5 }], ["metin süre", { time: "9.5" }],
+  ["ad 16 karakterden uzun", { name: "x".repeat(17) }], ["ad boş", { name: "" }], ["bayrak küçük harf", { flag: "tr" }],
+  ["bayrak üç harf", { flag: "TUR" }], ["boya # olmadan", { paint: "1a2b3c" }], ["boya kısa", { paint: "#abc" }],
+  ["kademe 6", { stage: 6 }], ["kademe ondalık", { stage: 2.5 }], ["seviye 0", { level: 0 }], ["seviye 100", { level: 100 }],
+  ["avatar 40 karakterden uzun", { av: "x".repeat(41) }], ["koşu harita (metin olmalı)", { run: { v: 3 } }],
+  ["koşu 2000 karakterden uzun", { run: "x".repeat(2001) }], ["at ondalık", { at: 1.5 }], ["araç kimliği bozuk", { car: "Ford Focus" }],
+]) {
+  await check(`geçersiz alan: ${what}`, assertFails(setDoc(doc(bob, lbId("bob")), lbRun({ uid: "bob", ...over }))));
+}
+await check("bayraksız / fabrika boyalı / avatarsız koşu yazılır", assertSucceeds(setDoc(doc(bob, lbId("bob")),
+  lbRun({ uid: "bob", flag: "", paint: "", av: "", run: "x".repeat(2000) }))));
+await check("herkes tek koşuyu okur (oturumsuz da: İZLE)", assertSucceeds(getDoc(doc(anon, lbId()))));
+await check("koşular listelenemez", assertFails(getDocs(collection(anon, "lb_runs"))));
+await check("giriş yapmış da listeleyemez", assertFails(getDocs(collection(bob, "lb_runs"))));
+await check("sahibi silemez (panel siler)", assertFails(deleteDoc(doc(alice, lbId()))));
+await banDb("mallory", { kind: "social", reason: "cheat", until: 0, at: now });
+await check("sosyal yasaklı yazamaz", assertFails(setDoc(doc(mallory, lbId("mallory")), lbRun({ uid: "mallory" }))));
+await banDb("mallory", { kind: "full", reason: "cheat", until: 0, at: now });
+await check("tam yasaklı yazamaz", assertFails(setDoc(doc(mallory, lbId("mallory")), lbRun({ uid: "mallory" }))));
+await banDb("mallory", { kind: "social", reason: "cheat", until: now - 60, at: now - 7200 });
+await check("süresi dolan yasak: yazar", assertSucceeds(setDoc(doc(mallory, lbId("mallory")), lbRun({ uid: "mallory" }))));
+await banDb("mallory", null);
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), `lb/${lbWk}_C`), { wk: lbWk, cls: "C", cc: "", count: 1, hist: { 185: 1 }, top: [], updated: 1 });
+  await setDoc(doc(ctx.firestore(), `lb_counted/${lbWk}_C_alice`), { uid: "alice", time: 9.25 });
+  await setDoc(doc(ctx.firestore(), `users/alice/lbnews/${lbWk}_C_bob`), { uid: "bob", name: "Usta Bob", time: 9.1, my_time: 9.25 });
+});
+await check("özet herkese okunur (oturumsuz da)", assertSucceeds(getDoc(doc(anon, `lb/${lbWk}_C`))));
+await check("ülke özeti (yoksa da) okunur", assertSucceeds(getDoc(doc(anon, `lb/${lbWk}_C_TR`))));
+await check("özetler listelenemez", assertFails(getDocs(collection(anon, "lb"))));
+await check("özete istemci yazamaz", assertFails(setDoc(doc(alice, `lb/${lbWk}_C`), { count: 0 })));
+await check("özeti istemci güncelleyemez", assertFails(updateDoc(doc(alice, `lb/${lbWk}_C`), { count: 0 })));
+await check("sunucu defteri kapalı", assertFails(getDoc(doc(alice, `lb_counted/${lbWk}_C_alice`))));
+await check("lbnews: sahibi listeler", assertSucceeds(getDocs(collection(alice, "users/alice/lbnews"))));
+await check("lbnews: sahibi okur", assertSucceeds(getDoc(doc(alice, `users/alice/lbnews/${lbWk}_C_bob`))));
+await check("lbnews: başkası okuyamaz", assertFails(getDoc(doc(bob, `users/alice/lbnews/${lbWk}_C_bob`))));
+await check("lbnews: başkası listeleyemez", assertFails(getDocs(collection(bob, "users/alice/lbnews"))));
+await check("lbnews: geçen oyuncu bile yazamaz", assertFails(setDoc(doc(bob, `users/alice/lbnews/${lbWk}_C_bob`), { uid: "bob" })));
+await check("lbnews: sahibi yazamaz", assertFails(setDoc(doc(alice, `users/alice/lbnews/${lbWk}_C_eve`), { uid: "eve" })));
+await check("lbnews: başkası silemez", assertFails(deleteDoc(doc(bob, `users/alice/lbnews/${lbWk}_C_bob`))));
+await check("lbnews: sahibi siler", assertSucceeds(deleteDoc(doc(alice, `users/alice/lbnews/${lbWk}_C_bob`))));
+
 console.log("== başka yollar ==");
 await check("bilinmeyen koleksiyon kapalı", assertFails(setDoc(doc(alice, "other/x"), { a: 1 })));
 await check("users/{uid} kök belgesi kapalı", assertFails(setDoc(doc(alice, "users/alice"), { a: 1 })));

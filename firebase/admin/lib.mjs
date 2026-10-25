@@ -836,3 +836,80 @@ export function matchSegment(p, seg, now) {
   if (seg.lang !== null && s.lang !== seg.lang) return false;
   return true;
 }
+
+// --- Haftalık drag lider tablosu (docs/LIDER_TABLOSU.md; hafta hesabı, sınıflar, ödül varsayılanları ve hile sınırı
+// functions/leaderboard.js ile AYNI kod: tek kaynak) ----------------------------------------------------------------------
+
+export const {
+  CLASSES: LB_CLASSES, TIERS: LB_TIERS, DEFAULT_REWARDS: LB_DEFAULT_REWARDS, REWARD_GEMS_MAX: LB_GEMS_MAX, LIMITS: LB_LIMITS,
+  weekOf: lbWeekOf, weekStart: lbWeekStart, parseId: lbParseId, rewardsFrom: lbRewardsFrom,
+} = createRequire(import.meta.url)("../functions/leaderboard.js");
+export const LB_LIST_MAX = 100;
+// Panel en çok bu kadar geriye bakar (eski haftalar lb_runs'ta durur; ödül pazartesi ödenir)
+export const LB_WEEKS_BACK = 52;
+export const LB_TIER_NAMES = { top3: "İLK 3", p10: "İLK %10", p50: "İLK %50" };
+// Satırda okunan alanlar (koşu kaydı run listeye gelmez: İZLE için oyun okur)
+export const LB_FIELDS = ["uid", "wk", "cls", "time", "car", "paint", "stage", "level", "name", "av", "flag", "at"];
+
+/** Liste isteği: {wk (boş = bu hafta), cls, cc (boş = DÜNYA, yoksa iki harf ülke kodu)}. nowS: unix sn. */
+export function lbQuery(input, nowS) {
+  const src = input || {};
+  const current = lbWeekOf(nowS);
+  const wk = src.wk === undefined || src.wk === null || src.wk === "" ? current
+    : int(src.wk, current - LB_WEEKS_BACK, current, "Hafta");
+  const cls = String(src.cls || "").trim().toUpperCase();
+  if (!LB_CLASSES.includes(cls)) throw new PanelError(`Sınıf: ${LB_CLASSES.join(", ")}`);
+  const cc = String(src.cc || "").trim().toUpperCase();
+  if (cc && !/^[A-Z]{2}$/.test(cc)) throw new PanelError("Ülke: iki harfli kod (TR, DE …) ya da boş (DÜNYA)");
+  return { wk, cls, cc, current };
+}
+
+/** Haftanın tarih aralığı (İstanbul saati): "26.10.2026 – 01.11.2026". */
+export function lbWeekLabel(wk) {
+  const day = (sec) => new Date(sec * 1000).toLocaleDateString("tr-TR", { timeZone: "Europe/Istanbul", day: "2-digit",
+    month: "2-digit", year: "numeric" });
+  const start = lbWeekStart(wk);
+  return `${day(start)} – ${day(start + 6 * 86400)}`;
+}
+
+/**
+ * Sorgu sonucundan (süreye göre) panel satırları: sıra, kısa UID, aracın katalog adı, hile sınırı (sınırın %2 yakınındaki
+ * süre "near": incelemeye değer). docs: [{id, data}]; limits: {araç: sn}.
+ */
+export function lbRows(docs, catalog, limits = LB_LIMITS) {
+  const names = new Map((catalog && catalog.cars ? catalog.cars : []).map((c) => [c.id, c.name]));
+  return (docs || []).map(({ id, data }, i) => {
+    const d = data || {};
+    const parsed = lbParseId(id);
+    const uid = parsed ? parsed.uid : String(d.uid || "");
+    const car = String(d.car || "");
+    const limit = Object.hasOwn(limits, car) ? Number(limits[car]) : 0;
+    const time = Number(d.time) || 0;
+    return {
+      rank: i + 1, id, uid, uid_short: uid.slice(0, 8), name: String(d.name || "").slice(0, 16), flag: String(d.flag || ""),
+      av: String(d.av || ""), car, car_name: names.get(car) || car, paint: String(d.paint || ""), stage: Number(d.stage) || 0,
+      level: Number(d.level) || 0, time, at: Number(d.at) || 0, limit, near: limit > 0 && time < limit * 1.02,
+    };
+  });
+}
+
+/** Ödül kademelerinin sıra kesimi (functions/leaderboard.js tierFor ile aynı): İLK %10 ve İLK %50 kaçıncı sıraya kadar. */
+export function lbCuts(count) {
+  const n = Math.max(0, Math.trunc(Number(count) || 0));
+  return { n10: Math.ceil(n * 0.1), n50: Math.ceil(n * 0.5) };
+}
+
+/** Panel formundan config/app.leaderboard.rewards: {top3, p10, p50: {gems 0–1000, crate: "" ya da satılan kasa}}. */
+export function buildLbRewards(input, catalog) {
+  const src = input && typeof input === "object" ? input : {};
+  const crates = new Set((catalog && catalog.crates ? catalog.crates : []).map((c) => c.id));
+  const out = {};
+  for (const tier of LB_TIERS) {
+    const r = src[tier] && typeof src[tier] === "object" ? src[tier] : {};
+    const crate = String(r.crate ?? "").trim();
+    if (crate && !crates.has(crate)) throw new PanelError(`${LB_TIER_NAMES[tier]}: bilinmeyen kasa "${crate}" (yalnız satılan kasalar)`);
+    out[tier] = { gems: int(r.gems, 0, LB_GEMS_MAX, `${LB_TIER_NAMES[tier]} elması`), crate };
+  }
+  for (const k of Object.keys(src)) if (!LB_TIERS.includes(k)) throw new PanelError(`Bilinmeyen ödül kademesi "${k}"`);
+  return out;
+}

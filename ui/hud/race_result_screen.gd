@@ -6,6 +6,9 @@ extends Control
 ## TEK yeniden yarış (RaceManager.start_rematch; pisti HUD yeniden açar). Rövanş kaybedilirse plaka çıkmaz.
 ## ARKADAŞ RAKİP (RaceManager.rival_owner): sonucun altında arkadaşın fotoğrafı + "ELİF USTA'YI YENDİN!" / "ELİF USTA
 ## KAZANDI" (Türkçe ek Loc.accusative ile).
+## HAFTALIK TABLO şeridi (2026-10-26, docs/LIDER_TABLOSU.md): koşu tabloya yazılınca (Leaderboard.submitted) sınıfın tablosundaki
+## sıra "128. → 97. ↑31", haftalık en iyi süre ve bir üst ödül kademesine kalan fark + TABLO düğmesi. Misafire "HESAP AÇ,
+## TABLOYA GİR". Etkinlik aracı yarışında / yazılamayınca şerit yok.
 
 signal closed
 ## GARAJA DÖN: yarış modundan tamamen çıkılacak.
@@ -14,6 +17,8 @@ signal exit_requested
 signal bonus_requested
 ## Oyuncu RÖVANŞ'a bastı.
 signal rematch_requested
+## HAFTALIK TABLO şeridinde TABLO'ya bastı (sınıf: şeridin sınıfı).
+signal leaderboard_requested(cls: StringName)
 
 const PLATE_WIDTH: float = 380.0
 
@@ -31,6 +36,16 @@ var _owner_text: Label
 var _bonus_amount: int = 0
 var _column: VBoxContainer
 var _closing: bool = false
+var _lb_strip: PanelContainer
+var _lb_head: Label
+var _lb_rank_row: HBoxContainer
+var _lb_old: Label
+var _lb_arrow: Label
+var _lb_rank: Label
+var _lb_badge: PanelContainer
+var _lb_badge_text: Label
+var _lb_sub: Label
+var _lb_class: StringName = &""
 
 
 func _ready() -> void:
@@ -60,6 +75,7 @@ func show_result(won: bool, player_time: float, rival_time: float, money: int, x
 	_reward.text = "   ".join(parts) if not parts.is_empty() else Loc.t("ÖDÜL YOK")
 	_times.text = Loc.t("SEN  %.2f sn        RAKİP  %.2f sn") % [player_time, rival_time]
 	hide_bonus()
+	show_leaderboard({})
 	_winner.text = Loc.t("KAZANAN: %s") % String(CarCatalog.get_entry(winner_id).get("display_name", winner_id)).to_upper()
 	_show_owner(won)
 
@@ -103,6 +119,43 @@ func show_record(finished: bool, is_new: bool, time: float, previous: float) -> 
 		_record.text = Loc.t("REKORUN  %.2f sn  (+%.2f)") % [previous, time - previous]
 	_record.add_theme_color_override(&"font_color",
 		HudPalette.COIN_DARK if is_new else HudPalette.INK_SOFT)
+
+
+## HAFTALIK TABLO şeridi (Leaderboard.submitted bilgisi; boşsa / yazılamadıysa gizli).
+func show_leaderboard(info: Dictionary) -> void:
+	var cls: StringName = StringName(SaveSafe.s(info.get("cls", "")))
+	_lb_strip.visible = cls != &"" and not bool(info.get("failed", false))
+	if not _lb_strip.visible:
+		return
+	_lb_class = cls
+	_lb_head.text = Loc.t("HAFTALIK TABLO · %s SINIFI") % cls
+	if bool(info.get("guest", false)):
+		_lb_rank_row.visible = false
+		_lb_sub.text = Loc.t("HESAP AÇ, TABLOYA GİR")
+		return
+	var rank: int = int(info.get("rank", 0))
+	var old_rank: int = int(info.get("old_rank", 0))
+	var improved: bool = bool(info.get("improved", false))
+	_lb_rank_row.visible = rank > 0
+	_lb_rank.text = "%d." % rank
+	var moved: bool = improved and old_rank > rank
+	_lb_old.visible = moved
+	_lb_arrow.visible = moved
+	_lb_old.text = "%d." % old_rank
+	_lb_badge.visible = improved and (moved or old_rank <= 0)
+	_lb_badge_text.text = "↑ %d" % (old_rank - rank) if moved else Loc.t("YENİ")
+	var lines: PackedStringArray = PackedStringArray()
+	var best: String = LeaderboardScreen.time_text(float(info.get("best", 0.0)))
+	lines.append(Loc.t("YENİ HAFTALIK EN İYİN %s sn") % best if improved else Loc.t("HAFTALIK EN İYİN %s sn") % best)
+	var gap: String = LeaderboardScreen.time_text(float(info.get("gap", 0.0)))
+	match StringName(SaveSafe.s(info.get("next_tier", ""))):
+		&"top3":
+			lines.append(Loc.t("İLK 3'E %s sn KALDI") % gap)
+		&"p10":
+			lines.append(Loc.t("İLK %%10'A %s sn KALDI") % gap)
+		&"p50":
+			lines.append(Loc.t("İLK %%50'YE %s sn KALDI") % gap)
+	_lb_sub.text = "\n".join(lines)
 
 
 ## Ödüllü reklam teklifi: "REKLAM İZLE +X ₺". Yalnızca oyuncu basarsa reklam gösterilir.
@@ -213,6 +266,7 @@ func _build() -> void:
 		box.add_child(label)
 	plate.add_child(box)
 	_column.add_child(plate)
+	_build_leaderboard_strip()
 
 	_bonus_button = PlateButton.new()
 	_bonus_button.name = "BonusButton"
@@ -249,6 +303,80 @@ func _build() -> void:
 	exit_button.focus_mode = Control.FOCUS_NONE
 	exit_button.pressed.connect(func() -> void: exit_requested.emit())
 	_column.add_child(exit_button)
+
+
+## Koyu zemin, amber kenar (tablonun ödül şeridiyle aynı dil): solda başlık / sıra / süre, sağda TABLO.
+func _build_leaderboard_strip() -> void:
+	_lb_strip = PanelContainer.new()
+	_lb_strip.name = "LeaderboardStrip"
+	_lb_strip.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)
+	_lb_strip.visible = false
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = LeaderboardScreen.DARK
+	style.border_color = HudPalette.PLATE_SELECTED
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	style.content_margin_left = 12.0
+	style.content_margin_right = 8.0
+	style.content_margin_top = 5.0
+	style.content_margin_bottom = 6.0
+	_lb_strip.add_theme_stylebox_override(&"panel", style)
+	_column.add_child(_lb_strip)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override(&"separation", 10)
+	_lb_strip.add_child(row)
+	var text: VBoxContainer = VBoxContainer.new()
+	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text.add_theme_constant_override(&"separation", 0)
+	row.add_child(text)
+	_lb_head = _strip_label(11, HudPalette.PLATE_SELECTED)
+	text.add_child(_lb_head)
+	_lb_rank_row = HBoxContainer.new()
+	_lb_rank_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_lb_rank_row.add_theme_constant_override(&"separation", 6)
+	text.add_child(_lb_rank_row)
+	_lb_old = _strip_label(15, HudPalette.PLATE_EDGE)
+	_lb_old.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_lb_rank_row.add_child(_lb_old)
+	_lb_arrow = _strip_label(15, HudPalette.PLATE_SELECTED)
+	_lb_arrow.text = "→"
+	_lb_arrow.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_lb_rank_row.add_child(_lb_arrow)
+	_lb_rank = _strip_label(22, HudPalette.TEXT_LIGHT)
+	_lb_rank_row.add_child(_lb_rank)
+	_lb_badge = PanelContainer.new()
+	_lb_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_lb_badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var badge: StyleBoxFlat = StyleBoxFlat.new()
+	badge.bg_color = Color("2E7D32")
+	badge.set_corner_radius_all(7)
+	badge.content_margin_left = 6.0
+	badge.content_margin_right = 6.0
+	_lb_badge.add_theme_stylebox_override(&"panel", badge)
+	_lb_badge_text = _strip_label(12, Color.WHITE)
+	_lb_badge.add_child(_lb_badge_text)
+	_lb_rank_row.add_child(_lb_badge)
+	_lb_sub = _strip_label(10, HudPalette.SIDEWALK)
+	_lb_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.add_child(_lb_sub)
+	var button: PlateButton = PlateButton.new()
+	button.name = "LeaderboardButton"
+	button.theme_type_variation = &"HudPlateSmall"
+	button.text = Loc.t("TABLO")
+	button.highlight = true
+	button.focus_mode = Control.FOCUS_NONE
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	button.pressed.connect(func() -> void: leaderboard_requested.emit(_lb_class))
+	row.add_child(button)
+
+
+func _strip_label(font_size: int, color: Color) -> Label:
+	var label: Label = _label(&"HudInkValue", "")
+	label.add_theme_font_size_override(&"font_size", font_size)
+	label.add_theme_color_override(&"font_color", color)
+	return label
 
 
 func _label(variation: StringName, text: String) -> Label:

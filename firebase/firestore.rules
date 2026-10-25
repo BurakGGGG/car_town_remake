@@ -128,6 +128,28 @@ service cloud.firestore {
         && saveAllowed();
     }
 
+    // HAFTALIK DRAG LİDER TABLOSU (2026-10-26, docs/LIDER_TABLOSU.md; sunucu functions/leaderboard.js).
+    // lb_runs/{hafta}_{sınıf}_{uid}: oyuncunun o hafta o sınıftaki en iyi koşusu. Yalnız sahibi yazar (hesaplı; misafir giremez),
+    // hafta request.time'dan hesaplanır (Pazartesi 00:00 TR döner: geçen haftaya yazılamaz), güncellemede süre yalnız KISALIR.
+    // Okuma: tek belge herkese açık (oturumsuz REST: misafir de İZLE'yi açar); liste kapalı (tablo lb özetlerinden okunur,
+    // bütün koşular toplu indirilemez). İstemci silemez (panel siler). Sosyal / tam yasaklı oyuncu yazamaz (garajla aynı denetim).
+    // Hile sınırı (aracın en yüksek modifiyeyle kuramsal en iyi süresi) ve araç sınıfı sunucuda (lbRun): altındaki kayıt silinir.
+    // run: DragRaceSim.Recording.to_dict() JSON METNİ (eklenti iç içe diziyi bozuyor); özetlere hiç girmez.
+    match /lb_runs/{runId} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if isValidLbRun(runId, request.resource.data) && socialAllowed();
+      allow update: if isValidLbRun(runId, request.resource.data) && socialAllowed()
+        && request.resource.data.time < resource.data.time;
+    }
+
+    // lb/{hafta}_{sınıf} (dünya) ve lb/{hafta}_{sınıf}_{ÜLKE}: {wk, cls, cc, count, hist, top (ilk 50), updated, paid}. YALNIZ
+    // SUNUCU yazar (lbRun / lbWeekly); herkes kimlikle okur (oturumsuz da). Liste kapalı: oyun özeti kimliğiyle ister.
+    // lb_counted/{koşu kimliği} (sunucunun hangi kaydı saydığı defteri) istemciye tamamen kapalı ("başka her yol kapalı").
+    match /lb/{lbId} {
+      allow get: if true;
+    }
+
     // ARKADAŞ KODU → UID. Kod bir kez alınır (üzerine yazılamaz), yalnızca sahibi siler.
     match /codes/{code} {
       allow get: if signedIn();
@@ -159,6 +181,12 @@ service cloud.firestore {
       // yazar (firebase/admin, yönetici SDK'sı); sahibi listeler, okur ve ödülü kaydına geçirdikten sonra siler. Aynı
       // hediye iki kez alınamaz: belge silinir, alınan kimlik kayıtta da tutulur (silme başarısız olsa bile).
       match /mail/{mailId} {
+        allow read, delete: if isOwner(uid);
+      }
+
+      // ARKADAŞIN SENİ GEÇTİ (lider tablosu, 2026-10-26): users/{uid}/lbnews/{hafta}_{sınıf}_{geçen} = {uid, name, av, car, time,
+      // my_time, cls, wk, at}. YALNIZCA SUNUCU yazar (functions/leaderboard.js); sahibi okur (OTO MANŞET) ve siler.
+      match /lbnews/{newsId} {
         allow read, delete: if isOwner(uid);
       }
 
@@ -310,6 +338,33 @@ service cloud.firestore {
 
     function signedIn() {
       return request.auth != null;
+    }
+
+    // Lider tablosu haftası (sunucu saati; functions/leaderboard.js weekOf ve oyundaki Leaderboard.week_of ile aynı):
+    // gün = (unix + 3 sa) / 1 gün (Türkiye UTC+3), hafta = (gün + 3) / 7 → Pazartesi 00:00 TR'de döner. Pozitif: int() = taban.
+    function lbWeek() {
+      return int((int((request.time.toMillis() + 10800000) / 86400000) + 3) / 7);
+    }
+
+    // Koşu belgesi: alanların hepsi var, başka alan yok; kimlik {hafta}_{sınıf}_{ben}, hafta şimdiki hafta.
+    function isValidLbRun(runId, d) {
+      return signedIn()
+        && d.keys().hasAll(['uid', 'wk', 'cls', 'time', 'car', 'paint', 'stage', 'level', 'name', 'av', 'flag', 'run', 'at'])
+        && d.keys().hasOnly(['uid', 'wk', 'cls', 'time', 'car', 'paint', 'stage', 'level', 'name', 'av', 'flag', 'run', 'at'])
+        && d.uid == request.auth.uid
+        && d.wk is int && d.wk == lbWeek()
+        && d.cls in ['D', 'C', 'B', 'A', 'S']
+        && runId == string(d.wk) + '_' + d.cls + '_' + request.auth.uid
+        && d.time is number && d.time >= 4 && d.time <= 30
+        && d.car is string && d.car.matches('^[a-z0-9_]{1,40}$')
+        && d.paint is string && d.paint.matches('^(#[0-9a-fA-F]{6})?$')
+        && d.stage is int && d.stage >= 0 && d.stage <= 5
+        && d.level is int && d.level >= 1 && d.level <= 99
+        && isValidName(d.name)
+        && d.av is string && d.av.size() <= 40
+        && d.flag is string && d.flag.matches('^([A-Z]{2})?$')
+        && d.run is string && d.run.size() <= 2000
+        && d.at is int;
     }
 
     // UTC gün numarası (sunucu saati): hediyenin günlük sınırı.

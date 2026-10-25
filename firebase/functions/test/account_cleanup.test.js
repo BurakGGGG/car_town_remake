@@ -9,7 +9,8 @@ function fakeDb(paths) {
   const docOf = (path) => ({ id: path.split("/").pop(), ref: ref(path) });
   const fields = { "codes/ABC234": { uid: "ali" }, "codes/XYZ789": { uid: "veli" }, "invites/TOKENTOKEN12": { uid: "ali" },
     "race_log/ali_20383": { uid: "ali" }, "race_log/veli_20383": { uid: "veli" },
-    "iap/t_ali": { uid: "ali" }, "iap/t_veli": { uid: "veli" }, "iap/t_misafir": { uid: "" } };
+    "iap/t_ali": { uid: "ali" }, "iap/t_veli": { uid: "veli" }, "iap/t_misafir": { uid: "" },
+    "lb_runs/2965_C_ali": { uid: "ali" }, "lb_runs/2964_S_ali": { uid: "ali" }, "lb_runs/2965_C_veli": { uid: "veli" } };
   return {
     store,
     doc: ref,
@@ -40,17 +41,19 @@ const WORLD = [
   "players/ali", "garages/g_ali", "avatars/a_ali", "push/p_ali", "codes/ABC234", "invites/TOKENTOKEN12",
   "moderation/m_ali", "admin_notes/n_ali", "users/ali/mail/m_x", "players/ali/history/h05", "players/ali/history/d2",
   "promo/REELS50/used/ali", "users/ali/redeem/REELS50", "race_log/ali_20383", "iap/t_ali",
+  "lb_runs/2965_C_ali", "lb_runs/2964_S_ali", "users/ali/lbnews/2965_C_veli",
   "users/ali/friends/f_veli", "users/ali/inbox/r_ayse", "users/ali/races/e_veli", "users/ali/gifts/p_veli_20000",
   "users/ali/referral/ref_claim", "referrals/r_ali", "referrals/r_ali/invited/f_ayse",
   // ali'nin başkalarına yazdıkları (eski arkadaş ayse dahil)
   "users/veli/friends/f_ali", "users/veli/races/e_ali", "users/veli/visits/v_ali", "users/veli/gifts/p_ali_20380",
   "users/ayse/outbox/o_ali", "users/ayse/visits/v_ali", "users/ayse/gifts/p_ali_20379", "users/ayse/inbox/r_ali",
   "referrals/r_veli/invited/f_ali",   // ali'yi veli davet etmişti
+  "users/veli/lbnews/2965_C_ali", "users/ayse/lbnews/2964_S_ali",   // "ali seni geçti" haberleri
   // başkalarının belgeleri: KALMALI
   "players/veli", "garages/g_veli", "codes/XYZ789", "users/veli/friends/f_ayse", "users/veli/gifts/p_ayse_20380",
   "users/veli/visits/v_alican", "users/veli/gifts/p_alican_20380", "reports/x_ali_veli", "reports/x_veli_ali",
   "moderation/m_veli", "admin_notes/n_veli", "players/veli/history/h01", "promo/REELS50/used/veli", "race_log/veli_20383",
-  "iap/t_veli", "iap/t_misafir", "referrals/r_veli", "referrals/r_veli/invited/f_alican", `ref_devices/${"a".repeat(64)}`,
+  "iap/t_veli", "iap/t_misafir", "referrals/r_veli", "lb_runs/2965_C_veli", "users/veli/lbnews/2965_C_alican", "referrals/r_veli/invited/f_alican", `ref_devices/${"a".repeat(64)}`,
 ];
 
 test("silinen hesabın bütün belgeleri gider, başkalarınınkiler kalır", async () => {
@@ -58,14 +61,17 @@ test("silinen hesabın bütün belgeleri gider, başkalarınınkiler kalır", as
   const result = await cleanupAccount({ db, uid: "ali" });
   const left = [...db.store].sort();
   assert.deepStrictEqual(left, [
-    "admin_notes/n_veli", "codes/XYZ789", "garages/g_veli", "iap/t_misafir", "iap/t_veli", "moderation/m_veli", "players/veli", "players/veli/history/h01", "promo/REELS50/used/veli",
+    "admin_notes/n_veli", "codes/XYZ789", "garages/g_veli", "iap/t_misafir", "iap/t_veli", "lb_runs/2965_C_veli",
+    "moderation/m_veli", "players/veli", "players/veli/history/h01", "promo/REELS50/used/veli",
     "race_log/veli_20383", "ref_devices/" + "a".repeat(64),   // cihaz özeti kalır (UID yok)
     "referrals/r_veli", "referrals/r_veli/invited/f_alican",   // davet edenin sayacı kalır
     "reports/x_ali_veli", "reports/x_veli_ali",   // şikâyetler 180 gün kalır (cleanup.js siler)
     "users/veli/friends/f_ayse", "users/veli/gifts/p_alican_20380", "users/veli/gifts/p_ayse_20380",
+    "users/veli/lbnews/2965_C_alican",   // "alican" "ali" ile bitmiyor: başka oyuncunun haberi
     "users/veli/visits/v_alican",   // "alican" "ali" ile başlıyor ama başka oyuncu
   ]);
-  assert.deepStrictEqual(result, { owned: 4, authored: 10 });   // kod + davet + yarış günlüğü + satın alma doğrulaması
+  // kod + davet + yarış günlüğü + satın alma doğrulaması + iki tablo koşusu; başkalarındaki 10 belge + 2 "geçti" haberi
+  assert.deepStrictEqual(result, { owned: 6, authored: 12 });
 });
 
 test("UID biçimsizse (yol kırabilecek karakter) hiçbir şey silinmez", async () => {

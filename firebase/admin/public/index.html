@@ -88,6 +88,7 @@
   <button data-tab="config">Sürüm ve bakım</button>
   <button data-tab="event">Etkinlik</button>
   <button data-tab="ads">Reklamlar</button>
+  <button data-tab="lb">Lider tablosu</button>
   <button data-tab="mail">Hediye gönder</button>
   <button data-tab="news">Duyuru bildirimi</button>
   <button data-tab="player">Oyuncu</button>
@@ -333,6 +334,30 @@
     <button class="act" id="a-save">Kaydet ve yayınla</button>
     <button class="act ghost" id="a-reset" style="margin-left:8px">Oyunun varsayılanına dön</button>
     <div class="status" id="a-status"></div>
+  </section>
+
+  <section id="lb">
+    <h2>Haftalık drag lider tablosu</h2>
+    <p class="hint">Her drag yarışı sayılır: oyuncunun o hafta o sınıftaki en iyi 300 m süresi. Hafta pazartesi 00:00'da (Türkiye)
+      döner; ödüller pazartesi 00:10'da DÜNYA tablosuna göre postayla gider. Liste doğrudan koşulardan (lb_runs) okunur. Sil: kayıt
+      kalkar, sunucu özeti (sıra, yüzdelik, ilk 50) kendisi düzeltir. Sınıra çok yakın süreler <span class="pill amber">sınırda</span>
+      ile işaretlidir (aracın en yüksek modifiyeyle kuramsal en iyisinin altı zaten reddedilir).</p>
+    <div class="row3">
+      <div><label>Hafta</label><select id="lb-wk"></select></div>
+      <div><label>Sınıf</label><select id="lb-cls"><option>D</option><option>C</option><option>B</option><option selected>A</option><option>S</option></select></div>
+      <div><label>Ülke kodu (boş = DÜNYA)</label><input id="lb-cc" maxlength="2" placeholder="ör. TR" style="text-transform:uppercase"></div>
+    </div>
+    <button class="act" id="lb-load">Göster</button>
+    <div class="status" id="lb-status"></div>
+    <p class="hint" id="lb-summary" style="margin-top:12px"></p>
+    <div id="lb-list"></div>
+    <h3>Ödüller (her sınıf ayrı, haftalık)</h3>
+    <p class="hint">Oyuncu yalnız en iyi kademesini alır. Kasa yalnız satılan kasalardan. Elmas ve kasa ikisi de boşsa o kademeye
+      posta gitmez. Değişiklik sonraki pazartesi ödemesinde geçerli.</p>
+    <table id="lb-rewards"></table>
+    <button class="act" id="lb-rw-save">Kaydet</button>
+    <button class="act ghost" id="lb-rw-reset" style="margin-left:8px">Varsayılana dön</button>
+    <div class="status" id="lb-rw-status"></div>
   </section>
 
   <section id="mail">
@@ -741,6 +766,9 @@ function describe(e) {
   if (e.kind === "news_delete") return `haber silindi ${e.id}: ${e.title || ""}`;
   if (e.kind === "news_publish") return `haber yayını yenilendi (${e.feed} haber)`;
   if (e.kind === "news_upload") return `haber resmi yüklendi ${e.path} (${Math.round(e.size / 1024)} KB)`;
+  if (e.kind === "lb_delete") return `lider tablosu kaydı silindi ${e.id}: ${e.name || ""} · ${e.car} · ${e.time} sn${e.flag ? " · " + e.flag : ""}`;
+  if (e.kind === "lb_rewards") return e.reset ? "lider tablosu ödülleri varsayılana döndü"
+    : `lider tablosu ödülleri: ${["top3", "p10", "p50"].map((k) => `${k} ${e.rewards?.[k]?.gems ?? "?"} elmas${e.rewards?.[k]?.crate ? " + " + e.rewards[k].crate : ""}`).join(" · ")}`;
   if (e.kind === "reports_closed") return `${e.count} şikâyet kapatıldı ${e.uid}${e.action ? " (" + e.action + ")" : ""}`;
   return JSON.stringify(e);
 }
@@ -1103,6 +1131,84 @@ $("a-reset").onclick = async () => {
   } catch (e) { status("a-status", e.message, false); }
 };
 document.querySelector('#tabs button[data-tab="ads"]').addEventListener("click", loadAds);
+
+// --- Haftalık drag lider tablosu ---
+const LB_TIER_NAMES = { top3: "İLK 3", p10: "İLK %10", p50: "İLK %50" };
+const flagEmoji = (cc) => (/^[A-Z]{2}$/.test(cc) ? String.fromCodePoint(...[...cc].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)) : "");
+let lbLast = null;
+async function loadLb() {
+  $("lb-list").textContent = "yükleniyor…";
+  try {
+    const body = { cls: $("lb-cls").value, cc: $("lb-cc").value.trim() };
+    if ($("lb-wk").value) body.wk = Number($("lb-wk").value);
+    const r = await api("POST", "/api/lb/list", body);
+    lbLast = r;
+    const keep = String(r.wk);
+    $("lb-wk").innerHTML = r.weeks.map((w, i) => `<option value="${w.wk}">${i === 0 ? "Bu hafta" : i === 1 ? "Geçen hafta" : i + " hafta önce"} · ${esc(w.label)} (${w.wk})</option>`).join("");
+    if (!r.weeks.some((w) => String(w.wk) === keep)) $("lb-wk").insertAdjacentHTML("beforeend", `<option value="${r.wk}">${esc(r.label)} (${r.wk})</option>`);
+    $("lb-wk").value = keep;
+    const s = r.summary;
+    const scope = r.cc ? `${flagEmoji(r.cc)} ${r.cc}` : "DÜNYA";
+    $("lb-summary").innerHTML = `<b>${esc(r.cls)} sınıfı · ${esc(scope)} · ${esc(r.label)}</b> · ` + (s
+      ? `${s.count} oyuncu · özet güncellendi ${when(s.updated)}` + (r.cc ? "" : ` · ödül kesimi: İLK %10 = ilk ${s.n10}, İLK %50 = ilk ${s.n50}`)
+        + (s.paid ? ` · <span class="pill green">ödendi ${when(s.paid_at)} (${s.paid_count} posta)</span>` : "")
+      : "özet yok (bu tabloda henüz kayıt yok ya da lbRun çalışmadı)");
+    $("lb-list").innerHTML = r.rows.length ? `<table><tr><th>Sıra</th><th>Oyuncu</th><th>UID</th><th>Araç</th><th>Kademe</th><th>Seviye</th><th>Süre</th><th>Tarih</th><th></th></tr>` +
+      r.rows.map((x) => `<tr><td><b>${x.rank}</b></td><td>${flagEmoji(x.flag)} ${esc(x.name)}${x.flag ? ` <span class="hint">${esc(x.flag)}</span>` : ""}</td>` +
+        `<td><code title="${esc(x.uid)}">${esc(x.uid_short)}…</code></td>` +
+        `<td>${/^#[0-9a-fA-F]{6}$/.test(x.paint) ? `<span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${esc(x.paint)}"></span> ` : ""}${esc(x.car_name)}</td>` +
+        `<td>${x.stage}</td><td>${x.level}</td>` +
+        `<td><b>${x.time.toFixed(3)}</b>${x.near ? ` <span class="pill amber" title="Aracın sınırı ${x.limit} sn">sınırda</span>` : ""}</td>` +
+        `<td>${when(x.at)}</td>` +
+        `<td><button class="ghost" data-lbopen="${esc(x.uid)}">Oyuncu</button> <button class="ghost" data-lbdel="${esc(x.id)}" data-lbname="${esc(x.name)}" data-lbtime="${x.time.toFixed(3)}">Sil</button></td></tr>`).join("") + "</table>"
+      : "<p class='hint'>Bu tabloda kayıt yok.</p>";
+    for (const b of document.querySelectorAll("[data-lbopen]")) {
+      b.onclick = () => { document.querySelector('#tabs button[data-tab="player"]').click(); $("p-query").value = b.dataset.lbopen; $("p-find").click(); };
+    }
+    for (const b of document.querySelectorAll("[data-lbdel]")) {
+      b.onclick = async () => {
+        if (!confirm(`${b.dataset.lbname} (${b.dataset.lbtime} sn) tablodan silinsin mi? Oyuncu bu hafta daha iyi bir süreyle yeniden girebilir.`)) return;
+        try {
+          await api("POST", "/api/lb/delete", { id: b.dataset.lbdel });
+          status("lb-status", "Silindi. Özet (sıra / ilk 50) birkaç saniye içinde sunucuda düzelir.", true);
+          loadLb();
+        } catch (e) { status("lb-status", e.message, false); }
+      };
+    }
+  } catch (e) { $("lb-list").textContent = ""; status("lb-status", e.message, false); }
+}
+function fillLbRewards(r) {
+  const crates = info.catalog.crates;
+  $("lb-rewards").innerHTML = `<tr><th>Kademe</th><th>Elmas (0–1000)</th><th>Kasa</th><th>Varsayılan</th></tr>` +
+    Object.entries(LB_TIER_NAMES).map(([k, name]) => `<tr><td><b>${esc(name)}</b></td>` +
+      `<td><input data-lbgems="${k}" type="number" min="0" max="1000" value="${r.rewards[k].gems}" style="max-width:110px"></td>` +
+      `<td><select data-lbcrate="${k}"><option value="">Kasa yok</option>${crates.map((c) => `<option value="${esc(c.id)}"${c.id === r.rewards[k].crate ? " selected" : ""}>${esc(c.name)} · ${esc(c.id)}</option>`).join("")}</select></td>` +
+      `<td class="hint">${r.defaults[k].gems} elmas${r.defaults[k].crate ? " + " + esc(r.defaults[k].crate) : ""}</td></tr>`).join("");
+  status("lb-rw-status", r.custom ? "Panelde kayıtlı ödüller geçerli." : "Kayıtlı ayar yok: varsayılan ödüller geçerli.", true);
+}
+async function loadLbRewards() {
+  if (!info) { setTimeout(loadLbRewards, 300); return; }
+  try { fillLbRewards(await api("GET", "/api/lb/rewards")); } catch (e) { status("lb-rw-status", e.message, false); }
+}
+$("lb-load").onclick = loadLb;
+$("lb-wk").onchange = loadLb;
+$("lb-cls").onchange = loadLb;
+$("lb-cc").onkeydown = (e) => { if (e.key === "Enter") loadLb(); };
+$("lb-rw-save").onclick = async () => {
+  const rewards = {};
+  for (const k of Object.keys(LB_TIER_NAMES)) {
+    rewards[k] = { gems: Number(document.querySelector(`[data-lbgems="${k}"]`).value || 0), crate: document.querySelector(`[data-lbcrate="${k}"]`).value };
+  }
+  try {
+    fillLbRewards(await api("POST", "/api/lb/rewards", { rewards }));
+    status("lb-rw-status", "Kaydedildi: sonraki pazartesi ödemesi bu tutarlarla.", true);
+  } catch (e) { status("lb-rw-status", e.message, false); }
+};
+$("lb-rw-reset").onclick = async () => {
+  if (!confirm("Lider tablosu ödül ayarı silinsin, varsayılan ödüller kullanılsın mı?")) return;
+  try { fillLbRewards(await api("POST", "/api/lb/rewards", { reset: true })); } catch (e) { status("lb-rw-status", e.message, false); }
+};
+document.querySelector('#tabs button[data-tab="lb"]').addEventListener("click", () => { if (!lbLast) loadLb(); loadLbRewards(); });
 
 // --- Hediye ---
 function catalogRow(container, list, kind, single = false) {

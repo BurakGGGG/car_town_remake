@@ -16,6 +16,8 @@ extends RefCounted
 ##   GARAGE_BUILT          garage (sen yokken inşaatı biten araç garajı) · GARAGE_UPGRADED  garage, item (biten iç yükseltme)
 ##   FRIEND_GARAGE         people, garage (arkadaşın aldığı lüks depo: VİTRİN / HANGAR DEPOSU)
 ##   PARKING_FEE           money (sen yokken kesilen otopark faturası), count (gün), cars (otoparktaki araç)
+##   LB_PASSED             people, car (geçenin aracı), cls (tablonun sınıfı), time (onun süresi), my_time (benim süresi)
+##                         — arkadaş HAFTALIK DRAG TABLOSU'nda seni geçti (2026-10-26)
 ## Kişi: {uid, name, av, frame, flag} (AvatarView / ProfileCard.avatar_for ile çizilir).
 
 const RACE_LOST: StringName = &"race_lost"
@@ -33,6 +35,7 @@ const GARAGE_BUILT: StringName = &"garage_built"
 const GARAGE_UPGRADED: StringName = &"garage_upgraded"
 const FRIEND_GARAGE: StringName = &"friend_garage"
 const PARKING_FEE: StringName = &"parking_fee"
+const LB_PASSED: StringName = &"lb_passed"
 
 ## Küçük işler sütuna çıkmaz, doğrudan KISA KISA şeridine iner (manşet olabilirler: gazetede başka haber yoksa).
 const BRIEF_KINDS: Array[StringName] = [PILES, MOD_READY, MISSIONS, GARAGE_UPGRADED]
@@ -83,7 +86,7 @@ static func _merge_group(kind: StringName, list: Array) -> Dictionary:
 	var out: Dictionary = {"kind": kind, "people": [], "count": 0, "money": 0, "jobs": 0, "minutes": 0, "full": false,
 		"finished": 0, "finished_money": 0, "finished_xp": 0,
 		"parts": {}, "likes": 0, "mods": [], "daily": false, "weekly": false, "car": &"", "part": &"", "garage": &"",
-		"item": &"", "cars": 0}
+		"item": &"", "cars": 0, "cls": &"", "time": 0.0, "my_time": 0.0}
 	var per_person: Dictionary = {}   # uid → [kişi, sayı, araç / parça]
 	for item: Dictionary in list:
 		var count: int = maxi(int(item.get("count", 1)), 1)
@@ -108,6 +111,10 @@ static func _merge_group(kind: StringName, list: Array) -> Dictionary:
 			out["car"] = StringName(item.get("car", &""))
 		if out["part"] == &"":
 			out["part"] = StringName(item.get("part", &""))
+		if out["cls"] == &"":   # tablo haberi: ilk gelenin sınıfı ve süreleri
+			out["cls"] = StringName(item.get("cls", &""))
+			out["time"] = float(item.get("time", 0.0))
+			out["my_time"] = float(item.get("my_time", 0.0))
 		# Garaj haberleri: merdivende en üstteki garaj öne çıkar (iç yükseltmede o garajın kalemi)
 		var garage: StringName = StringName(item.get("garage", &""))
 		if garage != &"" and CarGarageCatalog.rank(garage) > CarGarageCatalog.rank(StringName(out["garage"])):
@@ -145,6 +152,8 @@ static func weight(item: Dictionary) -> float:
 	match StringName(item.get("kind", &"")):
 		RACE_LOST:
 			return 100.0 + count
+		LB_PASSED:
+			return 98.0 + count
 		EARNINGS:
 			return 60.0 + 30.0 * clampf(float(item.get("minutes", 0)) / FULL_SHIFT_MINUTES, 0.0, 1.0)
 		RACE_WON:
@@ -207,6 +216,8 @@ static func section(item: Dictionary) -> String:
 			return Loc.t("MAGAZİN")
 		PARKING_FEE:
 			return Loc.t("EKONOMİ")
+		LB_PASSED:
+			return Loc.t("HAFTALIK TABLO")
 	return ""
 
 
@@ -292,6 +303,12 @@ static func title(item: Dictionary, seed: int) -> String:
 		PARKING_FEE:
 			var bill: String = money_text(int(item.get("money", 0)))
 			return _pick(seed, [Loc.t("OTOPARKÇI KAPIDA: %s FATURA!") % bill, Loc.t("OTOPARK SAYACI DÖNDÜ: −%s") % bill])
+		LB_PASSED:
+			if many:
+				return _pick(seed, [Loc.t("TABLODA İZDİHAM: %s SENİ GEÇTİ") % who,
+					Loc.t("%s TABLODA ÖNÜNE GEÇTİ!") % who])
+			return _pick(seed, [Loc.t("%s SENİ TABLODA GEÇTİ!") % first, Loc.t("TABLO SALLANDI: %s ÖNE GEÇTİ") % first,
+				Loc.t("KRONOMETRE KONUŞTU: %s DAHA HIZLI") % first])
 	return ""
 
 
@@ -372,6 +389,16 @@ static func deck(item: Dictionary) -> String:
 		PARKING_FEE:
 			return Loc.tn("Otoparkta %d aracın var, her gün değerlerinin yüzde 5'i kesiliyor. Bir depo al, otoparkçıya para kaptırma!",
 				int(item.get("cars", 0))) % int(item.get("cars", 0))
+		LB_PASSED:
+			if many:
+				return Loc.t("%s haftalık drag tablosunda seni geride bıraktı. Piste çık, sıranı geri al!") % _who(people, false)
+			var theirs: float = float(item.get("time", 0.0))
+			var mine: float = float(item.get("my_time", 0.0))
+			if theirs > 0.0 and mine > theirs:
+				return Loc.t("%s SINIFI tablosunda %s ile %s sn yaptı, senin %s sn'ni geçti. Piste çık, sıranı geri al!") \
+					% [item.get("cls", &""), _car(item.get("car", &"")), _seconds(theirs), _seconds(mine)]
+			return Loc.t("%s SINIFI tablosunda %s ile önüne geçti. Piste çık, sıranı geri al!") \
+				% [item.get("cls", &""), _car(item.get("car", &""))]
 	return ""
 
 
@@ -422,6 +449,8 @@ static func brief(item: Dictionary) -> String:
 			return Loc.t("%s %s ALDI") % [who, _garage(item.get("garage", &""))]
 		PARKING_FEE:
 			return Loc.t("OTOPARK FATURASI −%s") % money_text(int(item.get("money", 0)))
+		LB_PASSED:
+			return Loc.t("%s SENİ TABLODA GEÇTİ") % who
 	return ""
 
 
@@ -430,7 +459,7 @@ static func caption(item: Dictionary) -> String:
 	var people: Array = item.get("people", [])
 	var first: String = _name(people[0] as Dictionary) if not people.is_empty() else ""
 	match StringName(item.get("kind", &"")):
-		RACE_LOST:
+		RACE_LOST, LB_PASSED:
 			return Loc.t("Foto: %s · %s") % [first, _car(item.get("car", &""))]
 		RACE_WON, MOD_READY:
 			return Loc.t("Foto: garajının yıldızı %s") % _car(item.get("car", &""))
@@ -451,6 +480,11 @@ static func caption(item: Dictionary) -> String:
 		PARKING_FEE:
 			return Loc.t("Foto: otopark gişesi")
 	return ""
+
+
+## "10,31" (iki hane, dilin ondalık ayracıyla).
+static func _seconds(time: float) -> String:
+	return LeaderboardScreen.time_text(time)
 
 
 ## "1 CIVATA, 2 BUJİ".

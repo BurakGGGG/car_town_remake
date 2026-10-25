@@ -23,8 +23,10 @@ const UID_RE = /^[A-Za-z0-9]{1,128}$/;
 const OWN_DOCS = (uid) => [`players/${uid}`, `garages/g_${uid}`, `avatars/a_${uid}`, `push/p_${uid}`,
   `moderation/m_${uid}`, `admin_notes/n_${uid}`, `referrals/r_${uid}`];
 
-/** `uid` alanıyla bulunan belgeler (arkadaş kodu, davet linki, yarış günlüğü — 2026-10-22). */
-const OWNED_BY_FIELD = ["codes", "invites", "race_log", "iap"];   // iap: satın alma doğrulama kaydı (iap.js)
+/** `uid` alanıyla bulunan belgeler (arkadaş kodu, davet linki, yarış günlüğü — 2026-10-22). iap: satın alma doğrulama kaydı
+ *  (iap.js). lb_runs: haftalık drag tablosu koşuları (2026-10-26) — her silme lbRun'ı tetikler: oyuncu özetlerden (lb/…, ad ve
+ *  avatar dahil) ve sunucu defterinden (lb_counted) düşer. */
+const OWNED_BY_FIELD = ["codes", "invites", "race_log", "iap", "lb_runs"];
 
 /** Başkalarının users/{x}/<grup> altına bu UID'nin yazdığı belgeler: grup → kimlik eşleşmesi. */
 const AUTHORED = [
@@ -37,6 +39,8 @@ const AUTHORED = [
   { group: "used", matches: (id, uid) => id === uid },   // kupon kullanımı promo/{KOD}/used/{uid} (sayaç kalır)
   // davet edenin listesindeki satır referrals/r_{x}/invited/f_{uid} (davet edenin sayacı ve aldığı ödül kalır)
   { group: "invited", matches: (id, uid) => id === `f_${uid}` },
+  // "arkadaşın seni geçti" haberi users/{x}/lbnews/{hafta}_{sınıf}_{uid} (sunucu yazar; içinde bu oyuncunun adı var)
+  { group: "lbnews", matches: (id, uid) => new RegExp(`^[0-9]{1,6}_[DCBAS]_${uid}$`).test(id) },
 ];
 
 /**

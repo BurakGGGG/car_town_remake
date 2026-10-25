@@ -12,12 +12,17 @@ extends Control
 ## simgeler sığana kadar küçülür; altta açılan bandı deniz rengi doldurur (bkz. _layout_board).
 ## YAKINDA mekânları (SOON: OTO ŞOV, LİMAN — 2026-10-23): görselde gri maket, simgesi gri ve altında YAKINDA;
 ## dokununca yalnız "yakında açılıyor" kartı çıkar, yolculuk yok.
+## DRAG PİSTİ (2026-10-26, docs/LIDER_TABLOSU.md): şehrin kuzeybatısındaki pist; dokununca HAFTALIK DRAG TABLOSU açılır
+## (leaderboard_requested, yolculuk yok). Altında oyuncunun bu haftaki sırası (yarış aracının sınıfında) ya da
+## "HAFTALIK TABLO".
 
 signal closed
 ## Yolculuk başladı: hedef mekânın varlıkları arka planda yüklenmeye başlasın (varışta takılma olmasın).
 signal travel_started(place: StringName)
 ## Yolculuk bitti: hedef mekân açılsın. &"city" → şehre dönüş, &"junkyard" → hurdalık.
 signal travel_requested(place: StringName)
+## DRAG PİSTİ simgesine dokunuldu: haftalık drag tablosu açılsın.
+signal leaderboard_requested
 
 const MAP_TEXTURE: String = "res://assets/ui/map/world_map.png"
 const MAP_DATA: String = "res://assets/ui/map/world_map.json"
@@ -35,6 +40,8 @@ const PIN_EDGE: float = 10.0
 ## Henüz açılmayan mekânlar (haritada görünür, gidilmez).
 const SOON: Array[StringName] = [&"meet", &"port"]
 const SOON_TINT: Color = Color(0.72, 0.72, 0.74, 0.95)
+## Yolculuğu olmayan, tablo açan nokta.
+const DRAG: StringName = &"drag"
 
 var current: StringName = &"city"
 ## Haritanın kendisi (16:9). Kaplama ölçeğiyle ortalanır; simgeler sığmıyorsa küçülür (_layout_board).
@@ -132,6 +139,7 @@ func _build() -> void:
 	_add_pin(&"junkyard", Loc.t("HURDALIK"), HudIcon.Kind.WRENCH)
 	_add_pin(&"meet", Loc.t("OTO ŞOV"), HudIcon.Kind.FRIENDS)
 	_add_pin(&"port", Loc.t("LİMAN"), HudIcon.Kind.BOX)
+	_add_pin(DRAG, Loc.t("DRAG PİSTİ"), HudIcon.Kind.FLAG)
 
 	var top: MarginContainer = _margin(14, 12, 14, 0)
 	top.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
@@ -247,6 +255,10 @@ func _refresh() -> void:
 			hint.text = Loc.t("YAKINDA")
 			button.modulate = SOON_TINT
 			continue
+		if place == DRAG:
+			hint.text = Loc.t("HAFTALIK TABLO")
+			_refresh_drag_rank()
+			continue
 		if place == current:
 			hint.text = Loc.t("BURADASIN")
 		elif place == &"junkyard" and not open_yard:
@@ -260,6 +272,9 @@ func _refresh() -> void:
 
 func _on_pin(place: StringName) -> void:
 	if _travelling:
+		return
+	if place == DRAG:
+		leaderboard_requested.emit()
 		return
 	if place == current:
 		close()
@@ -284,6 +299,26 @@ func _on_pin(place: StringName) -> void:
 	tween.tween_callback(func() -> void:
 		_travelling = false
 		travel_requested.emit(place))
+
+
+## DRAG PİSTİ satırı: oyuncunun bu hafta yarış aracının sınıfında bir süresi varsa tablodaki sırası ("SEN 41.").
+## Özet ağdan gelir (önbellekte varsa hemen); gelmezse "HAFTALIK TABLO" kalır.
+func _refresh_drag_rank() -> void:
+	var board: Leaderboard = get_tree().get_first_node_in_group("leaderboard") as Leaderboard
+	var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+	if board == null or ownership == null or not _hints.has(DRAG):
+		return
+	var cls: StringName = Leaderboard.class_of(ownership.race_vehicle_id())
+	var wk: int = Leaderboard.current_week()
+	var best: float = board.my_best(wk, cls)
+	if cls == &"" or best <= 0.0:
+		return
+	var summary: Dictionary = await board.summary(wk, cls)
+	if summary.is_empty():
+		return   # ağ yok / tablo boş: "1." yazmasın
+	var rank: Dictionary = Leaderboard.rank_in(summary, best)
+	if not rank.is_empty():   # önbellekten gelirse open() daha show() demeden yazılır
+		(_hints[DRAG] as Label).text = Loc.t("%s SINIFI · SEN %d.") % [cls, int(rank["rank"])]
 
 
 func _flash_card(text: String) -> void:

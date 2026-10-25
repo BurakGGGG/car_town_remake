@@ -13,6 +13,8 @@ extends Control
 signal closed
 ## Yarış bitti: sonuç panosu için (kazandı mı, oyuncu süresi, rakip süresi).
 signal race_completed(won: bool, player_time: float, rival_time: float)
+## İZLEME KİPİ bitti (haftalık tablodaki koşu sonuna dek oynatıldı). Yarış sonucu / ödül yok.
+signal watch_finished
 
 enum Phase { READY, COUNTDOWN, RUNNING, DONE }
 
@@ -213,6 +215,13 @@ var _record_submitted: bool = false
 var _progress: RaceProgressBar
 ## EĞİTİM: ilk yarışta Rıza Usta kuralları anlatırken geri sayım başlamasın (HAZIR OL'da bekler).
 var hold_start: bool = false
+## İZLEME KİPİ (haftalık drag tablosu, İZLE — docs/LIDER_TABLOSU.md): open'dan önce verilirse pist bu koşuyu oyuncu
+## şeridinde kayıttan BİREBİR oynatır; oyuncu dokunamaz, rakip şeridi boştur. Rekor, koşu kaydı, ödül, öğrenen zorluk
+## yazılmaz (race_completed yayılmaz; bitince watch_finished). Kapanınca sıfırlanır.
+var watch_recording: DragRaceSim.Recording
+## İzlenen oyuncunun adı (pist tabelasında).
+var watch_name: String = ""
+var _watching: bool = false
 
 
 func _ready() -> void:
@@ -230,8 +239,9 @@ func _ready() -> void:
 func open() -> void:
 	var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager
 	_race = race
-	_player_id = race.player_vehicle_id() if race else RaceManager.FALLBACK_VEHICLE
-	_rival_id = race.rival_id() if race else &""
+	_watching = watch_recording != null
+	_player_id = watch_recording.vehicle_id if _watching else (race.player_vehicle_id() if race else RaceManager.FALLBACK_VEHICLE)
+	_rival_id = _player_id if _watching else (race.rival_id() if race else &"")
 	if _rival_id == &"":
 		# Ekran bir davet olmadan açıldıysa (menüden / hata ayıklama) rakip boş kalıyordu:
 		# rakip aracı hiç doğmuyor, pistte tek araç kalıyordu. Sınıfa uygun bir rakip seçilir.
@@ -256,11 +266,17 @@ func open() -> void:
 	_player_distance = DragTrack.START_Z
 	_rival_distance = DragTrack.START_Z
 	# Oyuncunun koşusu KAYDA alınır; koşucu kayıttan kurulur (modifiyeli künye + sapma): kayıt birebir tekrar edilir.
-	_player_recording = DragRaceSim.Recording.begin(_player_id, PerformanceMods.build_of(_player_id), _rng)
-	_player = _player_recording.make_runner()
-	# RAKİP KOŞUSU (docs/KOSU_ESLESTIRME.md): RaceManager seçer — gerçek arkadaşın kendi koşusu ya da yapay zekâ
-	# havuzundan, oyuncunun kazanma şansı hedefe en yakın olanı (araç onun modifiyeleriyle, kayıttan kurulur).
-	_rival_recording = race.rival_recording(_player_id) if race and race.rival_id() == _rival_id else null
+	if _watching:
+		# İZLEME: tablodaki koşu oyuncu şeridinde kendi kaydından; rakip şeridi hiç kalkmayan boş bir kayıt (araç gizli)
+		_player_recording = watch_recording
+		_player = _player_recording.make_runner()
+		_rival_recording = DragRaceSim.Recording.begin(_rival_id, {}, _rng)
+	else:
+		_player_recording = DragRaceSim.Recording.begin(_player_id, PerformanceMods.build_of(_player_id), _rng)
+		_player = _player_recording.make_runner()
+		# RAKİP KOŞUSU (docs/KOSU_ESLESTIRME.md): RaceManager seçer — gerçek arkadaşın kendi koşusu ya da yapay zekâ
+		# havuzundan, oyuncunun kazanma şansı hedefe en yakın olanı (araç onun modifiyeleriyle, kayıttan kurulur).
+		_rival_recording = race.rival_recording(_player_id) if race and race.rival_id() == _rival_id else null
 	if _rival_recording == null:
 		# Davetsiz açılış (menü / hata ayıklama): yapay zekâ, rakibin SINIFINDAN beceri + GÜN FORMU (güç, beceri, ara
 		# sıra kötü / iyi gün). Hile yok — aynı Runner, aynı fizik; başsız run_rival ile aynı yol.
@@ -276,12 +292,16 @@ func open() -> void:
 	_player_electric = DragRaceSim.is_electric(_player_id)
 	_rival_electric = DragRaceSim.is_electric(_rival_id)
 	_audio.set_character(_player_perf, _rival_perf, _player_electric, _rival_electric)
-	_best_time = race.best_time() if race else -1.0   # tek rekor: hangi araçla kırıldıysa
-	_best_trace = race.best_trace() if race else PackedFloat32Array()
+	_best_time = race.best_time() if race and not _watching else -1.0   # tek rekor: hangi araçla kırıldıysa
+	_best_trace = race.best_trace() if race and not _watching else PackedFloat32Array()
 	_trace = PackedFloat32Array()
 	_record_new = false
 	_record_submitted = false
 	_load_cars()
+	if _watching:
+		for node: Node3D in [_rival_car, _rival_fx]:
+			if is_instance_valid(node):
+				node.visible = false
 	_column.visible = true
 	if _sign:
 		_sign.visible = true
@@ -320,6 +340,12 @@ func open() -> void:
 	_set_status(Loc.t("YEŞİLDE DOKUN"))
 	_tap_button.text = Loc.t("DOKUN")
 	_tap_button.disabled = false
+	# İzleme kipinde dokunma tabelası ve "YEŞİLDE DOKUN" plakası gizli: oyuncu bir şey yapmaz, yalnız izler
+	_tap_button.visible = not _watching
+	_caption_plate.visible = not _watching
+	if _watching:
+		_record_label.text = Loc.t("İZLENİYOR · %s · %s sn") % [watch_name, Loc.decimal(watch_recording.time, 2)]
+		_tap_button.disabled = true
 	_tap_button.highlight = false
 	# Kalite / GPU'ya göre (PowerVR'da MSAA hareketli araçları bozuyordu: gri, delikli çizim)
 	_viewport.msaa_3d = GameSettings.subviewport_msaa(Viewport.MSAA_2X)
@@ -378,6 +404,8 @@ func close() -> void:
 	if not visible:
 		return
 	set_process(false)
+	watch_recording = null
+	_watching = false
 	_audio.stop()
 	GameMusic.race(get_tree(), false)
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
@@ -390,7 +418,7 @@ func close() -> void:
 ## Yarış sırasında EKRANIN HER YERİ dokunma alanıdır: plakayı ıskalamak yarışı kaybettirmesin.
 ## DOKUN plakasına basıldığında olay orada tüketilir, bu yüzden çift sayılmaz.
 func _gui_input(event: InputEvent) -> void:
-	if not visible or _phase == Phase.DONE:
+	if not visible or _phase == Phase.DONE or _watching:
 		return
 	var touch: bool = event is InputEventScreenTouch
 	var click: bool = event is InputEventMouseButton \
@@ -451,6 +479,8 @@ func _summary(runner: DragRaceSim.Runner) -> DragRaceSim.Run:
 
 ## Test / dokunma girişi: tek dokunuş (çıkış ya da vites).
 func tap() -> void:
+	if _watching:
+		return   # izleme kipi: koşu kayıttan oynar
 	match _phase:
 		Phase.COUNTDOWN:
 			if _tap_delay < 0.0:
@@ -874,6 +904,12 @@ func _run_steps(sim_delta: float) -> float:
 func _sim_step() -> void:
 	if not _rival.running:
 		_rival.rev(DragRaceSim.STEP, _rival_launch_rpm())
+	if _watching:
+		var event: int = _player_recording.play(_player, _steps)
+		if event == DragRaceSim.Recording.LAUNCHED:
+			_punch = 1.0
+			_shake = 1.0
+			_spawn_smoke(_player_car)
 	var rival_event: int = _rival_recording.play(_rival, _steps)
 	if rival_event == DragRaceSim.Recording.LAUNCHED:
 		_spawn_smoke(_rival_car)
@@ -1020,7 +1056,7 @@ func _update_record_hud() -> void:
 	if finished and not _record_submitted:
 		_record_submitted = true
 		_trace.append(DragRaceSim.DISTANCE)
-		if _race and _player.running:
+		if _race and _player.running and not _watching:
 			_record_new = _race.submit_time(_player_id, _player.finish_time, _trace)
 			_player_recording.time = _player.finish_time
 			_race.add_run(_player_recording)   # koşu kaydı: kazanma şansı + arkadaşların rakibi
@@ -1118,6 +1154,8 @@ func _advance_overrun(delta: float) -> void:
 func _should_finish() -> bool:
 	if _first_finish_time < 0.0:
 		return false
+	if _watching:   # izleme: rakip şeridi boş, koşu bitince kısa bir bekleyişle biter
+		return _player.finish_time >= 0.0 and _time - _player.finish_time >= FINISH_HOLD
 	var elapsed: float = _time - _first_finish_time
 	var both: bool = _player.finish_time >= 0.0 and _rival.finish_time >= 0.0
 	if both:
@@ -1320,7 +1358,7 @@ func _track_center() -> float:
 ## Rakibin ekranda oyuncuya göre farkı (dünya birimi): rakip ÖNDEYSE artı. Pistteki GERÇEK metre
 ## farkı, pistin metre → dünya birimi ölçeğiyle (oyuncunun konumuyla aynı ölçek).
 func _visual_gap() -> float:
-	if _player == null or _rival == null:
+	if _player == null or _rival == null or _watching:
 		return 0.0
 	var rival_total: float = _drawn_distance(_rival) + _rival_over
 	var player_total: float = _drawn_distance(_player) + _player_over
@@ -1370,6 +1408,11 @@ func _place_camera(_t: float) -> void:
 func _finish() -> void:
 	_phase = Phase.DONE
 	_tap_button.disabled = true
+	if _watching:
+		_audio.fade_out()
+		_status_label.text = Loc.t("%s sn") % Loc.decimal(_player.finish_time if _player.finish_time >= 0.0 else _time, 2)
+		watch_finished.emit()
+		return
 	# Sonuç panosu açılırken pist HUD'u kapanır: sonuç tek yerde yazsın (üstteki tabela da gider).
 	_column.visible = false
 	if _sign:

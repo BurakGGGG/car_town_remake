@@ -99,6 +99,10 @@ var photo_mode: PhotoMode
 var quest_screen: MissionScreen
 ## ETKİNLİK PANOSU: canlı etkinlik tabelasına dokununca (modüller ve düğmeleri).
 var event_screen: EventScreen
+## HAFTALIK DRAG TABLOSU (taslak B; docs/LIDER_TABLOSU.md): HARİTA'daki DRAG PİSTİ ve yarış sonucundan açılır.
+var leaderboard_screen: LeaderboardScreen
+## İZLE'den sonra tablo bu sınıfla yeniden açılır.
+var _watch_return_class: StringName = &""
 var quest_button: PlateButton
 ## Kodla kurulan ARKADAŞLAR tabelası ve onu açan plaka (alt sırada, GÖREVLER'in yanında).
 var friends_screen: FriendsScreen
@@ -1253,6 +1257,8 @@ func _on_race_completed(won: bool, player_time: float, rival_time: float) -> voi
 	var record: Dictionary = drag_race_screen.record_result()
 	race_result_screen.show_record(bool(record["finished"]), bool(record["new"]),
 		float(record["time"]), float(record["previous"]))
+	if _leaderboard_info_matches(float(record["time"])):
+		race_result_screen.show_leaderboard(_leaderboard_info)
 	# ÖDÜLLÜ REKLAM: yalnızca para kazanıldıysa ve politika + hazır reklam uygunsa teklif edilir (açık onay).
 	_race_bonus_amount = 0
 	var ads: AdService = _ads_service()
@@ -1348,6 +1354,12 @@ func _on_race_rematch() -> void:
 
 
 ## GARAJA DÖN: sonuç ve pist kapanır, oyuncu dünyaya döner (rövanş bekleyen rakip yola döner).
+## Sonuçtaki TABLO: yarıştan çıkınca açılacak tablonun sınıfı.
+var _leaderboard_after_race: StringName = &""
+## Bu yarışın HAFTALIK TABLO bilgisi (Leaderboard.submitted; koşu yazımı ağ beklediği için sonuç ekranından önce ya da sonra gelir).
+var _leaderboard_info: Dictionary = {}
+
+
 func _on_race_exit() -> void:
 	if _rematch_pending:   # sonuç panosu rövanş için kapandı: pist aynı rakiple baştan
 		_rematch_pending = false
@@ -1360,8 +1372,12 @@ func _on_race_exit() -> void:
 		_race.set_racing(false)
 	if router.is_open(&"drag_race") or router.is_open(&"race_result"):
 		router.close_all()
+	var board_class: StringName = _leaderboard_after_race
+	_leaderboard_after_race = &""
 	if _race and _race.take_showcase_tease():
 		router.open.call_deferred(&"supercar_tease")   # tanıtım yarışı kaybedildi: dünyaya dönünce hedef ekranı
+	elif board_class != &"":
+		open_leaderboard.call_deferred(board_class)   # sonuçtaki TABLO
 
 
 ## Showroom'dan araç satın alındı: kısa bildirim plakası (para düşüşünü zaten coin plakası gösterir).
@@ -1519,6 +1535,9 @@ func _build_race_screens() -> void:
 	race_result_screen.closed.connect(_on_race_exit)
 	race_result_screen.bonus_requested.connect(_on_race_bonus_requested)
 	race_result_screen.rematch_requested.connect(_on_race_rematch)
+	race_result_screen.leaderboard_requested.connect(func(cls: StringName) -> void:
+		_leaderboard_after_race = cls
+		_on_race_exit())
 
 
 ## HARİTA + HURDALIK (docs/HURDALIK_TASARIM.md §1): ikisi de PLACE. Şehirden HARİTA plakası (alt
@@ -1547,6 +1566,7 @@ func _build_junkyard_screens() -> void:
 				daily = junkyard.yard_cars()
 			JunkyardWorld.preload_assets(daily))
 	map_screen.closed.connect(_on_map_closed)
+	map_screen.leaderboard_requested.connect(func() -> void: open_leaderboard())
 	junkyard_screen.map_requested.connect(func() -> void: _open_map(&"junkyard"))
 	junkyard_screen.collection_requested.connect(func() -> void: router.open(&"collection"))
 	map_button = PlateButton.new()
@@ -1872,6 +1892,17 @@ func _setup_gem_store() -> void:
 	garage_screen.get_parent().add_child(event_screen)
 	router.register(&"event", event_screen, UiRouter.Kind.MODAL)
 	event_screen.action_requested.connect(_on_event_action)
+	leaderboard_screen = LeaderboardScreen.new()
+	garage_screen.get_parent().add_child(leaderboard_screen)
+	router.register(&"leaderboard", leaderboard_screen, UiRouter.Kind.MODAL)
+	leaderboard_screen.watch_requested.connect(_watch_leaderboard_run)
+	leaderboard_screen.account_requested.connect(func() -> void:
+		router.close_all()
+		router.open(&"account"))
+	drag_race_screen.watch_finished.connect(_on_watch_finished)
+	var board: Leaderboard = get_tree().get_first_node_in_group("leaderboard") as Leaderboard
+	if board:
+		board.submitted.connect(_on_leaderboard_submitted)
 	var mail: MailService = get_tree().get_first_node_in_group("mail") as MailService
 	if mail:
 		mail_notice = MailNotice.new(self, mail)
@@ -2510,6 +2541,50 @@ func start_event_race() -> bool:
 	_race.set_racing(true)
 	router.open(&"drag_race")
 	return true
+
+
+## HAFTALIK DRAG TABLOSU: `cls` verilirse o sınıfla (boşsa oyuncunun yarış aracının sınıfı).
+func open_leaderboard(cls: StringName = &"") -> void:
+	if leaderboard_screen == null:
+		return
+	leaderboard_screen.next_class = cls
+	router.open(&"leaderboard")
+
+
+## İZLE: tablodaki koşu indirilir, pist izleme kipinde açılır (yalnız izlenir; bitince tabloya dönülür).
+func _watch_leaderboard_run(info: Dictionary) -> void:
+	var board: Leaderboard = get_tree().get_first_node_in_group("leaderboard") as Leaderboard
+	if board == null or drag_race_screen == null:
+		return
+	var recording: DragRaceSim.Recording = await board.recording_of(int(info.get("wk", 0)), StringName(info.get("cls", "")),
+		String(info.get("uid", "")))
+	if recording == null:
+		_show_notice(Loc.t("Bu koşu şu an açılamadı."), HudPalette.INK, 2.0)
+		return
+	_watch_return_class = StringName(info.get("cls", ""))
+	drag_race_screen.watch_recording = recording
+	drag_race_screen.watch_name = String(info.get("name", ""))
+	router.close_all()
+	router.open(&"drag_race")
+
+
+## Koşu tabloya yazıldı: sonuç ekranı açıksa (ve bu yarışınsa) şerit hemen dolar, değilse sonuç açılınca.
+func _on_leaderboard_submitted(info: Dictionary) -> void:
+	_leaderboard_info = info
+	if router.is_open(&"race_result") and _leaderboard_info_matches(float(drag_race_screen.record_result()["time"])):
+		race_result_screen.show_leaderboard(info)
+
+
+func _leaderboard_info_matches(player_time: float) -> bool:
+	return not _leaderboard_info.is_empty() and player_time > 0.0 \
+		and absf(float(_leaderboard_info.get("time", -1.0)) - player_time) < 0.001
+
+
+func _on_watch_finished() -> void:
+	await get_tree().create_timer(1.8).timeout
+	if router.is_open(&"drag_race"):
+		router.close_all()
+		open_leaderboard(_watch_return_class)
 
 
 ## ETKİNLİK YARIŞI: süren etkinliğin aracıyla (ödünç ya da zaten oyuncunun) o aracın havuzundan isimsiz rakibe karşı pist

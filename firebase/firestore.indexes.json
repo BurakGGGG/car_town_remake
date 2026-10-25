@@ -1,0 +1,40 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "lb_runs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "wk", "order": "ASCENDING" },
+        { "fieldPath": "cls", "order": "ASCENDING" },
+        { "fieldPath": "time", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "lb_runs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "wk", "order": "ASCENDING" },
+        { "fieldPath": "cls", "order": "ASCENDING" },
+        { "fieldPath": "flag", "order": "ASCENDING" },
+        { "fieldPath": "time", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "lb_runs",
+      "fieldPath": "run",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "lb",
+      "fieldPath": "top",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "lb",
+      "fieldPath": "hist",
+      "indexes": []
+    }
+  ]
+}

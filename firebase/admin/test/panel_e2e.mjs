@@ -356,6 +356,60 @@ try {
     "tek oyuncuya haber: ödülsüz posta, resim + düğme");
   check((await call("POST", "/api/mail/send", { target: "one", query: "abc234", mail: { text: "x", action: { kind: "url", url: "http://x.com" } } })).status === 400,
     "postada https olmayan bağlantı: 400");
+
+  console.log("== lider tablosu ==");
+  const lbWk = Math.floor((Math.floor((Date.now() + 10800000) / 86400000) + 3) / 7);
+  const lbRun = (uid, time, over = {}) => ({ uid, wk: lbWk, cls: "A", time, car: "audi_rs6", paint: "#112233", stage: 3, level: 9,
+    name: `Usta ${uid.slice(0, 5)}`, av: "p01", flag: "TR", run: "{\"v\":3}", at: Math.floor(Date.now() / 1000), ...over });
+  const lbBatch = db.batch();
+  for (let i = 0; i < 105; i++) {
+    const uid = `lbuser${String(i).padStart(3, "0")}`;
+    lbBatch.set(db.doc(`lb_runs/${lbWk}_A_${uid}`), lbRun(uid, 7.5 + i * 0.01, { flag: i % 3 ? "TR" : "DE" }));
+  }
+  lbBatch.set(db.doc(`lb_runs/${lbWk}_C_lbother01`), lbRun("lbother01", 5.5, { cls: "C" }));   // başka sınıf: listede yok
+  lbBatch.set(db.doc(`lb_runs/${lbWk - 1}_A_lbold0001`), lbRun("lbold0001", 5.0, { wk: lbWk - 1 }));   // geçen hafta
+  lbBatch.set(db.doc(`lb/${lbWk}_A`), { wk: lbWk, cls: "A", cc: "", count: 105, hist: {}, top: [], updated: 5 });
+  await lbBatch.commit();
+  const lbl = await call("POST", "/api/lb/list", { cls: "A" });
+  const rows = lbl.data.rows || [];
+  check(lbl.status === 200 && rows.length === 100 && rows[0].uid === "lbuser000" && rows[0].rank === 1 && rows[99].uid === "lbuser099",
+    `ilk 100, süreye göre (${rows.length})`);
+  check(rows[0].car_name !== "audi_rs6" && rows[0].uid_short === "lbuser00" && !("run" in rows[0]), "katalog adı, kısa UID, koşu kaydı yok");
+  check(lbl.data.wk === lbWk && lbl.data.weeks?.length === 4 && lbl.data.summary?.count === 105 && lbl.data.summary.n50 === 53,
+    "bu hafta varsayılan, son 4 hafta seçeneği, özet + ödül kesimi");
+  const lbTr = await call("POST", "/api/lb/list", { cls: "a", cc: "tr" });
+  check(lbTr.status === 200 && lbTr.data.cc === "TR" && lbTr.data.rows.length === 70 && lbTr.data.rows.every((r) => r.flag === "TR")
+    && lbTr.data.summary === null, "ülke süzgeci (TR: 70 kayıt; ülke özeti henüz yok)");
+  const lbOld = await call("POST", "/api/lb/list", { cls: "A", wk: lbWk - 1 });
+  check(lbOld.data.rows?.length === 1 && lbOld.data.rows[0].uid === "lbold0001", "geçen hafta");
+  check((await call("POST", "/api/lb/list", { cls: "X" })).status === 400, "bilinmeyen sınıf: 400");
+  check((await call("POST", "/api/lb/list", { cls: "A", wk: lbWk + 1 })).status === 400, "gelecek hafta: 400");
+  const lbDel = await call("POST", "/api/lb/delete", { id: `${lbWk}_A_lbuser000` });
+  check(lbDel.status === 200 && !(await db.doc(`lb_runs/${lbWk}_A_lbuser000`).get()).exists, "kayıt silindi");
+  check((await call("POST", "/api/lb/list", { cls: "A" })).data.rows[0].uid === "lbuser001", "silinen listeden çıktı");
+  check((await call("POST", "/api/lb/delete", { id: `${lbWk}_A_lbuser000` })).status === 400, "olmayan kayıt: 400");
+  check((await call("POST", "/api/lb/delete", { id: "../players/alice_uid_1" })).status === 400, "geçersiz kimlik: 400");
+  const lbLog = (await call("GET", "/api/log")).data.log.find((e) => e.kind === "lb_delete");
+  check(lbLog?.id === `${lbWk}_A_lbuser000` && lbLog.uid === "lbuser000" && lbLog.time === 7.5 && lbLog.car === "audi_rs6", "silme günlükte");
+  const rw0 = await call("GET", "/api/lb/rewards");
+  check(rw0.data.custom === false && rw0.data.rewards?.top3?.gems === 150 && rw0.data.rewards.top3.crate === "super_crate", "ödül: kayıt yokken varsayılan");
+  const cfgBefore = (await db.doc("config/app").get()).data();
+  const rw = await call("POST", "/api/lb/rewards", { rewards: { top3: { gems: 300, crate: "prestige_crate" }, p10: { gems: 80, crate: "" },
+    p50: { gems: 10, crate: "city_crate" } } });
+  const cfgLb = (await db.doc("config/app").get()).data();
+  check(rw.status === 200 && cfgLb.leaderboard?.rewards?.top3?.gems === 300 && cfgLb.leaderboard.rewards.p50.crate === "city_crate"
+    && rw.data.custom === true, "ödül ayarı config/app.leaderboard.rewards'a yazıldı");
+  check(cfgLb.min_code === cfgBefore.min_code && JSON.stringify(cfgLb.events) === JSON.stringify(cfgBefore.events)
+    && JSON.stringify(cfgLb.event) === JSON.stringify(cfgBefore.event), "config/app'in öbür alanları korundu");
+  check((await call("POST", "/api/lb/rewards", { rewards: { top3: { gems: 2000 } } })).status === 400, "1000'den fazla elmas: 400");
+  check((await call("POST", "/api/lb/rewards", { rewards: { p10: { gems: 5, crate: "welcome_crate" } } })).status === 400, "hediye kasası: 400");
+  await call("POST", "/api/config", { min_code: cfgBefore.min_code, latest_code: cfgBefore.latest_code, maintenance: false });
+  check((await db.doc("config/app").get()).data().leaderboard?.rewards?.top3?.gems === 300, "Sürüm ve bakım kaydı lider tablosu ödüllerini korur");
+  const rwBack = await call("GET", "/api/lb/rewards");
+  check(rwBack.data.custom === true && rwBack.data.rewards.p10.gems === 80, "ödül ayarı geri okunur");
+  const rwReset = await call("POST", "/api/lb/rewards", { reset: true });
+  check(rwReset.status === 200 && !("leaderboard" in (await db.doc("config/app").get()).data()) && rwReset.data.custom === false,
+    "varsayılana dön: alan silindi");
 } finally {
   server.kill();
 }

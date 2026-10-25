@@ -31,6 +31,7 @@ import {
   buildPromo, PROMO_RE, buildSegment, matchSegment, buildLearning, buildEventsDoc, eventsOf, buildAds,
   buildNewsPost, newsId, NEWS_ID_RE, decodeNewsImage, STORAGE_OFF, bucketCandidates, isMissingBucket, storageUrl,
   buildNewsFeed, NEWS_FEED_DOC,
+  lbQuery, lbRows, lbCuts, lbWeekLabel, lbParseId, lbRewardsFrom, buildLbRewards, LB_LIST_MAX, LB_FIELDS, LB_DEFAULT_REWARDS,
 } from "./lib.mjs";
 
 // Gecelik istatistiğin aynısı (functions/stats.js, saf mantık): panel anlık sayıları da onunla hesaplar
@@ -252,13 +253,14 @@ const routes = {
 
   "POST /api/config": async (body) => {
     const doc = buildConfig(body, Date.now());
-    // Etkinlik takvimi (+ aynası), içerik paketleri ve reklam ayarı kendi sekmelerinden yazılır (POST /api/events, /api/ads):
+    // Etkinlik takvimi (+ aynası), içerik paketleri, reklam ayarı ve lider tablosu ödülleri kendi sekmelerinden yazılır
+    // (POST /api/events, /api/ads, /api/lb/rewards):
     // burada olduğu gibi korunur. İşlem: eventsTick aynayı aynı anda ilerletirse eski ayna geri yazılmaz.
     const ref = db.doc("config/app");
     await db.runTransaction(async (tx) => {
       const current = await tx.get(ref);
       const old = current.exists ? current.data() : {};
-      for (const k of ["events", "event", "packs", "ads"]) if (old[k] !== undefined) doc[k] = old[k];
+      for (const k of ["events", "event", "packs", "ads", "leaderboard"]) if (old[k] !== undefined) doc[k] = old[k];
       tx.set(ref, doc);
     });
     await log({ kind: "config", min_code: doc.min_code, latest_code: doc.latest_code, maintenance: doc.maintenance,
@@ -310,6 +312,68 @@ const routes = {
     });
     await log({ kind: "ads", reset: !ads, total_cap: ads ? ads.total_cap : 0, free_gems: ads ? ads.free_gems : 0 });
     return { ads };
+  },
+
+  // --- Haftalık drag lider tablosu (docs/LIDER_TABLOSU.md; özetleri functions/leaderboard.js lbRun tutar) ---
+  // İlk 100 doğrudan lb_runs'tan (süreye göre; ülke seçiliyse bayrağa göre süzülür) + o haftanın özeti. Okuma: en çok 101 belge.
+  // Bileşik dizin gerekir (firebase/firestore.indexes.json: wk + cls + time, wk + cls + flag + time).
+  "POST /api/lb/list": async (body) => {
+    const nowS = Math.floor(Date.now() / 1000);
+    const q = lbQuery(body, nowS);
+    let query = db.collection("lb_runs").where("wk", "==", q.wk).where("cls", "==", q.cls);
+    if (q.cc) query = query.where("flag", "==", q.cc);
+    const [snap, sumSnap] = await Promise.all([
+      query.orderBy("time").limit(LB_LIST_MAX).select(...LB_FIELDS).get(),
+      db.doc(`lb/${q.wk}_${q.cls}${q.cc ? "_" + q.cc : ""}`).get(),
+    ]);
+    const sum = sumSnap.exists ? sumSnap.data() : null;
+    return {
+      ...q, label: lbWeekLabel(q.wk),
+      weeks: [0, 1, 2, 3].map((i) => ({ wk: q.current - i, label: lbWeekLabel(q.current - i) })),
+      rows: lbRows(snap.docs.map((d) => ({ id: d.id, data: d.data() })), catalog),
+      summary: sum ? { count: sum.count || 0, updated: sum.updated || 0, paid: sum.paid === true, paid_at: sum.paid_at || 0,
+        paid_count: sum.paid_count || 0, top: Array.isArray(sum.top) ? sum.top.length : 0, ...lbCuts(sum.count) } : null,
+    };
+  },
+
+  // Kayıt silme (hile / şikâyet): lbRun silmeyi görür, özetleri (sayı, kovalar, ilk 50) düzeltir
+  "POST /api/lb/delete": async (body) => {
+    const id = String(body.id || "");
+    const parsed = lbParseId(id);
+    if (!parsed) throw new PanelError("Geçersiz kayıt kimliği");
+    const ref = db.doc(`lb_runs/${id}`);
+    const snap = await ref.get();
+    if (!snap.exists) throw new PanelError("Kayıt bulunamadı (silinmiş olabilir)");
+    const d = snap.data();
+    await ref.delete();
+    await log({ kind: "lb_delete", id, uid: parsed.uid, wk: parsed.wk, cls: parsed.cls, name: String(d.name || "").slice(0, 16),
+      car: String(d.car || ""), time: Number(d.time) || 0, flag: String(d.flag || "") });
+    return { ok: true };
+  },
+
+  // Ödül ayarı (config/app.leaderboard.rewards; öbür alanlara dokunulmaz). Kayıtlı değilse functions'ın varsayılanı geçerli.
+  "GET /api/lb/rewards": async () => {
+    const snap = await db.doc("config/app").get();
+    const c = snap.exists ? snap.data() : {};
+    return { rewards: lbRewardsFrom(c), custom: !!(c.leaderboard && c.leaderboard.rewards), defaults: LB_DEFAULT_REWARDS };
+  },
+
+  "POST /api/lb/rewards": async (body) => {
+    const rewards = body.reset ? null : buildLbRewards(body.rewards, catalog);
+    const ref = db.doc("config/app");
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const doc = { ...(snap.exists ? snap.data() : {}) };
+      const board = { ...(doc.leaderboard && typeof doc.leaderboard === "object" ? doc.leaderboard : {}) };
+      delete board.rewards;
+      if (rewards) board.rewards = rewards;
+      if (Object.keys(board).length) doc.leaderboard = board;
+      else delete doc.leaderboard;
+      doc.updated_at = Math.floor(Date.now() / 1000);
+      tx.set(ref, doc);
+    });
+    await log({ kind: "lb_rewards", reset: !rewards, rewards: rewards || null });
+    return { rewards: rewards || LB_DEFAULT_REWARDS, custom: !!rewards, defaults: LB_DEFAULT_REWARDS };
   },
 
   // Bilgisayardaki kurulmuş paketler (build_pack.sh çıktısı): özet dosyası + .pck birlikte olmalı

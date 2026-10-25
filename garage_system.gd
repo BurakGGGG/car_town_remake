@@ -195,6 +195,11 @@ func _ensure_social() -> void:
 		var push: PushService = PushService.new()
 		push.name = "PushService"
 		add_child(push)
+	# HAFTALIK DRAG LİDER TABLOSU (Leaderboard, "leaderboard"): yarış bitince en iyi süreyi yazar, tabloları okur
+	if get_tree().get_first_node_in_group("leaderboard") == null:
+		var leaderboard: Leaderboard = Leaderboard.new()
+		leaderboard.name = "Leaderboard"
+		add_child(leaderboard)
 	if get_tree().get_first_node_in_group("social") == null:
 		var social: SocialManager = SocialManager.new()
 		social.name = "SocialManager"

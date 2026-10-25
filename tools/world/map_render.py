@@ -17,6 +17,9 @@ Düzen (harita birimi ≈ metre, X doğu, Y kuzey): batıda çöl + kızıl kaya
 YAKINDA mekânları (2026-10-23, henüz oynanmaz): kuzeyde çöl düzlüğünde OTO ŞOV (araç sergisi / buluşma), şehrin
 güneyinde kıyıda LİMAN (ithal araçların geldiği rıhtım). İkisi de gri maket gibi çizilir (greyed()): açılınca
 greyed() kaldırılıp yeniden render edilir.
+DRAG PİSTİ (2026-10-26, haftalık drag tablosu: docs/LIDER_TABLOSU.md): şehrin kuzeybatısında, nehrin doğusunda; simgesi
+tabloyu açar (yolculuk yok). Ağaç / ev seçimleri pistin yerine düşünce rastgele sayılar YİNE çekilir: haritanın geri
+kalanı (şehir binaları, bulutlar) eski render'la aynı kalır.
 """
 import bpy, bmesh, math, random, json, os, sys
 from contextlib import contextmanager
@@ -43,6 +46,8 @@ PORT = (37.0, -25.0)   # LİMAN (YAKINDA)
 # telefonun üst / alt kırpma payının içinde kalmalı (harita ekranı geniş ekranda üstten ve alttan kırpılır).
 MEET_ROAD = [(-3.5, 4.4), (-5.5, 10.0), (-9.5, 15.5), (-14.0, 20.4)]
 PORT_ROAD = [(39.0, -4.6), (38.4, -9.0), (37.2, -14.0), (36.8, -19.6)]
+DRAG = (20.0, 25.6)   # DRAG PİSTİ: pistin orta noktası (şeritler doğu-batı, bitiş doğuda şehre yakın)
+DRAG_ROAD = [(27.5, 16.2), (27.5, 19.6), (27.3, 23.1)]   # şehrin batıdan ikinci sokağından piste
 CAR_COLORS = ["#D9483B", "#F2C14E", "#3F7FC1", "#F4EFE4", "#4FA46A", "#2E3440", "#E8833A", "#9B6FC4"]
 
 R = random.Random(5)
@@ -371,6 +376,9 @@ def trees():
         if abs(y - 3.5) < 3 and x < 34 or _near_new_places(x, y, 1.0):
             continue
         s = R.uniform(0.8, 1.5)
+        if _near_drag(x, y, 1.0):
+            R.random(), R.choice(leaf)   # yerleştirilseydi çekilecek sayılar: sonraki ağaçlar / şehir değişmesin
+            continue
         cyl("Trunk%d" % k, (x, y, 0), 0.25 * s, 0.9 * s, trunk, segs=6)
         if R.random() < 0.5:
             blob("Tree%d" % k, (x, y, 1.8 * s), 1.1 * s, (1, 1, 1.05), R.choice(leaf), segs=10, rings=7)
@@ -717,6 +725,112 @@ def _near_new_places(x, y, pad=0.0):
     return False
 
 
+def _near_drag(x, y, pad=0.0):
+    """DRAG PİSTİ alanı ve ona bağlanan yol (ağaç / ev konmaz)."""
+    dx, dy = DRAG
+    if dx - 12.9 - pad < x < dx + 12.9 + pad and dy - 4.0 - pad < y < dy + 7.6 + pad:   # 1,1 kat ölçekli alan
+        return True
+    for (ax, ay), (bx, by) in zip(DRAG_ROAD, DRAG_ROAD[1:]):
+        for t in (0.0, 0.25, 0.5, 0.75, 1.0):
+            if math.hypot(x - (ax + (bx - ax) * t), y - (ay + (by - ay) * t)) < 2.2 + pad:
+                return True
+    return False
+
+
+def drag_strip():
+    """DRAG PİSTİ: koyu asfalt iki şerit (beyaz kenar, sarı kesik orta çizgi), batıda başlama çizgisi + ışık ağacı ve
+    çizgide bekleyen iki araba, doğuda dama bitiş çizgisi + bitiş takı; kuzeyde kalabalık basamaklı tribün (arka
+    duvarında bayraklar), batı ucunda kule; güneyde kırmızı-beyaz bordür ve ışık direkleri. Şehre kısa yolla bağlanır.
+    Kendi rastgele üreteci var: R'nin dizisi (ağaçlar, evler, bulutlar) değişmesin. Sonunda 1,1 kat (yol hariç). Doğu ucu
+    ŞEHİR simgesinin altına girmesin, batı ucu nehir kıyısına: boyu buna göre."""
+    before = set(bpy.data.objects)
+    _drag_parts()
+    cx, cy = DRAG
+    for o in set(bpy.data.objects) - before:
+        o.location.x = cx + (o.location.x - cx) * 1.1
+        o.location.y = cy + (o.location.y - cy) * 1.1
+        o.location.z *= 1.1
+        o.scale = o.scale * 1.1
+    ribbon("DragRoad", DRAG_ROAD, 1.6, 0.075, mat("#6B625A"), smooth=6)
+    ribbon("DragRoadEdge", DRAG_ROAD, 2.1, 0.055, mat("#BFA57A"), smooth=6)
+
+
+def _drag_parts():
+    rnd = random.Random(11)
+    cx, cy = DRAG
+    ty = cy - 0.8            # pist ekseni
+    x0, x1 = cx - 8.5, cx + 8.5   # başlama / bitiş çizgisi
+    box("DragPad", (cx, cy + 1.6, 0.0), (22.8, 10.0, 0.08), mat("#CFC8B8"))
+    box("DragGrass", (cx, ty, 0.02), (22.0, 4.6, 0.08), mat("#7DB552"))
+    box("DragTrack", (cx, ty, 0.04), (20.8, 3.4, 0.12), mat("#3A3D41", rough=0.7))
+    white, yellow = mat("#F4EFE4"), mat("#F2C14E")
+    for side in (-1, 1):
+        box("DragEdge%d" % side, (cx, ty + side * 1.52, 0.16), (20.4, 0.12, 0.01), white)
+    for k in range(7):
+        box("DragDash%d" % k, (x0 + 1.2 + k * 2.1, ty, 0.16), (1.1, 0.1, 0.01), yellow)
+    box("DragStart", (x0, ty, 0.16), (0.2, 3.0, 0.01), white)
+    black = mat("#23262B")
+    for i in range(2):
+        for j in range(8):
+            box("DragFinish%d_%d" % (i, j), (x1 - 0.2 + i * 0.4, ty - 1.4 + j * 0.4, 0.16), (0.4, 0.4, 0.012),
+                black if (i + j) % 2 == 0 else white)
+    # Bitiş takı: iki kırmızı direk, üstünde dama desenli sarı kiriş
+    red = mat("#C24B3A")
+    for side in (-1, 1):
+        box("DragGatePost%d" % side, (x1 + 0.1, ty + side * 2.05, 0.1), (0.32, 0.32, 2.7), red, bevel=0.03)
+    box("DragGateBeam", (x1 + 0.1, ty, 2.8), (0.7, 4.5, 0.42), yellow, bevel=0.03)
+    for j in range(10):
+        box("DragGateChk%d" % j, (x1 + 0.1, ty - 2.0 + j * 0.44, 3.22), (0.6, 0.44, 0.02), black if j % 2 == 0 else white)
+    # Işık ağacı: şeritlerin arasında, başlama çizgisinin önünde (kırmızı, iki sarı, yanan yeşil)
+    box("DragTree", (x0 - 0.75, ty, 0.16), (0.2, 0.2, 1.7), black)
+    for k, (c, glow) in enumerate([("#D9483B", 0.0), ("#F2C14E", 0.0), ("#F2C14E", 0.0), ("#5EE07A", 3.0)]):
+        box("DragLamp%d" % k, (x0 - 0.75, ty, 2.5 - k * 0.32), (0.26, 0.5, 0.22), mat(c, rough=0.4, emit=glow), bevel=0.03)
+    toy_car("DragCarA", x0 - 1.7, ty - 0.76, 0.16, 0, "#D9483B", s=0.78)
+    toy_car("DragCarB", x0 - 1.7, ty + 0.76, 0.16, 0, "#F2C14E", s=0.78)
+    toy_car("DragCarRun", x0 + 10.5, ty - 0.76, 0.16, 0, "#3F7FC1", s=0.78)   # koşudaki araç
+    # Bordür + ışık direkleri (güney kenarı; başlar piste değil bordüre düşsün diye kısa ve uzakta)
+    for k in range(26):
+        box("DragCurb%d" % k, (cx - 10.4 + k * 0.8 + 0.4, ty - 1.95, 0.04), (0.8, 0.3, 0.16), red if k % 2 == 0 else white)
+    pole = mat("#5E5A55")
+    for k in range(3):
+        px = cx - 6.0 + k * 6.0
+        box("DragPole%d" % k, (px, ty - 3.2, 0.08), (0.12, 0.12, 1.6), pole)
+        box("DragPoleHead%d" % k, (px, ty - 3.05, 1.68), (0.5, 0.45, 0.14), pole)
+    # Tribün: üç basamak, arka duvar + kırmızı bant, basamaklarda renkli kalabalık, duvarın üstünde bayraklar
+    sx0, sx1 = cx - 5.4, cx + 6.0
+    sw, scx = sx1 - sx0, (sx0 + sx1) / 2
+    steps = [mat("#D9D4CA"), mat("#CFC8BA"), mat("#C4BDAE")]
+    crowd = ["#D9483B", "#F2C14E", "#3F7FC1", "#F4EFE4", "#4FA46A", "#E8833A", "#9B6FC4", "#2E3440"]
+    base_y = ty + 2.45
+    for k in range(3):
+        box("DragStand%d" % k, (scx, base_y + k * 1.0, 0.08), (sw, 1.0, 0.42 * (k + 1)), steps[k])
+        for i in range(int(sw / 0.42)):
+            if rnd.random() < 0.18:
+                continue   # boş koltuk
+            hx = sx0 + 0.25 + i * 0.42 + rnd.uniform(-0.05, 0.05)
+            box("DragFan%d_%d" % (k, i), (hx, base_y + k * 1.0 + 0.1, 0.08 + 0.42 * (k + 1)), (0.26, 0.26, 0.34),
+                mat(rnd.choice(crowd), rough=0.6), bevel=0.04)
+    wall_y = base_y + 2.65
+    box("DragStandWall", (scx, wall_y, 0.08), (sw + 0.2, 0.3, 2.1), mat("#E9E4DA"))
+    box("DragStandBand", (scx, wall_y - 0.02, 2.18), (sw + 0.3, 0.36, 0.3), red)
+    for k, c in enumerate(["#D9483B", "#F2C14E", "#3F7FC1", "#4FA46A", "#F2C14E", "#D9483B"]):
+        fx = sx0 + 0.6 + k * (sw - 1.2) / 5
+        box("DragFlagPole%d" % k, (fx, wall_y, 2.48), (0.06, 0.06, 1.3), mat("#E9E4DA"))
+        box("DragFlag%d" % k, (fx + 0.3, wall_y, 3.25), (0.56, 0.04, 0.36), mat(c))
+    # Kule (batı ucu, tribünün yanında): krem gövde, mavi cam bandı, kırmızı çatı
+    tx, tyy = cx - 8.3, ty + 3.4
+    box("DragTower", (tx, tyy, 0.08), (2.2, 2.0, 2.4), mat("#F3E8CF"), bevel=0.06)
+    box("DragTowerGlass", (tx, tyy, 1.55), (2.26, 2.06, 0.55), mat("#7FC8E8", rough=0.15))
+    box("DragTowerRoof", (tx, tyy, 2.48), (2.5, 2.3, 0.22), red, bevel=0.04)
+    # Doğu ucunda iki ağaç + park etmiş seyirci arabaları (tribün ile bitiş takı arasında)
+    leaf = mat("#4E9A3E")
+    for k, (lx, ly) in enumerate([(cx + 10.6, ty + 4.6), (cx - 10.6, ty + 5.4)]):
+        cyl("DragTreeTrunk%d" % k, (lx, ly, 0.08), 0.2, 0.8, mat("#7A5434"), segs=6)
+        blob("DragTreeTop%d" % k, (lx, ly, 1.6), 0.95, (1, 1, 1.05), leaf, segs=10, rings=7)
+    for k in range(3):
+        toy_car("DragPark%d" % k, cx + 7.4 + k * 1.05, ty + 4.9, 0.08, 90, rnd.choice(CAR_COLORS), s=0.5)
+
+
 def extras():
     """Haritayı canlandıran küçük ayrıntılar: tarlalar, kasaba evleri, yol üstünde benzinlik, deniz feneri,
     tekneler, çölde vaha ve rüzgârgülü."""
@@ -736,6 +850,9 @@ def extras():
         if abs(y - 3.5) < 3 and x < CITY[0] or _near_new_places(x, y, 1.0):
             continue
         rot = R.uniform(-30, 30)
+        if _near_drag(x, y, 1.5):
+            R.choice(roofs)   # sayı dizisi aynı kalsın (bkz. trees)
+            continue
         box("House%d" % k, (x, y, 0.0), (1.8, 1.4, 1.0), wall, rot=rot, bevel=0.05)
         roof = box("HouseRoof%d" % k, (x, y, 1.0), (2.0, 1.6, 0.6), R.choice(roofs), rot=rot)
         bm = bmesh.new()
@@ -860,6 +977,7 @@ def main():
     city()
     junkyard()
     side_roads()
+    drag_strip()
     with greyed():
         meet()
         port()
@@ -879,6 +997,7 @@ def main():
             "junkyard": screen_point(cam, JUNKYARD[0], JUNKYARD[1], 2.0),
             "meet": screen_point(cam, MEET[0], MEET[1], 2.0),
             "port": screen_point(cam, PORT[0], PORT[1], 3.0),
+            "drag": screen_point(cam, DRAG[0], DRAG[1] + 5.0, 2.0),   # tribünün arkası: simge pisti örtmesin
         },
         "route": [screen_point(cam, x, y, 0.1) for (x, y) in path[::3]] + [screen_point(cam, *path[-1], 0.1)],
     }

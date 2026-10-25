@@ -1,7 +1,7 @@
 // Uçtan uca (YEREL EMÜLATÖR, gerçek projeye dokunmaz): haber belgesi yazılınca raceNewsPush tetiklenir mi, bildirim
 // iletisi FCM'nin kabul edeceği biçimde mi (emülatörde FCM yerine _e2e_fcm koleksiyonuna yazılır, index.js), 6 saatlik
 // çift kaydı (push_log) yalnızca GÖNDERİLEN bildirimle mi yazılır. 2026-10-21: posta bildirimi (mailPush). 2026-10-25: HABERLER
-// bildirimi (newsPush; zamanlayıcı mantığı pushScheduled doğrudan çağrılır).
+// bildirimi (newsPush; zamanlayıcı mantığı pushScheduled doğrudan çağrılır). 2026-10-26: haftalık drag tablosu (lbRun).
 // firebase/ klasöründen: firebase emulators:exec --only firestore,functions --project demo-cartown "node functions/test/e2e.mjs"
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
@@ -120,5 +120,47 @@ const feedNow = (await db.doc("config/news").get()).data();
 const feedIdsNow = feedNow.items.map((i) => i.id);
 check(pruned.ended === 1 && !feedIdsNow.includes("n_e2e_5") && feedIdsNow.includes("n_e2e_1") && feedNow.at === nowS + 3700
   && !("pushed_at" in feedNow.items[0]), `zamanlayıcı biten haberi yayından düşürdü (${JSON.stringify(pruned)})`);
+
+// HAFTALIK DRAG LİDER TABLOSU (lbRun): gerçek tetikleyici + işlem içi sorgu. Hile sınırı lb_limits.json (ford_focus C sınıfı).
+const lbWk = Math.floor((Math.floor((Date.now() + 10800000) / 86400000) + 3) / 7);
+const lbRun = (uid, time, over = {}) => ({ uid, wk: lbWk, cls: "C", time, car: "ford_focus", paint: "", stage: 1, level: 5,
+  name: `Usta ${uid}`, av: "", flag: "TR", run: "{}", at: Math.floor(Date.now() / 1000), ...over });
+const lbSum = async (cc = "") => (await db.doc(`lb/${lbWk}_C${cc ? "_" + cc : ""}`).get()).data() || {};
+await db.doc("users/lbA/friends/f_lbB").set({ since: 1 });
+await db.doc("users/lbB/friends/f_lbA").set({ since: 1 });
+await db.doc("push/p_lbB").set({ token: "L".repeat(40), lang: "tr", at: 1 });
+await db.doc(`lb_runs/${lbWk}_C_lbB`).set(lbRun("lbB", 11.5));
+check(await waitFor(async () => (await lbSum()).count === 1), "lbRun: ilk koşu dünya özetine girdi");
+await db.doc(`lb_runs/${lbWk}_C_lbA`).set(lbRun("lbA", 12.0, { flag: "DE" }));
+check(await waitFor(async () => (await lbSum()).count === 2), "ikinci oyuncu");
+await db.doc(`lb_runs/${lbWk}_C_lbA`).set(lbRun("lbA", 11.2, { flag: "DE" }));
+check(await waitFor(async () => (await db.doc(`users/lbB/lbnews/${lbWk}_C_lbA`).get()).exists), "iyileşme: arkadaşa 'seni geçti' haberi");
+check(await waitFor(async () => (await sentTo("L".repeat(40))).some((m) => m.data?.type === "lb")), "arkadaşa bildirim");
+const lbMsg = (await sentTo("L".repeat(40))).find((m) => m.data?.type === "lb") || {};
+check(badKeys(lbMsg.data).length === 0 && lbMsg.notification?.body === "Usta lbA seni C sınıfı haftalık tablosunda geçti! (11.20 sn) 🏁",
+  `bildirim metni / veri yükü (${lbMsg.notification?.body})`);
+const s2 = await lbSum();
+check(s2.count === 2 && s2.top.map((e) => e.uid).join(",") === "lbA,lbB" && Object.values(s2.hist).reduce((a, b) => a + b, 0) === 2
+  && !("run" in s2.top[0]), "özet: sayı aynı, sıra değişti, kovalar, koşu kaydı yok");
+check((await lbSum("DE")).count === 1 && (await lbSum("TR")).count === 1, "ülke özetleri");
+await db.doc(`lb_runs/${lbWk}_C_lbC`).set(lbRun("lbC", 9.0));   // ford_focus sınırının altı
+check(await waitFor(async () => !(await db.doc(`lb_runs/${lbWk}_C_lbC`).get()).exists), "hile sınırının altı: belge silindi");
+await sleep(3000);
+check((await lbSum()).count === 2 && !(await lbSum()).top.some((e) => e.uid === "lbC"), "reddedilen kayıt özete girmedi");
+await db.doc(`lb_runs/${lbWk}_C_lbB`).delete();
+check(await waitFor(async () => (await lbSum()).count === 1), "panel silmesi: özetten düştü");
+check((await lbSum()).top.map((e) => e.uid).join(",") === "lbA" && (await lbSum("TR")).count === 0, "ilk 50 ve ülke özeti düzeldi");
+await db.doc(`lb/${lbWk}_C`).update({ count: 5 });   // eski bir kayma: liste sayıdan kısa → işlem içi sorguyla yeniden kurulur
+await db.doc(`lb_runs/${lbWk}_C_lbA`).set(lbRun("lbA", 11.1, { flag: "DE" }));
+check(await waitFor(async () => (await lbSum()).count === 1 && (await lbSum()).top[0]?.time === 11.1), "kayma: sorguyla sayı / liste düzeldi");
+// lbWeekly emülatörde çalışmaz (pubsub yok): aynı mantık gelecek pazartesi saatiyle doğrudan çağrılır (gerçek sorgu + toplu yazma)
+const { payWeekly, weekStart } = require("../leaderboard.js");
+const nextMonday = (weekStart(lbWk + 1) + 600) * 1000;
+const paid = await payWeekly({ db, now: nextMonday });
+const prize = (await db.doc(`users/lbA/mail/lb_${lbWk}_C`).get()).data();
+check(paid.mails === 1 && prize?.gems === 150 && prize.crates?.super_crate === 1 && prize.lb?.rank === 1 && (await lbSum()).paid === true,
+  `haftalık ödül postası + paid (${JSON.stringify(paid)})`);
+check((await payWeekly({ db, now: nextMonday })).mails === 0, "ikinci çalışma: ödenmiş tablo atlanır");
+
 console.log(fails === 0 ? "RESULT fails=0" : "RESULT fails=" + fails);
 process.exit(fails === 0 ? 0 : 1);

@@ -534,7 +534,7 @@ func _photo(item: Dictionary, area: Vector2, large: bool) -> Control:
 		NewsDigest.EARNINGS:
 			stack.add_child(_MoneyPile.new())
 			_money_photo = frame
-		NewsDigest.RACE_LOST, NewsDigest.RACE_WON, NewsDigest.MOD_READY:
+		NewsDigest.RACE_LOST, NewsDigest.RACE_WON, NewsDigest.MOD_READY, NewsDigest.LB_PASSED:
 			if large or people.is_empty():
 				stack.add_child(_car_picture(StringName(item.get("car", &""))))
 			if not people.is_empty():

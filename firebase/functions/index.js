@@ -17,6 +17,9 @@
 //   raceLearning    her gece yarış günlüklerini (race_log) bağlam × kol başına toplar → config/race_learning (learning.js)
 //   iapVerify       oyun elmas vermeden önce satın almayı Google Play'den doğrular (mantık iap.js)
 //   iapVoided       6 saatte bir Play'in iade / ters ibraz listesini okur, oyuncuya iade belgesi bırakır (mantık refunds.js)
+//   lbRun           haftalık drag tablosu: koşu yazılınca / silinince hile sınırı + dünya / ülke özeti (lb/…) + "arkadaşın seni
+//                   geçti" haberi ve bildirimi (mantık leaderboard.js, docs/LIDER_TABLOSU.md)
+//   lbWeekly        Pazartesi 00:10 TR: geçen haftanın sınıf tablolarına göre ödül postası (mantık leaderboard.js)
 // Test: npm test. Bölge europe-west4: Firestore eur3 (europe-west1 / europe-west4) ile aynı yer.
 // Gönderim: firebase/ klasöründen `firebase deploy --only functions --project car-town-remake` (Blaze planı gerekir).
 
@@ -41,6 +44,7 @@ const { sendCode, verifyCode, CodeError, clientIp } = require("./email_code");
 const { cleanupAccount } = require("./account_cleanup");
 const { verifyPurchase, IapError, PACKAGES } = require("./iap");
 const { processVoided } = require("./refunds");
+const { handleRunWritten, payWeekly } = require("./leaderboard");
 const { GoogleAuth } = require("google-auth-library");
 const functionsV1 = require("firebase-functions/v1");
 
@@ -253,6 +257,34 @@ exports.raceLearning = onSchedule(
   },
 );
 
+
+// HAFTALIK DRAG LİDER TABLOSU (docs/LIDER_TABLOSU.md). Bir sınıfın bütün koşuları aynı özet belgesine yazar (işlem): örnek
+// sayısı düşük tutulur, yarışan işlemler Firestore'da kendiliğinden yeniden denenir. Okuma: koşu + defter + 1–3 özet; iyileşmede
+// arkadaş listesi + arkadaş başına bir koşu. Ret günlüğe belge kimliğiyle yazılır (hile incelemesi; panelden silinebilir).
+exports.lbRun = onDocumentWritten(
+  { document: "lb_runs/{runId}", region: "europe-west4", maxInstances: 3 },
+  async (event) => {
+    const result = await handleRunWritten({
+      db: getFirestore(),
+      messaging: messaging(),
+      id: event.params.runId,
+      before: event.data && event.data.before.exists ? event.data.before.data() : null,
+      after: event.data && event.data.after.exists ? event.data.after.data() : null,
+      now: Date.now(),
+    });
+    if (result !== "same") console.log(`lbRun: ${result}`);
+  },
+);
+
+// Ödül: geçen haftanın (ve kaçmışsa bir önceki haftanın) ödenmemiş sınıf tabloları. Posta kimliği sabit (lb_{hafta}_{sınıf}),
+// özet paid: true olur; iki kez çalışsa da tek posta. Bildirimi mailPush gönderir.
+exports.lbWeekly = onSchedule(
+  { schedule: "10 0 * * 1", region: "europe-west4", timeZone: "Europe/Istanbul", maxInstances: 1, timeoutSeconds: 540 },
+  async () => {
+    const result = await payWeekly({ db: getFirestore(), now: Date.now() });
+    console.log(`lbWeekly: ${JSON.stringify(result)}`);   // yalnızca hafta / sınıf / sayılar
+  },
+);
 
 // SATIN ALMA DOĞRULAMASI: Play Developer API'ye fonksiyonun hizmet hesabıyla gidilir (Play Console'da davetli olmalı,
 // bkz. iap.js KURULUM). Oyun düz HTTP ile çağırır (misafir de satın alabilir: oturum istenmez, uid yalnız kayıt içindir).
