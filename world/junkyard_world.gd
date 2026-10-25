@@ -368,7 +368,7 @@ func show_player_car(id: StringName) -> void:
 	var rig: CarRig = CarRig.new(model)
 	rig.apply(CarAppearance.get_for(path))
 	rig.set_lod_bias(CarRig.LOD_BIAS_WORLD)
-	rig.optimize(true)   # duran araç: parçalar (tekerler dahil) birkaç çizim çağrısına iner
+	rig.optimize(true, true)   # duran araç: parçalar (tekerler dahil) birkaç çizim çağrısına iner; uzak kademe
 	_add_blob(Vector3.ZERO, 1.8, _player_car)
 
 

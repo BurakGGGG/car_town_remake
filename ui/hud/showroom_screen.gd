@@ -347,6 +347,15 @@ func _build_environment() -> void:
 	_build_outside(env_root)
 	_build_ceiling(env_root)
 	_build_decor(env_root)
+	# Salonun sabit kutuları (duvar, cam, tavan, koltuk, tabela...) toplu çizilir (StaticBatch): onlarca çizim çağrısı birkaç
+	# taneye iner. Dönen platform, araç altı gölge ve saydam zemin parıltısı ayrı kalır.
+	var statics: Array[Node3D] = []
+	for child: Node in env_root.get_children():
+		if child is GeometryInstance3D and child not in [_platform, _platform_base, _platform_rim, _blob]:
+			statics.append(child as Node3D)
+	var batch: StaticBatch = StaticBatch.build(statics, env_root, "RoomBatch")
+	if batch:
+		env_root.add_child(batch)
 
 
 # --- Zemin ---------------------------------------------------------------------

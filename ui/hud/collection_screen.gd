@@ -22,6 +22,8 @@ const PLATE_WIDTH: float = 820.0
 const EDGE: float = 16.0
 ## Restorasyon (hurdalık) kartlarının çerçevesi: pas / bakır tonu (kasa nadirlik renklerinden ayrışsın).
 const RESTORATION_COLOR: Color = Color("B5652A")
+## İlk açılışta hemen kurulan bölüm sayısı (kalanı kare başına bir bölüm).
+const GROUPS_FIRST: int = 2
 
 var _title: Label
 var _body: PlatePanel
@@ -33,6 +35,11 @@ var _thumb_host: CarGallery
 var _thumbs: Dictionary = {}   # araç id → {"rect": TextureRect, "silhouette": bool}
 var _pulses: Array[Tween] = []
 var _closing: bool = false
+## Kurulu içeriğin özeti (dil + her aracın sahiplik / yıldız / kopya / keşif durumu): değişmediyse açılışta 72 kart
+## yeniden kurulmaz (ilk açılış masaüstünde ~55 ms, sonrakiler aynı işi tekrar ediyordu).
+var _built_key: String = ""
+## Kurulum kuşağı: kademeli eklenen bölümler eski kuruluma eklenmesin.
+var _build_gen: int = 0
 
 
 func _ready() -> void:
@@ -52,7 +59,15 @@ func _ready() -> void:
 
 
 func open() -> void:
-	_rebuild()
+	var key: String = _content_key()
+	if key != _built_key:
+		_rebuild()
+		_built_key = key
+	else:
+		for tween: Tween in _pulses:
+			if tween and tween.is_valid():
+				tween.play()
+		_apply_thumbnails()
 	PlateAnim.pop_in(self, _column)
 
 
@@ -60,7 +75,9 @@ func close() -> void:
 	if not visible or _closing:
 		return
 	_closing = true
-	_stop_pulses()
+	for tween: Tween in _pulses:   # kartlar bir sonraki açılışa kalır: nabız durur, silinmez
+		if tween and tween.is_valid():
+			tween.pause()
 	PlateAnim.pop_out(self, _column, func() -> void:
 		hide()
 		_closing = false
@@ -163,21 +180,11 @@ func _rebuild() -> void:
 			groups.append({"title": Loc.t(String(tier["name"])), "crate": &"", "cars": tier_cars})
 
 	var last_missing: StringName = _last_missing(own)
-	for group: Dictionary in groups:
-		var cars: Array = group["cars"]
-		var have: int = 0
-		for id: StringName in cars:
-			if own and own.is_discovered(id):
-				have += 1
-		var header: Label = _label(&"HudPlateTitle", "%s   %d / %d" % [group["title"], have, cars.size()])
-		_grid_box.add_child(header)
-		var grid: GridContainer = GridContainer.new()
-		grid.add_theme_constant_override(&"h_separation", int(CARD_GAP))
-		grid.add_theme_constant_override(&"v_separation", int(CARD_GAP))
-		for id: StringName in cars:
-			grid.add_child(_card(id, own, id == last_missing))
-		_grid_box.add_child(grid)
-		_grids.append(grid)
+	_build_gen += 1
+	for i: int in mini(GROUPS_FIRST, groups.size()):
+		_add_group(groups[i], own, last_missing)
+	if groups.size() > GROUPS_FIRST:
+		_add_groups_later(groups.slice(GROUPS_FIRST), own, last_missing, _build_gen)
 
 	_sets_box.add_child(_label(&"HudPlateTitle", Loc.t("KOLEKSİYON SETLERİ")))
 	for set_entry: Dictionary in CrateCatalog.sets():
@@ -199,6 +206,48 @@ func _rebuild() -> void:
 		_sets_box.add_child(line)
 	_fit_width()
 	_apply_thumbnails()
+
+
+func _content_key() -> String:
+	var own: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
+	if own == null:
+		return ""
+	var parts: PackedStringArray = [TranslationServer.get_locale()]
+	var ids: Array[StringName] = VehicleOwnership.collection_ids()
+	for tier: Dictionary in RestorationCatalog.tiers():
+		for entry: Dictionary in RestorationCatalog.cars(tier["id"]):
+			ids.append(entry["id"])
+	for id: StringName in ids:
+		parts.append("%d%d%d" % [int(own.is_owned(id)) + 2 * int(own.is_discovered(id)), own.stars(id), own.duplicate_count(id)])
+	return "|".join(parts)
+
+
+## İlk açılışta ilk GROUPS_FIRST bölüm hemen kurulur, kalanı kare başına bir bölüm (72 kart tek karede ~30 ms'ydi).
+func _add_groups_later(groups: Array[Dictionary], own: VehicleOwnership, last_missing: StringName, gen: int) -> void:
+	for group: Dictionary in groups:
+		await get_tree().process_frame
+		if gen != _build_gen or not is_inside_tree():
+			return
+		_add_group(group, own, last_missing)
+		_fit_width()
+		_apply_thumbnails()
+
+
+func _add_group(group: Dictionary, own: VehicleOwnership, last_missing: StringName) -> void:
+	var cars: Array = group["cars"]
+	var have: int = 0
+	for id: StringName in cars:
+		if own and own.is_discovered(id):
+			have += 1
+	var header: Label = _label(&"HudPlateTitle", "%s   %d / %d" % [group["title"], have, cars.size()])
+	_grid_box.add_child(header)
+	var grid: GridContainer = GridContainer.new()
+	grid.add_theme_constant_override(&"h_separation", int(CARD_GAP))
+	grid.add_theme_constant_override(&"v_separation", int(CARD_GAP))
+	for id: StringName in cars:
+		grid.add_child(_card(id, own, id == last_missing))
+	_grid_box.add_child(grid)
+	_grids.append(grid)
 
 
 ## Plaka ve sütun sayısı kadraja göre: geniş tuvalde 820 birim / 5 sütun, dar tuvalde sığdığı kadar.

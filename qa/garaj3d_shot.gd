@@ -5,6 +5,7 @@ extends SceneTree
 ##   godot-4 --path . --display-driver x11 --resolution 1280x640 --script res://qa/garaj3d_shot.gd -- <garaj> <seviye> <çıktı.png>
 ##   garaj: mahalle | sanayi | … | waiting   seviye: 1-3 (her kalem aynı seviye; sv.3'te PARK YERİ en üstte)
 ##   QA_FOCUS=<araç> odak · QA_ZOOM=0.42 en yakın zoom · QA_CARS virgüllü liste · QA_SETTLE birleştirme bekleme karesi
+##   QA_UZAKSIZ=1 araç uzak kademesi (CarFarLod) kapalı. Görüntü araç birleştirmeleri bittikten sonra alınır.
 
 const CARS: Array[StringName] = [&"tofas_sahin", &"bmw_e46", &"lambo_huracan", &"vw_golf_7", &"porsche_gt3", &"renault_toros",
 	&"hyundai_getz", &"vw_passat_b55", &"bmw_f30", &"toyota_corolla", &"audi_a6", &"mercedes_g", &"porsche_taycan",
@@ -15,6 +16,7 @@ const WAITING_CARS: Array[StringName] = [&"renault_toros", &"hyundai_getz", &"to
 
 
 func _initialize() -> void:
+	CarFarLod.enabled = not OS.has_environment("QA_UZAKSIZ")   # araç uzak kademesi kapalı (önce / sonra kıyası)
 	_run.call_deferred()
 
 
@@ -60,6 +62,12 @@ func _run() -> void:
 		view.set("_dist", dist)
 		view.call("_apply_camera")
 	for i: int in 30:
+		await process_frame
+	var guard: int = 0
+	while CarMeshMerger.busy() and guard < 900:   # oyundaki kalıcı hâl: parçalar birleşmiş, LOD kademeleri birleşik mesh'te
+		await process_frame
+		guard += 1
+	for i: int in 5:
 		await process_frame
 	await RenderingServer.frame_post_draw
 	var image: Image = root.get_texture().get_image()

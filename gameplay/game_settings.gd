@@ -224,6 +224,11 @@ static func subviewport_msaa(preferred: Viewport.MSAA) -> Viewport.MSAA:
 	return preferred
 
 
+## Uygulanmış grafik kalitesi (Quality) — örnek olmadan okunur.
+static func active_quality() -> int:
+	return _active_quality
+
+
 ## Gölge açılsın mı (showroom / garaj ekranı ışıkları)? DÜŞÜK'te kapalı.
 static func shadows_enabled() -> bool:
 	return _active_quality != Quality.LOW

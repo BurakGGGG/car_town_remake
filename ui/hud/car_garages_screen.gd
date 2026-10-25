@@ -106,6 +106,7 @@ func open() -> void:
 	_refresh()
 	set_process(true)
 	PlateAnim.pop_in(self, _column)
+	_prefetch_selected()
 
 
 func close() -> void:
@@ -113,6 +114,8 @@ func close() -> void:
 		return
 	_closing = true
 	set_process(false)
+	# Kare sonunda: GİT'te UiRouter garaj ekranını açmadan ÖNCE bu panoyu kapatır; ekran dosyaları aynı karede alır
+	GarageInterior.cancel_prefetch.call_deferred()
 	PlateAnim.pop_out(self, _column, func() -> void:
 		hide()
 		_photo.texture = null
@@ -656,6 +659,18 @@ func _select(garage: StringName) -> void:
 	for id: StringName in _tabs:
 		(_tabs[id]["button"] as PlateButton).set_pressed_no_signal(id == garage)
 	_refresh_preview()
+	_prefetch_selected()
+
+
+## GİT'ten önce: seçili garajın iç mekânı arka planda yüklenmeye başlar (garaj ekranı açılırken ana iş parçacığı dosya
+## beklemez). Yalnız pano açıkken; kapanınca bırakılır.
+func _prefetch_selected() -> void:
+	var owned: bool = _manager != null and (_selected == CarGarageManager.WAITING
+		or _manager.status(_selected) == CarGarageManager.Status.OWNED)
+	if visible and not _closing and owned:
+		GarageInterior.prefetch(_selected, _manager.interior_levels(_selected))
+	else:
+		GarageInterior.cancel_prefetch()
 
 
 ## Başlık, uyarı, merdiven ve önizleme yazıları (geri sayımlar dahil). Yapı değişmez.

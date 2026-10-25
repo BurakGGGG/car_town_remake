@@ -49,6 +49,9 @@ func _run() -> void:
 			vehicles.append(body)
 		else:
 			others.append(body)
+	var batch: Node3D = view.find_child("DecorBatch", true, false) as Node3D
+	if batch:
+		others.append(batch)   # dekorun toplu çizimi (asıl parçalar çizilmiyor)
 	var traffic: Array[Node3D] = []
 	for node: Node in current_scene.find_children("*", "TrafficVehicle", true, false):
 		traffic.append(node as Node3D)

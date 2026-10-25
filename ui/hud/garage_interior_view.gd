@@ -30,6 +30,10 @@ const FOLLOW: float = 9.0            # kameranın hedefe yetişme hızı (1/sn)
 const NEAR_CARS: int = 6
 const LOD_BIAS_FAR: float = 0.0      # 0 = en kaba kademe (GeometryInstance3D.lod_bias)
 const DETAIL_INTERVAL: float = 0.25  # yakın araçlar bu aralıkla yeniden seçilir (sn)
+## Araçlar kare başına en çok bu kadar kurulur (kameraya yakın olan önce). Hepsi tek karede kuruluyordu: 13 araçlı
+## garaj açılışı masaüstünde ~75 ms'lik tek kare (telefonda yarım saniyeye yakın donma; qa/script_profile.gd open:garage).
+## Bir araç masaüstünde ~6 ms (sahne kurulumu); telefonda kare başına bir araç ~30 fps sınırında kalır.
+const SPAWNS_PER_FRAME: int = 1
 
 var active: bool = false
 var interior: GarageInterior
@@ -42,6 +46,7 @@ var _saved: Dictionary = {}
 var _cars_root: Node3D
 var _cars: Dictionary = {}           # araç id → Node3D
 var _slot_of: Dictionary = {}        # araç id → park yeri (-1 = çekici)
+var _pending: Array = []             # [araç id, park yeri] — sırada, henüz kurulmamış (yakın olan önde)
 var _ring: MeshInstance3D
 var _sign: NameSign
 var _focused: StringName = &""
@@ -74,11 +79,13 @@ func _ready() -> void:
 
 
 ## Kipi açar: `garage` için iç mekân `root`a kurulur, `hide` düğümleri (eski oda) gizlenir. Sahne yoksa false.
-func enter(garage: StringName, root: Node, camera: Camera3D, key_light: DirectionalLight3D, hide: Array[Node3D]) -> bool:
+## `levels` (GarageInterior.set_levels biçimi): o seviyelerin dokuları sahneyle birlikte arka planda yüklenir.
+func enter(garage: StringName, root: Node, camera: Camera3D, key_light: DirectionalLight3D, hide: Array[Node3D],
+		levels: Dictionary = {}) -> bool:
 	if active and interior and interior.garage == garage:
 		return true
 	exit()
-	var created: GarageInterior = GarageInterior.create(garage)
+	var created: GarageInterior = GarageInterior.create(garage, levels)
 	if created == null:
 		return false
 	interior = created
@@ -120,6 +127,7 @@ func exit() -> void:
 	_sign = null   # iç mekânın çocuğu: onunla serbest
 	_cars.clear()
 	_slot_of.clear()
+	_pending.clear()
 	_bias.clear()
 	# Önce ağaçtan ayrılır: yalnız queue_free'de eski kök bir kare daha ağaçta kalıyor, aynı karede kurulan yeni iç mekânla
 	# birlikte çiziliyor ve adı çakışıyordu ("InteriorCars" yerine "@Node3D@1717").
@@ -188,19 +196,47 @@ func sync_cars(slots: Array[StringName], tow: StringName = &"") -> void:
 			_cars.erase(id)
 			_slot_of.erase(id)
 			_bias.erase(id)
+	_pending.clear()
 	for id: StringName in wanted:
-		if _cars.has(id):
-			continue
-		var index: int = wanted[id]
-		var car: Node3D = _spawn(id, interior.tow_transform() if index < 0 else interior.slot_transform(index))
-		if car:
-			_cars[id] = car
-			_slot_of[id] = index
-			_bias[id] = CarRig.LOD_BIAS_WORLD
-	if _focused != &"" and not _cars.has(_focused):
+		if not _cars.has(id):
+			_pending.append([id, int(wanted[id])])
+	var eye: Vector3 = _goal_target
+	_pending.sort_custom(func(a: Array, b: Array) -> bool:
+		return _slot_point(int(a[1])).distance_squared_to(eye) < _slot_point(int(b[1])).distance_squared_to(eye))
+	_spawn_pending(SPAWNS_PER_FRAME)
+	if _focused != &"" and not has_car(_focused):
 		_focused = &""
 	_place_ring()
 	_update_detail()
+
+
+func _slot_point(index: int) -> Vector3:
+	return (interior.tow_transform() if index < 0 else interior.slot_transform(index)).origin
+
+
+## Sıradaki araçlardan en çok `count` tanesini kurar.
+func _spawn_pending(count: int) -> void:
+	while count > 0 and not _pending.is_empty():
+		var entry: Array = _pending.pop_front()
+		_spawn_entry(entry[0], int(entry[1]))
+		count -= 1
+
+
+func _spawn_entry(id: StringName, index: int) -> void:
+	var car: Node3D = _spawn(id, interior.tow_transform() if index < 0 else interior.slot_transform(index))
+	if car:
+		_cars[id] = car
+		_slot_of[id] = index
+		_bias[id] = CarRig.LOD_BIAS_WORLD
+
+
+## Sıradaki aracı hemen kurar (odak, boya önizlemesi beklemesin).
+func _spawn_now(vehicle_id: StringName) -> void:
+	for i: int in _pending.size():
+		if _pending[i][0] == vehicle_id:
+			var entry: Array = _pending.pop_at(i)
+			_spawn_entry(entry[0], int(entry[1]))
+			return
 
 
 ## İSİM TABELASI (NameSign): iç mekânın tabela yerine (GarageInterior.sign_anchor) kurulur; boş yazı tabelayı kaldırır.
@@ -225,18 +261,21 @@ func name_sign() -> NameSign:
 	return _sign if is_instance_valid(_sign) else null
 
 
+## Araç bu iç mekânda mı (kurulmuş ya da kurulmak üzere sırada).
 func has_car(vehicle_id: StringName) -> bool:
-	return _cars.has(vehicle_id)
+	return _cars.has(vehicle_id) or _pending.any(func(entry: Array) -> bool: return entry[0] == vehicle_id)
 
 
 ## Aracın görünüm sürücüsü (BOYA önizlemesi bunu kullanır).
 func rig_of(vehicle_id: StringName) -> CarRig:
+	_spawn_now(vehicle_id)
 	var car: Node3D = _cars.get(vehicle_id) as Node3D
 	return CarRig.for_node(car) if car else null
 
 
 ## Kamera araca gider ve yaklaşır; seçim halkası altına geçer.
 func focus(vehicle_id: StringName, animated: bool = true) -> void:
+	_spawn_now(vehicle_id)
 	_focused = vehicle_id
 	_place_ring()
 	var car: Node3D = _cars.get(vehicle_id) as Node3D
@@ -298,6 +337,10 @@ func _process(delta: float) -> void:
 	_dist = lerpf(_dist, _goal_dist, k)
 	_lift = lerpf(_lift, _goal_lift, k)
 	_apply_camera()
+	if not _pending.is_empty():
+		_spawn_pending(SPAWNS_PER_FRAME)
+		_place_ring()
+		_update_detail()
 	_detail_wait -= delta
 	if _detail_wait <= 0.0:
 		_update_detail()

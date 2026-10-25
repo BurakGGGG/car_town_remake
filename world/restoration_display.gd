@@ -46,6 +46,7 @@ func _ready() -> void:
 		rig = CarRig.new(model)
 		rig.apply(CarAppearance.get_for(path))
 		rig.set_lod_bias(CarRig.LOD_BIAS_NPC)
+		CarShadow.attach(self, model)   # liftteki araç pişmiş haritaya girmez (giriş / çıkış animasyonu)
 		_box = _model_box()
 	_build_chassis()
 	_add_hitbox()

@@ -22,6 +22,9 @@ const TIER_NAMES: Array[String] = ["KOLAY", "ORTA", "ZOR"]
 var _missions: MissionManager
 var _quests: QuestManager
 var _tab: int = Tab.DAILY
+## Gövde her kurulduğunda artar: sonradan eklenen başarım plakaları eski gövdeye eklenmesin.
+var _render_gen: int = 0
+
 var _tabs: Dictionary = {}
 var _tab_group: ButtonGroup = ButtonGroup.new()
 var _column: VBoxContainer
@@ -243,6 +246,7 @@ func _refresh() -> void:
 	for child: Node in _body.get_children():
 		_body.remove_child(child)
 		child.queue_free()
+	_render_gen += 1
 	_countdown = null
 	match _tab:
 		Tab.DAILY:
@@ -621,13 +625,33 @@ func _event_plate(task: Dictionary) -> PlatePanel:
 
 # --- BAŞARIMLAR -----------------------------------------------------------------------
 
+## Başarımlar ~40 plaka: ilk ACH_FIRST hemen, kalanı kare başına ACH_PER_FRAME (ekran açılışında hepsi tek karede
+## kuruluyordu, masaüstünde ~20 ms; görünenler ilk karede hazır, aşağıdakiler kaydırmaya yetişir).
+const ACH_FIRST: int = 8
+const ACH_PER_FRAME: int = 8
+
+
 func _render_achievements() -> void:
 	if _missions == null:
 		return
 	var total: int = _missions.value_of(&"ach_stars")
 	_body.add_child(_label(&"HudInkCaption", Loc.t("TOPLAM %d BAŞARIM YILDIZI") % total))
-	for line: Dictionary in _missions.achievements():
-		_body.add_child(_achievement_plate(line))
+	var lines: Array[Dictionary] = _missions.achievements()
+	for i: int in mini(ACH_FIRST, lines.size()):
+		_body.add_child(_achievement_plate(lines[i]))
+	if lines.size() > ACH_FIRST:
+		_add_achievements_later(lines.slice(ACH_FIRST), _render_gen)
+
+
+func _add_achievements_later(lines: Array[Dictionary], gen: int) -> void:
+	var at: int = 0
+	while at < lines.size():
+		await get_tree().process_frame
+		if gen != _render_gen or not is_inside_tree() or _body == null:
+			return
+		for i: int in range(at, mini(at + ACH_PER_FRAME, lines.size())):
+			_body.add_child(_achievement_plate(lines[i]))
+		at += ACH_PER_FRAME
 
 
 func _achievement_plate(line: Dictionary) -> PlatePanel:

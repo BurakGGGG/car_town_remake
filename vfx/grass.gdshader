@@ -2,6 +2,9 @@ shader_type spatial;
 // ÇİMEN (world/city_scenery.gd, GrassArea'ya): dünya konumundan örneklenen, dokusuz bir çimen görünümü.
 // Car Town'daki gibi parlak yeşil; büyük ölçekte açık-koyu lekeler, küçük ölçekte ot benekleri. UV'ye
 // bakmaz (CSG kutusunun UV'si 20 birime yayılıyor), dünya X/Z'sinden hesaplanır; ek doku yok.
+// Ağaç / bina / dekor gölgesi: WorldShadow'un pişirdiği harita (world_shadow.gdshaderinc).
+
+#include "res://vfx/world_shadow.gdshaderinc"
 
 uniform vec3 base_color : source_color = vec3(0.47, 0.72, 0.29);
 uniform vec3 dark_color : source_color = vec3(0.36, 0.60, 0.22);
@@ -36,7 +39,7 @@ void fragment() {
 	vec2 local = fract(cell) - 0.5;
 	float dot_mask = smoothstep(0.26, 0.12, length(local * vec2(1.0, 0.45)));
 	c *= 1.0 + (blade - 0.5) * 0.22 * dot_mask;
-	ALBEDO = c;
+	ALBEDO = c * world_shadow_factor(world_pos);
 	ROUGHNESS = 0.95;
 	SPECULAR = 0.2;
 }

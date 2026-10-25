@@ -226,10 +226,12 @@ func _draw() -> void:
 	var ink: Color = _ink_for(mode)
 	var bg: Color = _bg_for(mode)
 
+	# Cıvatalar, ikon ve rozet dairesi TEK üçgen dizisinde (TriBatch): plaka başına 17 çizim çağrısı 3'e iner.
+	var batch: TriBatch = TriBatch.new()
 	if shape == Shape.ROUND:
 		if kind != HudIcon.Kind.NONE:
-			HudIcon.draw_icon(self, kind, size * 0.5 + Vector2(0.0, -1.0), icon_size * _icon_scale, ink, bg)
-		_draw_badge()
+			HudIcon.add_icon(batch, kind, size * 0.5 + Vector2(0.0, -1.0), icon_size * _icon_scale, ink, bg)
+		_draw_badge(batch)
 		return
 
 	var has_icon: bool = kind != HudIcon.Kind.NONE or avatar != null
@@ -237,38 +239,42 @@ func _draw() -> void:
 	if bolts:
 		var bolt: Color = Color(ink, 0.45)
 		var y: float = (7.0 if has_icon and not side_icon else size.y * 0.5) - lift
-		draw_circle(Vector2(7.0, y), 1.7, bolt, true, -1.0, true)
-		draw_circle(Vector2(size.x - 7.0, y), 1.7, bolt, true, -1.0, true)
+		batch.draw_circle(Vector2(7.0, y), 1.7, bolt, true, -1.0, true)
+		batch.draw_circle(Vector2(size.x - 7.0, y), 1.7, bolt, true, -1.0, true)
 	if side_icon:
 		# Yazının hemen solunda, yazıyla aynı dikey ortada (kenar payları temadan)
 		var sb: StyleBox = get_theme_stylebox(&"normal")
 		var x: float = sb.content_margin_left - ICON_LEFT_GAP - icon_size * 0.5
 		var cy: float = (sb.content_margin_top + size.y - sb.content_margin_bottom) * 0.5 - lift
-		HudIcon.draw_icon(self, kind, Vector2(x, cy), icon_size, ink, bg)
+		HudIcon.add_icon(batch, kind, Vector2(x, cy), icon_size, ink, bg)
 	elif has_icon:
 		# İkon, stylebox'ın üst content margin'inin ortasına oturur; yazı onun altında.
 		var zone: float = get_theme_stylebox(&"normal").content_margin_top
 		var center: Vector2 = Vector2(size.x * 0.5, zone * 0.5 + 3.0 - lift)
 		if avatar:
+			batch.flush(self)   # resim dizinin sırasını bozmasın: önce cıvatalar
 			var side: float = icon_size + 2.0
 			var rect: Rect2 = Rect2(center - Vector2(side, side) * 0.5, Vector2(side, side))
 			draw_texture_rect(avatar, rect, false)
 			if avatar_frame:
 				draw_rect(rect, ink, false, 1.5, true)
 		else:
-			HudIcon.draw_icon(self, kind, center, icon_size, ink, bg)
-	_draw_badge()
+			HudIcon.add_icon(batch, kind, center, icon_size, ink, bg)
+	_draw_badge(batch)
 
 
-## Rozet köşenin biraz dışına taşar (GemShopButton'daki "!" rozetiyle aynı renkler).
-func _draw_badge() -> void:
+## Rozet köşenin biraz dışına taşar (GemShopButton'daki "!" rozetiyle aynı renkler). Daireler `batch`'e eklenir, dizi
+## gönderilir, sonra rozet yazısı (yazı dokulu: diziye giremez).
+func _draw_badge(batch: TriBatch) -> void:
 	if badge <= 0:
+		batch.flush(self)
 		return
 	var font: Font = get_theme_font(&"font")
 	var text: String = str(badge) if badge < 10 else "9+"
 	var center: Vector2 = Vector2(size.x - 3.0, 3.0)
-	draw_circle(center, 11.0, Color("A42E35"), true, -1.0, true)
-	draw_circle(center, 9.5, Color("E2474F"), true, -1.0, true)
+	batch.draw_circle(center, 11.0, Color("A42E35"), true, -1.0, true)
+	batch.draw_circle(center, 9.5, Color("E2474F"), true, -1.0, true)
+	batch.flush(self)
 	if font:
 		var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14).x
 		draw_string(font, center + Vector2(-w * 0.5, 5.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14, Color.WHITE)

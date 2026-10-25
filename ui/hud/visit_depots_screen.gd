@@ -175,7 +175,7 @@ func _show_depot() -> void:
 	var levels: Dictionary = {}
 	for item: StringName in CarGarageCatalog.ITEMS:
 		levels[item] = int((row.get("levels", {}) as Dictionary).get(String(item), 1))
-	if not _view.enter(id, _viewport, _camera, _key, []):
+	if not _view.enter(id, _viewport, _camera, _key, [], levels):
 		return
 	_view.set_levels(levels)
 	_view.sync_cars(slots)

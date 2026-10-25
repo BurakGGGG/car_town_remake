@@ -101,7 +101,10 @@ static var _split_meshes: Dictionary = {}
 
 ## Bir kez basılmış lamba eleme uyarıları ("sahne|rol").
 static var _lamp_warned: Dictionary = {}
-## Araç tipi (.tscn yolu) → canlı rig listesi; CarAppearance.changed → apply_to_all.
+## Araç tipi (.tscn yolu) → canlı rig'lerin ZAYIF referansları; CarAppearance.changed → apply_to_all.
+## Zayıf: rig'i aracın düğümü (meta) yaşatır. Eskiden güçlü referanstı ve ölü rig'ler yalnız o modelin boyası değişince
+## ayıklanıyordu: silinen araçların rig'leri (örneğe özel materyaller, boya maskesi) bellekte kalıyordu — garaj ekranı her
+## açılışta 13 aracı kurup siliyor (asıl büyük sızıntı CarMeshMerger'in beklenmeyen havuz görevleriydi; bkz. orası).
 static var _rigs: Dictionary = {}
 
 var root: Node3D
@@ -129,6 +132,7 @@ var _police: PoliceLights            # "police_lights" rolü varsa (polis araçl
 ## --- Parça birleştirme (bkz. optimize / CarMeshMerger) ---
 var _optimize: bool = false
 var _merge_wheels: bool = false
+var _far_lod: bool = false
 var _merge_key: String = ""
 var _merged: MeshInstance3D
 var _merge_hidden: Array[MeshInstance3D] = []   # birleşik mesh'e girdiği için gizlenen parçalar
@@ -140,9 +144,12 @@ static func for_node(car_root: Node3D) -> CarRig:
 		return car_root.get_meta(META_KEY)
 	var rig: CarRig = CarRig.new(car_root)
 	car_root.set_meta(META_KEY, rig)
-	if not _rigs.has(rig.scene_path):
-		_rigs[rig.scene_path] = []
-	(_rigs[rig.scene_path] as Array).append(rig)
+	var alive: Array = []
+	for ref: WeakRef in _rigs.get(rig.scene_path, []):
+		if ref.get_ref() != null:
+			alive.append(ref)
+	alive.append(weakref(rig))
+	_rigs[rig.scene_path] = alive
 	return rig
 
 
@@ -151,10 +158,13 @@ static func apply_to_all(path: String, appearance: CarAppearance) -> void:
 	if not _rigs.has(path):
 		return
 	var alive: Array = []
-	for rig: CarRig in _rigs[path]:
-		if is_instance_valid(rig.root) and rig.root.is_inside_tree():
+	for ref: WeakRef in _rigs[path]:
+		var rig: CarRig = ref.get_ref() as CarRig
+		if rig == null or not is_instance_valid(rig.root):
+			continue
+		alive.append(ref)
+		if rig.root.is_inside_tree():
 			rig.apply(appearance)
-			alive.append(rig)
 	_rigs[path] = alive
 
 
@@ -487,10 +497,14 @@ func set_lod_bias(bias: float) -> void:
 ## çağrısıyla çizilir (bkz. CarMeshMerger). Birleşik geometri arka planda kurulur; o sırada araç
 ## parçalı çizilmeye devam eder. `include_wheels`: tekerlekler de birleşsin mi — yalnızca DURAN
 ## araçlar için (sergi, park, showroom, kasa); dönen tekerli araçlarda (trafik, yarış) false.
+## `far_lod`: araç uzak kademesi (CarFarLod) — yalnız ŞEHİR araçları (trafik, sergi, kasa, hurdalık): kademe parça
+## kenarlarını kilitlemiyor, ekranda büyükçe duran araçta (garaj / otoparkın zorla en kaba kipi, ~200 piksel) aradan
+## aracın koyu içi benek benek görünüyordu (kullanıcı 2026-10-25: "otoparkta araçlar uzaktan çok kötü").
 ## Sonradan apply() çağrılırsa (renk / far) birleştirme kendini yeniler.
-func optimize(include_wheels: bool) -> void:
+func optimize(include_wheels: bool, far_lod: bool = false) -> void:
 	_optimize = true
 	_merge_wheels = include_wheels
+	_far_lod = far_lod
 	_request_merge()
 
 
@@ -528,7 +542,7 @@ func _request_merge() -> void:
 	var group_of: Dictionary = {}       # materyal kimliği → grup
 	var materials: Array[Material] = []
 	var parts: Array = []
-	var signature: PackedStringArray = PackedStringArray([scene_path, str(_merge_wheels)])
+	var signature: PackedStringArray = PackedStringArray([scene_path, str(_merge_wheels), "far" if _far_lod else ""])
 	for mesh: MeshInstance3D in sources:
 		var xf: Transform3D = CarMeshMerger.relative(mesh, root)
 		for surface: int in mesh.mesh.get_surface_count():
@@ -544,7 +558,7 @@ func _request_merge() -> void:
 		_set_merged_materials(materials)   # aynı bölüşüm: yalnızca materyaller tazelenir
 		return
 	_merge_key = key
-	CarMeshMerger.request(key, parts, materials.size(), _on_merged.bind(key, sources, materials))
+	CarMeshMerger.request(key, parts, materials.size(), _on_merged.bind(key, sources, materials), true, _far_lod)
 
 
 func _on_merged(mesh: ArrayMesh, key: String, sources: Array[MeshInstance3D], materials: Array[Material]) -> void:

@@ -65,11 +65,35 @@ func _ready() -> void:
 	if _traffic:
 		move_traffic_ends(_traffic)
 	_build_showroom()
-	add_child(CityScenery.new())
+	var scenery: CityScenery = CityScenery.new()
+	add_child(scenery)
+	_batch_scenery(scenery)
 	add_child(IntersectionMarkings.new())    # kavşağın yaya geçitleri, dur / orta çizgileri, okları (eskileri gizlenir)
 	add_child(TrafficLights.new(_traffic))   # showroom önündeki kavşak; trafik yeşilde geçer
 	add_child(CityBillboard.new())           # showroom meydanında, günde bir değişen araç afişi
 	_batch_lane_lines.call_deferred()        # sahnedeki 62 CSG kesik → tek çizim (kavşaktakiler yukarıda gizlendi)
+	add_child(WorldShadow.new())             # binaların, ağaçların, dekorun zemine pişmiş gölgesi
+
+
+## PEYZAJ TOPLU ÇİZİMİ: banklar, çiçeklikler, çitler ayrı MultiMesh'ler; kıpırdamadıkları için toplu mesh'te çizilir
+## (StaticBatch). Ağaçlar / çalılar LOD kademeleriyle çizildiği için dışarıda (birleşik mesh hep en detaylı kademede kalırdı:
+## ölçüldü, şehirde 21 bin → 53 bin üçgen). Düz zemin parçaları (kaldırım, bordür, patika, havuz) da dışarıda: WorldShadow
+## onları gölge alan zemine çevirir.
+func _batch_scenery(scenery: CityScenery) -> void:
+	var props: Array[Node3D] = []
+	for child: Node in scenery.get_children():
+		var geometry: GeometryInstance3D = child as GeometryInstance3D
+		if geometry == null:
+			continue
+		var box: AABB = geometry.global_transform * geometry.get_aabb()
+		if geometry is MultiMeshInstance3D and (geometry as MultiMeshInstance3D).multimesh:
+			box = geometry.global_transform * (geometry as MultiMeshInstance3D).multimesh.get_aabb()
+		if box.size.y < WorldShadow.FLAT_HEIGHT and box.end.y < WorldShadow.GROUND_TOP:
+			continue
+		props.append(geometry)
+	var batch: StaticBatch = StaticBatch.build(props, scenery, "SceneryBatch", true)   # ağaçlar LOD'larıyla kalır
+	if batch:
+		scenery.add_child(batch)
 
 
 ## ŞERİT ÇİZGİLERİ TEK ÇİZİM (2026-10-23 optimizasyon turu): Main.tscn'deki yol kesikleri 62 ayrı CSGMesh3D kök
@@ -280,6 +304,14 @@ func _build_showroom() -> void:
 	_showroom.position = LOT_ORIGIN
 	_showroom.scale = Vector3.ONE * METER
 	add_child(_showroom)
+	# Bina tek mesh, 23 yüzey = 23 çizim çağrısı: düz renkli yüzeyler birleşir (StaticBatch). Otoparkın zemin yüzeyleri
+	# (WorldShadow gölge alıcısı), cam (saydam) ve ışık bantları ayrı kalır.
+	for node: Node in _showroom.find_children("*", "MeshInstance3D", true, false):
+		var part: MeshInstance3D = node as MeshInstance3D
+		var merged: ArrayMesh = StaticBatch.merge_surfaces(part.mesh, func(material: Material) -> bool:
+			return WorldShadow.is_showroom_ground(material))
+		if merged:
+			part.mesh = merged
 	_add_signs()
 	_retire_old_gallery()
 

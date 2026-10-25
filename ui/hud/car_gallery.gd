@@ -55,6 +55,10 @@ static var _queue: Array[StringName] = []
 static var _queued: Dictionary = {}          # id → true (kuyrukta ya da render ediliyor)
 static var _pumping: bool = false
 static var _appearance_hooked: Dictionary = {}  # scene yolu → true (changed sinyali bağlandı)
+## Arka planda yüklenen pişmiş resimler: dosya yolu → araç id (bkz. _use_baked). Toplayıcı statiktir: yüklemeyi
+## başlatan galeri kapanmış olsa da resimler gelir; gelince bütün galeriler (GROUP) yeniden çizilir.
+static var _baked_loading: Dictionary = {}
+const GROUP: StringName = &"car_gallery"
 
 ## Hangi araçlar listelenecek (ebeveyn _ready'sinde kurulur; kurulum bir kare ertelenmiştir).
 var mode: Mode = Mode.SHOP
@@ -78,6 +82,7 @@ var _baked_notice: bool = false   # önceden çizilmiş resim girdi, kare sonu b
 
 
 func _ready() -> void:
+	add_to_group(GROUP)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_theme_constant_override(&"separation", 8)
 	_group.allow_unpress = false  # listede her zaman bir araç seçilidir
@@ -447,6 +452,8 @@ func _render_thumbnails(ids: Array[StringName]) -> void:
 
 
 ## Önceden çizilmiş resim (fabrika görünümü + dosya varsa) önbelleğe alınır; true → render gerekmez.
+## Resim ARKA PLANDA yüklenir (ResourceLoader iş parçacığı), gelince plakalar yeniden çizilir: koleksiyonun ilk
+## açılışı 72 resmi ana iş parçacığında tek tek yüklüyordu (masaüstünde ~31 ms'lik tek kare; telefonda birkaç kat).
 func _use_baked(id: StringName) -> bool:
 	var entry: Dictionary = CarCatalog.get_entry(id)
 	if entry.is_empty():
@@ -455,15 +462,57 @@ func _use_baked(id: StringName) -> bool:
 	var path: String = BAKED_DIR + String(id) + ".png"
 	if not CarAppearance.get_for(scene_path).is_factory(scene_path) or not ResourceLoader.exists(path):
 		return false
-	var texture: Texture2D = load(path) as Texture2D
-	if texture == null:
-		return false
-	_thumbnails[id] = texture
+	if _baked_loading.has(path):
+		return true
 	_hook_appearance(scene_path, id)
+	if ResourceLoader.has_cached(path):
+		_thumbnails[id] = load(path) as Texture2D
+		_announce_soon()
+		return true
+	if ResourceLoader.load_threaded_request(path, "Texture2D") != OK:
+		return false
+	_baked_loading[path] = id
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if not tree.process_frame.is_connected(_collect_baked):
+		tree.process_frame.connect(_collect_baked)
+	return true
+
+
+## Arka planda yüklenen pişmiş resimleri toplar (kare başına; hepsi gelince ayrılır).
+static func _collect_baked() -> void:
+	var arrived: bool = false
+	var failed: Array[StringName] = []
+	for path: String in _baked_loading.keys():
+		var status: ResourceLoader.ThreadLoadStatus = ResourceLoader.load_threaded_get_status(path)
+		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			continue
+		var id: StringName = _baked_loading[path]
+		_baked_loading.erase(path)
+		var texture: Texture2D = ResourceLoader.load_threaded_get(path) as Texture2D \
+			if status == ResourceLoader.THREAD_LOAD_LOADED else null
+		var scene_path: String = CarCatalog.scene_path(id)
+		if texture and CarAppearance.get_for(scene_path).is_factory(scene_path):
+			_thumbnails[id] = texture
+			arrived = true
+		elif not _thumbnails.has(id):
+			failed.append(id)   # yüklenemedi ya da bu arada boyandı: o an çizilir
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if _baked_loading.is_empty():
+		tree.process_frame.disconnect(_collect_baked)
+	for node: Node in tree.get_nodes_in_group(GROUP):
+		var gallery: CarGallery = node as CarGallery
+		if arrived:
+			gallery._announce_soon()
+		for id: StringName in failed:   # dosya bozuk / yüklenemedi: render'a düş
+			if not _thumbnails.has(id):
+				gallery._request_thumbnail(id)
+		failed.clear()
+
+
+func _announce_soon() -> void:
 	if not _baked_notice:
 		_baked_notice = true
 		_announce_baked.call_deferred()
-	return true
 
 
 ## Pişmiş resimler eşzamanlı girer; plakalar ve koleksiyon kare sonunda bir kez haberdar edilir.

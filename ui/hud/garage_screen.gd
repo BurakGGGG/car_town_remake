@@ -322,9 +322,9 @@ func _ready() -> void:
 	# Bu ekran ARAÇLAR sekmesidir; garajın kendisi (seviye, düzenleme) GARAJI DÜZENLE'de, detay PROFİL'de.
 	# Sahne dosyasındaki "GARAJ" yazıları burada değiştirilir.
 	exit_button.text = Loc.t("GERİ")
-	var title: Label = find_child("TitleLabel", true, false) as Label
-	if title:
-		title.text = Loc.t("ARAÇLAR")
+	_title_label = get_node_or_null("%TitleSign/TitleLabel") as Label
+	if _title_label:
+		_title_label.text = Loc.t("ARAÇLAR")
 	_set_wall_sign(Loc.t("ARAÇLAR"))
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_release_render_target()   # garaj hiç açılmasa da tam ekran hedef ayrılıyordu
@@ -537,6 +537,16 @@ func prewarm() -> void:
 	view.stretch = false
 	car_viewport.size = Vector2i(64, 36)
 	car_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	# Pişmiş iç mekânın materyalleri de (GarageInterior shader'larını canlı tutar): kameranın önünde küçük dörtgenler,
+	# bu tek çizimden sonra silinir. Yoksa ilk garaj açılışında ~30 ms'lik derleme karesi.
+	var warm: Array[Node3D] = GarageInterior.prewarm_nodes()
+	for node: Node3D in warm:
+		car_viewport.add_child(node)
+		node.global_transform = preview_camera.global_transform.translated_local(Vector3(0.0, 0.0, -preview_camera.near - 0.5))
+	for i: int in 3:
+		await get_tree().process_frame
+	for node: Node3D in warm:
+		node.queue_free()
 
 
 ## ÇİZİM HEDEFİ kapalıyken VRAM'de tutulmaz (bkz. DragRaceScreen._release_render_target): `stretch` açıkken
@@ -1489,14 +1499,16 @@ func _fit_mod_column() -> void:
 		_group_targets[right_group] = right_group.position
 
 
+## Başlık her açılışta ve garaj değişince yazılır: düğüm _ready'de bulunur (eskiden her seferinde find_child ekranın
+## bütün ağacını — araç listesi, panolar — tarıyordu).
 func _set_title(text: String) -> void:
-	var title: Label = find_child("TitleLabel", true, false) as Label
-	if title:
-		title.text = text
+	if _title_label:
+		_title_label.text = text
 
 
 var _name_sign_button: PlateButton
 var _name_sign_panel: NameSignPanel
+var _title_label: Label
 
 
 ## Sağ üstte yuvarlak tabelalar — dünyadaki kamera / ayarlar tabelalarının yeri ve dili: TÜM ARAÇLAR (sınıf / nadirlik
@@ -1952,7 +1964,7 @@ func _apply_interior() -> bool:
 	if room:
 		hide.append(room)
 	if not _interior_view.enter(id, car_viewport, preview_camera, car_viewport.get_node_or_null("KeyLight") as DirectionalLight3D,
-			hide):
+			hide, _interior_levels()):
 		return false
 	_refresh_interior_levels()
 	_sync_interior_cars()
@@ -1964,14 +1976,17 @@ func _apply_interior() -> bool:
 
 
 func _refresh_interior_levels() -> void:
+	var levels: Dictionary = _interior_levels()
+	if _interior_view.active and not levels.is_empty():
+		_interior_view.set_levels(levels)
+
+
+## Garajın kalem seviyeleri (GarageInterior.set_levels biçimi); kalemsiz yerde boş.
+func _interior_levels() -> Dictionary:
 	var manager: CarGarageManager = _garages()
-	if not _interior_view.active or manager == null or not CarGarageCatalog.has(_garage):
-		return
-	var levels: Dictionary = {}
-	for item: StringName in CarGarageCatalog.ITEMS:
-		levels[item] = manager.item_level(_garage, item)
-	levels[&"floor"] = manager.item_level(_garage, CarGarageCatalog.FLOOR)
-	_interior_view.set_levels(levels)
+	if manager == null or not CarGarageCatalog.has(_garage):
+		return {}
+	return manager.interior_levels(_garage)
 
 
 ## Park yerlerindeki araçlar: garajın yerleri; BEKLEYENLER'de en son gelen çekicinin kasasında, ötekiler sırayla.

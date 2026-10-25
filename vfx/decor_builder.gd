@@ -174,7 +174,7 @@ static func _vehicle(id: StringName) -> Node3D:
 	# düğümün meta'sında yaşar: birleştirme arka planda biter, yerel değişken o ana kadar ölürdü.
 	car.set_meta(CarRig.META_KEY, rig)
 	if not _measuring:
-		rig.optimize(true)
+		rig.optimize(true, true)   # şehirdeki sergi: uzak kademe (CarFarLod)
 	return holder
 
 

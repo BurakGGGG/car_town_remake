@@ -6,6 +6,7 @@ extends SceneTree
 ##   QA_SAVE=~/Projects/ct_shots/bench_saves/featured.json \
 ##     tools/qa_isolated.sh res://qa/perf_bench.gd --resolution 1152x648 -- <etiket>
 ## Çıktı: tablo stdout'a ve ~/Projects/ct_shots/bench/<etiket>.txt
+## QA_UZAKSIZ=1: araçların uzak kademesi (CarFarLod) kapalı — önce / sonra kıyası.
 ##
 ## Masaüstü (Intel ADL) sayıları telefonla aynı DEĞİL; kıyas ÖNCE/SONRA içindir. Telefonda asıl
 ## belirleyici olan çizim çağrısı, üçgen, VRAM ve betik süresidir (CPU ~5-8 kat yavaş).
@@ -23,6 +24,7 @@ func _initialize() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	if args.size() > 0:
 		_tag = args[0]
+	CarFarLod.enabled = not OS.has_environment("QA_UZAKSIZ")   # araç uzak kademesi kapalı (önce / sonra kıyası)
 	Engine.max_fps = 0
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	_run.call_deferred()

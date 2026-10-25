@@ -3,6 +3,9 @@ shader_type spatial;
 // Dünya noktasından gözü bulur, gözün desen indeksini küçük veri dokusundan okur (0 = varsayılan zemin),
 // deseni Texture2DArray'den örnekler. Türevler sürekli koordinattan alınır: göz sınırında mipmap
 // seçimi zıplamaz (fract() kenarında 1 piksellik çizgi çıkmaz).
+// Duvar / dekor / araç gölgesi: WorldShadow'un pişirdiği harita (world_shadow.gdshaderinc; güç 0 = gölgesiz).
+
+#include "res://vfx/world_shadow.gdshaderinc"
 
 uniform sampler2DArray patterns : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D tile_index : filter_nearest, repeat_disable;
@@ -42,7 +45,7 @@ void fragment() {
 			&& float(c.x) <= preview_rect.z && float(c.y) <= preview_rect.w) {
 		col = mix(col, preview_color.rgb, preview_color.a);
 	}
-	ALBEDO = col;
+	ALBEDO = col * world_shadow_factor(world_pos);
 	ROUGHNESS = rough;
 	METALLIC = metal;
 }

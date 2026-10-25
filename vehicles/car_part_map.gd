@@ -1021,7 +1021,7 @@ const MAPS: Dictionary = {
 		"tires": [10],
 		"rims": [22, 42, 49, 56, 62, 64, 75],
 		"glass": [28],
-		"headlights": [31, 33, 37, 40, 43],
+		"headlights": [33, 40, 43],   # 31 / 37 far olamayacak kadar büyük (CarRig._filter_lamps zaten eliyordu): rolsüz
 		"taillights": [66, 69, 72],
 		"grille": [30, 39, 48, 50, 57, 60],
 		"black_trim": [0, 12, 14, 52, 58],

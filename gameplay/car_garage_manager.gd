@@ -245,6 +245,15 @@ func finished_between(from: float, to: float) -> Array[Dictionary]:
 
 # --- İç yükseltmeler ----------------------------------------------------------------------
 
+## İç mekânın kalem seviyeleri (GarageInterior.set_levels biçimi); garaj alınmamışsa boş.
+func interior_levels(garage: StringName) -> Dictionary:
+	var levels: Dictionary = {}
+	if _garages.has(garage):
+		for item: StringName in CarGarageCatalog.ITEMS:
+			levels[item] = item_level(garage, item)
+	return levels
+
+
 ## Kalemin seviyesi (1 = taban); garaj alınmamışsa 0.
 func item_level(garage: StringName, item: StringName) -> int:
 	if not _garages.has(garage):

@@ -18,6 +18,10 @@ func check(cond: bool, what: String) -> void:
 
 
 func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
 	var index: Variant = JSON.parse_string(FileAccess.get_file_as_string(MakeThumbs.INDEX))
 	check(index is Dictionary, "thumbs.json okunuyor")
 	if not (index is Dictionary):
@@ -43,9 +47,14 @@ func _initialize() -> void:
 	var appearance: CarAppearance = CarAppearance.get_for(scene_path)
 	appearance.reset(scene_path)
 	CarGallery._thumbnails.erase(id)
-	check(gallery._use_baked(id) and CarGallery.cached_thumbnail(id) != null
+	var baked: bool = gallery._use_baked(id)
+	for i: int in 300:   # resim arka planda yüklenir (ana iş parçacığı beklemez)
+		if CarGallery.cached_thumbnail(id) != null:
+			break
+		await process_frame
+	check(baked and CarGallery.cached_thumbnail(id) != null
 		and CarGallery.cached_thumbnail(id).resource_path.begins_with(CarGallery.BAKED_DIR),
-		"fabrika görünümü: resim dosyadan (%s)" % id)
+		"fabrika görünümü: resim dosyadan, arka planda (%s)" % id)
 	CarGallery._thumbnails.erase(id)
 	appearance.body_color = Color(0.9, 0.1, 0.1)
 	check(not gallery._use_baked(id) and CarGallery.cached_thumbnail(id) == null, "boyalı araç: dosya kullanılmaz (o an çizilir)")

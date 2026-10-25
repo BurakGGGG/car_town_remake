@@ -19,6 +19,7 @@ Kullanım (proje kökünden; dışa aktarmadan ÖNCE — tools/build_release_aab
 Yeni içe aktarma (araç ekleme, ayar değişimi) o dosyayı yine 4 KB'a döndürür; betik sonraki dışa aktarmada onu da yakalar.
 """
 import ctypes
+import glob
 import hashlib
 import os
 import re
@@ -30,7 +31,7 @@ LEVEL = 19               # project.godot compression/formats/zstd/compression_le
 MODE_ZSTD = 2
 IMPORTED = ".godot/imported"
 ## İçe aktarılmayan, ResourceSaver.FLAG_COMPRESS ile kaydedilen proje kaynakları (pişirme araçları yeniden yazınca 4 KB'a döner).
-EXTRA = ["vfx/decor_patterns.res"]
+EXTRA = ["vfx/decor_patterns.res"] + sorted(glob.glob("assets/cars/far_lod/*.res"))
 
 _z = ctypes.CDLL("libzstd.so.1")
 _z.ZSTD_compressBound.restype = ctypes.c_size_t

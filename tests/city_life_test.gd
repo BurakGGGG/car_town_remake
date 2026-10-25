@@ -164,8 +164,11 @@ func _run() -> void:
 	check(marks != null and _meshes(marks) == 1, "yaya geçitleri, dur / orta çizgileri, oklar, izler tek gövde")
 	if marks:
 		var mesh_node: MeshInstance3D = marks.get_child(0) as MeshInstance3D
+		# WorldShadow işaretleri gölge alan kesik shader'a çevirir (aynı doku, alpha scissor); çevrilmemişse StandardMaterial3D
 		var mat: StandardMaterial3D = mesh_node.material_override as StandardMaterial3D
-		check(mat != null and mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR and mat.albedo_texture != null,
+		var shaded: ShaderMaterial = mesh_node.material_override as ShaderMaterial
+		check((mat != null and mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR and mat.albedo_texture != null)
+				or (shaded != null and shaded.shader == WorldShadow.MARKING_SHADER and shaded.get_shader_parameter("albedo_texture") != null),
 			"aşınmış boya atlası, alpha scissor (saydam sıralama yok)")
 		check(mesh_node.mesh.get_faces().size() / 3 >= 4 * 4 * 2, "dört kolun hepsi çizildi (%d üçgen)" % (mesh_node.mesh.get_faces().size() / 3))
 		var faces: PackedVector3Array = mesh_node.mesh.get_faces()

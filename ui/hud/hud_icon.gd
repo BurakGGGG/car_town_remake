@@ -97,7 +97,16 @@ func _draw() -> void:
 # --- Statik çizim ------------------------------------------------------------
 
 ## `c` merkez, `s` ikon boyutu (piksel). Şekiller [-0.5, 0.5] birim karede tanımlı.
+## İkonun bütün şekilleri tek üçgen dizisinde toplanıp TEK çizim komutuyla gönderilir (TriBatch): Compatibility her
+## poligonu / kenar yumuşatma şeridini ayrı çizim çağrısı yapıyordu (ikon başına 3–12).
 static func draw_icon(ci: CanvasItem, kind: Kind, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+	var batch: TriBatch = TriBatch.new()
+	add_icon(batch, kind, c, s, ink, cutout)
+	batch.flush(ci)
+
+
+## İkonu verilen toplu çizime ekler (çağıran başka şekilleri de aynı diziye koyup bir kez gönderebilir: PlateButton).
+static func add_icon(ci: TriBatch, kind: Kind, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
 	var w: float = maxf(1.5, s * 0.11)  # çizgi kalınlığı ikonla ölçeklenir
 	match kind:
 		Kind.GARAGE:
@@ -191,7 +200,7 @@ static func draw_icon(ci: CanvasItem, kind: Kind, c: Vector2, s: float, ink: Col
 
 
 ## Görevler: kıskaçlı pano, üstünde iki işaretli satır ve bir boş satır.
-static func _tasks(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+static func _tasks(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
 	_round_rect(ci, c, s, Vector2(-0.34, -0.40), Vector2(0.68, 0.88), 0.08, ink)
 	_rect(ci, c, s, Vector2(-0.25, -0.26), Vector2(0.50, 0.64), cutout)
 	_round_rect(ci, c, s, Vector2(-0.16, -0.48), Vector2(0.32, 0.16), 0.05, ink)   # kıskaç
@@ -204,7 +213,7 @@ static func _tasks(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Col
 
 
 ## Arkadaşlar: arkada (sağda) bir kişi, önde (solda) zemin renginde kenarlıkla ayrılmış ikinci kişi.
-static func _friends(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+static func _friends(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
 	ci.draw_circle(c + Vector2(0.17, -0.18) * s, s * 0.14, ink, true, -1.0, true)
 	ci.draw_colored_polygon(_dome(c + Vector2(0.17, 0.36) * s, s * 0.27, PI, TAU, 16), ink)
 	ci.draw_circle(c + Vector2(-0.13, -0.10) * s, s * 0.19, cutout, true, -1.0, true)
@@ -214,13 +223,13 @@ static func _friends(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: C
 
 
 ## Oynat: yuvarlatılmış ekran, içinde oynat üçgeni (ödüllü reklam).
-static func _play(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+static func _play(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
 	_round_rect(ci, c, s, Vector2(-0.46, -0.34), Vector2(0.92, 0.68), 0.14, ink)
 	_poly(ci, c, s, PackedVector2Array([Vector2(-0.12, -0.18), Vector2(0.2, 0.0), Vector2(-0.12, 0.18)]), cutout)
 
 
 ## Harita: üç katlı kâğıt (orta kat içe kırık) + üstünde iğne.
-static func _map(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+static func _map(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
 	_poly(ci, c, s, PackedVector2Array([
 		Vector2(-0.48, -0.26), Vector2(-0.16, -0.36), Vector2(0.16, -0.26), Vector2(0.48, -0.36),
 		Vector2(0.48, 0.30), Vector2(0.16, 0.40), Vector2(-0.16, 0.30), Vector2(-0.48, 0.40),
@@ -239,7 +248,7 @@ static func _map(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color
 
 
 ## Dişli: 8 diş + gövde + ortada delik.
-static func _gear(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+static func _gear(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
 	for i: int in 8:
 		var angle: float = TAU * float(i) / 8.0
 		var dir: Vector2 = Vector2(cos(angle), sin(angle))
@@ -252,7 +261,7 @@ static func _gear(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Colo
 
 
 ## Kalp: klasik kalp eğrisi, altında koyu "gölge" kopyası (para ikonu gibi tombul), sol üstte parıltı.
-static func _heart(ci: CanvasItem, c: Vector2, s: float) -> void:
+static func _heart(ci: TriBatch, c: Vector2, s: float) -> void:
 	var pts: PackedVector2Array = PackedVector2Array()
 	for i: int in 40:
 		var t: float = TAU * float(i) / 40.0
@@ -274,20 +283,16 @@ static func _pts(c: Vector2, s: float, raw: PackedVector2Array) -> PackedVector2
 	return out
 
 
-static func _poly(ci: CanvasItem, c: Vector2, s: float, raw: PackedVector2Array, color: Color) -> void:
+static func _poly(ci: TriBatch, c: Vector2, s: float, raw: PackedVector2Array, color: Color) -> void:
 	ci.draw_colored_polygon(_pts(c, s, raw), color)
 
 
-static func _rect(ci: CanvasItem, c: Vector2, s: float, pos: Vector2, sz: Vector2, color: Color) -> void:
+static func _rect(ci: TriBatch, c: Vector2, s: float, pos: Vector2, sz: Vector2, color: Color) -> void:
 	ci.draw_rect(Rect2(c + pos * s, sz * s), color, true)
 
 
-static func _round_rect(ci: CanvasItem, c: Vector2, s: float, pos: Vector2, sz: Vector2, radius: float, color: Color) -> void:
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.bg_color = color
-	sb.set_corner_radius_all(int(round(radius * s)))
-	sb.anti_aliasing = true
-	sb.draw(ci.get_canvas_item(), Rect2(c + pos * s, sz * s))
+static func _round_rect(ci: TriBatch, c: Vector2, s: float, pos: Vector2, sz: Vector2, radius: float, color: Color) -> void:
+	ci.draw_round_rect(Rect2(c + pos * s, sz * s), roundf(radius * s), color)   # eskiden StyleBoxFlat (tam sayı yarıçap)
 
 
 static func _dome(c: Vector2, r: float, from: float, to: float, steps: int) -> PackedVector2Array:
@@ -299,7 +304,7 @@ static func _dome(c: Vector2, r: float, from: float, to: float, steps: int) -> P
 
 # --- Navigasyon ikonları -----------------------------------------------------
 
-static func _garage(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+static func _garage(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
 	_poly(ci, c, s, PackedVector2Array([
 		Vector2(-0.48, 0.44), Vector2(-0.48, -0.10), Vector2(0.0, -0.46),
 		Vector2(0.48, -0.10), Vector2(0.48, 0.44),
@@ -309,7 +314,7 @@ static func _garage(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Co
 	ci.draw_line(c + Vector2(-0.28, 0.30) * s, c + Vector2(0.28, 0.30) * s, ink, w * 0.6, true)
 
 
-static func _car(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+static func _car(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
 	_poly(ci, c, s, PackedVector2Array([
 		Vector2(-0.50, 0.22), Vector2(-0.50, -0.02), Vector2(-0.34, -0.06), Vector2(-0.20, -0.30),
 		Vector2(0.22, -0.30), Vector2(0.40, -0.06), Vector2(0.50, -0.02), Vector2(0.50, 0.22),
@@ -324,7 +329,7 @@ static func _car(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color
 		ci.draw_circle(wheel, s * 0.055, cutout, true, -1.0, true)
 
 
-static func _shop(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+static func _shop(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
 	# Tente: bar + altında dalgalı uçlar
 	_rect(ci, c, s, Vector2(-0.48, -0.42), Vector2(0.96, 0.16), ink)
 	for x: float in [-0.36, -0.12, 0.12, 0.36]:
@@ -336,7 +341,7 @@ static func _shop(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Colo
 	_rect(ci, c, s, Vector2(0.17, 0.08), Vector2(0.17, 0.16), cutout)    # vitrin sağ
 
 
-static func _helmet(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+static func _helmet(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
 	var pts: PackedVector2Array = _dome(c + Vector2(0.0, -0.02) * s, s * 0.44, PI, TAU, 20)
 	pts.append(c + Vector2(0.44, 0.36) * s)
 	pts.append(c + Vector2(0.30, 0.44) * s)
@@ -349,7 +354,7 @@ static func _helmet(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Co
 
 # --- Araç butonları ----------------------------------------------------------
 
-static func _camera(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+static func _camera(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
 	_round_rect(ci, c, s, Vector2(-0.46, -0.22), Vector2(0.92, 0.60), 0.10, ink)
 	_rect(ci, c, s, Vector2(-0.22, -0.36), Vector2(0.32, 0.16), ink)   # üst çıkıntı
 	ci.draw_circle(c + Vector2(0.02, 0.08) * s, s * 0.18, cutout, true, -1.0, true)
@@ -357,7 +362,7 @@ static func _camera(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Co
 
 
 ## Göz: iki yaydan badem, ortada iris ve bebek. `crossed`: sol üstten sağ alta, zemin renginde boşluklu çizgi.
-static func _eye(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float, crossed: bool) -> void:
+static func _eye(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float, crossed: bool) -> void:
 	var upper: PackedVector2Array = _dome(c + Vector2(0.0, 0.30) * s, s * 0.58, deg_to_rad(-145.0), deg_to_rad(-35.0), 16)
 	var lower: PackedVector2Array = _dome(c + Vector2(0.0, -0.30) * s, s * 0.58, deg_to_rad(35.0), deg_to_rad(145.0), 16)
 	upper.append_array(lower)
@@ -370,7 +375,7 @@ static func _eye(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color
 
 
 ## Klaket: gövde + üstte eğik açılmış çubuk; çubuklarda zemin renginde eğik şeritler.
-static func _film(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+static func _film(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
 	_round_rect(ci, c, s, Vector2(-0.44, -0.06), Vector2(0.88, 0.48), 0.06, ink)
 	_rect(ci, c, s, Vector2(-0.44, -0.06), Vector2(0.88, 0.12), ink)
 	for x: float in [-0.30, -0.06, 0.18]:   # alt çubuğun şeritleri
@@ -387,7 +392,7 @@ static func _film(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Colo
 
 
 ## Dama bayrak: solda direk, sağında hafif dalgalı 4 × 3 damalı bez.
-static func _flag(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+static func _flag(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
 	ci.draw_line(c + Vector2(-0.36, -0.46) * s, c + Vector2(-0.36, 0.48) * s, ink, w * 1.2, true)
 	var cols: int = 4
 	var rows: int = 3
@@ -407,7 +412,7 @@ static func _flag(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Colo
 
 
 ## Kupa: kâse + iki kulp, kısa ayak ve kaide; kâsede parlama.
-static func _trophy(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+static func _trophy(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
 	ci.draw_arc(c + Vector2(-0.30, -0.22) * s, s * 0.13, PI * 0.5, PI * 1.5, 12, ink, w * 1.1, true)   # sol kulp
 	ci.draw_arc(c + Vector2(0.30, -0.22) * s, s * 0.13, -PI * 0.5, PI * 0.5, 12, ink, w * 1.1, true)   # sağ kulp
 	_poly(ci, c, s, PackedVector2Array([Vector2(-0.32, -0.42), Vector2(0.32, -0.42), Vector2(0.28, -0.14),
@@ -418,13 +423,13 @@ static func _trophy(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Co
 
 
 ## Üç nokta: yatay sıra.
-static func _more(ci: CanvasItem, c: Vector2, s: float, ink: Color) -> void:
+static func _more(ci: TriBatch, c: Vector2, s: float, ink: Color) -> void:
 	for x: float in [-0.30, 0.0, 0.30]:
 		ci.draw_circle(c + Vector2(x, 0.0) * s, s * 0.10, ink, true, -1.0, true)
 
 
 ## İsim tabelası: rayın üstünde iki eğik harf karosu (A ve B'nin oyulmuş çizgileri).
-static func _letters(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+static func _letters(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
 	_rect(ci, c, s, Vector2(-0.48, 0.18), Vector2(0.96, 0.1), ink)
 	for i: int in 2:
 		var o: Vector2 = c + Vector2(-0.22 + i * 0.44, -0.04) * s
@@ -440,14 +445,14 @@ static func _letters(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: C
 
 
 ## Nişangâh: halka, ortada nokta ve dört yöne kısa çentik.
-static func _target(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) -> void:
+static func _target(ci: TriBatch, c: Vector2, s: float, ink: Color, w: float) -> void:
 	ci.draw_arc(c, s * 0.30, 0.0, TAU, 32, ink, w * 1.2, true)
 	ci.draw_circle(c, s * 0.09, ink, true, -1.0, true)
 	for dir: Vector2 in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
 		ci.draw_line(c + dir * 0.20 * s, c + dir * 0.48 * s, ink, w * 1.2, true)
 
 
-static func _speaker(ci: CanvasItem, c: Vector2, s: float, ink: Color, muted: bool, w: float) -> void:
+static func _speaker(ci: TriBatch, c: Vector2, s: float, ink: Color, muted: bool, w: float) -> void:
 	_poly(ci, c, s, PackedVector2Array([
 		Vector2(-0.46, -0.16), Vector2(-0.28, -0.16), Vector2(-0.06, -0.38),
 		Vector2(-0.06, 0.38), Vector2(-0.28, 0.16), Vector2(-0.46, 0.16),
@@ -461,7 +466,7 @@ static func _speaker(ci: CanvasItem, c: Vector2, s: float, ink: Color, muted: bo
 		ci.draw_arc(o, s * 0.36, -PI / 4.0, PI / 4.0, 16, ink, w, true)
 
 
-static func _wrench(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+static func _wrench(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
 	# Sap: sol-alttan sağ-üste kalın çizgi
 	ci.draw_line(c + Vector2(-0.36, 0.36) * s, c + Vector2(0.10, -0.10) * s, ink, s * 0.24, true)
 	ci.draw_circle(c + Vector2(-0.36, 0.36) * s, s * 0.12, ink, true, -1.0, true)
@@ -473,7 +478,7 @@ static func _wrench(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Co
 	ci.draw_circle(c + Vector2(0.16, -0.16) * s, s * 0.07, cutout, true, -1.0, true)
 
 
-static func _paint(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+static func _paint(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
 	# Kutu gövdesi, etiket bandı, kapak ve memeden çıkan üç sprey noktası
 	_round_rect(ci, c, s, Vector2(-0.30, -0.12), Vector2(0.40, 0.56), 0.06, ink)
 	_rect(ci, c, s, Vector2(-0.30, 0.04), Vector2(0.40, 0.14), cutout)   # etiket bandı
@@ -483,7 +488,7 @@ static func _paint(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Col
 		ci.draw_circle(c + dot * s, s * 0.045, ink, true, -1.0, true)
 
 
-static func _zoom(ci: CanvasItem, c: Vector2, s: float, ink: Color, plus: bool, w: float) -> void:
+static func _zoom(ci: TriBatch, c: Vector2, s: float, ink: Color, plus: bool, w: float) -> void:
 	var lens: Vector2 = c + Vector2(-0.08, -0.08) * s
 	var r: float = s * 0.28
 	ci.draw_arc(lens, r, 0.0, TAU, 28, ink, w * 1.1, true)
@@ -493,7 +498,7 @@ static func _zoom(ci: CanvasItem, c: Vector2, s: float, ink: Color, plus: bool, 
 		ci.draw_line(lens + Vector2(0.0, -0.14) * s, lens + Vector2(0.0, 0.14) * s, ink, w, true)
 
 
-static func _rotate(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) -> void:
+static func _rotate(ci: TriBatch, c: Vector2, s: float, ink: Color, w: float) -> void:
 	var r: float = s * 0.32
 	var start: float = deg_to_rad(-40.0)
 	var end: float = deg_to_rad(235.0)
@@ -508,7 +513,7 @@ static func _rotate(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) 
 
 # --- Garajı düzenle ----------------------------------------------------------
 
-static func _grid(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) -> void:
+static func _grid(ci: TriBatch, c: Vector2, s: float, ink: Color, w: float) -> void:
 	var r: Rect2 = Rect2(c - Vector2(0.40, 0.40) * s, Vector2(0.80, 0.80) * s)
 	ci.draw_rect(r, ink, false, w, true)
 	for k: float in [1.0 / 3.0, 2.0 / 3.0]:
@@ -517,7 +522,7 @@ static func _grid(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) ->
 
 
 ## Geri al: üstten sola dönen yay, ucu solda aşağı bakan ok.
-static func _undo(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) -> void:
+static func _undo(ci: TriBatch, c: Vector2, s: float, ink: Color, w: float) -> void:
 	var o: Vector2 = c + Vector2(0.06, 0.10) * s
 	var r: float = s * 0.30
 	ci.draw_arc(o, r, deg_to_rad(-200.0), deg_to_rad(40.0), 24, ink, w * 1.1, true)
@@ -527,18 +532,18 @@ static func _undo(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) ->
 	]), ink)
 
 
-static func _check(ci: CanvasItem, c: Vector2, s: float, ink: Color) -> void:
+static func _check(ci: TriBatch, c: Vector2, s: float, ink: Color) -> void:
 	ci.draw_polyline(_pts(c, s, PackedVector2Array([Vector2(-0.36, 0.0), Vector2(-0.10, 0.26), Vector2(0.38, -0.28)])),
 		ink, s * 0.16, true)
 
 
-static func _cross(ci: CanvasItem, c: Vector2, s: float, ink: Color) -> void:
+static func _cross(ci: TriBatch, c: Vector2, s: float, ink: Color) -> void:
 	ci.draw_line(c + Vector2(-0.30, -0.30) * s, c + Vector2(0.30, 0.30) * s, ink, s * 0.15, true)
 	ci.draw_line(c + Vector2(0.30, -0.30) * s, c + Vector2(-0.30, 0.30) * s, ink, s * 0.15, true)
 
 
 ## Depo kutusu: gövde + açık kapak kanatları, içine inen ok.
-static func _box(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+static func _box(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
 	_rect(ci, c, s, Vector2(-0.40, -0.02), Vector2(0.80, 0.46), ink)
 	_poly(ci, c, s, PackedVector2Array([Vector2(-0.40, -0.02), Vector2(-0.50, -0.20), Vector2(-0.10, -0.20), Vector2(0.0, -0.02)]), ink)
 	_poly(ci, c, s, PackedVector2Array([Vector2(0.40, -0.02), Vector2(0.50, -0.20), Vector2(0.10, -0.20), Vector2(0.0, -0.02)]), ink)
@@ -548,7 +553,7 @@ static func _box(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color
 
 
 ## Boya rulosu: üstte rulo, sapı aşağı iner.
-static func _roller(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+static func _roller(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
 	_round_rect(ci, c, s, Vector2(-0.42, -0.42), Vector2(0.70, 0.26), 0.08, ink)
 	_rect(ci, c, s, Vector2(-0.34, -0.34), Vector2(0.10, 0.10), cutout)  # parlama
 	ci.draw_polyline(_pts(c, s, PackedVector2Array([Vector2(0.28, -0.29), Vector2(0.40, -0.29), Vector2(0.40, -0.06),
@@ -556,7 +561,7 @@ static func _roller(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Co
 	_round_rect(ci, c, s, Vector2(-0.10, 0.10), Vector2(0.12, 0.36), 0.05, ink)
 
 
-static func _area(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) -> void:
+static func _area(ci: TriBatch, c: Vector2, s: float, ink: Color, w: float) -> void:
 	var r: Rect2 = Rect2(c - Vector2(0.36, 0.32) * s, Vector2(0.72, 0.64) * s)
 	var corners: PackedVector2Array = PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y), r.position])
 	for i: int in 4:
@@ -566,7 +571,7 @@ static func _area(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) ->
 
 
 ## Kova: eğik gövde, ağzından damla.
-static func _bucket(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+static func _bucket(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
 	_poly(ci, c, s, PackedVector2Array([Vector2(-0.44, -0.12), Vector2(0.12, -0.38), Vector2(0.30, 0.14), Vector2(-0.16, 0.36)]), ink)
 	ci.draw_line(c + Vector2(-0.38, -0.10) * s, c + Vector2(0.08, -0.32) * s, cutout, w * 0.6, true)  # ağız
 	ci.draw_arc(c + Vector2(-0.10, -0.30) * s, s * 0.22, PI, TAU * 0.92, 12, ink, w * 0.8, true)    # sap
@@ -575,7 +580,7 @@ static func _bucket(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Co
 
 
 ## Damlalık: çapraz cam tüp + üstte lastik puar.
-static func _picker(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) -> void:
+static func _picker(ci: TriBatch, c: Vector2, s: float, ink: Color, w: float) -> void:
 	ci.draw_line(c + Vector2(-0.38, 0.38) * s, c + Vector2(0.10, -0.10) * s, ink, s * 0.13, true)
 	ci.draw_line(c + Vector2(-0.44, 0.44) * s, c + Vector2(-0.34, 0.34) * s, ink, w * 0.6, true)
 	ci.draw_line(c + Vector2(0.0, -0.20) * s, c + Vector2(0.20, 0.0) * s, ink, s * 0.12, true)   # bilezik
@@ -583,7 +588,7 @@ static func _picker(ci: CanvasItem, c: Vector2, s: float, ink: Color, w: float) 
 
 
 ## Silgi: eğik dikdörtgen, ucu açık renkli.
-static func _eraser(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+static func _eraser(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
 	var body: PackedVector2Array = PackedVector2Array([Vector2(-0.46, 0.12), Vector2(0.06, -0.40), Vector2(0.40, -0.06), Vector2(-0.12, 0.46)])
 	_poly(ci, c, s, body, ink)
 	_poly(ci, c, s, PackedVector2Array([Vector2(-0.40, 0.12), Vector2(-0.20, -0.08), Vector2(0.10, 0.22), Vector2(-0.10, 0.40)]), cutout)
@@ -591,7 +596,7 @@ static func _eraser(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Co
 
 
 ## Tuğla duvar: üç sıra, aralar oyuk.
-static func _bricks(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+static func _bricks(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
 	_rect(ci, c, s, Vector2(-0.46, -0.36), Vector2(0.92, 0.72), ink)
 	for row: int in 2:
 		var y: float = -0.12 + row * 0.24
@@ -604,12 +609,12 @@ static func _bricks(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Co
 
 
 ## Çekiç: çapraz sap + başlık.
-static func _hammer(ci: CanvasItem, c: Vector2, s: float, ink: Color) -> void:
+static func _hammer(ci: TriBatch, c: Vector2, s: float, ink: Color) -> void:
 	ci.draw_line(c + Vector2(-0.36, 0.40) * s, c + Vector2(0.12, -0.08) * s, ink, s * 0.14, true)
 	_poly(ci, c, s, PackedVector2Array([Vector2(-0.10, -0.24), Vector2(0.18, -0.52), Vector2(0.46, -0.24), Vector2(0.18, 0.04)]), ink)
 
 
-static func _lock(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
+static func _lock(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color, w: float) -> void:
 	ci.draw_arc(c + Vector2(0.0, -0.08) * s, s * 0.22, PI, TAU, 16, ink, w * 1.4, true)
 	ci.draw_line(c + Vector2(-0.22, -0.08) * s, c + Vector2(-0.22, 0.04) * s, ink, w * 1.4, true)
 	ci.draw_line(c + Vector2(0.22, -0.08) * s, c + Vector2(0.22, 0.04) * s, ink, w * 1.4, true)
@@ -619,7 +624,7 @@ static func _lock(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Colo
 
 
 ## Koltuk: arkalık + kolçaklar + oturak + ayaklar.
-static func _chair(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+static func _chair(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
 	_round_rect(ci, c, s, Vector2(-0.32, -0.40), Vector2(0.64, 0.44), 0.10, ink)   # arkalık
 	_round_rect(ci, c, s, Vector2(-0.48, -0.10), Vector2(0.20, 0.42), 0.08, ink)   # kolçaklar
 	_round_rect(ci, c, s, Vector2(0.28, -0.10), Vector2(0.20, 0.42), 0.08, ink)
@@ -630,7 +635,7 @@ static func _chair(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Col
 
 
 ## Dama karo: 3 × 3, köşeleri dolu.
-static func _tiles(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+static func _tiles(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
 	var cell: float = 0.27
 	_rect(ci, c, s, Vector2(-0.43, -0.43), Vector2(0.86, 0.86), ink)
 	for i: int in 3:
@@ -641,14 +646,14 @@ static func _tiles(ci: CanvasItem, c: Vector2, s: float, ink: Color, cutout: Col
 
 # --- Para birimleri ----------------------------------------------------------
 
-static func _coin(ci: CanvasItem, c: Vector2, s: float, w: float) -> void:
+static func _coin(ci: TriBatch, c: Vector2, s: float, w: float) -> void:
 	ci.draw_circle(c + Vector2(0.0, 0.04) * s, s * 0.48, HudPalette.COIN_DARK, true, -1.0, true)
 	ci.draw_circle(c, s * 0.44, HudPalette.COIN, true, -1.0, true)
 	ci.draw_arc(c, s * 0.30, 0.0, TAU, 24, HudPalette.COIN_DARK, w * 0.7, true)
 	ci.draw_arc(c, s * 0.36, PI * 1.15, PI * 1.55, 10, Color(1.0, 1.0, 1.0, 0.7), w * 0.7, true)
 
 
-static func _gem(ci: CanvasItem, c: Vector2, s: float) -> void:
+static func _gem(ci: TriBatch, c: Vector2, s: float) -> void:
 	var shape: PackedVector2Array = PackedVector2Array([
 		Vector2(-0.30, -0.36), Vector2(0.30, -0.36), Vector2(0.50, -0.06),
 		Vector2(0.0, 0.48), Vector2(-0.50, -0.06),

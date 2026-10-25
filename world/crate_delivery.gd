@@ -381,7 +381,7 @@ static func make_vehicle(parent: Node3D, vehicle: StringName) -> Node3D:
 	parent.add_child(car)
 	var rig: CarRig = CarRig.for_node(car)
 	rig.apply(CarAppearance.get_for(scene_path))
-	rig.optimize(true)   # açılan araç tekerini döndürmez: parçalar materyal başına birleşir
+	rig.optimize(true, true)   # açılan araç tekerini döndürmez: parçalar materyal başına birleşir; şehir: uzak kademe
 	return car
 
 

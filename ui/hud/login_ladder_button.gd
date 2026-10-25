@@ -86,4 +86,4 @@ func _draw() -> void:
 		var body_top: float = page.position.y + h * 0.32
 		var baseline: float = body_top + (page.end.y - body_top) * 0.5 + font_size * 0.36
 		draw_string(font, Vector2(page.position.x, baseline), text, HORIZONTAL_ALIGNMENT_CENTER, w, font_size, ink)
-	_draw_badge()
+	_draw_badge(TriBatch.new())

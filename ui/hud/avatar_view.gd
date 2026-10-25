@@ -56,8 +56,9 @@ const RAINBOW_STEPS: int = 36
 var _t: float = 0.0
 var _flag: FlagIcon
 var _ring: _RingLayer
-## Halka çizimlerinin hedef tuvali (_RingLayer çizerken o, yoksa bu düğüm).
-var _canvas: CanvasItem = self
+## Halkanın şekilleri tek üçgen dizisinde toplanır (TriBatch) ve halka katmanına bir kez gönderilir: her yay ayrı çizim
+## çağrısıydı (statik halkada 10–20).
+var _canvas: TriBatch = TriBatch.new()
 
 
 func _ready() -> void:
@@ -112,9 +113,8 @@ func _draw_ring_on(layer: CanvasItem) -> void:
 	var m: Array = _ring_metrics()
 	if m.is_empty():
 		return
-	_canvas = layer
 	_draw_ring(m[0], m[1], m[2])
-	_canvas = self
+	_canvas.flush(layer)
 
 
 ## [merkez, halka yarıçapı, kalınlık] ya da boş (çok küçük).

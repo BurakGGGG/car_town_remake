@@ -204,7 +204,8 @@ func setup(traffic_manager: TrafficManager, scene: PackedScene, look: CarAppeara
 	rig.apply(look)
 	rig.set_steer(0.0)        # düz gidiş: ön tekerler düz
 	rig.set_lod_bias(CarRig.LOD_BIAS_NPC)  # trafik: alt detay kademeleri
-	rig.optimize(false)   # gövde parçaları birleşir (çizim çağrısı); tekerler dönmek için ayrı kalır
+	rig.optimize(false, true)   # gövde parçaları birleşir (çizim çağrısı); tekerler dönmek için ayrı kalır; şehir: uzak kademe
+	CarShadow.attach(self, model)   # pişmiş şehir gölgesiyle aynı yönde, araçla dönen gölge
 	_add_hitbox()
 	_add_bubble()
 	_place_at(start)

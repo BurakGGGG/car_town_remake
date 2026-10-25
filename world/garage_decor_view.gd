@@ -54,6 +54,8 @@ var _pattern_ids: Array[StringName] = []
 const MAX_PATTERNS: int = 64
 ## LÜKS (elmasla alınmış) eşyaların üstündeki ışıltılar: tek MultiMesh, düzenlerken gizli.
 var _sparkles: LuxurySparkles
+## Oyun görünümünde dekorun toplu çizimi (world/static_batch.gd); düzenlerken yok.
+var _batch: StaticBatch
 
 
 func _ready() -> void:
@@ -245,7 +247,30 @@ func refresh() -> void:
 	if _floor_focus:
 		_apply_floor_focus()   # yeni kurulan gövdeler de soluk başlasın
 	_place_sparkles()
+	_rebatch()
 	area_changed.emit()
+
+
+## Dekorun toplu çizimini yeniden kurar (DecorBatch): düzenlerken / zemin odağında kurulmaz — eşyalar taşınır, soluklaşır.
+## Sergi araçları (kendi birleşik mesh'leri ve boya / LOD ayarları) ve isim tabelası (yazısı değişir) dışarıda kalır.
+func _rebatch() -> void:
+	if _batch != null and is_instance_valid(_batch):
+		_batch.dissolve()
+	_batch = null
+	if _editing or _floor_focus or _decor == null:
+		return
+	var bodies: Array[Node3D] = []
+	for iid: String in _bodies:
+		var inst: Dictionary = _decor.instance(iid)
+		var item: StringName = StringName(inst.get("item", ""))
+		if item == &"" or GarageDecor.is_vehicle(item) or item == GarageDecor.NAME_SIGN:
+			continue
+		var body: Node3D = body_of(iid)
+		if body:
+			bodies.append(body)
+	_batch = StaticBatch.build(bodies, _root, "DecorBatch")
+	if _batch:
+		_root.add_child(_batch)
 
 
 ## Işıltılar elmasla alınmış ve KURUCU eşyaların güncel kutularına dağılır. Düzenlerken gizli: eşya
@@ -557,6 +582,7 @@ func ground_point(camera: Camera3D, screen: Vector2) -> Vector2:
 ## tabelası gizlenir (eşyaların önüne biniyor; izi yine de engel sayılır).
 func set_editing(value: bool) -> void:
 	_editing = value
+	_rebatch()
 	_rebuild_walls()   # düzenlemede bütün duvarlar opak, oyunda aracın önündekiler yarı saydam
 	if _decor:
 		_place_sparkles()
@@ -617,7 +643,11 @@ func set_floor_focus(value: bool) -> void:
 	if value == _floor_focus:
 		return
 	_floor_focus = value
+	if value:
+		_rebatch()   # toplu çizim kalkar: soluk (hayalet) materyal asıl parçalara takılır
 	_apply_floor_focus()
+	if not value:
+		_rebatch()
 	_draw_blocked()
 
 

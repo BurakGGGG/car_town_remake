@@ -63,6 +63,7 @@ func setup(p_crate_id: StringName, p_uid: int) -> void:
 		_model.name = "Model"
 		_model.scale = Vector3.ONE * float(entry.get("scale", 1.0))
 		add_child(_model)
+		CarShadow.attach(self, _model)   # kasa haritaya girmez (gelir, açılır, kaybolur): gölgesini kendi taşır
 	else:
 		_build_placeholder(entry)
 	_build_tag(entry)

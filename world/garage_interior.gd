@@ -120,11 +120,21 @@ const SIGN_ANCHORS: Dictionary = {
 	&"hangar": {"pos": Vector3(8.5, 21.78, 5.9), "yaw": 0.0, "width": 10.0, "height": 1.0},
 }
 
+## Materyallerin shader'larını canlı tutan DOKUSUZ ikizler (her materyal türünden bir tane). BaseMaterial3D aynı ayarlı son
+## materyal silinince shader'ını da siler; iç mekân kapanınca (GarageInteriorView.exit) bütün materyalleri gidiyordu ve her
+## açılışta dört shader yeniden derleniyordu: açılıştan sonraki ilk çizim masaüstünde 42–48 ms, ikizlerle 14–15 ms
+## (2026-10-25). Shader anahtarı dokuya bağlı değil (BaseMaterial3D::MaterialKey): dokular yine kapanışta bellekten çıkar.
+## İlk derleme de oyun yüklenirken yapılır (prewarm_nodes → GarageScreen.prewarm).
+static var _shader_keepers: Array[Material] = []
+## Arka planda istenmiş, henüz alınmamış dosyalar (bkz. _request / _take).
+static var _requested: Dictionary = {}
+
 var garage: StringName = &""
 var _model: Node3D
 var _base: StandardMaterial3D        # köşe renkli ışıksız (IŞIKLAR çarpanı albedo_color'da)
 var _beam: StandardMaterial3D
 var _floor_material: StandardMaterial3D
+var _decals: Dictionary = {}         # seviye gölgesi MeshInstance3D → doku yolu (görünür olunca yüklenir)
 var _levels: Dictionary = {}
 
 
@@ -132,12 +142,19 @@ static func has_scene(id: StringName) -> bool:
 	return FILE.has(id) and ResourceLoader.exists(String(DIR[id]) + String(FILE[id]))
 
 
-## Sahneyi kurar (bulunamazsa null). Kökün ölçeği METER: alt düğümler Blender metresinde kalır.
-static func create(id: StringName) -> GarageInterior:
+## Sahneyi kurar (bulunamazsa null). Kökün ölçeği METER: alt düğümler Blender metresinde kalır. `levels` (set_levels
+## biçimi) verilirse o seviyelerde görünen dokular sahneyle BİRLİKTE arka planda, paralel yüklenir (ana iş parçacığı
+## yalnız bekler; telefonda dosya okuma / açma çekirdeklere dağılır).
+static func create(id: StringName, levels: Dictionary = {}) -> GarageInterior:
 	if not has_scene(id):
 		return null
-	var scene: PackedScene = load(String(DIR[id]) + String(FILE[id])) as PackedScene
+	var path: String = String(DIR[id]) + String(FILE[id])
+	_request(path)
+	for texture: String in _texture_paths(id, levels):
+		_request(texture)
+	var scene: PackedScene = _take(path) as PackedScene
 	if scene == null:
+		_drain()
 		return null
 	var interior: GarageInterior = GarageInterior.new()
 	interior.name = "Interior_%s" % id
@@ -145,26 +162,34 @@ static func create(id: StringName) -> GarageInterior:
 	interior.scale = Vector3.ONE * METER
 	interior._model = scene.instantiate() as Node3D
 	interior.add_child(interior._model)
-	interior._apply_materials()
+	interior._apply_materials(levels)
+	_drain()
 	return interior
 
 
 ## Kalem seviyeleri: {&"floor": 1, &"walls": 2, &"lights": 1, &"lift": 3, &"park": 2}. Eksik kalem 1 sayılır.
 func set_levels(levels: Dictionary) -> void:
 	_levels = levels.duplicate()
+	for path: String in _texture_paths(garage, _levels):
+		_request(path)
 	for child: Node in _model.get_children():
 		var parsed: Array = _parse_level(String(child.name))
 		if parsed.is_empty():
 			continue
 		var item: StringName = parsed[0]
 		(child as Node3D).visible = int(_levels.get(item, 1)) == int(parsed[1])
+	# Seviye gölgeleri yalnız görünürken dokulu: gizli seviyelerin (her kalemde 2–3) dokusu yüklenmez
+	for mi: MeshInstance3D in _decals:
+		var material: StandardMaterial3D = mi.get_surface_override_material(0) as StandardMaterial3D
+		if mi.visible and material and material.albedo_texture == null:
+			material.albedo_texture = _take(_decals[mi]) as Texture2D
 	var lights: int = clampi(int(_levels.get(&"lights", 1)), 1, 3)
 	if _base:
 		var tints: Array = setup().get("light_tint", LIGHT_TINT)
 		_base.albedo_color = tints[lights - 1] if is_leveled() else Color.WHITE
 	if _floor_material and is_leveled():
-		var floor_level: int = clampi(int(_levels.get(&"floor", 1)), 1, 3)
-		_floor_material.albedo_texture = load(String(DIR[garage]) + "floor_%d_%d.png" % [floor_level, lights]) as Texture2D
+		_floor_material.albedo_texture = _take(_floor_path(garage, _levels)) as Texture2D
+	_drain()
 
 
 ## Seviye kalemli garaj mı (çatı katı otoparkın ve modifiye garajının kalemi yok).
@@ -247,44 +272,130 @@ func _parse_level(node_name: String) -> Array:
 	return []
 
 
+# --- Dosyalar ------------------------------------------------------------------------------------
+
+## Seviyeli garajın zemin dokusu (her zemin × ışık seviyesi ayrı pişmiş).
+static func _floor_path(id: StringName, levels: Dictionary) -> String:
+	var lights: int = clampi(int(levels.get(&"lights", 1)), 1, 3)
+	return String(DIR[id]) + "floor_%d_%d.png" % [clampi(int(levels.get(&"floor", 1)), 1, 3), lights]
+
+
+## Bu seviyelerde görünecek dokular: zemin + görünür seviye gölgeleri; seviyesiz garajda zemin / güverte / fon.
+static func _texture_paths(id: StringName, levels: Dictionary) -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	var dir: String = String(DIR[id])
+	if id == &"waiting" or id == &"modgarage":
+		for file: String in ["floor.png", "deck.png", "backdrop.png"]:
+			out.append(dir + file)
+		return out
+	out.append(_floor_path(id, levels))
+	for item: StringName in ITEM_NODES:
+		out.append(dir + "decal_%s_l%d.png" % [String(ITEM_NODES[item]).to_lower(), int(levels.get(item, 1))])
+	return out
+
+
+## Dosyayı arka planda (WorkerThreadPool) yüklemeye başlar; _take ile alınır. Olmayan dosya istenmez.
+static func _request(path: String) -> void:
+	if _requested.has(path) or not ResourceLoader.exists(path):
+		return
+	if ResourceLoader.has_cached(path):
+		return
+	if ResourceLoader.load_threaded_request(path) == OK:
+		_requested[path] = true
+
+
+## İstenmişse arka plandaki yüklemeyi alır (bitmediyse bekler), istenmemişse doğrudan yükler.
+static func _take(path: String) -> Resource:
+	if _requested.has(path):
+		_requested.erase(path)
+		return ResourceLoader.load_threaded_get(path)
+	return load(path) if ResourceLoader.exists(path) else null
+
+
+## Kullanılmayan istekler bırakılır: alınmayan arka plan yüklemesi ResourceLoader'da asılı kalır (bellek). Süren yükleme
+## beklenmez (ana iş parçacığı durmasın): yarım saniye sonra yeniden denenir.
+static func _drain() -> void:
+	for path: String in _requested.keys():
+		if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			continue
+		ResourceLoader.load_threaded_get(path)
+		_requested.erase(path)
+	if not _requested.is_empty():
+		(Engine.get_main_loop() as SceneTree).create_timer(0.5).timeout.connect(_drain, CONNECT_ONE_SHOT)
+
+
+## GARAJ EKRANI AÇILMADAN ÖNCE (DEPOLARIM'da garaj seçilince): iç mekânın sahnesi ve o seviyelerin dokuları arka planda
+## yüklenmeye başlar; GİT'e basılınca create() hazır dosyaları alır (ana iş parçacığında yalnız sahne kurulumu kalır).
+## Seçim değişince / pano kapanınca cancel_prefetch.
+static func prefetch(id: StringName, levels: Dictionary) -> void:
+	cancel_prefetch()
+	if not has_scene(id):
+		return
+	_request(String(DIR[id]) + String(FILE[id]))
+	for path: String in _texture_paths(id, levels):
+		_request(path)
+
+
+static func cancel_prefetch() -> void:
+	_drain()
+
+
 # --- Materyaller ----------------------------------------------------------------------------------
 
-func _apply_materials() -> void:
-	_base = StandardMaterial3D.new()
-	_base.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_base.vertex_color_use_as_albedo = true
-	_base.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_beam = StandardMaterial3D.new()
-	_beam.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_beam.vertex_color_use_as_albedo = true
-	_beam.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	_beam.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_beam.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
-	_beam.cull_mode = BaseMaterial3D.CULL_DISABLED
+func _apply_materials(levels: Dictionary) -> void:
+	_keep_shaders()
+	_base = _vertex_material()
 	var gain: float = float(setup().get("beam_gain", 1.0))
-	_beam.albedo_color = Color(gain, gain, gain)
+	_beam = _beam_material(gain)
+	var dir: String = String(DIR[garage])
 	for node: Node in _model.find_children("*", "MeshInstance3D", true, false):
 		var mi: MeshInstance3D = node as MeshInstance3D
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var node_name: String = String(mi.name)
 		var material: Material = _base
-		if node_name.begins_with("Beam_"):
+		if node_name.begins_with("Decal_"):
+			var path: String = dir + node_name.to_lower() + ".png"
+			# Seviye gölgesi dokusunu set_levels görünür olunca verir; seviyesiz gölge hemen
+			material = _decal_material(null if not _parse_level(node_name).is_empty() else _take(path) as Texture2D)
+			if not _parse_level(node_name).is_empty():
+				_decals[mi] = path
+		elif node_name.begins_with("Beam_"):
 			material = _beam
-		elif node_name.begins_with("Decal_"):
-			material = _decal_material(node_name)
 		elif node_name == "Floor":
-			_floor_material = _texture_material(null if is_leveled() else load(String(DIR[garage]) + "floor.png") as Texture2D)
+			_floor_material = _texture_material(null if is_leveled() else _take(dir + "floor.png") as Texture2D)
 			material = _floor_material
 		elif node_name == "DeckTop":
-			material = _texture_material(load(String(DIR[garage]) + "deck.png") as Texture2D)
+			material = _texture_material(_take(dir + "deck.png") as Texture2D)
 		elif node_name == "Backdrop":
-			material = _texture_material(load(String(DIR[garage]) + "backdrop.png") as Texture2D)
+			material = _texture_material(_take(dir + "backdrop.png") as Texture2D)
 		for s: int in (mi.mesh.get_surface_count() if mi.mesh else 0):
 			mi.set_surface_override_material(s, material)
-	set_levels({})
+	set_levels(levels)
 
 
-func _texture_material(texture: Texture2D) -> StandardMaterial3D:
+## Duranlar: köşe rengi ışıksız (IŞIKLAR çarpanı albedo_color'da).
+static func _vertex_material() -> StandardMaterial3D:
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.vertex_color_use_as_albedo = true
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return material
+
+
+## Işık huzmeleri: katkılı.
+static func _beam_material(gain: float) -> StandardMaterial3D:
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.vertex_color_use_as_albedo = true
+	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.albedo_color = Color(gain, gain, gain)
+	return material
+
+
+static func _texture_material(texture: Texture2D) -> StandardMaterial3D:
 	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.albedo_texture = texture
@@ -294,12 +405,33 @@ func _texture_material(texture: Texture2D) -> StandardMaterial3D:
 
 
 ## Zemine düşen gölge: dokusu ekran değerine doğrudan çarpılır (pişirme oranı, 1 = gölgesiz).
-func _decal_material(node_name: String) -> StandardMaterial3D:
+static func _decal_material(texture: Texture2D) -> StandardMaterial3D:
 	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_texture = load(String(DIR[garage]) + node_name.to_lower() + ".png") as Texture2D
+	material.albedo_texture = texture
 	material.blend_mode = BaseMaterial3D.BLEND_MODE_MUL
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
 	material.render_priority = 1
 	return material
+
+
+static func _keep_shaders() -> void:
+	if _shader_keepers.is_empty():
+		_shader_keepers = [_vertex_material(), _beam_material(1.0), _texture_material(null), _decal_material(null)]
+
+
+## Shader ön ısıtması: her materyal türünden küçük birer dörtgen (GarageScreen.prewarm garaj görüntüsünün kamerası önüne
+## koyar, ilk çizimden sonra siler). İlk garaj açılışında da derleme takılması olmasın.
+static func prewarm_nodes() -> Array[Node3D]:
+	_keep_shaders()
+	var out: Array[Node3D] = []
+	for material: Material in _shader_keepers:
+		var quad: MeshInstance3D = MeshInstance3D.new()
+		var mesh: QuadMesh = QuadMesh.new()
+		mesh.size = Vector2(0.01, 0.01)
+		quad.mesh = mesh
+		quad.material_override = material
+		quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		out.append(quad)
+	return out
