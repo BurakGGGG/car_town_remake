@@ -711,6 +711,16 @@ func _run() -> void:
 	await _screen(&"friends", "arkadaslar")
 	await _screen(&"gem_store", "elmas_magazasi")
 	await _screen(&"garage_edit", "dekor")
+	await _screen(&"garage_edit", "dekor_depo", func() -> void:   # DEPO: depodaki bütün eşyalar tek şeritte, plakada rozet
+		(_router.screen(&"garage_edit") as GarageEditScreen).call("_select_tab", GarageEditScreen.STORAGE_KIND))
+	await _screen(&"garage_edit", "dekor_depo_dolu", func() -> void:   # kaydın kopyasına her kategoriden iki eşya verilir
+		var decor_qa: DecorManager = get_first_node_in_group("decor") as DecorManager
+		for kind: int in GarageDecor.categories():
+			var given: int = 0
+			for item: Dictionary in GarageDecor.shop_order(kind):
+				if given < 2 and GarageDecor.is_placeable(item["id"]) and decor_qa.grant(item["id"], 1 + given):
+					given += 1
+		(_router.screen(&"garage_edit") as GarageEditScreen).call("_select_tab", GarageEditScreen.STORAGE_KIND))
 	await _screen(&"garage_edit", "dekor_araclar", func() -> void:   # kartlarda aracın yeri (GARAJDA / depo / OTOPARK)
 		(_router.screen(&"garage_edit") as GarageEditScreen).call("_select_tab", GarageDecor.Kind.VEHICLE))
 	await _screen(&"garage_edit", "dekor_yukseltmeler", func() -> void:   # YÜKSELTMELER: kartlar + garaj plakası

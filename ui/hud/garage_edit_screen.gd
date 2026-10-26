@@ -11,7 +11,8 @@ extends Control
 ##   üst orta  : GARAJI DÜZENLE plakası, içinde ne yapılacağını söyleyen ipucu; altında uyarı hapı
 ##   sol üst   : bakiye
 ##   sağ üst   : IZGARA · GERİ AL · BİTİR (ikonlu)
-##   alt       : İKİ KATMANLI menü — solda MODLAR (EŞYALAR · ZEMİN · DUVAR · ARAÇLAR · YÜKSELTMELER, ikonlu), sağda
+##   alt       : İKİ KATMANLI menü — solda MODLAR (EŞYALAR · DEPO · ZEMİN · DUVAR · ARAÇLAR · YÜKSELTMELER; kare plakada
+##               çizim + altında küçük ad, bkz. _mode_plate), sağda
 ##               modun alt kategorileri (EŞYALAR: atölye, yaşam alanı...; DUVAR: İÇ DUVAR · KAPLAMA). Tek
 ##               kategorili modda alt satır yok. Altında eşya şeridi: depo adedi rozeti, fiyat, rütbe
 ##               kilidi. Açık moda yeniden dokunmak şeridi katlar, garajın tamamı görünür.
@@ -25,6 +26,9 @@ extends Control
 ## tamir hızı / tamir alanı yükseltmeler altında"): şeritte GARAJ SEVİYESİ · TAMİR HIZI · TAMİR ALANI kartları; karta
 ## dokununca satın alma plakası (ne kazandırdığı + SATIN AL / VAZGEÇ, dünyadaki plakayla aynı metinler). Garaj büyüyünce
 ## kamera garajı yeniden sığdırır.
+## DEPO (2026-10-26, kullanıcı: "satın aldığım dekorasyonu bazen kaybediyorum, depo butonu da olsun"): depoda kopyası
+## bekleyen BÜTÜN eşyalar tek şeritte (eskiden kategorilere dağılmıştı, hangi sekmede olduğu aranıyordu). Plakada
+## depodaki kopya sayısı rozeti; karta dokunmak eşyayı yerleştirmeye başlar, son kopya konunca kart şeritten kalkar.
 ## Dekorasyon v2: ZEMİN sekmesinde desen kartına dokunmak boyama aracını, DUVAR ÖR'de parça kartı
 ## örme aracını, DUVAR KAPLAMASI'nda kaplama kartı kaplama aracını açar; başka sekmeye geçmek eşya
 ## düzenine döndürür.
@@ -40,11 +44,18 @@ const THUMB_TOP: float = 8.0
 const THUMB_AREA: Vector2 = Vector2(108.0, 60.0)
 ## Yatay ikonlu plakalarda ikonun boyu.
 const PLATE_ICON: float = 20.0
+## Mod plakaları (_mode_plate): çizimin kenarı, adın puntosu, en dar plaka, iç pay (üst, alt).
+const MODE_ART: float = 46.0
+const MODE_CAPTION_SIZE: int = 12
+const MODE_PLATE_WIDTH: float = 78.0
+const MODE_PAD: Vector2 = Vector2(2.0, 5.0)
 ## LÜKS kart renkleri: koyu vitrin zemini ve altın çerçeve.
 const LUXURY_BACK: Color = Color("1E1B2B")
 const LUXURY_GOLD: Color = Color("E8B53A")
 ## Alt menünün modları: mod → [başlık, ikon]. Kategoriler modlara MODE_OF ile dağılır.
-const MODES: Array[StringName] = [&"items", &"floor", &"wall", &"vehicles"]
+const MODES: Array[StringName] = [&"items", &"storage", &"floor", &"wall", &"vehicles"]
+## DEPO modunun tek "kategorisi": katalogda tür değil (GarageDecor.Kind'da yok), şeridi depodaki eşyalardan kurulur.
+const STORAGE_KIND: int = -2
 ## Denetim / araç çubuğu için kamera bandında ayrılan yükseklik (plaka satırı + aralık).
 const BAR_RESERVE: float = 58.0
 ## Düzenleme arayüzünün ölçeği (kullanıcı 2026-10-20: "dekorasyonda HUD çok büyük"): dört grup (bakiye, başlık,
@@ -157,7 +168,7 @@ func open() -> void:
 	_pending_place = &""
 	if place != &"" and _tab_buttons.has(GarageDecor.Kind.VEHICLE):
 		_kind = GarageDecor.Kind.VEHICLE   # şeritte araçlar: oyuncu vazgeçip başka aracı da seçebilir
-	if _kind < 0 or not _tab_buttons.has(_kind):
+	if not _tab_buttons.has(_kind):
 		_kind = _first_useful_kind()
 	_select_tab(_kind)   # önce şerit dolsun: bandın alt sınırı kartların yüksekliğine bağlı
 	if not grab.is_empty():
@@ -440,10 +451,10 @@ func _build() -> void:
 	for mode: StringName in MODES:
 		if _kinds_of(mode).is_empty():
 			continue
-		var mode_button: PlateButton = _icon_plate(_nav, _mode_title(mode), _mode_icon(mode), &"HudPlate")
+		var mode_button: PlateButton = _mode_plate(_mode_title(mode), mode)
 		mode_button.pressed.connect(_on_mode_pressed.bind(mode))
 		_mode_buttons[mode] = mode_button
-	_upgrade_button = _icon_plate(_nav, Loc.t("YÜKSELTMELER"), HudIcon.Kind.WRENCH, &"HudPlate")
+	_upgrade_button = _mode_plate(Loc.t("YÜKSELTMELER"), &"upgrades")
 	_upgrade_button.name = "UpgradesMode"
 	_upgrade_button.pressed.connect(_on_upgrades_pressed)
 	var divider: ColorRect = ColorRect.new()
@@ -481,10 +492,8 @@ func _build() -> void:
 	_strip = HBoxContainer.new()
 	_strip.add_theme_constant_override(&"separation", 6)
 	_scroll.add_child(_strip)
-	# Alt kategoriler: her katalog kategorisine (+ ARAÇLAR sergisine) bir düğme; yalnız açık modunkiler görünür
-	var kinds: Array[int] = GarageDecor.categories()
-	kinds.append(GarageDecor.Kind.VEHICLE)   # SERGİ: sahip olunan araçlar (katalogda değil, VehicleOwnership'ten)
-	for kind: int in kinds:
+	# Alt kategoriler: her katalog kategorisine (+ ARAÇLAR sergisine, DEPO'ya) bir düğme; yalnız açık modunkiler görünür
+	for kind: int in _all_kinds():
 		var tab: PlateButton = _plate(_chip_title(kind), &"HudPlateSmall")
 		if kind == GarageDecor.Kind.LUXURY:   # elmasla satılan sekme: yazının solunda elmas
 			tab.icon_size = 16.0
@@ -584,6 +593,7 @@ func _open_upgrades() -> void:
 	_scroll.scroll_horizontal = 0
 	_refresh_nav()
 	_refresh_upgrades()
+	_refresh()
 
 
 func _draw_upgrade_card(card: PlateButton, id: StringName) -> void:
@@ -853,15 +863,23 @@ static func mode_of(kind: int) -> StringName:
 			return &"wall"
 		GarageDecor.Kind.VEHICLE:
 			return &"vehicles"
+		STORAGE_KIND:
+			return &"storage"
 	return &"items"
+
+
+## Katalog kategorileri + ARAÇLAR sergisi (katalogda değil, VehicleOwnership'ten) + DEPO.
+static func _all_kinds() -> Array[int]:
+	var kinds: Array[int] = GarageDecor.categories()
+	kinds.append(GarageDecor.Kind.VEHICLE)
+	kinds.append(STORAGE_KIND)
+	return kinds
 
 
 ## Modun kategorileri (katalog sırasıyla).
 static func _kinds_of(mode: StringName) -> Array[int]:
 	var out: Array[int] = []
-	var kinds: Array[int] = GarageDecor.categories()
-	kinds.append(GarageDecor.Kind.VEHICLE)
-	for kind: int in kinds:
+	for kind: int in _all_kinds():
 		if mode_of(kind) == mode:
 			out.append(kind)
 	return out
@@ -869,18 +887,51 @@ static func _kinds_of(mode: StringName) -> Array[int]:
 
 static func _mode_title(mode: StringName) -> String:
 	match mode:
+		&"storage": return Loc.t("DEPO")
 		&"floor": return Loc.t("ZEMİN")
 		&"wall": return Loc.t("DUVAR")
 		&"vehicles": return Loc.t("ARAÇLAR")
 	return Loc.t("EŞYALAR")
 
 
-static func _mode_icon(mode: StringName) -> HudIcon.Kind:
-	match mode:
-		&"floor": return HudIcon.Kind.TILES
-		&"wall": return HudIcon.Kind.BRICKS
-		&"vehicles": return HudIcon.Kind.CAR
-	return HudIcon.Kind.CHAIR
+## Mod plakası (2026-10-26, kullanıcı: "güzel ve anlaşılır çizimler, kareler olsun, minimal şekilde ne olduğu da yazsın"):
+## kare krem plaka, üstte modun çizimi, altında küçük adı. Çizimler MARKET çizimiyle aynı üslupta
+## (ui/hud/art/edit_modes/<mod>.svg: koyu kontur, düz renk + tek gölge tonu). Seçili mod amber (highlight, _refresh_nav).
+## Düğme kendi yazısını taşımaz (çizim yazının üstünde olmalı); boyu içeriğin kutusundan ölçülür.
+func _mode_plate(title: String, art: StringName) -> PlateButton:
+	var button: PlateButton = _plate("", &"HudPlate")
+	button.name = "Mode_" + String(art)
+	button.tooltip_text = title
+	_nav.add_child(button)
+	var box: VBoxContainer = VBoxContainer.new()
+	box.name = "Content"
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override(&"separation", -2)   # ad çizimin yer gölgesine yaslanır: plaka alçak kalsın
+	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	box.offset_top = MODE_PAD.x
+	box.offset_bottom = -MODE_PAD.y
+	button.add_child(box)
+	var picture: TextureRect = TextureRect.new()
+	picture.texture = load("res://ui/hud/art/edit_modes/%s.svg" % art) as Texture2D
+	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	picture.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	picture.custom_minimum_size = Vector2(MODE_ART, MODE_ART)
+	box.add_child(picture)
+	var caption: Label = _label(&"HudInkValue", title)
+	caption.name = "Caption"
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caption.add_theme_font_size_override(&"font_size", MODE_CAPTION_SIZE)
+	box.add_child(caption)
+	var fit: Callable = func() -> void:
+		var inner: Vector2 = box.get_combined_minimum_size()
+		button.custom_minimum_size = Vector2(maxf(MODE_PLATE_WIDTH, inner.x + PlateButton.BOLT_CLEAR * 2.0),
+			inner.y + MODE_PAD.x + MODE_PAD.y)
+	box.minimum_size_changed.connect(fit)
+	fit.call()
+	return button
 
 
 ## Alt kategori adı: mod içinde kısaltılır (DUVAR modunda "DUVAR ÖR" yerine "ÖR").
@@ -890,6 +941,7 @@ static func _chip_title(kind: int) -> String:
 		GarageDecor.Kind.WALL_SURFACE: return Loc.t("KAPLAMA")
 		GarageDecor.Kind.FLOOR_PATTERN: return Loc.t("DESEN")
 		GarageDecor.Kind.VEHICLE: return Loc.t("ARAÇLAR")
+		STORAGE_KIND: return Loc.t("DEPO")
 	return GarageDecor.kind_title(kind)
 
 
@@ -938,6 +990,7 @@ func _reframe_later() -> void:
 func _select_tab(kind: int) -> void:
 	if _editor and _kind != kind:
 		_editor.end_tool()   # başka sekme: eşya düzenine dönülür (araç kartına dokununca yeniden açılır)
+	var was_upgrades: bool = _upgrades_open
 	_upgrades_open = false
 	_upgrade_cards.clear()
 	_hide_upgrade_plate()
@@ -955,7 +1008,9 @@ func _select_tab(kind: int) -> void:
 	_cards.clear()
 	if kind == GarageDecor.Kind.FLOOR_SURFACE or kind == GarageDecor.Kind.WALL_SURFACE:
 		_add_card(&"")   # varsayılan kaplamaya dönüş (duvar kaplaması: kaplamasız duvar)
-	if kind == GarageDecor.Kind.VEHICLE:
+	if kind == STORAGE_KIND:
+		_add_storage_cards(_storage_ids())
+	elif kind == GarageDecor.Kind.VEHICLE:
 		var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 		if ownership:
 			for vehicle: StringName in ownership.owned_vehicle_ids():
@@ -965,6 +1020,8 @@ func _select_tab(kind: int) -> void:
 			_add_card(item["id"])
 	_scroll.scroll_horizontal = 0
 	_refresh_cards()
+	if was_upgrades and _editor and _editor.active:
+		_refresh()   # ipucu YÜKSELTMELER'inkiydi (açılışta değil: kadraj bandı open()'da ölçülür, _refresh sonra gelir)
 
 
 ## Seçili sekme şeritte görünsün; sığıyorsa şerit başta kalır (en baştaki LÜKS sekmesi yarım kesilmesin —
@@ -1013,6 +1070,77 @@ func _add_card(id: StringName) -> void:
 	_cards[id] = card
 
 
+## DEPO şeridi: depoda kopyası bekleyen garaj eşyaları, palet sırasıyla (kategori, sonra mağaza sırası). Paletten
+## kalkmış eşya (eski araç lifti gibi; hiçbir sekmede görünmüyordu) sonda listelenir. Kaplama / desen / duvar
+## parçası eşya değildir, kendi sekmelerinde kalır.
+func _storage_ids() -> Array[StringName]:
+	var out: Array[StringName] = []
+	if _decor == null:
+		return out
+	var stored: Dictionary = {}
+	for id: StringName in _decor.owned_ids():
+		if GarageDecor.is_placeable(id) and _decor.available_of(id) > 0:
+			stored[id] = true
+	if stored.is_empty():
+		return out
+	for kind: int in GarageDecor.categories():
+		for item: Dictionary in GarageDecor.shop_order(kind):
+			var id: StringName = item["id"]
+			if stored.has(id):
+				out.append(id)
+				stored.erase(id)
+	for id: StringName in stored:
+		out.append(id)
+	return out
+
+
+func _add_storage_cards(ids: Array[StringName]) -> void:
+	for id: StringName in ids:
+		_add_card(id)
+	if not ids.is_empty():
+		return
+	# Boş depo: şerit boyu değişmesin (kamera bandı ona bağlı) diye kart boyunda tek bilgi kartı, basılmaz
+	var card: PlateButton = PlateButton.new()
+	card.name = "StorageEmpty"
+	card.theme_type_variation = &"HudGalleryPlate"
+	card.kind = HudIcon.Kind.NONE
+	card.bolts = false
+	card.focus_mode = Control.FOCUS_NONE
+	card.disabled = true
+	card.custom_minimum_size = Vector2(CARD_WIDTH * 2.5, 0.0)
+	card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
+	card.text = Loc.t("DEPON BOŞ\nGARAJDA EŞYAYI SEÇ, DEPOYA KALDIR")
+	card.draw.connect(func() -> void:
+		var area: Rect2 = Rect2(Vector2((card.size.x - THUMB_AREA.x) * 0.5, THUMB_TOP), THUMB_AREA)
+		HudIcon.draw_icon(card, HudIcon.Kind.BOX, area.get_center(), 44.0, Color(HudPalette.INK, 0.4), HudPalette.PLATE))
+	_strip.add_child(card)
+
+
+## DEPO plakasının rozeti (depodaki kopya sayısı); DEPO açıksa şerit de güncellenir: eşyanın son kopyası konunca
+## kartı kalkar, DEPOYA KALDIR'la gelen eşyanın kartı eklenir (kaydırma yeri korunur).
+func _refresh_storage() -> void:
+	var ids: Array[StringName] = _storage_ids()
+	var copies: int = 0
+	for id: StringName in ids:
+		copies += _decor.available_of(id)
+	var button: PlateButton = _mode_buttons.get(&"storage") as PlateButton
+	if button:
+		button.badge = copies
+	if _kind != STORAGE_KIND or _upgrades_open:
+		return
+	var shown: Array[StringName] = []
+	shown.assign(_cards.keys())
+	if shown == ids:
+		return
+	var scroll: int = _scroll.scroll_horizontal
+	for child: Node in _strip.get_children():
+		child.queue_free()
+	_cards.clear()
+	_add_storage_cards(ids)
+	_scroll.set_deferred(&"scroll_horizontal", scroll)
+
+
 func _draw_card(card: PlateButton, id: StringName) -> void:
 	var area: Rect2 = Rect2(Vector2((card.size.x - THUMB_AREA.x) * 0.5, THUMB_TOP), THUMB_AREA)
 	if GarageDecor.is_gem_item(id):
@@ -1049,7 +1177,7 @@ func _draw_badges(card: PlateButton, id: StringName, area: Rect2) -> void:
 		return
 	if _decor == null or id == &"" or GarageDecor.is_exclusive(id):
 		return
-	if not _decor.is_unlocked(id):
+	if not _decor.is_unlocked(id) and not _stored_gift(id):
 		var center: Vector2 = area.get_center()
 		card.draw_circle(center, 17.0, Color(HudPalette.PLATE, 0.94), true, -1.0, true)
 		card.draw_arc(center, 17.0, 0.0, TAU, 28, Color(HudPalette.INK, 0.35), 1.5, true)
@@ -1242,6 +1370,7 @@ func _buy(id: StringName) -> bool:
 func _refresh_cards() -> void:
 	if _decor == null:
 		return
+	_refresh_storage()
 	for id: StringName in _cards:
 		var card: PlateButton = _cards[id]
 		if not is_instance_valid(card):
@@ -1314,7 +1443,7 @@ func _refresh_cards() -> void:
 			status = _confirm_status(id)
 		card.text = "%s\n%s" % [title, status]
 		_fit_card(card)
-		card.disabled = not _decor.is_unlocked(id)
+		card.disabled = not _decor.is_unlocked(id) and not _stored_gift(id)
 		card.button_pressed = _confirm_buy == id or (GarageDecor.is_surface(id) \
 				and _decor.surface(DecorManager.surface_slot_of(id)) == id)
 		card.queue_redraw()
@@ -1338,6 +1467,12 @@ func _price_status(id: StringName) -> String:
 	if GarageDecor.is_gem_item(id):
 		return Loc.t("%d GEM") % _decor.gem_price_of(id)
 	return "%s ₺" % Hud.format_thousands(_decor.price_of(id))
+
+
+## Seviyesi gelmemiş ama deposunda kopyası olan eşya: hediyeler (görev / yarış / posta / koleksiyon ödülü) seviye
+## kilidine bakılmadan verilir. Kart eskiden kilitli çizilip basılmıyordu: sahip olunan eşya garaja konamıyordu.
+func _stored_gift(id: StringName) -> bool:
+	return GarageDecor.is_placeable(id) and _decor.available_of(id) > 0
 
 
 ## İkinci dokunuşu bekleyen kartın yazısı ("SATIN AL? 120 GEM").
@@ -1375,6 +1510,9 @@ func _refresh() -> void:
 		var item2: StringName = inst.get("item", &"")
 		wall = GarageDecor.placement(item2) == GarageDecor.PLACE_WALL
 		_info.text = Loc.t("%s · SÜRÜKLE: TAŞI") % Loc.t(String(GarageDecor.get_item(item2).get("title", "")))
+	elif _upgrades_open:
+		# Kısa ipucu: uzun eşya ipucu dar tuvalde iki satıra kırılıyor, satın alma plakası başlığın altına giriyordu
+		_info.text = Loc.t("YÜKSELTMEK İÇİN KARTA DOKUN")
 	else:
 		_info.text = Loc.t("EŞYAYA DOKUN: SEÇ  ·  AŞAĞIDAN EŞYA SEÇ: EKLE")
 	_rot_left.visible = not wall

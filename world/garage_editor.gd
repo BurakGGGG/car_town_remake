@@ -81,6 +81,8 @@ var _history: Array[Dictionary] = []
 var _saved_picking: bool = true
 var _saved_view: Dictionary = {}
 var _saved_min_zoom: float = -1.0
+## Ekranın arayüzsüz dikey bandı (activate / reframe verir): hayalet bu bandın ortasında aranır ve ortalanır.
+var _band: Vector2 = Vector2(0.14, 0.64)
 
 ## Hayalet (yeni eşya): düğüm, eşya, konum, yön.
 var _ghost: Node3D
@@ -170,6 +172,7 @@ func activate(band: Vector2 = Vector2(0.14, 0.64), frame: bool = true) -> void:
 	if active or not _bind():
 		return
 	active = true
+	_band = band
 	# Kök düğümün en sonuna geç: _unhandled_input'u kameradan ve araç kutularından ÖNCE alırız.
 	var parent: Node = get_parent()
 	if parent:
@@ -289,7 +292,10 @@ func _frame_garage(band: Vector2, keep_saved: bool = false) -> void:
 ## Arayüz bandı değişti (eşya şeridi katlandı / açıldı): garaj yeni boş alana yeniden sığdırılır.
 func reframe(band: Vector2) -> void:
 	if active and _bind():
+		_band = band
 		_frame_garage(band, true)
+		if _ghost:
+			_center_on_ghost()   # garaj yeniden sığdırıldı: yerleştirilen eşya yine ortada kalsın
 
 
 ## IZGARA: yarım kareye oturtma + zemindeki ızgara çizgileri birlikte (kapalıyken serbest yerleştirme, çizgi yok).
@@ -337,6 +343,8 @@ func is_placing() -> bool:
 
 ## Depodaki bir kopyayı yerleştirmeye başlar: hayalet görünür alanın ortasına en yakın geçerli
 ## yere konur (yer yoksa ortada kırmızı bekler). Dokunarak / sürükleyerek taşınır, ✓ ile konur.
+## Kamera hayaleti bandın ortasına kaydırır (kullanıcı 2026-10-26: "bastığım eşyayı ortalasın, bazen gözden
+## kayboluyor" — boş yer uzakta bulunursa ya da duvar eşyası uzak duvara oturursa hayalet ekran dışında kalıyordu).
 func begin_place(item: StringName) -> bool:
 	if not active or not _bind() or _decor.available_of(item) <= 0 or GarageDecor.is_surface(item):
 		return false
@@ -355,6 +363,7 @@ func begin_place(item: StringName) -> bool:
 	_ghost_pos = spot["pos"]
 	_ghost_yaw = spot["yaw"]
 	_refresh_ghost()
+	_center_on_ghost()
 	if not bool(spot["ok"]):
 		notice.emit(Loc.t("YER YOK — SÜRÜKLEYİP BOŞ BİR YERE TAŞI"))
 	placing_changed.emit(item)
@@ -1243,15 +1252,24 @@ func _hits(camera: Camera3D, at: Vector2, node: Node3D) -> bool:
 
 
 ## Ekranın ortasının zemindeki karşılığı (garaj dışındaysa garajın ortası).
+## Görünen alanın (bandın; ekranın ortası değil — şerit açıkken o nokta şeridin hemen üstündeydi) zemindeki ortası.
 func _screen_center_ground() -> Vector2:
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	var rect: Rect2 = _view.area().floor_rect
 	if camera == null:
 		return rect.get_center()
-	var p: Vector2 = _view.ground_point(camera, get_viewport().get_visible_rect().size * 0.5)
+	var screen: Vector2 = get_viewport().get_visible_rect().size
+	var p: Vector2 = _view.ground_point(camera, Vector2(screen.x * 0.5, screen.y * (_band.x + _band.y) * 0.5))
 	if p == Vector2.INF or not rect.has_point(p):
 		return rect.get_center()
 	return p
+
+
+## Kamera hayaleti arayüzsüz bandın ortasına yumuşakça getirir (zoom değişmez; zaten ortadaysa kıpırdamaz).
+func _center_on_ghost() -> void:
+	var camera: WorldCamera = get_viewport().get_camera_3d() as WorldCamera
+	if camera and _ghost:
+		camera.center_on(_ghost_pos, _band.x, _band.y)
 
 
 ## `pos` çevresinde, NUDGE_RINGS adıma kadar, bu yönde geçerli olan EN YAKIN konum (yoksa INF).

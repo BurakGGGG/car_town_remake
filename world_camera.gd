@@ -166,6 +166,31 @@ func frame_box(box: AABB, top: float = 0.14, bottom: float = 0.64, side: float =
 	return before
 
 
+## Noktayı ekranın [top, bottom] bandının ortasına yumuşakça getirir; zoom değişmez. Süren bir kayma (frame_box)
+## varsa onun HEDEF görünümünden hesaplanır. Zaten ortaya yakınsa (`slack`, ekran boyunun oranı) kamera kıpırdamaz.
+## Garaj düzenleyicisi: yerleştirilmeye başlanan eşya gözden kaybolmasın (kullanıcı 2026-10-26).
+func center_on(point: Vector3, top: float = 0.14, bottom: float = 0.64, slack: float = 0.06) -> void:
+	var keep_size: float = size
+	var keep_focus: Vector3 = _focus
+	size = _target_size
+	if _glide and _glide.is_running():
+		_focus = _glide_target
+	_apply_focus()
+	var start: Vector3 = _focus
+	var screen: Vector2 = get_viewport().get_visible_rect().size
+	var target: Vector2 = Vector2(screen.x * 0.5, screen.y * (top + bottom) * 0.5)
+	var off: Vector2 = target - unproject_position(point)
+	if off.length() > screen.y * slack:
+		pan_by_pixels(off)
+	var final_focus: Vector3 = _focus
+	size = keep_size
+	_focus = keep_focus
+	_apply_focus()
+	if final_focus.is_equal_approx(start):
+		return
+	_glide_to(final_focus, _target_size, _target_size)
+
+
 ## Şu anki görünüm (restore_view ile geri dönülür).
 func view_state() -> Dictionary:
 	return {"focus": _focus, "size": _target_size}
@@ -202,11 +227,14 @@ func restore_view(state: Dictionary) -> void:
 
 
 var _glide: Tween
+## Süren kaymanın varacağı odak (center_on yeni hedefi bundan hesaplar).
+var _glide_target: Vector3
 
 
 func _glide_to(focus: Vector3, zoom: float, nearest: float = 0.0) -> void:
 	if _glide:
 		_glide.kill()
+	_glide_target = focus
 	_target_size = clampf(zoom, nearest if nearest > 0.0 else min_zoom, max_zoom)
 	_glide = create_tween()
 	_glide.tween_method(func(f: Vector3) -> void:

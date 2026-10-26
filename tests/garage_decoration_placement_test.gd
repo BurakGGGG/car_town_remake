@@ -247,7 +247,9 @@ func _open_editor() -> void:
 	tab_kinds.sort()
 	var expected_kinds: Array = Array(GarageDecor.categories())
 	expected_kinds.append(GarageDecor.Kind.VEHICLE)   # SERGİ sekmesi katalogda değil, sahip olunan araçlardan
-	check(16, tab_kinds == expected_kinds, "sekmeler katalog kategorileri + ARAÇLAR sergisi (%d)" % tabs.size())
+	expected_kinds.append(GarageEditScreen.STORAGE_KIND)   # DEPO: depodaki bütün eşyalar
+	expected_kinds.sort()
+	check(16, tab_kinds == expected_kinds, "sekmeler katalog kategorileri + ARAÇLAR sergisi + DEPO (%d)" % tabs.size())
 
 
 func _close_editor() -> void:

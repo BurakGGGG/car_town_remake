@@ -47,6 +47,7 @@ func _run() -> void:
 	var cards: Dictionary = edit.get("_upgrade_cards")
 	check(cards.size() == 3 and cards.has(&"garage") and cards.has(&"speed") and cards.has(&"bay"), "üç kart: garaj, tamir hızı, tamir alanı")
 	check((edit.get("_upgrade_button") as PlateButton).highlight, "YÜKSELTMELER modu vurgulu")
+	check((edit.get("_info") as Label).text == Loc.t("YÜKSELTMEK İÇİN KARTA DOKUN"), "başlıkta yükseltme ipucu")
 	eco.add_money(10_000_000)
 	await frames(1)
 	var level: int = upgrades.garage_level()
@@ -82,6 +83,7 @@ func _run() -> void:
 	edit.call("_on_mode_pressed", &"items")
 	await frames(2)
 	check(not edit.get("_upgrades_open") and not group.visible, "EŞYALAR'a geçince yükseltmeler kapanır")
+	check((edit.get("_info") as Label).text == Loc.t("EŞYAYA DOKUN: SEÇ  ·  AŞAĞIDAN EŞYA SEÇ: EKLE"), "eşya ipucu geri geldi")
 	hud.router.close_all()
 	await frames(3)
 
