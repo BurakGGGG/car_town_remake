@@ -17,8 +17,11 @@ extends Node
 ## kısılır (uzaktaki siren boğuk), ekranın solundaki polis soldan duyulur, yanından geçerken Doppler (perde düşer).
 ## Kendi bus'ında çalar (alçak geçiren + panner), o bus Efekt (SFX) bus'ına gider: ayarlardaki efekt düzeyi uygulanır.
 ## Bir ekran açıkken (garaj vb.) susar.
+## KORNA ("dat dat", HORN): trafik polisi kilidin önünde durunca bir kez çalar (blast) — kalın, akorlu havalı korna, iki
+## kısa vuruş (kullanıcı: "polis kornası varya kalın, dat dat yapsın 1 kere"; sonra "daha güzel, daha yüksek sesli").
+## Aynı bus, aynı düzey kuralı; sirenden HORN_DB yüksek.
 
-enum Kind { WAIL, HI_LO }
+enum Kind { WAIL, HI_LO, HORN }
 
 const MIX_RATE: int = 24000
 ## Ses düzeyi: ekranın tam ortasında CENTER_DB, ekran kenarında EDGE_DB (arası dB'de doğrusal). Kenarın dışında ekran
@@ -52,10 +55,15 @@ const TOP_HZ: float = 9000.0
 const ECHOES: Array[Vector2] = [Vector2(0.027, 0.26), Vector2(0.046, 0.19), Vector2(0.081, 0.14),
 	Vector2(0.133, 0.095), Vector2(0.21, 0.06)]
 const ECHO_TONE: float = 2800.0
+## Korna: iki vuruş (başlangıç sn, süre sn), sonrasında yankılar için sessiz kuyruk; sirenden bu kadar dB yüksek.
+const HORN_BLASTS: Array[Vector2] = [Vector2(0.0, 0.16), Vector2(0.27, 0.21)]
+const HORN_TAIL: float = 0.35
+const HORN_DB: float = 7.0
 
 static var _streams: Dictionary = {}   # Kind → AudioStreamWAV
 
 var _player: AudioStreamPlayer
+var _horn_player: AudioStreamPlayer
 var _filter: AudioEffectLowPassFilter
 var _panner: AudioEffectPanner
 var _target: Node3D
@@ -75,6 +83,9 @@ func _ready() -> void:
 	_player.bus = BUS
 	_player.volume_db = SILENT_DB
 	add_child(_player)
+	_horn_player = AudioStreamPlayer.new()
+	_horn_player.bus = BUS
+	add_child(_horn_player)
 
 
 ## Sirenin bus'ı: alçak geçiren (0) + panner (1) → SFX. Bir kez kurulur (sahne yeniden yüklense de aynı bus).
@@ -127,6 +138,42 @@ func volume_db() -> float:
 	return _player.volume_db
 
 
+## Polis kornası ("dat dat", bir kez): aracın ekrandaki yerine göre düzeyde (sirenle aynı kural, HORN_DB yüksek).
+## Ekran açıkken / kamera yokken sessiz. Sonuç: iki vuruşun bittiği an (sn, çalmaya başlamadan itibaren).
+func blast(vehicle: Node3D) -> float:
+	var end: float = HORN_BLASTS[HORN_BLASTS.size() - 1].x + HORN_BLASTS[HORN_BLASTS.size() - 1].y
+	var mix: Dictionary = _screen_mix(vehicle)
+	if mix.is_empty():
+		return end
+	if not _player.playing:   # siren susmuşsa süzgeç / pan kornanın yerine oturur
+		_filter.cutoff_hz = mix["cutoff"]
+		_panner.pan = mix["pan"]
+	_horn_player.stream = stream(Kind.HORN)
+	_horn_player.volume_db = float(mix["db"]) + HORN_DB
+	_horn_player.play()
+	return end
+
+
+## Korna çalıyor mu (test / QA)?
+func horn_playing() -> bool:
+	return _horn_player.playing
+
+
+## Hedefin ekrandaki yerine göre ses: {db, cutoff, pan}; kamera yoksa / ekran açıksa {}.
+func _screen_mix(target: Node3D) -> Dictionary:
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	if target == null or camera == null or _screen_open():
+		return {}
+	var size: Vector2 = get_viewport().get_visible_rect().size
+	var place: Vector2 = camera.unproject_position(target.global_position) / size * 2.0 - Vector2.ONE
+	# Yuvarlatılmış dikdörtgen ölçü: ekranın dört kenarı da 1 (köşeler biraz dışarıda)
+	var edge: float = pow(pow(absf(place.x), 4.0) + pow(absf(place.y), 4.0), 0.25)
+	var db: float = level_db(edge)
+	var far: float = clampf(inverse_lerp(CENTER_DB, FLOOR_DB, db), 0.0, 1.0)
+	return {"db": db, "cutoff": CUTOFF_NEAR * pow(CUTOFF_FAR / CUTOFF_NEAR, pow(far, 0.8)),
+		"pan": clampf(place.x, -1.0, 1.0) * PAN_WIDTH}
+
+
 ## Ekrandaki konuma göre hedef düzey: `edge` 0 = ekranın tam ortası, 1 = kenarı, > 1 ekran dışı.
 static func level_db(edge: float) -> float:
 	if edge <= 1.0:
@@ -140,21 +187,14 @@ func _physics_process(delta: float) -> void:
 	if not is_instance_valid(_target):
 		_target = null   # araç silindi: kısılarak sus
 	var goal: float = SILENT_DB
-	var camera: Camera3D = get_viewport().get_camera_3d()
-	if _target and camera and not _screen_open():
-		var size: Vector2 = get_viewport().get_visible_rect().size
-		var place: Vector2 = camera.unproject_position(_target.global_position) / size * 2.0 - Vector2.ONE
-		# Yuvarlatılmış dikdörtgen ölçü: ekranın dört kenarı da 1 (köşeler biraz dışarıda)
-		var edge: float = pow(pow(absf(place.x), 4.0) + pow(absf(place.y), 4.0), 0.25)
-		goal = level_db(edge)
-		var far: float = clampf(inverse_lerp(CENTER_DB, FLOOR_DB, goal), 0.0, 1.0)
-		var cutoff: float = CUTOFF_NEAR * pow(CUTOFF_FAR / CUTOFF_NEAR, pow(far, 0.8))
-		var pan: float = clampf(place.x, -1.0, 1.0) * PAN_WIDTH
+	var mix: Dictionary = _screen_mix(_target)
+	if not mix.is_empty():
+		goal = mix["db"]
 		var blend: float = 1.0 if _fresh else 1.0 - exp(-SMOOTH * delta)
-		_filter.cutoff_hz = lerpf(_filter.cutoff_hz, cutoff, blend)
-		_panner.pan = lerpf(_panner.pan, pan, blend)
+		_filter.cutoff_hz = lerpf(_filter.cutoff_hz, mix["cutoff"], blend)
+		_panner.pan = lerpf(_panner.pan, mix["pan"], blend)
 		_fresh = false
-		_doppler(camera, delta)
+		_doppler(get_viewport().get_camera_3d(), delta)
 	var rate: float = ATTACK_RATE if _target else RELEASE_RATE
 	_player.volume_db = move_toward(_player.volume_db, goal, rate * delta)
 	if _target == null and _player.volume_db <= SILENT_DB + 0.01:
@@ -206,6 +246,10 @@ static func build(kind: Kind) -> AudioStreamWAV:
 static func _synth(kind: Kind) -> AudioStreamWAV:
 	if kind == Kind.WAIL:
 		return _to_wav(_make_wail(), 1.9)
+	if kind == Kind.HORN:
+		var horn: AudioStreamWAV = _to_wav(_make_horn(), 5.0)
+		horn.loop_mode = AudioStreamWAV.LOOP_DISABLED   # bir kez
+		return horn
 	return _to_wav(_make_hi_lo(), 1.4)
 
 
@@ -239,6 +283,64 @@ static func _sweep(freqs: PackedFloat32Array, seconds: float, from: float, to: f
 	for i: int in count:
 		var t: float = float(i) / MIX_RATE
 		freqs.append(lerpf(from, to, (1.0 - exp(-t / tau)) / full))
+
+
+## "DAT DAT": polis kornası, iki kısa vuruş — havalı korna gibi AKOR: kök 150 Hz + beşlisi 225 Hz (kalın ve dolgun), her
+## ses %0,4 tiz ikiziyle (koro). Kaynak kare benzeri sürücü (doluluk %42); vuruş başında basınç oturana kadar perde %6
+## alttan gelir, gövde hafifçe söner, 33 Hz pürüz; her vuruşun başında valf "tık"ı (kısa parlak gürültü) — vuruş hissi.
+## TELEFONDA DUYULSUN DİYE: telefon hoparlörü ~300 Hz altını çalamaz; ilk sürümde enerjinin çoğu oradaydı (cılız,
+## kısık). Korna hoparlörü 300 Hz'den keser, 620 / 1.250 / 2.500 Hz rezonanslı: kalınlığı harmonikler taşır (kulak
+## eksik temeli tamamlar). Sert doyma (_synth). Sonda yankıların sığacağı sessizlik (yankı ses içinde sarar).
+static func _make_horn() -> PackedFloat32Array:
+	var last: Vector2 = HORN_BLASTS[HORN_BLASTS.size() - 1]
+	var count: int = int((last.x + last.y + HORN_TAIL) * MIX_RATE)
+	var gains: PackedFloat32Array = PackedFloat32Array()
+	var scoop: PackedFloat32Array = PackedFloat32Array()   # perde çarpanı (vuruş başında alttan gelir)
+	gains.resize(count)
+	scoop.resize(count)
+	for i: int in count:
+		var t: float = float(i) / MIX_RATE
+		var g: float = 0.0
+		var p: float = 1.0
+		for blast: Vector2 in HORN_BLASTS:
+			var since: float = t - blast.x
+			if since < 0.0 or since > blast.y + 0.08:
+				continue
+			p = 1.0 - 0.06 * exp(-since / 0.02)
+			var body: float = 1.0 - 0.18 * minf(since / blast.y, 1.0)
+			g = smoothstep(0.0, 0.004, since) * body * (1.0 if since < blast.y else exp(-(since - blast.y) / 0.016))
+			g *= 1.0 + 0.1 * sin(TAU * 33.0 * t)
+		gains[i] = g
+		scoop[i] = p
+	var source: PackedFloat32Array = PackedFloat32Array()
+	for n: int in range(1, 31):
+		source.append(absf(sin(float(n) * PI * 0.42)) / float(n))
+	var horn: Array = [300.0, 5000.0, 620.0, 1.6, 1250.0, 1.1, 2500.0, 0.55]
+	var out: PackedFloat32Array = PackedFloat32Array()
+	out.resize(count)
+	for voice: Vector2 in [Vector2(150.0, 1.0), Vector2(225.0, 0.75)]:
+		var freqs: PackedFloat32Array = PackedFloat32Array()
+		freqs.resize(count)
+		for i: int in count:
+			freqs[i] = voice.x * scoop[i]
+		_additive(out, freqs, gains, source, horn, voice.y)
+		for i: int in count:
+			freqs[i] *= 1.004
+		_additive(out, freqs, gains, source.slice(0, 12), horn, voice.y * 0.4)
+	# Valf tıkı: vuruş başında ~5 ms parlak gürültü (sabit tohum: her seferinde aynı ses)
+	var peak: float = 0.0001
+	for v: float in out:
+		peak = maxf(peak, absf(v))
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 7311
+	for blast: Vector2 in HORN_BLASTS:
+		var from: int = int(blast.x * MIX_RATE)
+		var previous: float = 0.0
+		for i: int in int(0.02 * MIX_RATE):
+			var noise: float = rng.randf_range(-1.0, 1.0)
+			out[from + i] += (noise - previous) * 0.5 * peak * 0.35 * exp(-float(i) / MIX_RATE / 0.004)
+			previous = noise
+	return out
 
 
 ## Martinshorn: la (440 Hz) ve re (587 Hz), her ton 0,65 sn, 4 tam çevrim (5,2 sn). Her ton hafif farklı akortlu

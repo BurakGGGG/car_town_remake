@@ -35,6 +35,8 @@ func _run() -> void:
 	check(settings.quality == GameSettings.Quality.MEDIUM and not settings.battery_saver and not settings.muted, "varsayılan: ORTA kalite, pil tasarrufu kapalı, ses açık")
 	check(is_equal_approx(root.scaling_3d_scale, 1.0) and root.msaa_3d == Viewport.MSAA_DISABLED, "ORTA: 3B çözünürlük %100, MSAA kapalı (eski görünüm)")
 	check(Engine.max_fps == 60, "kare hızı 60")
+	check(not DisplayRate.supported() and not DisplayRate.request(60), "ekran hızı isteği Android dışında yapılmaz")
+	check(DisplayRate.request_rate(60) == 60.0 and DisplayRate.request_rate(30) == 60.0, "60 FPS'e de pil tasarrufunun 30'una da 60 Hz istenir")
 	check(AudioServer.get_bus_index(GameSettings.MUSIC_BUS) >= 0 and AudioServer.get_bus_index(GameSettings.SFX_BUS) >= 0, "Müzik ve Efekt bus'ları kuruldu")
 
 	print("== UYGULAMA ==")

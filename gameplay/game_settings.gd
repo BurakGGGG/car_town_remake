@@ -18,6 +18,9 @@ extends Node
 ## delikli çizim üretiyor (godotengine/godot#104351, açık). Bu GPU'da MSAA HİÇBİR görünümde açılmaz;
 ## SubViewport'lar MSAA'yı subviewport_msaa() üzerinden alır (drag pisti eskiden 2×'te sabitti).
 ## Pil tasarrufu: kare hızı 60 → 30.
+## EKRAN HIZI (DisplayRate): Android'de oyun penceresi 60 Hz ekran ister — 90 / 120 Hz ekran oyun açıkken 60 Hz'e iner,
+## 60 kare eşit aralıkla görünür (90 Hz'de kareler 11 / 22 ms karışık kalıyordu: "kasıyor gibi"). Oyundan çıkınca ekran
+## telefonun kendi ayarına döner.
 ## HUD BOYUTU: oyun ekranındaki HUD'un (sol üst sayaçlar, sağ üst tabelalar, alt şerit ve dünya plakaları) beş
 ## kademeli ölçeği; uygulayan Hud (settings_changed'i dinler). Panolar / tam ekranlar bundan etkilenmez.
 ## Ses: Müzik ve Efekt bus'ları kodla kurulur (Master'a bağlı); oyunda henüz ses varlığı yok, düzeyler
@@ -42,6 +45,9 @@ const DEFAULT_SFX: float = 0.6
 ## varsayılanlardı (kimse bilerek seçmedi): bir kez standarda çekilir.
 const AUDIO_VERSION: int = 2
 const FPS_SAVER: int = 30
+## Ekran isteği yerine ulaşmazsa (pencere henüz hazır değil) bu kadar sn sonra, en çok MAX_RATE_FAILURES kez yeniden denenir.
+const RATE_RETRY_SECONDS: float = 2.0
+const MAX_RATE_FAILURES: int = 3
 ## Düşük kalitede trafikteki en fazla araç (normalde TrafficManager.max_vehicles).
 const LOW_TRAFFIC: int = 2
 ## HUD BOYUTU kademeleri (%80 … %120) ve varsayılan kademe (%100). Üst sınır en dar tuvalde (853x480) garaj
@@ -78,6 +84,9 @@ var language: String = ""
 ## GİZLİLİK (Telemetry): adsız kullanım istatistikleri (Firebase Analytics) ve hata / çökme raporları (Crashlytics).
 var analytics_enabled: bool = true
 var crash_reports_enabled: bool = true
+## Ekran hızı istenen son hedef kare hızı (0: henüz istenmedi / arka plandan dönüldü) ve art arda düşen istek sayısı.
+var _rate_voted: int = 0
+var _rate_failures: int = 0
 
 
 func _ready() -> void:
@@ -90,6 +99,14 @@ func _ready() -> void:
 	Loc.use(effective_language())
 	apply()
 	_apply_traffic.call_deferred()   # trafik yöneticisi sahnede bu düğümden sonra hazırlanır
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_RESUMED:
+		# Arka plandan dönüş: pencere isteği normalde korunur, değilse yenilenir (zaten istenen hızdaysa bir şey yapmaz)
+		_rate_voted = 0
+		_rate_failures = 0
+		_request_display_rate()
 
 
 ## Kullanılan dil: seçilmişse o, seçilmemişse cihaz dili.
@@ -171,11 +188,26 @@ func apply() -> void:
 		_apply_traffic()
 	_active_quality = quality
 	Engine.max_fps = FPS_SAVER if battery_saver else FPS_NORMAL
+	_request_display_rate()
 	_set_bus(MUSIC_BUS, music_volume)
 	_set_bus(SFX_BUS, sfx_volume)
 	var master: int = AudioServer.get_bus_index(&"Master")
 	if master >= 0:
 		AudioServer.set_bus_mute(master, muted)
+
+
+## Hedef kare hızına uyan ekran hızını ister (DisplayRate): bir kez, hedef değişince ve arka plandan dönüşte yeniden.
+## Pencere o an hazır değilse biraz sonra yeniden dener.
+func _request_display_rate() -> void:
+	var target: int = FPS_SAVER if battery_saver else FPS_NORMAL
+	if _rate_voted == target or _rate_failures >= MAX_RATE_FAILURES or not DisplayRate.supported():
+		return
+	if DisplayRate.request(target):
+		_rate_voted = target
+	else:
+		_rate_failures += 1
+		if is_inside_tree():
+			get_tree().create_timer(RATE_RETRY_SECONDS).timeout.connect(_request_display_rate)
 
 
 ## Trafikteki araç sayısı: DÜŞÜK'te azalır (her araç ayrı model + hareket = çizim ve CPU).

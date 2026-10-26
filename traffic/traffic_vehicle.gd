@@ -27,6 +27,7 @@ extends Node3D
 ##                    kilidine ve öndeki araca bakmaz. Seçilemez, müşteri / rakip olmaz, şehir sayacına girmez.
 ## Yol verme: TRAFFIC kipindeki araç arkadan gelen ya da karşıdan yaklaşan kovalamaca aracını görünce sağa
 ## çekilir ve yavaşlar (TrafficManager.chase_pressure); kovalamaca geçince şeridine döner.
+## Kilit: araçlar birbirini bekleyip kilitlenirse TrafficPolice gelir ve en öndekini geçirir (wave_through).
 
 signal reached_despawn(vehicle: TrafficVehicle)
 ## Yol kenarındaki bekleme noktasına yerleşti (REPAIR_WAITING).
@@ -189,6 +190,9 @@ var _launch_from: Vector3 = Vector3.INF  # süper araç kalkışının başladı
 var launch_chance: float = LAUNCH_CHANCE
 var _hazards: HazardLights
 var _scene_path: String = ""
+## TRAFİK POLİSİ geçirdi: bu araçlar (kilitteki öbürleri) _wave_left sn boyunca önündeki araç sayılmaz.
+var _waved_past: Array[TrafficVehicle] = []
+var _wave_left: float = 0.0
 
 
 func setup(traffic_manager: TrafficManager, scene: PackedScene, look: CarAppearance, start: TrafficWaypoint, model_scale: float) -> void:
@@ -213,6 +217,10 @@ func setup(traffic_manager: TrafficManager, scene: PackedScene, look: CarAppeara
 
 
 func _physics_process(delta: float) -> void:
+	if _wave_left > 0.0:
+		_wave_left -= delta
+		if _wave_left <= 0.0:
+			_waved_past.clear()
 	if _hazard_left > 0.0 and mode != Mode.TRAFFIC:
 		_end_hazard()   # müşteri / rakip / kovalamaca oldu
 	match mode:
@@ -379,6 +387,30 @@ func _physics_process(delta: float) -> void:
 		_drive_flair(-(lateral_now - lateral_before) / maxf(delta, 0.001), delta)
 	elif _launch_from != Vector3.INF or absf(_flair_pitch) > 0.001:
 		_drive_flair(0.0, delta)   # kalkışta gövde arkaya oturur, bitince düzelir
+
+
+## TRAFİK POLİSİ bu aracı geçiriyor: `blockers` (kilitteki öbür araçlar) `seconds` boyunca önündeki araç sayılmaz —
+## üst üste binmiş olsalar da çıkar gider, arkadakiler onu izler.
+func wave_through(blockers: Array[TrafficVehicle], seconds: float) -> void:
+	_waved_past = blockers.duplicate()
+	_waved_past.erase(self)
+	_wave_left = seconds
+	stuck_time = 0.0
+
+
+## Geçirilirken `other`'ı engel saymıyor mu (TrafficManager.distance_to_vehicle_ahead)?
+func ignores(other: TrafficVehicle) -> bool:
+	return _wave_left > 0.0 and _waved_past.has(other)
+
+
+## Yolun yönü (burun şeride kırılmış olsa da): hedefli sürüşte yol parçası, yanaşırken bekleme noktasının yönü.
+## Kaldırımdan çıkan araç beklerken yerinde dönmeye devam eder — burnu yola neredeyse dik kalabilir.
+func lane_direction() -> Vector3:
+	if target:
+		return _lane_frame()["dir"]
+	if _spot:
+		return _flat(_spot.global_transform.basis.z).normalized()
+	return _forward()
 
 
 ## DÖRTLÜ için uygun mu: trafikte, kaçmıyor / şeride çıkmıyor, kavşakta ya da kavşağa yaklaşırken değil (kavşağı
@@ -848,6 +880,7 @@ func return_to_traffic(point: TrafficWaypoint) -> void:
 func _pull_over(delta: float) -> void:
 	var center: Vector3 = _flat(_spot.global_position)
 	if _arrived:
+		stuck_time = 0.0
 		if _settle(center, _spot.global_rotation.y, delta):
 			speed = 0.0
 			# Yarış rakibi yerine oturunca KİPİ DEĞİŞMEZ: RACE_CHALLENGE olarak bekler.
@@ -874,6 +907,8 @@ func _pull_over(delta: float) -> void:
 		speed = minf(speed + acceleration * delta, desired)
 	else:
 		speed = maxf(speed - braking * delta, desired)
+	# Yanaşırken önündeki yüzünden duruyor (kilit araması: kaldırıma yanaşan müşteri de halkaya girebilir)
+	stuck_time = stuck_time + delta if speed < 0.03 and ahead < stop_distance + 0.05 else 0.0
 	global_position += forward * speed * delta
 	if rig and speed > 0.0:
 		rig.spin_wheels(rad_to_deg(speed * delta / (WHEEL_RADIUS * model.scale.x)))

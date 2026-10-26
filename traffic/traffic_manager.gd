@@ -29,6 +29,8 @@ extends Node3D
 ## art arda gelmesin diye arada en az EXOTIC_MIN_GAP araç olur. Sıra gelince model hemen arka planda yüklenir (yarışa
 ## özel modellerin yanına), araç doğunca listeden düşer (sahnesini araç tutar). Egzotik yalnızca GEÇER: tamir müşterisi
 ## olmaz (RepairManager). Motor sesi CityAmbience'ta (ExoticEngine).
+## TRAFİK POLİSİ (TrafficPolice, çocuk düğüm): araçlar birbirini bekleyip kilitlenince (find_deadlock) karşı şeritten polis
+## gelir, kilidin önünde durup siren çalar, en öndeki aracı geçirir.
 ## Polis kovalamacası: PoliceChase (çocuk düğüm, kodla kurulur) açılıştan 15 sn sonra, sonra 2 dakikada bir şüpheli + polis gönderir;
 ## bu araçlar `vehicles` listesinde DEĞİLDİR (sayılmaz, müşteri / rakip olmaz). Trafik onlara yol verir
 ## (chase_pressure) ve kovalamaca sürerken kavşakta karşı eksen bekler.
@@ -84,6 +86,8 @@ const EXOTIC_EVERY: int = 20
 const EXOTIC_MIN_GAP: int = 8
 ## Takip mesafelerinin (TrafficVehicle.stop_distance / follow_distance) varsaydığı iki yarım boy: burun 0,3 + 0,3.
 const NOMINAL_LENGTH: float = 0.6
+## Bu hızın altındaki araç "duruyor" sayılır (kilit araması).
+const STILL_SPEED: float = 0.03
 ## DÖRTLÜ (2026-10-20, kullanıcı: "araçlar bazı yerlerde durup dörtlü yaksınlar, 3–5 saniye sonra devam etsinler,
 ## nadir olarak"): HAZARD_GAP'te bir, ekranda görünen uygun bir araç HAZARD_TIME saniye durur. Görünen uygun araç
 ## yoksa HAZARD_RETRY sonra yeniden bakılır (ekran dışında durması boşa olur).
@@ -115,6 +119,7 @@ var _exotic_next: StringName = &""         # sırası gelen egzotik (yükleniyor
 var _rotate_timer: float = 0.0
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var chase: PoliceChase
+var police: TrafficPolice
 ## Kavşağın trafik lambası (TrafficLights kendini bağlar; yoksa yalnızca eksen sırası).
 var lights: TrafficLights
 ## Yarışı kaybedip kaçan araçlar ve kavşağı talep eden kaçak (karşı eksen beklesin), talep zamanı, korna çalanlar.
@@ -136,6 +141,8 @@ func _ready() -> void:
 	_collect_spawn_points(self)
 	chase = PoliceChase.new()
 	add_child(chase)
+	police = TrafficPolice.new()
+	add_child(police)
 	sfx = TrafficSfx.new()
 	add_child(sfx)
 	ambience = CityAmbience.new()
@@ -381,6 +388,8 @@ func models_in_use() -> Dictionary:
 	if chase:
 		for vehicle: TrafficVehicle in chase.vehicles():
 			used[vehicle.vehicle_id] = true
+	if police and police.police():
+		used[police.police().vehicle_id] = true
 	return used
 
 
@@ -580,7 +589,8 @@ func chase_pressure(vehicle: TrafficVehicle) -> float:
 
 # --- Takip mesafesi ----------------------------------------------------------
 
-## Aracın önünde, aynı yönde ve yakın şeritte olan en yakın aracın mesafesi (yoksa INF).
+## Aracın önünde, aynı yönde ve yakın şeritte olan en yakın aracın mesafesi (yoksa INF). Duran / yaklaşan trafik
+## polisi de engeldir (arkasından gelen içinden geçmez); trafik polisinin geçirdiği araç kilitteki öbürlerini saymaz.
 func distance_to_vehicle_ahead(vehicle: TrafficVehicle) -> float:
 	var forward: Vector3 = vehicle.global_transform.basis.z
 	forward.y = 0.0
@@ -590,28 +600,57 @@ func distance_to_vehicle_ahead(vehicle: TrafficVehicle) -> float:
 	# Kaçan araç orta çizgide gider: kendi şeridindeki (0,3 yanındaki) yavaş aracı engel saymaz, yanından geçer
 	var lane_half: float = 0.18 if vehicle.fleeing else 0.35
 	for other: TrafficVehicle in vehicles:
-		if other == vehicle or not other.blocks_traffic():
+		if other == vehicle or not other.blocks_traffic() or vehicle.ignores(other):
 			continue  # yol kenarında bekleyen / CarSpot'taki araç trafiği durdurmaz
-		var delta: Vector3 = other.global_position - vehicle.global_position
-		delta.y = 0.0
-		var along: float = delta.dot(forward)
-		if along <= 0.0:
-			continue
-		var lateral: float = absf(delta.cross(forward).y)
-		if lateral > lane_half:
-			continue
-		var other_forward: Vector3 = other.global_transform.basis.z
-		other_forward.y = 0.0
-		if other_forward.normalized().dot(forward) < 0.3:
-			continue  # karşıdan gelen
-		# stop / follow mesafeleri ~0,6 boylu araca göre ayarlı: uzun araç (minibüs, kamyonet) aynı tampon
-		# boşluğunu bıraksın diye fazla boy merkezden merkeze mesafeden düşülür (kısa araç yaklaşmaz)
-		var gap: float = along - maxf(vehicle._front + other._front - NOMINAL_LENGTH, 0.0)
+		var gap: float = _gap_to(vehicle, other, forward, lane_half)
 		if gap < best:
 			best = gap
 			nearest = other
+	var cop: TrafficVehicle = police.obstacle() if police else null
+	if cop and cop != vehicle:
+		var gap: float = _gap_to(vehicle, cop, forward, lane_half)
+		if gap < best:
+			best = gap
+			nearest = cop
 	vehicle.leader = nearest
 	return best
+
+
+## `other` aracın önünde, aynı yönde ve şeridinde mi; öyleyse tampon arası mesafe, değilse INF.
+func _gap_to(vehicle: TrafficVehicle, other: TrafficVehicle, forward: Vector3, lane_half: float) -> float:
+	var delta: Vector3 = other.global_position - vehicle.global_position
+	delta.y = 0.0
+	var along: float = delta.dot(forward)
+	if along <= 0.0 or absf(delta.cross(forward).y) > lane_half:
+		return INF
+	var other_forward: Vector3 = other.global_transform.basis.z
+	other_forward.y = 0.0
+	if other_forward.normalized().dot(forward) < 0.3:
+		return INF  # karşıdan gelen
+	# stop / follow mesafeleri ~0,6 boylu araca göre ayarlı: uzun araç (minibüs, kamyonet) aynı tampon
+	# boşluğunu bıraksın diye fazla boy merkezden merkeze mesafeden düşülür (kısa araç yaklaşmaz)
+	return along - maxf(vehicle._front + other._front - NOMINAL_LENGTH, 0.0)
+
+
+## TRAFİK KİLİDİ: önündeki araç yüzünden en az `min_stuck` sn duran bir aracın "öndeki araç" zinciri (leader) kendi
+## üstüne kapanıyorsa halkadaki araçlar — ör. kaldırımdan çıkan sıkılmış müşteri ile şeritte gelen araç burun buruna:
+## ikisi de öbürünü önünde sayar, hiçbiri kımıldamaz. Zincirdeki her araç trafiği engelleyen kipte ve duruyor olmalı;
+## kırmızıda / kavşak sırasında bekleyen kuyruk sayılmaz (stuck_time ışıkta artmaz). Halka yoksa boş.
+func find_deadlock(min_stuck: float) -> Array[TrafficVehicle]:
+	for start: TrafficVehicle in vehicles:
+		if not is_instance_valid(start) or start.stuck_time < min_stuck:
+			continue
+		var chain: Array[TrafficVehicle] = []
+		var at: TrafficVehicle = start
+		while at != null and not chain.has(at) and chain.size() < 16:
+			if not is_instance_valid(at) or not vehicles.has(at) or not at.blocks_traffic() or at.speed > STILL_SPEED:
+				at = null
+				break
+			chain.append(at)
+			at = at.leader if is_instance_valid(at.leader) else null
+		if at != null and chain.has(at):
+			return chain.slice(chain.find(at))
+	return []
 
 
 ## DÖRTLÜ: `vehicle` verilmezse ekranda görünen uygun bir araç seçilir; kovalamaca sürerken olmaz. Duran araç (yoksa null).
@@ -645,6 +684,8 @@ func request_crossing(vehicle: TrafficVehicle) -> bool:
 		return true
 	if chase and chase.holds_crossing(vehicle.axis):
 		return false   # kovalamaca geçiyor: karşı eksen kavşağa girmez
+	if police and police.holds_crossing(vehicle.axis):
+		return false   # sirenli trafik polisi geçiyor
 	if _runner_holds(vehicle.axis):
 		_honk(vehicle)
 		return false   # karşıdan kaçak geliyor: yeşil olsa da bekler (korna)
@@ -722,6 +763,15 @@ func light_allows(axis: int) -> bool:
 ## Kavşak girişinden dur çizgisine mesafe (lamba / çizgi yoksa -1: araç eskisi gibi giriş noktasında durur).
 func stop_line_gap(entry: Node3D) -> float:
 	return lights.stop_gap(entry) if lights else -1.0
+
+
+## Kavşakta karşı eksenden (axis dışından) araç var mı? Sirenli polis ışığa bakmaz ama içindeki araca girmez.
+func cross_traffic_in_intersection(axis: int) -> bool:
+	_prune_crossing()
+	for other: TrafficVehicle in _crossing:
+		if other.axis != axis:
+			return true
+	return false
 
 
 func finish_crossing(vehicle: TrafficVehicle) -> void:

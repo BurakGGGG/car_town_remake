@@ -178,6 +178,8 @@ func start_now(lane: TrafficWaypoint = null, police_id: StringName = &"") -> boo
 func start(ignore_screens: bool = false, lane: TrafficWaypoint = null) -> bool:
 	if _active or _manager == null or _police_scene == null:
 		return false
+	if _manager.police and _manager.police.is_busy():
+		return false   # trafik polisi kilit açıyor: aynı polis modeli iki kez çıkmasın
 	if not ignore_screens and _screen_open():
 		return false
 	var model: Dictionary = _manager.random_city_model()
