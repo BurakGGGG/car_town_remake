@@ -5,7 +5,7 @@
 [ext_resource type="Script" uid="uid://uh5fpuw4xr85" path="res://world_camera.gd" id="1_wkp8b"]
 [ext_resource type="Script" uid="uid://c2q2daq3bodg" path="res://shop_hitbox.gd" id="2_5vvyt"]
 [ext_resource type="PackedScene" path="res://traffic/traffic.tscn" id="8_03owx"]
-[ext_resource type="PackedScene" path="res://ui/hud/hud.tscn" id="9_wkp8b"]
+[ext_resource type="PackedScene" uid="uid://dmu5qr3w7co5h" path="res://ui/hud/hud.tscn" id="9_wkp8b"]
 [ext_resource type="Script" uid="uid://bymc7xa5k5o6p" path="res://gameplay/vehicle_ownership.gd" id="11_20pc6"]
 [ext_resource type="Script" uid="uid://byv1e580in0se" path="res://gameplay/economy_manager.gd" id="14_fpfj3"]
 [ext_resource type="Script" uid="uid://ytueqmkwke7h" path="res://gameplay/player_progress.gd" id="14_j4qnp"]
@@ -609,6 +609,7 @@ shape = SubResource("BoxShape3D_c6i3y")
 script = ExtResource("1_uu6xs")
 level_names = PackedStringArray("10x10", "20x20", "30x30", "40x40")
 level_prices = PackedInt32Array(10000, 25000, 50000, 100000)
+city_preview = true
 
 [node name="Floor" type="Node3D" parent="GarageSystem" unique_id=62228734]
 
