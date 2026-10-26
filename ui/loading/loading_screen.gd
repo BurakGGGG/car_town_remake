@@ -126,6 +126,7 @@ var _main_at: float = -1.0       # Main'in eklendiği an (_elapsed)
 
 func _ready() -> void:
 	layer = 128   # oyunun HUD katmanlarının da üstünde
+	LaunchReset.run_once()   # test döneminden kalan cihaz kaydı, oyun kurulmadan bir kez (bkz. sınıf)
 	_apply_language()
 	FontFallback.install()   # ipuçlarında ₺ / → (bkz. sınıf)
 	_build()
