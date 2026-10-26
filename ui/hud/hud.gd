@@ -2308,6 +2308,8 @@ func open_photo_mode(mode: PhotoMode.Mode) -> void:
 func _build_login_screen() -> void:
 	login_screen = LoginScreen.new()
 	garage_screen.get_parent().add_child(login_screen)
+	# Hesapla girişten sonra (bulut kaydı yüklendi) PLAYER panosu açılmaz: sonuç kısa bildirimdir
+	login_screen.toast_requested.connect(func(text: String) -> void: _show_notice(text, HudPalette.INK, 2.4))
 
 
 ## ARKADAŞ DAVETİ: link açılınca (InviteLinks) oyuncu boşta kalınca (açık ekran / ders / yükleme yok, ziyarette

@@ -747,7 +747,7 @@ func _on_sign_out_result(success: bool) -> void:
 	_write_json(META_PATH, _meta)
 	user_changed.emit({})
 	_set_state(State.SIGNED_OUT)
-	_reload_world(Loc.t("Çıkış yapıldı. Bu cihazda yeni bir misafir oyunu başladı; hesabına tekrar girince ilerlemen geri gelir."))
+	_reload_world(Loc.t("Çıkış yapıldı. Bu cihazda yeni bir misafir oyunu başladı; hesabına tekrar girince ilerlemen geri gelir."), true)
 
 
 # --- Hesap silme -------------------------------------------------------------------
@@ -819,7 +819,7 @@ func _finish_delete(auth_deleted: bool) -> void:
 	user_changed.emit({})
 	_set_state(State.SIGNED_OUT)
 	account_deleted.emit(true)
-	_reload_world(Loc.t("Hesabın ve tüm verilerin silindi. Yeni bir oyunla misafir olarak devam ediyorsun."))
+	_reload_world(Loc.t("Hesabın ve tüm verilerin silindi. Yeni bir oyunla misafir olarak devam ediyorsun."), true)
 
 
 ## Silme iptal / başarısız: hiçbir şey silinmedi. resync → bulut yeniden okunup normal akışa dönülür.
@@ -1110,14 +1110,20 @@ func _on_retry_timeout() -> void:
 ## Dünyayı kayıttan yeniden kurar (bkz. başlıktaki DÜNYA YENİLEME). message, yenilenen sahnede
 ## PLAYER ekranında bir kez gösterilir (HUD sahneyle birlikte yok olduğu için dosyada taşınır).
 ## Ana sahne yoksa (test / başsız çalıştırma) hiçbir şey yapmaz.
-func _reload_world(message: String = "") -> void:
+## message yenilenen dünyada bir kez söylenir. open_account: PLAYER panosu açılıp orada söylenir (çıkış / hesap silme:
+## oyuncu zaten o panodaydı); değilse oyun doğrudan açılır, mesaj kısa bildirim olur (2026-10-26, kullanıcı: hesapla
+## girince PLAYER sayfası gelmesin, oyun açılsın).
+func _reload_world(message: String = "", open_account: bool = false) -> void:
 	var tree: SceneTree = get_tree()
 	if tree == null or tree.current_scene == null or not tree.current_scene.is_ancestor_of(self):
 		return
+	_meta.erase("pending_notice_open")
 	if message.is_empty():
 		_meta.erase("pending_notice")
 	else:
 		_meta["pending_notice"] = message
+		if open_account:
+			_meta["pending_notice_open"] = true
 	_write_json(META_PATH, _meta)
 	CarHitboxScript.set(&"selected_car", null)   # static: eski sahnenin aracını göstermesin
 	tree.reload_current_scene.call_deferred()
@@ -1128,8 +1134,15 @@ func take_pending_notice() -> String:
 	var text: String = _str(_meta.get("pending_notice"))
 	if not text.is_empty():
 		_meta.erase("pending_notice")
+		_meta.erase("pending_notice_open")
 		_write_json(META_PATH, _meta)
 	return text
+
+
+## Bekleyen mesaj PLAYER panosunda mı söylenecek (çıkış / hesap silme), yoksa kısa bildirim mi? take_pending_notice'ten
+## ÖNCE sorulur.
+func pending_notice_opens_account() -> bool:
+	return bool(_meta.get("pending_notice_open", false))
 
 
 func _set_state(value: State) -> void:

@@ -12,6 +12,8 @@ extends Control
 ## Misafir ilerlemesi giriş yapılan hesaba taşınır: hesabın bulut kaydı yoksa bu cihazın oyunu
 ## buluta yazılır; varsa KAYIT SEÇ ile oyuncu hangisinin kalacağını seçer. Kayıt seçimi (CONFLICT) çıkınca kendiliğinden
 ## açılır; SONRA KARAR VER ile kapatılabilir, seçim yapılana kadar buluta yazılmaz.
+## Hesapla girişte bulut kaydı yüklenip dünya yenilenince bu pano AÇILMAZ, oyun doğrudan başlar ("Hesabın yüklendi."
+## kısa bildirim); çıkış / hesap silme sonucu ise burada söylenir.
 ##
 ## HESABIMI SİL iki adımlıdır: ilk basış yalnızca neyin silineceğini anlatan onay görünümünü açar,
 ## silme EVET, KALICI OLARAK SİL ile başlar (hesap kendi yoluyla — Google / Facebook — yeniden seçtirilir; bu cihazda
@@ -22,6 +24,9 @@ extends Control
 
 signal opened
 signal closed
+## Dünya yenilendikten sonraki mesaj (hesap yüklendi / kayıt geri yüklendi) pano açılmadan söylensin: HUD kısa bildirim
+## olarak gösterir.
+signal toast_requested(text: String)
 
 const PANEL_WIDTH: float = 380.0
 const CHOICE_WIDTH: float = 200.0
@@ -270,11 +275,17 @@ func _connect_cloud() -> void:
 	_cloud.email_reauth_needed.connect(_open_email_panel)
 	_refresh()
 	await get_tree().process_frame
-	# Dünya yenilendiyse (giriş / çıkış / hesap silme) sonucu bir kez söyle
+	# Dünya yenilendiyse sonucu bir kez söyle. Çıkış / hesap silme bu panoda söylenir; hesapla giriş (bulut kaydı
+	# yüklendi) panoyu AÇMAZ, oyun doğrudan açılır ve mesaj kısa bildirimdir (2026-10-26, kullanıcı isteği).
+	var opens: bool = _cloud.pending_notice_opens_account()
 	var pending: String = _cloud.take_pending_notice()
-	if not pending.is_empty():
+	if pending.is_empty():
+		return
+	if opens:
 		open()
 		_on_notice(pending)
+	else:
+		toast_requested.emit(pending)
 
 
 ## Oyuncu biraz ilerledi: giriş BİR KEZ, nedeniyle birlikte önerilir (HUD açar, router üstünden).

@@ -198,7 +198,12 @@ func _run() -> void:
 	check(eco().money == 54321, "dünya Dana'nın oyunuyla kuruldu (54321)")
 	check(cloud().get_state() == CloudSaveManager.State.SYNCED and cloud().is_authenticated(), "yeni sahnede SYNCED, oturum sürüyor")
 	screen = get_first_node_in_group("login_screen") as LoginScreen
-	check(screen != null and screen._notice.text.contains("yüklendi"), "PLAYER ekranı 'hesabın yüklendi' dedi")
+	var hud_after: Hud = current_scene.find_child("HUD", true, false) as Hud
+	check(screen != null and not screen.visible and hud_after.router.top() == &"",
+		"hesapla girişten sonra PLAYER ekranı AÇILMADI, oyun doğrudan açıldı")
+	var toast: Label = hud_after.get("_notice_label") as Label
+	check(toast != null and toast.text.contains("yüklendi"), "'Hesabın yüklendi' kısa bildirim olarak söylendi")
+	check(cloud().take_pending_notice() == "", "giriş mesajı bir kez")
 	var scene_count: int = current_scene.get_child_count()
 	await frames(30)
 	check(current_scene.get_child_count() == scene_count and cloud().get_state() == CloudSaveManager.State.SYNCED, "yenileme döngüsü yok, sahne kararlı")
