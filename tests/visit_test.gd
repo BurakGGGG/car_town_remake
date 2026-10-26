@@ -259,5 +259,70 @@ func _run() -> void:
 	check(not GarageVisit.is_visiting(), "ziyaret başlamadı")
 	fb.hang = false
 
+	print("== 8) Ziyaretteyken kendi sahneye geç gelen cevaplar hata vermez ==")
+	# Yayın derlemesinde GDScript boş nesneye metot çağrısını denetlemez: burada hata olan her satır telefonda
+	# ÇÖKMEDİR (2026-10-27 Crashlytics, Xiaomi/Oppo: Emre'yi ziyaret ederken reklam yüklendi → AdService._level →
+	# ağaçtan çıkmış sahnede get_tree() boş → get_first_node_in_group).
+	var errors: ErrorCount = ErrorCount.new()
+	var ads: AdService = get_first_node_in_group("ads") as AdService
+	(get_first_node_in_group("player_progress") as PlayerProgress).level = 10   # teklifler 3. seviyeden
+	var offer_btn: AdOfferButton = AdOfferButton.new(AdPolicy.FREE_GEMS, "+5", true)
+	(home.find_child("HUD", true, false) as Node).add_child(offer_btn)
+	offer_btn.refresh()   # görünen bir teklif gibi readiness_changed'e bağlanır
+	fb.max_delay = 1.0    # ziyaretten hemen önceki yazmaların (kayıt, açık garaj) cevabı ziyarette gelir
+	OS.add_logger(errors)
+	# 7. bölümün askıdaki yazması zaman aşımıyla düşer (REQUEST_TIMEOUT, yeniden denemeler): bulut boşalınca gidilir
+	var emre: String = String(FeaturedFriends.all()[0]["uid"])
+	check(await until(func() -> bool: return not cloud.is_busy() and FeaturedFriends.visit(self, emre), 90.0),
+		"Emre'nin garajına gidildi")
+	if not await until(func() -> bool: return GarageVisit.is_visiting()):
+		check(false, "ziyarette")
+		OS.remove_logger(errors)
+		print("RESULT fails=%d" % fails)
+		quit(1)
+		return
+	for slot: StringName in [AdConfig.SLOT_RACE, AdConfig.SLOT_REPAIR]:
+		if ads._slots.has(slot):
+			ads._on_loaded(slot, slot == AdConfig.SLOT_RACE)   # Appodeal geri çağrısı: biri yüklendi, biri yüklenemedi
+	# Ağ cevabıyla (Firebase, davet, posta) kendi sahnedeki yöneticiler "changed" yayabilir: dinleyicileri ağaç dışında
+	var emitters: Array[String] = []
+	for node: Node in home.find_children("*", "", true, false):
+		for sig: Dictionary in node.get_signal_list():
+			if sig["name"] == "changed" and (sig["args"] as Array).is_empty() and not node.get_signal_connection_list(&"changed").is_empty():
+				emitters.append(String(node.name))
+				node.emit_signal(&"changed")
+	check(emitters.size() >= 3, "ağaç dışında changed yayıldı: %s" % [emitters])
+	social.notice.emit("ziyarette gelen bildirim")   # HUD bildirim plakası (hurdalık hediyesi vb.)
+	for node: Node in home.find_children("*", "", true, false):
+		if node is MailService:
+			(node as MailService).arrived.emit()   # yeni posta → ARKADAŞLAR rozeti
+	await create_timer(2.5).timeout
+	check(errors.count == 0, "ziyarette kendi sahneden hata yok (%d) %s" % [errors.count, errors.first])
+	(get_first_node_in_group("visit_bar").find_child("BackHomeButton", true, false) as PlateButton).pressed.emit()
+	await frames(6)
+	OS.remove_logger(errors)
+	fb.max_delay = 0.02
+	check(not GarageVisit.is_visiting() and current_scene == home, "geri dönüldü")
+	offer_btn.refresh()
+	check(offer_btn.visible, "dönünce reklam teklifi yine güncelleniyor")
+	offer_btn.queue_free()
+
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
+
+
+## Ziyaret sırasında basılan hatalar (uyarılar sayılmaz).
+class ErrorCount extends Logger:
+	var count: int = 0
+	var first: String = ""
+
+	func _log_error(function: String, file: String, line: int, code: String, rationale: String, _editor_notify: bool,
+			error_type: int, script_backtraces: Array[ScriptBacktrace]) -> void:
+		if error_type == ERROR_TYPE_WARNING:
+			return
+		count += 1
+		if first.is_empty():
+			var where: String = "%s:%d %s" % [file.get_file(), line, function]
+			if not script_backtraces.is_empty() and script_backtraces[0] != null and not script_backtraces[0].is_empty():
+				where = script_backtraces[0].format()
+			first = "%s — %s" % [rationale if not rationale.is_empty() else code, where]

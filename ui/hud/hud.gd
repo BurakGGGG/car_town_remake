@@ -1144,8 +1144,13 @@ func _show_notice(text: String, color: Color, hold: float = 1.6, action: Callabl
 	_notice_queue.append({"text": text, "color": color, "hold": hold, "action": action})
 	if _notice_queue.size() > NOTICE_QUEUE_MAX:
 		_notice_queue.pop_front()   # taşarsa en eskisi düşer (oyuncu güncel olanı görsün)
-	if not _notice_busy:
+	if _notice_busy:
+		return
+	if is_inside_tree():
 		_drain_notices()
+	elif not tree_entered.is_connected(_drain_notices):
+		# Arkadaş garajı ziyaretinde gelen bildirim (sosyal cevap): get_tree() boş, yayında ÇÖKERTİR. Dönüşte gösterilir.
+		tree_entered.connect(_drain_notices, CONNECT_DEFERRED | CONNECT_ONE_SHOT)
 
 
 func _drain_notices() -> void:
@@ -2444,6 +2449,12 @@ func _wants_rating() -> bool:
 
 
 func _arm_rate_prompt() -> void:
+	if not is_inside_tree():
+		# Oturumun 3. dakikası arkadaş garajı ziyaretine denk geldi: kendi sahne ağaçta değil, get_tree() boş (yayın
+		# derlemesinde boş nesneye çağrı ÇÖKERTİR). Kendi sahne geri takılınca kurulur.
+		if not tree_entered.is_connected(_arm_rate_prompt):
+			tree_entered.connect(_arm_rate_prompt, CONNECT_DEFERRED | CONNECT_ONE_SHOT)
+		return
 	if is_instance_valid(_rate_prompt_timer) or not _wants_rating():
 		return
 	_rate_prompt_idle = 0.0
@@ -2769,6 +2780,11 @@ func _connect_social() -> void:
 ## Gelen istek + yarış haberi sayısı ARKADAŞLAR plakasının rozetinde (alt sırada sekme gibi durur: amber = seçili olurdu).
 func _refresh_friends_button() -> void:
 	if friends_button == null:
+		return
+	if not is_inside_tree():
+		# Arkadaş garajı ziyaretinde sosyal / davet / posta cevabı geldi: get_tree() boş (yayında ÇÖKERTİR). Dönüşte tazelenir.
+		if not tree_entered.is_connected(_refresh_friends_button):
+			tree_entered.connect(_refresh_friends_button, CONNECT_DEFERRED | CONNECT_ONE_SHOT)
 		return
 	friends_button.text = Loc.t("ARKADAŞLAR")
 	var referral: ReferralManager = get_tree().get_first_node_in_group("referral") as ReferralManager

@@ -42,6 +42,8 @@ var _state: Dictionary = {"day": -1, "counts": {}, "last": {}}
 var _pending_kind: StringName = &""
 var _earned_this_show: bool = false
 var _clock_unix: float = -1.0       # testler için: ≥0 ise sistem saati yerine bu unix zamanı
+var _readiness_pending: bool = false   # ağaç dışındayken (arkadaş ziyareti) değişti: dönünce bir kez yayılır
+var _last_level: int = 1
 
 
 func _ready() -> void:
@@ -69,7 +71,7 @@ func _ready() -> void:
 func _apply_remote() -> void:
 	var config: AppConfig = AppConfig.current()
 	AdPolicy.remote = AdPolicy.normalize_remote(config.config().get("ads") if config else null)
-	readiness_changed.emit()
+	_emit_readiness()
 
 
 ## Test / geliştirme: sağlayıcıyı elle ver (_ready'den ÖNCE çağrılmalı).
@@ -198,7 +200,7 @@ func show_rewarded(kind: StringName) -> bool:
 	_pending_kind = kind
 	_pending_slot = AdPolicy.slot_of(kind)
 	_earned_this_show = false
-	readiness_changed.emit()
+	_emit_readiness()
 	_provider.show_rewarded(_pending_slot, _on_earned, _on_finished)
 	return true
 
@@ -238,7 +240,7 @@ func _finish_show() -> void:
 	if _slots.has(slot):
 		_slots[slot]["loaded_at"] = -1
 	ad_finished.emit(kind, rewarded)
-	readiness_changed.emit()
+	_emit_readiness()
 	ensure_loaded()   # gösterilen yuvanın yenisi arka planda hazırlanır
 
 
@@ -252,7 +254,7 @@ func _on_provider_started(ok: bool) -> void:
 			if _provider.has_rewarded(slot):
 				_on_loaded(slot, true)   # açılışta (AdBoot) yüklenmiş: eskime sayacı buradan başlar
 		ensure_loaded()
-	readiness_changed.emit()
+	_emit_readiness()
 
 
 ## Yüklü olmayan her yuvanın reklamını yüklemeyi dener (zaten yükleniyorsa / yüklüyse dokunmaz).
@@ -284,7 +286,7 @@ func _on_loaded(slot: StringName, ok: bool) -> void:
 		_schedule_expiry(slot)
 	else:
 		_schedule_retry(slot)
-	readiness_changed.emit()
+	_emit_readiness()
 
 
 func _schedule_retry(slot: StringName) -> void:
@@ -338,7 +340,7 @@ func load_state(data: Dictionary) -> void:
 				last[kind] = maxi(SaveSafe.i((raw_last as Dictionary)[key]), 0)
 	_state = {"day": SaveSafe.i(data.get("day", -1)), "counts": counts, "last": last}
 	_roll_day()
-	readiness_changed.emit()
+	_emit_readiness()
 
 
 func reset() -> void:
@@ -369,12 +371,34 @@ func forget_last_ad() -> void:
 	_last_ad_end_ms = -1
 
 
+## Ziyarette kendi sahne ağaçtan çıkar ama SDK geri çağrıları (reklam yüklendi…) gelmeye devam eder. get_tree() o an
+## boştur; yayın derlemesinde GDScript boş nesneye metot çağrısını denetlemediği için çağrı ÇÖKERTİR (2026-10-27
+## Crashlytics, Xiaomi / Oppo: Emre'yi ziyaret ederken yüklenen reklam → _level). Bu yüzden ağaç dışında sinyal
+## yayılmaz, dönüşte bir kez yayılır; ağaca bakan yardımcılar da son bilineni kullanır.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_ENTER_TREE and _readiness_pending:
+		_readiness_pending = false
+		readiness_changed.emit.call_deferred()
+
+
+func _emit_readiness() -> void:
+	if is_inside_tree():
+		readiness_changed.emit()
+	else:
+		_readiness_pending = true
+
+
 func _level() -> int:
+	if not is_inside_tree():
+		return _last_level
 	var progress: PlayerProgress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
-	return progress.level if progress else 1
+	_last_level = progress.level if progress else 1
+	return _last_level
 
 
 func _request_save() -> void:
+	if not is_inside_tree():
+		return
 	var save: SaveManager = get_tree().get_first_node_in_group("save_manager") as SaveManager
 	if save:
 		save.request_save()

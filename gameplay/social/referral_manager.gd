@@ -341,7 +341,8 @@ func _apply_claim(result: String, from: String) -> void:
 	changed.emit()
 	if result != "ok":
 		return
-	var mail: MailService = get_tree().get_first_node_in_group("mail") as MailService
+	# Ağaç dışı = arkadaş garajı ziyareti: get_tree() boş (yayında ÇÖKERTİR); posta dönüşte zaten okunur
+	var mail: MailService = get_tree().get_first_node_in_group("mail") as MailService if is_inside_tree() else null
 	if mail:
 		mail.poll()   # hoş geldin hediyesi (posta o an okunuyorsa poll boşa düşer: biraz sonra bir kez daha)
 		get_tree().create_timer(3.0).timeout.connect(mail.poll)

@@ -55,6 +55,8 @@ func _ready() -> void:
 
 ## Durumu yeniden değerlendirir (çağıran ödül metni / koşul değişince de çağırabilir).
 func refresh() -> void:
+	if not is_inside_tree():
+		return   # arkadaş ziyaretinde kendi sahne ağaçta değil (get_tree() boş); dönünce zamanlayıcı tazeler
 	var ads: AdService = _service()
 	if ads == null or offer == &"" or (condition.is_valid() and not bool(condition.call())):
 		visible = false
