@@ -2,15 +2,17 @@ class_name AdService
 extends Node
 ## REKLAM SERVİSİ — oyunun reklamlarla konuştuğu TEK nokta ("ads" grubu; autoload yok).
 ##
-## Sorumluluklar: sağlayıcı seçimi, onay + SDK başlatma, ödüllü reklamı önceden yükleme, teklif uygunluğu
-## (AdPolicy), günlük sayaçlar (kayıt), ödülü TEK kez bildirme.
+## Sorumluluklar: sağlayıcı seçimi (AdBoot; yükleme ekranı SDK'yı erken başlatır), onay + SDK başlatma, ödüllü reklamı
+## önceden yükleme, teklif uygunluğu (AdPolicy), günlük sayaçlar (kayıt), ödülü TEK kez bildirme.
 ##
 ## ÖDÜL SÖZLEŞMESİ: `reward_earned(kind)` bir reklam gösteriminde en çok BİR kez yayılır ve yalnızca
 ## oyuncu reklamı gerçekten hak ettiyse. Dinleyici ödülü verir (₺ ×2, süre kısaltma…); ödül verildikten sonra
 ## kayıt zaten istenmiştir. Reklam ortasında uygulama kapanırsa ödül yoktur, kayıp yoktur.
 ##
-## Teklif akışı (UI): `block_reason(kind) == &""` ve `is_ready()` ise "REKLAM İZLE" plakası gösterilir;
-## oyuncu plakaya basarsa `show_rewarded(kind)`. Reddetmek hiçbir şeyi engellemez (AdMob / AppLovin politikası).
+## Teklif akışı (UI): `offer_state(kind)` READY ise "REKLAM İZLE" plakası gösterilir, oyuncu basarsa `show_rewarded(kind)`;
+## LOADING ise plaka görünür ama pasif "REKLAM YÜKLENİYOR" der (2026-10-26, kullanıcı: reklam yüklenmemişken düğme hiç
+## görünmüyordu; kimi oyuncu birkaç saniye bekler) ve yükleme `request(kind)` ile dürtülür. Reddetmek hiçbir şeyi
+## engellemez (AdMob / AppLovin politikası).
 
 ## Bir ödüllü reklam hak edildi. Dinleyici ödülü uygular.
 signal reward_earned(kind: StringName)
@@ -19,6 +21,10 @@ signal ad_finished(kind: StringName, rewarded: bool)
 ## Hazırlık / yükleme durumu değişti (teklif plakası kendini tazelesin).
 signal readiness_changed
 
+## Teklif düğmesinin durumu (offer_state). NONE: düğme yok · LOADING: düğme görünür ama pasif, "REKLAM YÜKLENİYOR" ·
+## READY: "REKLAM İZLE", basılabilir.
+enum Offer { NONE, LOADING, READY }
+
 ## Reklam geçerlilik süresi (Google: 1 saat). Daha eskiyse yeniden yüklenir.
 const AD_MAX_AGE_MS: int = 50 * 60 * 1000
 ## Yükleme başarısız olunca yeniden deneme bekleme süreleri (ms) — sonsuz döngü yok.
@@ -26,9 +32,10 @@ const RETRY_MS: Array[int] = [15_000, 45_000, 120_000]
 
 var _provider: AdProvider
 var _started: bool = false          # SDK hazır mı
+var _starting: bool = false         # SDK başlatılıyor (cevap bekleniyor)
 var _busy: bool = false             # bir reklam gösteriliyor
 var _last_ad_end_ms: int = -1
-## Yuva başına: {"loading": bool, "loaded_at": int(ms, -1=yok), "retry": int}
+## Yuva başına: {"loading": bool, "loaded_at": int(ms, -1=yok), "retry": int, "waiting": bool (yeniden deneme bekleniyor)}
 var _slots: Dictionary = {}
 var _pending_slot: StringName = &""
 var _state: Dictionary = {"day": -1, "counts": {}, "last": {}}
@@ -41,15 +48,21 @@ func _ready() -> void:
 	add_to_group("ads")
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	for slot: StringName in AdConfig.slots():
-		_slots[slot] = {"loading": false, "loaded_at": -1, "retry": 0}
+		_slots[slot] = {"loading": false, "loaded_at": -1, "retry": 0, "waiting": false}
+	_starting = true
+	var adopted: bool = false
 	if _provider == null:
-		_provider = _pick_provider()
+		_provider = AdBoot.take(_on_provider_started)   # yükleme ekranında başlatıldıysa SDK + ilk yükleme sürüyor
+		adopted = _provider != null
+	if _provider == null:
+		_provider = AdBoot.pick()
 	_roll_day()
 	_apply_remote()
 	var config: AppConfig = AppConfig.current()
 	if config:
 		config.changed.connect(_apply_remote)   # panelden reklam sınırları (config/app.ads)
-	_provider.start(_on_provider_started)
+	if not adopted:
+		_provider.start(_on_provider_started)
 
 
 ## Yönetim panelinin reklam ayarı (sınırlar, ücretsiz elmas miktarı / beklemesi) kurallara yazılır.
@@ -94,32 +107,6 @@ func set_personalized_ads(on: bool) -> void:
 		_provider.set_personalized_ads(on)
 
 
-## Seçilmeyen ağın sağlayıcısı adıyla anılmaz (yalnız gerekince yüklenir): betiği yüklenince eklentinin GDScript
-## sınıfları da yüklenir ve eklenti kapalıyken her açılışta "Native plugin not found" hataları basar (telefonda
-## görüldü 2026-10-23; Telemetry bunları hata raporu sayıyordu).
-const ADMOB_PROVIDER: String = "res://ads/admob_provider.gd"
-const APPLOVIN_PROVIDER: String = "res://ads/applovin_provider.gd"
-const APPLOVIN_SINGLETON: String = "AppLovinMAXGodotPlugin"   # AppLovinProvider.SINGLETON
-
-## Ağın eklentisi varsa gerçek sağlayıcı (kimlikler eksikse KAPALI); eklentisiz debug derleme = sahte sağlayıcı.
-static func _pick_provider() -> AdProvider:
-	if not GameFeatures.ADS:
-		return AdProvider.new()   # kapalı: hiçbir şey yüklenmez, hiçbir teklif çıkmaz
-	match AdConfig.NETWORK:
-		AdConfig.Network.APPLOVIN:
-			if Engine.has_singleton(APPLOVIN_SINGLETON):
-				return load(APPLOVIN_PROVIDER).new() if AdConfig.applovin_ready() else AdProvider.new()
-		AdConfig.Network.ADMOB:
-			if Engine.has_singleton("PoingGodotAdMob"):
-				return load(ADMOB_PROVIDER).new() if AdConfig.any_slot_usable() else AdProvider.new()
-		AdConfig.Network.APPODEAL:
-			if AppodealProvider.available():
-				return AppodealProvider.new() if AdConfig.appodeal_ready() else AdProvider.new()
-	if OS.is_debug_build():
-		return MockAdProvider.new()   # masaüstü geliştirme
-	return AdProvider.new()
-
-
 # --- Sorgular ---------------------------------------------------------------------
 
 ## Reklam gösterilmeye hazır mı (SDK hazır, başka reklam yok, yuvada yüklü reklam var)?
@@ -152,9 +139,43 @@ func cooldown_left(kind: StringName) -> int:
 	return AdPolicy.cooldown_left(kind, _state, _now_unix())
 
 
-## Teklif plakası görünsün mü: politika uygun VE reklam hazır.
+## Teklif plakası basılabilir mi: politika uygun VE reklam hazır.
 func can_offer(kind: StringName) -> bool:
 	return block_reason(kind) == AdPolicy.OK and is_ready(kind)
+
+
+## Teklif düğmesi ne göstersin: READY (izlenebilir), LOADING (reklam yükleniyor / SDK başlıyor / iki reklam arası
+## bekleme: az sonra izlenebilir), NONE (seviye, günlük sınır, tür beklemesi ya da bu oturumda reklam yok).
+func offer_state(kind: StringName) -> Offer:
+	var reason: StringName = block_reason(kind)
+	if reason == AdPolicy.OK and is_ready(kind):
+		return Offer.READY
+	if reason in [AdPolicy.OK, AdPolicy.TOO_SOON] and can_load(kind):
+		return Offer.LOADING
+	return Offer.NONE
+
+
+## Bu oturumda bu türün reklamı gelebilir mi: SDK başladı ya da başlıyor ve yuvanın birimi var. false = reklamsız
+## derleme / SDK başlayamadı (teklif "yükleniyor"da asılı kalmaz, hiç görünmez).
+func can_load(kind: StringName) -> bool:
+	if _starting:
+		return true
+	var slot: StringName = AdPolicy.slot_of(kind)
+	return _started and _slots.has(slot) and _provider.unit_for(slot) != ""
+
+
+## LOADING gösteren düğme reklamı istiyor: yuva yüklenmiyorsa ve yeniden deneme beklemiyorsa yükleme başlar; denemeler
+## bitmişse (pes edilmiş) baştan alınır. Saniyede bir çağrılabilir: yükleme ya da bekleme sürerken bir şey yapmaz.
+func request(kind: StringName) -> void:
+	var slot: StringName = AdPolicy.slot_of(kind)
+	if not _slots.has(slot):
+		return
+	var info: Dictionary = _slots[slot]
+	if bool(info["loading"]) or bool(info["waiting"]):
+		return
+	if int(info["retry"]) >= RETRY_MS.size():
+		info["retry"] = 0
+	_load_slot(slot)
 
 
 ## Bugün bu türden kaç reklam izlendi / kaç hakkı kaldı (UI "2/5" yazısı için).
@@ -224,8 +245,12 @@ func _finish_show() -> void:
 # --- Yükleme ----------------------------------------------------------------------
 
 func _on_provider_started(ok: bool) -> void:
+	_starting = false
 	_started = ok
 	if ok:
+		for slot: StringName in _slots:
+			if _provider.has_rewarded(slot):
+				_on_loaded(slot, true)   # açılışta (AdBoot) yüklenmiş: eskime sayacı buradan başlar
 		ensure_loaded()
 	readiness_changed.emit()
 
@@ -268,7 +293,10 @@ func _schedule_retry(slot: StringName) -> void:
 	if not is_inside_tree() or index >= RETRY_MS.size():
 		return   # pes et: sonsuz istek yağmuru yok; sonraki oturum yeniden dener
 	info["retry"] = index + 1
-	get_tree().create_timer(float(RETRY_MS[index]) / 1000.0).timeout.connect(func() -> void: _load_slot(slot))
+	info["waiting"] = true
+	get_tree().create_timer(float(RETRY_MS[index]) / 1000.0).timeout.connect(func() -> void:
+		info["waiting"] = false
+		_load_slot(slot))
 
 
 func _schedule_expiry(slot: StringName) -> void:

@@ -54,6 +54,7 @@ func _initialize() -> void:
 	await _levelup_double()
 	await _mission_reroll()
 	await _junk_refill()
+	await _loading()
 	await _remote()
 	print("SONUC: fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
@@ -258,6 +259,48 @@ func _junk_refill() -> void:
 	var result: Dictionary = jy.search_pile(0)
 	check(bool(result["ok"]) and not jy.pile_ready(0), "aranan yığın boşaldı")
 	check(jy.refill_pile() == 0 and jy.pile_ready(0), "reklam ödülü: yığın hemen doldu")
+
+
+## 2026-10-26 kullanıcı: reklam yüklenmemişken REKLAM İZLE düğmesi hiç görünmüyordu → görünür, pasif "REKLAM
+## YÜKLENİYOR"; gazete ×2 reklamını en çok NewsFlow.AD_WAIT sn bekler.
+func _loading() -> void:
+	print("== 7b) Reklam yüklenmemişken: REKLAM YÜKLENİYOR ==")
+	await _ready_ads()
+	var mock: MockAdProvider = ads.provider() as MockAdProvider
+	mock._loaded.clear()
+	mock.load_ok = false
+	var away: OfflineEarnings = g(&"offline_earnings") as OfflineEarnings
+	away.bank_money = 2000
+	away.bank_minutes = 40.0
+	away.bank_jobs = 2
+	check(hud.news_flow._ad_loading(), "gazete ×2 reklamını bekler (en çok %.0f sn)" % NewsFlow.AD_WAIT)
+	check(hud.news_flow.present(), "gazete açıldı")
+	await seconds(1.4)
+	var screen: NewsScreen = hud.router.screen(&"news") as NewsScreen
+	var button: AdOfferButton = _offer(screen, AdPolicy.OFFLINE_DOUBLE)
+	check(button != null and button.visible and button.disabled and button.text.contains("REKLAM YÜKLENİYOR")
+		and button.text.contains("2.000"), "düğme gizlenmedi: REKLAM YÜKLENİYOR +2.000 ₺, pasif")
+	mock.load_ok = true
+	ads.ensure_loaded()
+	await seconds(1.2)
+	check(button.visible and not button.disabled and button.text.contains("REKLAM İZLE"), "reklam gelince REKLAM İZLE, basılabilir")
+	check(not hud.news_flow._ad_loading(), "reklam hazır: gazete beklemez")
+	screen.close()
+	await seconds(1.6)
+	# Yarış sonucu ×2 plakası
+	ads.forget_last_ad()
+	mock._loaded.clear()
+	mock.load_ok = false
+	var bonus: Button = hud.race_result_screen.find_child("BonusButton", true, false) as Button
+	hud._on_race_completed(true, 9.0, 10.0)
+	await frames(2)
+	check(bonus.visible and bonus.disabled and bonus.text.contains("REKLAM YÜKLENİYOR"), "yarış ×2: plaka görünür, REKLAM YÜKLENİYOR, pasif")
+	mock.load_ok = true
+	ads.ensure_loaded()
+	await seconds(0.8)
+	check(bonus.visible and not bonus.disabled and bonus.text.contains("REKLAM İZLE"), "yarış ×2: reklam gelince plaka açıldı")
+	hud._on_race_exit()
+	await seconds(0.8)
 
 
 func _remote() -> void:

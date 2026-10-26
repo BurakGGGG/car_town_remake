@@ -3,9 +3,10 @@ extends PlateButton
 ## ÖDÜLLÜ REKLAM DÜĞMESİ — "REKLAM İZLE" tekliflerinin ortak düğmesi (2026-10-23, kullanıcı kararı: yalnızca oyuncunun
 ## kendi bastığı ödüllü reklam; kendiliğinden açılan reklam / pencere yok). Düğme kendi durumunu yönetir:
 ##   uygun + reklam yüklü      → "REKLAM İZLE" + ödül satırı, basılabilir
+##   reklam henüz yüklenmedi   → "REKLAM YÜKLENİYOR" + ödül satırı, pasif; yüklenince kendiliğinden açılır (2026-10-26,
+##                               kullanıcı: eskiden gizleniyordu, oyuncu teklifi hiç görmüyordu; kimisi birkaç sn bekler)
 ##   tür beklemede (cooldown)  → kalıcı düğmede geri sayım ("2:41 SONRA"), değilse gizli
 ##   bugünlük hak bitti        → kalıcı düğmede "YARIN YENİLENİR", değilse gizli
-##   reklam henüz yüklenmedi   → kalıcı düğmede "REKLAM HAZIRLANIYOR", değilse gizli
 ## Basınca AdService.show_rewarded(kind). Ödül YALNIZCA bu düğme başlattıysa `rewarded` olarak yayılır (aynı türün
 ## başka düğmesi ödülü yanlışlıkla almasın); reklam bitince `finished(rewarded)`. Ödülü veren çağıran tarafır.
 ## `condition` (isteğe bağlı): teklifin o an anlamlı olup olmadığı (ör. kesilecek süre var mı); false → gizli.
@@ -65,9 +66,8 @@ func refresh() -> void:
 		return
 	if reward_fn.is_valid():
 		reward_text = String(reward_fn.call())
-	var reason: StringName = ads.block_reason(offer)
-	var loaded: bool = ads.is_ready(offer)
-	if reason == AdPolicy.OK and loaded:
+	var state: AdService.Offer = ads.offer_state(offer)
+	if state == AdService.Offer.READY:
 		visible = true
 		disabled = false
 		highlight = not compact
@@ -78,6 +78,15 @@ func refresh() -> void:
 		return
 	highlight = false
 	disabled = true
+	if state == AdService.Offer.LOADING:
+		visible = true
+		ads.request(offer)
+		if compact:
+			text = Loc.t("YÜKLENİYOR…")
+		else:
+			text = Loc.t("REKLAM YÜKLENİYOR") + ("\n" + reward_text if not reward_text.is_empty() else "")
+		return
+	var reason: StringName = ads.block_reason(offer)
 	if not persistent or reason in [AdPolicy.LEVEL_LOW, AdPolicy.UNKNOWN_KIND]:
 		visible = false
 		return
@@ -88,7 +97,7 @@ func refresh() -> void:
 		AdPolicy.DAILY_CAP, AdPolicy.TOTAL_CAP:
 			text = Loc.t("YARIN YENİLENİR")
 		_:
-			text = Loc.t("REKLAM HAZIRLANIYOR")
+			text = Loc.t("REKLAM YÜKLENİYOR")   # bu oturumda reklam yok (reklamsız derleme / SDK başlamadı)
 
 
 func _on_pressed() -> void:

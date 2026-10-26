@@ -34,6 +34,10 @@ var _owner_row: HBoxContainer
 var _owner_avatar: AvatarView
 var _owner_text: Label
 var _bonus_amount: int = 0
+## Bonus reklamı şu an gösterilebilir mi (HUD verir; değilse plaka "REKLAM YÜKLENİYOR" der, hazır olunca açılır).
+var _bonus_ready: Callable = Callable()
+var _bonus_asked: bool = false   # oyuncu bastı, reklam sürüyor: tazeleme plakayı yeniden açmaz
+var _bonus_timer: Timer
 var _column: VBoxContainer
 var _closing: bool = false
 var _lb_strip: PanelContainer
@@ -158,25 +162,40 @@ func show_leaderboard(info: Dictionary) -> void:
 	_lb_sub.text = "\n".join(lines)
 
 
-## Ödüllü reklam teklifi: "REKLAM İZLE +X ₺". Yalnızca oyuncu basarsa reklam gösterilir.
-func offer_bonus(amount: int) -> void:
+## Ödüllü reklam teklifi: "REKLAM İZLE +X ₺". Yalnızca oyuncu basarsa reklam gösterilir. ready(): reklam şu an
+## gösterilebilir mi — değilse plaka görünür ama pasif "REKLAM YÜKLENİYOR +X ₺" der ve hazır olunca kendiliğinden açılır.
+func offer_bonus(amount: int, ready: Callable = Callable()) -> void:
 	_bonus_amount = amount
-	_bonus_button.text = Loc.t("REKLAM İZLE   +%s ₺") % Hud.format_thousands(amount)
-	_bonus_button.disabled = false
+	_bonus_ready = ready
+	_bonus_asked = false
 	_bonus_button.visible = true
+	_refresh_bonus()
+	_bonus_timer.start()
 
 
-## Reklam bitti ama ödül hak edilmedi (erken kapatıldı): teklif tekrar basılabilir olsun.
+## Reklam bitti ama ödül hak edilmedi (erken kapatıldı) ya da gösterilemedi: teklif yeniden açılır (reklam hazır değilse
+## "yükleniyor" der).
 func rearm_bonus() -> void:
 	if _bonus_amount > 0:
-		_bonus_button.disabled = false
+		_bonus_asked = false
 		_bonus_button.visible = true
+		_refresh_bonus()
+
+
+func _refresh_bonus() -> void:
+	if _bonus_amount <= 0 or _bonus_asked:
+		return
+	var ready: bool = not _bonus_ready.is_valid() or bool(_bonus_ready.call())
+	_bonus_button.disabled = not ready
+	var amount: String = Hud.format_thousands(_bonus_amount)
+	_bonus_button.text = Loc.t("REKLAM İZLE   +%s ₺") % amount if ready else Loc.t("REKLAM YÜKLENİYOR   +%s ₺") % amount
 
 
 ## Ödül verildi: teklif kapanır, ödül satırı bonusu gösterir.
 func bonus_granted(amount: int) -> void:
 	_bonus_button.visible = false
 	_bonus_amount = 0
+	_bonus_timer.stop()
 	_reward.text = Loc.t("%s   +%s ₺ BONUS") % [_reward.text, Hud.format_thousands(amount)]
 
 
@@ -189,6 +208,7 @@ func offer_rematch(on: bool) -> void:
 func hide_bonus() -> void:
 	_bonus_amount = 0
 	_bonus_button.visible = false
+	_bonus_timer.stop()
 
 
 ## Eğitim spot ışığı: &"column" (başlık + sonuç + düğmeler).
@@ -275,9 +295,16 @@ func _build() -> void:
 	_bonus_button.focus_mode = Control.FOCUS_NONE
 	_bonus_button.visible = false
 	_bonus_button.pressed.connect(func() -> void:
+		if _bonus_asked:
+			return
+		_bonus_asked = true
 		_bonus_button.disabled = true   # çift dokunuş: reklam bitene kadar pasif
 		bonus_requested.emit())
 	_column.add_child(_bonus_button)
+	_bonus_timer = Timer.new()
+	_bonus_timer.wait_time = 0.5
+	_bonus_timer.timeout.connect(_refresh_bonus)
+	add_child(_bonus_timer)
 
 	_rematch_button = PlateButton.new()
 	_rematch_button.name = "RematchButton"

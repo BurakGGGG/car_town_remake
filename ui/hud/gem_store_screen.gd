@@ -436,7 +436,7 @@ func _free_card() -> PlatePanel:
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(caption)
 	var button: AdOfferButton = AdOfferButton.new(AdPolicy.FREE_GEMS, "", true)
-	button.clip_text = true   # "REKLAM HAZIRLANIYOR" gibi uzun durum yazısı kartı (ve panoyu) genişletmesin
+	button.clip_text = true   # "REKLAM YÜKLENİYOR" gibi uzun durum yazısı kartı (ve panoyu) genişletmesin
 	button.rewarded.connect(_on_free_gems)
 	button.finished.connect(func(_ok: bool) -> void:
 		if visible and _tab == TAB_GEMS:

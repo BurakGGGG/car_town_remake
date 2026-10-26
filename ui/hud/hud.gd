@@ -851,8 +851,9 @@ func _refresh_repair_panel(celebrate: bool) -> void:
 	if state:
 		_repair_panel.set_info(state.repair_type, state.repair_reward)   # ödül işin kendi çarpanıyla
 		if state.phase == RepairState.Phase.REPAIRING:
-			_repair_panel.show_repairing(state.repair_progress, state.remaining, _boost_offer(vehicle),
-				_repair_manager.gem_skip_cost(vehicle))
+			var boost: AdService.Offer = _boost_offer(vehicle)
+			_repair_panel.show_repairing(state.repair_progress, state.remaining, boost == AdService.Offer.READY,
+				_repair_manager.gem_skip_cost(vehicle), boost == AdService.Offer.LOADING)
 		else:
 			_repair_panel.show_ready()
 	elif vehicle.repair_status == TrafficVehicle.RepairStatus.REPAIRED:
@@ -873,12 +874,16 @@ func _on_repair_pressed(_type: RepairType) -> void:
 		_refresh_repair_panel(false)  # başladıysa "TAMİR EDİLİYOR", başlamadıysa güncel kilit/bakiye durumu
 
 
-## Süren işte "REKLAM İZLE (süre yarıya iner)" sunulabilir mi: uzun iş, daha önce kısaltılmamış,
-## reklam politikası uygun ve hazır reklam var.
-func _boost_offer(car: Node3D) -> bool:
+## Süren işte "REKLAM İZLE (süre yarıya iner)" sunulabilir mi: uzun iş, daha önce kısaltılmamış, reklam politikası
+## uygun. READY: reklam hazır · LOADING: plaka "REKLAM YÜKLENİYOR" der (yüklemesi dürtülür) · NONE: teklif yok.
+func _boost_offer(car: Node3D) -> AdService.Offer:
 	var ads: AdService = _ads_service()
-	return ads != null and _repair_manager != null and _repair_manager.can_boost(car) \
-			and ads.can_offer(AdPolicy.REPAIR_BOOST)
+	if ads == null or _repair_manager == null or not _repair_manager.can_boost(car):
+		return AdService.Offer.NONE
+	var state: AdService.Offer = ads.offer_state(AdPolicy.REPAIR_BOOST)
+	if state == AdService.Offer.LOADING:
+		ads.request(AdPolicy.REPAIR_BOOST)
+	return state
 
 
 func _on_repair_boost_pressed() -> void:
@@ -1262,12 +1267,13 @@ func _on_race_completed(won: bool, player_time: float, rival_time: float) -> voi
 		float(record["time"]), float(record["previous"]))
 	if _leaderboard_info_matches(float(record["time"])):
 		race_result_screen.show_leaderboard(_leaderboard_info)
-	# ÖDÜLLÜ REKLAM: yalnızca para kazanıldıysa ve politika + hazır reklam uygunsa teklif edilir (açık onay).
+	# ÖDÜLLÜ REKLAM: yalnızca para kazanıldıysa ve politika uygunsa teklif edilir (açık onay); reklam henüz yüklenmediyse
+	# plaka "REKLAM YÜKLENİYOR" der, hazır olunca açılır.
 	_race_bonus_amount = 0
 	var ads: AdService = _ads_service()
-	if ads and int(reward["money"]) > 0 and ads.can_offer(AdPolicy.RACE_DOUBLE):
+	if ads and int(reward["money"]) > 0 and ads.offer_state(AdPolicy.RACE_DOUBLE) != AdService.Offer.NONE:
 		_race_bonus_amount = int(reward["money"])
-		race_result_screen.offer_bonus(_race_bonus_amount)
+		race_result_screen.offer_bonus(_race_bonus_amount, _race_bonus_ready)
 	router.open(&"race_result")
 
 
@@ -1305,6 +1311,17 @@ func _ads_service() -> AdService:
 	return ads
 
 
+## Yarış bonusu plakası basılabilir mi (reklam hazır); değilse yüklemesi dürtülür.
+func _race_bonus_ready() -> bool:
+	var ads: AdService = _ads_service()
+	if ads == null:
+		return false
+	if ads.offer_state(AdPolicy.RACE_DOUBLE) == AdService.Offer.READY:
+		return true
+	ads.request(AdPolicy.RACE_DOUBLE)
+	return false
+
+
 ## Yarış bonusu: oyuncu REKLAM İZLE'ye bastı.
 func _on_race_bonus_requested() -> void:
 	var ads: AdService = _ads_service()
@@ -1335,7 +1352,7 @@ func _on_ad_finished(kind: StringName, rewarded: bool) -> void:
 		return
 	if kind == AdPolicy.RACE_DOUBLE and not rewarded:
 		var ads: AdService = _ads_service()
-		if ads and _race_bonus_amount > 0 and ads.block_reason(AdPolicy.RACE_DOUBLE) == AdPolicy.OK:
+		if ads and _race_bonus_amount > 0 and ads.offer_state(AdPolicy.RACE_DOUBLE) != AdService.Offer.NONE:
 			race_result_screen.rearm_bonus()
 		else:
 			race_result_screen.hide_bonus()
@@ -1410,8 +1427,9 @@ func _on_repair_ready(car: Node3D) -> void:
 func _on_repair_progress(car: Node3D, progress: float) -> void:
 	if car == _repair_target:
 		var state: RepairState = _repair_manager.get_state(car)
-		_repair_panel.show_repairing(progress, state.remaining if state else 0.0, _boost_offer(car),
-			_repair_manager.gem_skip_cost(car))
+		var boost: AdService.Offer = _boost_offer(car)
+		_repair_panel.show_repairing(progress, state.remaining if state else 0.0, boost == AdService.Offer.READY,
+			_repair_manager.gem_skip_cost(car), boost == AdService.Offer.LOADING)
 
 
 ## Araç alandan çıktı: seçili başka bir arızalı aracın plakası TAMİR'i açar.

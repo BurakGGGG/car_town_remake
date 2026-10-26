@@ -155,6 +155,55 @@ func _run() -> void:
 	await frames(6)
 	check(mock.last_shown_slot == AdConfig.SLOT_REPAIR, "tamir teklifi TAMİR yuvasından gösterildi")
 
+	print("== 3c) Teklif durumu: reklam yokken YÜKLENİYOR (2026-10-26) ==")
+	svc.reset()
+	svc.forget_last_ad()
+	svc.ensure_loaded()
+	await frames(4)
+	check(svc.offer_state(AdPolicy.RACE_DOUBLE) == AdService.Offer.READY, "reklam yüklü: HAZIR")
+	mock._loaded.clear()
+	mock.load_ok = false
+	check(svc.offer_state(AdPolicy.RACE_DOUBLE) == AdService.Offer.LOADING, "reklam yokken teklif kaybolmaz: YÜKLENİYOR")
+	svc.request(AdPolicy.RACE_DOUBLE)
+	await frames(3)   # yükleme düştü: yeniden deneme bekleniyor
+	var loads0: int = mock.loads
+	for i: int in 5:
+		svc.request(AdPolicy.RACE_DOUBLE)
+	await frames(3)
+	check(mock.loads == loads0, "yeniden deneme beklerken düğmenin istekleri yükleme yağdırmaz")
+	mock.load_ok = true
+	svc.ensure_loaded()
+	await frames(3)
+	check(svc.offer_state(AdPolicy.RACE_DOUBLE) == AdService.Offer.READY, "yüklenince HAZIR")
+	svc.show_rewarded(AdPolicy.RACE_DOUBLE)
+	await frames(6)
+	check(svc.block_reason(AdPolicy.RACE_DOUBLE) == AdPolicy.TOO_SOON
+		and svc.offer_state(AdPolicy.RACE_DOUBLE) == AdService.Offer.LOADING, "iki reklam arası beklemede de YÜKLENİYOR (gizlenmez)")
+	svc.load_state({"day": svc.state()["day"], "counts": {"race_double": 5}})
+	check(svc.offer_state(AdPolicy.RACE_DOUBLE) == AdService.Offer.NONE, "günlük sınırda teklif yok")
+	svc.reset()
+	var off: AdService = AdService.new()
+	off.use_provider(AdProvider.new())
+	root.add_child(off)
+	await frames(2)
+	check(not off.can_load(AdPolicy.RACE_DOUBLE) and off.offer_state(AdPolicy.RACE_DOUBLE) == AdService.Offer.NONE,
+		"reklamsız derlemede teklif YÜKLENİYOR'da asılı kalmaz (hiç görünmez)")
+	off.queue_free()
+
+	print("== 3d) Açılışta erken başlatma (AdBoot) ==")
+	AdBoot.start_early()
+	await frames(4)   # yükleme ekranı: SDK başladı, iki yuva AdService yokken yüklendi
+	var early: AdService = AdService.new()
+	root.add_child(early)
+	var early_mock: MockAdProvider = early.provider() as MockAdProvider
+	check(early_mock != null and early_mock.loads == AdConfig.slots().size(), "AdService yükleme ekranında başlatılan sağlayıcıyı devraldı")
+	await frames(3)
+	check(early.offer_state(AdPolicy.RACE_DOUBLE) == AdService.Offer.READY and early_mock.loads == AdConfig.slots().size(),
+		"devralınca reklam hemen hazır, yeniden yüklenmedi")
+	check(AdBoot.take(func(_ok: bool) -> void: pass) == null, "erken sağlayıcı bir kez devralınır")
+	early.queue_free()
+	await frames(2)
+
 	print("== 4) Saat oyunu + kayıt turu ==")
 	svc.set_test_clock(86400.0 * 200.0)
 	svc.reset()

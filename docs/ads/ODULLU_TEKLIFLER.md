@@ -29,7 +29,13 @@ engellemez. Kullanıcı yedi yerin hepsini istedi. Tek farkla: ücretsiz elmas 1
 - **Toplam:** bütün teklifler toplamı günde en çok 20 reklam.
 - **Ara:** iki reklam arası en az 45 sn (oturum içi).
 - **Seviye:** 3. seviyeden önce hiç teklif yok; ilk deneyim reklamsız.
-- **Reklam hazır değilse:** teklif gizlenir. MARKET kartı istisna: kalıcıdır, "REKLAM HAZIRLANIYOR" yazar.
+- **Reklam hazır değilse (2026-10-26):** teklif gizlenmez. Düğme pasif kalır ve "REKLAM YÜKLENİYOR" yazar (ödül satırı durur). Reklam gelince kendiliğinden REKLAM İZLE olur.
+  - Bu durum 45 sn aradayken de geçerli. Durumu `AdService.offer_state()` verir: NONE / LOADING / READY.
+  - Bekleyen düğme `AdService.request()` ile yüklemeyi dürter. Yeniden deneme sürerken istek gitmez; denemeler bitmişse baştan alınır.
+  - Reklamsız derlemede ya da SDK başlamazsa teklif hiç görünmez. MARKET kartı kalıcıdır, orada da "REKLAM YÜKLENİYOR" yazar.
+  - Yarış sonucu ×2 plakası ve tamir kısaltma plakası da aynı kuralla çalışır.
+- **Açılışta yükleme:** reklam SDK'sı yükleme ekranında başlar (`AdBoot.start_early`). İlk ödüllü reklam Main yüklenirken gelir; AdService kurulunca sağlayıcıyı devralır.
+- **OTO MANŞET bekler:** ×2 teklifi çıkacaksa gazete reklamı en çok 5 sn bekler (`NewsFlow.AD_WAIT`), sonra açılır.
 - **Sayaçlar ve bekleme kayıtta:**
   - Uygulamayı kapatıp açmak hakkı ya da 3 dk beklemeyi sıfırlamaz.
   - Saat geri alınırsa sayaç sıfırlanmaz.

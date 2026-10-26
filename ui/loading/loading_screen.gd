@@ -142,6 +142,9 @@ func _ready() -> void:
 		for path: String in MAIN_THREAD_FIRST:
 			if ResourceLoader.exists(path):
 				load(path)
+	# REKLAM: SDK başlatma + ilk ödüllü reklamın yüklenmesi Main yüklenirken başlar (OTO MANŞET ×2 açılışta hazır olsun);
+	# AdService kurulunca devralır (AdBoot).
+	AdBoot.start_early()
 	var error: Error = ResourceLoader.load_threaded_request(MAIN_SCENE, "", false)
 	if error != OK:
 		push_warning("LoadingScreen: arka plan yüklemesi başlamadı (%d), doğrudan geçiliyor" % error)

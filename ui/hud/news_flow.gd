@@ -6,6 +6,10 @@ extends Node
 ## yok; IDLE sn) haberler birleştirilir ve gazete UiRouter MODAL "news" ile açılır. Haber yoksa açılmaz.
 ## Kaynaklar: ustanın kazancı + biten yarım işler (OfflineEarnings), arkadaşlar (SocialManager.news_items: yarış, hediye,
 ## yeni arkadaş, istek, parça isteği), oyun (NewsSources: hurda yığını, modifiye, görevler).
+## REKLAM BEKLEME (2026-10-26, kullanıcı: "kimisi 5 sn de olsa bekler; açılışta yüklensin, bir süreyi geçerse devam
+## etsin"): sen yokken kazanç varsa ve ×2 teklifi sunulabilecekse gazete reklamın yüklenmesini en çok AD_WAIT sn
+## (boşta geçen süre) bekler; reklam yükleme ekranında başladığı için (AdBoot) çoğu zaman beklemeden hazırdır. Süre
+## dolarsa gazete açılır, plaka "REKLAM YÜKLENİYOR" der ve reklam gelince REKLAM İZLE olur.
 ## Toplama sürerken arkadaş hediyesi / yarış haberi küçük bildirim olarak çıkmaz (gazeteye girer; kullanıcı kararı: oyun
 ## açıkken gelenler bildirim, girişte toplu gazete).
 ## TAMAM'da OfflineEarnings.collect() parayı verir, paralar kazanç fotoğrafından sayaca uçar (CoinFlight), arkadaş tabanı
@@ -16,6 +20,8 @@ const IDLE: float = 1.0
 const POLL: float = 0.25
 ## Arkadaş listesi / haberleri yüklenmeden gazete en çok bu kadar bekler (boşta geçen süre; bulut senkronu sayılmaz).
 const SOCIAL_WAIT: float = 6.0
+## Kazanç ×2 reklamı yüklenmeden gazete en çok bu kadar bekler (boşta geçen süre; SOCIAL_WAIT ile aynı sayaç).
+const AD_WAIT: float = 5.0
 ## Paralar sayaca vardıktan sonra Rıza Usta konuşur.
 const TIP_DELAY: float = 1.1
 
@@ -87,6 +93,8 @@ func _tick() -> void:
 	_waited += POLL
 	if not _social_ready() and _waited < SOCIAL_WAIT:
 		return
+	if _ad_loading() and _waited < AD_WAIT:
+		return
 	_idle += POLL
 	if _idle < IDLE:
 		return
@@ -127,6 +135,17 @@ func _social_ready() -> bool:
 			return _social.has_loaded() and not _social.is_busy()
 		SocialManager.State.LOADING:
 			return false
+	return true
+
+
+## Gazetede ×2 teklifi çıkacak ama reklamı henüz yüklenmedi mi (o zaman biraz beklenir)?
+func _ad_loading() -> bool:
+	if _away.pending_money() <= 0:
+		return false
+	var ads: AdService = get_tree().get_first_node_in_group("ads") as AdService
+	if ads == null or ads.offer_state(AdPolicy.OFFLINE_DOUBLE) != AdService.Offer.LOADING:
+		return false
+	ads.request(AdPolicy.OFFLINE_DOUBLE)
 	return true
 
 

@@ -304,8 +304,10 @@ func show_ready() -> void:
 
 
 ## boost_available: ödüllü reklamla kalan süre yarıya indirilebilir → buton "REKLAM İZLE" olur.
+## boost_loading: teklif var ama reklam henüz yüklenmedi → buton pasif "REKLAM YÜKLENİYOR".
 ## gem_cost > 0: uzun iş, kalan süre elmasla bitirilebilir (ELMASLA BİTİR plakası).
-func show_repairing(progress: float, remaining: float, boost_available: bool = false, gem_cost: int = 0) -> void:
+func show_repairing(progress: float, remaining: float, boost_available: bool = false, gem_cost: int = 0,
+		boost_loading: bool = false) -> void:
 	if _mode != Mode.REPAIRING:
 		_set_mode(Mode.REPAIRING)
 	_repairing_title.text = Loc.t("TAMİR EDİLİYOR")
@@ -314,6 +316,11 @@ func show_repairing(progress: float, remaining: float, boost_available: bool = f
 	if boost_available:
 		_button.disabled = false
 		_button.text = Loc.t("REKLAM İZLE")
+		_button.kind = HudIcon.Kind.NONE
+		_reward_label.text = Loc.t("Süre yarıya iner")
+	elif boost_loading:
+		_button.disabled = true
+		_button.text = Loc.t("REKLAM YÜKLENİYOR")
 		_button.kind = HudIcon.Kind.NONE
 		_reward_label.text = Loc.t("Süre yarıya iner")
 	else:

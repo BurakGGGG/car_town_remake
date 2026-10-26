@@ -192,6 +192,16 @@ func shown_money() -> int:
 	return int(_shown.get("money", 0))
 
 
+## Gazete şimdi açılsa gösterilecek kazanç (₺; news_items gibi ama yan etkisiz). NewsFlow ×2 reklamını beklerken bakar.
+func pending_money() -> int:
+	if not has_news():
+		return 0
+	var money: int = bank_money if bank_minutes >= MIN_NEWS_MINUTES else 0
+	for job: Dictionary in finished:
+		money += int(job.get("reward", 0))
+	return money
+
+
 ## TAMAM: gösterilen pay verilir (para + yarım işlerin XP'si ve ustalık sayacı), kasadan düşülür, kayıt HEMEN yazılır
 ## (gazete açıkken uygulama kapanırsa ödeme ya hiç yapılmamış ya da bir kez yapılmıştır). {money, xp, bank, full}.
 ## money_mult: gazetede ödüllü reklam izlendiyse 2 (yalnız para katlanır).
