@@ -161,6 +161,28 @@ const prize = (await db.doc(`users/lbA/mail/lb_${lbWk}_C`).get()).data();
 check(paid.mails === 1 && prize?.gems === 150 && prize.crates?.super_crate === 1 && prize.lb?.rank === 1 && (await lbSum()).paid === true,
   `haftalık ödül postası + paid (${JSON.stringify(paid)})`);
 check((await payWeekly({ db, now: nextMonday })).mails === 0, "ikinci çalışma: ödenmiş tablo atlanır");
+// Budama (2026-10-26: ödenen haftada yalnız ilk 100 kalır): eski bir haftada 3 koşu, ilk 1 kalsın, sayfa 2 (startAfter sınanır)
+const oldWk = lbWk - 3;
+const oldSum = async () => (await db.doc(`lb/${oldWk}_C`).get()).data() || {};
+for (const [uid, t] of [["lbP1", 11.0], ["lbP2", 11.3], ["lbP3", 11.6]]) {
+  await db.doc(`lb_runs/${oldWk}_C_${uid}`).set(lbRun(uid, t, { wk: oldWk }));
+}
+check(await waitFor(async () => (await oldSum()).count === 3), "budama: eski haftanın özeti 3");
+await db.doc(`lb/${oldWk}_C`).update({ paid: true });
+const { pruneWeek } = require("../leaderboard.js");
+const cut = await pruneWeek({ db, wk: oldWk, cls: "C", count: 3, nowS: Math.floor(Date.now() / 1000), keep: 1, pageSize: 2 });
+check(cut.kept === 1 && cut.deleted === 2, `budama: 1 kaldı, 2 silindi (${JSON.stringify(cut)})`);
+const hist1 = (await db.doc("lb_hist/lbP1").get()).data() || {};
+check(hist1.recs?.[0]?.rank === 1 && hist1.recs[0].wk === oldWk && !(await db.doc("lb_hist/lbP2").get()).exists, "ilk 1'in derecesi profilde");
+await sleep(3000);
+const frozen = await oldSum();
+check(!(await db.doc(`lb_runs/${oldWk}_C_lbP2`).get()).exists && frozen.count === 3 && frozen.top.length === 3,
+  "silme tetikleyicisi donmuş özeti değiştirmedi (sayı 3, liste 3)");
+await db.doc(`lb_runs/${oldWk}_C_lbP1`).delete();   // panel / hesap silme: ilk 100'deki koşu
+check(await waitFor(async () => ((await db.doc("lb_hist/lbP1").get()).data()?.recs || [1]).length === 0),
+  "ilk 100'deki koşu silinince profildeki derece düştü");
+const after = await oldSum();
+check(after.count === 3 && !after.top.some((e) => e.uid === "lbP1"), "listedeki adı düştü, sayı aynı");
 
 console.log(fails === 0 ? "RESULT fails=0" : "RESULT fails=" + fails);
 process.exit(fails === 0 ? 0 : 1);

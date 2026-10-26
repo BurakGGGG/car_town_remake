@@ -2610,5 +2610,14 @@
  "İLK 3'E %s sn KALDI": "NOCH %s s BIS TOP 3",
  "İZLE": "REPLAY",
  "İZLENİYOR · %s · %s sn": "WIEDERGABE · %s · %s s",
- "ŞU AN ÖDÜL KADEMESİNDESİN": "DU BIST IN EINER BELOHNUNGSSTUFE"
+ "ŞU AN ÖDÜL KADEMESİNDESİN": "DU BIST IN EINER BELOHNUNGSSTUFE",
+ "%d KEZ İLK 100": "%d× TOP 100",
+ "%d KEZ İLK 3": "%d× TOP 3",
+ "%d OYUNCU ARASINDA": "UNTER %d SPIELERN",
+ "%s · TABLO DERECELERİ": "%s · TABELLENPLÄTZE",
+ "EN İYİSİ %d.": "BESTE: %d.",
+ "TABLO DERECELERİ": "TABELLENPLÄTZE",
+ "TÜMÜ ›": "ALLE ›",
+ "Yalnız ilk 100'e girilen haftalar saklanır.": "Nur Wochen in den Top 100 werden gespeichert.",
+ "İLK 100": "TOP 100"
 }

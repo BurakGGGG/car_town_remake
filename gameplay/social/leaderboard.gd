@@ -9,6 +9,8 @@ extends Node
 ## kayıtlarından (tek tek okuma). Oyuncunun sırası özetteki süre kovalarından (hist) hesaplanır: rank_in.
 ## Tablodaki koşu YALNIZ İZLENİR: run (Recording.to_dict JSON'u) indirilir, DragRaceScreen kayıttan oynatır.
 ## Yazılan en iyi süreler cihazda user://leaderboard.json'da tutulur (yeni cihazda ilk yarışta sunucudaki kayıttan öğrenilir).
+## PROFİLDEKİ DERECELER (kullanıcı kararı 2026-10-26: "yalnız ilk 100'ün kayıtları profillerinde dursun"): sunucu ödenen
+## haftada ilk 100'ün derecesini lb_hist/{uid}'ye yazar (gerisinin koşusu silinir); history_of okur, profil kartı gösterir.
 ## GarageSystem kurar (ziyarette yok), "leaderboard" grubundan bulunur.
 
 ## Özetler / kendi en iyilerim değişti (ekran tazelenir).
@@ -19,6 +21,9 @@ signal submitted(info: Dictionary)
 const BASE_URL: String = "https://firestore.googleapis.com/v1/projects/car-town-remake/databases/(default)/documents/"
 const RUNS: String = "lb_runs"
 const SUMMARIES: String = "lb"
+const HISTORY: String = "lb_hist"
+## Profilde derecesi duran sıra sınırı (sunucu KEEP).
+const KEEP: int = 100
 const CLASSES: Array[StringName] = [&"D", &"C", &"B", &"A", &"S"]
 ## Türkiye saati (UTC+3, yaz saati yok): hafta Pazartesi 00:00'da döner.
 const TZ_OFFSET: int = 10800
@@ -77,6 +82,24 @@ static func current_week() -> int:
 ## Haftanın bitişi (sonraki Pazartesi 00:00 TR) — sıfırlanma geri sayımı.
 static func week_end(wk: int) -> int:
 	return (wk * 7 - 3 + 7) * 86400 - TZ_OFFSET
+
+
+## Haftanın başlangıcı (Pazartesi 00:00 TR).
+static func week_start(wk: int) -> int:
+	return week_end(wk - 1)
+
+
+## "19–25 EKİM" · "28 EYLÜL – 4 EKİM" (Türkiye takvimiyle Pazartesi–Pazar; gün-ay sırası dilden).
+static func week_text(wk: int) -> String:
+	var months: Array[String] = [Loc.t("OCAK"), Loc.t("ŞUBAT"), Loc.t("MART"), Loc.t("NİSAN"), Loc.t("MAYIS"),
+		Loc.t("HAZİRAN"), Loc.t("TEMMUZ"), Loc.t("AĞUSTOS"), Loc.t("EYLÜL"), Loc.t("EKİM"), Loc.t("KASIM"), Loc.t("ARALIK")]
+	var first: Dictionary = Time.get_datetime_dict_from_unix_time(week_start(wk) + TZ_OFFSET)
+	var last: Dictionary = Time.get_datetime_dict_from_unix_time(week_start(wk) + TZ_OFFSET + 6 * 86400)
+	var m1: String = months[clampi(int(first["month"]), 1, 12) - 1]
+	var m2: String = months[clampi(int(last["month"]), 1, 12) - 1]
+	if m1 == m2:
+		return Loc.t("%d–%d %s") % [int(first["day"]), int(last["day"]), m2]
+	return Loc.t("%d %s – %d %s") % [int(first["day"]), m1, int(last["day"]), m2]
 
 
 ## Aracın tablo sınıfı (katalog sınıfı); bilinmiyorsa &"".
@@ -211,6 +234,47 @@ func friends_entries(wk: int, cls: StringName) -> Array[Dictionary]:
 			out.append(entry)
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["time"]) < float(b["time"]))
 	return out
+
+
+## Profildeki dereceler (lb_hist/{uid}): [{wk, cls, rank, count, tier, time, car, paint, stage}], en yeni hafta önce.
+## Yoksa / okunamazsa boş. Biçimsiz satır elenir.
+func history_of(uid: String, max_age: float = FRESH_SEC) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if uid.is_empty():
+		return out
+	var doc: Dictionary = await _fetch(HISTORY + "/" + uid, max_age)
+	var recs: Variant = doc.get("recs", [])
+	if not recs is Array:
+		return out
+	for raw: Variant in recs:
+		if not raw is Dictionary:
+			continue
+		var rec: Dictionary = raw
+		var cls: StringName = StringName(SaveSafe.s(rec.get("cls", "")))
+		var rank: int = SaveSafe.i(rec.get("rank", 0))
+		var wk: int = SaveSafe.i(rec.get("wk", 0))
+		if not CLASSES.has(cls) or rank < 1 or rank > KEEP or wk <= 0:
+			continue
+		var tier: StringName = StringName(SaveSafe.s(rec.get("tier", "")))
+		out.append({"wk": wk, "cls": cls, "rank": rank, "count": maxi(SaveSafe.i(rec.get("count", 0)), rank),
+			"tier": tier if TIERS.has(tier) else &"", "time": maxf(SaveSafe.f(rec.get("time", 0.0)), 0.0),
+			"car": StringName(SaveSafe.s(rec.get("car", ""))), "paint": SaveSafe.s(rec.get("paint", "")),
+			"stage": clampi(SaveSafe.i(rec.get("stage", 0)), 0, PerformanceMods.STAGES)})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a["wk"]) > int(b["wk"]) or (int(a["wk"]) == int(b["wk"]) and int(a["rank"]) < int(b["rank"])))
+	return out
+
+
+## Derecelerin özeti: {count (kaç kez ilk 100), top3 (kaç kez ilk 3), best (en iyi sıralı derece; eşitte en yenisi)}.
+static func history_summary(recs: Array[Dictionary]) -> Dictionary:
+	var best: Dictionary = {}
+	var top3: int = 0
+	for rec: Dictionary in recs:
+		if int(rec["rank"]) <= 3:
+			top3 += 1
+		if best.is_empty() or int(rec["rank"]) < int(best["rank"]):
+			best = rec   # liste en yeniden eskiye: eşit sırada ilk görülen (yeni) kalır
+	return {"count": recs.size(), "top3": top3, "best": best}
 
 
 ## İZLE: tablodaki koşunun kaydı (indirilemezse / bozuksa null).

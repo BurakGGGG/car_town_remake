@@ -131,6 +131,25 @@ Kod: `firebase/functions/leaderboard.js` (saf mantık; `index.js` bağlar), test
   kasalardan; ikisi de boş kademeye posta gitmez). Kayıt yoksa / alan bozuksa varsayılan: İLK 3 150 elmas + `super_crate`, İLK
   %10 50 elmas + `sport_crate`, İLK %50 15 elmas. Oyun aynı alanı `config/app`'ten okuyup kademe çubuğunda gösterebilir.
 
+### Budama ve profildeki dereceler (kullanıcı kararı 2026-10-26: "yalnız ilk 100'ün kayıtları profillerinde dursun")
+
+- `lbWeekly` ödemeden sonra (ya da önceden ödenmiş ama budanmamış haftada) `pruneWeek` çalıştırır.
+  - Koşular süreye göre 300'lük sayfalarla okunur (`startAfter`).
+  - Geçerli ilk 100 (`KEEP`, DÜNYA sırası) kalır: koşu kaydı İZLE için durur.
+  - Bu 100 oyuncunun derecesi `lb_hist/{uid}`'ye yazılır.
+  - Gerisi ve sınırı sonradan sıkılaşan geçersizler, defterleriyle (`lb_counted`) aynı toplu yazmada silinir.
+  - Özete `pruned: true, pruned_at, kept` yazılır.
+- `lb_hist/{uid}` = `{uid, recs: [{wk, cls, rank, count, tier ("top3" | "p10" | "p50" | ""), time, car, paint, stage}],
+  updated}`.
+  - En yeni hafta önce (aynı haftada iyi sıra önce), en çok 40 (`HIST_MAX`).
+  - Aynı hafta + sınıf yenisiyle değişir: iki kez çalışsa da tek satır.
+  - Yalnız sunucu yazar, herkes okur, liste kapalı.
+- **Ödenmiş hafta donar:** `lbRun` silme olayında DÜNYA özeti `paid` ise sayıyı / kovaları değiştirmez.
+  - Budamanın sildiği koşunun defteri de silinmiştir: iş yok.
+  - Defteri olan, ilk 100'de kalmış koşu panelden ya da hesap silmeyle gidiyorsa `forgetFrozen` çalışır: profildeki derece ve
+    dünya / ülke `top` listesindeki satırı düşer, defter silinir.
+- Hesap silme `lb_hist/{uid}`'yi de siler.
+
 ### Dizinler (`firebase/firestore.indexes.json`, `firebase.json` → `firestore.indexes`)
 
 - `lb_runs`: (`wk` ↑, `cls` ↑, `time` ↑) — dünya listesi, `lbWeekly`, `top` yeniden doldurma, panel.
@@ -207,9 +226,19 @@ firebase deploy --only functions:lbRun,functions:lbWeekly,functions:accountClean
   - Gazetede `NewsDigest.LB_PASSED`: "ELİF SENİ TABLODA GEÇTİ!", açıklamada iki süre.
   - Önemi seni yenen arkadaşın altında, büyük kazancın üstünde.
   - Gösterilince sunucudan silinir.
+- **Profildeki dereceler** (taslak A, kullanıcı 2026-10-26):
+  - `ProfileCard` (kendi profilin + arkadaş kartı) istatistiklerin altında koyu TABLO DERECELERİ şeridi gösterir: en iyi
+    derece + sınıf + hafta ("1. A 12–18 EKİM"), "6 KEZ İLK 100 · 3 KEZ İLK 3", "TÜMÜ ›".
+  - Veri `Leaderboard.history_of(uid)` (`lb_hist/{uid}`, REST). Derecesi olmayanda, öne çıkan kişide ve listeyi açan ekranı
+    olmayan kartta (davet) şerit yok.
+  - Şeridin tamamı dokunulur (kendi profilinde bilgi sütunu dar: plaka düğme yazıları kesiyordu) → `LbRecordsScreen`
+    (ALT PANO `lb_records`): madalya sıralı satırlar (1–3 altın / gümüş / bronz, İLK %10 koyu-amber, diğerleri mavi), sınıf,
+    hafta + kaç oyuncu arasında, kademe, araç, süre, İZLE.
+  - İZLE bitince ana pano (PROFİL / ARKADAŞLAR) ve liste yeniden açılır.
 - **Testler:**
   - `tests/leaderboard_test.gd` (`tools/run_tests.sh leaderboard_test`): hafta, sıra, kademe, kalan fark, yazım, belgenin
     13 alanı, gazete haberi.
-  - Görsel denetim: `qa/lider_tablosu_qa.gd`, kipler `hesap | misafir | izle | harita | sonuc`; `QA_LANG=de` ile dil.
+  - Görsel denetim: `qa/lider_tablosu_qa.gd`, kipler `hesap | misafir | izle | harita | sonuc | profil`; `QA_LANG=de` ile
+    dil.
 - **Hile sınırı dosyası:** `tools/lb_limits.gd` → `firebase/functions/lb_limits.json`. Fizik / araç verisi değişince
   yeniden üret ve functions'ı yeniden dağıt.

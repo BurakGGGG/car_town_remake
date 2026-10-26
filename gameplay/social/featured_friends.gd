@@ -138,7 +138,7 @@ static func _load(id: String) -> Dictionary:
 		"stats": {
 			"wins": SaveSafe.i(profile.get("wins", 0)),
 			"races": SaveSafe.i(profile.get("races", 0)),
-			"cars": VehicleOwnership.collection_ids().size(),
+			"cars": CollectionRewards.total_count(),
 			"best": int(round(DragRaceSim.base_time(StringName(best_car)) * 1000.0)) if not best_car.is_empty() else 0,
 			"best_car": best_car,
 		},

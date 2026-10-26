@@ -7,6 +7,9 @@
 - **Sayılan araçlar:** edinilebilir bütün katalog = kasa araçları + hurdalık klasikleri (72). Bir kez SAHİP OLMAK yeter
   (keşif: sonra satılsa da sayılır). KOLEKSİYONCU görevleri eskisi gibi yalnız kasa araçlarını sayar
   (`VehicleOwnership.discovered_count`).
+- **Profilde ve arkadaş listesinde de 72 (2026-10-26):** profil kartı, ARKADAŞLAR kartları ve öne çıkanlar
+  `CollectionRewards.total_count()` paydasını, yayınlanan `stats.cars` `CollectionRewards.found_count()`'u kullanır.
+  Eskiden "x / 44" (yalnız kasa araçları) görünüyordu; KOLEKSİYON panosu 72 diyordu.
 - **Setler:** `vehicles/crates.json` → `sets` (21 set; her edinilebilir araç en az bir sette). Hurdalık klasikleri için 8
   yeni set: ŞEHİR ARABALARI, SUV DÜNYASI, DOLMUŞ DURAĞI, AVRUPA MİNİKLERİ, YOL VE MACERA, AMERİKAN KASLILARI,
   ALTIN ÇAĞ GT, RALLİ EFSANELERİ; YERLİ KLASİKLER'e Murat 124/131 + Anadol, BAVYERA'ya M3 E30, SICAK KOMPAKT'a Formentor.

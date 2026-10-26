@@ -2612,5 +2612,14 @@
  "İLK 3'E %s sn KALDI": "A %s s DEL TOP 3",
  "İZLE": "VER",
  "İZLENİYOR · %s · %s sn": "VIENDO · %s · %s s",
- "ŞU AN ÖDÜL KADEMESİNDESİN": "ESTÁS EN UN NIVEL CON PREMIO"
+ "ŞU AN ÖDÜL KADEMESİNDESİN": "ESTÁS EN UN NIVEL CON PREMIO",
+ "%d KEZ İLK 100": "%d VECES TOP 100",
+ "%d KEZ İLK 3": "%d VECES TOP 3",
+ "%d OYUNCU ARASINDA": "ENTRE %d JUGADORES",
+ "%s · TABLO DERECELERİ": "%s · PUESTOS EN LA TABLA",
+ "EN İYİSİ %d.": "MEJOR: %dº",
+ "TABLO DERECELERİ": "PUESTOS EN LA TABLA",
+ "TÜMÜ ›": "TODOS ›",
+ "Yalnız ilk 100'e girilen haftalar saklanır.": "Solo se guardan las semanas en el top 100.",
+ "İLK 100": "TOP 100"
 }

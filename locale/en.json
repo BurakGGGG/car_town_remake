@@ -2612,5 +2612,14 @@
  "İLK 3'E %s sn KALDI": "%s s TO THE TOP 3",
  "İZLE": "WATCH",
  "İZLENİYOR · %s · %s sn": "WATCHING · %s · %s s",
- "ŞU AN ÖDÜL KADEMESİNDESİN": "YOU'RE IN A REWARD TIER"
+ "ŞU AN ÖDÜL KADEMESİNDESİN": "YOU'RE IN A REWARD TIER",
+ "%d KEZ İLK 100": "%d× TOP 100",
+ "%d KEZ İLK 3": "%d× TOP 3",
+ "%d OYUNCU ARASINDA": "AMONG %d PLAYERS",
+ "%s · TABLO DERECELERİ": "%s · BOARD RECORDS",
+ "EN İYİSİ %d.": "BEST #%d",
+ "TABLO DERECELERİ": "BOARD RECORDS",
+ "TÜMÜ ›": "ALL ›",
+ "Yalnız ilk 100'e girilen haftalar saklanır.": "Only weeks in the top 100 are kept.",
+ "İLK 100": "TOP 100"
 }

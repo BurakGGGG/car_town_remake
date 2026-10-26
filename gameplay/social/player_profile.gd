@@ -396,7 +396,7 @@ func stats() -> Dictionary:
 			out["best_car"] = String(best["vehicle"])
 	var ownership: VehicleOwnership = get_tree().get_first_node_in_group("vehicle_ownership") as VehicleOwnership
 	if ownership:
-		out["cars"] = ownership.discovered_count()
+		out["cars"] = CollectionRewards.found_count(ownership)   # KOLEKSİYON panosuyla aynı: kasa + hurdalık klasikleri
 	if likes > 0:
 		out["likes"] = likes   # yalnız varken: beğeni kuralı yüklenmeden önceki sunucu bu alanı reddederdi
 	return out

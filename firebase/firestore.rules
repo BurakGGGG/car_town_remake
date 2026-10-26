@@ -150,6 +150,13 @@ service cloud.firestore {
       allow get: if true;
     }
 
+    // lb_hist/{uid}: profildeki tablo dereceleri {uid, recs: [{wk, cls, rank, count, tier, time, car, paint, stage}], updated}
+    // (kullanıcı kararı 2026-10-26: ödenen haftada yalnız ilk 100'ün kaydı kalır, dereceleri profilde durur). YALNIZ sunucu
+    // (lbWeekly) yazar; herkes kimlikle okur (oturumsuz REST: arkadaşın / ziyaret edilen garajın profili). Liste kapalı.
+    match /lb_hist/{uid} {
+      allow get: if true;
+    }
+
     // ARKADAŞ KODU → UID. Kod bir kez alınır (üzerine yazılamaz), yalnızca sahibi siler.
     match /codes/{code} {
       allow get: if signedIn();

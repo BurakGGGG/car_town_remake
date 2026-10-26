@@ -2,7 +2,8 @@ extends SceneTree
 ## HAFTALIK DRAG TABLOSU görsel denetimi (2026-10-26, taslak B): telefon tuvalinde (1152x648 + content_scale 1,35 = 853x480;
 ## geniş 1440x648 → 1067x480) DÜNYA tablosu (podyum + liste + kendi satırın + ödül kademeleri), misafir hâli ve İZLE
 ## (izleme kipi), HARİTA'daki DRAG PİSTİ noktası ve yarış sonucu şeridi. Ağ yok: özet belgesi Leaderboard.inject ile verilir.
-## Kip (betik argümanı): hesap | misafir | izle | harita | sonuc.
+## Kip (betik argümanı): hesap | misafir | izle | harita | sonuc | profil (TABLO DERECELERİ şeridi + liste + İZLE dönüşü,
+## arkadaş kartı).
 ##   CT_NO_TUTORIAL=1 tools/qa_isolated.sh res://qa/lider_tablosu_qa.gd --resolution 1152x648 --display-driver x11 -- hesap
 ## Kareler ~/Projects/ct_shots/lider_tablosu/.
 
@@ -82,6 +83,9 @@ func _run() -> void:
 	if mode == "sonuc":
 		await _result(hud)
 		return
+	if mode == "profil":
+		await _profile(hud, board, wk)
+		return
 	hud.open_leaderboard(&"A")
 	await create_timer(1.6).timeout
 	check(hud.leaderboard_screen.visible, "tablo açık")
@@ -128,6 +132,63 @@ func _map(hud: Hud) -> void:
 	await create_timer(1.2).timeout
 	check(hud.router.top() == &"leaderboard" and hud.router.is_open(&"map"), "tablo haritanın üstünde (%s)" % hud.router.top())
 	await shot("02_haritadan_tablo")
+	_finish()
+
+
+static func sample_history(wk: int) -> Dictionary:
+	var recs: Array = []
+	for r: Array in [[1, &"A", 2, 312, "top3", 9.12, "mercedes_cls"], [2, &"A", 1, 288, "top3", 9.08, "mercedes_cls"],
+			[2, &"S", 7, 96, "p10", 7.41, "lambo_huracan"], [3, &"B", 3, 140, "top3", 10.02, "bmw_e46"],
+			[5, &"A", 64, 201, "p50", 9.87, "bmw_e60"], [6, &"C", 88, 170, "", 11.4, "vw_golf_7"]]:
+		recs.append({"wk": wk - int(r[0]), "cls": String(r[1]), "rank": r[2], "count": r[3], "tier": r[4], "time": r[5],
+			"car": r[6], "paint": "", "stage": 3})
+	return {"uid": "me_uid", "recs": recs}
+
+
+## PROFİL: kartta TABLO DERECELERİ şeridi, TÜMÜ → liste (ALT PANO), İZLE → pist → bitince listeye dönüş; arkadaş kartı.
+func _profile(hud: Hud, board: Leaderboard, wk: int) -> void:
+	board.inject("lb_hist/me_uid", sample_history(wk))
+	hud.router.open(&"profile")
+	await create_timer(1.4).timeout
+	var strip: Control = hud.profile_screen.find_child("LbRecords", true, false) as Control
+	check(strip != null and strip.visible, "profil kartında TABLO DERECELERİ şeridi")
+	var view: Rect2 = root.get_visible_rect()
+	var card: Control = hud.profile_screen.find_child("Card", true, false) as Control
+	check(card != null and view.encloses(card.get_global_rect()), "profil kartı ekrana sığıyor (%s)" % [card.get_global_rect() if card else Rect2()])
+	await shot("01_profil")
+	(hud.profile_screen.find_child("Card", true, false) as ProfileCard).request_records()
+	await create_timer(1.0).timeout
+	check(hud.router.top() == &"lb_records" and hud.router.is_open(&"profile"), "TÜMÜ: liste profilin üstünde (%s)" % hud.router.top())
+	var rows: int = 0
+	for child: Node in hud.lb_records_screen.find_children("Record_*", "PanelContainer", true, false):
+		rows += 1
+	check(rows == 6, "6 derece satırı (%d)" % rows)
+	await shot("02_dereceler")
+	var rec: DragRaceSim.Recording = DragRaceSim.ai_recording(&"mercedes_cls", {&"motor": 5, &"turbo": 5},
+		DragRaceSim.roll_form(&"mercedes_cls", null), RandomNumberGenerator.new())
+	board.inject("lb_runs/" + Leaderboard.doc_id(wk - 1, &"A", "me_uid"), {"run": JSON.stringify(rec.to_dict())})
+	(hud.lb_records_screen.find_child("Watch_%d_A" % (wk - 1), true, false) as PlateButton).pressed.emit()
+	await create_timer(3.0).timeout
+	check(hud.router.top() == &"drag_race", "İZLE: pist izleme kipinde")
+	await create_timer(22.0).timeout
+	check(hud.router.top() == &"lb_records" and hud.router.is_open(&"profile"), "izleme bitince listeye dönüldü (%s)" % hud.router.top())
+	await shot("03_izleme_donus")
+	# Arkadaş kartı: aynı kart, arkadaşın dereceleri
+	var social: SocialManager = get_first_node_in_group("social") as SocialManager
+	social.friends.append({"uid": "f1", "name": "Elif", "code": "ABC123", "level": 24, "av": "p03", "frame": "", "flag": "TR",
+		"ask_part": "", "ask_at": 0, "stats": {"wins": 30, "races": 41, "cars": 37, "best": 9120, "best_car": "mercedes_cls"}})
+	var other: Dictionary = sample_history(wk)
+	other["uid"] = "f1"
+	board.inject("lb_hist/f1", other)
+	hud.router.close_all()
+	hud.router.open(&"friends")
+	await create_timer(0.8).timeout
+	check(hud.friend_card_screen.show_for("f1"), "arkadaş kartı")
+	hud.router.open(&"friend_card")
+	await create_timer(1.2).timeout
+	var friend_strip: Control = hud.friend_card_screen.find_child("LbRecords", true, false) as Control
+	check(friend_strip != null and friend_strip.visible, "arkadaş kartında şerit")
+	await shot("04_arkadas_karti")
 	_finish()
 
 

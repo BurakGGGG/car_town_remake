@@ -2612,5 +2612,14 @@
  "İLK 3'E %s sn KALDI": "ENCORE %s s POUR LE TOP 3",
  "İZLE": "REVOIR",
  "İZLENİYOR · %s · %s sn": "EN LECTURE · %s · %s s",
- "ŞU AN ÖDÜL KADEMESİNDESİN": "TU ES DANS UN PALIER RÉCOMPENSÉ"
+ "ŞU AN ÖDÜL KADEMESİNDESİN": "TU ES DANS UN PALIER RÉCOMPENSÉ",
+ "%d KEZ İLK 100": "%d× TOP 100",
+ "%d KEZ İLK 3": "%d× TOP 3",
+ "%d OYUNCU ARASINDA": "PARMI %d JOUEURS",
+ "%s · TABLO DERECELERİ": "%s · CLASSEMENTS",
+ "EN İYİSİ %d.": "MEILLEUR : %de",
+ "TABLO DERECELERİ": "CLASSEMENTS",
+ "TÜMÜ ›": "TOUT ›",
+ "Yalnız ilk 100'e girilen haftalar saklanır.": "Seules les semaines dans le top 100 sont conservées.",
+ "İLK 100": "TOP 100"
 }

@@ -15,6 +15,8 @@ extends Control
 signal closed
 ## Bir ayrıntı ekranı istendi (UiRouter bu id'yi açar).
 signal screen_requested(id: StringName)
+## Kartın TABLO DERECELERİ şeridinde TÜMÜ: {uid, name, recs}.
+signal records_requested(info: Dictionary)
 
 const PLATE_WIDTH: float = ProfileCard.CARD_WIDTH
 const NAV_WIDTH: float = (PLATE_WIDTH - 6.0) * 0.5
@@ -83,6 +85,7 @@ func _build() -> void:
 
 	_card = ProfileCard.new()
 	_card.name = "Card"
+	_card.records_requested.connect(records_requested.emit)
 	column.add_child(_card)
 	_edit_button = PlateButton.new()
 	_edit_button.name = "EditButton"

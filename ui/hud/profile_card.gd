@@ -8,6 +8,13 @@ extends PlatePanel
 ## best_car}, featured, garages{own, cap}}. `garages` (GARAJLARIM özeti, PublicGarage.car_garage_summary) yoksa garaj
 ## şeridi gizlenir (eski sürümdeki arkadaş, öne çıkan garajlar). SocialManager arkadaş girdileri, FeaturedFriends.all() ve me() aynı biçimdedir.
 ## `actions`: kartın sağ altındaki boş sütun; ekran kendi düğmesini (DÜZENLE) koyar.
+## TABLO DERECELERİ şeridi (taslak A, kullanıcı 2026-10-26): kişinin haftalık drag tablosunda ilk 100'e girdiği haftalar
+## (Leaderboard.history_of, lb_hist/{uid}) varsa istatistiklerin altında koyu şerit: en iyi derece + sınıf + hafta, kaç kez
+## ilk 100 / ilk 3. Şeridin TAMAMI dokunulur ("TÜMÜ ›"; kendi profilinde bilgi sütunu dar: plaka düğme yazıları kesiyordu)
+## → records_requested (DERECELER listesi). Derecesi yoksa / öne çıkan kişide / listeyi açan ekran yoksa görünmez.
+
+## TÜMÜ: {uid (sunucudaki kimlik), name, recs}.
+signal records_requested(info: Dictionary)
 
 const CARD_WIDTH: float = 500.0
 const AVATAR_SIZE: float = 116.0
@@ -31,6 +38,14 @@ var _best_caption: Label
 var _thumb: TextureRect
 var _car_name: Label
 var _person: Dictionary = {}
+var _records: PanelContainer
+var _rec_rank: Label
+var _rec_class: Label
+var _rec_week: Label
+var _rec_counts: Label
+var _recs: Array[Dictionary] = []
+var _rec_uid: String = ""
+var _rec_gen: int = 0
 
 
 func _init() -> void:
@@ -123,6 +138,7 @@ func _init() -> void:
 	info.add_child(grid)
 	_best_caption = _label(&"HudInkCaption", "")
 	info.add_child(_best_caption)
+	_build_records(info)
 
 	var side: VBoxContainer = VBoxContainer.new()
 	side.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -146,6 +162,120 @@ func _init() -> void:
 	actions.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	actions.alignment = BoxContainer.ALIGNMENT_END
 	side.add_child(actions)
+
+
+## Koyu şerit (tablo ekranının ödül şeridi dili): kupa · başlık / en iyi derece / sayılar · TÜMÜ.
+func _build_records(parent: Control) -> void:
+	_records = PanelContainer.new()
+	_records.name = "LbRecords"
+	_records.mouse_filter = Control.MOUSE_FILTER_STOP
+	_records.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_records.visible = false
+	_records.gui_input.connect(func(event: InputEvent) -> void:
+		var tap: InputEventMouseButton = event as InputEventMouseButton
+		if tap and tap.button_index == MOUSE_BUTTON_LEFT and not tap.pressed:
+			request_records())
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = LeaderboardScreen.DARK
+	style.border_color = HudPalette.PLATE_SELECTED
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(9)
+	style.content_margin_left = 8.0
+	style.content_margin_right = 6.0
+	style.content_margin_top = 3.0
+	style.content_margin_bottom = 4.0
+	_records.add_theme_stylebox_override(&"panel", style)
+	parent.add_child(_records)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override(&"separation", 7)
+	_records.add_child(row)
+	var trophy: HudIcon = HudIcon.new()
+	trophy.kind = HudIcon.Kind.TROPHY
+	trophy.color = HudPalette.COIN
+	trophy.icon_size = 22.0
+	trophy.custom_minimum_size = Vector2(24.0, 24.0)
+	trophy.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(trophy)
+	var texts: VBoxContainer = VBoxContainer.new()
+	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	texts.add_theme_constant_override(&"separation", -2)
+	row.add_child(texts)
+	texts.add_child(_dark_label(Loc.t("TABLO DERECELERİ"), 10, HudPalette.PLATE_SELECTED))
+	var best: HBoxContainer = HBoxContainer.new()
+	best.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	best.add_theme_constant_override(&"separation", 5)
+	texts.add_child(best)
+	_rec_rank = _dark_label("", 18, HudPalette.TEXT_LIGHT)
+	best.add_child(_rec_rank)
+	var pill: PanelContainer = PanelContainer.new()
+	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var pill_box: StyleBoxFlat = StyleBoxFlat.new()
+	pill_box.bg_color = HudPalette.PLATE_SELECTED
+	pill_box.set_corner_radius_all(4)
+	pill_box.content_margin_left = 4.0
+	pill_box.content_margin_right = 4.0
+	pill.add_theme_stylebox_override(&"panel", pill_box)
+	_rec_class = _dark_label("", 10, HudPalette.INK)
+	pill.add_child(_rec_class)
+	best.add_child(pill)
+	_rec_week = _dark_label("", 10, HudPalette.SIDEWALK)
+	_rec_week.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_rec_week.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_rec_week.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	best.add_child(_rec_week)
+	_rec_counts = _dark_label("", 10, HudPalette.SIDEWALK)
+	_rec_counts.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	texts.add_child(_rec_counts)
+	var all: Label = _dark_label(Loc.t("TÜMÜ ›"), 11, HudPalette.PLATE_SELECTED)
+	all.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(all)
+
+
+## DERECELER listesi istenir (şeride dokunuş; testler de çağırır).
+func request_records() -> void:
+	if _recs.is_empty():
+		return
+	records_requested.emit({"uid": _rec_uid, "name": _name.text, "recs": _recs.duplicate()})
+
+
+## Kişinin dereceleri sunucudan (öne çıkan kişide yok). Kişi bu arada değiştiyse eski cevap atılır.
+func _load_records(entry: Dictionary) -> void:
+	_rec_gen += 1
+	var gen: int = _rec_gen
+	_records.visible = false
+	_recs = []
+	var uid: String = SaveSafe.s(entry.get("uid", ""))
+	if uid == ME:
+		var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
+		uid = social.uid() if social else ""
+	_rec_uid = uid if not FeaturedFriends.is_featured(uid) else ""
+	var board: Leaderboard = get_tree().get_first_node_in_group("leaderboard") as Leaderboard
+	if _rec_uid.is_empty() or board == null or records_requested.get_connections().is_empty():
+		return   # listeyi açan ekran yok (davet kartı): şerit de yok
+	var recs: Array[Dictionary] = await board.history_of(_rec_uid)
+	if gen != _rec_gen or recs.is_empty():
+		return
+	_recs = recs
+	var summary: Dictionary = Leaderboard.history_summary(recs)
+	var best: Dictionary = summary["best"]
+	_rec_rank.text = "%d." % int(best["rank"])
+	_rec_class.text = String(best["cls"])
+	_rec_week.text = Leaderboard.week_text(int(best["wk"]))
+	var counts: String = Loc.t("%d KEZ İLK 100") % int(summary["count"])
+	if int(summary["top3"]) > 0:
+		counts += " · " + Loc.t("%d KEZ İLK 3") % int(summary["top3"])
+	_rec_counts.text = counts
+	_records.visible = true
+
+
+func _dark_label(text: String, font_size: int, color: Color) -> Label:
+	var label: Label = _label(&"HudInkValue", text)
+	label.add_theme_font_size_override(&"font_size", font_size)
+	label.add_theme_color_override(&"font_color", color)
+	return label
 
 
 ## Gösterilen kişi (son show_person).
@@ -180,7 +310,7 @@ func show_person(entry: Dictionary) -> void:
 	var races: int = SaveSafe.i(stats.get("races", 0))
 	var wins: int = SaveSafe.i(stats.get("wins", 0))
 	_stats["races"].text = Loc.t("%d GALİBİYET") % wins if races > 0 else "–"
-	_stats["cars"].text = "%d / %d" % [SaveSafe.i(stats.get("cars", 0)), VehicleOwnership.collection_ids().size()]
+	_stats["cars"].text = "%d / %d" % [SaveSafe.i(stats.get("cars", 0)), CollectionRewards.total_count()]
 	var best: int = SaveSafe.i(stats.get("best", 0))
 	_stats["best"].text = Loc.t("%s sn") % Loc.decimal(best / 1000.0, 2) if best > 0 else "–"
 	var likes: int = SaveSafe.i(stats.get("likes", 0))
@@ -198,6 +328,8 @@ func show_person(entry: Dictionary) -> void:
 	var thumb_path: String = THUMB_DIR + car_id + ".png"
 	_thumb.texture = load(thumb_path) as Texture2D if not car.is_empty() and ResourceLoader.exists(thumb_path) else null
 	_car_name.text = CarCatalog.label(car) if not car.is_empty() else Loc.t("SEÇİLMEDİ")
+	if is_inside_tree():
+		_load_records(entry)
 
 
 ## "UÇAK HANGARI · 5 GARAJ · 64 YER" (özet boşsa ""). Dar sütun (≈240 birim): tek boşluklu ayraç, kısa birim.

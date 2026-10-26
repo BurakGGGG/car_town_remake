@@ -13,6 +13,8 @@ extends Control
 signal closed
 ## Başka bir ekran istendi.
 signal screen_requested(id: StringName)
+## Kartın TABLO DERECELERİ şeridinde TÜMÜ: {uid, name, recs}.
+signal records_requested(info: Dictionary)
 
 enum Mode { FEATURED, FRIEND, INCOMING, OUTGOING }
 
@@ -99,6 +101,7 @@ func _build() -> void:
 	center.add_child(_column)
 	_card = ProfileCard.new()
 	_card.name = "Card"
+	_card.records_requested.connect(records_requested.emit)
 	_column.add_child(_card)
 	_score_plate = PlatePanel.new()
 	_score_plate.name = "ScorePlate"

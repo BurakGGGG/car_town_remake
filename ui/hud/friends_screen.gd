@@ -886,7 +886,7 @@ func _stats(entry: Dictionary) -> PanelContainer:
 	var rows: Array[Array] = [
 		[Loc.t("ARANIZDA"), "%d–%d" % [score.x, score.y] if score.x + score.y > 0 else "–", score_color],
 		[Loc.t("KAZANMA"), Loc.percent(str(roundi(100.0 * wins / races))) if races > 0 else "–", HudPalette.INK],
-		[Loc.t("KOLEKSİYON"), "%d/%d" % [cars, VehicleOwnership.collection_ids().size()] if cars > 0 else "–",
+		[Loc.t("KOLEKSİYON"), "%d/%d" % [cars, CollectionRewards.total_count()] if cars > 0 else "–",
 			HudPalette.INK],
 		[Loc.t("EN İYİ 300 M"), Loc.t("%s sn") % Loc.decimal(best / 1000.0, 2) if best > 0 else "–", HudPalette.INK],
 	]

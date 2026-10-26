@@ -103,6 +103,9 @@ var event_screen: EventScreen
 var leaderboard_screen: LeaderboardScreen
 ## İZLE'den sonra tablo bu sınıfla yeniden açılır.
 var _watch_return_class: StringName = &""
+## Profilde / arkadaş kartında TABLO DERECELERİ listesi (ALT PANO). İZLE bu listeden açıldıysa dönüş buraya.
+var lb_records_screen: LbRecordsScreen
+var _watch_from_records: bool = false
 var quest_button: PlateButton
 ## Kodla kurulan ARKADAŞLAR tabelası ve onu açan plaka (alt sırada, GÖREVLER'in yanında).
 var friends_screen: FriendsScreen
@@ -1900,6 +1903,13 @@ func _setup_gem_store() -> void:
 		router.close_all()
 		router.open(&"account"))
 	drag_race_screen.watch_finished.connect(_on_watch_finished)
+	lb_records_screen = LbRecordsScreen.new()
+	garage_screen.get_parent().add_child(lb_records_screen)
+	router.register(&"lb_records", lb_records_screen, UiRouter.Kind.SUB)
+	lb_records_screen.watch_requested.connect(func(info: Dictionary) -> void:
+		_watch_leaderboard_run(info, true))
+	profile_screen.records_requested.connect(_open_lb_records.bind(&"profile"))
+	friend_card_screen.records_requested.connect(_open_lb_records.bind(&"friends"))
 	var board: Leaderboard = get_tree().get_first_node_in_group("leaderboard") as Leaderboard
 	if board:
 		board.submitted.connect(_on_leaderboard_submitted)
@@ -2551,8 +2561,15 @@ func open_leaderboard(cls: StringName = &"") -> void:
 	router.open(&"leaderboard")
 
 
-## İZLE: tablodaki koşu indirilir, pist izleme kipinde açılır (yalnız izlenir; bitince tabloya dönülür).
-func _watch_leaderboard_run(info: Dictionary) -> void:
+## TABLO DERECELERİ listesi profilin / arkadaş kartının üstüne açılır. origin: izlemeden dönüşte açılacak ana pano.
+func _open_lb_records(info: Dictionary, origin: StringName) -> void:
+	lb_records_screen.origin = origin
+	lb_records_screen.show_records(info)
+	router.open(&"lb_records")
+
+
+## İZLE: tablodaki koşu indirilir, pist izleme kipinde açılır (yalnız izlenir; bitince tabloya / derece listesine dönülür).
+func _watch_leaderboard_run(info: Dictionary, from_records: bool = false) -> void:
 	var board: Leaderboard = get_tree().get_first_node_in_group("leaderboard") as Leaderboard
 	if board == null or drag_race_screen == null:
 		return
@@ -2562,6 +2579,7 @@ func _watch_leaderboard_run(info: Dictionary) -> void:
 		_show_notice(Loc.t("Bu koşu şu an açılamadı."), HudPalette.INK, 2.0)
 		return
 	_watch_return_class = StringName(info.get("cls", ""))
+	_watch_from_records = from_records
 	drag_race_screen.watch_recording = recording
 	drag_race_screen.watch_name = String(info.get("name", ""))
 	router.close_all()
@@ -2584,7 +2602,11 @@ func _on_watch_finished() -> void:
 	await get_tree().create_timer(1.8).timeout
 	if router.is_open(&"drag_race"):
 		router.close_all()
-		open_leaderboard(_watch_return_class)
+		if _watch_from_records and lb_records_screen.origin != &"":
+			router.open(lb_records_screen.origin)   # liste verisini tutar: ana panonun üstüne yeniden açılır
+			router.open(&"lb_records")
+		else:
+			open_leaderboard(_watch_return_class)
 
 
 ## ETKİNLİK YARIŞI: süren etkinliğin aracıyla (ödünç ya da zaten oyuncunun) o aracın havuzundan isimsiz rakibe karşı pist

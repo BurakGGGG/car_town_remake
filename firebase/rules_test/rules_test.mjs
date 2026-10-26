@@ -491,6 +491,10 @@ await check("özetler listelenemez", assertFails(getDocs(collection(anon, "lb"))
 await check("özete istemci yazamaz", assertFails(setDoc(doc(alice, `lb/${lbWk}_C`), { count: 0 })));
 await check("özeti istemci güncelleyemez", assertFails(updateDoc(doc(alice, `lb/${lbWk}_C`), { count: 0 })));
 await check("sunucu defteri kapalı", assertFails(getDoc(doc(alice, `lb_counted/${lbWk}_C_alice`))));
+await check("profil dereceleri herkese okunur (oturumsuz da)", assertSucceeds(getDoc(doc(anon, "lb_hist/alice"))));
+await check("profil derecelerine sahibi yazamaz", assertFails(setDoc(doc(alice, "lb_hist/alice"), { uid: "alice", recs: [] })));
+await check("profil derecelerini sahibi silemez", assertFails(deleteDoc(doc(alice, "lb_hist/alice"))));
+await check("profil dereceleri listelenemez", assertFails(getDocs(collection(anon, "lb_hist"))));
 await check("lbnews: sahibi listeler", assertSucceeds(getDocs(collection(alice, "users/alice/lbnews"))));
 await check("lbnews: sahibi okur", assertSucceeds(getDoc(doc(alice, `users/alice/lbnews/${lbWk}_C_bob`))));
 await check("lbnews: başkası okuyamaz", assertFails(getDoc(doc(bob, `users/alice/lbnews/${lbWk}_C_bob`))));

@@ -2,7 +2,8 @@ extends SceneTree
 ## HAFTALIK DRAG LİDER TABLOSU (2026-10-26, docs/LIDER_TABLOSU.md) — oyun tarafı: hafta hesabı (Pazartesi 00:00 Türkiye,
 ## sunucuyla aynı), belge kimlikleri, sıra (süre kovaları), ödül kademesi, bir üst kademeye kalan fark, yarış sonrası yazım
 ## (misafir yazmaz; ilk kayıt / daha yavaş koşu / iyileşme; belge kuralın 13 alanı), OTO MANŞET "seni tabloda geçti" haberi
-## (gazetede çıkar, gösterilince sunucudan silinir; artık arkadaş olmayanınki atılır).
+## (gazetede çıkar, gösterilince sunucudan silinir; artık arkadaş olmayanınki atılır), profildeki dereceler (lb_hist okuma,
+## hafta metni, özet).
 ## Çalıştırma: tools/run_tests.sh leaderboard_test
 var fails: int = 0
 
@@ -195,6 +196,24 @@ func _run() -> void:
 		"gösterilince sunucudan silindi")
 	check(social.news_items(monday - 3600).filter(func(i: Dictionary) -> bool: return i["kind"] == NewsDigest.LB_PASSED).is_empty(),
 		"tekrar çıkmaz")
+
+	print("== 5) Profildeki dereceler (yalnız ilk 100) ==")
+	check(Leaderboard.week_start(2965) == monday and Leaderboard.week_text(2964) == "19–25 EKİM"
+		and Leaderboard.week_text(2965) == "26 EKİM – 1 KASIM", "hafta metni (%s / %s)" % [Leaderboard.week_text(2964), Leaderboard.week_text(2965)])
+	board.inject("lb_hist/f1", {"uid": "f1", "recs": [
+		{"wk": 2960, "cls": "A", "rank": 12, "count": 90, "tier": "p50", "time": 9.5, "car": "bmw_e46", "paint": "", "stage": 2},
+		{"wk": 2964, "cls": "S", "rank": 3, "count": 40, "tier": "top3", "time": 7.4, "car": "lambo_huracan", "paint": "", "stage": 5},
+		{"wk": 2964, "cls": "A", "rank": 1, "count": 300, "tier": "top3", "time": 9.0, "car": "bmw_e46", "paint": "", "stage": 5},
+		{"wk": 2963, "cls": "X", "rank": 1, "count": 3},   # sınıfsız: atılır
+		{"wk": 2962, "cls": "B", "rank": 140, "count": 300},   # ilk 100 dışı: atılır
+		"bozuk"]})
+	var hist: Array[Dictionary] = await board.history_of("f1")
+	check(hist.size() == 3 and hist[0]["cls"] == &"A" and hist[1]["cls"] == &"S" and int(hist[2]["wk"]) == 2960,
+		"okunur: en yeni hafta önce, aynı haftada iyi sıra önce, biçimsiz satır atılır")
+	var sum: Dictionary = Leaderboard.history_summary(hist)
+	check(int(sum["count"]) == 3 and int(sum["top3"]) == 2 and int(sum["best"]["rank"]) == 1 and int(sum["best"]["wk"]) == 2964,
+		"özet: 3 kez ilk 100, 2 kez ilk 3, en iyisi 1.")
+	check((await board.history_of("yok")).is_empty() and (await board.history_of("")).is_empty(), "derecesi olmayan: boş")
 
 	Leaderboard.test_now = -1
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Leaderboard.FILE))

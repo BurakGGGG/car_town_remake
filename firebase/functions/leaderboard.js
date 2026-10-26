@@ -12,6 +12,10 @@
 //   pushed: bu koşunun sahibinin bu hafta bu sınıfta GEÇTİĞİ için bildirim gönderilen arkadaşlar (çift başına haftada bir).
 // users/{arkadaş}/lbnews/{wk}_{cls}_{uid}  "X seni geçti" haberi (OTO MANŞET; sahibi okur / siler)
 // users/{uid}/mail/lb_{wk}_{cls}  haftalık ödül postası (mevcut posta biçimi; bildirimi mailPush gönderir)
+// lb_hist/{uid}             PROFİLDEKİ DERECELER (kullanıcı kararı 2026-10-26: "yalnız ilk 100'ün kayıtları profillerinde
+//   dursun"): {uid, recs: [{wk, cls, rank, count, tier, time, car, paint, stage}] (en yeni HIST_MAX), updated}. Yalnız sunucu
+//   yazar, herkes okur. Ödenen haftanın İLK 100 dışındaki koşuları (ve defterleri) silinir (pruneWeek); ilk 100'ün koşusu İZLE
+//   için kalır. Ödenmiş hafta DONAR: özetin sayısı / kovaları bir daha değişmez (bkz. handleRunWritten).
 
 const CLASSES = ["D", "C", "B", "A", "S"];
 const TIERS = ["top3", "p10", "p50"];
@@ -26,6 +30,11 @@ const REWARD_GEMS_MAX = 1000;
 // Zamanlayıcı her pazartesi ödenmemiş son iki haftaya bakar: bir tur kaçsa da (dağıtım / hata) ödül bir sonrakinde gider
 const PAY_WEEKS_BACK = 2;
 const PAY_SLACK = 20;
+// Ödenen haftada koşusu kalan (profile derecesi yazılan) oyuncu sayısı (sınıf başına, DÜNYA sırası)
+const KEEP = 100;
+// Profilde tutulan derece sayısı (en yeniler)
+const HIST_MAX = 40;
+const PRUNE_PAGE = 300;
 const ID_RE = /^([0-9]{1,6})_([DCBAS])_([A-Za-z0-9]{1,128})$/;
 const CRATE_RE = /^[a-z0-9_]{0,40}$/;
 const ENTRY_FIELDS = ["uid", "name", "av", "flag", "level", "car", "paint", "stage", "time", "at"];
@@ -318,6 +327,15 @@ async function notifyOvertaken({ db, messaging, id, parsed, entry, oldTime, now 
 async function handleRunWritten({ db, messaging, id, before, after, now, limits = LIMITS, classes = CAR_CLASSES }) {
   const parsed = parseId(id);
   if (!parsed) return "skip";
+  if (!after) {
+    // Ödenmiş (donmuş) hafta: özetin sayısı / kovaları değişmez. Budamanın sildiği koşunun defteri de silinmiştir: iş yok.
+    // Defteri olan (ilk 100'de kalmış) koşu panelden / hesap silmeyle gidiyorsa: profildeki derecesi ve listelerdeki adı düşer.
+    const sum = await db.doc(`lb/${summaryId(parsed.wk, parsed.cls)}`).get();
+    if (sum.exists && (sum.data() || {}).paid === true) {
+      const hint = before && typeof before.flag === "string" && /^[A-Z]{2}$/.test(before.flag) ? before.flag : "";
+      return (await forgetFrozen({ db, id, parsed, flag: hint })) ? "frozen:forgot" : "frozen";
+    }
+  }
   if (after) {
     const reason = checkRun(after, parsed, limits, classes);
     if (reason) {
@@ -334,6 +352,94 @@ async function handleRunWritten({ db, messaging, id, before, after, now, limits 
   if (!next || (prev && !(next.time < prev.time))) return "synced";
   const result = await notifyOvertaken({ db, messaging, id, parsed, entry: next, oldTime: prev ? prev.time : Infinity, now });
   return `improved news=${result.news} pushed=${result.pushed}`;
+}
+
+/**
+ * Donmuş haftadan silinen, ilk 100'de kalmış koşu: profildeki derecesi (lb_hist) ve dünya / ülke özetinin top listesindeki
+ * satırı çıkarılır, defteri silinir (sayı ve kovalar aynı kalır: geçmiş tablo). Defter yoksa (budanmış) false.
+ */
+async function forgetFrozen({ db, id, parsed, flag }) {
+  const { wk, cls, uid } = parsed;
+  const markerRef = db.doc(`lb_counted/${id}`);
+  const histRef = db.doc(`lb_hist/${uid}`);
+  const refs = ["", ...(flag ? [flag] : [])].map((cc) => db.doc(`lb/${summaryId(wk, cls, cc)}`));
+  return db.runTransaction(async (t) => {
+    const marker = await t.get(markerRef);
+    if (!marker.exists) return false;
+    const hist = await t.get(histRef);
+    const sums = [];
+    for (const ref of refs) sums.push(await t.get(ref));
+    if (hist.exists) {
+      const data = hist.data() || {};
+      const recs = Array.isArray(data.recs) ? data.recs : [];
+      const left = recs.filter((r) => !(r && r.wk === wk && r.cls === cls));
+      if (left.length !== recs.length) t.set(histRef, { ...data, recs: left });
+    }
+    sums.forEach((snap, i) => {
+      const top = snap.exists && Array.isArray((snap.data() || {}).top) ? snap.data().top : null;
+      if (top && top.some((e) => e && e.uid === uid)) t.update(refs[i], { top: top.filter((e) => e && e.uid !== uid) });
+    });
+    t.delete(markerRef);
+    return true;
+  });
+}
+
+/** Profildeki derece listesi: aynı hafta + sınıf yenisiyle değişir, en yeni hafta önce (eşitte iyi sıra), en çok HIST_MAX. */
+function mergeHist(recs, add) {
+  const keyOf = (r) => `${r.wk}_${r.cls}`;
+  const fresh = new Set(add.map(keyOf));
+  const out = (Array.isArray(recs) ? recs : []).filter((r) => r && typeof r === "object" && !fresh.has(keyOf(r))).concat(add);
+  out.sort((a, b) => b.wk - a.wk || a.rank - b.rank || (a.cls < b.cls ? -1 : a.cls > b.cls ? 1 : 0));
+  return out.slice(0, HIST_MAX);
+}
+
+/**
+ * Ödenmiş haftanın sınıf tablosunu budar: koşular süreye göre sayfa sayfa okunur; geçerli ilk KEEP koşu kalır ve derecesi
+ * sahibinin lb_hist'ine yazılır, gerisi (ve sınırı sonradan sıkılaşan geçersizler) defteriyle birlikte silinir. count: özetteki
+ * oyuncu sayısı (kademe). Defter koşuyla AYNI toplu yazmada silinir: silme tetikleyicisi özeti değiştirmez. Dönüş: {kept, deleted}.
+ */
+async function pruneWeek({ db, wk, cls, count, nowS, limits = LIMITS, classes = CAR_CLASSES, keep = KEEP, pageSize = PRUNE_PAGE }) {
+  const kept = [];
+  const doomed = [];
+  let rank = 0;
+  let last = null;
+  for (;;) {
+    let q = db.collection("lb_runs").where("wk", "==", wk).where("cls", "==", cls).orderBy("time");
+    if (last) q = q.startAfter(last);
+    const page = await q.limit(pageSize).select(...ENTRY_FIELDS, "wk", "cls").get();
+    for (const d of page.docs) {
+      const p = parseId(d.id);
+      const data = d.data();
+      if (p && !checkRun(data, p, limits, classes) && rank < keep) {
+        rank++;
+        kept.push({ uid: p.uid, rec: { wk, cls, rank, count, tier: tierFor(rank, count), time: Number(data.time),
+          car: str(data.car, 40), paint: str(data.paint, 7), stage: intOf(data.stage) } });
+      } else {
+        doomed.push(d.id);
+      }
+    }
+    if (page.docs.length < pageSize) break;
+    last = page.docs[page.docs.length - 1];
+  }
+  for (let i = 0; i < doomed.length; i += BATCH / 2) {
+    const batch = db.batch();
+    for (const id of doomed.slice(i, i + BATCH / 2)) {
+      batch.delete(db.doc(`lb_counted/${id}`));
+      batch.delete(db.doc(`lb_runs/${id}`));
+    }
+    await batch.commit();
+  }
+  for (let i = 0; i < kept.length; i += BATCH) {
+    const chunk = kept.slice(i, i + BATCH);
+    const snaps = await db.getAll(...chunk.map((k) => db.doc(`lb_hist/${k.uid}`)));
+    const batch = db.batch();
+    chunk.forEach((k, j) => {
+      const old = snaps[j].exists ? snaps[j].data() || {} : {};
+      batch.set(db.doc(`lb_hist/${k.uid}`), { uid: k.uid, recs: mergeHist(old.recs, [k.rec]), updated: nowS });
+    });
+    await batch.commit();
+  }
+  return { kept: kept.length, deleted: doomed.length };
 }
 
 // --- Haftalık ödül ---------------------------------------------------------------------------------------------------
@@ -409,24 +515,28 @@ function rewardMail({ wk, cls, rank, count, tier, reward, nowS }) {
 }
 
 /**
- * lbWeekly (Pazartesi 00:10 TR): geçen haftanın (ve kaçmış bir önceki haftanın) her sınıfı için DÜNYA özetine bakar; yoksa ya
- * da paid ise geçer. İlk ceil(count × 0.5) koşu süreye göre okunur, kademe tierFor ile; ödülü olan kademeye posta yazılır
- * (kimlik sabit: iki kez çalışsa da tek posta), sonda özete paid: true. db: {doc, collection, batch}. Dönüş: günlük özeti.
+ * lbWeekly (Pazartesi 00:10 TR): geçen haftanın (ve kaçmış bir önceki haftanın) her sınıfı için DÜNYA özetine bakar; yoksa
+ * geçer. Ödenmemişse: ilk ceil(count × 0.5) koşu süreye göre okunur, kademe tierFor ile; ödülü olan kademeye posta yazılır
+ * (kimlik sabit: iki kez çalışsa da tek posta), özete paid: true. Sonra budanmamışsa pruneWeek (ilk 100 kalır, dereceler
+ * profile), özete pruned: true. db: {doc, collection, batch, getAll}. Dönüş: günlük özeti.
  */
 async function payWeekly({ db, now, limits = LIMITS, classes = CAR_CLASSES }) {
   const nowS = Math.floor(now / 1000);
   const current = weekOf(nowS);
   const cfgSnap = await db.doc("config/app").get();
   const rewards = rewardsFrom(cfgSnap.exists ? cfgSnap.data() : {});
-  const result = { week: current, paid: [], mails: 0 };
+  const result = { week: current, paid: [], mails: 0, pruned: [] };
   for (let wk = current - PAY_WEEKS_BACK; wk < current; wk++) {
     for (const cls of CLASSES) {
       const ref = db.doc(`lb/${summaryId(wk, cls)}`);
       const snap = await ref.get();
       if (!snap.exists) continue;
       const sum = snap.data() || {};
-      if (sum.paid === true) continue;
       const count = Math.max(0, intOf(sum.count));
+      if (sum.paid === true) {
+        if (sum.pruned !== true) await prune(ref, wk, cls, count);
+        continue;
+      }
       const limit = Math.ceil(count * 0.5);
       const mails = [];
       if (limit > 0) {
@@ -453,13 +563,21 @@ async function payWeekly({ db, now, limits = LIMITS, classes = CAR_CLASSES }) {
       await ref.update({ paid: true, paid_at: nowS, paid_count: mails.length });
       result.paid.push(`${wk}_${cls}:${mails.length}/${count}`);
       result.mails += mails.length;
+      await prune(ref, wk, cls, count);
     }
   }
   return result;
+
+  async function prune(ref, wk, cls, count) {
+    const r = await pruneWeek({ db, wk, cls, count, nowS, limits, classes });
+    await ref.update({ pruned: true, pruned_at: nowS, kept: r.kept });
+    result.pruned.push(`${wk}_${cls}:${r.kept}+${r.deleted}`);
+  }
 }
 
 module.exports = {
-  CLASSES, TIERS, TOP_MAX, TIME_MIN, TIME_MAX, DEFAULT_REWARDS, REWARD_GEMS_MAX, PAY_WEEKS_BACK, LIMITS, CAR_CLASSES,
+  CLASSES, TIERS, TOP_MAX, TIME_MIN, TIME_MAX, DEFAULT_REWARDS, REWARD_GEMS_MAX, PAY_WEEKS_BACK, LIMITS, CAR_CLASSES, KEEP, HIST_MAX,
   weekOf, weekStart, parseId, bucketOf, summaryId, entryOf, checkRun, nextSummary, syncSummaries, topQuery,
-  overtakeMessage, overtaken, notifyOvertaken, handleRunWritten, rewardsFrom, tierFor, rewardMail, payWeekly,
+  overtakeMessage, overtaken, notifyOvertaken, handleRunWritten, rewardsFrom, tierFor, rewardMail, payWeekly, pruneWeek,
+  mergeHist, forgetFrozen,
 };

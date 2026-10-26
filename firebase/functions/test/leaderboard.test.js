@@ -31,19 +31,21 @@ function fakeDb(initial = {}) {
       async delete() { delete store[p]; },
     };
   }
-  function query(coll, filters = [], order = null, n = Infinity, fields = null) {
+  function query(coll, filters = [], order = null, n = Infinity, fields = null, after = null) {
     const q = {
       _query: true,
-      where: (f, op, v) => { assert.strictEqual(op, "=="); return query(coll, [...filters, [f, v]], order, n, fields); },
-      orderBy: (f) => query(coll, filters, f, n, fields),
-      limit: (k) => query(coll, filters, order, k, fields),
-      select: (...fs) => query(coll, filters, order, n, fs),
+      where: (f, op, v) => { assert.strictEqual(op, "=="); return query(coll, [...filters, [f, v]], order, n, fields, after); },
+      orderBy: (f) => query(coll, filters, f, n, fields, after),
+      limit: (k) => query(coll, filters, order, k, fields, after),
+      select: (...fs) => query(coll, filters, order, n, fs, after),
+      startAfter: (snap) => query(coll, filters, order, n, fields, snap.ref.path),
       _run() {
         const depth = coll.split("/").length + 1;
         let paths = Object.keys(store).filter((p) => p.startsWith(coll + "/") && p.split("/").length === depth)
           .filter((p) => filters.every(([f, v]) => store[p][f] === v));
         if (order) paths = paths.filter((p) => order in store[p]);
         paths.sort((a, b) => (order ? store[a][order] - store[b][order] : 0) || (a < b ? -1 : a > b ? 1 : 0));
+        if (after) paths = paths.slice(paths.indexOf(after) + 1);
         const docs = paths.slice(0, n).map((p) => {
           const s = snapOf(p);
           if (!fields) return s;
@@ -64,7 +66,8 @@ function fakeDb(initial = {}) {
     async getAll(...refs) { return refs.map((r) => { stats.reads++; return snapOf(r.path); }); },
     batch() {
       const ops = [];
-      return { set: (r, v) => ops.push(() => { store[r.path] = clone(v); }), async commit() { for (const op of ops) op(); } };
+      return { set: (r, v) => ops.push(() => { store[r.path] = clone(v); }), delete: (r) => ops.push(() => { delete store[r.path]; }),
+        async commit() { assert.ok(ops.length <= 500, "toplu yazma 500 sınırı"); for (const op of ops) op(); } };
     },
     // İşlem: okumalar anlık, yazmalar sonda; yazmadan sonra okuma Firestore'daki gibi hata
     async runTransaction(fn) {
@@ -437,5 +440,79 @@ test("haftalık ödül: özet yok / bu hafta / sınırı sonradan sıkılaşan k
   assert.ok(db.store[`users/old1/mail/lb_${WK - 2}_S`], "kaçmış hafta ödendi");
   assert.equal(r.paid.length, 2);
   const empty = fakeDb({});
-  assert.deepEqual(await pay(empty), { week: WK, paid: [], mails: 0 }, "özet yoksa hiçbir şey");
+  assert.deepEqual(await pay(empty), { week: WK, paid: [], mails: 0, pruned: [] }, "özet yoksa hiçbir şey");
+});
+
+
+test("budama: ödenen haftada ilk 100 kalır, dereceleri profile yazılır, gerisi defteriyle silinir", async () => {
+  const store = weekWorld(260);
+  for (let i = 0; i < 260; i++) {
+    const uid = `p${String(i + 1).padStart(3, "0")}`;
+    store[`lb_counted/${rid(uid, "A", WK - 1)}`] = { uid, time: 7 + i * 0.01 };
+  }
+  store[`lb/${WK - 1}_A`].count = 261;
+  store[`lb_runs/${rid("cheat", "A", WK - 1)}`] = run("cheat", 6.0, { wk: WK - 1, cls: "A", car: "audi_rs6" });
+  store["lb_hist/p001"] = { uid: "p001", recs: [{ wk: WK - 1, cls: "A", rank: 9, count: 5 }, { wk: WK - 3, cls: "B", rank: 4, count: 50 }] };
+  const db = fakeDb(store);
+  const r = await pay(db);
+  assert.deepEqual(r.pruned, [`${WK - 1}_A:100+161`]);
+  const runs = Object.keys(db.store).filter((p) => p.startsWith("lb_runs/"));
+  assert.equal(runs.length, 100, "yalnız ilk 100'ün koşusu kaldı (İZLE için)");
+  assert.ok(db.store[`lb_runs/${rid("p100", "A", WK - 1)}`] && !db.store[`lb_runs/${rid("p101", "A", WK - 1)}`]);
+  assert.ok(!db.store[`lb_runs/${rid("cheat", "A", WK - 1)}`], "sınırı sonradan sıkılaşan geçersiz koşu da silindi");
+  assert.ok(db.store[`lb_counted/${rid("p100", "A", WK - 1)}`] && !db.store[`lb_counted/${rid("p101", "A", WK - 1)}`],
+    "silinenin defteri de silindi (silme tetikleyicisi özeti değiştirmez)");
+  const h1 = db.store["lb_hist/p001"];
+  assert.deepEqual(h1.recs[0], { wk: WK - 1, cls: "A", rank: 1, count: 261, tier: "top3", time: 7.01, car: "audi_rs6", paint: "", stage: 2 });
+  assert.equal(h1.recs.length, 2, "aynı hafta + sınıfın eski satırı yenisiyle değişti, eski hafta kaldı");
+  assert.equal(db.store["lb_hist/p100"].recs[0].rank, 100);
+  assert.equal(db.store["lb_hist/p100"].recs[0].tier, "p50");
+  assert.ok(!db.store["lb_hist/p101"], "101. profile yazılmaz");
+  const sum = db.store[`lb/${WK - 1}_A`];
+  assert.equal(sum.pruned, true);
+  assert.equal(sum.kept, 100);
+  // İkinci çalışma: budanmış → dokunulmaz; ödenmiş ama budanmamış hafta (bu sürümden önce ödenen) budanır
+  assert.deepEqual((await pay(db)).pruned, []);
+  const old = fakeDb(weekWorld(3));
+  old.store[`lb/${WK - 1}_A`].paid = true;
+  const r2 = await pay(old);
+  assert.deepEqual([r2.mails, r2.pruned], [0, [`${WK - 1}_A:3+0`]]);
+  assert.equal(old.store["lb_hist/p003"].recs[0].rank, 3);
+});
+
+test("profil dereceleri: en yeni hafta önce, en çok HIST_MAX", () => {
+  const recs = [];
+  for (let w = 1; w <= lb.HIST_MAX; w++) recs.push({ wk: w, cls: "A", rank: 5 });
+  const out = lb.mergeHist(recs, [{ wk: 100, cls: "S", rank: 2 }, { wk: 100, cls: "B", rank: 1 }]);
+  assert.equal(out.length, lb.HIST_MAX);
+  assert.deepEqual(out.slice(0, 2).map((r) => r.cls), ["B", "S"], "aynı haftada iyi sıra önce");
+  assert.ok(!out.some((r) => r.wk === 1 || r.wk === 2), "en eski iki hafta düştü");
+  assert.deepEqual(lb.mergeHist(undefined, [{ wk: 3, cls: "A", rank: 1 }]), [{ wk: 3, cls: "A", rank: 1 }]);
+});
+
+test("donmuş hafta: budanan koşunun silinmesi özeti değiştirmez; ilk 100'deki koşu silinince derece ve satırı düşer", async () => {
+  const id = rid("p002", "A", WK - 1);
+  const store = {
+    [`lb/${WK - 1}_A`]: { wk: WK - 1, cls: "A", cc: "", count: 7, hist: { 140: 7 }, paid: true, pruned: true,
+      top: [{ uid: "p001", time: 7 }, { uid: "p002", time: 7.01 }] },
+    [`lb/${WK - 1}_A_DE`]: { wk: WK - 1, cls: "A", cc: "DE", count: 2, hist: { 140: 2 }, paid: false,
+      top: [{ uid: "p002", time: 7.01 }, { uid: "p009", time: 7.2 }] },
+    [`lb_counted/${id}`]: { uid: "p002", time: 7.01 },
+    "lb_hist/p002": { uid: "p002", recs: [{ wk: WK - 1, cls: "A", rank: 2 }, { wk: WK - 2, cls: "A", rank: 8 }] },
+  };
+  const db = fakeDb(store);
+  const before = run("p002", 7.01, { wk: WK - 1, cls: "A", car: "audi_rs6", flag: "DE" });
+  // Budanmış (defteri yok) koşu: hiçbir şey değişmez
+  const pruned = await handleRunWritten({ db, messaging: fakeMessaging(), id: rid("p300", "A", WK - 1),
+    before: run("p300", 9, { wk: WK - 1, cls: "A", car: "audi_rs6" }), after: null, now: NOW, limits: {}, classes: {} });
+  assert.equal(pruned, "frozen");
+  assert.equal(db.store[`lb/${WK - 1}_A`].count, 7);
+  // İlk 100'deki koşu (panel / hesap silme): derece ve listelerdeki satır düşer, sayı / kovalar aynı
+  const r = await handleRunWritten({ db, messaging: fakeMessaging(), id, before, after: null, now: NOW, limits: {}, classes: {} });
+  assert.equal(r, "frozen:forgot");
+  const sum = db.store[`lb/${WK - 1}_A`];
+  assert.deepEqual([sum.count, sum.hist, sum.top.map((e) => e.uid)], [7, { 140: 7 }, ["p001"]]);
+  assert.deepEqual(db.store[`lb/${WK - 1}_A_DE`].top.map((e) => e.uid), ["p009"]);
+  assert.deepEqual(db.store["lb_hist/p002"].recs, [{ wk: WK - 2, cls: "A", rank: 8 }]);
+  assert.ok(!db.store[`lb_counted/${id}`]);
 });
