@@ -589,6 +589,7 @@ var _race_bonus_amount: int = 0
 var _ads_bound: AdService = null
 ## Süre kısaltma reklamı izlenirken kısaltılacak araç.
 var _boost_car: Node3D = null
+var _boost_viewed_id: int = 0   # analitik: tamir kısaltma teklifinin en son sayıldığı araç
 ## Seçili parça takılan oyuncu aracı (araç plakası onu gösteriyor); yoksa &"".
 var _mod_target: StringName = &""
 
@@ -883,6 +884,9 @@ func _boost_offer(car: Node3D) -> AdService.Offer:
 	var state: AdService.Offer = ads.offer_state(AdPolicy.REPAIR_BOOST)
 	if state == AdService.Offer.LOADING:
 		ads.request(AdPolicy.REPAIR_BOOST)
+	if state != AdService.Offer.NONE and car.get_instance_id() != _boost_viewed_id:
+		_boost_viewed_id = car.get_instance_id()   # analitik: teklif bu araçta bir kez görüldü sayılır
+		Telemetry.event(&"ad_offer_view", {"kind": AdPolicy.REPAIR_BOOST, "ready": state == AdService.Offer.READY})
 	return state
 
 
@@ -1279,6 +1283,8 @@ func _on_race_completed(won: bool, player_time: float, rival_time: float) -> voi
 	if ads and int(reward["money"]) > 0 and ads.offer_state(AdPolicy.RACE_DOUBLE) != AdService.Offer.NONE:
 		_race_bonus_amount = int(reward["money"])
 		race_result_screen.offer_bonus(_race_bonus_amount, _race_bonus_ready)
+		Telemetry.event(&"ad_offer_view", {"kind": AdPolicy.RACE_DOUBLE,
+			"ready": ads.offer_state(AdPolicy.RACE_DOUBLE) == AdService.Offer.READY})
 	router.open(&"race_result")
 
 

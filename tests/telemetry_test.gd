@@ -134,6 +134,12 @@ func _run() -> void:
 	await frames(2)
 	check(_count(&"error") == 3, "Logger tek kaldı, yeni düğüm hataları alıyor")
 
+	print("== 9) Hesap türü (account) ==")
+	check(Telemetry.account_kind(CloudSaveManager.PROVIDER_GOOGLE) == "google"
+		and Telemetry.account_kind(CloudSaveManager.PROVIDER_FACEBOOK) == "facebook"
+		and Telemetry.account_kind(CloudSaveManager.PROVIDER_EMAIL) == "email"
+		and Telemetry.account_kind("") == "guest", "giriş yolu → google / facebook / email, oturumsuz → guest")
+
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(GameSettings.PATH))
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)

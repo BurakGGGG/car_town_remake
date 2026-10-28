@@ -291,7 +291,5 @@ static func _wav(samples: PackedFloat32Array, gain: float, loop: bool) -> AudioS
 	stream.stereo = false
 	stream.data = bytes
 	if loop:
-		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		stream.loop_begin = 0
-		stream.loop_end = samples.size()
+		LoopedWav.loop_forward(stream)
 	return stream

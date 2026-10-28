@@ -74,6 +74,9 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build()
 	_appear()
+	# Analitik huni (2026-10-28): login_gate_show → login_choice (basılan düğme) → login_done (nasıl girildi).
+	# Seçilip login_done'a varmayan yol = vazgeçildi / olmadı. Telemetry henüz kurulmadıysa olaylar sıraya girer.
+	Telemetry.event(&"login_gate_show")
 
 
 func _build() -> void:
@@ -147,6 +150,7 @@ func _appear() -> void:
 # --- Düğmeler ---------------------------------------------------------------------------
 
 func _on_sign_in(provider: String) -> void:
+	Telemetry.event(&"login_choice", {"option": Telemetry.account_kind(provider)})
 	var cloud: CloudSaveManager = _cloud()
 	if cloud == null:
 		_show_status(Loc.t("Facebook girişi yapılamadı") if provider == CloudSaveManager.PROVIDER_FACEBOOK
@@ -174,6 +178,7 @@ func _watch_sign_in(cloud: CloudSaveManager) -> void:
 ## FACEBOOK: Meta onayı gelene kadar giriş yok, yalnızca bilgi.
 func _on_facebook() -> void:
 	if not CloudSaveManager.FACEBOOK_READY:
+		Telemetry.event(&"login_choice", {"option": "facebook_soon"})
 		_show_status(Loc.t("Facebook girişi üzerinde çalışıyoruz, çok yakında!"))
 		return
 	_on_sign_in(CloudSaveManager.PROVIDER_FACEBOOK)
@@ -181,6 +186,7 @@ func _on_facebook() -> void:
 
 ## E-POSTA: kod penceresi; kod kabul edilince giriş Google'daki gibi beklenir.
 func _on_email() -> void:
+	Telemetry.event(&"login_choice", {"option": "email"})
 	var cloud: CloudSaveManager = _cloud()
 	if cloud == null:
 		_show_status(Loc.t("E-posta ile giriş yapılamadı"))
@@ -196,6 +202,7 @@ func _on_email() -> void:
 
 ## MİSAFİR: önce ne kaybedilebileceği söylenir; onaylanınca oyun başlar, GERİ DÖN seçeneklere döner.
 func _open_guest_confirm() -> void:
+	Telemetry.event(&"login_choice", {"option": "guest"})
 	var modal: Control = Control.new()
 	modal.name = "GuestConfirm"
 	modal.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -313,6 +320,9 @@ func _finish() -> void:
 	_done = true
 	for button: LoginOptionButton in _buttons:
 		button.disabled = true
+	var cloud: CloudSaveManager = _cloud()
+	var authenticated: bool = cloud != null and cloud.is_authenticated()
+	Telemetry.event(&"login_done", {"method": Telemetry.account_kind(cloud.get_provider() if authenticated else "")})
 	finished.emit()
 
 

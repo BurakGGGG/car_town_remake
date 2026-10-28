@@ -61,7 +61,7 @@ func _run() -> void:
 	print("== sentez ==")
 	for kind: int in TrafficEngine.Kind.values():
 		var loop: AudioStreamWAV = TrafficEngine.make_stream(kind as TrafficEngine.Kind)
-		var count: int = loop.data.size() / 2
+		var count: int = loop.data.size() / 2 - 1   # son kare ilk karenin kopyası (LoopedWav: okuma veri içinde)
 		var seam: float = absf(loop.data.decode_s16(0) - loop.data.decode_s16((count - 1) * 2)) / 32768.0
 		check(loop.loop_mode == AudioStreamWAV.LOOP_FORWARD and loop.loop_end == count and seam < 0.2,
 			"%s döngüsü dikişsiz (%.3f)" % [TrafficEngine.Kind.keys()[kind], seam])

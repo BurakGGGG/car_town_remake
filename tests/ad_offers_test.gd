@@ -73,6 +73,17 @@ func _press(button: AdOfferButton) -> void:
 	await frames(8)
 
 
+## Analitik `ad_offer_view` olaylarının parametreleri (gönderilmiş + düğüm yokken sırada bekleyen).
+func _offer_views(kind: StringName) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for entry: Dictionary in Telemetry.recorded + Telemetry._pending:
+		if entry.get("name") == "ad_offer_view":
+			var params: Dictionary = entry.get("params", {})
+			if String(params.get("kind", "")) == String(kind):
+				out.append(params)
+	return out
+
+
 func _offer(where: Node, offer: StringName) -> AdOfferButton:
 	return where.find_child("AdOffer_%s" % offer, true, false) as AdOfferButton
 
@@ -274,6 +285,7 @@ func _loading() -> void:
 	away.bank_minutes = 40.0
 	away.bank_jobs = 2
 	check(hud.news_flow._ad_loading(), "gazete ×2 reklamını bekler (en çok %.0f sn)" % NewsFlow.AD_WAIT)
+	var seen_before: int = _offer_views(AdPolicy.OFFLINE_DOUBLE).size()
 	check(hud.news_flow.present(), "gazete açıldı")
 	await seconds(1.4)
 	var screen: NewsScreen = hud.router.screen(&"news") as NewsScreen
@@ -285,6 +297,9 @@ func _loading() -> void:
 	await seconds(1.2)
 	check(button.visible and not button.disabled and button.text.contains("REKLAM İZLE"), "reklam gelince REKLAM İZLE, basılabilir")
 	check(not hud.news_flow._ad_loading(), "reklam hazır: gazete beklemez")
+	var views: Array[Dictionary] = _offer_views(AdPolicy.OFFLINE_DOUBLE)
+	check(views.size() == seen_before + 1 and not bool(views[-1].get("ready")),
+		"analitik: teklif bu açılışta bir kez görüldü sayıldı (yüklenirken, ready=0; hazır olunca yeniden sayılmaz)")
 	screen.close()
 	await seconds(1.6)
 	# Yarış sonucu ×2 plakası
@@ -295,6 +310,7 @@ func _loading() -> void:
 	hud._on_race_completed(true, 9.0, 10.0)
 	await frames(2)
 	check(bonus.visible and bonus.disabled and bonus.text.contains("REKLAM YÜKLENİYOR"), "yarış ×2: plaka görünür, REKLAM YÜKLENİYOR, pasif")
+	check(_offer_views(AdPolicy.RACE_DOUBLE).size() >= 1, "analitik: yarış ×2 teklifi görüldü sayıldı")
 	mock.load_ok = true
 	ads.ensure_loaded()
 	await seconds(0.8)

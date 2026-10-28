@@ -300,9 +300,7 @@ static func _wav(samples: PackedFloat32Array) -> AudioStreamWAV:
 	wav.format = AudioStreamWAV.FORMAT_16_BITS
 	wav.mix_rate = MIX_RATE
 	wav.data = bytes
-	wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	wav.loop_begin = 0
-	wav.loop_end = samples.size()
+	LoopedWav.loop_forward(wav)
 	return wav
 
 

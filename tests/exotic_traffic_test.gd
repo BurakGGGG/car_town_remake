@@ -68,7 +68,7 @@ func _run() -> void:
 	print("== motor döngüsü ==")
 	for cylinders: int in [6, 8, 10]:
 		var wav: AudioStreamWAV = ExoticEngine.make_stream(cylinders)
-		var n: int = wav.data.size() / 2
+		var n: int = wav.data.size() / 2 - 1   # son kare ilk karenin kopyası (LoopedWav: okuma veri içinde)
 		var max_step: int = 0
 		for i: int in range(1, n):
 			max_step = maxi(max_step, absi(wav.data.decode_s16(i * 2) - wav.data.decode_s16((i - 1) * 2)))

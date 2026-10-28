@@ -491,7 +491,5 @@ static func _to_wav(dry: PackedFloat32Array, drive: float) -> AudioStreamWAV:
 	out.mix_rate = MIX_RATE
 	out.stereo = false
 	out.data = bytes
-	out.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	out.loop_begin = 0
-	out.loop_end = count
+	LoopedWav.loop_forward(out)
 	return out

@@ -835,7 +835,5 @@ static func _to_wav(samples: PackedFloat32Array, peak: float, loop: bool) -> Aud
 	wav.stereo = false
 	wav.data = bytes
 	if loop:
-		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		wav.loop_begin = 0
-		wav.loop_end = samples.size()
+		LoopedWav.loop_forward(wav)
 	return wav

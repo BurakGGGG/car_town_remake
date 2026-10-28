@@ -27,6 +27,7 @@ var compact: bool = false
 
 var _ads: AdService
 var _waiting: bool = false
+var _viewed: bool = false   # analitik: teklif bu düğmede oyuncuya bir kez görünmüş sayıldı
 var _timer: Timer
 
 
@@ -77,6 +78,7 @@ func refresh() -> void:
 			text = reward_text
 		else:
 			text = Loc.t("REKLAM İZLE") + ("\n" + reward_text if not reward_text.is_empty() else "")
+		_note_view(true)
 		return
 	highlight = false
 	disabled = true
@@ -87,6 +89,7 @@ func refresh() -> void:
 			text = Loc.t("YÜKLENİYOR…")
 		else:
 			text = Loc.t("REKLAM YÜKLENİYOR") + ("\n" + reward_text if not reward_text.is_empty() else "")
+		_note_view(false)
 		return
 	var reason: StringName = ads.block_reason(offer)
 	if not persistent or reason in [AdPolicy.LEVEL_LOW, AdPolicy.UNKNOWN_KIND]:
@@ -100,6 +103,21 @@ func refresh() -> void:
 			text = Loc.t("YARIN YENİLENİR")
 		_:
 			text = Loc.t("REKLAM YÜKLENİYOR")   # bu oturumda reklam yok (reklamsız derleme / SDK başlamadı)
+
+
+## Analitik (2026-10-28): teklif oyuncuya her görünüşünde bir kez `ad_offer_view` (tür, reklam hazır mıydı) →
+## Firebase'de "teklifi gördü → izledi (ad_finished)" hunisi. Ekranı gizliyken sayılmaz; ekran kapanıp yeniden açılınca
+## (aynı düğme kalsa da) yeniden sayılır.
+func _notification(what: int) -> void:
+	if (what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree()) or what == NOTIFICATION_EXIT_TREE:
+		_viewed = false
+
+
+func _note_view(ready: bool) -> void:
+	if _viewed or not is_visible_in_tree():
+		return
+	_viewed = true
+	Telemetry.event(&"ad_offer_view", {"kind": offer, "ready": ready})
 
 
 func _on_pressed() -> void:

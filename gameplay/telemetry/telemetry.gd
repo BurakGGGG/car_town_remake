@@ -80,6 +80,20 @@ static func set_property(name: StringName, value: String) -> void:
 	_push({"kind": &"property", "name": String(name), "value": value.left(36)})
 
 
+## Giriş yolunun analitik adı (CloudSaveManager.get_provider() → "google" / "facebook" / "email"; boş = "guest").
+static func account_kind(provider: String) -> String:
+	match provider:
+		CloudSaveManager.PROVIDER_GOOGLE:
+			return "google"
+		CloudSaveManager.PROVIDER_FACEBOOK:
+			return "facebook"
+		CloudSaveManager.PROVIDER_EMAIL:
+			return "email"
+		"":
+			return "guest"
+	return clean_name(provider)
+
+
 ## Çökme raporuna iz (son 64 KB'lık günlüğe; çökme olursa raporda görünür).
 static func breadcrumb(text: String) -> void:
 	_push({"kind": &"log", "name": text.left(200)})
@@ -371,8 +385,11 @@ func _on_tutorial_changed(tutorial: TutorialManager) -> void:
 		_tutorial_seen[id] = done
 
 
+## UID yalnız Crashlytics'e; Analytics'e yalnız hesap TÜRÜ (`account`: guest / google / email / facebook) gider →
+## tutma ve gelir misafir / hesaplı oyuncuya göre kırılabilir (2026-10-28).
 func _sync_user(cloud: CloudSaveManager) -> void:
 	set_user(cloud.get_uid())
+	set_property(&"account", account_kind(cloud.get_provider() if cloud.is_authenticated() else ""))
 
 
 ## GDScript / motor hatalarını yakalar. Başka iş parçacığından da çağrılır: yalnız kilitli listeye yazar
