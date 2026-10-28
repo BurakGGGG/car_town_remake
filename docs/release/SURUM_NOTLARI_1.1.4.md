@@ -11,6 +11,11 @@ karenin kopyası, loop_end eski kare sayısı; döngü dikişsiz). Test: looped_
 Ölçüm: ad_offer_view (reklam teklifi göründü), login_gate_show / login_choice / login_done (giriş ekranı hunisi),
 oyuncu özelliği account (guest / google / email / facebook).
 
+HESABA KAYDET (kullanıcı kararı: taslak B + C): misafire sv5 ve sv10'da sakin anda bir kez İLERLEMENİ KAYDET kartı
+(seviye / para / elmas, GOOGLE / E-POSTA İLE KAYDET, SONRA); kartı görmüş misafir hesaba girip kaydı buluta eşitlenince
++20 gem (bir kez, SaveReminder). Misafirken MARKET'te uyarı şeridi + HESABA KAYDET. Güncellemeyle eşiği geçmiş misafir
+kartı bir kez görür. Olaylar: save_prompt_show / save_prompt_choice / save_bonus / save_strip_tap.
+
 Play Console sınırı dil başına 500 karakter. Fransızcada noktalama öncesi U+00A0.
 
 ## tr-TR
@@ -18,6 +23,7 @@ Play Console sınırı dil başına 500 karakter. Fransızcada noktalama öncesi
 ```
 Düzeltmeler
 • Bazı telefonlarda oyun sırasında yaşanan ani kapanma giderildi
+• Misafir oyunculara: ilerlemeni hesabına kaydet, 20 gem hediye kazan
 • Küçük iyileştirmeler
 ```
 
@@ -26,6 +32,7 @@ Düzeltmeler
 ```
 Fixes
 • Fixed a crash that could close the game on some phones during play
+• Guest players: save your progress to your account and get 20 gems
 • Small improvements
 ```
 
@@ -34,6 +41,7 @@ Fixes
 ```
 Correcciones
 • Se corrigió un cierre inesperado del juego en algunos teléfonos
+• Invitados: guarda tu progreso en tu cuenta y llévate 20 gemas
 • Pequeñas mejoras
 ```
 
@@ -42,6 +50,7 @@ Correcciones
 ```
 Korrekturen
 • Absturz behoben, der das Spiel auf manchen Handys unerwartet schloss
+• Gäste: Fortschritt im Konto sichern und 20 Juwelen erhalten
 • Kleine Verbesserungen
 ```
 
@@ -50,5 +59,6 @@ Korrekturen
 ```
 Corrections
 • Correction d’un plantage qui pouvait fermer le jeu sur certains téléphones
+• Invités : sauvegarde ta progression sur ton compte et reçois 20 gemmes
 • Petites améliorations
 ```

@@ -499,6 +499,19 @@ func _open_email_panel(reauth_email: String) -> void:
 	_refresh()
 
 
+## HESABA KAYDET kartından (SaveReminderCard): pano açıktır, misafirse seçilen yolla giriş hemen başlar (Google seçicisi /
+## E-POSTA penceresi); bekleme, hata ve KAYIT SEÇ her zamanki gibi bu panoda.
+func start_sign_in(provider: String) -> void:
+	if _cloud == null or _cloud.is_authenticated() or _cloud.is_busy():
+		return
+	if provider == CloudSaveManager.PROVIDER_EMAIL:
+		_open_email_panel("")
+		return
+	_notice_text = ""
+	_cloud.sign_in()
+	_refresh()
+
+
 ## cancel: vazgeçildi (silme doğrulamasıysa silme iptal); değilse kod kabul edildi, giriş / silme sürer.
 func _close_email_panel(cancel: bool) -> void:
 	if _email_panel == null:

@@ -219,6 +219,11 @@ func _ensure_social() -> void:
 		var community: CommunityLinks = CommunityLinks.new()
 		community.name = "CommunityLinks"
 		add_child(community)
+	# HESABA KAYDET (SaveReminder, "save_reminder"): misafire sv5 / sv10 kartı + MARKET şeridi (SaveManager'dan ÖNCE)
+	if get_tree().get_first_node_in_group("save_reminder") == null:
+		var save_reminder: SaveReminder = SaveReminder.new()
+		save_reminder.name = "SaveReminder"
+		add_child(save_reminder)
 	# MODERASYON (ModerationWatch, "moderation"): yönetim panelinin yasak / ad / fotoğraf kararları
 	if get_tree().get_first_node_in_group("moderation") == null:
 		var moderation: ModerationWatch = ModerationWatch.new()

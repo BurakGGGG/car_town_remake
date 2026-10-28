@@ -81,6 +81,7 @@ var login_screen: LoginScreen
 var push_prompt: PushPrompt
 ## Birkaç farklı günde oyuna giren oyuncuya bir kez: BİZİ DEĞERLENDİR → Play mağaza sayfası (RatePrompt, ödülsüz).
 var rate_prompt: RatePrompt
+var save_reminder_card: SaveReminderCard
 ## Oyuna girişte "sen yokken neler oldu" gazetesi (OTO MANŞET, NewsScreen) ve ne zaman açılacağı (NewsFlow).
 var news_screen: NewsScreen
 var news_flow: NewsFlow
@@ -274,6 +275,7 @@ func _ready() -> void:
 	_build_login_screen()
 	_build_push_prompt()
 	_build_rate_prompt()
+	_build_save_reminder()
 	_build_news()
 	_build_invites()
 	_build_settings()
@@ -1652,6 +1654,7 @@ func _register_screens() -> void:
 	router.register(&"account", login_screen, UiRouter.Kind.MODAL)
 	router.register(&"push_prompt", push_prompt, UiRouter.Kind.MODAL)
 	router.register(&"rate_prompt", rate_prompt, UiRouter.Kind.MODAL)
+	router.register(&"save_reminder", save_reminder_card, UiRouter.Kind.MODAL)
 	router.register(&"news", news_screen, UiRouter.Kind.MODAL)
 	router.register(&"invite", invite_screen, UiRouter.Kind.MODAL)
 	router.register(&"settings", settings_screen, UiRouter.Kind.PLACE)   # tam ekran: oyun arkada görünmez
@@ -2484,6 +2487,49 @@ func _tick_rate_prompt() -> void:
 		return
 	_rate_prompt_timer.queue_free()
 	router.open(&"rate_prompt")
+
+
+## İLERLEMENİ KAYDET (2026-10-28, kullanıcı kararı: taslak B): misafir seviye eşiğine (SaveReminder.THRESHOLDS) varınca,
+## oturumun SAVE_PROMPT_SESSION. saniyesinden sonra oyun SAVE_PROMPT_IDLE sn sakin kalınca kart bir kez açılır
+## (açılıştaki gazete / merdiven / ders ile üst üste binmesin; SEVİYE ATLADIN kapanınca gelir). Ziyarette yok.
+const SAVE_PROMPT_SESSION: float = 60.0
+const SAVE_PROMPT_IDLE: float = 1.5
+var save_prompt_session: float = SAVE_PROMPT_SESSION   # testler kısaltır
+var _save_prompt_timer: Timer
+var _save_prompt_idle: float = 0.0
+
+
+func _build_save_reminder() -> void:
+	save_reminder_card = SaveReminderCard.new()
+	garage_screen.get_parent().add_child(save_reminder_card)
+	save_reminder_card.sign_in_requested.connect(func(provider: String) -> void:
+		router.open(&"account")
+		login_screen.start_sign_in(provider))
+	var reminder: SaveReminder = get_tree().get_first_node_in_group("save_reminder") as SaveReminder
+	if reminder:
+		reminder.bonus_granted.connect(func(gems_amount: int) -> void:
+			_show_notice(Loc.t("+%d GEM · İLERLEMEN ARTIK HESABINDA") % gems_amount, HudPalette.GEM_DARK, 2.6))
+	if GarageVisit.is_visiting():
+		return
+	_save_prompt_timer = Timer.new()
+	_save_prompt_timer.name = "SavePromptTimer"
+	_save_prompt_timer.wait_time = 0.5
+	add_child(_save_prompt_timer)
+	_save_prompt_timer.timeout.connect(_tick_save_prompt)
+	_save_prompt_timer.start()
+
+
+func _tick_save_prompt() -> void:
+	if not is_inside_tree() or Time.get_ticks_msec() < save_prompt_session * 1000.0:
+		return
+	var reminder: SaveReminder = get_tree().get_first_node_in_group("save_reminder") as SaveReminder
+	if reminder == null or _player_progress == null or reminder.due(_player_progress.level) == 0 or not _is_quiet():
+		_save_prompt_idle = 0.0
+		return
+	_save_prompt_idle += _save_prompt_timer.wait_time
+	if _save_prompt_idle >= SAVE_PROMPT_IDLE:
+		_save_prompt_idle = 0.0
+		router.open(&"save_reminder")
 
 
 func _on_profile_button_pressed() -> void:

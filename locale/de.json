@@ -2623,5 +2623,14 @@
  "İLK 100": "TOP 100",
  "DEPO": "LAGER",
  "DEPON BOŞ\nGARAJDA EŞYAYI SEÇ, DEPOYA KALDIR": "LAGER LEER\nWÄHLE EINEN GEGENSTAND IN DER GARAGE, EINLAGERN",
- "YÜKSELTMEK İÇİN KARTA DOKUN": "KARTE ANTIPPEN ZUM AUSBAUEN"
+ "YÜKSELTMEK İÇİN KARTA DOKUN": "KARTE ANTIPPEN ZUM AUSBAUEN",
+ "İLERLEMENİ KAYDET": "FORTSCHRITT SICHERN",
+ "Garajın, araçların ve elmasların şu an yalnızca bu telefonda. Telefon değişir ya da oyun silinirse hepsi kaybolur. Hesabına kaydet, her telefonda devam et.": "Deine Werkstatt, deine Autos und Juwelen sind gerade nur auf diesem Handy. Wechselst du das Handy oder löschst das Spiel, ist alles weg. Sichere alles in deinem Konto und spiel auf jedem Handy weiter.",
+ "KAYDEDENE +%d GEM HEDİYE": "SICHERN UND +%d JUWELEN ERHALTEN",
+ "GOOGLE İLE KAYDET": "MIT GOOGLE SICHERN",
+ "E-POSTA İLE KAYDET": "MIT E-MAIL SICHERN",
+ "+%d GEM · İLERLEMEN ARTIK HESABINDA": "+%d JUWELEN · DEIN FORTSCHRITT IST JETZT IM KONTO",
+ "MİSAFİR OLARAK OYNUYORSUN": "DU SPIELST ALS GAST",
+ "Aldığın gemler yalnızca bu telefonda kalır. Telefon değişirse kaybolur.": "Gekaufte Juwelen bleiben nur auf diesem Handy. Bei einem Handywechsel gehen sie verloren.",
+ "HESABA KAYDET": "IM KONTO SICHERN"
 }

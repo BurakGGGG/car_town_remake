@@ -2625,5 +2625,14 @@
  "İLK 100": "TOP 100",
  "DEPO": "RÉSERVE",
  "DEPON BOŞ\nGARAJDA EŞYAYI SEÇ, DEPOYA KALDIR": "RÉSERVE VIDE\nCHOISIS UN OBJET DU GARAGE, METTRE EN RÉSERVE",
- "YÜKSELTMEK İÇİN KARTA DOKUN": "TOUCHE UNE CARTE POUR AMÉLIORER"
+ "YÜKSELTMEK İÇİN KARTA DOKUN": "TOUCHE UNE CARTE POUR AMÉLIORER",
+ "İLERLEMENİ KAYDET": "SAUVEGARDE TA PROGRESSION",
+ "Garajın, araçların ve elmasların şu an yalnızca bu telefonda. Telefon değişir ya da oyun silinirse hepsi kaybolur. Hesabına kaydet, her telefonda devam et.": "Ton garage, tes voitures et tes gemmes ne sont que sur ce téléphone. Si tu changes de téléphone ou supprimes le jeu, tout est perdu. Sauvegarde sur ton compte et continue sur n’importe quel téléphone.",
+ "KAYDEDENE +%d GEM HEDİYE": "SAUVEGARDE ET REÇOIS +%d GEMMES",
+ "GOOGLE İLE KAYDET": "SAUVEGARDER AVEC GOOGLE",
+ "E-POSTA İLE KAYDET": "SAUVEGARDER PAR E-MAIL",
+ "+%d GEM · İLERLEMEN ARTIK HESABINDA": "+%d GEMMES · TA PROGRESSION EST SUR TON COMPTE",
+ "MİSAFİR OLARAK OYNUYORSUN": "TU JOUES EN INVITÉ",
+ "Aldığın gemler yalnızca bu telefonda kalır. Telefon değişirse kaybolur.": "Les gemmes achetées restent sur ce téléphone. Si tu changes de téléphone, elles sont perdues.",
+ "HESABA KAYDET": "SAUVEGARDER"
 }

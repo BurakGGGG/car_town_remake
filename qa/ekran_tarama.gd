@@ -673,6 +673,11 @@ func _run() -> void:
 	await _screen(&"account", "hesap")
 	await _screen(&"account", "hesap_oneri", func() -> void:
 		_hud.login_screen.show_prompt())
+	# HESABA KAYDET (2026-10-28): misafir sayılır (PC'de eklenti yok); kart + MARKET şeridi
+	SaveReminder.force_guest = true
+	await _screen(&"save_reminder", "hesap_kaydet_karti")
+	await _screen(&"gem_store", "hesap_kaydet_market")
+	SaveReminder.force_guest = false
 	await _screen(&"settings", "ayarlar")
 	for page: int in [1, 2, 3, 4]:
 		await _screen(&"settings", "ayarlar_%d" % page, func() -> void:

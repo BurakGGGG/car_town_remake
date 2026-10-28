@@ -2625,5 +2625,14 @@
  "İLK 100": "TOP 100",
  "DEPO": "STORAGE",
  "DEPON BOŞ\nGARAJDA EŞYAYI SEÇ, DEPOYA KALDIR": "STORAGE EMPTY\nSELECT AN ITEM IN THE GARAGE, PUT IN STORAGE",
- "YÜKSELTMEK İÇİN KARTA DOKUN": "TAP A CARD TO UPGRADE"
+ "YÜKSELTMEK İÇİN KARTA DOKUN": "TAP A CARD TO UPGRADE",
+ "İLERLEMENİ KAYDET": "SAVE YOUR PROGRESS",
+ "Garajın, araçların ve elmasların şu an yalnızca bu telefonda. Telefon değişir ya da oyun silinirse hepsi kaybolur. Hesabına kaydet, her telefonda devam et.": "Your garage, cars and gems are only on this phone right now. If you change phones or delete the game, it's all gone. Save to your account and keep playing on any phone.",
+ "KAYDEDENE +%d GEM HEDİYE": "SAVE NOW, GET +%d GEMS",
+ "GOOGLE İLE KAYDET": "SAVE WITH GOOGLE",
+ "E-POSTA İLE KAYDET": "SAVE WITH EMAIL",
+ "+%d GEM · İLERLEMEN ARTIK HESABINDA": "+%d GEMS · YOUR PROGRESS IS NOW IN YOUR ACCOUNT",
+ "MİSAFİR OLARAK OYNUYORSUN": "YOU'RE PLAYING AS A GUEST",
+ "Aldığın gemler yalnızca bu telefonda kalır. Telefon değişirse kaybolur.": "Gems you buy stay on this phone only. If you change phones, they're lost.",
+ "HESABA KAYDET": "SAVE TO ACCOUNT"
 }

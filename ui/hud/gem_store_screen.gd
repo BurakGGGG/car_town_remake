@@ -52,6 +52,7 @@ var _reward_popup: RewardPopup
 var _notice: PlatePanel
 var _notice_label: Label
 var _notice_tween: Tween
+var _guest_strip: PlatePanel
 var _closing: bool = false
 var _tab: StringName = TAB_GEMS
 var _tab_buttons: Dictionary = {}   # sekme → PlateButton
@@ -76,6 +77,8 @@ func _ready() -> void:
 func open() -> void:
 	_confirm_offer = -1
 	_notice.hide()
+	var reminder: SaveReminder = get_tree().get_first_node_in_group("save_reminder") as SaveReminder
+	_guest_strip.visible = reminder != null and reminder.is_guest()
 	_select_tab(TAB_GEMS)
 	_fit()
 	PlateAnim.pop_in(self, _column)
@@ -175,6 +178,43 @@ func _build() -> void:
 	_list.add_theme_constant_override(&"separation", int(CARD_GAP))
 	column.add_child(_list)
 
+	# HESABA KAYDET (2026-10-28, kullanıcı kararı: taslak C): misafirken uyarı şeridi. Her sekmede aynı (pano boyu
+	# sekmeyle oynamaz); HESABA KAYDET hesap panosunu açar (MARKET kapanır).
+	_guest_strip = PlatePanel.new()
+	_guest_strip.name = "GuestStrip"
+	_guest_strip.theme_type_variation = &"HudCarPlate"
+	_guest_strip.custom_minimum_size = Vector2(PLATE_WIDTH * 1.6, 0.0)
+	_guest_strip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_guest_strip.visible = false
+	var strip_row: HBoxContainer = HBoxContainer.new()
+	strip_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	strip_row.add_theme_constant_override(&"separation", 12)
+	_guest_strip.add_child(strip_row)
+	var strip_text: VBoxContainer = VBoxContainer.new()
+	strip_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	strip_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	strip_text.alignment = BoxContainer.ALIGNMENT_CENTER
+	strip_text.add_theme_constant_override(&"separation", 0)
+	strip_text.add_child(_label(&"HudPlateTitle", Loc.t("MİSAFİR OLARAK OYNUYORSUN")))
+	var strip_caption: Label = _label(&"HudInkCaption",
+		Loc.t("Aldığın gemler yalnızca bu telefonda kalır. Telefon değişirse kaybolur."))
+	strip_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	strip_caption.custom_minimum_size = Vector2(PLATE_WIDTH, 0.0)   # sarılan etiket kapta sıfır genişliğe düşmesin
+	strip_text.add_child(strip_caption)
+	strip_row.add_child(strip_text)
+	var save_button: PlateButton = PlateButton.new()
+	save_button.name = "SaveAccountButton"
+	save_button.theme_type_variation = &"HudPlateSmall"
+	save_button.text = Loc.t("HESABA KAYDET")
+	save_button.kind = HudIcon.Kind.HELMET
+	save_button.icon_left = true
+	save_button.highlight = true
+	save_button.focus_mode = Control.FOCUS_NONE
+	save_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	save_button.pressed.connect(_on_save_account)
+	strip_row.add_child(save_button)
+	column.add_child(_guest_strip)
+
 	var close_button: PlateButton = PlateButton.new()
 	close_button.theme_type_variation = &"HudPlateSmall"
 	close_button.text = Loc.t("KAPAT")
@@ -222,6 +262,12 @@ func _fit() -> void:
 	_center.offset_bottom = over.y
 	_stage.pivot_offset = size * 0.5
 	_stage.scale = Vector2.ONE * k
+
+
+func _on_save_account() -> void:
+	Telemetry.event(&"save_strip_tap")
+	if hud:
+		hud.router.open(&"account")   # MODAL: MARKET kapanır, hesap panosu açılır
 
 
 func _on_tab_pressed(tab: StringName) -> void:

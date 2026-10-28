@@ -306,9 +306,10 @@ func make_world() -> void:
 	var upg: GarageUpgradeManager = GarageUpgradeManager.new()
 	var own: VehicleOwnership = VehicleOwnership.new()
 	var crates: CrateManager = CrateManager.new()   # yeni oyunda HOŞ GELDİN KUTUSU (ilk araç ondan çıkar)
+	var reminder: SaveReminder = SaveReminder.new()   # HESABA KAYDET hediyesi (SaveManager'dan önce)
 	var save: SaveManager = SaveManager.new()
 	var cloud: CloudSaveManager = CloudSaveManager.new()
-	for n: Node in [eco, prog, upg, own, crates, save, cloud]:
+	for n: Node in [eco, prog, upg, own, crates, reminder, save, cloud]:
 		root_node.add_child(n)
 	root.add_child(root_node)
 	# Plugin PC'de yok: _ready bağlantı kurmadı, sahte Firebase'i gerçek bağlantı adlarıyla bağla
@@ -330,7 +331,8 @@ func make_world() -> void:
 	cloud.email_reauth_needed.connect(func(e: String) -> void: email_events.append("reauth:" + e))
 	cloud.account_deleted.connect(func(ok: bool) -> void: deleted_results.append(ok))
 	cloud.notice.connect(func(t: String) -> void: notices.append(t))
-	w = {"root": root_node, "eco": eco, "prog": prog, "own": own, "crates": crates, "save": save, "cloud": cloud}
+	w = {"root": root_node, "eco": eco, "prog": prog, "own": own, "crates": crates, "save": save, "cloud": cloud,
+		"reminder": reminder}
 	await frames(6)
 
 
@@ -718,12 +720,56 @@ func _run() -> void:
 	check(deleted_results == [true] and not fb.linked.has("fb:katefb") and not fb.linked.has("kate"), "hesap ve iki giriş yolu silindi")
 
 	await _email_scenarios()
+	await _save_bonus_scenarios()
 	await close_app()
 
 	check(fb.rule_denials == 0, "hiçbir yazma Firestore kuralına takılmadı (profilde yalnız izinli alanlar)")
 	print("RESULT fails=%d" % fails)
 	fb.free()
 	quit(1 if fails > 0 else 0)
+
+
+## HESABA KAYDET hediyesi (SaveReminder, 2026-10-28): kartı görmüş misafir hesaba girip kaydı buluta eşitlenince
+## (SYNCED) BONUS_GEMS gem alır, bir kez (bayrak kayıtla buluta gider); kartı hiç görmemiş misafire hediye yok.
+func _save_bonus_scenarios() -> void:
+	print("Hesaba kaydet: kartı görmüş misafire +%d gem, bir kez" % SaveReminder.BONUS_GEMS)
+	var reminder: SaveReminder = w["reminder"]
+	check(cloud().get_state() == CloudSaveManager.State.SIGNED_OUT and not reminder.was_shown(), "yeni misafir oyunu, kart görülmemiş")
+	eco().set_money(12345)
+	own().add_vehicle(&"hyundai_getz")
+	reminder.mark_shown(5)
+	(w["save"] as SaveManager).save_game()
+	var gems_before: int = (w["prog"] as PlayerProgress).gems
+	await sign_in_as("gul")
+	var gul: String = cloud().get_uid()
+	await frames(6)
+	check(cloud().get_state() == CloudSaveManager.State.SYNCED
+		and (w["prog"] as PlayerProgress).gems == gems_before + SaveReminder.BONUS_GEMS and reminder.bonus_claimed(),
+		"Gül SYNCED: +%d gem verildi" % SaveReminder.BONUS_GEMS)
+	await seconds(2.2)   # kayıt (DEBOUNCE) + bulut yazması (UPLOAD_DEBOUNCE)
+	var cloud_data: Variant = JSON.parse_string(CloudPack.unpack(String(fb.docs[gul]["save_json"])))
+	check(cloud_data is Dictionary and bool(((cloud_data as Dictionary).get("save_reminder", {}) as Dictionary).get("bonus", false)),
+		"hediye bayrağı bulut kaydında")
+	var gems_after: int = (w["prog"] as PlayerProgress).gems
+	cloud().sign_out()
+	await frames(8)
+	await sign_in_as("gul")
+	await frames(6)
+	check(cloud().get_uid() == gul and (w["prog"] as PlayerProgress).gems == gems_after,
+		"aynı hesaba yeniden girince ikinci hediye yok (%d)" % (w["prog"] as PlayerProgress).gems)
+
+	print("Hesaba kaydet: kartı görmemiş misafire hediye yok")
+	cloud().sign_out()
+	await frames(8)
+	reminder = w["reminder"]
+	eco().set_money(54321)
+	own().add_vehicle(&"hyundai_getz")
+	(w["save"] as SaveManager).save_game()
+	gems_before = (w["prog"] as PlayerProgress).gems
+	await sign_in_as("hale")
+	await frames(6)
+	check(cloud().get_state() == CloudSaveManager.State.SYNCED and (w["prog"] as PlayerProgress).gems == gems_before
+		and not reminder.bonus_claimed(), "Hale SYNCED, hediye yok")
 
 
 ## E-posta koduyla giriş: kod adımları, yeni hesap, aynı e-posta = aynı hesap (Google ↔ kod), kodla silme / vazgeçme.

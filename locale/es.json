@@ -2625,5 +2625,14 @@
  "İLK 100": "TOP 100",
  "DEPO": "ALMACÉN",
  "DEPON BOŞ\nGARAJDA EŞYAYI SEÇ, DEPOYA KALDIR": "ALMACÉN VACÍO\nELIGE UN OBJETO DEL GARAJE, GUARDAR EN ALMACÉN",
- "YÜKSELTMEK İÇİN KARTA DOKUN": "TOCA UNA TARJETA PARA MEJORAR"
+ "YÜKSELTMEK İÇİN KARTA DOKUN": "TOCA UNA TARJETA PARA MEJORAR",
+ "İLERLEMENİ KAYDET": "GUARDA TU PROGRESO",
+ "Garajın, araçların ve elmasların şu an yalnızca bu telefonda. Telefon değişir ya da oyun silinirse hepsi kaybolur. Hesabına kaydet, her telefonda devam et.": "Tu taller, tus coches y tus gemas solo están en este teléfono. Si cambias de teléfono o borras el juego, lo perderás todo. Guárdalo en tu cuenta y sigue jugando en cualquier teléfono.",
+ "KAYDEDENE +%d GEM HEDİYE": "GUÁRDALO Y LLÉVATE +%d GEMAS",
+ "GOOGLE İLE KAYDET": "GUARDAR CON GOOGLE",
+ "E-POSTA İLE KAYDET": "GUARDAR CON CORREO",
+ "+%d GEM · İLERLEMEN ARTIK HESABINDA": "+%d GEMAS · TU PROGRESO YA ESTÁ EN TU CUENTA",
+ "MİSAFİR OLARAK OYNUYORSUN": "ESTÁS JUGANDO COMO INVITADO",
+ "Aldığın gemler yalnızca bu telefonda kalır. Telefon değişirse kaybolur.": "Las gemas que compres solo se quedan en este teléfono. Si cambias de teléfono, se pierden.",
+ "HESABA KAYDET": "GUARDAR EN CUENTA"
 }

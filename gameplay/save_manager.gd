@@ -78,6 +78,7 @@ var _away: OfflineEarnings
 var _car_garages: CarGarageManager
 var _referral: ReferralManager
 var _community: CommunityLinks
+var _save_reminder: SaveReminder
 var _collection: CollectionRewards
 var _event_car: EventCar
 var _timer: Timer
@@ -120,6 +121,7 @@ func _setup() -> void:
 	_car_garages = get_tree().get_first_node_in_group("car_garages") as CarGarageManager
 	_referral = get_tree().get_first_node_in_group("referral") as ReferralManager
 	_community = get_tree().get_first_node_in_group("community") as CommunityLinks
+	_save_reminder = get_tree().get_first_node_in_group("save_reminder") as SaveReminder
 	_collection = get_tree().get_first_node_in_group("collection_rewards") as CollectionRewards
 	_event_car = get_tree().get_first_node_in_group("event_car") as EventCar
 	if visit_mode:
@@ -253,6 +255,8 @@ func new_game() -> void:
 		_referral.reset()
 	if _community:
 		_community.reset()
+	if _save_reminder:
+		_save_reminder.reset()
 	if _collection:
 		_collection.reset()
 	if _event_car:
@@ -297,6 +301,7 @@ func _progress_json() -> String:
 	data.erase("away")   # son görülme saati her yazımda değişir; kasa zamanla dolar
 	data.erase("repairs")   # süren tamirler geçicidir
 	data.erase("community")   # takip ödülünün gemi oyuncu kaydında sayılır; değerlendirme sorusu günle kayar
+	data.erase("save_reminder")   # hatırlatma kartının gösterilmesi ilerleme değil; hediyenin gemi oyuncu kaydında
 	# DEPOLARIM: park yerleri / otopark sahipliğin yansımasıdır (araçlar "vehicles"ta sayılır); ilerleme yalnız alınan
 	# depo, seviye, inşaat ve iştir. Yoksa HOŞ GELDİN KUTUSU'ndan çıkan araç otoparka girince "ilerleme" olurdu. Ücret
 	# dönemi saatle kayar, faturalar da onun sonucudur.
@@ -433,6 +438,9 @@ func _collect() -> Dictionary:
 		# TOPLULUK: Instagram / TikTok takip ödülleri (açıldı / alındı), BİZİ DEĞERLENDİR sorusu (kaç kez, sıradaki gün).
 		# Eski kayıtta yoktur: hiçbiri alınmamış, hiç sorulmamış.
 		"community": _community.state() if _community else {},
+		# HESABA KAYDET: misafire gösterilen kart eşikleri (sv5 / sv10) ve kayıt hediyesi alındı mı. Eski kayıtta yoktur:
+		# hiç gösterilmemiş (güncellemeden sonra eşiği geçmiş misafir kartı bir kez görür).
+		"save_reminder": _save_reminder.state() if _save_reminder else {},
 		# KOLEKSİYON ÖDÜLLERİ: ödenmiş setler ve kilometre taşları. Eski kayıtta yoktur: bugün tamam olanlar ödülsüz sayılır.
 		"collection": _collection.state() if _collection else {},
 		# ETKİNLİK ARACI: hangi etkinliğin durumu, araç verildi mi, bugünkü etkinlik yarışı hakları. Eski kayıtta yoktur.
@@ -590,6 +598,9 @@ func _apply(data: Dictionary) -> void:
 	if _community:
 		var community_data: Variant = data.get("community", {})
 		_community.load_state(community_data if community_data is Dictionary else {})
+	if _save_reminder:
+		var reminder_data: Variant = data.get("save_reminder", {})
+		_save_reminder.load_state(reminder_data if reminder_data is Dictionary else {})
 	if _collection:
 		# Araçlar yukarıda yüklendi: bölümü olmayan kayıtta bugün tamam olan set / taş ödülsüz işaretlenir
 		var collection_data: Variant = data.get("collection", {})
