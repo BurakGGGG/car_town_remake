@@ -482,7 +482,9 @@ func _free_card() -> PlatePanel:
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(caption)
 	var button: AdOfferButton = AdOfferButton.new(AdPolicy.FREE_GEMS, "", true)
-	button.clip_text = true   # "REKLAM YÜKLENİYOR" gibi uzun durum yazısı kartı (ve panoyu) genişletmesin
+	button.clip_text = true   # uzun durum yazısı kartı (ve panoyu) genişletmesin
+	button.ready_text = Loc.tc("REKLAM İZLE", "market")   # dar kart: DE / FR / ES kısa karşılık (TR aynı)
+	button.loading_text = Loc.tc("YÜKLENİYOR", "market")   # kullanıcı (2026-10-28): markette yalnız "YÜKLENİYOR"
 	button.rewarded.connect(_on_free_gems)
 	button.finished.connect(func(_ok: bool) -> void:
 		if visible and _tab == TAB_GEMS:

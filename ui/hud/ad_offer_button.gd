@@ -24,6 +24,10 @@ var condition: Callable = Callable()
 var reward_fn: Callable = Callable()
 ## Sade düğme (listede çok kez görünen teklif: GÖREVİ DEĞİŞTİR): tek satır, yalnız ödül yazısı + oynat ikonu, amber değil.
 var compact: bool = false
+## Dar yer (MARKET kartı) için yazılar: boşsa "REKLAM İZLE" / "REKLAM YÜKLENİYOR" (2026-10-28, kullanıcı: markette
+## yüklenirken yalnız "YÜKLENİYOR"; DE "WERBUNG ANSEHEN" kartta kesiliyordu → Loc.tc bağlamlı kısa karşılık).
+var ready_text: String = ""
+var loading_text: String = ""
 
 var _ads: AdService
 var _waiting: bool = false
@@ -77,7 +81,7 @@ func refresh() -> void:
 		if compact:
 			text = reward_text
 		else:
-			text = Loc.t("REKLAM İZLE") + ("\n" + reward_text if not reward_text.is_empty() else "")
+			text = _or(ready_text, Loc.t("REKLAM İZLE")) + ("\n" + reward_text if not reward_text.is_empty() else "")
 		_note_view(true)
 		return
 	highlight = false
@@ -88,7 +92,7 @@ func refresh() -> void:
 		if compact:
 			text = Loc.t("YÜKLENİYOR…")
 		else:
-			text = Loc.t("REKLAM YÜKLENİYOR") + ("\n" + reward_text if not reward_text.is_empty() else "")
+			text = _or(loading_text, Loc.t("REKLAM YÜKLENİYOR")) + ("\n" + reward_text if not reward_text.is_empty() else "")
 		_note_view(false)
 		return
 	var reason: StringName = ads.block_reason(offer)
@@ -102,7 +106,7 @@ func refresh() -> void:
 		AdPolicy.DAILY_CAP, AdPolicy.TOTAL_CAP:
 			text = Loc.t("YARIN YENİLENİR")
 		_:
-			text = Loc.t("REKLAM YÜKLENİYOR")   # bu oturumda reklam yok (reklamsız derleme / SDK başlamadı)
+			text = _or(loading_text, Loc.t("REKLAM YÜKLENİYOR"))   # bu oturumda reklam yok (reklamsız derleme / SDK başlamadı)
 
 
 ## Analitik (2026-10-28): teklif oyuncuya her görünüşünde bir kez `ad_offer_view` (tür, reklam hazır mıydı) →
@@ -151,6 +155,10 @@ func _on_finished(k: StringName, was_rewarded: bool) -> void:
 	_waiting = false
 	finished.emit(was_rewarded)
 	refresh()
+
+
+static func _or(custom: String, fallback: String) -> String:
+	return custom if not custom.is_empty() else fallback
 
 
 ## Süre kısaltma ödülünün yazısı: "−12 DK" / "−45 SN".

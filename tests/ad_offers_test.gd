@@ -280,6 +280,22 @@ func _loading() -> void:
 	var mock: MockAdProvider = ads.provider() as MockAdProvider
 	mock._loaded.clear()
 	mock.load_ok = false
+	# MARKET kartı (2026-10-28, kullanıcı): yüklenirken yalnız "YÜKLENİYOR"; dar kartta bağlamlı kısa yazılar
+	var short: AdOfferButton = AdOfferButton.new(AdPolicy.LEVELUP_DOUBLE, "", true)
+	short.ready_text = Loc.tc("REKLAM İZLE", "market")
+	short.loading_text = Loc.tc("YÜKLENİYOR", "market")
+	hud.add_child(short)
+	await frames(2)
+	short.refresh()
+	check(short.visible and short.disabled and short.text == "YÜKLENİYOR", "yüklenirken kısa yazı: «%s»" % short.text)
+	short.queue_free()
+	hud.router.open(&"gem_store")
+	await seconds(0.6)
+	var free: AdOfferButton = _offer(hud.router.screen(&"gem_store"), AdPolicy.FREE_GEMS)
+	check(free != null and free.loading_text == "YÜKLENİYOR" and free.ready_text == "REKLAM İZLE",
+		"MARKET kartı: YÜKLENİYOR / REKLAM İZLE")
+	hud.router.close_all()
+	await seconds(0.6)
 	var away: OfflineEarnings = g(&"offline_earnings") as OfflineEarnings
 	away.bank_money = 2000
 	away.bank_minutes = 40.0

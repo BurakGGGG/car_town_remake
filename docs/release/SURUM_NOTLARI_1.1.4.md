@@ -16,6 +16,9 @@ HESABA KAYDET (kullanıcı kararı: taslak B + C): misafire sv5 ve sv10'da sakin
 +20 gem (bir kez, SaveReminder). Misafirken MARKET'te uyarı şeridi + HESABA KAYDET. Güncellemeyle eşiği geçmiş misafir
 kartı bir kez görür. Olaylar: save_prompt_show / save_prompt_choice / save_bonus / save_strip_tap.
 
+MARKET ücretsiz gem kartı: yüklenirken yalnız YÜKLENİYOR (kullanıcı isteği); DE "WERBUNG ANSEHEN" kartta kesiliyordu →
+bağlamlı kısa yazılar (Loc.tc "market": ES VER VÍDEO, DE ANSEHEN / LÄDT…, FR VOIR LA PUB / UN INSTANT).
+
 Play Console sınırı dil başına 500 karakter. Fransızcada noktalama öncesi U+00A0.
 
 ## tr-TR
