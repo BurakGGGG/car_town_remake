@@ -50,9 +50,7 @@ rengiyle dolduruldu: `tools/debadge/` (Blender'ın Python'u + numpy; ayrıntı `
 * `willys_jeep_mb`'de üretici logosu yok (yalnız askerî işaretler), dokunulmadı.
 
 ## Açık
-* `ui/hud/garage_screen.tscn` CarNameLabel'in editör yer tutucu metni hâlâ "BMW E46" (çalışırken katalogdan
-  doldurulur ama sahne dosyasıyla APK'ya girer). Editörde boşaltılmalı / değiştirilmeli, sonra `tools/i18n/extract.py`
-  (çevirilerdeki "BMW E46" anahtarı o zaman eskimiş olur, silinebilir).
+* `ui/hud/garage_screen.tscn` CarNameLabel yer tutucusu 2026-11-01'de "BMR 3.46" yapıldı (kullanıcı "sen değiştir"; locale anahtarı da).
 * W123'ün kaput yıldızı gibi 3B çıkıntılı armalar doku değil mesh: renk silindi, biçim duruyor.
 * Kasa tasarımları gerçek araçlara benzer (ızgara biçimleri vb.); isim ve logo değişikliği bunu çözmez.
 * Hurdalık enkaz modelleri (`assets/world/junk_wrecks/`) dokusuz, köşe renkli; logo okunmuyor, dokunulmadı.
