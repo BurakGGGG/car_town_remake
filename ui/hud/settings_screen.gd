@@ -20,7 +20,7 @@ enum Page { LANGUAGE, GRAPHICS, AUDIO, ACCOUNT, ABOUT }
 
 ## Sürüm adı: export_presets.cfg "version/name" ile AYNI tutulmalı (dışa aktarımda proje ayarına girmiyor). Yalnızca
 ## editörde / masaüstünde gösterilir; dışa aktarılmış pakette sürüm AppInfo'dan gelir (version_label).
-const VERSION: String = "1.1.4"
+const VERSION: String = "1.1.5"
 ## "Dil" sözcüğü her dilin kendi yazımıyla (çevrilmez: language_title'da İngilizcesiyle yan yana durur).
 const LANGUAGE_WORDS: Dictionary = {"tr": "DİL", "es": "IDIOMA", "de": "SPRACHE", "fr": "LANGUE"}
 const VOLUME_STEP: float = 0.1

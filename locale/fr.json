@@ -2225,11 +2225,9 @@
  "Bu kodun süresi dolmuş.": "Ce code a expiré.",
  "Böyle bir kod yok. Harfleri kontrol et.": "Ce code n’existe pas. Vérifie les lettres.",
  "CANLI ETKİNLİK": "ÉVÉNEMENT EN DIRECT",
- "Instagram ve YouTube'da paylaştığımız kodu yaz. Her kod hesabına bir kez geçer, ödül postana düşer.": "Saisis un code partagé sur Instagram ou YouTube. Chaque code fonctionne une fois par compte ; la récompense arrive dans ton COURRIER.",
  "KOD": "CODE",
  "KOD GİR": "CODE",
  "KULLAN": "VALIDER",
- "Kod kabul edildi: ödülün POSTA'da seni bekliyor.": "Code accepté : ta récompense t’attend dans le COURRIER.",
  "Kod kontrol edilemedi. İnternet bağlantını kontrol edip tekrar dene.": "Impossible de vérifier le code. Vérifie ta connexion Internet et réessaie.",
  "Kod kontrol ediliyor…": "Vérification du code…",
  "Kod kullanmak için hesabınla giriş yap (PLAYER).": "Connecte-toi à ton compte pour utiliser des codes (JOUEUR).",
@@ -2636,5 +2634,11 @@
  "Aldığın gemler yalnızca bu telefonda kalır. Telefon değişirse kaybolur.": "Les gemmes achetées restent sur ce téléphone. Si tu changes de téléphone, elles sont perdues.",
  "HESABA KAYDET": "SAUVEGARDER",
  "REKLAM İZLE|market": "VOIR LA PUB",
- "YÜKLENİYOR|market": "UN INSTANT"
+ "YÜKLENİYOR|market": "UN INSTANT",
+ "KOD KABUL EDİLDİ!": "CODE ACCEPTÉ !",
+ "Hediyen açılıyor…": "Ouverture de ton cadeau…",
+ "Hediyen hesabına geçti.": "Ton cadeau a été ajouté à ton compte.",
+ "Hediyen birazdan HABERLER kutusuna gelecek.": "Ton cadeau arrivera bientôt dans ACTUS.",
+ "Instagram ve YouTube'da paylaştığımız kodu yaz. Her kod hesabına bir kez geçer, hediyen hemen açılır.": "Saisis un code partagé sur Instagram ou YouTube. Chaque code fonctionne une fois par compte et ton cadeau s’ouvre aussitôt.",
+ "Bu koşuyu izlemek için oyunu güncelle.": "Mets le jeu à jour pour regarder cette course."
 }

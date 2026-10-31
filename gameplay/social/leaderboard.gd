@@ -230,7 +230,7 @@ func friends_entries(wk: int, cls: StringName) -> Array[Dictionary]:
 			continue
 		var entry: Dictionary = await run_of(wk, cls, uid)
 		if not entry.is_empty() and float(entry.get("time", 0.0)) > 0.0:
-			entry.erase("run")
+			entry.erase("run")   # kopya (_fetch): önbellekteki koşu İZLE için yerinde kalır
 			out.append(entry)
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["time"]) < float(b["time"]))
 	return out
@@ -278,10 +278,22 @@ static func history_summary(recs: Array[Dictionary]) -> Dictionary:
 
 
 ## İZLE: tablodaki koşunun kaydı (indirilemezse / bozuksa null).
-func recording_of(wk: int, cls: StringName, uid: String) -> DragRaceSim.Recording:
+## İZLE: koşu kaydı (önbellekten, en çok 1 saatlik). expected_time verilirse (tablodaki süre) önbellekteki koşu o süreyi
+## tutmuyorsa — oyuncu bu arada iyileştirdi — yeniden indirilir: tabloda yazan koşu izlenir. Açılamazsa null.
+## 2026-10-31 (kullanıcı: "birkaç kez yarış tekrarını izleyemedim"): ARKADAŞLAR listesi önbellekteki satırdan "run"ı
+## SİLİYORDU (_fetch aynı sözlüğü döndürüyordu) → o listeden / kendi satırından İZLE bir saat boyunca hep "açılamadı";
+## boş metni ayrıştırmak da her seferinde Crashlytics'e "Parse JSON failed" yazıyordu. _fetch artık kopya döndürür.
+func recording_of(wk: int, cls: StringName, uid: String, expected_time: float = -1.0) -> DragRaceSim.Recording:
 	var entry: Dictionary = await run_of(wk, cls, uid, 3600.0)
-	var parsed: Variant = JSON.parse_string(SaveSafe.s(entry.get("run", "")))
-	return DragRaceSim.Recording.from_dict(parsed) if parsed is Dictionary else null
+	if expected_time > 0.0 and absf(float(entry.get("time", -1.0)) - expected_time) > 0.0005:
+		entry = await run_of(wk, cls, uid, 0.0)
+	var run: String = SaveSafe.s(entry.get("run", ""))
+	if run.is_empty():
+		return null   # koşu yok (silinmiş / ağ yok)
+	var json: JSON = JSON.new()
+	if json.parse(run) != OK or not json.data is Dictionary:
+		return null   # bozuk kayıt (parse_string gibi hata basmaz)
+	return DragRaceSim.Recording.from_dict(json.data)
 
 
 ## Bu cihazda bilinen en iyi sürem (yoksa -1).
@@ -301,10 +313,11 @@ func inject(path: String, data: Dictionary) -> void:
 	_cache[path] = {"at": _seconds(), "data": data}
 
 
+## Belgeyi okur (önbellek max_age sn). Dönüş HER ZAMAN KOPYA: çağıran değiştirse de önbellek bozulmaz (bkz. recording_of).
 func _fetch(path: String, max_age: float) -> Dictionary:
 	var cached: Variant = _cache.get(path)
 	if cached is Dictionary and (base_url.is_empty() or _seconds() - float(cached["at"]) < max_age):
-		return cached["data"]
+		return (cached["data"] as Dictionary).duplicate(true)
 	if base_url.is_empty() or not is_inside_tree():
 		return {}
 	var http: HTTPRequest = HTTPRequest.new()
@@ -312,19 +325,19 @@ func _fetch(path: String, max_age: float) -> Dictionary:
 	add_child(http)
 	if http.request(base_url + path) != OK:
 		http.queue_free()
-		return cached["data"] if cached is Dictionary else {}
+		return (cached["data"] as Dictionary).duplicate(true) if cached is Dictionary else {}
 	var result: Array = await http.request_completed
 	http.queue_free()
 	var data: Dictionary = {}
 	if int(result[0]) != HTTPRequest.RESULT_SUCCESS or (int(result[1]) != 200 and int(result[1]) != 404):
-		return cached["data"] if cached is Dictionary else {}   # ağ yok: eldeki kalır
+		return (cached["data"] as Dictionary).duplicate(true) if cached is Dictionary else {}   # ağ yok: eldeki kalır
 	if int(result[1]) == 200:
 		var parsed: Variant = JSON.parse_string((result[3] as PackedByteArray).get_string_from_utf8())
 		if parsed is Dictionary:
 			var fields: Variant = (parsed as Dictionary).get("fields", {})
 			data = AppConfig.decode_fields(fields if fields is Dictionary else {})
 	_cache[path] = {"at": _seconds(), "data": data}
-	return data
+	return data.duplicate(true)
 
 
 # --- Yazma ----------------------------------------------------------------------------------

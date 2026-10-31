@@ -29,8 +29,20 @@ const TAB_GEMS: StringName = &"gems"
 const TAB_FREE: StringName = &"free"
 const TAB_CASH: StringName = &"cash"
 const TAB_CODE: StringName = &"code"
-## Kupon kodu kabul edildi metninin rengi (taslaktaki yeşil; HUD paletinde yeşil yok).
+## Kupon kodu kabul edildi plakasının rengi (taslaktaki yeşil; HUD paletinde yeşil yok).
 const OK_COLOR: Color = Color("2E7D4F")
+## KOD GİR yazı boyları (2026-10-31, kullanıcı: "hata da başarılı olsa da çok küçük gözüküyor"): sonuç eskiden en küçük
+## altyazı boyuyla (HudInkCaption 10) basılıyordu, pano telefonda ~0,8 ölçekle daha da küçülüyordu.
+const CODE_TITLE_SIZE: int = 20
+const CODE_CAPTION_SIZE: int = 13
+const CODE_INPUT_SIZE: int = 30
+const CODE_RESULT_SIZE: int = 22
+const CODE_RESULT_DETAIL_SIZE: int = 15
+## Kabul edilen kodun postası (p_<kod>) en çok bu kadar beklenir (deneme × aralık, sn); gelmezse HABERLER'de bekler.
+const GIFT_WAIT_TRIES: int = 10
+const GIFT_WAIT_SEC: float = 0.75
+## Ekran klavyesiyle kod kutusunun alt kenarı arasında kalan pay (tuval birimi).
+const KEYBOARD_GAP: float = 14.0
 ## Çeviri iki dokunuşla onaylanır (geri alınamaz); ilk dokunuştan sonra bu süre içinde ikinci dokunuş gerekir.
 const CONFIRM_TIME: float = 3.0
 ## Bildirimin ekranda kalma süresi (sn).
@@ -61,6 +73,11 @@ var _list_min_h: float = 0.0
 ## Onay bekleyen çeviri teklifinin sırası (-1: yok) ve onayın verildiği an (msn).
 var _confirm_offer: int = -1
 var _confirm_at: int = 0
+## KOD GİR sekmesinin kutusu (başka sekmede serbest) ve klavye yüzünden panonun yukarı kaydığı miktar (tuval birimi).
+var _code_edit: LineEdit
+var _keyboard_shift: float = 0.0
+## QA / test: ekran klavyesinin tuval birimindeki yüksekliği (≥ 0 ise gerçek klavye yerine kullanılır; oyunda -1).
+static var simulate_keyboard: float = -1.0
 
 
 func _ready() -> void:
@@ -264,6 +281,32 @@ func _fit() -> void:
 	_stage.scale = Vector2.ONE * k
 
 
+func _process(_delta: float) -> void:
+	if visible:
+		_fit_keyboard()
+
+
+## EKRAN KLAVYESİ (kullanıcı 2026-10-31: "klavye kodu girdiğimiz yerin üzerine basıyor, ne yazdığımı bilemiyorum"): KOD GİR
+## kutusu odaktayken klavye açıksa pano, kutunun alt kenarı klavyenin KEYBOARD_GAP üstünde kalacak kadar yukarı kayar;
+## klavye kapanınca (KULLAN, geri tuşu, odak gitti) yerine döner. Klavye yüksekliği pencere pikselinden tuval birimine
+## çevrilir (EmailCodePanel ile aynı). Pano ortadan ölçeklendiği için kutunun yeri ölçekli dönüşümle okunur (Hud.screen_rect).
+func _fit_keyboard() -> void:
+	var keyboard: float = 0.0
+	var typing: bool = is_instance_valid(_code_edit) and _code_edit.is_visible_in_tree() and _code_edit.has_focus()
+	if typing and simulate_keyboard >= 0.0:
+		keyboard = simulate_keyboard
+	elif typing and DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+		var window_height: float = maxf(1.0, float(DisplayServer.window_get_size().y))
+		keyboard = DisplayServer.virtual_keyboard_get_height() * get_viewport_rect().size.y / window_height
+	var shift: float = 0.0
+	if keyboard > 0.0:
+		var bottom: float = Hud.screen_rect(_code_edit).end.y + _keyboard_shift   # kaymasız yer
+		shift = maxf(0.0, bottom + KEYBOARD_GAP - (get_viewport_rect().size.y - keyboard))
+	if not is_equal_approx(shift, _keyboard_shift):
+		_keyboard_shift = shift
+		_stage.position.y = -shift
+
+
 func _on_save_account() -> void:
 	Telemetry.event(&"save_strip_tap")
 	if hud:
@@ -312,7 +355,11 @@ func _refresh() -> void:
 	_list_min_h = maxf(_list_min_h, _list.get_combined_minimum_size().y)
 
 
-## KOD GİR: kupon kodu kutusu + KULLAN. Misafirde kutu kilitli ve neden yazılı (kod hesaba bir kez geçer).
+## KOD GİR: kupon kodu kutusu + KULLAN + sonuç plakası. Misafirde kutu kilitli ve neden yazılı (kod hesaba bir kez geçer).
+## 2026-10-31 (kullanıcı: "hata da başarılı olsa da çok küçük gözüküyor, hediyeyi aldım mı almadım mı anlayamıyorum; klavye
+## kodu girdiğimiz yerin üzerine bastığı için ne yazdığımı bilemiyorum"): sonuç büyük renkli plakada (yeşil ✔ / kırmızı ✖),
+## kabul edilen kodun hediyesi HEDİYEN GELDİ! ekranıyla hemen açılır (_open_coupon_gift), KULLAN klavyeyi kapatır, yazarken
+## klavye açıksa pano kutu görünecek kadar yukarı kayar (_fit_keyboard).
 func _code_panel() -> PlatePanel:
 	var panel: PlatePanel = PlatePanel.new()
 	panel.name = "CodePanel"
@@ -324,11 +371,14 @@ func _code_panel() -> PlatePanel:
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_theme_constant_override(&"separation", 12)
 	panel.add_child(box)
-	box.add_child(_label(&"HudPlateTitle", Loc.t("Kupon kodun mu var?")))
+	var title: Label = _label(&"HudPlateTitle", Loc.t("Kupon kodun mu var?"))
+	title.add_theme_font_size_override(&"font_size", CODE_TITLE_SIZE)
+	box.add_child(title)
 	var caption: Label = _label(&"HudInkCaption",
-		Loc.t("Instagram ve YouTube'da paylaştığımız kodu yaz. Her kod hesabına bir kez geçer, ödül postana düşer."))
+		Loc.t("Instagram ve YouTube'da paylaştığımız kodu yaz. Her kod hesabına bir kez geçer, hediyen hemen açılır."))
 	caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	caption.custom_minimum_size = Vector2(560.0, 0.0)
+	caption.add_theme_font_size_override(&"font_size", CODE_CAPTION_SIZE)
 	box.add_child(caption)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -344,7 +394,7 @@ func _code_panel() -> PlatePanel:
 	edit.add_theme_color_override(&"font_color", HudPalette.INK)
 	edit.add_theme_color_override(&"font_placeholder_color", HudPalette.INK_SOFT)
 	edit.add_theme_color_override(&"caret_color", HudPalette.INK)
-	edit.add_theme_font_size_override(&"font_size", 26)
+	edit.add_theme_font_size_override(&"font_size", CODE_INPUT_SIZE)
 	for style_name: StringName in [&"normal", &"focus", &"read_only"]:
 		var style: StyleBoxFlat = StyleBoxFlat.new()
 		style.bg_color = HudPalette.PLATE_HOVER
@@ -355,6 +405,7 @@ func _code_panel() -> PlatePanel:
 		style.content_margin_right = 12.0
 		edit.add_theme_stylebox_override(style_name, style)
 	row.add_child(edit)
+	_code_edit = edit
 	var use: PlateButton = PlateButton.new()
 	use.name = "UseButton"
 	use.theme_type_variation = &"HudPlate"
@@ -363,16 +414,13 @@ func _code_panel() -> PlatePanel:
 	use.focus_mode = Control.FOCUS_NONE
 	use.custom_minimum_size = Vector2(160.0, 56.0)
 	row.add_child(use)
-	var result: Label = _label(&"HudInkCaption", "")
-	result.name = "CodeResult"
-	result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	result.custom_minimum_size = Vector2(560.0, 0.0)
+	var result: PanelContainer = _result_plate()
 	box.add_child(result)
 	var social: SocialManager = get_tree().get_first_node_in_group("social") as SocialManager
 	if social == null or social.uid().is_empty():
 		edit.editable = false
 		use.disabled = true
-		result.text = PromoService.status_text("signin")
+		_show_result(result, &"info", PromoService.status_text("signin"))
 	edit.text_changed.connect(func(text: String) -> void:
 		var code: String = PromoService.normalize(text)
 		if code != text:
@@ -381,23 +429,133 @@ func _code_panel() -> PlatePanel:
 	var submit: Callable = func() -> void:
 		if use.disabled:
 			return
+		var code: String = PromoService.normalize(edit.text)
+		var gift_id: String = "p_" + code.to_lower()   # sunucunun hediye postası (functions/promo.js)
 		use.disabled = true
 		edit.editable = false
-		result.remove_theme_color_override(&"font_color")
-		result.text = Loc.t("Kod kontrol ediliyor…")
-		var outcome: Dictionary = await PromoService.redeem(get_tree(), edit.text)
+		edit.release_focus()   # klavye kapansın: sonuç plakası altında kalmasın
+		_show_result(result, &"wait", Loc.t("Kod kontrol ediliyor…"))
+		var inbox: Inbox = hud.inbox if hud else null
+		if inbox:
+			inbox.set_announced(gift_id, true)   # hediye burada açılır: HUD'da "HEDİYEN VAR" yazısı çıkmasın
+		var outcome: Dictionary = await PromoService.redeem(get_tree(), code)
+		var status: String = SaveSafe.s(outcome.get("status", ""))
+		var opened: bool = false
+		if is_instance_valid(result) and (status == "ok" or status == "already"):
+			if status == "ok":
+				edit.text = ""
+				_show_result(result, &"ok", Loc.t("KOD KABUL EDİLDİ!"), Loc.t("Hediyen açılıyor…"))
+			# Kod daha önce kabul edilmiş ama hediyesi alınmamış olabilir ("already"): bekleyen posta da açılır
+			opened = await _open_coupon_gift(gift_id, status == "ok")
+		if not opened and inbox and is_instance_valid(inbox):
+			inbox.set_announced(gift_id, false)   # açılamadı: hediye HABERLER'de her zamanki gibi duyurulur
 		if not is_instance_valid(result):
 			return   # sekme değişti / pano kapandı
-		var status: String = SaveSafe.s(outcome.get("status", ""))
-		result.text = PromoService.status_text(status)
-		result.add_theme_color_override(&"font_color", OK_COLOR if status == "ok" else HudPalette.DANGER)
+		if opened:
+			_show_result(result, &"ok", Loc.t("KOD KABUL EDİLDİ!"), Loc.t("Hediyen hesabına geçti."))
+		elif status == "ok":
+			_show_result(result, &"ok", Loc.t("KOD KABUL EDİLDİ!"), PromoService.status_text(status))
+		else:
+			_show_result(result, &"error", PromoService.status_text(status))
 		use.disabled = false
 		edit.editable = true
-		if status == "ok":
-			edit.text = ""
 	use.pressed.connect(submit)
 	edit.text_submitted.connect(func(_t: String) -> void: submit.call())
 	return panel
+
+
+## Kabul edilen kuponun postası (p_<kod>) gelince hemen alınır: HEDİYEN GELDİ! ekranı MARKET'in üstünde açılır, HABERLER'e
+## gitmek gerekmez. wait = false: yalnız şu an bekleyen posta denenir. Posta GIFT_WAIT_TRIES × GIFT_WAIT_SEC içinde
+## gelmezse (ağ yavaş, bulut eşitlenmemiş) ya da pano kapanırsa false: hediye HABERLER'de bekler.
+func _open_coupon_gift(gift_id: String, wait: bool) -> bool:
+	var mail: MailService = get_tree().get_first_node_in_group("mail") as MailService
+	if mail == null or hud == null or hud.mail_notice == null:
+		return false
+	var tries: int = GIFT_WAIT_TRIES if wait else 1
+	for i: int in tries:
+		if mail.pending().any(func(m: Dictionary) -> bool: return m["id"] == gift_id):
+			return hud.mail_notice.claim_now(gift_id)
+		if i == tries - 1:
+			break
+		mail.poll()   # PromoService bir kez okuttu; posta sunucuda biraz sonra yazılmış olabilir
+		await get_tree().create_timer(GIFT_WAIT_SEC).timeout
+		if not is_inside_tree() or not visible or not is_instance_valid(mail):
+			return false
+	return false
+
+
+## Sonuç plakası: başta gizli; _show_result durumuna göre renk, simge ve yazı verir.
+func _result_plate() -> PanelContainer:
+	var plate: PanelContainer = PanelContainer.new()
+	plate.name = "CodeResult"
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.custom_minimum_size = Vector2(560.0, 0.0)
+	plate.visible = false
+	var row: HBoxContainer = HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override(&"separation", 12)
+	plate.add_child(row)
+	var icon: Control = Control.new()
+	icon.name = "Icon"
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.custom_minimum_size = Vector2(34.0, 34.0)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.draw.connect(func() -> void:
+		var kind: HudIcon.Kind = icon.get_meta(&"kind", HudIcon.Kind.NONE)
+		if kind != HudIcon.Kind.NONE:
+			HudIcon.draw_icon(icon, kind, icon.size * 0.5, icon.size.x, Color.WHITE,
+				icon.get_meta(&"cutout", HudPalette.INK) as Color))
+	row.add_child(icon)
+	var texts: VBoxContainer = VBoxContainer.new()
+	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texts.alignment = BoxContainer.ALIGNMENT_CENTER
+	texts.add_theme_constant_override(&"separation", 0)
+	row.add_child(texts)
+	var heading: Label = _label(&"HudPlateTitle", "")
+	heading.name = "Heading"
+	heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	heading.custom_minimum_size = Vector2(470.0, 0.0)   # sarılan etiket kapta sıfır genişliğe düşmesin
+	heading.add_theme_font_size_override(&"font_size", CODE_RESULT_SIZE)
+	texts.add_child(heading)
+	var detail: Label = _label(&"HudPlateTitle", "")
+	detail.name = "Detail"
+	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail.custom_minimum_size = Vector2(470.0, 0.0)
+	detail.add_theme_font_size_override(&"font_size", CODE_RESULT_DETAIL_SIZE)
+	texts.add_child(detail)
+	return plate
+
+
+## state: &"ok" (yeşil, ✔), &"error" (kırmızı, ✖), &"wait" / &"info" (krem plaka, simgesiz). detail boşsa tek satır.
+func _show_result(plate: PanelContainer, state: StringName, heading: String, detail: String = "") -> void:
+	var fill: Color = OK_COLOR if state == &"ok" else HudPalette.DANGER if state == &"error" else HudPalette.PLATE_HOVER
+	var ink: Color = Color.WHITE if state == &"ok" or state == &"error" else HudPalette.INK
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = fill.darkened(0.25) if state == &"ok" or state == &"error" else HudPalette.PLATE_EDGE
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(10)
+	style.set_content_margin_all(12.0)
+	plate.add_theme_stylebox_override(&"panel", style)
+	var icon: Control = plate.find_child("Icon", true, false) as Control
+	var kind: HudIcon.Kind = HudIcon.Kind.CHECK if state == &"ok" else HudIcon.Kind.CROSS if state == &"error" \
+		else HudIcon.Kind.NONE
+	icon.set_meta(&"kind", kind)
+	icon.set_meta(&"cutout", fill)
+	icon.visible = kind != HudIcon.Kind.NONE
+	icon.queue_redraw()
+	for label_name: String in ["Heading", "Detail"]:
+		var label: Label = plate.find_child(label_name, true, false) as Label
+		label.text = heading if label_name == "Heading" else detail
+		label.visible = not label.text.is_empty()
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if kind == HudIcon.Kind.NONE else HORIZONTAL_ALIGNMENT_LEFT
+		label.add_theme_color_override(&"font_color", ink)
+		label.add_theme_color_override(&"font_outline_color", fill.darkened(0.35) if ink == Color.WHITE else Color.TRANSPARENT)
+	plate.visible = true
+	if state == &"ok" or state == &"error":   # sonuç belirerek gelir (ölçek animasyonu olmaz: kap çocuğun ölçeğini sıfırlar)
+		plate.modulate.a = 0.0
+		create_tween().tween_property(plate, ^"modulate:a", 1.0, 0.2)
 
 
 ## Paket kartı: hareketli çizim (rozetli), miktar, ad, fiyat plakası. Başlangıç paketi amber kart.

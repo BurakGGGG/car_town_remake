@@ -90,6 +90,9 @@ func _connect() -> void:
 		bays.connect(&"bays_changed", refresh)
 	if bays and bays.has_signal(&"layout_changed") and not bays.is_connected(&"layout_changed", refresh):
 		bays.connect(&"layout_changed", refresh)
+	var mod_bays: PerformanceBays = get_tree().get_first_node_in_group("performance_bays") as PerformanceBays
+	if mod_bays and not mod_bays.cars_changed.is_connected(_apply_away):
+		mod_bays.cars_changed.connect(_apply_away)
 	refresh()
 
 
@@ -246,9 +249,35 @@ func refresh() -> void:
 		_draw_blocked()
 	if _floor_focus:
 		_apply_floor_focus()   # yeni kurulan gövdeler de soluk başlasın
+	_apply_away(false)   # yeni kurulan sergi aracı liftteyse gizli başlasın (area_changed aşağıda zaten)
 	_place_sparkles()
 	_rebatch()
 	area_changed.emit()
+
+
+## LİFTTEKİ ARACIN SERGİSİ (kullanıcı 2026-10-31: "modifiyeye başlayınca Tofaş hâlâ garajda görünüyor, aynı anda liftte de;
+## 2 farklı araç gibi"): parçası takılan araç tamir alanındayken (PerformanceBays.is_in_bay — takma + alandan çıkış) sergi
+## gövdesi gizlenir, araç alandan çıkınca geri gelir. Düzenlerken görünür: yeri ayrılmış durur, taşınabilir (gizliyken
+## seçilemez ama yer kaplar — boş görünen yere eşya konamıyordu). Sergi aracı pişmiş şehir gölgesinde (WorldShadow,
+## gizli düğüm pişmez): görünürlük değişince area_changed garaj parselini yeniden pişirtir, yerde gölgesi kalmaz.
+func _apply_away(notify: bool = true) -> void:
+	if _decor == null:
+		return
+	var mod_bays: PerformanceBays = null
+	if is_inside_tree():
+		mod_bays = get_tree().get_first_node_in_group("performance_bays") as PerformanceBays
+	var changed: bool = false
+	for iid: String in _bodies:
+		var body: Node3D = body_of(iid)
+		var item: StringName = StringName(_decor.instance(iid).get("item", &""))
+		if body == null or not GarageDecor.is_vehicle(item):
+			continue
+		var shown: bool = _editing or mod_bays == null or not mod_bays.is_in_bay(GarageDecor.vehicle_of(item))
+		if body.visible != shown:
+			body.visible = shown
+			changed = true
+	if changed and notify:
+		area_changed.emit()
 
 
 ## Dekorun toplu çizimini yeniden kurar (DecorBatch): düzenlerken / zemin odağında kurulmaz — eşyalar taşınır, soluklaşır.
@@ -582,6 +611,7 @@ func ground_point(camera: Camera3D, screen: Vector2) -> Vector2:
 ## tabelası gizlenir (eşyaların önüne biniyor; izi yine de engel sayılır).
 func set_editing(value: bool) -> void:
 	_editing = value
+	_apply_away()   # liftteki aracın sergisi düzenlerken görünür (yeri ayrılmış)
 	_rebatch()
 	_rebuild_walls()   # düzenlemede bütün duvarlar opak, oyunda aracın önündekiler yarı saydam
 	if _decor:

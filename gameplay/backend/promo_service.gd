@@ -3,7 +3,7 @@ extends RefCounted
 ## KUPON KODU (2026-10-21; giriş yeri kullanıcı kararı: MARKET › KOD GİR). Oyuncu kodu yazar → users/{uid}/redeem/{KOD}
 ## = {at} (SocialManager kuyruğuyla; kural kod başına bir kez yazdırır) → sunucu (functions/promo.js) doğrular ve sonucu
 ## aynı belgeye yazar → oyun belgeyi POLL_SEC aralıkla okur. Kabul edilen kodun ödülü POSTA'ya düşer (MailService hemen
-## okunur, oyuncu MARKET'ten çıkınca POSTA penceresi açılır). Yalnızca hesaplı oyuncu (misafirin UID'si yok).
+## okunur; MARKET › KOD GİR postayı hemen alır, HEDİYEN GELDİ! açılır — gecikirse HABERLER'de bekler). Yalnızca hesaplı oyuncu.
 ## Durumlar: ok · already · not_found · expired · inactive · used_up · rate (sunucu) · invalid · signin · offline · timeout.
 
 const CODE_PATTERN: String = "^[A-Z0-9]{4,16}$"
@@ -56,8 +56,8 @@ static func redeem(tree: SceneTree, raw: String) -> Dictionary:
 ## Oyuncuya gösterilen sonuç metni.
 static func status_text(status: String) -> String:
 	match status:
-		"ok":
-			return Loc.t("Kod kabul edildi: ödülün POSTA'da seni bekliyor.")
+		"ok":   # MARKET › KOD GİR hediyeyi kendisi açar; posta gecikirse bu yazı görünür (POSTA penceresi 2026-10-25'te kalktı)
+			return Loc.t("Hediyen birazdan HABERLER kutusuna gelecek.")
 		"already":
 			return Loc.t("Bu kodu zaten kullandın.")
 		"not_found", "invalid":

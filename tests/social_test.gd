@@ -357,6 +357,7 @@ func garage_doc(uid: String) -> Dictionary:
 
 
 func _run() -> void:
+	SocialManager.auto_profile = false   # profil elle kurulur (otomatik profil social_test §15'te denenir)
 	print("== 0) Adlar ve kodlar ==")
 	check(SocialNames.is_valid_name("Usta Ali"), "'Usta Ali' geçerli")
 	check(SocialNames.is_valid_name("Şahin Çağrı"), "Türkçe harfler geçerli")
@@ -702,6 +703,34 @@ func _run() -> void:
 	check(old_default_off and legacy.use_google and legacy.state().get("google_photo") == true,
 		"eski kayıttaki varsayılan 'açık' okunmaz; oyuncunun yeni seçimi saklanır")
 	legacy.free()
+
+	print("== 15) Otomatik profil: hesapla giren ARKADAŞLAR'a gitmeden rastgele adla profil alır (2026-10-31) ==")
+	SocialManager.auto_profile = true
+	var said: int = notices.size()
+	await open_session("kim")
+	check(social().is_ready(), "girişten hemen sonra profil hazır (READY)")
+	check(RegEx.create_from_string("^Usta\\d{4}$").search(social().my_name()) != null, "rastgele ad: %s" % social().my_name())
+	check(SocialNames.is_valid_code(social().my_code()) and fb.store.get("codes/" + social().my_code(), {}).get("uid") == "kim",
+		"arkadaş kodu alındı")
+	check(garage_doc("kim").get("name") == social().my_name(), "açık garaj rastgele adla yazıldı")
+	check(notices.size() == said, "oyuncuya bildirim gösterilmedi (sessiz)")
+	check(await social().rename("Kim Usta") and garage_doc("kim").get("name") == "Kim Usta", "ad sonradan değişir")
+	await close_session()
+	await open_session("kim", false)   # aynı cihaz, yeniden açılış
+	check(social().is_ready() and social().my_name() == "Kim Usta", "yeniden açılışta aynı profil (yeni ad verilmedi)")
+	await close_session()
+	await open_session("kim")   # yeni cihaz: sunucudaki profil okunur
+	check(social().my_name() == "Kim Usta" and garage_doc("kim").get("name") == "Kim Usta",
+		"yeni cihazda sunucudaki profil geri geldi (üstüne rastgele ad yazılmadı)")
+	await close_session()
+	said = notices.size()
+	fb.deny_codes = SocialManager.CODE_ATTEMPTS   # kod alınamıyor: profil kurulamaz
+	await open_session("lee")
+	check(social().get_state() == SocialManager.State.NO_PROFILE and notices.size() == said and not fb.store.has("garages/g_lee"),
+		"kurulamazsa NO_PROFILE kalır, hata bildirimi yağmaz (ARKADAŞLAR formu yedek)")
+	fb.deny_codes = 0
+	await close_session()
+	SocialManager.auto_profile = false
 
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)

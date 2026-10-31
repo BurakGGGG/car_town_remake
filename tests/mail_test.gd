@@ -193,6 +193,7 @@ func until(cond: Callable, limit: float = 5.0) -> bool:
 
 
 func _run() -> void:
+	SocialManager.auto_profile = false   # profil elle kurulur (otomatik profil social_test §15'te denenir)
 	Loc.use("tr")
 	crate_id = StringName(String(CrateCatalog.all()[0]["id"]))
 	for entry: Dictionary in CarCatalog.all():
@@ -467,7 +468,7 @@ func _promo() -> void:
 	check(r.get("status") == "not_found", "olmayan kod")
 	r = await PromoService.redeem(self, "a!")
 	check(r.get("status") == "invalid" and not fb.calls.any(func(c: String) -> bool: return c.contains("redeem a")), "biçimsiz kod sunucuya gitmez")
-	check(PromoService.status_text("ok").contains("POSTA") and PromoService.status_text("used_up") != PromoService.status_text("ok"), "sonuç metinleri")
+	check(PromoService.status_text("ok").contains("HABERLER") and PromoService.status_text("used_up") != PromoService.status_text("ok"), "sonuç metinleri")
 	await close_session()
 	await open_session("bob")
 	r = await PromoService.redeem(self, "REELS50")
@@ -559,5 +560,39 @@ func _hud_popup() -> void:
 	check(labels.contains(Loc.t("ZATEN VARDI · +%s ₺").split(" ·")[0]), "kartta ZATEN VARDI")
 	gift.close()
 	await seconds(0.5)
+
+	print("-- MARKET › KOD GİR: kabul edilen kuponun hediyesi hemen açılır (2026-10-31) --")
+	hud.router.close_all()
+	await seconds(0.4)
+	hud.router.open(&"gem_store")
+	await seconds(0.6)
+	var store: GemStoreScreen = hud.router.screen(&"gem_store") as GemStoreScreen
+	store._on_tab_pressed(GemStoreScreen.TAB_CODE)
+	await frames(3)
+	hud.inbox.set_announced("p_reels50", true)   # KOD GİR bunu redeem'den önce yapar
+	var announced: Array = []   # "HEDİYEN VAR" yazısının tek kaynağı: Inbox.gift_arrived
+	hud.inbox.gift_arrived.connect(func(count: int) -> void: announced.append(count))
+	var gems0: int = (get_first_node_in_group("player_progress") as PlayerProgress).gems
+	service._pending = [MailService.normalize("p_reels50", {"title": {"tr": "Reels kodu"}, "gems": 50})]
+	service.arrived.emit()
+	await frames(3)
+	check(announced.is_empty(), "kupon hediyesi gelince HUD'da \"HEDİYEN VAR\" yazısı çıkmadı")
+	var opened: bool = await store._open_coupon_gift("p_reels50", false)
+	await seconds(0.4)
+	check(opened and gift.visible and gift.get_index() > store.get_index(), "HEDİYEN GELDİ! MARKET'in üstünde açıldı")
+	check((get_first_node_in_group("player_progress") as PlayerProgress).gems == gems0 + 50, "kuponun 50 gemi hesaba geçti")
+	check(not service.pending().any(func(m: Dictionary) -> bool: return m["id"] == "p_reels50"), "posta alındı (HABERLER'de beklemez)")
+	gift.close()
+	await seconds(0.5)
+	check(not await store._open_coupon_gift("p_yokboyle", false), "bekleyen posta yoksa açılmaz (false)")
+	hud.inbox.set_announced("p_gec", true)
+	service._pending = [MailService.normalize("p_gec", {"title": {"tr": "Geç kalan"}, "gems": 5})]
+	service.arrived.emit()
+	await frames(2)
+	hud.inbox.set_announced("p_gec", false)   # açılamadı: duyuru geri gelir
+	await frames(2)
+	check(announced == [1], "açılamayan kupon hediyesi HABERLER'den her zamanki gibi duyuruldu (%s)" % [announced])
+	hud.router.close_all()
+	await seconds(0.4)
 	main.queue_free()
 	await frames(4)

@@ -2225,11 +2225,9 @@
  "Bu kodun süresi dolmuş.": "Este código ha caducado.",
  "Böyle bir kod yok. Harfleri kontrol et.": "Ese código no existe. Revisa las letras.",
  "CANLI ETKİNLİK": "EVENTO EN VIVO",
- "Instagram ve YouTube'da paylaştığımız kodu yaz. Her kod hesabına bir kez geçer, ödül postana düşer.": "Escribe un código que compartimos en Instagram o YouTube. Cada código vale una vez por cuenta; la recompensa llega a tu CORREO.",
  "KOD": "CÓDIGO",
  "KOD GİR": "CANJEAR",
  "KULLAN": "CANJEAR",
- "Kod kabul edildi: ödülün POSTA'da seni bekliyor.": "Código aceptado: tu recompensa te espera en el CORREO.",
  "Kod kontrol edilemedi. İnternet bağlantını kontrol edip tekrar dene.": "No se pudo comprobar el código. Revisa tu conexión e inténtalo de nuevo.",
  "Kod kontrol ediliyor…": "Comprobando el código…",
  "Kod kullanmak için hesabınla giriş yap (PLAYER).": "Inicia sesión con tu cuenta para usar códigos (JUGADOR).",
@@ -2635,5 +2633,11 @@
  "MİSAFİR OLARAK OYNUYORSUN": "ESTÁS JUGANDO COMO INVITADO",
  "Aldığın gemler yalnızca bu telefonda kalır. Telefon değişirse kaybolur.": "Las gemas que compres solo se quedan en este teléfono. Si cambias de teléfono, se pierden.",
  "HESABA KAYDET": "GUARDAR EN CUENTA",
- "REKLAM İZLE|market": "VER VÍDEO"
+ "REKLAM İZLE|market": "VER VÍDEO",
+ "KOD KABUL EDİLDİ!": "¡CÓDIGO ACEPTADO!",
+ "Hediyen açılıyor…": "Abriendo tu regalo…",
+ "Hediyen hesabına geçti.": "Tu regalo ya está en tu cuenta.",
+ "Hediyen birazdan HABERLER kutusuna gelecek.": "Tu regalo llegará en breve a NOTICIAS.",
+ "Instagram ve YouTube'da paylaştığımız kodu yaz. Her kod hesabına bir kez geçer, hediyen hemen açılır.": "Escribe un código que compartimos en Instagram o YouTube. Cada código vale una vez por cuenta y tu regalo se abre al instante.",
+ "Bu koşuyu izlemek için oyunu güncelle.": "Actualiza el juego para ver esta carrera."
 }

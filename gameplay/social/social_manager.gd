@@ -119,6 +119,12 @@ const AVATAR_CACHE_DIR: String = "user://avatars/"
 const AVATAR_CACHE_INDEX: String = "user://avatars/index.json"
 ## Şikâyet nedenleri (kuralla aynı).
 const REPORT_REASONS: Array[String] = ["photo", "name", "garage"]
+## OTOMATİK PROFİL (kullanıcı 2026-10-31: "google veya maille girdi ama profil kurmak için arkadaşlara gitmesi gerekiyor;
+## direkt rastgele isimli açalım, isteyen değiştirsin"): hesapla giren oyuncunun sunucuda profili yoksa oturum açılınca
+## rastgele adla (SocialNames.default_name, "Usta1234") SESSİZCE kurulur; ad PROFİL › DÜZENLE ya da ARKADAŞLAR'dan
+## değişir. Kurulamazsa (ağ) NO_PROFILE kalır: ARKADAŞLAR'daki form yedektir, sonraki açılışta yeniden denenir.
+## Testler elle kurma akışını denerken kapatır.
+static var auto_profile: bool = true
 
 ## Eşleşme için bekleyen isteğin sonucu (iç kullanım).
 signal _op_result(result: Dictionary)
@@ -425,8 +431,9 @@ func is_friend(uid: String) -> bool:
 	return _index_of(friends, uid) >= 0
 
 
-## Profil oluşturur: takma ad + yeni arkadaş kodu, ardından açık garaj yayınlanır.
-func create_profile(raw_name: String) -> bool:
+## Profil oluşturur: takma ad + yeni arkadaş kodu, ardından açık garaj yayınlanır. quiet: oyuncu istemedi (otomatik
+## profil) — başarı / hata bildirimi gösterilmez.
+func create_profile(raw_name: String, quiet: bool = false) -> bool:
 	var name: String = SocialNames.clean_name(raw_name)
 	if not _check_name(name) or _state != State.NO_PROFILE:
 		return false
@@ -445,10 +452,12 @@ func create_profile(raw_name: String) -> bool:
 		_meta["name"] = name
 		_write_meta()
 		_set_state(State.READY)
-		notice.emit(Loc.t("Profilin hazır! Kodunu arkadaşlarınla paylaş."))
+		if not quiet:
+			notice.emit(Loc.t("Profilin hazır! Kodunu arkadaşlarınla paylaş."))
 	else:
 		_set_state(State.NO_PROFILE)
-		_write_failed(Loc.t("Profil oluşturulamadı. İnternet bağlantını kontrol edip tekrar dene."))
+		if not quiet:
+			_write_failed(Loc.t("Profil oluşturulamadı. İnternet bağlantını kontrol edip tekrar dene."))
 	return ok
 
 
@@ -910,6 +919,8 @@ func _start_session() -> void:
 		refresh(true)
 	elif _not_found(result):
 		_set_state(State.NO_PROFILE)
+		if auto_profile:
+			await create_profile(SocialNames.default_name(), true)   # bkz. auto_profile
 	else:
 		_set_state(State.OFFLINE)
 

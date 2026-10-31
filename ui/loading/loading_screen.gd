@@ -222,6 +222,10 @@ func _start_game(scene: PackedScene) -> void:
 		return
 	_main = scene.instantiate()
 	var tree: SceneTree = get_tree()
+	# Çökme raporunda iz: bu karenin çiziminde şehrin malzemeleri ilk kez derlenir (2026-10-31: PowerVR sürücüsü açılışta
+	# shader derlerken çöktü, bu karede mi ön ısıtmada mı belli değildi). Telemetry düğümü Main'le kurulur, iz sırada
+	# bekleyip çizimden önce gider.
+	Telemetry.breadcrumb("açılış: oyun sahnesi kuruldu (şehrin ilk 3B karesi)")
 	tree.root.add_child(_main)
 	tree.current_scene = _main
 	_settle = SETTLE_FRAMES

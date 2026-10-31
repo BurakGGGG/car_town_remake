@@ -215,6 +215,26 @@ func _run() -> void:
 		"özet: 3 kez ilk 100, 2 kez ilk 3, en iyisi 1.")
 	check((await board.history_of("yok")).is_empty() and (await board.history_of("")).is_empty(), "derecesi olmayan: boş")
 
+	print("== 6) İZLE: ARKADAŞLAR listesinden sonra da koşu açılır (2026-10-31) ==")
+	# Kullanıcı: "birkaç kez yarış tekrarını izleyemedim". ARKADAŞLAR listesi önbellekteki satırdan "run"ı siliyordu →
+	# o listeden İZLE bir saat boyunca "Bu koşu şu an açılamadı" diyordu.
+	var friend_run: DragRaceSim.Recording = DragRaceSim.ai_recording(&"bmw_e46", {&"motor": 2},
+		DragRaceSim.roll_form(&"bmw_e46", null), RandomNumberGenerator.new())
+	board.inject(Leaderboard.RUNS + "/" + Leaderboard.doc_id(2965, &"A", "f1"), {"uid": "f1", "name": "Ali", "time": friend_run.time,
+		"car": "bmw_e46", "run": JSON.stringify(friend_run.to_dict())})
+	social.friends = [{"uid": "f1", "name": "Ali"}]
+	var listed: Array[Dictionary] = await board.friends_entries(2965, &"A")
+	check(listed.size() == 1 and listed[0]["uid"] == "f1" and not listed[0].has("run"), "ARKADAŞLAR satırında koşu metni yok")
+	var watched: DragRaceSim.Recording = await board.recording_of(2965, &"A", "f1", friend_run.time)
+	check(watched != null and watched.vehicle_id == &"bmw_e46" and is_equal_approx(watched.time, friend_run.time),
+		"listeden sonra İZLE koşuyu açar (önbellek bozulmadı)")
+	var again: Array[Dictionary] = await board.friends_entries(2965, &"A")
+	check(again.size() == 1 and await board.recording_of(2965, &"A", "f1") != null, "ikinci kez de")
+	check(await board.recording_of(2965, &"A", "kimse") == null, "koşusu olmayan oyuncu: null")
+	board.inject(Leaderboard.RUNS + "/" + Leaderboard.doc_id(2965, &"A", "bozuk"), {"uid": "bozuk", "time": 9.0, "run": "{yarım"})
+	check(await board.recording_of(2965, &"A", "bozuk") == null, "bozuk koşu metni: null")
+	social.friends = []
+
 	Leaderboard.test_now = -1
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Leaderboard.FILE))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SocialManager.META_PATH))

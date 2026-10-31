@@ -140,6 +140,41 @@ func _run() -> void:
 		and Telemetry.account_kind(CloudSaveManager.PROVIDER_EMAIL) == "email"
 		and Telemetry.account_kind("") == "guest", "giriş yolu → google / facebook / email, oturumsuz → guest")
 
+	print("== 10) GPU izi + derlenemeyen shader'ın kimliği (PowerVR, 2026-10-31) ==")
+	check(_last(&"log").is_empty() == false and _count(&"log") > 0, "çökme günlüğüne iz yazılıyor")
+	var gpu_logged: bool = false
+	for entry: Dictionary in Telemetry.recorded:
+		gpu_logged = gpu_logged or (entry.get("kind") == &"log" and String(entry["name"]).begins_with("gpu: "))
+	check(gpu_logged, "düğüm kurulunca GPU özeti çökme günlüğüne yazıldı")
+	check(_last(&"property", "gpu").get("value", "") == RenderingServer.get_video_adapter_name().left(36), "gpu oyuncu özelliği")
+	Telemetry.breadcrumb("ön ısıtma: deneme")
+	check(_last(&"log", "ön ısıtma: deneme").size() > 0, "breadcrumb çökme günlüğüne gider")
+	# Godot'un _display_error_with_code biçimi: önce "N: satır", sonra hata (ileti iki satır)
+	var errors_before: int = _count(&"error")
+	for line: String in ["1: #version 300 es", "2: #define USE_GLES_OVER_GL", "3: #define DISABLE_LIGHTMAP",
+			"4: #define MAX_GLOBAL_SHADER_UNIFORMS 256", "5: #define MODE_RENDER_DEPTH", "6: ",
+			"7: uniform highp sampler2D m_albedo_tex;", "8: vec4 m_paint_color; float m_gloss;",
+			"9: #define SHADOW_DEPTH(m_uv) (m_uv)", "10: color = m_paint_color.rgb * m_gloss;"]:
+		print(line)
+	push_error("SceneShaderGLES3: Fragment shader compilation failed:\nCompile failed.")
+	await frames(2)
+	var shader_error: String = String(_last(&"error").get("name", ""))
+	check(_count(&"error") == errors_before + 1, "shader hatası raporlandı")
+	check(shader_error.contains("m_albedo_tex, m_paint_color, m_gloss") and not shader_error.contains("m_uv"),
+		"kimlikte malzemenin m_ adları (şablonun m_uv'si yok): %s" % shader_error)
+	check(shader_error.contains("bayrak: USE_GLES_OVER_GL, DISABLE_LIGHTMAP, MODE_RENDER_DEPTH")
+		and not shader_error.contains("MAX_GLOBAL"), "kimlikte değersiz #define bayrakları")
+	check(not shader_error.contains("\n"), "ileti tek satır")
+	# Başka malzemede aynı hata metni: ayrı raporlanır (anahtar kimliği içerir); dökümsüz aynı hata kimliksiz kalır
+	for line: String in ["1: #version 300 es", "2: #define USE_RADIANCE_MAP", "3: float m_glow;"]:
+		print(line)
+	push_error("SceneShaderGLES3: Fragment shader compilation failed:\nCompile failed.")
+	await frames(2)
+	check(_count(&"error") == errors_before + 2 and String(_last(&"error").get("name", "")).contains("m_glow"),
+		"başka malzemenin aynı hatası ayrı raporlandı")
+	print("57: sıra dışı numaralı satır döküm başlatmaz")
+	check(Telemetry._take_dump().is_empty(), "döküm hata ile tüketildi, sıra dışı satır yeni döküm açmadı")
+
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(GameSettings.PATH))
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)

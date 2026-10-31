@@ -220,6 +220,7 @@ func until(cond: Callable, limit: float = 5.0) -> bool:
 
 
 func _run() -> void:
+	SocialManager.auto_profile = false   # profil elle kurulur (otomatik profil social_test §15'te denenir)
 	Loc.use("tr")
 	fb.store["codes/" + CODE] = {"uid": "alice"}
 	_table()

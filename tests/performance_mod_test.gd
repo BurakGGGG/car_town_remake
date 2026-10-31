@@ -180,6 +180,12 @@ func _run() -> void:
 	if not own.is_owned(sahin):
 		own.add_vehicle(sahin)   # yeni oyunda araç HOŞ GELDİN KUTUSU'ndan çıkar; test kutuyu açmadan ekler
 	check(own.is_owned(sahin), "başlangıç aracı Şahin")
+	# Şahin garajda sergide (kullanıcı 2026-10-31: modifiyeye başlayınca hem sergide hem liftte iki Şahin görünüyordu)
+	var decor_view: GarageDecorView = g(&"garage_decor_view")
+	var exhibit_iid: String = decor_view.place_free(GarageDecor.vehicle_item_id(sahin))
+	await frames(2)
+	check(exhibit_iid != "" and decor_view.body_of(exhibit_iid) != null and decor_view.body_of(exhibit_iid).visible,
+		"Şahin garajda sergide")
 	pp.level = 1
 	check(mods.status(sahin, &"motor") == PerformanceModManager.Status.NEEDS_LEVEL, "seviye 1'de SOKAK kilitli (seviye 3)")
 	pp.level = 3
@@ -197,6 +203,11 @@ func _run() -> void:
 	check(mods.status(sahin, &"turbo") == PerformanceModManager.Status.INSTALLING, "aynı araca ikinci parça aynı anda takılmaz")
 	await frames(3)
 	check(view.display_of(sahin) != null and view.display_of(sahin).bay == bay, "araç alanın liftinde görünüyor")
+	check(view.is_in_bay(sahin) and not decor_view.body_of(exhibit_iid).visible, "liftteyken sergideki kopyası gizli")
+	decor_view.set_editing(true)
+	check(decor_view.body_of(exhibit_iid).visible, "düzenlerken sergi yeri görünür (yeri ayrılmış)")
+	decor_view.set_editing(false)
+	check(not decor_view.body_of(exhibit_iid).visible, "düzenleme kapanınca yine gizli")
 	check(not mods.collect(sahin), "süre dolmadan takılamaz")
 	save.save_game()
 	var data: Dictionary = disk()
@@ -211,6 +222,12 @@ func _run() -> void:
 	check(mods.has_job(sahin) and int(mods.job_of(sahin)["bay"]) == bay, "takma yeniden yüklendi, aynı alanda")
 	check(not rm.is_bay_free(bay), "alan hâlâ dolu")
 	check(view.display_of(sahin) != null, "görünüm yeniden kuruldu")
+	decor_view = g(&"garage_decor_view")
+	exhibit_iid = ""
+	for inst: Dictionary in (g(&"decor") as DecorManager).instances():
+		if inst["item"] == GarageDecor.vehicle_item_id(sahin):
+			exhibit_iid = String(inst["iid"])
+	check(exhibit_iid != "" and not decor_view.body_of(exhibit_iid).visible, "kayıttan yüklenen takmada da sergi gizli")
 	mods.finish_now(sahin)
 	await frames(2)
 	check(mods.is_ready(sahin), "süre doldu: HAZIR")
@@ -224,6 +241,7 @@ func _run() -> void:
 		"Şahin 0-100 13,2 → %.2f" % PerformanceMods.stats(sahin)["zero_100"])
 	await create_timer(1.6).timeout
 	check(rm.is_bay_free(bay) and view.display_of(sahin) == null, "araç alandan çıktı, alan boşaldı")
+	check(not view.is_in_bay(sahin) and decor_view.body_of(exhibit_iid).visible, "alandan çıkınca sergideki yerine döndü")
 	save.save_game()
 	data = disk()
 	check(int(data["performance"]["builds"]["tofas_sahin"]["motor"]) == 1, "yapı kayıtta")

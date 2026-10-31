@@ -226,11 +226,35 @@ func _market_code_tab() -> void:
 	await frames(4)
 	var panel: Control = store.find_child("CodePanel", true, false) as Control
 	var edit: LineEdit = store.find_child("CodeEdit", true, false) as LineEdit
-	var result: Label = store.find_child("CodeResult", true, false) as Label
+	var result: PanelContainer = store.find_child("CodeResult", true, false) as PanelContainer
+	var heading: Label = result.find_child("Heading", true, false) as Label if result else null
 	check(panel != null and edit != null and store.find_child("UseButton", true, false) != null, "KOD GİR: kutu + KULLAN")
-	check(edit != null and not edit.editable and result.text == PromoService.status_text("signin"), "misafirde kilitli, neden yazılı")
+	check(edit != null and not edit.editable and result.visible and heading.text == PromoService.status_text("signin"),
+		"misafirde kilitli, neden sonuç plakasında yazılı")
 	edit.text_changed.emit("reels-50")
 	check(edit.text == "REELS50", "yazılan kod büyük harfe çevrilir")
+	# Sonuç plakası (2026-10-31, kullanıcı: "çok küçük gözüküyor, hediyeyi aldım mı anlayamıyorum"): renkli, büyük yazı
+	store._show_result(result, &"error", PromoService.status_text("not_found"))
+	var error_fill: Color = (result.get_theme_stylebox(&"panel") as StyleBoxFlat).bg_color
+	check(error_fill == HudPalette.DANGER and heading.get_theme_font_size(&"font_size") >= GemStoreScreen.CODE_RESULT_SIZE
+		and (result.find_child("Icon", true, false) as Control).visible, "hata: kırmızı plaka, ✖, büyük yazı")
+	store._show_result(result, &"ok", Loc.t("KOD KABUL EDİLDİ!"), Loc.t("Hediyen hesabına geçti."))
+	check((result.get_theme_stylebox(&"panel") as StyleBoxFlat).bg_color == GemStoreScreen.OK_COLOR
+		and (result.find_child("Detail", true, false) as Label).visible, "başarı: yeşil plaka, ✔, iki satır")
+	# Ekran klavyesi (kullanıcı: "klavye kodu girdiğimiz yerin üzerine basıyor"): kutu odaktayken pano yukarı kayar
+	var view_h: float = store.get_viewport_rect().size.y
+	var keyboard: float = view_h * 0.5
+	GemStoreScreen.simulate_keyboard = keyboard
+	edit.grab_focus()
+	await frames(3)
+	var edit_bottom: float = Hud.screen_rect(edit).end.y
+	check(edit_bottom <= view_h - keyboard + 0.5, "klavye açıkken kutu klavyenin üstünde (alt %.0f, klavye üstü %.0f)"
+		% [edit_bottom, view_h - keyboard])
+	edit.release_focus()
+	await frames(3)
+	check(is_zero_approx(store.get("_keyboard_shift")) and Hud.screen_rect(edit).end.y > view_h - keyboard,
+		"klavye kapanınca pano yerine döndü")
+	GemStoreScreen.simulate_keyboard = -1.0
 	hud.router.close_all()
 	await seconds(0.4)
 

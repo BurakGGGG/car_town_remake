@@ -9,6 +9,9 @@ extends Node
 signal job_selected(vehicle_id: StringName)
 ## Seçim o araçtan ayrıldı (başka yere dokunuldu): HUD plakayı kapatır.
 signal job_deselected(vehicle_id: StringName)
+## Tamir alanındaki araçlar değişti (yeni takma, çıkışın sonu, silinme): garajdaki sergi kopyası gizlenir / geri gelir
+## (GarageDecorView, bkz. is_in_bay).
+signal cars_changed
 
 const CarHitboxScript: GDScript = preload("res://car_hitbox.gd")
 ## Balon sayacı bu aralıkla güncellenir (sn).
@@ -66,6 +69,17 @@ func display_of(vehicle_id: StringName) -> PerformanceBayDisplay:
 	return _displays.get(vehicle_id) as PerformanceBayDisplay
 
 
+## Araç şu an bir tamir alanında mı: parçası takılıyor ya da takılmış, alandan çıkıyor. O sürede garajdaki sergisi
+## görünmez — aynı araç hem liftte hem sergide iki ayrı araç gibi duruyordu (kullanıcı 2026-10-31).
+func is_in_bay(vehicle_id: StringName) -> bool:
+	if is_instance_valid(_displays.get(vehicle_id)):
+		return true
+	for display: PerformanceBayDisplay in _leaving:
+		if is_instance_valid(display) and display.vehicle_id == vehicle_id:
+			return true
+	return false
+
+
 ## Görünümü duran alanlar (çıkış animasyonu süren dahil): müşteri aracı buraya girmesin.
 func busy_bays() -> Array[int]:
 	var out: Array[int] = []
@@ -121,6 +135,7 @@ func _add(id: StringName, bay: int) -> void:
 	spot.add_child(display)
 	display.position = Vector3(0.0, RepairLift.REST_TOP, 0.0)
 	_displays[id] = display
+	cars_changed.emit()
 	if _arrivals.has(id):
 		# Yeni alınan parça: araç gizli bekler, YÜKSELT sinematiği (present) alana sokar
 		display.visible = false
@@ -180,7 +195,8 @@ func _leave(id: StringName) -> void:
 		var bays: RepairBayManager = get_tree().get_first_node_in_group("repair_bays") as RepairBayManager
 		if bays:
 			bays.release_lift(display.bay)
-		display.queue_free())
+		display.queue_free()
+		cars_changed.emit())   # araç alandan çıktı: sergisi geri gelir
 	display.finish()
 
 
@@ -195,6 +211,7 @@ func _remove(id: StringName) -> void:
 	if CarHitboxScript.get(&"selected_car") == display:
 		CarHitboxScript.set(&"selected_car", null)
 	display.queue_free()
+	cars_changed.emit()
 
 
 func _clear_selection() -> void:

@@ -8,7 +8,7 @@ Google Play Games arkadaş listesi (henüz yok, bkz. "Sonraki adım").
 
 * Sağ üstte GÖREVLER'in altında **ARKADAŞLAR** plakası. Gelen istek varsa amber olur: `ARKADAŞLAR (1)`.
 * Misafir (Google girişi yok): "Google ile giriş yap" + GİRİŞ YAP (PLAYER ekranını açar).
-* İlk açılışta takma ad seçilir (öneri: `Usta1234`). Gerçek ad paylaşılmaz.
+* Profil hesapla girişte KENDİLİĞİNDEN kurulur (2026-10-31, kullanıcı: "profil kurmak için arkadaşlara gitmesi gerekiyor; direkt rastgele isimli açalım, isteyen değiştirsin"): sunucuda profil yoksa rastgele `Usta1234` adı + arkadaş kodu, bildirimsiz (`SocialManager.auto_profile`). Ad PROFİL › DÜZENLE ya da ARKADAŞLAR'dan değişir. Kurulamazsa (ağ) ARKADAŞLAR'daki TAKMA AD SEÇ formu yedektir, sonraki açılışta yeniden denenir. HUD isim plakası takma adı gösterir (yoksa hesap adı). Gerçek ad paylaşılmaz.
 * Profil: takma ad (DEĞİŞTİR), arkadaş kodu `AY-7K2Q4M` (KOPYALA), kodla EKLE.
 * GELEN İSTEKLER (KABUL / RET), ARKADAŞLARIN (GARAJA GİT / ÇIKAR, çıkarma iki adımlı), GÖNDERDİĞİN İSTEKLER (GERİ AL).
 * İki oyuncu birbirine istek atarsa ikinci gönderen doğrudan arkadaş olur.

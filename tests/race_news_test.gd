@@ -123,6 +123,7 @@ func race_against(owner: Dictionary, car: StringName, won: bool) -> Dictionary:
 
 
 func _run() -> void:
+	SocialManager.auto_profile = false   # profil elle kurulur (otomatik profil social_test §15'te denenir)
 	print("== 1) Bonus, skor, İNTİKAM (yerel) ==")
 	await open_session("solo")
 	var bob_owner: Dictionary = {"uid": "bob", "name": "Bob Usta", "featured": false, "paint": "", "build": {}}

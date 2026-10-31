@@ -136,6 +136,8 @@ var profile_edit_screen: ProfileEditScreen
 var avatar_cropper: AvatarCropper
 var camera_capture: CameraCapture
 var _social: SocialManager
+## Oturumdaki hesabın görünen adı (CloudSaveManager.user_changed); isim plakasının yedeği.
+var _cloud_display_name: String = ""
 var _quests: QuestManager
 var _missions: MissionManager
 @onready var top_left: MarginContainer = %TopLeft
@@ -819,10 +821,22 @@ func _connect_gameplay() -> void:
 		_on_cloud_user_changed(cloud.get_profile())
 
 
-## Google hesabının adı isim plakasına; çıkışta / misafirde player_name.
+## Hesabın (Google) adı; isim plakası profil takma adı yoksa bunu gösterir (_refresh_player_name).
 func _on_cloud_user_changed(profile: Dictionary) -> void:
-	var display_name: String = String(profile.get("display_name", "")).strip_edges()
-	set_player_name(display_name if not display_name.is_empty() else player_name)
+	_cloud_display_name = String(profile.get("display_name", "")).strip_edges()
+	_refresh_player_name()
+
+
+## İSİM PLAKASI: sosyal profilin takma adı — arkadaşların gördüğü ad, profil kartıyla aynı (2026-10-31: hesapla girince
+## profil "Usta1234" gibi rastgele adla kendiliğinden kurulur, SocialManager.auto_profile; oyuncu adı PROFİL › DÜZENLE'den
+## değiştirir). Profil yoksa hesabın (Google) adı, misafirde / e-postada player_name. Ağaç dışında da çağrılır (arkadaş
+## garajı ziyaretinde sosyal sinyali): get_tree kullanmaz.
+func _refresh_player_name() -> void:
+	var nick: String = _social.my_name() if _social and _social.is_ready() else ""
+	if not nick.is_empty():
+		set_player_name(nick)
+	else:
+		set_player_name(_cloud_display_name if not _cloud_display_name.is_empty() else player_name)
 
 
 func _on_xp_changed(new_level: int, current_xp: int, xp_to_next: int) -> void:
@@ -1689,10 +1703,15 @@ func _register_screens() -> void:
 ## masaüstünde 1,3 sn sürüyor ve yükleme ekranı (slaytlar, ipucu, çubuk) donuyordu. Şimdi aralarda yükleme ekranı çizilir.
 func _warm_up() -> void:
 	var tree: SceneTree = get_tree()
-	for step: Callable in [drag_race_screen.prewarm, showroom.prewarm, garage_screen.prewarm, WorldPrewarm.run.bind(tree)]:
+	var steps: Dictionary[String, Callable] = {"drag pisti": drag_race_screen.prewarm, "showroom": showroom.prewarm,
+		"garaj ekranı": garage_screen.prewarm, "dünya efektleri": WorldPrewarm.run.bind(tree)}
+	for step_name: String in steps:
 		await tree.process_frame   # her karede tek adım: o karenin çiziminde yalnız onun shader'ları derlenir
-		step.call()
+		# Çökme raporunda iz: sürücü shader derlerken çökerse hangi adımda olduğu görünür (PowerVR, 2026-10-31)
+		Telemetry.breadcrumb("ön ısıtma: " + step_name)
+		steps[step_name].call()
 	await tree.process_frame
+	Telemetry.breadcrumb("ön ısıtma bitti")
 	warmed_up = true
 
 
@@ -2656,8 +2675,13 @@ func _watch_leaderboard_run(info: Dictionary, from_records: bool = false) -> voi
 	var board: Leaderboard = get_tree().get_first_node_in_group("leaderboard") as Leaderboard
 	if board == null or drag_race_screen == null:
 		return
+	var car: String = SaveSafe.s(info.get("car", ""))
+	if not car.is_empty() and CarCatalog.get_entry(StringName(car)).is_empty():
+		# Koşu bu sürümde olmayan bir araçla (sonraki güncellemenin aracı): kayıt oynatılamaz
+		_show_notice(Loc.t("Bu koşuyu izlemek için oyunu güncelle."), HudPalette.INK, 2.4)
+		return
 	var recording: DragRaceSim.Recording = await board.recording_of(int(info.get("wk", 0)), StringName(info.get("cls", "")),
-		String(info.get("uid", "")))
+		String(info.get("uid", "")), float(info.get("time", -1.0)))
 	if recording == null:
 		_show_notice(Loc.t("Bu koşu şu an açılamadı."), HudPalette.INK, 2.0)
 		return
@@ -2810,6 +2834,7 @@ func _connect_social() -> void:
 	_social = get_tree().get_first_node_in_group("social") as SocialManager
 	if _social:
 		_social.changed.connect(_refresh_friends_button)
+		_social.changed.connect(_refresh_player_name)   # profil kuruldu / ad değişti: isim plakası
 		# DAVET ÖDÜLÜ: alınmayı bekleyen basamak / efsanevi araç seçimi de rozette
 		var referral: ReferralManager = get_tree().get_first_node_in_group("referral") as ReferralManager
 		if referral:

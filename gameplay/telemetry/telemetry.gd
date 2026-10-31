@@ -33,6 +33,13 @@ const QUEUE_MAX: int = 200
 const ERRORS_PER_SESSION: int = 25
 ## Masaüstü / test kaydının uzunluğu.
 const RECORDED_MAX: int = 200
+## SHADER DÖKÜMÜ (bkz. _scan_dump_line): bayrak #define'ları kaynağın bu kadar ilk satırında aranır (motorun eklediği
+## varyant / özelleştirme başlığı; şablonun içindeki #define'lar alınmaz). Kimlikte en çok bu kadar ad tutulur.
+const DUMP_HEADER_LINES: int = 160
+const DUMP_MAX_DEFINES: int = 30
+const DUMP_MAX_IDS: int = 30
+## Godot'un kendi şablonundaki tek m_ adı (canvas.glsl SHADOW_DEPTH makro parametresi): malzemeyi tanıtmaz.
+const DUMP_IGNORED_IDS: PackedStringArray = ["m_uv"]
 
 ## Masaüstü / test: gönderilmiş sayılan kayıtlar {kind, name, params} (en yenisi sonda).
 static var recorded: Array[Dictionary] = []
@@ -46,6 +53,11 @@ static var _logger: _ErrorLogger
 static var _error_mutex: Mutex = Mutex.new()
 static var _errors: Array[Dictionary] = []      # Logger'dan (başka iş parçacığı olabilir) gelen hatalar
 static var _error_keys: Dictionary = {}         # bu oturumda görülen hata yerleri
+## Şu an okunan shader dökümü (_error_mutex ile korunur): son satır numarası (0: döküm yok), bayraklar, m_ adları.
+static var _dump_line: int = 0
+static var _dump_defines: PackedStringArray = []
+static var _dump_ids: PackedStringArray = []
+static var _dump_id_regex: RegEx
 
 var _analytics: Variant = null   # JavaObject (FirebaseAnalytics)
 var _crashlytics: Variant = null # JavaObject (FirebaseCrashlytics)
@@ -111,12 +123,69 @@ static func test_crash() -> void:
 	OS.crash("AUTO YARD Crashlytics test crash")
 
 
+## GPU kimliği (çökme raporunun ilk izi): ad | üretici | API + sürücü sürümü | uygulanan kalite. PowerVR sürücüsü
+## açılışta shader derlerken çöktüğünde (2026-10-31, 1.1.4) raporda hiçbir iz yoktu.
+static func gpu_summary() -> String:
+	return "%s | %s | %s | kalite %d" % [RenderingServer.get_video_adapter_name(),
+		RenderingServer.get_video_adapter_vendor(), RenderingServer.get_video_adapter_api_version(),
+		GameSettings.active_quality()]
+
+
 ## Logger'ı kurar (süreçte bir kez). GDScript / motor hataları Crashlytics'e ölümcül olmayan kayıt olarak gider.
 static func install_logger() -> void:
 	if _logger != null:
 		return
 	_logger = _ErrorLogger.new()
 	OS.add_logger(_logger)
+
+
+## SHADER DÖKÜMÜ (2026-10-31): derlenemeyen shader'da Godot kaynağı satır satır basar ("1: #version 300 es", "2: …"),
+## hemen ardından "…: Fragment shader compilation failed: <sürücü günlüğü>" hatasını yazar. PowerVR'ın günlüğü yalnız
+## "Compile failed." diyordu, hangi malzeme olduğu belli değildi. Logger her baskı satırını buraya verir; ardışık
+## numaralı satırlardan kimlik çıkarılır: başlıktaki bayrak #define'ları (varyant: geçiş, gölge, ışık…) ve kullanıcı
+## kodunun m_ adları (Godot malzeme shader'ındaki her adı m_ ile yazar → hangi .gdshader / StandardMaterial3D).
+## Başka iş parçacığından çağrılabilir (Logger): _error_mutex ile.
+static func _scan_dump_line(message: String) -> void:
+	var colon: int = message.find(": ")
+	if colon < 1 or colon > 5 or not message.left(colon).is_valid_int():
+		return
+	var number: int = message.left(colon).to_int()
+	var text: String = message.substr(colon + 2).strip_edges()
+	_error_mutex.lock()
+	if number == 1:
+		_dump_defines.clear()
+		_dump_ids.clear()
+	elif _dump_line <= 0 or number != _dump_line + 1:
+		_error_mutex.unlock()
+		return   # döküm değil (ya da araya başka baskı girdi)
+	_dump_line = number
+	if number <= DUMP_HEADER_LINES and text.begins_with("#define ") and _dump_defines.size() < DUMP_MAX_DEFINES:
+		var flag: String = text.substr(8).strip_edges()
+		if not flag.is_empty() and not flag.contains(" ") and not _dump_defines.has(flag):
+			_dump_defines.append(flag)
+	if text.contains("m_") and _dump_ids.size() < DUMP_MAX_IDS:
+		if _dump_id_regex == null:
+			_dump_id_regex = RegEx.create_from_string("\\bm_[A-Za-z0-9_]+")
+		for found: RegExMatch in _dump_id_regex.search_all(text):
+			var id: String = found.get_string()
+			if not DUMP_IGNORED_IDS.has(id) and not _dump_ids.has(id) and _dump_ids.size() < DUMP_MAX_IDS:
+				_dump_ids.append(id)
+	_error_mutex.unlock()
+
+
+## Son dökümün kimliği ("ad: m_a, m_b | bayrak: X, Y"; döküm yoksa boş) — okununca sıfırlanır (bir hataya bir döküm).
+## Çağıran _error_mutex'i TUTMAZ.
+static func _take_dump() -> String:
+	_error_mutex.lock()
+	var out: String = ""
+	if _dump_line > 0:
+		out = "ad: %s | bayrak: %s" % [", ".join(_dump_ids) if not _dump_ids.is_empty() else "-",
+			", ".join(_dump_defines) if not _dump_defines.is_empty() else "-"]
+	_dump_line = 0
+	_dump_defines.clear()
+	_dump_ids.clear()
+	_error_mutex.unlock()
+	return out
 
 
 static func _push(entry: Dictionary) -> void:
@@ -156,6 +225,9 @@ func _ready() -> void:
 	_bind_android()
 	_apply_consent()
 	set_property(&"lang", Loc.current())
+	# GPU: çökme raporunda ilk iz + Analytics'te oyuncu özelliği (kaç oyuncu hangi GPU'da: PowerVR payı)
+	_crash_log("gpu: " + gpu_summary())
+	set_property(&"gpu", RenderingServer.get_video_adapter_name())
 	var queued: Array[Dictionary] = _pending.duplicate()
 	_pending.clear()
 	for entry: Dictionary in queued:
@@ -285,6 +357,7 @@ func _log_event(name: String, params: Dictionary) -> void:
 
 
 func _crash_log(text: String) -> void:
+	_record({"kind": &"log", "name": text})
 	if _crashlytics != null and crash_enabled:
 		_crashlytics.call(&"log", text)
 
@@ -409,8 +482,20 @@ class _ErrorLogger extends Logger:
 			where = "%s:%d %s" % [top.get_frame_file(0).get_file(), top.get_frame_line(0), top.get_frame_function(0)]
 		# Yığın yoksa (sürüm derlemesi) push_error'ların yeri aynıdır: ileti de anahtara girer
 		var key: String = where + "|" + message.left(80)
+		# Derlenemeyen shader: hemen önce basılan kaynağın kimliği iletiye (Crashlytics başlığında görünsün) ve anahtara
+		# (farklı malzemelerin aynı "Compile failed." hatası ayrı raporlansın) girer. Bkz. Telemetry._scan_dump_line.
+		if message.contains("shader compilation failed"):
+			var shader_id: String = Telemetry._take_dump()
+			if not shader_id.is_empty():
+				message = "%s [%s]" % [message.replace("\n", " ").strip_edges(), shader_id]
+				key += "|" + shader_id
+				trace = ("shader " + shader_id + "\n" + trace).strip_edges()
 		Telemetry._error_mutex.lock()
 		if not Telemetry._error_keys.has(key) and Telemetry._error_keys.size() < Telemetry.ERRORS_PER_SESSION:
 			Telemetry._error_keys[key] = true
 			Telemetry._errors.append({"where": where, "message": message.left(300), "trace": trace})
 		Telemetry._error_mutex.unlock()
+
+	## Her baskı satırı: yalnız shader dökümü aranır (bkz. Telemetry._scan_dump_line; numarasız satır hemen döner).
+	func _log_message(message: String, _error: bool) -> void:
+		Telemetry._scan_dump_line(message)

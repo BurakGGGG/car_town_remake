@@ -48,9 +48,15 @@ func show_for(id: StringName) -> bool:
 	_sell_armed_until = 0
 	_show_actions()
 	_refresh()
+	# Parçası takılan araç liftte, sergisi gizli (GarageDecorView._apply_away): kamera boş sergi yerine lifteki araca gider
+	var target: Node3D = body
+	var mod_bays: PerformanceBays = get_tree().get_first_node_in_group("performance_bays") as PerformanceBays
+	var on_lift: PerformanceBayDisplay = mod_bays.display_of(id) if mod_bays else null
+	if not body.visible and on_lift != null and is_instance_valid(on_lift):
+		target = on_lift
 	var camera: WorldCamera = get_viewport().get_camera_3d() as WorldCamera
 	if camera:
-		var c: Vector3 = body.global_position
+		var c: Vector3 = target.global_position
 		var before: Dictionary = camera.frame_box(AABB(Vector3(c.x - ZOOM_SPAN * 0.5, 0.0, c.z - ZOOM_SPAN * 0.5),
 			Vector3(ZOOM_SPAN, 0.5, ZOOM_SPAN)), 0.10, 0.56, 0.05, ZOOM_CLOSEST)
 		if _view_before.is_empty():   # plaka açıkken başka araca geçilirse ilk görünüme dönülür

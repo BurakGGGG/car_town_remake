@@ -2225,11 +2225,9 @@
  "Bu kodun süresi dolmuş.": "This code has expired.",
  "Böyle bir kod yok. Harfleri kontrol et.": "There's no such code. Check the letters.",
  "CANLI ETKİNLİK": "LIVE EVENT",
- "Instagram ve YouTube'da paylaştığımız kodu yaz. Her kod hesabına bir kez geçer, ödül postana düşer.": "Enter a code we shared on Instagram or YouTube. Each code works once per account; the reward lands in your MAIL.",
  "KOD": "CODE",
  "KOD GİR": "ENTER CODE",
  "KULLAN": "REDEEM",
- "Kod kabul edildi: ödülün POSTA'da seni bekliyor.": "Code accepted: your reward is waiting in MAIL.",
  "Kod kontrol edilemedi. İnternet bağlantını kontrol edip tekrar dene.": "Couldn't check the code. Check your internet connection and try again.",
  "Kod kontrol ediliyor…": "Checking code…",
  "Kod kullanmak için hesabınla giriş yap (PLAYER).": "Sign in with your account to use codes (PLAYER).",
@@ -2634,5 +2632,11 @@
  "+%d GEM · İLERLEMEN ARTIK HESABINDA": "+%d GEMS · YOUR PROGRESS IS NOW IN YOUR ACCOUNT",
  "MİSAFİR OLARAK OYNUYORSUN": "YOU'RE PLAYING AS A GUEST",
  "Aldığın gemler yalnızca bu telefonda kalır. Telefon değişirse kaybolur.": "Gems you buy stay on this phone only. If you change phones, they're lost.",
- "HESABA KAYDET": "SAVE TO ACCOUNT"
+ "HESABA KAYDET": "SAVE TO ACCOUNT",
+ "KOD KABUL EDİLDİ!": "CODE ACCEPTED!",
+ "Hediyen açılıyor…": "Opening your gift…",
+ "Hediyen hesabına geçti.": "Your gift has been added to your account.",
+ "Hediyen birazdan HABERLER kutusuna gelecek.": "Your gift will arrive in NEWS shortly.",
+ "Instagram ve YouTube'da paylaştığımız kodu yaz. Her kod hesabına bir kez geçer, hediyen hemen açılır.": "Enter a code we shared on Instagram or YouTube. Each code works once per account, and your gift opens right away.",
+ "Bu koşuyu izlemek için oyunu güncelle.": "Update the game to watch this run."
 }

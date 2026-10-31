@@ -225,6 +225,16 @@ static func _trim(out: Array[Dictionary]) -> void:
 		i -= 1
 
 
+## Bu postanın "HEDİYEN VAR" yazısı çıkmasın (on) / yeniden çıkabilsin (off). MARKET › KOD GİR kabul edilen kuponun
+## hediyesini kendisi açar (2026-10-31); açamazsa (posta gecikti, pano kapandı) işareti kaldırır, yazı her zamanki gibi gelir.
+func set_announced(id: String, on: bool) -> void:
+	if on:
+		_notified[id] = true
+		return
+	_notified.erase(id)
+	_announce_gifts()
+
+
 func _announce_gifts() -> void:
 	var fresh: int = 0
 	for entry: Dictionary in _items:

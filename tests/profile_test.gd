@@ -120,6 +120,7 @@ func photo(color: Color) -> Image:
 
 
 func _run() -> void:
+	SocialManager.auto_profile = false   # profil elle kurulur (otomatik profil social_test §15'te denenir)
 	print("== 1) Katalog ==")
 	check(ProfileCatalog.preset_ids().size() == 12 and ProfileCatalog.is_preset("p12") and not ProfileCatalog.is_preset("p13"),
 		"12 hazır avatar, p13 yok")
