@@ -53,7 +53,8 @@ const MODE_PAD: Vector2 = Vector2(2.0, 5.0)
 const LUXURY_BACK: Color = Color("1E1B2B")
 const LUXURY_GOLD: Color = Color("E8B53A")
 ## Alt menünün modları: mod → [başlık, ikon]. Kategoriler modlara MODE_OF ile dağılır.
-const MODES: Array[StringName] = [&"items", &"storage", &"floor", &"wall", &"vehicles"]
+## EVCİL HAYVAN (2026-10-31, kullanıcı: "eşyalar, depo yanına pets diye bir şey aç, evcil hayvan eşyalarını oradan satalım").
+const MODES: Array[StringName] = [&"items", &"storage", &"pets", &"floor", &"wall", &"vehicles"]
 ## DEPO modunun tek "kategorisi": katalogda tür değil (GarageDecor.Kind'da yok), şeridi depodaki eşyalardan kurulur.
 const STORAGE_KIND: int = -2
 ## Denetim / araç çubuğu için kamera bandında ayrılan yükseklik (plaka satırı + aralık).
@@ -863,6 +864,8 @@ static func mode_of(kind: int) -> StringName:
 			return &"wall"
 		GarageDecor.Kind.VEHICLE:
 			return &"vehicles"
+		GarageDecor.Kind.PET:
+			return &"pets"
 		STORAGE_KIND:
 			return &"storage"
 	return &"items"
@@ -891,6 +894,7 @@ static func _mode_title(mode: StringName) -> String:
 		&"floor": return Loc.t("ZEMİN")
 		&"wall": return Loc.t("DUVAR")
 		&"vehicles": return Loc.t("ARAÇLAR")
+		&"pets": return Loc.t("EVCİL HAYVAN")
 	return Loc.t("EŞYALAR")
 
 

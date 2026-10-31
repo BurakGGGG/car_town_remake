@@ -2640,6 +2640,39 @@
       "desc": "Işıklı pistiyle altın şeritli özel helikopter. Garajın taçı."
     },
     {
+      "id": "lux_cat_bed",
+      "title": "DERİ KEDİ YATAĞI",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 120,
+      "value": 36000,
+      "min_level": 5,
+      "desc": "Siyah deri, altın biye, kırmızı kadife minder. Kedin bir kral gibi uyur."
+    },
+    {
+      "id": "lux_cat_tower",
+      "title": "ALTIN LASTİK KULE",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 220,
+      "value": 66000,
+      "min_level": 5,
+      "desc": "Altın şeritli lastikler, deri minder ve altın egzoz borusu. Garajın en havalı kedi kulesi."
+    },
+    {
+      "id": "lux_cat_bowls",
+      "title": "MERMER MAMA KABI",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 80,
+      "value": 24000,
+      "min_level": 5,
+      "desc": "Mermer kaide üstünde altın mama ve su kabı."
+    },
+    {
       "id": "flip_chart",
       "title": "SUNUM PANOSU",
       "kind": "lounge",
@@ -2758,6 +2791,36 @@
       "value": 12800,
       "min_level": 9,
       "desc": "Işıklı AUTO YARD bankosu, servis zili ve broşürler."
+    },
+    {
+      "id": "cat_bed",
+      "title": "KEDİ YATAĞI",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 6000,
+      "value": 2400,
+      "min_level": 5,
+      "desc": "Yumuşak minderli yuvarlak yatak. Kedin burada kıvrılıp uyur."
+    },
+    {
+      "id": "cat_tower",
+      "title": "LASTİK KEDİ KULESİ",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 14000,
+      "value": 5600,
+      "min_level": 5,
+      "desc": "İki eski lastik, minderli tabla ve sisal sarılı egzoz borusu. Kedin tepesine çıkıp etrafı izler."
+    },
+    {
+      "id": "cat_bowls",
+      "title": "MAMA VE SU KABI",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 3500,
+      "value": 1400,
+      "min_level": 5,
+      "desc": "Paspas üstünde mama ve su kabı. Kedin acıkınca gelip yer."
     },
     {
       "id": "certificates",

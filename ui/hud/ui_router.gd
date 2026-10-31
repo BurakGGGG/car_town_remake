@@ -73,6 +73,10 @@ func open(id: StringName) -> void:
 func back() -> void:
 	if _stack.is_empty():
 		return
+	# Ekran kapanmayı reddedebilir (ör. kedinin geliş sinematiğinde ad zorunlu): blocks_back() true → GERİ yok sayılır
+	var node: Control = _screens[_stack.back()]["node"]
+	if node.has_method(&"blocks_back") and bool(node.call(&"blocks_back")):
+		return
 	_close_silent(_stack.pop_back())
 	_emit()
 

@@ -25,6 +25,7 @@ enum Kind {
 	YARD,            # avlu düzeni: bariyer, konteyner, pompa...
 	PLANT,           # bitki / peyzaj
 	VEHICLE,         # SERGİ: sahip olunan araçlar (katalogda değil, VehicleOwnership'ten gelir)
+	PET,             # EVCİL HAYVAN eşyaları (kedi yatağı, kule, kap; ₺ ve elmaslı) — GARAJI DÜZENLE'de kendi modu
 }
 
 ## Yerleşim türleri.
@@ -41,7 +42,7 @@ const KIND_KEYS: Dictionary = {
 	"floor_pattern": Kind.FLOOR_PATTERN, "wall_piece": Kind.WALL_PIECE,
 	"floor_surface": Kind.FLOOR_SURFACE, "wall_surface": Kind.WALL_SURFACE, "luxury": Kind.LUXURY,
 	"workshop": Kind.WORKSHOP, "lounge": Kind.LOUNGE, "wall_item": Kind.WALL_ITEM,
-	"yard": Kind.YARD, "plant": Kind.PLANT,
+	"yard": Kind.YARD, "plant": Kind.PLANT, "pet": Kind.PET,
 }
 ## Kayıtta yoksa kullanılan değerler (JSON "defaults" bunları ezer).
 const DEFAULT_ROTATION_STEP: float = 45.0
@@ -284,6 +285,10 @@ static func shop_order(kind: int) -> Array[Dictionary]:
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		if int(a["min_level"]) != int(b["min_level"]):
 			return int(a["min_level"]) < int(b["min_level"])
+		# Aynı seviyede önce ₺, sonra elmaslı (EVCİL HAYVAN sekmesi: basit yatak / kule / kap, ardından lüksleri)
+		var a_gem: bool = int(a.get("price_gems", 0)) > 0
+		if a_gem != (int(b.get("price_gems", 0)) > 0):
+			return not a_gem
 		if int(a["price"]) != int(b["price"]):
 			return int(a["price"]) < int(b["price"])
 		if int(a.get("price_gems", 0)) != int(b.get("price_gems", 0)):
@@ -305,6 +310,7 @@ static func kind_title(kind: int) -> String:
 		Kind.LOUNGE: return Loc.t("YAŞAM ALANI")
 		Kind.YARD: return Loc.t("AVLU DÜZENİ")
 		Kind.PLANT: return Loc.t("BİTKİ")
+		Kind.PET: return Loc.t("EVCİL HAYVAN")
 		_: return Loc.t("PANO")
 
 

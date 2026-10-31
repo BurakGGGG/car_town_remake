@@ -113,6 +113,7 @@ func _unlocks() -> void:
 	expected += 1 if MissionCatalog.MIN_LEVEL > 1 else 0
 	for frame: Dictionary in ProfileCatalog.FRAMES:
 		expected += 1 if int(frame["gems"]) == 0 and int(frame["level"]) > 1 else 0
+	expected += 1 if PetManager.ARRIVAL_LEVEL > 1 else 0   # GARAJ DOSTLARI: kedi (YENİ DOST)
 	var decor_expected: int = 0
 	for item: Dictionary in GarageDecor.all():
 		decor_expected += 1 if int(item["min_level"]) > 1 else 0
@@ -124,7 +125,7 @@ func _unlocks() -> void:
 				decor_found += (entry["items"] as Array).size()
 			else:
 				found += 1
-	check(found == expected, "her müşteri / depo / kasa / kademe / görev / çerçeve kilidi bir kez (%d / %d)" % [found, expected])
+	check(found == expected, "her müşteri / depo / kasa / kademe / görev / çerçeve / kedi kilidi bir kez (%d / %d)" % [found, expected])
 	check(decor_found == decor_expected, "her dekor eşyası bir kez (%d / %d)" % [decor_found, decor_expected])
 
 	var next: Dictionary = LevelUnlocks.next_after(2)
@@ -173,7 +174,7 @@ func _screen() -> void:
 	await seconds(1.6)
 	check(screen.visible, "pano kapanınca açıldı")
 	check((badge.get("_number") as Label).text == "5", "rozet 5")
-	check(cards.get_child_count() == 5, "3 → 5 aralığı: BOYA İŞİ + SANAYİ DEPOSU + 2. kademe + BRONZ + dekor (%d kart)" % cards.get_child_count())
+	check(cards.get_child_count() == 6, "3 → 5 aralığı: BOYA İŞİ + SANAYİ DEPOSU + 2. kademe + YENİ DOST + BRONZ + dekor (%d kart)" % cards.get_child_count())
 	screen.close()
 	await seconds(0.4)
 

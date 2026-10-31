@@ -404,7 +404,7 @@ func _hold_to_move() -> void:
 
 
 ## Dekorasyon v3: katalog ~1,5 kat; her yeni desen / kaplama gerçekten çiziliyor, her eşyanın modeli var,
-## desen sayısı zemin shader'ının dizilerine sığıyor, palet seviye → fiyat sırasında.
+## desen sayısı zemin shader'ının dizilerine sığıyor, palet seviye → fiyat sırasında (aynı seviyede ₺ önce, elmaslı sonra).
 func _catalog_v3() -> void:
 	print("== 10) DEKORASYON v3 KATALOĞU ==")
 	var active: int = GarageDecor.all().size()   # emekli kayıtlar all()'da yok
@@ -454,8 +454,13 @@ func _catalog_v3() -> void:
 		for k: int in range(1, order.size()):
 			var a: Dictionary = order[k - 1]
 			var b: Dictionary = order[k]
-			if int(a["min_level"]) > int(b["min_level"]) \
-					or (int(a["min_level"]) == int(b["min_level"]) and int(a["price"]) > int(b["price"])):
+			# Aynı seviyede ₺ eşyalar önce (fiyata göre), elmaslılar sonra (elmasa göre) — EVCİL HAYVAN sekmesi
+			var a_gem: bool = int(a.get("price_gems", 0)) > 0
+			var b_gem: bool = int(b.get("price_gems", 0)) > 0
+			var same: bool = int(a["min_level"]) == int(b["min_level"])
+			if int(a["min_level"]) > int(b["min_level"]) or (same and a_gem and not b_gem) \
+					or (same and a_gem == b_gem and not a_gem and int(a["price"]) > int(b["price"])) \
+					or (same and a_gem and b_gem and int(a["price_gems"]) > int(b["price_gems"])):
 				unsorted.append(kind)
 				break
 	check(unsorted.is_empty(), "palet kartları seviye → fiyat sırasında %s" % [unsorted])

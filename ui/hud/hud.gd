@@ -195,6 +195,8 @@ var drag_race_screen: DragRaceScreen
 var race_result_screen: RaceResultScreen
 ## SÜPER ARABA TANITIMI'nın sonu: "BİR GÜN SENİN DE OLACAK!" (tanıtım yarışı kaybedilip GARAJA DÖN'e basılınca).
 var supercar_tease_screen: SupercarTeaseScreen
+## GARAJ DOSTLARI: kediye dokununca yakın kamera (PLACE "pet_closeup") ve ad ekranı (MODAL "pet_name").
+var pet_closeup_screen: PetCloseupScreen
 ## Ön ısıtma bitti mi (_warm_up). Yükleme ekranı bu olmadan kalkmaz: ilk kullanım takılmaları oyuna taşınmasın.
 var warmed_up: bool = false
 var _race: RaceManager
@@ -289,6 +291,7 @@ func _ready() -> void:
 	_build_profile_screens()
 	_build_race_screens()
 	_build_junkyard_screens()
+	_build_pet_screens()
 	_register_screens()
 
 	name_plate.pressed.connect(_on_name_plate_pressed)
@@ -1676,6 +1679,8 @@ func _register_screens() -> void:
 	router.register(&"drag_race", drag_race_screen, UiRouter.Kind.PLACE)
 	router.register(&"race_result", race_result_screen, UiRouter.Kind.MODAL)
 	router.register(&"supercar_tease", supercar_tease_screen, UiRouter.Kind.MODAL)
+	router.register(&"pet_closeup", pet_closeup_screen, UiRouter.Kind.PLACE)   # dünya görünür, HUD gizli
+	router.register(&"pet_name", pet_closeup_screen.name_screen(), UiRouter.Kind.MODAL)
 	router.register(&"collection", collection_screen, UiRouter.Kind.MODAL)
 	router.register(&"all_cars", all_cars_screen, UiRouter.Kind.MODAL)
 	router.register(&"car_garages", car_garages_screen, UiRouter.Kind.MODAL)
@@ -2451,6 +2456,52 @@ const RATE_PROMPT_SESSION: float = 180.0
 const RATE_PROMPT_IDLE: float = 1.5
 var _rate_prompt_timer: Timer
 var _rate_prompt_idle: float = 0.0
+
+
+# --- GARAJ DOSTLARI --------------------------------------------------------------------------------------
+
+## Kediye dokununca yakın kamera; sv5 ödülünde (PetManager.arrival_ready) sakin bir anda geliş sinematiği.
+const PET_ARRIVAL_IDLE: float = 1.5
+var _pet_arrival_timer: Timer
+var _pet_arrival_idle: float = 0.0
+
+
+func _build_pet_screens() -> void:
+	pet_closeup_screen = PetCloseupScreen.new()
+	var host: Node = garage_screen.get_parent()
+	host.add_child(pet_closeup_screen)
+	host.add_child(pet_closeup_screen.name_screen())
+	if GarageVisit.is_visiting():
+		return
+	_connect_pets.call_deferred()
+
+
+func _connect_pets() -> void:
+	var world: PetWorld = get_tree().get_first_node_in_group("pet_world") as PetWorld
+	if world and not world.pet_tapped.is_connected(_on_pet_tapped):
+		world.pet_tapped.connect(_on_pet_tapped)
+	_pet_arrival_timer = Timer.new()
+	_pet_arrival_timer.name = "PetArrivalTimer"
+	_pet_arrival_timer.wait_time = 0.5
+	add_child(_pet_arrival_timer)
+	_pet_arrival_timer.timeout.connect(_tick_pet_arrival)
+	_pet_arrival_timer.start()
+
+
+func _on_pet_tapped() -> void:
+	if router.top().is_empty() and not (tutorial and tutorial.is_running()):
+		router.open(&"pet_closeup")
+
+
+func _tick_pet_arrival() -> void:
+	var pets: PetManager = get_tree().get_first_node_in_group("pets") as PetManager
+	if pets == null or not pets.is_arrival_pending() or not _is_quiet():
+		_pet_arrival_idle = 0.0
+		return
+	_pet_arrival_idle += _pet_arrival_timer.wait_time
+	if _pet_arrival_idle >= PET_ARRIVAL_IDLE:
+		_pet_arrival_idle = 0.0
+		pet_closeup_screen.open_arrival()
 
 
 func _build_rate_prompt() -> void:

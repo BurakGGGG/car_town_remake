@@ -3,6 +3,7 @@
 *.translation
 eksik_dosyalar/
 assets/cars/source/
+assets/pets/source/
 assets/cars/optimized_old/
 __pycache__/
 *.pyc

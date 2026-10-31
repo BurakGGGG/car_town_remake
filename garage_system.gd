@@ -76,6 +76,7 @@ func _ready():
 		_ensure_social()
 		_ensure_editor.call_deferred()
 	_ensure_world_dressing.call_deferred()
+	_ensure_pet_world()
 	GameMusic.ensure(get_tree())
 	_hide_build_grid()
 	_connect_upgrade.call_deferred()
@@ -173,6 +174,11 @@ func _ensure_crate_system() -> void:
 		var car_garages: CarGarageManager = CarGarageManager.new()
 		car_garages.name = "CarGarageManager"
 		add_child(car_garages)
+	# GARAJ DOSTLARI: kedinin verisi (PetManager, "pets"; kayıt SaveManager'da, ondan ÖNCE hazır olmalı)
+	if get_tree().get_first_node_in_group("pets") == null:
+		var pets: PetManager = PetManager.new()
+		pets.name = "PetManager"
+		add_child(pets)
 
 
 ## AYARLAR (grafik / performans / ses; cihaza özel, kayda girmez)
@@ -229,6 +235,15 @@ func _ensure_social() -> void:
 		var moderation: ModerationWatch = ModerationWatch.new()
 		moderation.name = "ModerationWatch"
 		add_child(moderation)
+
+
+## GARAJ DOSTLARI: kedinin garajdaki hayatı (PetWorld, "pet_world"). Kedi sahiplenilince ortaya çıkar; ziyarette şimdilik yok.
+func _ensure_pet_world() -> void:
+	if get_tree().get_first_node_in_group("pet_world") != null:
+		return
+	var world: PetWorld = PetWorld.new()
+	world.name = "PetWorld"
+	add_child(world)
 
 
 ## Avludaki dekorasyon görünümü de kodla kurulur (sahne dosyası elle düzenlenmiyor).
