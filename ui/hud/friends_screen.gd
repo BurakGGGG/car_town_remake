@@ -52,6 +52,7 @@ const NARROW_WIDTH: float = 1000.0
 var _social: SocialManager
 var _referral: ReferralManager
 var _tab: Tab = Tab.FRIENDS
+var _wanted_tab: int = -1                # bir sonraki open() bu sekmede açar (open_on); -1 = kendisi seçer
 var _compact: bool = false
 var _margin: MarginContainer
 var _title_text: Control
@@ -95,17 +96,27 @@ func _ready() -> void:
 	_connect_social.call_deferred()
 
 
+## Bir sonraki open() bu sekmede açılır (HABERLER'deki DAVET ET düğmesi → DAVET ET sekmesi). Arkadaşlık hazır
+## değilse yine ARKADAŞLAR (giriş / takma ad kartı) görünür.
+func open_on(tab: Tab) -> void:
+	_wanted_tab = tab
+
+
 func open() -> void:
 	_notice_text = ""
 	_renaming = false
 	_popup.hide()
+	var wanted: int = _wanted_tab
+	_wanted_tab = -1
 	if _social:
 		_social.retry()
 		_social.refresh()
 		# İNTİKAM bekleyen haber varsa doğrudan oraya (HUD bildirimi "İNTİKAM İÇİN: ARKADAŞLAR" der); yoksa alınmayı
 		# bekleyen davet ödülü varsa DAVET ET'e
 		_tab = Tab.FRIENDS
-		if _social.is_ready() and not _social.race_events.is_empty():
+		if wanted >= 0 and _social.is_ready():
+			_tab = wanted as Tab
+		elif _social.is_ready() and not _social.race_events.is_empty():
 			_tab = Tab.NEWS
 		elif _social.is_ready() and _referral and _referral.attention() > 0:
 			_tab = Tab.INVITE

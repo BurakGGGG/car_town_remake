@@ -2037,7 +2037,9 @@ func _on_inbox_action(kind: String, url: String) -> void:
 		"friends":
 			router.open(&"friends")
 		"invite":
-			router.open(&"invite")
+			# &"invite" gelen davet LİNKİNİ kabul ekranıdır (token'sız boş açılıyordu); düğme kendi kodunu paylaşma sekmesine gider
+			friends_screen.open_on(FriendsScreen.Tab.INVITE)
+			router.open(&"friends")
 		"account":
 			router.open(&"account")
 		"store":

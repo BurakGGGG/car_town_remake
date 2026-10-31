@@ -122,6 +122,25 @@ func _run() -> void:
 	router.close_all()
 	await create_timer(0.4).timeout
 
+	print("3b) HABERLER'deki DAVET ET düğmesi DAVET ET sekmesini açar (ödül beklemiyorken de)")
+	referral.car_choices = 0
+	mail._pending = []
+	check(referral.attention() == 0, "bekleyen davet ödülü yok")
+	router.open(&"inbox")
+	await create_timer(0.3).timeout
+	hud._on_inbox_action("invite", "")
+	await create_timer(0.4).timeout
+	check(router.top() == &"friends" and not hud.invite_screen.visible, "ARKADAŞLAR açıldı, davet linki ekranı değil (%s)" % router.top())
+	check((screen._tabs[FriendsScreen.Tab.INVITE] as PlateButton).button_pressed and tab.visible, "DAVET ET sekmesinde")
+	await shot("03b_haberler_davet_et")
+	router.close_all()
+	await create_timer(0.4).timeout
+	router.open(&"friends")
+	await create_timer(0.4).timeout
+	check((screen._tabs[FriendsScreen.Tab.FRIENDS] as PlateButton).button_pressed, "sonraki normal açılış yine ARKADAŞLAR'da")
+	router.close_all()
+	await create_timer(0.4).timeout
+
 	print("4) POSTA: hoş geldin ve basamak ödülleri HABERLER kutusunda")
 	referral.status = "ok"
 	referral.referrer = "f0"
