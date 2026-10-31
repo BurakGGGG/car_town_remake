@@ -491,7 +491,7 @@ func _run() -> void:
 		_hud._show_notice(Loc.t("TAMİR ALANI %d AÇILDI\nGARAJI DÜZENLE'DEN TAŞIYABİLİRSİN") % 3, HudPalette.COIN_DARK, 6.0)
 		await wait(0.4))
 	await _world("dunya_bildirim", func() -> void:
-		_hud._show_notice(Loc.t("PARÇA HAZIR: %s\nTAMİR ALANINDAKİ ARACA DOKUN") % "BAVARIA FÜNF 07",
+		_hud._show_notice(Loc.t("PARÇA HAZIR: %s\nTAMİR ALANINDAKİ ARACA DOKUN") % "BMR 5.60",
 			HudPalette.COIN_DARK, 6.0)
 		await wait(0.4))
 	await _world("dunya_kamera", func() -> void:
@@ -512,16 +512,16 @@ func _run() -> void:
 		_hud.open_photo_mode(PhotoMode.Mode.CLEAN))
 	var types: Array[RepairType] = RepairType.defaults()
 	await _world("dunya_arac_ariza", func() -> void:
-		_hud.show_car_info("WULF KOMBI 04")
+		_hud.show_car_info("VOLKAN PASSAGE B5")
 		_hud._repair_panel.set_player_state(30, 9000000)
 		_hud._repair_panel.set_issue(types[types.size() - 1])
 		_hud._repair_panel.show_damaged(false))
 	await _world("dunya_arac_tamirde", func() -> void:
-		_hud.show_car_info("WULF KOMBI 04")
+		_hud.show_car_info("VOLKAN PASSAGE B5")
 		_hud._repair_panel.set_info(types[types.size() - 1], 4800)
 		_hud._repair_panel.show_repairing(0.42, 754.0, true, 14))
 	await _world("dunya_arac_hazir", func() -> void:
-		_hud.show_car_info("WULF KOMBI 04")
+		_hud.show_car_info("VOLKAN PASSAGE B5")
 		_hud._repair_panel.set_info(types[0], 1200)
 		_hud._repair_panel.show_ready())
 	_hud.hide_car_info()
@@ -622,6 +622,8 @@ func _run() -> void:
 	await _screen(&"showroom", "magaza_son_kasa", func() -> void:   # en uzun oran listesi
 		var crates: Array[Dictionary] = CrateCatalog.all()
 		(_router.screen(&"showroom") as ShowroomScreen).call("_show_crate", StringName(String(crates.back()["id"]))))
+	await _screen(&"showroom", "magaza_spor_kasa", func() -> void:   # en uzun oran SATIRI (CHEVALIER CAMARGO SS)
+		(_router.screen(&"showroom") as ShowroomScreen).call("_show_crate", &"sport_crate"))
 	await _screen(&"quests", "gorevler")
 	await _screen(&"quests", "gorevler_haftalik", func() -> void:
 		_hud.quest_screen.call("_on_tab_pressed", 1))
@@ -684,8 +686,8 @@ func _run() -> void:
 			_hud.settings_screen.call("_show_page", page))
 	await _screen(&"account", "hesap_kayit_sec", func() -> void:
 		_hud.login_screen.call("_on_conflict_found",
-			{"money": 9993530, "level": 30, "vehicles": PackedStringArray(["BAVARIA FÜNF 07", "BURSAN ATMACA 95", "BULL MONSOON"])},
-			{"money": 125000, "level": 8, "vehicles": PackedStringArray(["BURSAN ATMACA 95", "HYPER POCKET Z"])})
+			{"money": 9993530, "level": 30, "vehicles": PackedStringArray(["BMR 5.60", "TOFAN ŞAHAN", "LAMBERTINI URAGANO"])},
+			{"money": 125000, "level": 8, "vehicles": PackedStringArray(["TOFAN ŞAHAN", "HYUNGA GETTA"])})
 		(_hud.login_screen.get("_choice_row") as Control).visible = true)
 	if _want("koleksiyon"):   # oyunda garajdan / showroom'dan açılır (YER açık: oyun HUD'u gizli)
 		_router.close_all()

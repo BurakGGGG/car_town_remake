@@ -3,7 +3,7 @@ extends PlatePanel
 ## STANDART SATIN ALMA PLAKASI — garaj genişletme, tamir alanı ve araç satın alma AYNI görsel
 ## hiyerarşiyi kullansın diye tek bileşen:
 ##
-##   BAŞLIK          (GARAJI GENİŞLET / TAMİR ALANI 2 / BAVARIA CLUB 46)
+##   BAŞLIK          (GARAJI GENİŞLET / TAMİR ALANI 2 / BMR 3.46)
 ##   alt başlık      (SEVİYE 2 / A SINIFI · 2003 · %85)
 ##   FİYAT           (12.000 ₺  ·  PARA YETERSİZ)
 ##   etki satırları  (ProgressionEffects'ten; elle yazılmaz)

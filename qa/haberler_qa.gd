@@ -62,7 +62,7 @@ func _run() -> void:
 				"en": "• NEWS box: gifts, events and announcements in one place\n• Mail gifts now always arrive\n• Smoother city (baked shadows)\n• Wheel and tire fixes\n• Small bug fixes"}},
 		{"id": "n_car", "kind": "notice", "image": POSTER_CAR, "at": now - 2 * 86400,
 			"title": {"tr": "YENİ SÜPER ARAÇ SHOWROOM'DA", "en": "NEW SUPERCAR IN THE SHOWROOM"},
-			"text": {"tr": "OVALE TONNERRE 16 artık showroom'da. Kim ilk alacak?", "en": "OVALE TONNERRE 16 is now in the showroom. Who gets it first?"},
+			"text": {"tr": "BUGANTI CHIRAL artık showroom'da. Kim ilk alacak?", "en": "BUGANTI CHIRAL is now in the showroom. Who gets it first?"},
 			"action": {"kind": "showroom"}},
 		{"id": "n_bakim", "kind": "notice", "at": now - 3 * 86400,
 			"title": {"tr": "28 EKİM 03:00 · KISA BAKIM", "en": "OCT 28 03:00 · SHORT MAINTENANCE"},

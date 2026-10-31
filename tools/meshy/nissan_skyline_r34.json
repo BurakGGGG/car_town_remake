@@ -1,0 +1,10 @@
+{
+  "textured": "~/Desktop/cars/r34 gtr/nissan_gtr_r34.glb",
+  "segmented": "~/Desktop/cars/r34 gtr/Meshy_AI_Blue_Skyline_GT_R_20261031_part-segmentation_split.glb",
+  "out": "assets/cars/source/nissan_skyline_r34.glb",
+  "front": "-X",
+  "seg": {"wheels": [0, 1, 7, 8], "glass": [4, 5, 6, 10, 11, 12], "trim": [2, 3]},
+  "tris": {"body": 80000, "glass": 4000, "wheel": 6000, "lights": 1500, "trim": 1500},
+  "tex": 2048,
+  "ao": 0.35
+}

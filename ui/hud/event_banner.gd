@@ -6,7 +6,7 @@ extends Control
 ## ziyaret yok). Dokununca ETKİNLİK PANOSU açılır (EventScreen: modüller ve düğmeleri). Ana satır etkinliğin modüllerini
 ## özetler (ÇİFTE PARA · KASALAR −%30 · ÖZEL RAKİP …); rozet çarpan (×2), yoksa en büyük indirim, yoksa ★.
 ## ETKİNLİK ARACI (2026-10-26, taslak B2): araçlı etkinlikte rozetin yerinde aracın resmi, ana satırda adı ve görev
-## ilerlemesi ("VIER SPORT 85 · 2 / 5 GÖREV"). Süren etkinlik yokken SOON_DAYS gün içinde başlayacak etkinlik varsa
+## ilerlemesi ("AUDEX QUARTO S1 · 2 / 5 GÖREV"). Süren etkinlik yokken SOON_DAYS gün içinde başlayacak etkinlik varsa
 ## "YAKINDA" hâli: başlangıca geri sayım; dokununca pano takvimle açılır.
 ## Hud kurar (temalı kök). Kodla kurulur.
 

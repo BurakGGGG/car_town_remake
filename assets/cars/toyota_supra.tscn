@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://fg7jdpixap0a"]
+
+[ext_resource type="PackedScene" uid="uid://bf67rd1kb8qfg" path="res://assets/cars/optimized/toyota_supra.glb" id="1_toyot"]
+
+[node name="toyota_supra" instance=ExtResource("1_toyot")]

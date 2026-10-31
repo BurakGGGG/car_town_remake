@@ -1,0 +1,10 @@
+{
+  "textured": "~/Desktop/cars/supra/toyota_supra.glb",
+  "segmented": "~/Desktop/cars/supra/Meshy_AI_White_Supra_Front_View_20261031_part-segmentation_split.glb",
+  "out": "assets/cars/source/toyota_supra.glb",
+  "front": "-X",
+  "seg": {"wheels": [0, 1, 3, 8], "glass": [2, 4, 6, 7], "trim": [5]},
+  "tris": {"body": 80000, "glass": 4000, "wheel": 6000, "lights": 1500, "trim": 1500},
+  "tex": 2048,
+  "ao": 0.35
+}

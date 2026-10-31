@@ -835,7 +835,7 @@
  "VARİL RAFI": "ESTANTE DE BARRILES",
  "VASAT GARAJ": "TALLER CORRIENTE",
  "VAZGEÇ": "CANCELAR",
- "WULF GRUBU": "GRUPO WULF",
+ "VOLKAN GRUBU": "GRUPO VOLKAN",
  "Vitesi ibre YEŞİL dilime girince at: kusursuz vites seni rekora taşır.": "Cambia cuando la aguja entre en la zona VERDE: los cambios perfectos baten récords.",
  "VİTES": "MARCHA",
  "VİTES  %d / %d": "MARCHA  %d / %d",
@@ -978,7 +978,7 @@
  "İNCE AĞAÇ": "ÁRBOL ESBELTO",
  "İTALYAN": "ITALIANOS",
  "AMERİKAN": "AMERICANOS",
- "ŞİMŞEK": "ŞİMŞEK",
+ "TOGRA": "TOGRA",
  " · %d HP": " · %d CV",
  "0-100 %s sn · %d km/sa": "0-100 %s s · %d km/h",
  "4 ÇEKER": "4X4",
@@ -1505,7 +1505,7 @@
  "AL, İLK ARACIN!": "¡AQUÍ TIENES TU PRIMER COCHE!",
  "AÇ'a bas, bakalım içinden ne çıkacak!": "¡Pulsa ABRIR y veamos qué hay dentro!",
  "Ben Rıza Usta. Bu garaj artık senin: arızalı araçları tamir et, para kazan, garajını büyüt. Ama önce sana bir hoş geldin hediyem var!": "Soy el maestro Rıza. Este taller ya es tuyo: repara coches averiados, gana dinero y haz crecer tu taller. ¡Pero antes, tengo un regalo de bienvenida para ti!",
- "Bu Bursan Atmaca artık senin! Drag yarışlarına bununla çıkacaksın; yeni araçlar ileride kasalardan çıkar. Plakadaki TAMAM'a bas.": "¡Este Bursan Atmaca ya es tuyo! Con él correrás las carreras de aceleración; más adelante, los coches nuevos saldrán de cajas. Pulsa DE ACUERDO en la placa.",
+ "Bu Tofan Şahan artık senin! Drag yarışlarına bununla çıkacaksın; yeni araçlar ileride kasalardan çıkar. Plakadaki TAMAM'a bas.": "¡Este Tofan Şahan ya es tuyo! Con él correrás las carreras de aceleración; más adelante, los coches nuevos saldrán de cajas. Pulsa DE ACUERDO en la placa.",
  "Garajına bir hediye kutusu bıraktım. İçinde ilk araban var! Kutuya dokun.": "Te dejé una caja de regalo en el taller. ¡Dentro está tu primer coche! Toca la caja.",
  "HEDİYE": "REGALO",
  "HOŞ GELDİN HEDİYEN GARAJINDA\nKUTUYA DOKUN VE AÇ": "TU REGALO DE BIENVENIDA ESTÁ EN EL TALLER\nTOCA LA CAJA PARA ABRIRLA",
@@ -2705,5 +2705,6 @@
  "Altın şeritli lastikler, deri minder ve altın egzoz borusu. Garajın en havalı kedi kulesi.": "Neumáticos con franja dorada, cojín de cuero y tubo de escape dorado. La torre para gatos más genial del taller.",
  "MERMER MAMA KABI": "COMEDERO DE MÁRMOL",
  "Mermer kaide üstünde altın mama ve su kabı.": "Comedero y bebedero dorados sobre una base de mármol.",
- "EVCİL HAYVAN": "MASCOTAS"
+ "EVCİL HAYVAN": "MASCOTAS",
+ "JAPON EFSANELERİ": "LEYENDAS JAPONESAS"
 }

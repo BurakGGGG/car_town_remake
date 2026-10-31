@@ -41,7 +41,8 @@ signal screen_requested(id: StringName)
 
 const TITLE: String = "MAĞAZA"
 const LIST_WIDTH: float = 188.0
-const INFO_WIDTH: float = 264.0   # kasa oran satırları (yüzde · model · nadirlik) tek satıra sığsın (en uzunu: OVALE TONNERRE 16 · EFSANEVİ)
+const INFO_WIDTH: float = 290.0   # kasa oran satırları (✔ yüzde · model · nadirlik) tek satıra sığsın; en uzunu
+# "✔ %5,8  CHEVALIER CAMARGO SS · EPİK"; plakanın iç payı 32 px (2026-11-01 ad değişikliği: 264 → 290)
 const SLIDE: float = 18.0
 
 # --- 3D sahne ölçüleri (araç ~1 birim uzunlukta) ---

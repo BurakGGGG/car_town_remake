@@ -58,7 +58,7 @@ func _run() -> void:
 	await wait(1.0)
 	# TAMİR PLAKASI
 	var types: Array[RepairType] = RepairType.defaults()
-	hud.show_car_info("WULF KOMBI 04")
+	hud.show_car_info("VOLKAN PASSAGE B5")
 	hud._repair_panel.set_info(types[types.size() - 1], 4800)
 	hud._repair_panel.show_repairing(0.42, 754.0, false, 14, true)
 	await wait(0.8)

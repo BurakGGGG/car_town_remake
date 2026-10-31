@@ -1150,6 +1150,31 @@ const MAPS: Dictionary = {
 		"wheel_groups": {"fl": [6], "fr": [3], "rl": [4], "rr": [2]},
 		"wheel_axes": {"fl": [0.0739, 0.3101, 0.0727], "fr": [0.0751, 0.3099, 0.0720], "rl": [0.0743, -0.2756, 0.0703], "rr": [0.0753, -0.2747, 0.0699]},
 	},
+	# --- 2026-10-31 dokuzuncu parti (Meshy AI): tools/meshy_prep.py bölütlemeyi dokulu mesh'e aktarıp parçaları
+	# --- KENDİSİ adlandırır (0 gövde, 1 cam, 2 stop, 3–6 teker fl/fr/rl/rr, 7 kaliper / küçük trim); doku Blender'da
+	# --- yeni UV'ye pişirildi. Far ayrı parça değil (dokudan) → dörtlü önde "hazards" ile (ön ortografik ızgaradan).
+	"res://assets/cars/toyota_supra.tscn": {
+		"default_paint": Color(1.0, 1.0, 1.0),  # boya maskesi aracının ölçtüğü fabrika rengi #FFFFFF
+		"hazards": {"front": [0.185, 0.098]},  # köşedeki turuncu sinyal
+		"body": [0],
+		"glass": [1],
+		"taillights": [2],
+		"wheels": [3, 4, 5, 6],
+		"black_trim": [7],
+		"wheel_groups": {"fl": [3], "fr": [4], "rl": [5], "rr": [6]},
+		"wheel_axes": {"fl": [0.0715, 0.2914, 0.0776], "fr": [0.0715, 0.2915, 0.0775], "rl": [0.0692, -0.2659, 0.0767], "rr": [0.0690, -0.2662, 0.0768]},
+	},
+	"res://assets/cars/nissan_skyline_r34.tscn": {
+		"default_paint": Color(0.008, 0.341, 0.890),  # boya maskesi aracının ölçtüğü fabrika rengi #0257E3
+		"hazards": {"front": [0.145, 0.098]},  # tampondaki sinyal camı
+		"body": [0],
+		"glass": [1],
+		"taillights": [2],
+		"wheels": [3, 4, 5, 6],
+		"black_trim": [7],  # ön kaliperler
+		"wheel_groups": {"fl": [3], "fr": [4], "rl": [5], "rr": [6]},
+		"wheel_axes": {"fl": [0.0744, 0.2986, 0.0740], "fr": [0.0746, 0.2986, 0.0740], "rl": [0.0745, -0.2703, 0.0742], "rr": [0.0743, -0.2702, 0.0744]},
+	},
 	"res://assets/cars/toyota_corolla.tscn": {
 		"default_paint": Color(0.612, 0.627, 0.702),  # boya maskesi aracının ölçtüğü fabrika rengi #9CA0B3
 		"body": [6, 7, 8, 10, 12, 13, 16, 17, 18, 19, 20, 22, 23, 26, 27, 28, 30, 31, 33, 38, 40, 42, 43, 45, 46, 47, 48, 49, 53, 54, 55],

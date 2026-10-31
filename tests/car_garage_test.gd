@@ -85,7 +85,7 @@ func _run() -> void:
 	check(own.set_race_vehicle(&"porsche_gt3") and own.race_vehicle_id() == &"porsche_gt3", "otoparktaki araç yarışır")
 	check(own.sell_vehicle(&"renault_toros") and not garages.waiting_ids().has(&"renault_toros"), "otoparktaki araç satılabilir")
 	check(CarGarageManager.fee_of(&"tofas_sahin") == 750 and CarGarageManager.fee_of(&"lambo_huracan") == 20000,
-		"ücret araç değerinin %5'i (Bursan 750, Lambo 20.000)")
+		"ücret araç değerinin %5'i (Tofan 750, Lambertini 20.000)")
 	var daily: int = 0
 	for id: StringName in garages.waiting_ids():
 		daily += CarGarageManager.fee_of(id)

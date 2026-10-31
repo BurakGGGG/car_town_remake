@@ -1,5 +1,5 @@
 extends SceneTree
-## SÜPER ARABA TANITIMI QA: 2 yarışı bitmiş oyuncu gibi başlar, 3. rakibi (beyaz OVALE ÉCLAIR) getirir, yarışı oto-sürer
+## SÜPER ARABA TANITIMI QA: 2 yarışı bitmiş oyuncu gibi başlar, 3. rakibi (beyaz BUGANTI VERION) getirir, yarışı oto-sürer
 ## (yeşilde kalkış, ideal devirde vites) ve dünya daveti → davet panosu → pist → sonuç → "BİR GÜN SENİN DE OLACAK!"
 ## karelerini alır. Kaydı değiştirir: yalıtılmış klasörde çalıştırın.
 ## Kullanım: CT_NO_TUTORIAL=1 QA_SAVE=<kayıt> tools/qa_isolated.sh res://qa/supercar_showcase_shots.gd \

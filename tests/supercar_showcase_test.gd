@@ -1,5 +1,5 @@
 extends SceneTree
-## SÜPER ARABA TANITIMI (2026-10-23): 2 yarışı biten yeni oyuncunun 3. rakibi öne çıkan arkadaşın BEYAZ OVALE ÉCLAIR'i —
+## SÜPER ARABA TANITIMI (2026-10-23): 2 yarışı biten yeni oyuncunun 3. rakibi öne çıkan arkadaşın BEYAZ BUGANTI VERION'u —
 ## kusursuz sürer (ezici fark), rövanş yok, öğrenen zorluğa yazılmaz; kaybedip GARAJA DÖN'de "BİR GÜN SENİN DE OLACAK!"
 ## ekranı açılır. Bir kez gelir (kayıtta), davet geri çevrilirse araç şehirden çıkınca yine gelir, eski oyuncuya / testlerde
 ## gelmez.
@@ -57,7 +57,7 @@ func _run() -> void:
 	race.load_state({"races": RaceManager.SHOWCASE_AFTER, "wins": 1})
 	check(race.showcase_due(), "2 yarıştan sonra sıradaki rakip tanıtım")
 
-	print("== 3. RAKİP: BEYAZ OVALE ÉCLAIR ==")
+	print("== 3. RAKİP: BEYAZ BUGANTI VERION ==")
 	check(await _challenge(race), "rakip geldi, davet açık")
 	check(race.rival_id() == RaceManager.SHOWCASE_CAR and race.is_showcase(), "rakip %s" % race.rival_id())
 	check(bool(race.rival_owner().get("featured", false)), "sahibi öne çıkan arkadaş (%s)" % race.rival_owner().get("name", ""))
@@ -89,7 +89,7 @@ func _run() -> void:
 	result.exit_requested.emit()
 	await create_timer(0.8).timeout
 	check(router.top() == &"supercar_tease" and tease.visible, "GARAJA DÖN → hedef ekranı")
-	check(tease._name.text.contains("ÉCLAIR"), "araç adı: %s" % tease._name.text)
+	check(tease._name.text.contains("VERION"), "araç adı: %s" % tease._name.text)
 	check(tease._chips.get_child_count() == 3, "BG / 0-100 / son hız hapları")
 	check(tease._source.visible and tease._source.text.contains(Loc.t("SÜPER KASA")),
 		"nereden çıkar: %s" % tease._source.text)

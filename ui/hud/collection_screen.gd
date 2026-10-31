@@ -2,7 +2,7 @@ class_name CollectionScreen
 extends Control
 ## KOLEKSİYON tabelası — edinilebilir bütün araçlar (kasalar + hurdalık klasikleri) kasalarına / restorasyon kademelerine
 ## göre gruplu: sahip olunanlar, keşfedilmiş ama satılmış olanlar ve henüz keşfedilmemişler (siluet). Her kartta nadirlik,
-## sınıf, kasa kaynağı, o kasadaki gerçek olasılık ve kopya yıldızları. Üstte kilometre taşı şeridi (10 / 20 / 35 / 50 / 72
+## sınıf, kasa kaynağı, o kasadaki gerçek olasılık ve kopya yıldızları. Üstte kilometre taşı şeridi (10 / 20 / 35 / 50 / 74
 ## araç, ödülleri), altta koleksiyon setleri (ilerleme, ödül ya da ALINDI). Ödülleri CollectionRewards öder (2026-10-25).
 ## Ekran TAMAMEN KODLA kurulur (.tscn yok); mantık yoktur — VehicleOwnership, CrateCatalog ve CollectionRewards okunur.
 ##
@@ -496,7 +496,7 @@ class _Bar extends Control:
 				HudPalette.COIN if value < 1.0 else HudPalette.COIN_DARK, true)
 
 
-## KİLOMETRE TAŞLARI şeridi: 10 / 20 / 35 / 50 / 72 araç eşit aralıklı duraklar, keşfedilen sayıya göre dolan yol; durağın
+## KİLOMETRE TAŞLARI şeridi: 10 / 20 / 35 / 50 / 74 araç eşit aralıklı duraklar, keşfedilen sayıya göre dolan yol; durağın
 ## altında ödülü (+GEM, sonda KUPA) ya da alındıysa onay. Yazılar temanın yazı tipiyle çizilir.
 class _MilestoneTrack extends Control:
 	const RADIUS: float = 13.0

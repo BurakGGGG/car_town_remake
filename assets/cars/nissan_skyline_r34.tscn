@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://b8q3mgfusw318"]
+
+[ext_resource type="PackedScene" uid="uid://dy7bs75wc3n78" path="res://assets/cars/optimized/nissan_skyline_r34.glb" id="1_nissa"]
+
+[node name="nissan_skyline_r34" instance=ExtResource("1_nissa")]

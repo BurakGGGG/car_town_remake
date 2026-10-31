@@ -251,8 +251,8 @@ func _text(text: String, pos: Vector3, rotation_deg: Vector3, pixel: float, colo
 
 # --- DRAG: gece start çizgisi -----------------------------------------------------------------
 
-const DRAG_NEAR: StringName = &"chevrolet_camaro"    # CROSSBOW BRUTE SS
-const DRAG_FAR: StringName = &"ferrari_488_pista"    # FURIA CIRCUITO 19
+const DRAG_NEAR: StringName = &"chevrolet_camaro"    # CHEVALIER CAMARGO SS
+const DRAG_FAR: StringName = &"ferrari_488_pista"    # FERRAZZI 488 PISTO
 const NIGHT_BG: Color = Color("0B0E15")
 const FLOOD: Color = Color("DCE7FF")
 
@@ -390,10 +390,10 @@ func _drag() -> void:
 
 # --- SHOWROOM: gece lansman salonu --------------------------------------------------------------
 
-const SHOW_HERO: StringName = &"lambo_huracan"        # BULL MONSOON (döner platformda)
+const SHOW_HERO: StringName = &"lambo_huracan"        # LAMBERTINI URAGANO (döner platformda)
 const SHOW_SIDE: Array[Array] = [                     # [araç, konum, yön]
-	[&"porsche_gt3", Vector3(-0.92, 0.0, 0.52), 75.0],      # STALLION RING 18 (solda)
-	[&"mercedes_cls", Vector3(0.95, 0.0, -0.62), 15.0],     # STERN COUPÉ 350 (sağda)
+	[&"porsche_gt3", Vector3(-0.92, 0.0, 0.52), 75.0],      # PORSTEN 991 GT (solda)
+	[&"mercedes_cls", Vector3(0.95, 0.0, -0.62), 15.0],     # MERIDES CLX 35 (sağda)
 ]
 const SHOW_WARM: Color = Color("FFD9A0")
 const SHOW_COOL: Color = Color("9CC4FF")
@@ -550,7 +550,7 @@ func _confetti(center: Vector3) -> void:
 
 # --- HURDALIK: gün batımında hurda köşesi -----------------------------------------------------
 
-const YARD_HERO: StringName = &"ford_mustang_1967"       # FORGE WILD PONY 67 (restore edilmiş)
+const YARD_HERO: StringName = &"ford_mustang_1967"       # FJORD MUSTANO 67 (restore edilmiş)
 const YARD_WRECK_DIR: String = "res://assets/world/junk_wrecks/"
 const SUNSET: Color = Color("FF9A4D")
 const FIRE: Color = Color("FF7A2A")
@@ -709,8 +709,8 @@ func _junkyard() -> void:
 
 # --- KOVALAMACA: gece sokak köşesi -------------------------------------------------------------
 
-const CHASE_SUSPECT: StringName = &"dodge_charger_1970"   # BLACKTOP BRUISER 70
-const CHASE_POLICE: StringName = &"police_bentley"        # MONARCH PATROL GT
+const CHASE_SUSPECT: StringName = &"dodge_charger_1970"   # DODSON CHARGO 70
+const CHASE_POLICE: StringName = &"police_bentley"        # BENTON PATROL GT
 const P_RED: Color = Color(1.0, 0.18, 0.2)
 const P_BLUE: Color = Color(0.22, 0.45, 1.0)
 const STREET: Color = Color("FFC27A")

@@ -835,7 +835,7 @@
  "VARİL RAFI": "FASSREGAL",
  "VASAT GARAJ": "MITTELMÄSSIGE WERKSTATT",
  "VAZGEÇ": "ABBRECHEN",
- "WULF GRUBU": "WULF-KONZERN",
+ "VOLKAN GRUBU": "VOLKAN-KONZERN",
  "Vitesi ibre YEŞİL dilime girince at: kusursuz vites seni rekora taşır.": "Schalte, sobald die Nadel im GRÜNEN Bereich ist: Perfekte Gangwechsel bringen Rekorde.",
  "VİTES": "GANG",
  "VİTES  %d / %d": "GANG  %d / %d",
@@ -978,7 +978,7 @@
  "İNCE AĞAÇ": "SCHLANKER BAUM",
  "İTALYAN": "ITALIENER",
  "AMERİKAN": "AMERIKANER",
- "ŞİMŞEK": "ŞİMŞEK",
+ "TOGRA": "TOGRA",
  " · %d HP": " · %d PS",
  "0-100 %s sn · %d km/sa": "0-100 %s s · %d km/h",
  "4 ÇEKER": "ALLRAD",
@@ -1505,7 +1505,7 @@
  "AL, İLK ARACIN!": "HIER, DEIN ERSTES AUTO!",
  "AÇ'a bas, bakalım içinden ne çıkacak!": "Drück auf ÖFFNEN, mal sehen, was drin ist!",
  "Ben Rıza Usta. Bu garaj artık senin: arızalı araçları tamir et, para kazan, garajını büyüt. Ama önce sana bir hoş geldin hediyem var!": "Ich bin Meister Rıza. Diese Werkstatt gehört jetzt dir: Repariere kaputte Autos, verdiene Geld und bau deine Werkstatt aus. Aber zuerst habe ich ein Willkommensgeschenk für dich!",
- "Bu Bursan Atmaca artık senin! Drag yarışlarına bununla çıkacaksın; yeni araçlar ileride kasalardan çıkar. Plakadaki TAMAM'a bas.": "Dieser Bursan Atmaca gehört jetzt dir! Mit ihm fährst du Drag-Rennen; neue Autos bekommst du später aus Kisten. Drück im Schild auf OK.",
+ "Bu Tofan Şahan artık senin! Drag yarışlarına bununla çıkacaksın; yeni araçlar ileride kasalardan çıkar. Plakadaki TAMAM'a bas.": "Dieser Tofan Şahan gehört jetzt dir! Mit ihm fährst du Drag-Rennen; neue Autos bekommst du später aus Kisten. Drück im Schild auf OK.",
  "Garajına bir hediye kutusu bıraktım. İçinde ilk araban var! Kutuya dokun.": "Ich habe dir eine Geschenkbox in die Werkstatt gestellt. Darin ist dein erstes Auto! Tippe auf die Box.",
  "HEDİYE": "GESCHENK",
  "HOŞ GELDİN HEDİYEN GARAJINDA\nKUTUYA DOKUN VE AÇ": "DEIN WILLKOMMENSGESCHENK IST IN DER WERKSTATT\nTIPPE ZUM ÖFFNEN AUF DIE BOX",
@@ -2704,5 +2704,6 @@
  "Altın şeritli lastikler, deri minder ve altın egzoz borusu. Garajın en havalı kedi kulesi.": "Reifen mit Goldstreifen, Lederkissen und goldenes Auspuffrohr. Der coolste Katzenturm der Werkstatt.",
  "MERMER MAMA KABI": "MARMOR-FUTTERNAPF",
  "Mermer kaide üstünde altın mama ve su kabı.": "Goldener Futter- und Wassernapf auf einem Marmorsockel.",
- "EVCİL HAYVAN": "HAUSTIERE"
+ "EVCİL HAYVAN": "HAUSTIERE",
+ "JAPON EFSANELERİ": "JAPANISCHE LEGENDEN"
 }

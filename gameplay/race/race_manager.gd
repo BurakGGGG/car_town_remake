@@ -65,7 +65,7 @@ extends Node
 ##
 ## SÜPER ARABA TANITIMI (2026-10-23, kullanıcı: "ilk 2 dragını yapsın, 3. dragında süper araç gelsin, ezici üstünlükle
 ## yensin, sonra ileride senin de araçların böyle olacak ekranı gelsin; sadece yeni başlayanlarda"): 2 yarışı biten
-## (SHOWCASE_AFTER) ve tanıtımı görmemiş oyuncuya sıradaki rakip öne çıkan arkadaşın (Emre / Elif) BEYAZ OVALE ÉCLAIR'i
+## (SHOWCASE_AFTER) ve tanıtımı görmemiş oyuncuya sıradaki rakip öne çıkan arkadaşın (Emre / Elif) BEYAZ BUGANTI VERION'u
 ## (SHOWCASE_CAR) olur. Rakip kusursuz sürer (gün formu yok, beceri tam); rövanş çıkmaz, öğrenen zorluğa yazılmaz.
 ## Kaybedince GARAJA DÖN'de HUD "BİR GÜN SENİN DE OLACAK!" ekranını açar (take_showcase_tease). Tanıtım bir kez ("showcase"
 ## kayıtta); davet geri çevrilirse araç şehre karışır, şehirden çıkınca yine gelir (arada normal rakip gelebilir: bir

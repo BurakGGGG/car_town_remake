@@ -3,9 +3,9 @@
   "cars": [
     {
       "id": "bmw_e46",
-      "brand": "BAVARIA",
-      "model": "CLUB 46",
-      "display_name": "BAVARIA CLUB 46",
+      "brand": "BMR",
+      "model": "3.46",
+      "display_name": "BMR 3.46",
       "year": 2003,
       "price": 85000,
       "condition": 0.85,
@@ -36,7 +36,7 @@
         "grip": 80
       },
       "performance": {
-        "variant": "Bavaria Club 46",
+        "variant": "BMR 3.46",
         "engine": "3.0",
         "hp": 231,
         "zero_100": 6.5,
@@ -53,9 +53,9 @@
     },
     {
       "id": "hyundai_getz",
-      "brand": "HYPER",
-      "model": "POCKET Z",
-      "display_name": "HYPER POCKET Z",
+      "brand": "HYUNGA",
+      "model": "GETTA",
+      "display_name": "HYUNGA GETTA",
       "year": 2008,
       "price": 35000,
       "condition": 0.72,
@@ -86,7 +86,7 @@
         "grip": 64
       },
       "performance": {
-        "variant": "Hyper Pocket Z",
+        "variant": "Hyunga Getta",
         "engine": "1.5 CRDi",
         "hp": 110,
         "zero_100": 11.5,
@@ -103,9 +103,9 @@
     },
     {
       "id": "renault_fluence",
-      "brand": "ROMBO",
-      "model": "FLOW 12",
-      "display_name": "ROMBO FLOW 12",
+      "brand": "RENOIR",
+      "model": "FLUVIA",
+      "display_name": "RENOIR FLUVIA",
       "year": 2012,
       "price": 60000,
       "condition": 0.64,
@@ -136,7 +136,7 @@
         "grip": 74
       },
       "performance": {
-        "variant": "Rombo Flow 12",
+        "variant": "Renoir Fluvia",
         "engine": "2.0",
         "hp": 140,
         "zero_100": 9.9,
@@ -153,9 +153,9 @@
     },
     {
       "id": "vw_passat_b55",
-      "brand": "WULF",
-      "model": "KOMBI 04",
-      "display_name": "WULF KOMBI 04",
+      "brand": "VOLKAN",
+      "model": "PASSAGE B5",
+      "display_name": "VOLKAN PASSAGE B5",
       "year": 2004,
       "price": 50000,
       "condition": 0.58,
@@ -186,7 +186,7 @@
         "grip": 70
       },
       "performance": {
-        "variant": "Wulf Kombi 04",
+        "variant": "Volkan Passage B5",
         "engine": "1.9 TDI",
         "hp": 130,
         "zero_100": 9.9,
@@ -203,9 +203,9 @@
     },
     {
       "id": "hyundai_era",
-      "brand": "HYPER",
-      "model": "KENT 07",
-      "display_name": "HYPER KENT 07",
+      "brand": "HYUNGA",
+      "model": "ASCENT ERO",
+      "display_name": "HYUNGA ASCENT ERO",
       "year": 2007,
       "price": 30000,
       "condition": 0.7,
@@ -236,7 +236,7 @@
         "grip": 60
       },
       "performance": {
-        "variant": "Hyper Kent 07",
+        "variant": "Hyunga Ascent Ero",
         "engine": "1.4",
         "hp": 97,
         "zero_100": 12.3,
@@ -253,10 +253,10 @@
     },
     {
       "id": "tofas_sahin",
-      "brand": "BURSAN",
-      "model": "ATMACA 95",
-      "display_name": "BURSAN ATMACA 95",
-      "label": "BURSAN\nATMACA 95",
+      "brand": "TOFAN",
+      "model": "ŞAHAN",
+      "display_name": "TOFAN ŞAHAN",
+      "label": "TOFAN\nŞAHAN",
       "year": 1995,
       "price": 15000,
       "condition": 0.5,
@@ -287,7 +287,7 @@
         "grip": 45
       },
       "performance": {
-        "variant": "Bursan Atmaca 95",
+        "variant": "Tofan Şahan",
         "engine": "1.6",
         "hp": 80,
         "zero_100": 13.2,
@@ -304,10 +304,10 @@
     },
     {
       "id": "renault_toros",
-      "brand": "ROMBO",
-      "model": "ERCİYES 94",
-      "display_name": "ROMBO ERCİYES 94",
-      "label": "ROMBO\nERCİYES 94",
+      "brand": "RENOIR",
+      "model": "TORUS 12",
+      "display_name": "RENOIR TORUS 12",
+      "label": "RENOIR\nTORUS 12",
       "year": 1994,
       "price": 20000,
       "condition": 0.55,
@@ -338,7 +338,7 @@
         "grip": 47
       },
       "performance": {
-        "variant": "Rombo Erciyes 94",
+        "variant": "Renoir Torus 12",
         "engine": "1.4",
         "hp": 72,
         "zero_100": 14.5,
@@ -355,9 +355,9 @@
     },
     {
       "id": "hyundai_accent_blue",
-      "brand": "HYPER",
-      "model": "CYAN 13",
-      "display_name": "HYPER CYAN 13",
+      "brand": "HYUNGA",
+      "model": "ASCENT BLU",
+      "display_name": "HYUNGA ASCENT BLU",
       "year": 2013,
       "price": 38000,
       "condition": 0.85,
@@ -388,7 +388,7 @@
         "grip": 64
       },
       "performance": {
-        "variant": "Hyper Cyan 13",
+        "variant": "Hyunga Ascent Blu",
         "engine": "1.6",
         "hp": 124,
         "zero_100": 10.2,
@@ -405,9 +405,9 @@
     },
     {
       "id": "ford_focus",
-      "brand": "FORGE",
-      "model": "FOCAL 13",
-      "display_name": "FORGE FOCAL 13",
+      "brand": "FJORD",
+      "model": "FOCAL 3",
+      "display_name": "FJORD FOCAL 3",
       "year": 2013,
       "price": 45000,
       "condition": 0.85,
@@ -438,7 +438,7 @@
         "grip": 68
       },
       "performance": {
-        "variant": "Forge Focal 13",
+        "variant": "Fjord Focal 3",
         "engine": "1.6",
         "hp": 125,
         "zero_100": 10.9,
@@ -455,9 +455,9 @@
     },
     {
       "id": "skoda_kamiq",
-      "brand": "ARROW",
-      "model": "SUMMIT 20",
-      "display_name": "ARROW SUMMIT 20",
+      "brand": "SKOVA",
+      "model": "KAMIKO",
+      "display_name": "SKOVA KAMIKO",
       "year": 2020,
       "price": 55000,
       "condition": 0.85,
@@ -488,7 +488,7 @@
         "grip": 74
       },
       "performance": {
-        "variant": "Arrow Summit 20",
+        "variant": "Skova Kamiko",
         "engine": "1.6 TDI",
         "hp": 115,
         "zero_100": 10.2,
@@ -505,9 +505,9 @@
     },
     {
       "id": "vw_golf_7",
-      "brand": "WULF",
-      "model": "MK7 HATCH",
-      "display_name": "WULF MK7 HATCH",
+      "brand": "VOLKAN",
+      "model": "GOLFER 7",
+      "display_name": "VOLKAN GOLFER 7",
       "year": 2015,
       "price": 65000,
       "condition": 0.85,
@@ -538,7 +538,7 @@
         "grip": 76
       },
       "performance": {
-        "variant": "Wulf MK7 Hatch",
+        "variant": "Volkan Golfer 7",
         "engine": "1.4 TSI",
         "hp": 150,
         "zero_100": 8.2,
@@ -555,9 +555,9 @@
     },
     {
       "id": "seat_leon",
-      "brand": "IBERO",
-      "model": "LINCE 16",
-      "display_name": "IBERO LINCE 16",
+      "brand": "SEDRA",
+      "model": "LEONA",
+      "display_name": "SEDRA LEONA",
       "year": 2016,
       "price": 68000,
       "condition": 0.85,
@@ -588,7 +588,7 @@
         "grip": 78
       },
       "performance": {
-        "variant": "Ibero Lince 16",
+        "variant": "Sedra Leona",
         "engine": "1.4 TSI",
         "hp": 150,
         "zero_100": 8.0,
@@ -605,9 +605,9 @@
     },
     {
       "id": "honda_civic",
-      "brand": "ZENITH",
-      "model": "REV 10",
-      "display_name": "ZENITH REV 10",
+      "brand": "HONZA",
+      "model": "CIVITA",
+      "display_name": "HONZA CIVITA",
       "year": 2010,
       "price": 72000,
       "condition": 0.85,
@@ -638,7 +638,7 @@
         "grip": 78
       },
       "performance": {
-        "variant": "Zenith Rev 10",
+        "variant": "Honza Civita",
         "engine": "1.6",
         "hp": 125,
         "zero_100": 10.5,
@@ -655,9 +655,9 @@
     },
     {
       "id": "audi_a3",
-      "brand": "VIER",
-      "model": "KOMPAKT 14",
-      "display_name": "VIER KOMPAKT 14",
+      "brand": "AUDEX",
+      "model": "AX3",
+      "display_name": "AUDEX AX3",
       "year": 2014,
       "price": 95000,
       "condition": 0.85,
@@ -688,7 +688,7 @@
         "grip": 82
       },
       "performance": {
-        "variant": "Vier Kompakt 14",
+        "variant": "Audex AX3",
         "engine": "1.8 TFSI",
         "hp": 180,
         "zero_100": 7.2,
@@ -705,9 +705,9 @@
     },
     {
       "id": "volvo_s60",
-      "brand": "SHIELD",
-      "model": "ARMOR 16",
-      "display_name": "SHIELD ARMOR 16",
+      "brand": "VOLDA",
+      "model": "SV60",
+      "display_name": "VOLDA SV60",
       "year": 2016,
       "price": 105000,
       "condition": 0.85,
@@ -738,7 +738,7 @@
         "grip": 84
       },
       "performance": {
-        "variant": "Shield Armor 16",
+        "variant": "Volda SV60",
         "engine": "2.5T",
         "hp": 210,
         "zero_100": 7.0,
@@ -755,9 +755,9 @@
     },
     {
       "id": "bmw_e60",
-      "brand": "BAVARIA",
-      "model": "FÜNF 07",
-      "display_name": "BAVARIA FÜNF 07",
+      "brand": "BMR",
+      "model": "5.60",
+      "display_name": "BMR 5.60",
       "year": 2007,
       "price": 120000,
       "condition": 0.85,
@@ -788,7 +788,7 @@
         "grip": 82
       },
       "performance": {
-        "variant": "Bavaria Fünf 07",
+        "variant": "BMR 5.60",
         "engine": "3.0",
         "hp": 272,
         "zero_100": 6.5,
@@ -805,9 +805,9 @@
     },
     {
       "id": "alfa_romeo_159",
-      "brand": "SERPENTA",
-      "model": "LUSSO 08",
-      "display_name": "SERPENTA LUSSO 08",
+      "brand": "ROMANO",
+      "model": "159",
+      "display_name": "ROMANO 159",
       "year": 2008,
       "price": 90000,
       "condition": 0.85,
@@ -838,7 +838,7 @@
         "grip": 82
       },
       "performance": {
-        "variant": "Serpenta Lusso 08",
+        "variant": "Romano 159",
         "engine": "2.2 JTS",
         "hp": 185,
         "zero_100": 8.8,
@@ -855,9 +855,9 @@
     },
     {
       "id": "mercedes_cls",
-      "brand": "STERN",
-      "model": "COUPÉ 350",
-      "display_name": "STERN COUPÉ 350",
+      "brand": "MERIDES",
+      "model": "CLX 35",
+      "display_name": "MERIDES CLX 35",
       "year": 2018,
       "price": 150000,
       "condition": 0.85,
@@ -888,7 +888,7 @@
         "grip": 84
       },
       "performance": {
-        "variant": "Stern Coupé 350",
+        "variant": "Merides CLX 35",
         "engine": "3.5 V6",
         "hp": 306,
         "zero_100": 6.7,
@@ -905,9 +905,9 @@
     },
     {
       "id": "audi_rs6",
-      "brand": "VIER",
-      "model": "KOMBI R 20",
-      "display_name": "VIER KOMBI R 20",
+      "brand": "AUDEX",
+      "model": "RX6",
+      "display_name": "AUDEX RX6",
       "year": 2020,
       "price": 220000,
       "condition": 0.85,
@@ -938,7 +938,7 @@
         "grip": 86
       },
       "performance": {
-        "variant": "Vier Kombi R 20",
+        "variant": "Audex RX6",
         "engine": "4.0 TFSI",
         "hp": 600,
         "zero_100": 3.9,
@@ -955,9 +955,9 @@
     },
     {
       "id": "porsche_gt3",
-      "brand": "STALLION",
-      "model": "RING 18",
-      "display_name": "STALLION RING 18",
+      "brand": "PORSTEN",
+      "model": "991 GT",
+      "display_name": "PORSTEN 991 GT",
       "year": 2018,
       "price": 300000,
       "condition": 0.85,
@@ -989,7 +989,7 @@
         "grip": 94
       },
       "performance": {
-        "variant": "Stallion Ring 18",
+        "variant": "Porsten 991 GT",
         "engine": "4.0",
         "hp": 500,
         "zero_100": 3.4,
@@ -1006,9 +1006,9 @@
     },
     {
       "id": "lambo_huracan",
-      "brand": "BULL",
-      "model": "MONSOON",
-      "display_name": "BULL MONSOON",
+      "brand": "LAMBERTINI",
+      "model": "URAGANO",
+      "display_name": "LAMBERTINI URAGANO",
       "year": 2015,
       "price": 400000,
       "condition": 0.85,
@@ -1040,7 +1040,7 @@
         "grip": 90
       },
       "performance": {
-        "variant": "Bull Monsoon",
+        "variant": "Lambertini Uragano",
         "engine": "5.2 V10",
         "hp": 610,
         "zero_100": 2.9,
@@ -1057,9 +1057,9 @@
     },
     {
       "id": "ferrari_488_pista",
-      "brand": "FURIA",
-      "model": "CIRCUITO 19",
-      "display_name": "FURIA CIRCUITO 19",
+      "brand": "FERRAZZI",
+      "model": "488 PISTO",
+      "display_name": "FERRAZZI 488 PISTO",
       "year": 2019,
       "price": 450000,
       "condition": 0.85,
@@ -1091,7 +1091,7 @@
         "grip": 92
       },
       "performance": {
-        "variant": "Furia Circuito 19",
+        "variant": "Ferrazzi 488 Pisto",
         "engine": "3.9 V8",
         "hp": 720,
         "zero_100": 2.9,
@@ -1108,9 +1108,9 @@
     },
     {
       "id": "opel_corsa",
-      "brand": "DONNER",
-      "model": "C-PULSE",
-      "display_name": "DONNER C-PULSE",
+      "brand": "OPAR",
+      "model": "CORSIA",
+      "display_name": "OPAR CORSIA",
       "year": 2004,
       "price": 26000,
       "condition": 0.85,
@@ -1141,7 +1141,7 @@
         "grip": 64
       },
       "performance": {
-        "variant": "Donner C-Pulse",
+        "variant": "Opar Corsia",
         "engine": "1.4 Turbo",
         "hp": 100,
         "zero_100": 11.2,
@@ -1158,9 +1158,9 @@
     },
     {
       "id": "tesla_model_y",
-      "brand": "ARCLINE",
-      "model": "RANGE Y",
-      "display_name": "ARCLINE RANGE Y",
+      "brand": "TELSA",
+      "model": "MODO Y",
+      "display_name": "TELSA MODO Y",
       "year": 2021,
       "price": 110000,
       "condition": 0.85,
@@ -1191,7 +1191,7 @@
         "grip": 84
       },
       "performance": {
-        "variant": "Arcline Range Y",
+        "variant": "Telsa Modo Y",
         "engine": "Elektrik",
         "hp": 351,
         "zero_100": 5.0,
@@ -1208,9 +1208,9 @@
     },
     {
       "id": "chevrolet_camaro",
-      "brand": "CROSSBOW",
-      "model": "BRUTE SS",
-      "display_name": "CROSSBOW BRUTE SS",
+      "brand": "CHEVALIER",
+      "model": "CAMARGO SS",
+      "display_name": "CHEVALIER CAMARGO SS",
       "year": 2012,
       "price": 140000,
       "condition": 0.85,
@@ -1241,7 +1241,7 @@
         "grip": 80
       },
       "performance": {
-        "variant": "Crossbow Brute SS",
+        "variant": "Chevalier Camargo SS",
         "engine": "6.2 V8",
         "hp": 432,
         "zero_100": 4.0,
@@ -1258,9 +1258,9 @@
     },
     {
       "id": "mercedes_s400",
-      "brand": "STERN",
-      "model": "KAISER S",
-      "display_name": "STERN KAISER S",
+      "brand": "MERIDES",
+      "model": "S-40",
+      "display_name": "MERIDES S-40",
       "year": 2014,
       "price": 170000,
       "condition": 0.85,
@@ -1291,7 +1291,7 @@
         "grip": 86
       },
       "performance": {
-        "variant": "Stern Kaiser S",
+        "variant": "Merides S-40",
         "engine": "3.0 V6 Biturbo",
         "hp": 333,
         "zero_100": 5.3,
@@ -1308,9 +1308,9 @@
     },
     {
       "id": "vw_beetle",
-      "brand": "WULF",
-      "model": "TURBO BUG",
-      "display_name": "WULF TURBO BUG",
+      "brand": "VOLKAN",
+      "model": "BÖCÜK 2.0",
+      "display_name": "VOLKAN BÖCÜK 2.0",
       "year": 2016,
       "price": 80000,
       "condition": 0.85,
@@ -1341,7 +1341,7 @@
         "grip": 72
       },
       "performance": {
-        "variant": "Wulf Turbo Bug",
+        "variant": "Volkan Böcük 2.0",
         "engine": "2.0 TSI",
         "hp": 220,
         "zero_100": 6.9,
@@ -1358,9 +1358,9 @@
     },
     {
       "id": "togg_t10x",
-      "brand": "ŞİMŞEK",
-      "model": "X-VOLT",
-      "display_name": "ŞİMŞEK X-VOLT",
+      "brand": "TOGRA",
+      "model": "TX-10",
+      "display_name": "TOGRA TX-10",
       "year": 2023,
       "price": 85000,
       "condition": 0.85,
@@ -1391,7 +1391,7 @@
         "grip": 76
       },
       "performance": {
-        "variant": "Şimşek X-Volt",
+        "variant": "Togra TX-10",
         "engine": "Elektrik",
         "hp": 218,
         "zero_100": 7.8,
@@ -1408,9 +1408,9 @@
     },
     {
       "id": "togg_t10f",
-      "brand": "ŞİMŞEK",
-      "model": "F-VOLT",
-      "display_name": "ŞİMŞEK F-VOLT",
+      "brand": "TOGRA",
+      "model": "TF-10",
+      "display_name": "TOGRA TF-10",
       "year": 2025,
       "price": 100000,
       "condition": 0.85,
@@ -1441,7 +1441,7 @@
         "grip": 78
       },
       "performance": {
-        "variant": "Şimşek F-Volt",
+        "variant": "Togra TF-10",
         "engine": "Elektrik",
         "hp": 218,
         "zero_100": 7.5,
@@ -1458,9 +1458,9 @@
     },
     {
       "id": "audi_a6",
-      "brand": "VIER",
-      "model": "SECHS 19",
-      "display_name": "VIER SECHS 19",
+      "brand": "AUDEX",
+      "model": "AX6",
+      "display_name": "AUDEX AX6",
       "year": 2019,
       "price": 135000,
       "condition": 0.85,
@@ -1491,7 +1491,7 @@
         "grip": 84
       },
       "performance": {
-        "variant": "Vier Sechs 19",
+        "variant": "Audex AX6",
         "engine": "2.0 TFSI",
         "hp": 245,
         "zero_100": 6.0,
@@ -1508,9 +1508,9 @@
     },
     {
       "id": "bmw_f30",
-      "brand": "BAVARIA",
-      "model": "DREI 15",
-      "display_name": "BAVARIA DREI 15",
+      "brand": "BMR",
+      "model": "3.30",
+      "display_name": "BMR 3.30",
       "year": 2015,
       "price": 92000,
       "condition": 0.85,
@@ -1541,7 +1541,7 @@
         "grip": 82
       },
       "performance": {
-        "variant": "Bavaria Drei 15",
+        "variant": "BMR 3.30",
         "engine": "2.0 Turbo",
         "hp": 184,
         "zero_100": 7.3,
@@ -1558,9 +1558,9 @@
     },
     {
       "id": "bugatti_chiron",
-      "brand": "OVALE",
-      "model": "TONNERRE 16",
-      "display_name": "OVALE TONNERRE 16",
+      "brand": "BUGANTI",
+      "model": "CHIRAL",
+      "display_name": "BUGANTI CHIRAL",
       "year": 2016,
       "price": 900000,
       "condition": 0.85,
@@ -1592,7 +1592,7 @@
         "grip": 96
       },
       "performance": {
-        "variant": "Ovale Tonnerre 16",
+        "variant": "Buganti Chiral",
         "engine": "8.0 W16 Quad-Turbo",
         "hp": 1500,
         "zero_100": 2.42,
@@ -1609,9 +1609,9 @@
     },
     {
       "id": "bugatti_veyron",
-      "brand": "OVALE",
-      "model": "ÉCLAIR 05",
-      "display_name": "OVALE ÉCLAIR 05",
+      "brand": "BUGANTI",
+      "model": "VERION",
+      "display_name": "BUGANTI VERION",
       "year": 2005,
       "price": 700000,
       "condition": 0.85,
@@ -1643,7 +1643,7 @@
         "grip": 94
       },
       "performance": {
-        "variant": "Ovale Éclair 05",
+        "variant": "Buganti Verion",
         "engine": "8.0 W16 Quad-Turbo",
         "hp": 1001,
         "zero_100": 2.5,
@@ -1660,9 +1660,9 @@
     },
     {
       "id": "chery_tiggo_8",
-      "brand": "KİRAZ",
-      "model": "KAPLAN 8",
-      "display_name": "KİRAZ KAPLAN 8",
+      "brand": "CHERA",
+      "model": "TIGRO 8",
+      "display_name": "CHERA TIGRO 8",
       "year": 2023,
       "price": 70000,
       "condition": 0.85,
@@ -1693,7 +1693,7 @@
         "grip": 72
       },
       "performance": {
-        "variant": "Kiraz Kaplan 8",
+        "variant": "Chera Tigro 8",
         "engine": "1.6 TGDI",
         "hp": 183,
         "zero_100": 10.0,
@@ -1710,9 +1710,9 @@
     },
     {
       "id": "toyota_corolla",
-      "brand": "TORNADO",
-      "model": "HALE 21",
-      "display_name": "TORNADO HALE 21",
+      "brand": "TOKAYA",
+      "model": "CORALIA",
+      "display_name": "TOKAYA CORALIA",
       "year": 2021,
       "price": 48000,
       "condition": 0.85,
@@ -1743,7 +1743,7 @@
         "grip": 68
       },
       "performance": {
-        "variant": "Tornado Hale 21",
+        "variant": "Tokaya Coralia",
         "engine": "1.8 Hibrit",
         "hp": 122,
         "zero_100": 11.0,
@@ -1760,9 +1760,9 @@
     },
     {
       "id": "cupra_formentor",
-      "brand": "IBERO",
-      "model": "FARO 20",
-      "display_name": "IBERO FARO 20",
+      "brand": "CUPRUM",
+      "model": "FORMENTA",
+      "display_name": "CUPRUM FORMENTA",
       "year": 2020,
       "price": 120000,
       "condition": 0.85,
@@ -1793,7 +1793,7 @@
         "grip": 84
       },
       "performance": {
-        "variant": "Ibero Faro 20",
+        "variant": "Cuprum Formenta",
         "engine": "2.0 TSI",
         "hp": 310,
         "zero_100": 4.9,
@@ -1810,9 +1810,9 @@
     },
     {
       "id": "ferrari_laferrari",
-      "brand": "FURIA",
-      "model": "ASSOLUTA 13",
-      "display_name": "FURIA ASSOLUTA 13",
+      "brand": "FERRAZZI",
+      "model": "LAFERRA",
+      "display_name": "FERRAZZI LAFERRA",
       "year": 2013,
       "price": 650000,
       "condition": 0.85,
@@ -1844,7 +1844,7 @@
         "grip": 96
       },
       "performance": {
-        "variant": "Furia Assoluta 13",
+        "variant": "Ferrazzi Laferra",
         "engine": "6.3 V12 Hibrit",
         "hp": 963,
         "zero_100": 2.6,
@@ -1861,9 +1861,9 @@
     },
     {
       "id": "ford_transit",
-      "brand": "FORGE",
-      "model": "HAMAL 19",
-      "display_name": "FORGE HAMAL 19",
+      "brand": "FJORD",
+      "model": "TRANSA",
+      "display_name": "FJORD TRANSA",
       "year": 2019,
       "price": 40000,
       "condition": 0.85,
@@ -1894,7 +1894,7 @@
         "grip": 58
       },
       "performance": {
-        "variant": "Forge Hamal 19",
+        "variant": "Fjord Transa",
         "engine": "2.0 EcoBlue",
         "hp": 170,
         "zero_100": 14.0,
@@ -1911,9 +1911,9 @@
     },
     {
       "id": "renault_megane_4",
-      "brand": "ROMBO",
-      "model": "KAYRA 19",
-      "display_name": "ROMBO KAYRA 19",
+      "brand": "RENOIR",
+      "model": "MEGARA 4",
+      "display_name": "RENOIR MEGARA 4",
       "year": 2019,
       "price": 62000,
       "condition": 0.85,
@@ -1944,7 +1944,7 @@
         "grip": 72
       },
       "performance": {
-        "variant": "Rombo Kayra 19",
+        "variant": "Renoir Megara 4",
         "engine": "1.3 TCe",
         "hp": 140,
         "zero_100": 9.7,
@@ -1961,9 +1961,9 @@
     },
     {
       "id": "mercedes_g",
-      "brand": "STERN",
-      "model": "FESTUNG 18",
-      "display_name": "STERN FESTUNG 18",
+      "brand": "MERIDES",
+      "model": "GD 63",
+      "display_name": "MERIDES GD 63",
       "year": 2018,
       "price": 280000,
       "condition": 0.85,
@@ -1994,7 +1994,7 @@
         "grip": 80
       },
       "performance": {
-        "variant": "Stern Festung 18",
+        "variant": "Merides GD 63",
         "engine": "4.0 V8 Biturbo",
         "hp": 585,
         "zero_100": 4.5,
@@ -2011,9 +2011,9 @@
     },
     {
       "id": "mercedes_sprinter",
-      "brand": "STERN",
-      "model": "DOLMUŞ 19",
-      "display_name": "STERN DOLMUŞ 19",
+      "brand": "MERIDES",
+      "model": "SPRINTO",
+      "display_name": "MERIDES SPRINTO",
       "year": 2019,
       "price": 45000,
       "condition": 0.85,
@@ -2044,7 +2044,7 @@
         "grip": 56
       },
       "performance": {
-        "variant": "Stern Dolmuş 19",
+        "variant": "Merides Sprinto",
         "engine": "2.1 CDI",
         "hp": 163,
         "zero_100": 19.0,
@@ -2061,9 +2061,9 @@
     },
     {
       "id": "vw_passat_b8",
-      "brand": "WULF",
-      "model": "KOMBI 16",
-      "display_name": "WULF KOMBI 16",
+      "brand": "VOLKAN",
+      "model": "PASSAGE B8",
+      "display_name": "VOLKAN PASSAGE B8",
       "year": 2016,
       "price": 78000,
       "condition": 0.85,
@@ -2094,7 +2094,7 @@
         "grip": 76
       },
       "performance": {
-        "variant": "Wulf Kombi 16",
+        "variant": "Volkan Passage B8",
         "engine": "1.4 TSI",
         "hp": 150,
         "zero_100": 8.4,
@@ -2111,9 +2111,9 @@
     },
     {
       "id": "porsche_taycan",
-      "brand": "STALLION",
-      "model": "FOHLEN 20",
-      "display_name": "STALLION FOHLEN 20",
+      "brand": "PORSTEN",
+      "model": "TAYGAN",
+      "display_name": "PORSTEN TAYGAN",
       "year": 2020,
       "price": 380000,
       "condition": 0.85,
@@ -2144,7 +2144,7 @@
         "grip": 92
       },
       "performance": {
-        "variant": "Stallion Fohlen 20",
+        "variant": "Porsten Taygan",
         "engine": "Elektrik",
         "hp": 680,
         "zero_100": 3.2,
@@ -2161,9 +2161,9 @@
     },
     {
       "id": "skoda_superb",
-      "brand": "ARROW",
-      "model": "KANZLER 16",
-      "display_name": "ARROW KANZLER 16",
+      "brand": "SKOVA",
+      "model": "SUPERBA",
+      "display_name": "SKOVA SUPERBA",
       "year": 2016,
       "price": 82000,
       "condition": 0.85,
@@ -2194,7 +2194,7 @@
         "grip": 78
       },
       "performance": {
-        "variant": "Arrow Kanzler 16",
+        "variant": "Skova Superba",
         "engine": "1.4 TSI",
         "hp": 150,
         "zero_100": 8.8,
@@ -2211,9 +2211,9 @@
     },
     {
       "id": "police_vito",
-      "brand": "STERN",
-      "model": "SQUAD VAN",
-      "display_name": "STERN SQUAD VAN",
+      "brand": "MERIDES",
+      "model": "VITA",
+      "display_name": "MERIDES VITA",
       "year": 2020,
       "price": 45000,
       "condition": 0.85,
@@ -2244,7 +2244,7 @@
         "grip": 62
       },
       "performance": {
-        "variant": "Stern Squad Van",
+        "variant": "Merides Vita",
         "engine": "2.0 CDI",
         "hp": 190,
         "zero_100": 10.0,
@@ -2263,9 +2263,9 @@
     },
     {
       "id": "police_bentley",
-      "brand": "MONARCH",
+      "brand": "BENTON",
       "model": "PATROL GT",
-      "display_name": "MONARCH PATROL GT",
+      "display_name": "BENTON PATROL GT",
       "year": 2018,
       "price": 380000,
       "condition": 0.85,
@@ -2296,7 +2296,7 @@
         "grip": 86
       },
       "performance": {
-        "variant": "Monarch Patrol GT",
+        "variant": "Benton Patrol GT",
         "engine": "6.0 W12 Biturbo",
         "hp": 635,
         "zero_100": 3.7,
@@ -2315,9 +2315,9 @@
     },
     {
       "id": "tofas_murat_124",
-      "brand": "BURSAN",
-      "model": "HACI 124",
-      "label": "BURSAN\nHACI 124",
+      "brand": "TOFAN",
+      "model": "MİRAT 124",
+      "label": "TOFAN\nMİRAT 124",
       "year": 1971,
       "price": 25000,
       "condition": 1.0,
@@ -2340,7 +2340,7 @@
         "grip": 42
       },
       "performance": {
-        "variant": "Bursan Hacı 124",
+        "variant": "Tofan Mirat 124",
         "engine": "1.2",
         "hp": 60,
         "zero_100": 16.5,
@@ -2360,9 +2360,9 @@
     },
     {
       "id": "anadol_a1",
-      "brand": "HİTİT",
-      "model": "A-67 CLASSIC",
-      "label": "HİTİT\nA-67 CLASSIC",
+      "brand": "ANADUR",
+      "model": "A-67",
+      "label": "ANADUR\nA-67",
       "year": 1967,
       "price": 25000,
       "condition": 1.0,
@@ -2385,7 +2385,7 @@
         "grip": 40
       },
       "performance": {
-        "variant": "Hitit A-67 Classic",
+        "variant": "Anadur A-67",
         "engine": "1.2",
         "hp": 53,
         "zero_100": 20.0,
@@ -2405,9 +2405,9 @@
     },
     {
       "id": "vw_beetle_1967",
-      "brand": "WULF",
-      "model": "BUG 67",
-      "label": "WULF\nBUG 67",
+      "brand": "VOLKAN",
+      "model": "BÖCÜK 67",
+      "label": "VOLKAN\nBÖCÜK 67",
       "year": 1967,
       "price": 25000,
       "condition": 1.0,
@@ -2430,7 +2430,7 @@
         "grip": 40
       },
       "performance": {
-        "variant": "Wulf Bug 67",
+        "variant": "Volkan Böcük 67",
         "engine": "1.5",
         "hp": 53,
         "zero_100": 20.0,
@@ -2450,9 +2450,9 @@
     },
     {
       "id": "fiat_500_1965",
-      "brand": "FITO",
-      "model": "PICCOLO 65",
-      "label": "FITO\nPICCOLO 65",
+      "brand": "FIORA",
+      "model": "PICCOLA 65",
+      "label": "FIORA\nPICCOLA 65",
       "year": 1965,
       "price": 25000,
       "condition": 1.0,
@@ -2475,7 +2475,7 @@
         "grip": 38
       },
       "performance": {
-        "variant": "Fito Piccolo 65",
+        "variant": "Fiora Piccola 65",
         "engine": "0.5",
         "hp": 18,
         "zero_100": 35.0,
@@ -2495,9 +2495,9 @@
     },
     {
       "id": "tofas_murat_131",
-      "brand": "BURSAN",
-      "model": "M-131 BOX",
-      "label": "BURSAN\nM-131 BOX",
+      "brand": "TOFAN",
+      "model": "MİRAT 131",
+      "label": "TOFAN\nMİRAT 131",
       "year": 1979,
       "price": 25000,
       "condition": 1.0,
@@ -2520,7 +2520,7 @@
         "grip": 44
       },
       "performance": {
-        "variant": "Bursan M-131 Box",
+        "variant": "Tofan Mirat 131",
         "engine": "1.6",
         "hp": 75,
         "zero_100": 14.0,
@@ -2540,9 +2540,9 @@
     },
     {
       "id": "mini_cooper_1965",
-      "brand": "MICRO",
-      "model": "BULLDOG 65",
-      "label": "MICRO\nBULLDOG 65",
+      "brand": "MINKO",
+      "model": "COPPA 65",
+      "label": "MINKO\nCOPPA 65",
       "year": 1965,
       "price": 25000,
       "condition": 1.0,
@@ -2565,7 +2565,7 @@
         "grip": 52
       },
       "performance": {
-        "variant": "Micro Bulldog 65",
+        "variant": "Minko Coppa 65",
         "engine": "1.0",
         "hp": 55,
         "zero_100": 14.8,
@@ -2585,9 +2585,9 @@
     },
     {
       "id": "willys_jeep_mb",
-      "brand": "VETERAN",
-      "model": "WW2 CLASSIC",
-      "label": "VETERAN\nWW2 CLASSIC",
+      "brand": "WILLOW",
+      "model": "MV",
+      "label": "WILLOW\nMV",
       "year": 1944,
       "price": 25000,
       "condition": 1.0,
@@ -2610,7 +2610,7 @@
         "grip": 46
       },
       "performance": {
-        "variant": "Veteran WW2 Classic",
+        "variant": "Willow MV",
         "engine": "2.2",
         "hp": 60,
         "zero_100": 30.0,
@@ -2630,9 +2630,9 @@
     },
     {
       "id": "peugeot_404",
-      "brand": "LION",
-      "model": "QUATRE 68",
-      "label": "LION\nQUATRE 68",
+      "brand": "PERGEOT",
+      "model": "44",
+      "label": "PERGEOT\n44",
       "year": 1968,
       "price": 25000,
       "condition": 1.0,
@@ -2655,7 +2655,7 @@
         "grip": 42
       },
       "performance": {
-        "variant": "Lion Quatre 68",
+        "variant": "Pergeot 44",
         "engine": "1.6",
         "hp": 72,
         "zero_100": 17.0,
@@ -2675,9 +2675,9 @@
     },
     {
       "id": "mercedes_w123",
-      "brand": "STERN",
-      "model": "TANK 123",
-      "label": "STERN\nTANK 123",
+      "brand": "MERIDES",
+      "model": "123 D",
+      "label": "MERIDES\n123 D",
       "year": 1980,
       "price": 25000,
       "condition": 1.0,
@@ -2700,7 +2700,7 @@
         "grip": 44
       },
       "performance": {
-        "variant": "Stern Tank 123",
+        "variant": "Merides 123 D",
         "engine": "2.4 Dizel",
         "hp": 72,
         "zero_100": 22.0,
@@ -2720,9 +2720,9 @@
     },
     {
       "id": "vw_t1_bus",
-      "brand": "WULF",
-      "model": "FLOWER BUS 65",
-      "label": "WULF\nFLOWER BUS 65",
+      "brand": "VOLKAN",
+      "model": "HİPPİ T1",
+      "label": "VOLKAN\nHİPPİ T1",
       "year": 1965,
       "price": 25000,
       "condition": 1.0,
@@ -2745,7 +2745,7 @@
         "grip": 40
       },
       "performance": {
-        "variant": "Wulf Flower Bus 65",
+        "variant": "Volkan Hippi T1",
         "engine": "1.5",
         "hp": 44,
         "zero_100": 40.0,
@@ -2765,9 +2765,9 @@
     },
     {
       "id": "land_rover_series3",
-      "brand": "MOORLAND",
-      "model": "TREK III",
-      "label": "MOORLAND\nTREK III",
+      "brand": "LANDRIDER",
+      "model": "SERIA 3",
+      "label": "LANDRIDER\nSERIA 3",
       "year": 1975,
       "price": 25000,
       "condition": 1.0,
@@ -2790,7 +2790,7 @@
         "grip": 46
       },
       "performance": {
-        "variant": "Moorland Trek III",
+        "variant": "Landrider Seria 3",
         "engine": "2.25",
         "hp": 70,
         "zero_100": 29.0,
@@ -2810,9 +2810,9 @@
     },
     {
       "id": "chevrolet_bel_air_1956",
-      "brand": "CROSSBOW",
-      "model": "SUNSET 56",
-      "label": "CROSSBOW\nSUNSET 56",
+      "brand": "CHEVALIER",
+      "model": "BELMAR 56",
+      "label": "CHEVALIER\nBELMAR 56",
       "year": 1956,
       "price": 25000,
       "condition": 1.0,
@@ -2835,7 +2835,7 @@
         "grip": 42
       },
       "performance": {
-        "variant": "Crossbow Sunset 56",
+        "variant": "Chevalier Belmar 56",
         "engine": "4.3 V8",
         "hp": 162,
         "zero_100": 12.0,
@@ -2855,9 +2855,9 @@
     },
     {
       "id": "ford_mustang_1967",
-      "brand": "FORGE",
-      "model": "WILD PONY 67",
-      "label": "FORGE\nWILD PONY 67",
+      "brand": "FJORD",
+      "model": "MUSTANO 67",
+      "label": "FJORD\nMUSTANO 67",
       "year": 1967,
       "price": 62500,
       "condition": 1.0,
@@ -2880,7 +2880,7 @@
         "grip": 55
       },
       "performance": {
-        "variant": "Forge Wild Pony 67",
+        "variant": "Fjord Mustano 67",
         "engine": "6.4 V8",
         "hp": 320,
         "zero_100": 7.4,
@@ -2900,9 +2900,9 @@
     },
     {
       "id": "chevrolet_corvette_c2",
-      "brand": "CROSSBOW",
-      "model": "RAZORBACK 63",
-      "label": "CROSSBOW\nRAZORBACK 63",
+      "brand": "CHEVALIER",
+      "model": "CORVINA 63",
+      "label": "CHEVALIER\nCORVINA 63",
       "year": 1963,
       "price": 62500,
       "condition": 1.0,
@@ -2925,7 +2925,7 @@
         "grip": 58
       },
       "performance": {
-        "variant": "Crossbow Razorback 63",
+        "variant": "Chevalier Corvina 63",
         "engine": "5.4 V8",
         "hp": 360,
         "zero_100": 6.3,
@@ -2945,9 +2945,9 @@
     },
     {
       "id": "jaguar_e_type",
-      "brand": "OCELOT",
-      "model": "CLASSIC 61",
-      "label": "OCELOT\nCLASSIC 61",
+      "brand": "JAGORA",
+      "model": "E-TIPO",
+      "label": "JAGORA\nE-TIPO",
       "year": 1961,
       "price": 62500,
       "condition": 1.0,
@@ -2970,7 +2970,7 @@
         "grip": 58
       },
       "performance": {
-        "variant": "Ocelot Classic 61",
+        "variant": "Jagora E-tipo",
         "engine": "3.8",
         "hp": 265,
         "zero_100": 7.1,
@@ -2990,9 +2990,9 @@
     },
     {
       "id": "aston_martin_db5",
-      "brand": "AGENT",
-      "model": "SPY 005",
-      "label": "AGENT\nSPY 005",
+      "brand": "ASTOR",
+      "model": "MARTEN D5",
+      "label": "ASTOR\nMARTEN D5",
       "year": 1964,
       "price": 62500,
       "condition": 1.0,
@@ -3015,7 +3015,7 @@
         "grip": 58
       },
       "performance": {
-        "variant": "Agent Spy 005",
+        "variant": "Astor Marten D5",
         "engine": "4.0",
         "hp": 282,
         "zero_100": 8.0,
@@ -3035,9 +3035,9 @@
     },
     {
       "id": "dodge_charger_1970",
-      "brand": "BLACKTOP",
-      "model": "BRUISER 70",
-      "label": "BLACKTOP\nBRUISER 70",
+      "brand": "DODSON",
+      "model": "CHARGO 70",
+      "label": "DODSON\nCHARGO 70",
       "year": 1970,
       "price": 62500,
       "condition": 1.0,
@@ -3060,7 +3060,7 @@
         "grip": 55
       },
       "performance": {
-        "variant": "Blacktop Bruiser 70",
+        "variant": "Dodson Chargo 70",
         "engine": "7.2 V8",
         "hp": 375,
         "zero_100": 6.7,
@@ -3080,9 +3080,9 @@
     },
     {
       "id": "porsche_911_1973",
-      "brand": "STALLION",
-      "model": "RS-73",
-      "label": "STALLION\nRS-73",
+      "brand": "PORSTEN",
+      "model": "CARRA RS",
+      "label": "PORSTEN\nCARRA RS",
       "year": 1973,
       "price": 62500,
       "condition": 1.0,
@@ -3105,7 +3105,7 @@
         "grip": 64
       },
       "performance": {
-        "variant": "Stallion RS-73",
+        "variant": "Porsten Carra RS",
         "engine": "2.7",
         "hp": 210,
         "zero_100": 5.8,
@@ -3125,9 +3125,9 @@
     },
     {
       "id": "mercedes_300sl",
-      "brand": "STERN",
-      "model": "GULLWING 55",
-      "label": "STERN\nGULLWING 55",
+      "brand": "MERIDES",
+      "model": "GULL 55",
+      "label": "MERIDES\nGULL 55",
       "year": 1955,
       "price": 62500,
       "condition": 1.0,
@@ -3150,7 +3150,7 @@
         "grip": 58
       },
       "performance": {
-        "variant": "Stern Gullwing 55",
+        "variant": "Merides Gull 55",
         "engine": "3.0",
         "hp": 215,
         "zero_100": 8.8,
@@ -3170,9 +3170,9 @@
     },
     {
       "id": "lamborghini_miura",
-      "brand": "BULL",
-      "model": "MATADOR 400",
-      "label": "BULL\nMATADOR 400",
+      "brand": "LAMBERTINI",
+      "model": "MIRUNA",
+      "label": "LAMBERTINI\nMIRUNA",
       "year": 1968,
       "price": 62500,
       "condition": 1.0,
@@ -3195,7 +3195,7 @@
         "grip": 62
       },
       "performance": {
-        "variant": "Bull Matador 400",
+        "variant": "Lambertini Miruna",
         "engine": "3.9 V12",
         "hp": 350,
         "zero_100": 6.7,
@@ -3215,9 +3215,9 @@
     },
     {
       "id": "ford_escort_rs1600",
-      "brand": "FORGE",
-      "model": "RALLYE 72",
-      "label": "FORGE\nRALLYE 72",
+      "brand": "FJORD",
+      "model": "ESCORTA RS",
+      "label": "FJORD\nESCORTA RS",
       "year": 1972,
       "price": 62500,
       "condition": 1.0,
@@ -3240,7 +3240,7 @@
         "grip": 70
       },
       "performance": {
-        "variant": "Forge Rallye 72",
+        "variant": "Fjord Escorta RS",
         "engine": "1.6",
         "hp": 120,
         "zero_100": 8.9,
@@ -3260,9 +3260,9 @@
     },
     {
       "id": "lancia_stratos",
-      "brand": "ASTA",
-      "model": "COMETA 74",
-      "label": "ASTA\nCOMETA 74",
+      "brand": "LANZA",
+      "model": "STRATIA",
+      "label": "LANZA\nSTRATIA",
       "year": 1974,
       "price": 62500,
       "condition": 1.0,
@@ -3285,7 +3285,7 @@
         "grip": 72
       },
       "performance": {
-        "variant": "Asta Cometa 74",
+        "variant": "Lanza Stratia",
         "engine": "2.4 V6",
         "hp": 190,
         "zero_100": 6.8,
@@ -3305,9 +3305,9 @@
     },
     {
       "id": "bmw_m3_e30",
-      "brand": "BAVARIA",
-      "model": "LEGEND 90",
-      "label": "BAVARIA\nLEGEND 90",
+      "brand": "BMR",
+      "model": "RS 30",
+      "label": "BMR\nRS 30",
       "year": 1990,
       "price": 62500,
       "condition": 1.0,
@@ -3330,7 +3330,7 @@
         "grip": 72
       },
       "performance": {
-        "variant": "Bavaria Legend 90",
+        "variant": "BMR RS 30",
         "engine": "2.3",
         "hp": 215,
         "zero_100": 6.6,
@@ -3350,9 +3350,9 @@
     },
     {
       "id": "toyota_celica_gt4",
-      "brand": "TORNADO",
-      "model": "QUAD 93",
-      "label": "TORNADO\nQUAD 93",
+      "brand": "TOKAYA",
+      "model": "CELESTA GT4",
+      "label": "TOKAYA\nCELESTA GT4",
       "year": 1993,
       "price": 62500,
       "condition": 1.0,
@@ -3375,7 +3375,7 @@
         "grip": 74
       },
       "performance": {
-        "variant": "Tornado Quad 93",
+        "variant": "Tokaya Celesta GT4",
         "engine": "2.0 Turbo",
         "hp": 208,
         "zero_100": 7.5,
@@ -3395,9 +3395,9 @@
     },
     {
       "id": "lancia_delta_integrale",
-      "brand": "ASTA",
-      "model": "SEDICI 92",
-      "label": "ASTA\nSEDICI 92",
+      "brand": "LANZA",
+      "model": "DELTIA HF",
+      "label": "LANZA\nDELTIA HF",
       "year": 1992,
       "price": 62500,
       "condition": 1.0,
@@ -3420,7 +3420,7 @@
         "grip": 78
       },
       "performance": {
-        "variant": "Asta Sedici 92",
+        "variant": "Lanza Deltia HF",
         "engine": "2.0 Turbo",
         "hp": 210,
         "zero_100": 5.7,
@@ -3440,9 +3440,9 @@
     },
     {
       "id": "audi_quattro_s1",
-      "brand": "VIER",
-      "model": "SPORT 85",
-      "label": "VIER\nSPORT 85",
+      "brand": "AUDEX",
+      "model": "QUARTO S1",
+      "label": "AUDEX\nQUARTO S1",
       "year": 1985,
       "price": 62500,
       "condition": 1.0,
@@ -3465,7 +3465,7 @@
         "grip": 78
       },
       "performance": {
-        "variant": "Vier Sport 85",
+        "variant": "Audex Quarto S1",
         "engine": "2.1 Turbo",
         "hp": 306,
         "zero_100": 4.8,
@@ -3485,9 +3485,9 @@
     },
     {
       "id": "ford_rs200",
-      "brand": "FORGE",
-      "model": "GROUP B 200",
-      "label": "FORGE\nGROUP B 200",
+      "brand": "FJORD",
+      "model": "RZ 200",
+      "label": "FJORD\nRZ 200",
       "year": 1986,
       "price": 62500,
       "condition": 1.0,
@@ -3510,7 +3510,7 @@
         "grip": 76
       },
       "performance": {
-        "variant": "Forge Group B 200",
+        "variant": "Fjord RZ 200",
         "engine": "1.8 Turbo",
         "hp": 250,
         "zero_100": 6.1,
@@ -3530,9 +3530,9 @@
     },
     {
       "id": "mitsubishi_evo6",
-      "brand": "TRIDIA",
-      "model": "RALLY VI",
-      "label": "TRIDIA\nRALLY VI",
+      "brand": "MITSUKO",
+      "model": "EVOLTA 6",
+      "label": "MITSUKO\nEVOLTA 6",
       "year": 1999,
       "price": 62500,
       "condition": 1.0,
@@ -3555,7 +3555,7 @@
         "grip": 78
       },
       "performance": {
-        "variant": "Tridia Rally VI",
+        "variant": "Mitsuko Evolta 6",
         "engine": "2.0 Turbo",
         "hp": 280,
         "zero_100": 4.4,
@@ -3572,6 +3572,106 @@
       "available_colors": [
         "#EDEBED"
       ]
+    },
+    {
+      "id": "toyota_supra",
+      "brand": "TOKAYA",
+      "model": "SUPREMA",
+      "display_name": "TOKAYA SUPREMA",
+      "year": 1997,
+      "price": 130000,
+      "condition": 0.9,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/toyota_supra.tscn",
+      "source_path": "res://assets/cars/source/toyota_supra.glb",
+      "optimized_path": "res://assets/cars/optimized/toyota_supra.glb",
+      "default_color": "#FFFFFF",
+      "available_colors": [
+        "#FFFFFF",
+        "#1F1F21",
+        "#CC241F",
+        "#E8B21E",
+        "#24468C",
+        "#C2C4CC"
+      ],
+      "world_node": "",
+      "plate_color": "#F5B34A",
+      "traffic": true,
+      "class": "A",
+      "rarity": "epic",
+      "min_level": 22,
+      "min_garage_rank": 5,
+      "race": {
+        "top_speed": 250,
+        "acceleration": 81,
+        "reaction": 78,
+        "grip": 78
+      },
+      "performance": {
+        "variant": "Tokaya Suprema",
+        "engine": "3.0 Biturbo",
+        "hp": 330,
+        "zero_100": 5.1,
+        "top_speed": 250,
+        "drivetrain": "RWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.52,
+        "width_m": 1.81,
+        "height_m": 1.275,
+        "wheelbase_m": 2.55
+      },
+      "model_scale": 1.08
+    },
+    {
+      "id": "nissan_skyline_r34",
+      "brand": "NISKA",
+      "model": "SKYRISE 34",
+      "display_name": "NISKA SKYRISE 34",
+      "year": 1999,
+      "price": 135000,
+      "condition": 0.9,
+      "category": "coupe",
+      "scene_path": "res://assets/cars/nissan_skyline_r34.tscn",
+      "source_path": "res://assets/cars/source/nissan_skyline_r34.glb",
+      "optimized_path": "res://assets/cars/optimized/nissan_skyline_r34.glb",
+      "default_color": "#0257E3",
+      "available_colors": [
+        "#0257E3",
+        "#F2F2EB",
+        "#1F1F21",
+        "#C2C4CC",
+        "#CC241F",
+        "#7A8A3A"
+      ],
+      "world_node": "",
+      "plate_color": "#8FC9F0",
+      "traffic": true,
+      "class": "A",
+      "rarity": "epic",
+      "min_level": 23,
+      "min_garage_rank": 5,
+      "race": {
+        "top_speed": 250,
+        "acceleration": 80,
+        "reaction": 80,
+        "grip": 86
+      },
+      "performance": {
+        "variant": "Niska Skyrise 34",
+        "engine": "2.6 Biturbo",
+        "hp": 280,
+        "zero_100": 5.2,
+        "top_speed": 250,
+        "drivetrain": "AWD"
+      },
+      "real_dimensions": {
+        "length_m": 4.6,
+        "width_m": 1.785,
+        "height_m": 1.36,
+        "wheelbase_m": 2.665
+      },
+      "model_scale": 1.11
     }
   ]
 }

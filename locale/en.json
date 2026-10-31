@@ -835,7 +835,7 @@
  "VARİL RAFI": "BARREL RACK",
  "VASAT GARAJ": "AVERAGE GARAGE",
  "VAZGEÇ": "CANCEL",
- "WULF GRUBU": "WULF GROUP",
+ "VOLKAN GRUBU": "VOLKAN GROUP",
  "Vitesi ibre YEŞİL dilime girince at: kusursuz vites seni rekora taşır.": "Shift when the needle hits the GREEN zone: perfect shifts set records.",
  "VİTES": "GEAR",
  "VİTES  %d / %d": "GEAR  %d / %d",
@@ -978,7 +978,7 @@
  "İNCE AĞAÇ": "SLIM TREE",
  "İTALYAN": "ITALIAN",
  "AMERİKAN": "AMERICAN",
- "ŞİMŞEK": "ŞİMŞEK",
+ "TOGRA": "TOGRA",
  " · %d HP": " · %d HP",
  "0-100 %s sn · %d km/sa": "0-100 %s s · %d km/h",
  "4 ÇEKER": "AWD",
@@ -1505,7 +1505,7 @@
  "AL, İLK ARACIN!": "HERE'S YOUR FIRST CAR!",
  "AÇ'a bas, bakalım içinden ne çıkacak!": "Press OPEN and let's see what's inside!",
  "Ben Rıza Usta. Bu garaj artık senin: arızalı araçları tamir et, para kazan, garajını büyüt. Ama önce sana bir hoş geldin hediyem var!": "I'm Master Rıza. This garage is yours now: fix broken cars, earn money and grow your garage. But first, I have a welcome gift for you!",
- "Bu Bursan Atmaca artık senin! Drag yarışlarına bununla çıkacaksın; yeni araçlar ileride kasalardan çıkar. Plakadaki TAMAM'a bas.": "This Bursan Atmaca is yours now! You'll take it to drag races; new cars will come from crates later on. Press OK on the plate.",
+ "Bu Tofan Şahan artık senin! Drag yarışlarına bununla çıkacaksın; yeni araçlar ileride kasalardan çıkar. Plakadaki TAMAM'a bas.": "This Tofan Şahan is yours now! You'll take it to drag races; new cars will come from crates later on. Press OK on the plate.",
  "Garajına bir hediye kutusu bıraktım. İçinde ilk araban var! Kutuya dokun.": "I left a gift box in your garage. Your first car is inside! Tap the box.",
  "HEDİYE": "GIFT",
  "HOŞ GELDİN HEDİYEN GARAJINDA\nKUTUYA DOKUN VE AÇ": "YOUR WELCOME GIFT IS IN THE GARAGE\nTAP THE BOX TO OPEN IT",
@@ -2704,5 +2704,6 @@
  "Altın şeritli lastikler, deri minder ve altın egzoz borusu. Garajın en havalı kedi kulesi.": "Gold-striped tires, a leather cushion and a gold exhaust pipe. The coolest cat tower in the garage.",
  "MERMER MAMA KABI": "MARBLE FOOD BOWLS",
  "Mermer kaide üstünde altın mama ve su kabı.": "Gold food and water bowls on a marble stand.",
- "EVCİL HAYVAN": "PETS"
+ "EVCİL HAYVAN": "PETS",
+ "JAPON EFSANELERİ": "JAPANESE LEGENDS"
 }

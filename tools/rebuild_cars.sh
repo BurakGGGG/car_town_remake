@@ -17,6 +17,9 @@ for c in json.load(open("vehicles/cars.json"))["cars"]:
     # (vw_passat_b55 → volswagen_passat_b5_5.glb gibi uyuşmazlıklar var).
     out = c["optimized_path"].replace("res://", "")
     extra = "--ratio 0.08 --rename" if c["id"] == "renault_toros" else "--ratio 0.125"
+    # Meshy kaynakları (tools/meshy_prep.py) Blender'da sadeleşmiş + yeni UV'ye pişirilmiş geliyor: oran 1
+    if c["id"] in ("toyota_supra", "nissan_skyline_r34"):
+        extra = "--ratio 1.0"
     print("%s|%s|%s|%s|%s" % (c["id"], src, out, c["scene_path"], extra))
 PY
 fail=0

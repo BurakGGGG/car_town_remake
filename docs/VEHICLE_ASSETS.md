@@ -671,3 +671,55 @@ iç yanak dokusu kopyalara da geçer. 74 küçük resim yenilendi. Yedek: `~/Pro
 `tools/wheel_parts.gd` artık ikinci satırda `AXES` (teker grupları + eksenler) basar; iki betik onu okur.
 **Yeni araç sırası (teker):** wheel_fit → fill_arc (dış yanak) → `tire_auto_fill.py` → debadge → `tire_inner_paint.py`
 → --import → make_car_thumbs; denetim `qa/teker_tarama.gd` (dıştan, `bakis=180,0` içten, `merge` garaj kademesi).
+
+---
+
+# Dokuzuncu parti (2026-10-31) — ilk Meshy AI araçları, katalog 74 → 76
+
+Toyota Supra A80 (`toyota_supra`) ve Nissan Skyline GT-R R34 (`nissan_skyline_r34`). Kullanıcı Meshy AI'da üretti; her
+araç için iki dosya (`~/Desktop/cars/supra/`, `~/Desktop/cars/r34 gtr/`): dokulu TEK mesh (Supra 783K, R34 1,13M üçgen,
+2048² temel renk + metal/pürüz + normal) ve dokusuz `…part-segmentation_split.glb` (10 / 14 parça, köşe renkli, aynı şekil
+1/15,84 ölçekte). Tripo yapısında değiller → yeni ön adım **`tools/meshy_prep.py`** (ayar: `tools/meshy/<id>.json`):
+
+1. Bölütleme dokulu mesh'e kutu eşleştirmesiyle oturtulur (üç eksen ölçeği aynı çıkmalı, betik denetler), her yüze en
+   yakın bölütleme parçası etiket olur. Meshy bölütlemesi teker (lastik + jant tek parça), camlar, rüzgârlık, ön
+   kaliperler ve gövde veriyor; far / stop AYRILMIYOR.
+2. Cam adayı parçalarda yalnız koyu texel'li yüzler cam (Supra tavanı gövde rengi), komşu çoğunluğuyla yumuşatılır; stop =
+   arka %14'teki kırmızı texel kümeleri (en büyüğün %12'sinden küçükler rozet/yansıma sayılıp atılır). Etiket kırıntıları
+   (alan < toplamın 2,5e-4'ü) en uzun sınırı paylaştığı komşuya katılır.
+3. Kaynaştırılmış kopya (Meshy dokulu mesh'i kaynaştırınca TEK bağlı parça — tekerler gövdeye bağlı) role göre ayrılır, her
+   parça Blender Decimate ile hedefe iner: gövde 80K, cam 4K, teker 6K, stop / trim 1,5K.
+4. **Doku yeni UV'ye pişirilir.** Meshy atlası binlerce küçük ada (R34: 2.227); Godot sadeleştiricisi bu dikişlerde leke
+   bırakıyordu (Şahin denemesi). Smart UV sadeleşmiş yüzeyin gürültülü normalleriyle ~9.500 ada üretti → yerine her yüz
+   altı küp yönünden birine atanır (komşu oylaması), küçük adalar en uygun komşu yöne katılır, sınırlar dikiş + açı tabanlı
+   açılım + paketleme: 1.064 / 1.302 ada. Alta bakan adalar paketlemeden önce ×0,3 (taban görünmez). Cycles "selected to
+   active" EMIT (temel renk; metal parçalar kararmasın diye emisyon) + gövdeye %35 AO (tekerlere değil: teker dönerken
+   kemer gölgesi de dönerdi — AO pişirmesinin kenar dolgusu teker texel'lerine taşıyordu, ayrıca teker maskesi pişirilir).
+   Kafes 0,008 / ışın 0,02: daha küçük kafeste sadeleşmiş cam yüksek çözünürlüklü camın içine düşüp ışın kaportanın iç
+   yüzüne çarpıyordu (Supra yan camında açık leke).
+5. Parçalar `tripo_part_N` (0 gövde, 1 cam, 2 stop, 3–6 teker fl/fr/rl/rr, 7 trim / ön kaliper), pivot = kutu merkezi,
+   tek materyal, JPEG gömülü. Teker ekseni dış zarf çemberiyle (alt 120° hariç) ölçülüp basılır.
+
+Sonrası normal hat, tek fark **`optimize_car.gd --ratio 1.0`** (sadeleştirme Blender'da yapıldı; `tools/rebuild_cars.sh`'e
+istisna eklendi): resimplify (Supra 111K → 58K, R34 → 79K üçgen) → --import (.import ayarları elle: tanjant / gölge mesh
+kapalı, albedo VRAM sıkıştırma + 1024 sınırı, maske mipmap) → make_car_scene → wheel_fit / wheel_blur (eksenler meshy_prep'in
+dış zarf ölçümü; blur'da lastik çizgisi keskin) → `tire_auto_fill.py` (lastik sırtının üstü kemerle kaynaşıktı → 180°
+kopya) → make_paint_mask → debadge (Supra ön / arka arma + arka model yazısı; R34 ızgara arması, arka arma + rozet + model
+yazısı, iki yan çamurluk rozeti, dört jant göbeği) → `tire_inner_paint.py` → küçük resimler → race_specs / rival_pool /
+lb_limits / lb_classes → `make_size_lab.gd --add`.
+
+| Ad | Kimlik | GLB MB | Üçgen | Boya % | Fabrika rengi | 300 m | Sınıf |
+|---|---|---|---|---|---|---|---|
+| TOKAYA SUPREMA | `toyota_supra` | 2,4 | 57.778 | 32,7 | #FFFFFF | 9,22 sn | A |
+| NISKA SKYRISE 34 | `nissan_skyline_r34` | 3,2 | 79.450 | 47,9 | #0257E3 | 9,59 sn | A |
+
+**Veri:** Supra A80 3.0 Twin Turbo (330 PS, 0-100 5,1 sn, 250, RWD; 4,52 × 1,81 × 1,275 m, aks 2,55 — auto-data,
+cars-data). R34 GT-R V-spec (280 PS resmi, 250, AWD; 4,60 × 1,785 × 1,36 m, aks 2,665 — auto-data, Nissan heritage).
+R34'ün resmi 0-100'ü yok → **5,2 sn TAHMİN**. Fiyat / seviye / rütbe / nadirlik GEÇİCİ (A sınıfı epic, Formentor ile
+Camaro arası: 130.000 / 135.000 ₺, sv. 22 / 23, rütbe 5). SPOR KASASI havuzu; yeni set **JAPON EFSANELERİ** (Supra, R34,
+Evo VI, Celica GT-Four, Civic); ikisi de Emre'nin araç listesinde; trafikte normal araç. `model_scale` kullanıcının
+laboratuvarda ayarladığı değer (2026-11-01): Supra 1,03 → 1,08, R34 1,05 → 1,11 (ilk tahmin uzunluk / 4,39 idi).
+
+**Far** ayrı parça değil (dokudan): dörtlü önde `hazards` ile (köşe sinyali, ön ortografik ızgaradan ölçüldü); arkada
+stop parçası. Bilinen kusurlar: arka tekerlerde kemerden birkaç küçük kırıntı tekerle dönüyor (blur'da ince leke); Supra
+yanındaki reflektör ve kapı altı AO'yla hafif kirli; Meshy camlara iç döşemeyi silik boyamış (orijinalde de var).

@@ -1,8 +1,8 @@
 extends SceneTree
-## KOLEKSİYON ÖDÜLLERİ — CollectionRewards (set ödülü nadirliğe göre, kilometre taşları 10 / 20 / 35 / 50 / 72, TAM
+## KOLEKSİYON ÖDÜLLERİ — CollectionRewards (set ödülü nadirliğe göre, kilometre taşları 10 / 20 / 35 / 50 / 74, TAM
 ## KOLEKSİYON: çerçeve + kupa + unvan), kayıt (ödenen bir daha ödenmez, bölümü olmayan eski kayıtta tamam olanlar ödülsüz),
 ## SET TAMAMLANDI! ekranı (oyun sakinleşince, ödüller birleşir, sayaçlar TOPLA'ya dek bekler) ve KOLEKSİYON panosu
-## (sayaç 72 üzerinden, set satırları, ALINDI). Gerçek düğümlerle koşar (Main.tscn).
+## (sayaç 74 üzerinden, set satırları, ALINDI). Gerçek düğümlerle koşar (Main.tscn).
 ##   tools/run_tests.sh collection_rewards_test
 
 var fails: int = 0
@@ -78,7 +78,7 @@ func _rules() -> void:
 	check(CollectionRewards.final_milestone() == CollectionRewards.total_count(),
 		"son kilometre taşı (%d) = bütün koleksiyon (%d): katalog büyürse MILESTONES güncellenmeli"
 		% [CollectionRewards.final_milestone(), CollectionRewards.total_count()])
-	check(CollectionRewards.milestone_list() == [10, 20, 35, 50, 72], "taşlar 10 / 20 / 35 / 50 / 72")
+	check(CollectionRewards.milestone_list() == [10, 20, 35, 50, 74], "taşlar 10 / 20 / 35 / 50 / 74")
 	var in_sets: Dictionary = {}
 	var ids: Dictionary = {}
 	var bad: Array[String] = []
@@ -93,7 +93,7 @@ func _rules() -> void:
 	check(bad.is_empty(), "setler: kimlik tekil, en az 2 araç, adlı, hepsi edinilebilir %s" % [bad])
 	var missing: Array[StringName] = cars.filter(func(car: StringName) -> bool: return not in_sets.has(car))
 	check(missing.is_empty(), "her araç en az bir sette (hurdalık klasikleri dahil) %s" % [missing])
-	check(CrateCatalog.sets().size() == 21, "21 set (%d)" % CrateCatalog.sets().size())
+	check(CrateCatalog.sets().size() == 22, "22 set (%d)" % CrateCatalog.sets().size())
 	check(CollectionRewards.car_rarity(&"anadol_a1") == CollectionRewards.RESTORATION_RARITY[RestorationCatalog.tier_of(&"anadol_a1")],
 		"hurdalık klasiğinin nadirliği kademesinden (%s)" % CollectionRewards.car_rarity(&"anadol_a1"))
 	var yerli: Dictionary = CrateCatalog.get_set(&"yerli_klasikler")
@@ -115,6 +115,10 @@ func _set_reward() -> void:
 	var economy: EconomyManager = g(&"economy")
 	var pp: PlayerProgress = g(&"player_progress")
 	check(rewards != null and rewards.state() == {"sets": [], "milestones": []}, "kodla kuruldu, yeni oyunda boş")
+	rewards.load_state({"sets": [], "milestones": [10, 72]})
+	check(rewards.is_milestone_paid(CollectionRewards.final_milestone()) and rewards.is_milestone_paid(10),
+		"eski kayıttaki TAM KOLEKSİYON taşı (72) yeni son taşa (%d) taşınır: ödül ikinci kez verilmez" % CollectionRewards.final_milestone())
+	rewards.reset()
 	var yerli: Dictionary = CrateCatalog.get_set(&"yerli_klasikler")
 	var cars: Array = yerli["cars"]
 	var money0: int = economy.money
@@ -246,7 +250,7 @@ func _full_collection() -> void:
 		own.add_vehicle(car)
 	var final_entries: Array = entries.filter(func(entry: Dictionary) -> bool: return entry["final"])
 	check(final_entries.size() == 1, "TAM KOLEKSİYON bir kez")
-	check(CollectionRewards.found_count(own) == CollectionRewards.total_count(), "72 / 72")
+	check(CollectionRewards.found_count(own) == CollectionRewards.total_count(), "%d / %d" % [CollectionRewards.total_count(), CollectionRewards.total_count()])
 	for count: int in CollectionRewards.milestone_list():
 		check(rewards.is_milestone_paid(count), "taş %d ödendi" % count)
 	var all_paid: bool = true

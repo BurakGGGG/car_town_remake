@@ -52,7 +52,7 @@ daha cool olsun". Panelde planlama ve başlangıç bildirimi: docs/CANLI_ETKINLI
   - Görevsiz etkinlikte yol yerine eski modül satırları.
   - Süren etkinlik yokken yalnız takvim açılır ("ETKİNLİK TAKVİMİ", büyük kartlar).
 - **Tabela** (`ui/hud/event_banner.gd`):
-  - Araçlı etkinlikte rozetin yerinde aracın resmi; ana satır "VIER SPORT 85 · 2 / 5 GÖREV".
+  - Araçlı etkinlikte rozetin yerinde aracın resmi; ana satır "AUDEX QUARTO S1 · 2 / 5 GÖREV".
   - Süren etkinlik yokken 3 gün içinde başlayacak etkinlik varsa **YAKINDA** hâli: başlangıca geri sayım; dokununca
     takvim açılır.
 - **Kaldırımda ödünç araç** (`world/event_car_spot.gd`, EventCarSpot; kullanıcı: "tamire gelen araçların olduğu kaldırımın
