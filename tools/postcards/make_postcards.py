@@ -188,8 +188,11 @@ def main() -> None:
         photo = age(compose(work, car_id, tier), zlib.crc32(car_id.encode()))
         photo.save(OUT / f"{car_id}.jpg", quality=90)
         made += 1
-    wrinkles().save(OUT / "kirisik.png", optimize=True)
-    print(f"kartpostal: {made} fotoğraf + kirisik.png → {OUT.relative_to(ROOT)}")
+    # Ortak katman yalnız tam üretimde (ya da yoksa) yazılır: gürültüsü rastgele, tek araç için her koşu değiştirmesin
+    overlay = OUT / "kirisik.png"
+    if not wanted or not overlay.exists():
+        wrinkles().save(overlay, optimize=True)
+    print(f"kartpostal: {made} fotoğraf{' + kirisik.png' if not wanted else ''} → {OUT.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":
