@@ -480,15 +480,56 @@ func _layout_cards() -> void:
 
 ## Kart başlığı sığmıyorsa yazı küçülür (en çok 9 punto; yine sığmazsa üç nokta). Almanca tek sözcük
 ## "BREMSENÜBERHOLUNG" (FREN REVİZYONU) en dar tuvalde 181 birimdi, kart 140: kesiliyordu.
+## Sıra: tek satırda NAME_ONE_LINE_MIN'e kadar küçül → çok sözcüklüyse İKİ SATIRA böl (NAME_WRAP_MIN'e kadar) → tek satır
+## 9 punto + "…". 2026-11-01: "GARAJINA BİR KEDİ GELİYOR" en dar tuvalde 6 kartla 9 puntoda bile tek satıra sığmayıp
+## kesiliyordu.
+const NAME_ONE_LINE_MIN: int = 12
+const NAME_WRAP_MIN: int = 9
+
+
 func _fit_name(label: Label, width: float) -> void:
 	label.remove_theme_font_size_override(&"font_size")
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.max_lines_visible = -1
 	var font: Font = label.get_theme_font(&"font")
 	var base: int = label.get_theme_font_size(&"font_size")
 	var size: int = base
+	while size > NAME_ONE_LINE_MIN and font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > width:
+		size -= 1
+	if font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= width:
+		if size != base:
+			label.add_theme_font_size_override(&"font_size", size)
+		return
+	size = base
+	if label.text.contains(" "):
+		var wrap_width: float = width * 0.92   # Label'ın kendi satır kırması ölçümden biraz önce kırıyor (FR / ES 3 satıra taşıyordu)
+		while size > NAME_WRAP_MIN and _wrapped_lines(font, label.text, size, wrap_width) > 2:
+			size -= 1
+		if _wrapped_lines(font, label.text, size, wrap_width) <= 2:
+			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			label.max_lines_visible = 2
+			if size != base:
+				label.add_theme_font_size_override(&"font_size", size)
+			return
+		size = base
 	while size > 9 and font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > width:
 		size -= 1
 	if size != base:
 		label.add_theme_font_size_override(&"font_size", size)
+
+
+## Sözcük sözcük satıra dizilince kaç satır tutar (tek sözcük satırdan uzunsa o satır taşar, yine bir satır sayılır).
+static func _wrapped_lines(font: Font, text: String, size: int, width: float) -> int:
+	var lines: int = 1
+	var line: String = ""
+	for word: String in text.split(" ", false):
+		var trial: String = word if line.is_empty() else line + " " + word
+		if line.is_empty() or font.get_string_size(trial, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= width:
+			line = trial
+		else:
+			lines += 1
+			line = word
+	return lines
 
 
 ## Kart sırayla "pıt" diye yerine oturur.
