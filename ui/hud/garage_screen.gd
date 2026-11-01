@@ -544,6 +544,8 @@ func prewarm() -> void:
 		car_viewport.add_child(node)
 		node.global_transform = preview_camera.global_transform.translated_local(Vector3(0.0, 0.0, -preview_camera.near - 0.5))
 	for i: int in 3:
+		if not is_inside_tree():
+			break
 		await get_tree().process_frame
 	for node: Node3D in warm:
 		node.queue_free()

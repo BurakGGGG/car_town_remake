@@ -130,14 +130,20 @@ func capture() -> void:
 	var task: int = WorkerThreadPool.add_task(func() -> void:
 		out.append(PhotoCapture.render_jpeg(shot, logo))
 		out.append(PhotoCapture.thumbnail(shot, int(THUMB_WIDTH * 2.0))))
-	while not WorkerThreadPool.is_task_completed(task):
+	while not WorkerThreadPool.is_task_completed(task) and is_inside_tree():
 		await get_tree().process_frame
 	WorkerThreadPool.wait_for_task_completion(task)
+	if not is_inside_tree():
+		_busy = false
+		return   # sahne yeniden kurulurken (dil / hesap) ağaçtan çıkıldı: get_tree() null, döngü beklemeden dönerdi
 	var bytes: PackedByteArray = out[0] if out.size() > 0 else PackedByteArray()
 	# Android 7–9: depolama izni GİRİŞTE değil, ilk fotoğraf çekildikten sonra (kaydederken) istenir (kullanıcı kararı
 	# 2026-10-17). Reddedilirse çekim kaydedilmez, oyuncuya neden söylenir; sonraki çekimde yeniden sorulur.
 	if GallerySaver.needs_legacy_permission():
 		await _request_legacy_permission()
+		if not is_inside_tree():
+			_busy = false
+			return
 		if GallerySaver.needs_legacy_permission():
 			_show_toast(Loc.t("GALERİYE KAYDETMEK İÇİN İZİN GEREKİYOR"), HudPalette.DANGER)
 			_busy = false
@@ -475,11 +481,12 @@ func _request_legacy_permission() -> void:
 	var on_result: Callable = func(permission: String, _granted: bool) -> void:
 		if permission == GallerySaver.LEGACY_PERMISSION:
 			answered[0] = true
-	get_tree().on_request_permissions_result.connect(on_result)
+	var tree: SceneTree = get_tree()   # ağaçtan çıkılsa da bekleme ve bağlantı bu referansla (get_tree() null olur)
+	tree.on_request_permissions_result.connect(on_result)
 	var deadline: int = Time.get_ticks_msec() + 60000
-	while not bool(answered[0]) and Time.get_ticks_msec() < deadline:
-		await get_tree().process_frame
-	get_tree().on_request_permissions_result.disconnect(on_result)
+	while not bool(answered[0]) and Time.get_ticks_msec() < deadline and is_inside_tree():
+		await tree.process_frame
+	tree.on_request_permissions_result.disconnect(on_result)
 
 
 # --- İç sınıflar -----------------------------------------------------------------

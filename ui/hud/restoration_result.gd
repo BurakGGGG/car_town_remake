@@ -90,8 +90,10 @@ func _stamp_plate() -> void:
 	# Plaka yeni göründü: sütun yerleşimi oturana kadar beklenir (yoksa konum eski yerinden okunuyor,
 	# mühür ekranın altına düşüyordu — QA ekran görüntüsü)
 	for k: int in 2:
+		if not is_inside_tree():
+			return
 		await get_tree().process_frame
-	if not visible or is_instance_valid(_stamp):
+	if not visible or is_instance_valid(_stamp) or not is_inside_tree():
 		return
 	var stamp: PanelContainer = PanelContainer.new()
 	stamp.mouse_filter = Control.MOUSE_FILTER_IGNORE

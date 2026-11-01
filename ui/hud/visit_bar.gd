@@ -97,7 +97,11 @@ func _ready() -> void:
 ## Üstte bu tabelanın altı, altta ekran kenarı payı bırakılır.
 func _frame_garage() -> void:
 	for i: int in 3:
+		if not is_inside_tree():
+			return
 		await get_tree().process_frame   # garaj seviyesi ve dekor yüklensin
+	if not is_inside_tree():
+		return
 	var camera: WorldCamera = get_viewport().get_camera_3d() as WorldCamera
 	var view: GarageDecorView = get_tree().get_first_node_in_group("garage_decor_view") as GarageDecorView
 	if camera == null or view == null:

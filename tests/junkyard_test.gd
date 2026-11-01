@@ -67,6 +67,42 @@ func _run() -> void:
 			continue
 		check(RestorationCatalog.cars().all(func(e: Dictionary) -> bool: return e["id"] != entry["id"]), "%s modeli yok → oyunda görünmez" % entry["id"])
 		break
+	# Kartpostal (hurdalıkta araca dokununca): her aracın pişmiş eski fotoğrafı + ortak katman + yazı tipleri
+	var no_card: PackedStringArray = PackedStringArray()
+	for entry: Dictionary in RestorationCatalog.cars():
+		if not ResourceLoader.exists(JunkyardPostcard.photo_path(entry["id"])):
+			no_card.append(String(entry["id"]))
+	check(no_card.is_empty(), "her restorasyon aracının kartpostal resmi var (tools/postcards/build.sh)%s"
+		% ("" if no_card.is_empty() else ": eksik " + ", ".join(no_card)))
+	check(ResourceLoader.exists(JunkyardPostcard.OVERLAY_PATH) and ResourceLoader.exists(JunkyardPostcard.HAND_FONT_PATH)
+		and ResourceLoader.exists(JunkyardPostcard.SLAB_FONT_PATH), "kartpostal: kırışık katmanı + iki yazı tipi pakette")
+	check(JunkyardPostcard.title_for("PERGEOT", "44") == "PERGEOT 44" and JunkyardPostcard.title_for("BMR", "RS 30") == "BMR RS 30"
+		and JunkyardPostcard.title_for("LAMBERTINI", "MIRUNA") == "MIRUNA", "kartpostal başlığı: kısa modelde marka da yazılır")
+	# Aranabilir yığının dış hattı önceden hesaplanır: sahne yeniden dışa aktarılınca veri yenilenmeli
+	var outline_raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(PileOutline.DATA_PATH))
+	var outline_data: Dictionary = outline_raw if outline_raw is Dictionary else {}
+	check(outline_data.get("scene_md5", "") == FileAccess.get_md5(PileOutline.SCENE_PATH)
+		and (outline_data.get("piles", []) as Array).size() == JunkyardWorld.PILE_COUNT,
+		"yığın hatları hurdalık sahnesiyle güncel (tools/world/bake_pile_outlines.gd)")
+	# Tepeye gömülü yığınlar bütün tepenin tek hattını paylaşır: grup temsilcisi kendi grubundadır, en az bir tepe var
+	var groups: Array = []
+	for entry: Variant in outline_data.get("piles", []):
+		groups.append(int((entry as Dictionary).get("group", -1)))
+	var groups_ok: bool = not groups.is_empty()
+	var shared: bool = false
+	for i: int in groups.size():
+		groups_ok = groups_ok and groups[i] >= 0 and groups[i] < groups.size() and groups[groups[i]] == groups[i]
+		shared = shared or groups[i] != i
+	check(groups_ok and shared, "büyük tepedeki yığınlar tek hattı paylaşıyor (gruplar %s)" % [groups])
+	# Hat izleme: iç delik dolu sayılır, sınır yalnız dış kenardan geçer (5x5 halka → 16 nokta, ortadaki boşluğa girmez)
+	var ring_mask: PackedByteArray = PackedByteArray()
+	ring_mask.resize(49)
+	for y: int in range(1, 6):
+		for x: int in range(1, 6):
+			ring_mask[y * 7 + x] = 0 if (x == 3 and y == 3) else 1
+	var ring_contour: PackedVector2Array = PileOutline.outer_contour(ring_mask, 7, 7)
+	check(ring_contour.size() == 16 and not ring_contour.has(Vector2(3, 3)) and not ring_contour.has(Vector2(2, 3)),
+		"yığın hattı: yalnız dış sınır (%d nokta), içteki boşluk çevrilmez" % ring_contour.size())
 
 	print("== 2) İLK AÇILIŞ ==")
 	await reload()
@@ -496,6 +532,32 @@ func _run() -> void:
 	await frames(5)
 	check(hud_node.junkyard_screen.world() != null and hud_node.junkyard_screen.world().spots.size() == 3,
 		"hurdalık ekranı dünyayı kurdu")
+	# Halka yok: dolu yığının dış hattı parlar, boşunki parlamaz
+	var open_world: JunkyardWorld = hud_node.junkyard_screen.world()
+	var yard_jy: JunkyardManager = g(&"junkyard") as JunkyardManager
+	var glow_ok: bool = open_world.piles.size() == JunkyardWorld.PILE_COUNT
+	for i: int in open_world.piles.size():
+		var should: bool = i < yard_jy.pile_count() and yard_jy.pile_ready(i)
+		glow_ok = glow_ok and open_world.pile_ready_shown(i) == should
+	check(glow_ok, "dolu yığınların dış hattı parlıyor, boşlarınki değil")
+	# Günün aracına dokunmak: kartpostal ön yüzle açılır, ÇEVİR arka yüze (parçalar) geçer
+	var yard_screen: JunkyardScreen = hud_node.junkyard_screen
+	var yard_ids: Array[StringName] = (g(&"junkyard") as JunkyardManager).yard_cars()
+	var shown: int = yard_ids.find_custom(func(car_id: StringName) -> bool: return car_id != &"")
+	check(shown >= 0, "sahada günün aracı var (kartpostal denetimi için)")
+	if shown >= 0:
+		yard_screen.call("_show_car", shown)
+		await frames(3)
+		var card: JunkyardPostcard = yard_screen.get("_postcard") as JunkyardPostcard
+		var bottom_bar: Control = yard_screen.get("_bottom_bar") as Control
+		check(card.is_visible_in_tree() and not card.is_back() and not bottom_bar.visible,
+			"araca dokununca kartpostal ön yüzüyle açıldı, alt şerit gizli")
+		card.flip()
+		await create_timer(0.4).timeout
+		check(card.is_back() and (yard_screen.get("_face_button") as PlateButton).text == Loc.t("ARACI GÖR"),
+			"ÇEVİR: arka yüz (parçalar), alttaki düğme ARACI GÖR")
+		(yard_screen.get("_car_layer") as Control).hide()
+		check(bottom_bar.visible, "kart kapanınca alt şerit geri geldi")
 	var yard_theme: AudioStreamPlayer = music.get_node_or_null("JunkyardTheme") as AudioStreamPlayer if music else null
 	check(yard_theme != null and yard_theme.playing, "hurdalıkta hurdalık teması çalıyor")
 	hud_node.router.close_all()

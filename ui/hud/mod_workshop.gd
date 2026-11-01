@@ -281,8 +281,8 @@ func _warm() -> void:
 		if PerformanceMods.is_measured(vehicle_id, b):
 			continue
 		await get_tree().process_frame
-		if generation != _warm_generation or not _active:
-			return
+		if generation != _warm_generation or not _active or not is_inside_tree():
+			return   # ağaçtan çıkıldıysa (sahne yeniden kuruluyor) ağır ölçüm boşuna sürmesin
 		PerformanceMods.measure(vehicle_id, b)
 		measured_any = true
 	if measured_any and generation == _warm_generation:

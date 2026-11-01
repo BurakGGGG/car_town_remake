@@ -41,7 +41,21 @@ oyuncunun gördüğü her şeyin tasarımıdır.
 - Sahada **rastgele 3 paslı araç** var (tekerleksiz, paslı) ve **24 saatte bir değişiyor**.
 - **Yalnız bu 3 araçtan biri** restore edilebilir. Tam liste koleksiyonda, siluetli.
 - **Havuz:** açık kademelerden, henüz restore edilmemiş araçlar.
-- **Seçim:** araca dokununca bilgi plakası (ad, yıl, sınıf, parça reçetesi) + RESTORE ET.
+- **Seçim:** araca dokununca **eski kartpostal** (2026-11-01, kullanıcının seçtiği taslak B) + RESTORE ET.
+  Oyuncu aracın restore edilince nasıl görüneceğini önceden görür:
+  - **Ön yüz:** aracın temiz hâli, kademesinin manzarasında (RESTORASYON mahalle · USTA KLASİK sahil yolu ·
+    USTA YARIŞ ralli etabı). Fotoğraf sararmış, hafif solmuş, ortadan katlanmış, hafif kırışık; kenarlar aşınmış,
+    sol üst köşe kıvrık. Üstünde el yazısıyla "Toparlarsan böyle olur!", retro harflerle model adı, pul (sınıf + yıl),
+    Hurdacı Necati damgası.
+  - **Arka yüz:** Necati'nin el yazısıyla notu ve imzası (araca göre sabit 4 nottan biri), adres satırlarında
+    GEREKEN PARÇALAR (eldeki / gereken; tamamlanan yeşil mürekkep), garaj ipucu.
+  - Karta (fotoğrafa / arka yüze) dokunmak, sağ alttaki kıvrık köşe (ÇEVİR) ya da alttaki PARÇALAR / ARACI GÖR
+    düğmesi kartı çevirir. Boş tamir alanı yoksa
+    RESTORE ET sönük, altında uyarı. Kart açıkken hurdalığın üst tabelası ve alt şeridi gizlenir.
+  - Kod: `ui/hud/junkyard_postcard.gd` (JunkyardPostcard). Resimler önceden pişirilir: `tools/postcards/build.sh`
+    (araç çizimi + manzara + eskitme → `assets/ui/postcards/<id>.jpg`, ortak kırışık katmanı `kirisik.png`;
+    kayıplı WebP 0,85, 28 araç ≈ 4,7 MiB). Yeni restorasyon aracı eklenince build.sh koşulmalı (junkyard_test denetler).
+  - Yazı tipleri: Caveat (el yazısı) + Alfa Slab One (başlık), SIL Open Font License, `ui/theme/fonts/OFL_*.txt`.
 - Başlatılan araç sahadan kalkıyor; yeri bir sonraki yenilemeye kadar boş kalıyor.
 - **Proje garajda bir tamir alanını kaplıyor** (çekirdekte hazır). Garajda **3 aşamada** görünüyor:
   1. **%0–33:** çıplak demir şasi. Ortak model, ben çiziyorum.
@@ -49,8 +63,11 @@ oyuncunun gördüğü her şeyin tasarımıdır.
   3. **%100:** temiz, parlak araç + kutlama.
 
 ## 5. Hurda yığınları
-- **Görünüş:** karışık metal yığını (sac, jant, boru, motor parçası). Aranabilir olanın üstünde sarı
-  halka / işaret.
+- **Görünüş:** karışık metal yığını (sac, jant, boru, motor parçası). Aranabilir olanın **yalnız dış hattı**
+  parlak sarı çizgiyle çevrilir, yavaşça parlayıp söner (2026-11-01; eski sarı kesik halka kalktı). Büyük hurda
+  tepesine gömülü iki yığın tepenin TEK dış hattını paylaşır (biri doluysa tepe parlar; tepeye dokunmak dolu olanı
+  seçer). Hat yalnız önünden bir şey (direk, varil) geçen yerde kısa kesilir. Kod `world/pile_outline.gd`; hat önceden hesaplanır: `tools/world/bake_pile_outlines.gd` →
+  `assets/world/junkyard_outlines.json` (hurdalık sahnesi yeniden dışa aktarılınca koşulmalı, junkyard_test denetler).
 - **Sayı ve dolma süresi (2026-10-12, simülasyon + kullanıcı kararı):** sahnedeki **6 yığının hepsi**
   aktif, aranan yığın **8 saatte** dolar, her arama **1 parça**, **%25 boş**. Tamirden düşme **%10**.
   Simülasyon (tools/economy/junkyard_sim.py, günde 3–4 oturum): temel araç ~1,4 gün, usta ~10,7 gün; günde 2
@@ -87,7 +104,7 @@ oyuncunun gördüğü her şeyin tasarımıdır.
   rengine ve zemin dokusuna PİŞİRİLİR, oyunda ışıksız çizilir (telefonda GI / gölge yok; Godot GL
   Compatibility köşe rengini sRGB sayar → pişmiş değerler sRGB kodlanır). world/junkyard_world.gd.
 - **Günün araçları:** 24 klasiğin paslı, tekerleksiz hurda varyantları (assets/world/junk_wrecks/, ~3.000 üçgen).
-- **Ekranlar:** ui/hud/junkyard_screen.gd (saha, yığın arama, araç plakası, PARÇALAR, sayaçlar),
+- **Ekranlar:** ui/hud/junkyard_screen.gd (saha, yığın arama, araç kartpostalı, PARÇALAR, sayaçlar),
   ui/hud/map_screen.gd (tools/world/map_render.py ile çizilen harita + rota animasyonu + yol kartı),
   ui/hud/restoration_panel.gd (garajdaki proje panosu: tak, onaylı gemle al, bitir, bırak).
 - **Garaj:** gameplay/junkyard/restoration_bays.gd + world/restoration_display.gd — liftte 3 aşama

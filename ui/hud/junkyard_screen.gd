@@ -6,10 +6,11 @@ extends Control
 ##
 ## Oyuncu ne yapar:
 ##   * Sahada gezer: tek parmak kaydırır, iki parmak yakınlaştırır (şehir kamerasının aynısı, WorldCamera).
-##   * Sarı halkalı yığına dokunur → yığın sallanır, toz kalkar (~1 sn) → bulunan parçalar PARÇALAR
+##   * Kenarı sarı parlayan yığına (PileOutline) dokunur → yığın sallanır, toz kalkar (~1 sn) → bulunan parçalar PARÇALAR
 ##     plakasına uçar ya da "Bir şey çıkmadı". Halkası olmayan yığın boş: dolmasına kalan süre söylenir.
-##   * Günün araçlarından birine dokunur → bilgi plakası (ad, yıl, sınıf, parça reçetesi) + RESTORE ET:
-##     proje hemen kaydedilir (JunkyardManager.start), plakaya "İŞ ALINDI" mührü vurulur, sonra çekme
+##   * Günün araçlarından birine dokunur → ESKİ KARTPOSTAL (JunkyardPostcard): ön yüzde aracın restore edilmiş
+##     hâli, arka yüzde Necati'nin notu + parça reçetesi (ÇEVİR / PARÇALAR ↔ ARACI GÖR) + RESTORE ET:
+##     proje hemen kaydedilir (JunkyardManager.start), karta "İŞ ALINDI" mührü vurulur, sonra çekme
 ##     sahnesi oynar (JunkyardTow): kapıdaki araç gelip hurdayı halatla çekerek götürür. Sahne boyunca
 ##     sinema şeritleri iner, alt plakalar gizlenir; ekrana dokunmak sahneyi atlar.
 ##   * Alt plakalar: PARÇALAR (envanter), HARİTA (şehre dönüş), KOLEKSİYON, yenilenme sayacı.
@@ -31,6 +32,9 @@ const FLY_TIME: float = 0.6
 const NOTICE_HOLD: float = 1.8
 const LETTERBOX: float = 0.09      # sinema şeridi, ekran yüksekliğinin oranı
 const REPEAT_SPEED: float = 1.35   # ilk restorasyondan sonra çekme sahnesi bu kadar hızlı oynar
+const CARD_GAP: int = 10           # kartpostal ↔ düğmeler
+const CARD_SLACK: float = 30.0     # kartın eğikliği + gölgesi + ekran kenarı payı (dikeyde)
+const CARD_MAX_FIT: float = 1.2
 ## Hurda halatı yiyince Necati'nin sözü (biri rastgele).
 const NECATI_LINES: Array[String] = [
 	"Ayağa kaldırırsan adın duyulur evlat!",
@@ -49,13 +53,12 @@ var _notice_plate: PlatePanel
 var _notice_label: Label
 var _notice_tween: Tween
 var _car_layer: Control
-var _car_title: Label
-var _car_info: Label
-var _car_recipe: HBoxContainer
-var _car_hint: Label
+var _car_name: String = ""     # seçili aracın adı (çekme sahnesi bildirimleri)
 var _car_start: PlateButton
-var _car_center: Control
-var _car_plate: PlatePanel
+var _face_button: PlateButton   # PARÇALAR (arka yüz) ↔ ARACI GÖR (ön yüz)
+var _card_holder: Control       # kartın yerleşimdeki yeri (ölçekli boy); kart bunun ortasında döner
+var _postcard: JunkyardPostcard
+var _no_bay_label: Label
 var _title_bar: Control
 var _bottom_bar: Control
 var _map_button: PlateButton
@@ -304,51 +307,77 @@ func _build_notice() -> void:
 	margin.add_child(_notice_plate)
 
 
-## Günün aracının bilgi plakası: ad, yıl · sınıf, parça reçetesi, RESTORE ET.
+## Günün aracının KARTPOSTALI (JunkyardPostcard) + altında RESTORE ET · PARÇALAR/ARACI GÖR · KAPAT.
+## Kart ekrana sığacak ölçekte (_fit_card); boş tamir alanı yoksa düğmelerin altında uyarı satırı.
 func _build_car_panel() -> void:
 	_car_layer = _modal_layer()
 	var center: CenterContainer = CenterContainer.new()
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_car_layer.add_child(center)
-	_car_center = center
 	var column: VBoxContainer = VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override(&"separation", 6)
+	column.add_theme_constant_override(&"separation", CARD_GAP)
 	center.add_child(column)
-	var plate: PlatePanel = PlatePanel.new()
-	plate.theme_type_variation = &"HudCarPlate"
-	plate.custom_minimum_size = Vector2(PANEL_WIDTH, 0.0)
-	plate.mouse_filter = Control.MOUSE_FILTER_STOP
-	_car_plate = plate
-	var box: VBoxContainer = VBoxContainer.new()
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_theme_constant_override(&"separation", 4)
-	_car_title = _label(&"HudPlateTitle", "")
-	_car_info = _label(&"HudInkCaption", "")
-	box.add_child(_car_title)
-	box.add_child(_car_info)
-	box.add_child(_label(&"HudInkCaption", Loc.t("GEREKEN PARÇALAR")))
-	_car_recipe = HBoxContainer.new()
-	_car_recipe.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_car_recipe.add_theme_constant_override(&"separation", 10)
-	box.add_child(_car_recipe)
-	_car_hint = _label(&"HudInkCaption", "")
-	_car_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(_car_hint)
-	plate.add_child(box)
-	column.add_child(plate)
+	_card_holder = Control.new()
+	_card_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_card_holder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	column.add_child(_card_holder)
+	_postcard = JunkyardPostcard.new()
+	_card_holder.add_child(_postcard)
+	_card_holder.resized.connect(_place_card)
+	_postcard.face_changed.connect(func(back: bool) -> void:
+		_face_button.text = Loc.t("ARACI GÖR") if back else Loc.t("PARÇALAR"))
 	var buttons: HBoxContainer = HBoxContainer.new()
 	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	buttons.add_theme_constant_override(&"separation", 8)
 	_car_start = _plate_button(Loc.t("RESTORE ET"), _start_selected, &"HudPlate")
-	_car_start.custom_minimum_size = Vector2(PANEL_WIDTH * 0.5 - 4.0, 0.0)
-	var cancel: PlateButton = _plate_button(Loc.t("KAPAT"), func() -> void: _car_layer.hide())
-	cancel.custom_minimum_size = Vector2(PANEL_WIDTH * 0.5 - 4.0, 0.0)
+	_car_start.highlight = true
+	_car_start.custom_minimum_size = Vector2(190.0, 0.0)
+	_face_button = _plate_button(Loc.t("PARÇALAR"), func() -> void: _postcard.flip(), &"HudPlate")
+	_face_button.custom_minimum_size = Vector2(140.0, 0.0)
+	var cancel: PlateButton = _plate_button(Loc.t("KAPAT"), func() -> void: _car_layer.hide(), &"HudPlate")
+	cancel.custom_minimum_size = Vector2(140.0, 0.0)
 	buttons.add_child(_car_start)
+	buttons.add_child(_face_button)
 	buttons.add_child(cancel)
 	column.add_child(buttons)
+	_no_bay_label = _label(&"HudOutlined", Loc.t("BOŞ TAMİR ALANI YOK — önce bir tamir işini bitir."))
+	_no_bay_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_no_bay_label.visible = false
+	column.add_child(_no_bay_label)
+	_car_layer.resized.connect(_fit_card)
+	_car_layer.visibility_changed.connect(_on_card_visibility)
+
+
+## Kart açıkken üst tabela ve alt şerit gizlenir (dünyadaki panolardaki gibi: karartma altında zaten basılamaz,
+## kartın düğmeleriyle üst üste binmesin). Çekme sahnesinde şeritleri sahne yönetir.
+func _on_card_visibility() -> void:
+	if _departing:
+		return
+	_title_bar.visible = not _car_layer.visible
+	_bottom_bar.visible = not _car_layer.visible
+
+
+## Kart, düğmeler ve (varsa) uyarı satırı ekrana sığacak en büyük ölçek; geniş ekranda CARD_MAX_FIT'te durur.
+func _fit_card() -> void:
+	var room: Vector2 = _car_layer.size
+	if room.x <= 0.0 or room.y <= 0.0:
+		return
+	var below: float = CARD_GAP + _car_start.get_combined_minimum_size().y
+	if _no_bay_label.visible:
+		below += CARD_GAP + _no_bay_label.get_combined_minimum_size().y
+	var fit: float = minf((room.y - CARD_SLACK - below) / JunkyardPostcard.SIZE.y,
+		room.x * 0.9 / JunkyardPostcard.SIZE.x)
+	fit = clampf(fit, 0.4, CARD_MAX_FIT)
+	_postcard.fit = fit
+	_card_holder.custom_minimum_size = (JunkyardPostcard.SIZE * fit).floor()
+
+
+## Kart tasarım boyunda; ölçek ve dönüş merkezden (pivot) uygulanır → tutucunun ortasına oturtulur.
+func _place_card() -> void:
+	_postcard.position = (_card_holder.size - JunkyardPostcard.SIZE) * 0.5
 
 
 ## PARÇALAR: envanterdeki dokuz parça türü, adetleriyle.
@@ -519,33 +548,19 @@ func _show_car(index: int) -> void:
 	_selected_car = index
 	var id: StringName = cars[index]
 	var entry: Dictionary = CarCatalog.get_entry(id)
-	var plan: Dictionary = RestorationCatalog.get_entry(id)
-	_car_title.text = String(entry.get("display_name", plan.get("name", id))).to_upper()
-	var tier: Dictionary = RestorationCatalog.tier(RestorationCatalog.tier_of(id))
-	_car_info.text = Loc.t("%d  ·  %s SINIFI  ·  %s") % [int(plan.get("year", 0)),
-		String(entry.get("class", plan.get("class", "?"))), Loc.t(String(tier.get("name", "")))]
-	for child: Node in _car_recipe.get_children():
-		child.queue_free()
-	var recipe: Dictionary = RestorationCatalog.recipe(id)
-	for part_id: StringName in recipe:
-		var cell: VBoxContainer = VBoxContainer.new()
-		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		cell.add_theme_constant_override(&"separation", 0)
-		var icon: PartIcon = PartIcon.new()
-		icon.part_id = part_id
-		icon.custom_minimum_size = Vector2(ICON_SIZE, ICON_SIZE)
-		cell.add_child(icon)
-		var have: int = jy.part_count(part_id)
-		var count: Label = _label(&"HudInkCaption", "%d/%d" % [mini(have, int(recipe[part_id])), int(recipe[part_id])])
-		count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		cell.add_child(count)
-		_car_recipe.add_child(cell)
+	_car_name = String(entry.get("display_name", RestorationCatalog.get_entry(id).get("name", id))).to_upper()
+	var have: Dictionary = {}
+	for part_id: StringName in RestorationCatalog.recipe(id):
+		have[part_id] = jy.part_count(part_id)
 	var free_bay: bool = jy.can_start(id)
+	_postcard.show_car(id, have, free_bay)
+	_postcard.locked = false
 	_car_start.disabled = not free_bay
-	_car_hint.text = Loc.t("Garajda bir tamir alanına yerleşir. Parçaları orada takarsın.") if free_bay \
-		else Loc.t("BOŞ TAMİR ALANI YOK — önce bir tamir işini bitir.")
+	_no_bay_label.visible = not free_bay
 	_parts_layer.hide()
 	_car_layer.show()
+	_fit_card()
+	_postcard.toss_in()
 
 
 func _start_selected() -> void:
@@ -571,9 +586,10 @@ func _start_selected() -> void:
 	_stamp(func() -> void: _depart(index, wreck))
 
 
-## "İŞ ALINDI" mührü plakaya vurulur, plaka sarsılır; sonra plaka kalkar ve `then` çağrılır.
+## "İŞ ALINDI" mührü kartpostala vurulur, kart sarsılır; sonra kart kalkar ve `then` çağrılır.
 func _stamp(then: Callable) -> void:
 	_car_start.disabled = true
+	_postcard.locked = true   # mühür vurulurken kart çevrilmez
 	var stamp: PanelContainer = PanelContainer.new()
 	stamp.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var frame: StyleBoxFlat = StyleBoxFlat.new()
@@ -591,9 +607,9 @@ func _stamp(then: Callable) -> void:
 	stamp.add_child(label)
 	_car_layer.add_child(stamp)
 	stamp.reset_size()
-	var plate_rect: Rect2 = _car_plate.get_global_rect()
-	stamp.position = plate_rect.get_center() - stamp.size * 0.5 - _car_layer.get_global_rect().position \
-		+ Vector2(plate_rect.size.x * 0.18, 0.0)
+	var card_rect: Rect2 = _card_holder.get_global_rect()
+	stamp.position = card_rect.get_center() - stamp.size * 0.5 - _car_layer.get_global_rect().position \
+		+ Vector2(card_rect.size.x * 0.18, card_rect.size.y * 0.12)
 	stamp.pivot_offset = stamp.size * 0.5
 	stamp.rotation = deg_to_rad(-12.0)
 	stamp.scale = Vector2(2.6, 2.6)
@@ -601,7 +617,7 @@ func _stamp(then: Callable) -> void:
 	var tween: Tween = create_tween()
 	tween.tween_property(stamp, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tween.parallel().tween_property(stamp, "modulate:a", 1.0, 0.1)
-	tween.tween_callback(func() -> void: _shake(_car_center))
+	tween.tween_callback(_postcard.shake)
 	tween.tween_interval(0.85)
 	tween.tween_property(_car_layer, "modulate:a", 0.0, 0.25)
 	tween.tween_callback(func() -> void:
@@ -612,22 +628,12 @@ func _stamp(then: Callable) -> void:
 		then.call())
 
 
-## Kısa sarsıntı (mührün darbesi). Konteyner çocuğu: yerleşim bir sonraki düzende kendini düzeltir.
-func _shake(control: Control) -> void:
-	var origin: Vector2 = control.position
-	var tween: Tween = control.create_tween()
-	for k: int in 4:
-		var push: float = 9.0 * (1.0 - k / 4.0) * (1.0 if k % 2 == 0 else -1.0)
-		tween.tween_property(control, "position", origin + Vector2(push, push * 0.4), 0.04)
-	tween.tween_property(control, "position", origin, 0.05)
-
-
 ## Çekme sahnesi: sinema şeritleri iner, plakalar kalkar; hurda halatı yiyince Necati konuşur.
 func _depart(index: int, wreck: Node3D) -> void:
 	if _world == null:
 		_end_departure()
 		return
-	var name_text: String = _car_title.text
+	var name_text: String = _car_name
 	if wreck == null or _world.player_car() == null:
 		_end_departure()
 		_notice(Loc.t("%s GARAJA YOLA ÇIKTI") % name_text, HudPalette.COIN_DARK, 2.2)

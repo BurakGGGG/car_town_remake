@@ -6,7 +6,8 @@ extends Node3D
 ## Sahnede ne var:
 ##   Static_*            hareketsiz her şey, bölge bölge birleşik (az düğüm, az çizim çağrısı)
 ##   Terrain             tabakalı çöl tepeleri
-##   SearchPile_N        aranabilir hurda yığınları + SearchRing_N (sarı kesik halka: "aranabilir")
+##   SearchPile_N        aranabilir hurda yığınları: dolu olanın dış hattı parlak sarı çizgiyle çevrilir
+##                       (set_pile_ready). Sahnedeki eski SearchRing_N halkaları kullanılmaz, açılışta silinir.
 ##   DailyCarSpot_N      günün araçlarının yeri (boş düğüm; hurda varyantı buraya konur)
 ##   Crane_Hook          vincin mıknatısı + taşıdığı araba (sallanır)
 ##   Press_Ram           pres çenesi (iner / kalkar)
@@ -66,7 +67,6 @@ const CAR_PICK_RADIUS: float = 2.6
 
 var camera: WorldCamera
 var piles: Array[Node3D] = []
-var rings: Array[Node3D] = []
 var spots: Array[Node3D] = []
 var _daily: Array[StringName] = []
 var _daily_nodes: Array[Node3D] = []
@@ -77,6 +77,7 @@ var _ram_rest: float = 0.0
 var _figures: Array[Node3D] = []
 var _time: float = 0.0
 var _shakes: Dictionary = {}   # yığın indeksi → Tween
+var _outline: PileOutline           # aranabilir yığınların sarı dış hattı (2B, görüntü alanının tuvalinde)
 var _player_car: Node3D        # tutucu (yalnız konum); içinde dönük araç modeli + gölge lekesi
 var _player_model: Node3D
 var _player_car_id: StringName = &""
@@ -102,6 +103,10 @@ func _ready() -> void:
 	_load_scene()
 	_build_signs()
 	_build_camera()
+	_outline = PileOutline.new()
+	_outline.name = "PileOutline"
+	add_child(_outline)   # 2B: görüntü alanının tuvaline, 3B sahnenin üstüne çizilir
+	_outline.setup(camera, piles)
 	set_process(false)
 
 
@@ -167,9 +172,10 @@ func _load_scene() -> void:
 	for i: int in PILE_COUNT:
 		var pile: Node3D = root.find_child("SearchPile_%d" % i, true, false) as Node3D
 		var ring: Node3D = root.find_child("SearchRing_%d" % i, true, false) as Node3D
+		if ring:
+			ring.queue_free()   # 2026-11-01: halka yerine yığının kendi hattı parlar (kullanıcı isteği)
 		if pile:
 			piles.append(_pivot(pile))
-			rings.append(ring)
 	for i: int in DAILY_COUNT:
 		var spot: Node3D = root.find_child("DailyCarSpot_%d" % i, true, false) as Node3D
 		if spot:
@@ -433,10 +439,14 @@ func daily_ids() -> Array[StringName]:
 
 # --- Yığınlar -----------------------------------------------------------------------
 
-## Yığının üstündeki sarı halka (aranabilir mi).
+## Aranabilir yığının yalnız DIŞ hattı parlak sarı çizgiyle çevrilir (PileOutline). Boşalınca çizgi kalkar.
 func set_pile_ready(index: int, on: bool) -> void:
-	if index >= 0 and index < rings.size() and rings[index]:
-		rings[index].visible = on
+	if _outline:
+		_outline.set_ready(index, on)
+
+
+func pile_ready_shown(index: int) -> bool:
+	return _outline != null and _outline.is_shown(index)
 
 
 ## ARAMA animasyonu: yığın sarsılır, toz kalkar (~1 sn). Bitince `done` çağrılır.
@@ -502,6 +512,10 @@ func dust(at: Vector3, radius: float = 1.6, amount: int = 18) -> void:
 ## Ekran noktasına (bu görüntü alanının pikseli) en yakın yığın ya da araç:
 ## {"kind": &"pile" | &"car", "index": int} ya da boş sözlük.
 func pick(screen: Vector2) -> Dictionary:
+	# Yığının (tepedeyse bütün tepenin) hattının içine dokunuş: o yığın; tepede dolu olan tercih edilir
+	var inside: int = _outline.hit(screen) if _outline else -1
+	if inside >= 0:
+		return {"kind": &"pile", "index": inside}
 	var best: Dictionary = {}
 	var best_d: float = INF
 	for i: int in piles.size():
@@ -516,6 +530,10 @@ func pick(screen: Vector2) -> Dictionary:
 		if d < best_d:
 			best_d = d
 			best = {"kind": &"car", "index": i}
+	if best.get("kind", &"") == &"pile" and _outline:
+		var mate: int = _outline.ready_mate(int(best["index"]))
+		if mate >= 0:
+			best["index"] = mate
 	return best
 
 

@@ -82,6 +82,26 @@ var _in_closeup: bool = false
 var _visitor: bool = false    # geliş sinematiğindeki (henüz sahiplenilmemiş) kedi
 var _cu_gen: int = 0          # yakın kameradaki tek seferlik kliplerin kendi sayacı (yeni dokunuş eskisini keser)
 var _cu_busy: bool = false
+## Bekleyen rutinlerin (yürü / dön / zıpla / bekle) SceneTree'si: düğüm ağaçtan çıkınca get_tree() null olur.
+## Dil değişince sahne baştan kurulur; eski sahne ağaçtan çıkarken yürüyen kedinin döngüsü bir kare daha uyanıp
+## get_tree().process_frame'de çöküyordu (2026-11-01, İngilizceye geçince). Bekleme hep bu referansla yapılır.
+var _tree: SceneTree
+var _left_tree: bool = false
+
+
+func _enter_tree() -> void:
+	_tree = get_tree()
+	if _left_tree and _actor != null and not _editing:
+		_left_tree = false
+		_restart()   # ağaca geri döndü: kesilen hayat yeniden başlar
+
+
+## Ağaçtan çıkış (sahne yeniden kuruluyor): bütün rutinler kesilir — uyanan döngü sayaç değiştiği için hemen biter.
+func _exit_tree() -> void:
+	_left_tree = true
+	_gen += 1
+	_cu_gen += 1
+	_mode = Mode.STILL
 
 
 func _ready() -> void:
@@ -728,7 +748,7 @@ func _walk_direct(target: Vector2, gen: int) -> bool:
 	_mode = Mode.WALK
 	_actor.play(&"walk", PetActor.BLEND, WALK_SCALE)
 	while _mode == Mode.WALK and gen == _gen:
-		await get_tree().process_frame
+		await _tree.process_frame
 	if gen != _gen:
 		return false
 	_actor.play(&"idle")
@@ -833,7 +853,7 @@ func _run_closeup_clips(gen: int, clips: Array[StringName], then_loop: StringNam
 		if not _actor.has_clip(clip):
 			continue
 		_actor.play(clip, 0.16)
-		await get_tree().create_timer(maxf(_actor.clip_length(clip) - 0.06, 0.05), false).timeout
+		await _tree.create_timer(maxf(_actor.clip_length(clip) - 0.06, 0.05), false).timeout
 		if gen != _cu_gen or not _in_closeup:
 			return
 	_actor.play(then_loop, 0.2)
@@ -872,7 +892,7 @@ func _run_visitor(gen: int, to: Vector2, face_yaw: float) -> void:
 	_mode = Mode.WALK
 	_actor.play(&"walk", PetActor.BLEND, WALK_SCALE)
 	while _mode == Mode.WALK and gen == _gen:
-		await get_tree().process_frame
+		await _tree.process_frame
 	if gen != _gen:
 		return
 	_actor.play(&"idle")
@@ -989,7 +1009,7 @@ func _run_reaction(routine: Callable, gen: int) -> void:
 # --- Adımlar (hepsi kesintide false döner) ----------------------------------------------------------
 
 func _wait(seconds: float, gen: int) -> bool:
-	await get_tree().create_timer(seconds, false).timeout
+	await _tree.create_timer(seconds, false).timeout
 	return gen == _gen and is_instance_valid(_actor)
 
 
@@ -1010,7 +1030,7 @@ func _walk_to(target: Vector2, gen: int) -> bool:
 	_mode = Mode.WALK
 	_actor.play(&"walk", PetActor.BLEND, WALK_SCALE)
 	while _mode == Mode.WALK and gen == _gen:
-		await get_tree().process_frame
+		await _tree.process_frame
 	if gen != _gen:
 		return false
 	_actor.play(&"idle")
@@ -1024,7 +1044,7 @@ func _turn_to(yaw: float, gen: int) -> bool:
 	_mode = Mode.TURN
 	_actor.play(&"walk", PetActor.BLEND, 0.8)   # yerinde dönerken ayak adımı
 	while _mode == Mode.TURN and gen == _gen:
-		await get_tree().process_frame
+		await _tree.process_frame
 	if gen != _gen:
 		return false
 	_actor.play(&"idle")
@@ -1049,11 +1069,12 @@ func _jump_to(target: Vector3, gen: int, on_land: Callable = Callable()) -> bool
 	_actor.play(&"jump_air", 0.12)
 	_actor.set_shadow(Vector2(0.6, 0.6))
 	while _mode == Mode.JUMP and gen == _gen:
-		await get_tree().process_frame
+		await _tree.process_frame
 	_actor.set_shadow(Vector2.ONE)
 	if gen != _gen:
-		_actor.global_position = target   # kesilen zıplama havada kalmasın
-		_land()
+		if _actor.is_inside_tree():   # sahne yıkılırken (ağaç dışında) konum yazılamaz
+			_actor.global_position = target   # kesilen zıplama havada kalmasın
+			_land()
 		return false
 	_land()
 	return await _once(&"jump_land", gen)

@@ -154,8 +154,10 @@ func close() -> void:
 ## değdiği an "pat" + hafif ezilme, kayma biraz daha sürer ve hışırtıyla durur. TAMAM ancak durunca basılır.
 func _throw_in() -> void:
 	for i: int in 2:
+		if not is_inside_tree():
+			return
 		await get_tree().process_frame   # sarılan yazıların boyu yerleşsin (sığdırma ölçümü doğru olsun)
-	if not visible or _closing:
+	if not visible or _closing or not is_inside_tree():
 		return
 	_fit_briefs()
 	_measure_fit()

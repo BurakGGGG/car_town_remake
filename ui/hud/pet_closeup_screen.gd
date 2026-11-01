@@ -458,9 +458,11 @@ func _photo() -> void:
 	var logo: Image = _logo
 	var out: Array = []
 	var task: int = WorkerThreadPool.add_task(func() -> void: out.append(PhotoCapture.render_jpeg(shot, logo)))
-	while not WorkerThreadPool.is_task_completed(task):
+	while not WorkerThreadPool.is_task_completed(task) and is_inside_tree():
 		await get_tree().process_frame
 	WorkerThreadPool.wait_for_task_completion(task)
+	if not is_inside_tree():
+		return   # sahne yeniden kurulurken (dil / hesap) ağaçtan çıkıldı: get_tree() null, döngü beklemeden dönerdi
 	var bytes: PackedByteArray = out[0] if out.size() > 0 else PackedByteArray()
 	if GallerySaver.needs_legacy_permission():
 		OS.request_permission(GallerySaver.LEGACY_PERMISSION)
@@ -508,13 +510,16 @@ func _run_arrival() -> void:
 	var arrived: Array[bool] = [false]
 	_world.visitor_arrived.connect(func() -> void: arrived[0] = true, CONNECT_ONE_SHOT)
 	var until: int = Time.get_ticks_msec() + 12000
-	while not arrived[0] and Time.get_ticks_msec() < until and visible:
+	# is_inside_tree: sahne yeniden kurulurken ağaçtan çıkılırsa döngü 12 sn beklemeden dönüp oyunu donduruyordu
+	while not arrived[0] and Time.get_ticks_msec() < until and visible and is_inside_tree():
 		if wc and _world.actor():
 			var p: Vector3 = _world.actor().global_position
 			wc.follow(Vector3(p.x, 0.0, p.z - 0.15), 1.0)
 		await get_tree().process_frame
+	if not is_inside_tree():
+		return
 	await get_tree().create_timer(0.9).timeout
-	if not visible:
+	if not visible or not is_inside_tree():
 		return
 	await _cut_to_close_camera()
 	_world.begin_closeup(_dir)

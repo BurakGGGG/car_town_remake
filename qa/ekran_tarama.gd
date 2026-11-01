@@ -187,6 +187,16 @@ func _transformed(c: Control) -> bool:
 	return false
 
 
+## En yakın döndürülmüş ata (yoksa null).
+func _rotated_root(c: Control) -> Control:
+	var node: Node = c.get_parent()
+	while node is Control:
+		if not is_zero_approx((node as Control).rotation):
+			return node as Control
+		node = node.get_parent()
+	return null
+
+
 func _is_ancestor(a: Node, b: Node) -> bool:
 	return a.is_ancestor_of(b) or b.is_ancestor_of(a)
 
@@ -246,6 +256,15 @@ func _analyze(state: String, scope: Node) -> PackedStringArray:
 				continue
 			var ca: Control = a["c"]
 			var cb: Control = b["c"]
+			# İkisi aynı döndürülmüş atanın içinde (eğik kartpostal): ekran düzlemindeki sınır kutuları komşu
+			# satırlarda yalancı çakışma verir → o atanın kendi (döndürülmemiş) düzleminde karşılaştır
+			var tilted: Control = _rotated_root(ca)
+			if tilted and tilted == _rotated_root(cb):
+				var inverse: Transform2D = tilted.get_global_transform().affine_inverse()
+				ra = inverse * ca.get_global_transform() * Rect2(Vector2.ZERO, ca.size)
+				rb = inverse * cb.get_global_transform() * Rect2(Vector2.ZERO, cb.size)
+				if not ra.intersects(rb):
+					continue
 			if _is_ancestor(ca, cb):
 				continue
 			var inter: float = ra.intersection(rb).get_area()
@@ -431,6 +450,8 @@ func _garage_states() -> void:
 func _screen(id: StringName, state: String, setup: Callable = Callable(), settle: float = 0.7) -> void:
 	if not _want(state):
 		return
+	if _hud.tutorial and _hud.tutorial.get("_state") == &"say":
+		_hud.tutorial.call("_end_say")   # açılışta kalmış tek seferlik konuşma kartı
 	_router.close_all()
 	await wait(0.35)
 	_router.open(id)
@@ -473,6 +494,11 @@ func _run() -> void:
 		await process_frame
 	_hud = current_scene.find_child("HUD", true, false) as Hud
 	_router = _hud.router
+	# Rıza Usta'nın pasif gelir açıklaması (DÜKKAN BANA EMANET / KEPENGİ İNDİRDİM) sonraki görüntüleri örtmesin
+	var away: OfflineEarnings = get_first_node_in_group("offline_earnings") as OfflineEarnings
+	if away:
+		away.told_first = true
+		away.told_full = true
 	if _hud_size >= 0:
 		var settings: GameSettings = get_first_node_in_group("settings") as GameSettings
 		settings.set_hud_size(_hud_size)
@@ -789,6 +815,12 @@ func _run() -> void:
 	await _screen(&"junkyard", "hurdalik", Callable(), 1.5)
 	await _screen(&"junkyard", "hurdalik_arac", func() -> void:
 		(_router.screen(&"junkyard") as JunkyardScreen).call("_show_car", 0), 1.5)
+	# Kartpostalın arka yüzü: Necati'nin notu (uzun dillerde küçülür) + adres satırlarında parçalar
+	await _screen(&"junkyard", "hurdalik_kart_arka", func() -> void:
+		var yard: JunkyardScreen = _router.screen(&"junkyard") as JunkyardScreen
+		yard.call("_show_car", 0)
+		await wait(0.4)
+		(yard.get("_postcard") as JunkyardPostcard).flip(), 1.5)
 	await _screen(&"junkyard", "hurdalik_parcalar", func() -> void:
 		(_router.screen(&"junkyard") as JunkyardScreen).call("_toggle_parts"), 1.5)
 	var jy: JunkyardManager = get_first_node_in_group("junkyard") as JunkyardManager

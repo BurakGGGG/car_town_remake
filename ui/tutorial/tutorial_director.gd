@@ -724,7 +724,7 @@ func _garage_steps() -> Array[Dictionary]:
 	]
 
 
-## HURDALIK (Necati + Cemo): hoş geldin → sarı halkalı yığını ara → PARÇALAR → günün aracı → RESTORE ET → kapanış.
+## HURDALIK (Necati + Cemo): hoş geldin → parlayan yığını ara → PARÇALAR → günün aracı → RESTORE ET → kapanış.
 ## İlk arama her zaman doludur (JunkyardManager): Cemo'nun yığını boş çıkmaz.
 func _junkyard_steps() -> Array[Dictionary]:
 	var screen: JunkyardScreen = hud.junkyard_screen
@@ -736,8 +736,8 @@ func _junkyard_steps() -> Array[Dictionary]:
 		{"coach": CoachCard.COACH_NECATI, "title": Loc.t("HOŞ GELDİN EVLAT"),
 			"text": Loc.t("Kırk yıldır bu sahadayım. Her hurdanın bir hikâyesi var; doğru parçalarla hepsi yeniden yola çıkar. Cemo, göster bakalım!"),
 			"button": Loc.t("İLERİ"), "fail": func() -> bool: return not in_yard.call()},
-		{"coach": CoachCard.COACH_CEMO, "title": Loc.t("SARI HALKALI YIĞIN"),
-			"text": Loc.t("Selam usta! Sarı halkalı yığınlar aranabilir. Şuna dokun, beraber bakalım!"),
+		{"coach": CoachCard.COACH_CEMO, "title": Loc.t("PARLAYAN YIĞIN"),
+			"text": Loc.t("Selam usta! Kenarı sarı parlayan yığınlar aranabilir. Şuna dokun, beraber bakalım!"),
 			"target": func() -> Control: return screen.tutorial_anchor(&"pile"),
 			"skip_if": func() -> bool: return screen.tutorial_anchor(&"pile") == null,
 			"done": func() -> bool: return _flags.has(&"pile_searched"),

@@ -88,7 +88,11 @@ func _ready() -> void:
 ## Açılış: kayıt yüklensin, saat alınsın; sonra yokluk hesaplanır (yarım işler + kasa).
 func _boot() -> void:
 	for i: int in 2:
+		if not is_inside_tree():
+			return
 		await get_tree().process_frame   # SaveManager ertelenmiş _setup'ında kaydı yükler
+	if not is_inside_tree():
+		return
 	await _sync_time()
 	_resolve(_away_seconds(now()), true)
 
