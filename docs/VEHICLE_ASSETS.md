@@ -551,6 +551,8 @@ Passat B5.5 1,12 → 1,14, 488 1,10 → 1,07, Corsa 0,82 → 0,84, Model Y 1,24 
 Golf 7 1,00 → 1,02, A3 1,00 → 0,98, RS6 1,23 → 1,20, 488 1,07 → 1,05, Corsa 0,84 → 0,87, Model Y 1,14 → 1,085,
 T10F 1,07 → 1,10, Chiron 1,055 → 1,08, Veyron 1,06 → 1,10, Formentor 1,07 → 1,10, G 63 1,16 → 1,18, Superb 1,12 → 1,16.
 vehicle_scale 454, vehicle_asset 1637, vehicle_display 23, traffic_pool 28 — 0 FAIL.
+Üçüncü ayar (2026-11-02, Meshy araçları): Supra 1,08 → 1,12, R34 GT-R 1,11 → 1,14 (yarış verisi `model_scale`'e bağlı
+değil, yeniden pişirme gerekmedi). vehicle_scale 466, vehicle_asset 1681 — 0 FAIL.
 
 **Bilboard:** Chiron (aurora), LaFerrari (night_city), Taycan (neon_grid), Veyron (studio) afişleri; `CityBillboard.POSTERS`
 10 → 14 (süper araçlar araya dağıtıldı).

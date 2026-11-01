@@ -3621,7 +3621,7 @@
         "height_m": 1.275,
         "wheelbase_m": 2.55
       },
-      "model_scale": 1.08
+      "model_scale": 1.12
     },
     {
       "id": "nissan_skyline_r34",
@@ -3671,7 +3671,7 @@
         "height_m": 1.36,
         "wheelbase_m": 2.665
       },
-      "model_scale": 1.11
+      "model_scale": 1.14
     }
   ]
 }
