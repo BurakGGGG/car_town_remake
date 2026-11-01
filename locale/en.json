@@ -2740,5 +2740,8 @@
  "ALEVLİ KUPA": "BLAZING CUP",
  "ELMAS TAÇ": "DIAMOND CROWN",
  "%s çerçevesi %d drag galibiyetinde açılır.": "The %s frame unlocks at %d drag race wins.",
- "YENİ ÇERÇEVE AÇILDI!": "NEW FRAME UNLOCKED!"
+ "YENİ ÇERÇEVE AÇILDI!": "NEW FRAME UNLOCKED!",
+ "SÜRÜCÜ BELGESİ": "DRIVING LICENCE",
+ "SONRAKİ SINIF %s": "NEXT CLASS %s",
+ " · AUTO YARD": ""
 }

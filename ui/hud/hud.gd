@@ -125,12 +125,10 @@ var lot_button: ParkingBadge
 ## PROFİL (2026-10-16): sol üstte kendi avatarın; arkadaş kartı, profil düzenleme, fotoğraf kırpma, kamera alt panoları.
 var avatar_button: AvatarButton
 const AVATAR_BUTTON_SIZE: float = 76.0
-## Seviye rozeti avatarın sağ altına, dışına doğru taşar (kullanıcı: "level avatarı kapatıyor, küçült, sağ alta al").
-const LEVEL_BADGE_SIZE: float = 26.0
-## 2026-11-01: avatar dairesi kutunun içinde ORNAMENT_ROOM kadar küçük çizildiği için (taşan prestij süsü sığsın) rozet
-## kutunun köşesinde kalsa dairenin kenarına yine biner; taşma payı 8 → 0.
-const LEVEL_BADGE_OVERHANG: float = 0.0
-const LEVEL_BADGE_FONT: int = 12
+## SOL ÜST PROFİL = SÜRÜCÜ BELGESİ (2026-11-01, kullanıcı taslak B'yi seçti): avatar, ad, seviye, XP ve para / elmas
+## tek kartta (LicenseCard). Sahnedeki eski satır (PlayerRow: seviye rozeti, isim plakası, XP şeridi) gizlidir ama
+## düğümleri güncellenmeye devam eder; para / elmas kutuları karta taşınır.
+var license_card: LicenseCard
 ## Bu panolar açıkken sol üst HUD gizlenir (geniş düzenleme panosu ona yer açarken sağdan taşıyordu; gazete tam sayfa;
 ## arkadaş kartı 853 birimlik telefonda bloğun sağına itilince 47 birim taşıyordu — ekran taraması 2026-10-17).
 const HUD_FREE_SCREENS: Array[StringName] = [&"profile_edit", &"avatar_crop", &"avatar_camera", &"news", &"friend_card"]
@@ -429,15 +427,21 @@ static func screen_rect(control: Control) -> Rect2:
 
 func set_player_name(value: String) -> void:
 	name_plate.text = value.to_upper()
+	if license_card:
+		license_card.set_player_name(value)
 
 
 func set_level(value: int) -> void:
 	level_label.text = str(value)
+	if license_card:
+		license_card.set_level(value)
 
 
 ## 0.0 - 1.0 arası; bir sonraki level'a ilerleme.
 func set_xp_ratio(value: float) -> void:
 	xp_lane.ratio = value
+	if license_card:
+		license_card.set_xp_ratio(value)
 
 
 func set_coins(value: int) -> void:
@@ -2883,37 +2887,26 @@ func _build_profile_screens() -> void:
 	host.move_child(avatar_cropper, -1)
 	host.move_child(camera_capture, -1)
 
-	# Avatar + seviye rozeti üst üste: ortak kap avatardan LEVEL_BADGE_OVERHANG büyük; avatar sol üste, seviye
-	# (sahnedeki LevelSign) sağ alt köşeye yaslanır → rozet avatarın kenarından dışarı taşar, yüzü kapatmaz. Rozet
-	# ayrı dursaydı sol üst blok genişler, dar tuvalde panolar ona yer açarken sağdan taşıyordu (2026-10-16 taraması).
-	var level_sign: Control = level_label.get_parent() as Control
-	var row: Node = level_sign.get_parent()   # TopLeft/PlayerRow
-	var slot: MarginContainer = MarginContainer.new()
-	slot.name = "AvatarSlot"
-	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	for side: String in ["left", "top", "right", "bottom"]:
-		slot.add_theme_constant_override("margin_" + side, 0)
-	row.add_child(slot)
-	row.move_child(slot, level_sign.get_index())
-	slot.custom_minimum_size = Vector2.ONE * (AVATAR_BUTTON_SIZE + LEVEL_BADGE_OVERHANG)
+	# SOL ÜST: SÜRÜCÜ BELGESİ (LicenseCard). Avatar kartın fotoğraf yerinde; para / elmas kutuları kartın altındaki
+	# şeride taşınır (uçan para hedefi, MARKET dokunuşu aynı düğümler). Eski PlayerRow gizlenir.
+	var old_row: Control = level_label.get_parent().get_parent() as Control   # TopLeft/PlayerRow
+	license_card = LicenseCard.new()
+	top_left.add_child(license_card)
+	license_card.pressed.connect(_on_name_plate_pressed)
 	avatar_button = AvatarButton.new()
 	avatar_button.name = "AvatarButton"
 	avatar_button.diameter = AVATAR_BUTTON_SIZE
-	avatar_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	avatar_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	avatar_button.view.flag_left = true   # sağ alt köşe seviye rozetinin: bayrak sola (üst üste biniyorlardı)
+	avatar_button.view.flag_left = true
 	# Taşan prestij süsü (taç, kanat, defne, kupa) kutuya sığsın diye daire HERKESTE küçük (kullanıcı kararı 2026-11-01:
 	# "fotoğraf küçük olsun, prestij alan herkese sığsın; süsü olmayanın da küçük olsun"); düzen kaymaz.
 	avatar_button.view.ornament_room = ProfileCatalog.ORNAMENT_ROOM
 	avatar_button.pressed.connect(_on_name_plate_pressed)
-	slot.add_child(avatar_button)
-	level_sign.reparent(slot, false)
-	level_sign.custom_minimum_size = Vector2(LEVEL_BADGE_SIZE, LEVEL_BADGE_SIZE)
-	level_sign.size_flags_horizontal = Control.SIZE_SHRINK_END
-	level_sign.size_flags_vertical = Control.SIZE_SHRINK_END
-	level_label.add_theme_font_size_override(&"font_size", LEVEL_BADGE_FONT)
-	level_sign.set_meta(&"qa_badge", true)   # ekran taraması: avatarın köşesine bilerek biner
+	license_card.avatar_slot.add_child(avatar_button)
+	license_card.take_currency(coin_label.get_parent() as Control, gem_label.get_parent() as Control)
+	old_row.visible = false
+	license_card.set_player_name(name_plate.text)
+	license_card.set_level(int(level_label.text))
+	license_card.set_xp_ratio(xp_lane.ratio)
 	_connect_profile.call_deferred()
 
 
@@ -2921,9 +2914,13 @@ func _connect_profile() -> void:
 	var profile: PlayerProfile = get_tree().get_first_node_in_group("player_profile") as PlayerProfile
 	if profile == null:
 		avatar_button.show_avatar(ProfileCatalog.default_texture(), true)
+		if license_card:
+			license_card.set_country("")   # cihazın bölgesi
 		return
 	var update: Callable = func() -> void:
 		avatar_button.show_avatar(profile.my_texture(), profile.my_illustrated(), profile.frame_id, profile.flag)
+		if license_card:
+			license_card.set_country(profile.flag)
 	profile.changed.connect(update)
 	profile.avatar_changed.connect(update)
 	# Başarım avatarı (100 drag galibiyeti, 500 tamir…): dokununca PROFİL › DÜZENLE açılır

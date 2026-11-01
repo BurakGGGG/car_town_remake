@@ -2742,5 +2742,8 @@
  "ALEVLİ KUPA": "COUPE ARDENTE",
  "ELMAS TAÇ": "COURONNE DE DIAMANTS",
  "%s çerçevesi %d drag galibiyetinde açılır.": "Le cadre %s se débloque à %d victoires en course de dragster.",
- "YENİ ÇERÇEVE AÇILDI!": "NOUVEAU CADRE DÉBLOQUÉ !"
+ "YENİ ÇERÇEVE AÇILDI!": "NOUVEAU CADRE DÉBLOQUÉ !",
+ "SÜRÜCÜ BELGESİ": "PERMIS DE CONDUIRE",
+ "SONRAKİ SINIF %s": "CLASSE SUIVANTE %s",
+ " · AUTO YARD": ""
 }

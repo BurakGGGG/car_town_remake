@@ -96,3 +96,15 @@ Godot snap olduğu için çıktı klasörü ev dizininde olmalı (`/tmp`'ye yaza
 * Eski otomatik adlı ("Usta" + 4 rakam) oyuncuya bir kez YENİ TAKMA AD kartı (`RenamePrompt`, MODAL "rename_prompt"):
   oturumun ilk 20 sn'si + 1,5 sn sakin an, KAYDET / KALSIN; `user://rename_offer.json` {uid: true}.
 * Test: `name_pool_test`, `social_test` §15–16; QA `qa/rename_shots.gd`.
+
+## Sol üst profil = SÜRÜCÜ BELGESİ (2026-11-01)
+
+Kullanıcı "sol taraf profil kısmını daha farklı tasarla" dedi; gerçek oyun görüntüsü üstüne 4 taslak
+(https://claude.ai/artifact/M3bazLWzg6uQJzXWJTpg7w: A profil kartı, B ehliyet, C kadran, D plaka) → **B seçildi**.
+`ui/hud/license_card.gd` (LicenseCard): mavi "TR" şeridi, fotoğraf yerinde avatar (AvatarButton, ORNAMENT_ROOM),
+"SÜRÜCÜ BELGESİ · AUTO YARD", "1." takma ad (uzunsa 128 birimde "…"), "9. SINIF" + koyu "SV n" çipi + araba,
+"SONRAKİ SINIF %n" + mavi çubuk; altında krem şeritte para · elmas. Kart kodla kurulur (`.tscn` değişmedi): sahnedeki
+eski PlayerRow GİZLİ ama `name_plate` / `level_label` / `xp_lane` güncellenmeye devam eder; `CoinBox` / `GemBox` karta
+taşınır (uçan para hedefi `coin_label` / `gem_label`, MARKET dokunuşu, test parası aynı düğümler). Hud.set_player_name /
+set_level / set_xp_ratio karta da yazar. Taslaktaki silik barkod XP çubuğunun ucuna bindiği için kaldırıldı.
+QA: `qa/hud_left_shots.gd`; tarama p16x9 / p20x9 / p16x9 %120 HUD kartla ilgili madde yok.

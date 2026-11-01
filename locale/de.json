@@ -2740,5 +2740,8 @@
  "ALEVLİ KUPA": "FLAMMENPOKAL",
  "ELMAS TAÇ": "DIAMANTKRONE",
  "%s çerçevesi %d drag galibiyetinde açılır.": "Der Rahmen %s wird bei %d Drag-Rennsiegen freigeschaltet.",
- "YENİ ÇERÇEVE AÇILDI!": "NEUER RAHMEN FREIGESCHALTET!"
+ "YENİ ÇERÇEVE AÇILDI!": "NEUER RAHMEN FREIGESCHALTET!",
+ "SÜRÜCÜ BELGESİ": "FÜHRERSCHEIN",
+ "SONRAKİ SINIF %s": "NÄCHSTE KLASSE %s",
+ " · AUTO YARD": ""
 }
