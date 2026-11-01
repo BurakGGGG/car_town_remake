@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- HAZIR AVATAR 32 (yüzsüz simge): vites topuzu (tools/avatars/make_presets.py üretir, elle düzenleme) -->
+  <defs><radialGradient id="bg" cx="256" cy="220" r="330" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F0E6FF"/><stop offset="1" stop-color="#B49AE8"/></radialGradient><radialGradient id="knob" cx="220" cy="150" r="140" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5A5E68"/><stop offset="1" stop-color="#16181C"/></radialGradient></defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g fill="#FFFFFF" opacity="0.22">
+  <rect x="0" y="0" width="64" height="64"/>
+  <rect x="128" y="0" width="64" height="64"/>
+  <rect x="256" y="0" width="64" height="64"/>
+  <rect x="384" y="0" width="64" height="64"/>
+  <rect x="64" y="64" width="64" height="64"/>
+  <rect x="192" y="64" width="64" height="64"/>
+  <rect x="320" y="64" width="64" height="64"/>
+  <rect x="448" y="64" width="64" height="64"/>
+  <rect x="0" y="128" width="64" height="64"/>
+  <rect x="128" y="128" width="64" height="64"/>
+  <rect x="256" y="128" width="64" height="64"/>
+  <rect x="384" y="128" width="64" height="64"/>
+  <rect x="64" y="192" width="64" height="64"/>
+  <rect x="192" y="192" width="64" height="64"/>
+  <rect x="320" y="192" width="64" height="64"/>
+  <rect x="448" y="192" width="64" height="64"/>
+  <rect x="0" y="256" width="64" height="64"/>
+  <rect x="128" y="256" width="64" height="64"/>
+  <rect x="256" y="256" width="64" height="64"/>
+  <rect x="384" y="256" width="64" height="64"/>
+  <rect x="64" y="320" width="64" height="64"/>
+  <rect x="192" y="320" width="64" height="64"/>
+  <rect x="320" y="320" width="64" height="64"/>
+  <rect x="448" y="320" width="64" height="64"/>
+  <rect x="0" y="384" width="64" height="64"/>
+  <rect x="128" y="384" width="64" height="64"/>
+  <rect x="256" y="384" width="64" height="64"/>
+  <rect x="384" y="384" width="64" height="64"/>
+  <rect x="64" y="448" width="64" height="64"/>
+  <rect x="192" y="448" width="64" height="64"/>
+  <rect x="320" y="448" width="64" height="64"/>
+  <rect x="448" y="448" width="64" height="64"/>
+  </g>
+  <ellipse cx="264" cy="430" rx="110" ry="22" fill="#000" opacity="0.18"/>
+  <path d="M 186 420 C 196 360, 222 318, 238 300 L 274 300 C 290 318, 316 360, 326 420 Z" fill="#6B4632" stroke="#33262F" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 246 308 C 236 340, 224 380, 218 416" fill="none" stroke="#E9D6B8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 7"/>
+  <path d="M 266 308 C 276 340, 288 380, 294 416" fill="none" stroke="#E9D6B8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 7"/>
+  <path d="M 214 372 Q 256 362 300 372" fill="none" stroke="#4E3224" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 204 400 Q 256 388 310 400" fill="none" stroke="#4E3224" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="218" y="276" width="76" height="30" rx="8" fill="#C7CED6" stroke="#33262F" stroke-width="6"/>
+  <path d="M 226 286 L 286 286" fill="none" stroke="#E9EDF1" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="184" r="104" fill="url(#knob)" stroke="#33262F" stroke-width="7"/>
+  <path d="M 196 128 Q 220 104 252 98" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+  <path d="M 216 150 L 216 214 M 256 150 L 256 214 M 296 150 L 296 214 M 216 182 L 296 182" fill="none" stroke="#F4F1EA" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="216" cy="150" r="6" fill="#F4F1EA"/>
+  <circle cx="256" cy="150" r="6" fill="#F4F1EA"/>
+  <circle cx="296" cy="150" r="6" fill="#F4F1EA"/>
+  <circle cx="216" cy="214" r="6" fill="#F4F1EA"/>
+  <circle cx="256" cy="214" r="6" fill="#F4F1EA"/>
+  <circle cx="296" cy="214" r="6" fill="#F4F1EA"/>
+</svg>

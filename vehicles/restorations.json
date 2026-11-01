@@ -115,7 +115,7 @@
   },
   {
    "id": "vw_beetle_1967",
-   "name": "Volkan Böcük 67",
+   "name": "Volkan Vasvas 67",
    "year": 1967,
    "class": "D",
    "tier": "basic",
@@ -130,7 +130,7 @@
   },
   {
    "id": "fiat_500_1965",
-   "name": "Fiora Piccola 65",
+   "name": "Fiora Nova 50",
    "year": 1965,
    "class": "D",
    "tier": "basic",
@@ -220,7 +220,7 @@
   },
   {
    "id": "vw_t1_bus",
-   "name": "Volkan Hippi T1",
+   "name": "Volkan Transpo T1",
    "year": 1965,
    "class": "D",
    "tier": "basic",
@@ -355,7 +355,7 @@
   },
   {
    "id": "mercedes_300sl",
-   "name": "Merides Gull 55",
+   "name": "Merides SL-30",
    "year": 1955,
    "class": "B",
    "tier": "classic",
@@ -415,7 +415,7 @@
   },
   {
    "id": "bmw_m3_e30",
-   "name": "BMR RS 30",
+   "name": "BMR MX 3.30",
    "year": 1990,
    "class": "A",
    "tier": "race",

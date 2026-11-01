@@ -24,7 +24,9 @@ const RAINBOW_STEPS: int = 36
 @export var texture: Texture2D:
 	set(value):
 		texture = value
+		_full_bleed = ProfileCatalog.is_icon_texture(value)   # yüzsüz simge: kırpılmaz (her çizimde yol okunmasın)
 		queue_redraw()
+var _full_bleed: bool = false
 @export var illustrated: bool = false:
 	set(value):
 		illustrated = value
@@ -46,6 +48,15 @@ const RAINBOW_STEPS: int = 36
 	set(value):
 		flag_left = value
 		_update_flag()
+## Süse yer: daire kutudan bu oranda küçük çizilir, taşan süs kutunun içinde kalır (ProfileCatalog.ORNAMENT_ROOM; HUD
+## avatarında herkes için, kullanıcı kararı 2026-11-01). 1 = daire kutuyu doldurur, süs kutudan taşar.
+@export var ornament_room: float = 1.0:
+	set(value):
+		ornament_room = maxf(value, 1.0)
+		queue_redraw()
+		_redraw_ring()
+		_update_flag()
+		_update_filters()
 ## Çerçeve kalınlığı çarpanı (1 = çapın %7'si).
 @export var ring_scale: float = 1.0:
 	set(value):
@@ -56,6 +67,7 @@ const RAINBOW_STEPS: int = 36
 var _t: float = 0.0
 var _flag: FlagIcon
 var _ring: _RingLayer
+var _back: _BackLayer
 ## Halkanın şekilleri tek üçgen dizisinde toplanır (TriBatch) ve halka katmanına bir kez gönderilir: her yay ayrı çizim
 ## çağrısıydı (statik halkada 10–20).
 var _canvas: TriBatch = TriBatch.new()
@@ -64,13 +76,17 @@ var _canvas: TriBatch = TriBatch.new()
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ring = _RingLayer.new()
+	tree_entered.connect(_sync_back)
 	_ring.owner_view = self
 	add_child(_ring)
 	move_child(_ring, 0)   # bayrak (FlagIcon) halkanın üstünde kalsın
+	resized.connect(_update_filters)
+	_update_filters()
 	visibility_changed.connect(_update_process)
 	resized.connect(_update_flag)
 	_update_process()
 	_update_flag()
+	_sync_back()
 
 
 ## Tek seferde resim + çizim mi + çerçeve + bayrak.
@@ -90,6 +106,44 @@ func _process(delta: float) -> void:
 func _redraw_ring() -> void:
 	if _ring:
 		_ring.rebuild()
+	_sync_back()
+
+
+## Arka süs katmanı (kanat) YALNIZ öyle bir çerçeve takılıyken vardır: listelerdeki onlarca avatara boşuna düğüm eklenmesin.
+func _sync_back() -> void:
+	if not is_inside_tree():
+		return
+	var needed: bool = ProfileCatalog.frame_ornament(frame_id, "back") != null
+	if needed and _back == null:
+		_back = _BackLayer.new()
+		_back.owner_view = self
+		_back.show_behind_parent = true   # avatarın arkasındaki süs: fotoğraftan ÖNCE çizilir
+		add_child(_back)
+		_update_filters()
+	elif not needed and _back != null:
+		_back.queue_free()
+		_back = null
+	if _back:
+		_back.queue_redraw()
+
+
+## Halka / süs dokularının süzgeci: küçük dairede mipmap'li (3–5 kat küçülünce tırtıklanmasın), büyükte mipmap'siz (alt mip
+## seviyesiyle karışınca ince şeritler eriyip halka soluklaşıyordu, 140 px'de bile).
+const MIPMAP_BELOW: float = 96.0
+
+
+func _update_filters() -> void:
+	var filter: CanvasItem.TextureFilter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS if _disc() < MIPMAP_BELOW \
+		else CanvasItem.TEXTURE_FILTER_LINEAR
+	if _ring:
+		_ring.texture_filter = filter
+	if _back:
+		_back.texture_filter = filter
+
+
+## Dairenin çapı: kutunun kısa kenarı, süse yer bırakılıyorsa (ornament_room) o oranda küçük.
+func _disc() -> float:
+	return minf(size.x, size.y) / ornament_room
 
 
 func _update_process() -> void:
@@ -97,7 +151,7 @@ func _update_process() -> void:
 
 
 func _draw() -> void:
-	var d: float = minf(size.x, size.y)
+	var d: float = _disc()
 	if d < 4.0:
 		return
 	var c: Vector2 = size * 0.5
@@ -113,13 +167,26 @@ func _draw_ring_on(layer: CanvasItem) -> void:
 	var m: Array = _ring_metrics()
 	if m.is_empty():
 		return
+	var ring_tex: Texture2D = ProfileCatalog.frame_ring(frame_id)
+	if ring_tex:   # detaylı doku halka (make_rings.py); hareketli kısımlar _draw_ring'de üstüne
+		var r: float = _disc() * 0.5
+		layer.draw_texture_rect(ring_tex, Rect2(m[0] - Vector2(r, r), Vector2(r, r) * 2.0), false)
 	_draw_ring(m[0], m[1], m[2])
 	_canvas.flush(layer)
+	var front: Texture2D = ProfileCatalog.frame_ornament(frame_id, "front")
+	if front:   # taşan süs, halkanın ÖNÜNDE (taç, defne, kupa)
+		layer.draw_texture_rect(front, _ornament_rect(m[0], _disc()), false)
+
+
+## Taşan süsün çizildiği kare: dairenin ORNAMENT_SCALE katı, aynı merkezde (kontrolün dışına taşar).
+func _ornament_rect(c: Vector2, d: float) -> Rect2:
+	var side: float = d * ProfileCatalog.ORNAMENT_SCALE
+	return Rect2(c - Vector2(side, side) * 0.5, Vector2(side, side))
 
 
 ## [merkez, halka yarıçapı, kalınlık] ya da boş (çok küçük).
 func _ring_metrics() -> Array:
-	var d: float = minf(size.x, size.y)
+	var d: float = _disc()
 	if d < 4.0:
 		return []
 	var ring: float = clampf(d * 0.07 * ring_scale, 2.0, 10.0)
@@ -180,13 +247,14 @@ func _update_flag() -> void:
 		add_child(_flag)
 	_flag.show()
 	_flag.code = flag_code
-	var d: float = minf(size.x, size.y)
+	var d: float = _disc()
 	_flag.pixel = maxf(roundf(d * 0.26 / float(FlagIcon.H + 2)), 1.0)
-	var anchor_x: float = 0.5 - 0.31 if flag_left else 0.5 + 0.31
+	var off: float = 0.31 / ornament_room   # daire küçük çizilince rozet de ona yaklaşır
+	var anchor_x: float = 0.5 - off if flag_left else 0.5 + off
 	_flag.anchor_left = anchor_x
 	_flag.anchor_right = anchor_x
-	_flag.anchor_top = 0.5 + 0.31
-	_flag.anchor_bottom = 0.5 + 0.31
+	_flag.anchor_top = 0.5 + off
+	_flag.anchor_bottom = 0.5 + off
 	_flag.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_flag.grow_vertical = Control.GROW_DIRECTION_BOTH
 	var half: Vector2 = _flag.get_combined_minimum_size() * 0.5
@@ -198,7 +266,8 @@ func _update_flag() -> void:
 
 func _draw_photo(c: Vector2, r: float, d: float) -> void:
 	var tex: Texture2D = texture if texture else ProfileCatalog.default_texture()
-	var region: Rect2 = TIGHT_REGION if (illustrated or texture == null) and d < TIGHT_BELOW else Rect2(0, 0, 1, 1)
+	var region: Rect2 = TIGHT_REGION if (illustrated or texture == null) and d < TIGHT_BELOW \
+		and not _full_bleed else Rect2(0, 0, 1, 1)   # yüzsüz simge tuvali doldurur
 	var points: PackedVector2Array = PackedVector2Array()
 	var uvs: PackedVector2Array = PackedVector2Array()
 	for i: int in SEGMENTS:
@@ -265,6 +334,43 @@ func _draw_ring(c: Vector2, rr: float, w: float) -> void:
 				var hue: float = fposmod(float(i) / n3 + _t * 0.12, 1.0)
 				_canvas.draw_arc(c, rr, a, a + TAU / n3 + 0.01, 3, Color.from_hsv(hue, 0.5, 1.0), w, true)
 			_edge(c, rr, w, Color(0.18, 0.2, 0.22, 0.6))
+		"gauge":   # GÖSTERGE (doku halka): kadranın üstünde gezen kırmızı ibre
+			var band: Array = _texture_band(c)
+			var start: float = PI * 0.75
+			var sweep: float = PI * 1.5
+			var v: float = 0.5 + 0.42 * sin(_t * 1.3) + 0.04 * sin(_t * 7.0)
+			var nd: Vector2 = Vector2.from_angle(start + sweep * v)
+			var np: Vector2 = Vector2(-nd.y, nd.x)
+			var needle: PackedVector2Array = PackedVector2Array([c + nd * (band[0] - band[1] * 0.35),
+				c + nd * (band[0] + band[1] * 0.42) + np * band[1] * 0.16, c + nd * (band[0] + band[1] * 0.42) - np * band[1] * 0.16])
+			_canvas.draw_colored_polygon(needle, Color("FF4A2A"))
+			needle.append(needle[0])
+			_canvas.draw_polyline(needle, Color("6A1408"), 1.0, true)
+			_canvas.draw_circle(c + nd * (band[0] + band[1] * 0.42), maxf(band[1] * 0.1, 1.0), Color("2A2C30"))
+		"chrome":   # KROM (doku halka): halkada dönen parlak parıltı
+			var band: Array = _texture_band(c)
+			var glint: float = fposmod(_t * 0.9, TAU)
+			_canvas.draw_arc(c, band[0], glint, glint + 0.3, 8, Color(1, 1, 1, 0.75), band[1] * 0.55, true)
+			_canvas.draw_arc(c, band[0], glint + 0.08, glint + 0.22, 6, Color(1, 1, 1, 0.95), band[1] * 0.25, true)
+		"flame_cup":   # ALEVLİ KUPA (doku halka): iki yandan yükselen hareketli alevler (dairenin %20'sini aşmaz)
+			var band: Array = _texture_band(c)
+			var outer: float = band[0] + band[1] * 0.5
+			var tongues: int = 22
+			for layer_i: int in 3:   # kırmızı → turuncu → sarı çekirdek
+				var col: Color = [Color("E8381C"), Color("FF8A1C"), Color("FFD24A")][layer_i]
+				var k: float = [1.0, 0.72, 0.42][layer_i]
+				for i: int in tongues:
+					var a: float = lerpf(-PI * 0.08, PI * 1.08, float(i) / (tongues - 1)) + sin(_t * 2.0 + i) * 0.03
+					var flick: float = 0.7 + 0.3 * sin(_t * 9.0 + i * 1.7 + layer_i)
+					var out_dir: Vector2 = Vector2.from_angle(a)
+					var up: Vector2 = (out_dir + Vector2(0.0, -1.1)).normalized()
+					var low: float = clampf(sin(a), 0.0, 1.0)
+					var base: Vector2 = c + out_dir * (outer - band[1] * 0.25)
+					var tip: Vector2 = base + up * outer * (0.12 + 0.08 * low + 0.06 * flick) * k
+					var side: Vector2 = Vector2(-out_dir.y, out_dir.x) * band[1] * 0.42 * k
+					_canvas.draw_colored_polygon(PackedVector2Array([base - side, tip, base + side]), col)
+		"diamond_crown", "crown", "laurel", "winged", "hazard", "tire", "wheel", "stripe", "wood", "rust", "copper", "velvet":
+			pass   # yalnız doku halka (+ süs)
 		"inviter":   # DAVETÇİ (5. davet): turkuaz metal (gümüşten ayrılsın), iki yanda elmas
 			_metal(c, rr, w, Color("2FA597"), Color("A8F0E6"), Color("17675E"))
 			for k: int in 2:
@@ -283,6 +389,13 @@ func _draw_ring(c: Vector2, rr: float, w: float) -> void:
 		_:
 			_canvas.draw_arc(c, rr, 0.0, TAU, SEGMENTS, HudPalette.PLATE_SELECTED_EDGE, w, true)
 			_canvas.draw_arc(c, rr - w * 0.5 + 0.75, 0.0, TAU, SEGMENTS, HudPalette.PLATE_SELECTED, maxf(w * 0.25, 1.0), true)
+
+
+## Doku halkanın bandı: [orta yarıçap, kalınlık] (ProfileCatalog.RING_INNER; make_rings.py ile aynı oranlar).
+func _texture_band(_c: Vector2) -> Array:
+	var outer: float = _disc() * 0.5
+	var inner: float = outer * ProfileCatalog.RING_INNER
+	return [(outer + inner) * 0.5, outer - inner]
 
 
 ## Metal halka: düz renk, üstte parlak, altta koyu yay.
@@ -366,6 +479,24 @@ class _RingLayer:
 	func _draw() -> void:
 		if owner_view and not _segmented:
 			owner_view._draw_ring_on(self)
+
+
+## Avatarın ARKASINDAKİ süs (kanat): show_behind_parent ile fotoğraftan önce çizilir; mipmap'li süzgeç.
+class _BackLayer:
+	extends Control
+	var owner_view: AvatarView
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		resized.connect(queue_redraw)
+
+	func _draw() -> void:
+		if owner_view == null:
+			return
+		var back: Texture2D = ProfileCatalog.frame_ornament(owner_view.frame_id, "back")
+		if back:
+			draw_texture_rect(back, owner_view._ornament_rect(size * 0.5, owner_view._disc()), false)
 
 
 ## Bir kez çizilen yay(lar): [merkez, yarıçap, başlangıç, bitiş, nokta, renk, kalınlık].

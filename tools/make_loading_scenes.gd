@@ -390,7 +390,7 @@ func _drag() -> void:
 
 # --- SHOWROOM: gece lansman salonu --------------------------------------------------------------
 
-const SHOW_HERO: StringName = &"lambo_huracan"        # LAMBERTINI URAGANO (döner platformda)
+const SHOW_HERO: StringName = &"lambo_huracan"        # LAMBERTINI HURACO (döner platformda)
 const SHOW_SIDE: Array[Array] = [                     # [araç, konum, yön]
 	[&"porsche_gt3", Vector3(-0.92, 0.0, 0.52), 75.0],      # PORSTEN 991 GT (solda)
 	[&"mercedes_cls", Vector3(0.95, 0.0, -0.62), 15.0],     # MERIDES CLX 35 (sağda)
@@ -710,7 +710,7 @@ func _junkyard() -> void:
 # --- KOVALAMACA: gece sokak köşesi -------------------------------------------------------------
 
 const CHASE_SUSPECT: StringName = &"dodge_charger_1970"   # DODSON CHARGO 70
-const CHASE_POLICE: StringName = &"police_bentley"        # BENTON PATROL GT
+const CHASE_POLICE: StringName = &"police_bentley"        # BENTON CONTINA GT
 const P_RED: Color = Color(1.0, 0.18, 0.2)
 const P_BLUE: Color = Color(0.22, 0.45, 1.0)
 const STREET: Color = Color("FFC27A")

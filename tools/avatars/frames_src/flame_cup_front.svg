@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- ÇERÇEVE SÜSÜ flame_cup_front (tools/avatars/make_frames.py üretir, elle düzenleme) -->
+  <defs><linearGradient id="cup" x1="210" y1="0" x2="302" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0.00" stop-color="#FFF0B0"/><stop offset="0.33" stop-color="#F2C14E"/><stop offset="0.67" stop-color="#C8901E"/><stop offset="1.00" stop-color="#8A5A0C"/></linearGradient><linearGradient id="base" x1="0" y1="452" x2="0" y2="474" gradientUnits="userSpaceOnUse"><stop offset="0.00" stop-color="#5A3A1E"/><stop offset="1.00" stop-color="#2E1C0C"/></linearGradient></defs>
+  <path d="M 216 386 C 182 380, 180 424, 222 428" fill="none" stroke="#4A2A0C" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 216 386 C 182 380, 180 424, 222 428" fill="none" stroke="#E8B23A" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 216 386 C 182 380, 180 424, 222 428" fill="none" stroke="#FFF0B0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 296 386 C 330 380 332 424 290 428" fill="none" stroke="#4A2A0C" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 296 386 C 330 380 332 424 290 428" fill="none" stroke="#C8901E" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 214 376 L 298 376 C 298 420, 284 440, 256 444 C 228 440, 214 420, 214 376 Z" fill="url(#cup)" stroke="#4A2A0C" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="256" cy="377" rx="42" ry="7" fill="#FFE68A" stroke="#4A2A0C" stroke-width="4"/>
+  <ellipse cx="256" cy="378" rx="34" ry="3.5" fill="#B8801A"/>
+  <path d="M 226 388 C 226 414, 234 430, 246 436" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+  <path d="M 256 394 L 261 405 L 273 406 L 264 414 L 267 426 L 256 419 L 245 426 L 248 414 L 239 406 L 251 405 Z" fill="#FFF3C2" stroke="#4A2A0C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="246" y="442" width="20" height="12" fill="#C8901E" stroke="#4A2A0C" stroke-width="4"/>
+  <rect x="222" y="452" width="68" height="22" rx="5" fill="url(#base)" stroke="#4A2A0C" stroke-width="5"/>
+  <rect x="238" y="458" width="36" height="10" rx="2" fill="#F2C14E" stroke="#4A2A0C" stroke-width="2"/>
+</svg>

@@ -341,6 +341,7 @@ func _build_popup() -> void:
 	_name_edit.name = "NameEdit"
 	_name_edit.text_submitted.connect(func(_t: String) -> void: _on_rename_saved())
 	_rename_line.add_child(_name_edit)
+	_rename_line.add_child(_dice_button(_name_edit))
 	_rename_line.add_child(_button(Loc.t("KAYDET"), _on_rename_saved, true))
 	box.add_child(_rename_line)
 
@@ -576,10 +577,13 @@ func _add_state_card(state: SocialManager.State, busy: bool) -> void:
 			var box: VBoxContainer = card.get_child(0)
 			_profile_edit = _line_edit(Loc.t("Takma ad"), SocialNames.NAME_MAX)
 			_profile_edit.name = "NameEdit"
-			_profile_edit.size_flags_horizontal = Control.SIZE_FILL
+			_profile_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_profile_edit.text = SocialNames.default_name()
 			_profile_edit.text_submitted.connect(func(_t: String) -> void: _social.create_profile(_profile_edit.text))
-			box.add_child(_profile_edit)
+			var name_line: HBoxContainer = _hbox(8)
+			name_line.add_child(_profile_edit)
+			name_line.add_child(_dice_button(_profile_edit))
+			box.add_child(name_line)
 			var create: PlateButton = _button(Loc.t("PROFİLİ OLUŞTUR"),
 				func() -> void: _social.create_profile(_profile_edit.text), true, busy)
 			create.name = "PrimaryButton"
@@ -941,6 +945,13 @@ func _button(text: String, callback: Callable, accent: bool = false, disabled: b
 	button.disabled = disabled
 	button.pressed.connect(callback)
 	return button
+
+
+## ZAR: havuzdan yeni bir takma ad önerir (oyun dilinde); kaydetmek için yine DEĞİŞTİR / KAYDET'e basılır.
+func _dice_button(target: LineEdit) -> PlateButton:
+	return RenamePrompt.dice_button(func() -> void:
+		target.text = SocialNames.default_name()
+		target.caret_column = target.text.length(), PlateButton.MIN_PLATE_HEIGHT)
 
 
 ## Ekran başlığı: altın yuvarlak rozette kask + kalın ARKADAŞLAR, altında kısa altın çizgi.

@@ -103,7 +103,7 @@ static func hand_font(weight: int) -> FontVariation:
 	return font
 
 
-## Kartpostalın büyük başlığı: model adı; çok kısa modelde (MV, 44, RS 30) marka da yazılır.
+## Kartpostalın büyük başlığı: model adı; çok kısa modelde (MV, 44, MX 3.30) marka da yazılır.
 static func title_for(brand: String, model: String) -> String:
 	var letters: int = 0
 	for i: int in model.length():

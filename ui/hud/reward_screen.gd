@@ -376,6 +376,18 @@ func _framed_avatar(frame_id: String) -> Control:
 	return center
 
 
+## Hazır avatar resmi (yeni açılan profil resmi kartı), düz çerçeveyle.
+func _preset_avatar(id: String) -> Control:
+	var center: CenterContainer = CenterContainer.new()
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var avatar: AvatarView = AvatarView.new()
+	avatar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	avatar.custom_minimum_size = Vector2(PIC_HEIGHT - 8.0, PIC_HEIGHT - 8.0)
+	avatar.show_avatar(ProfileCatalog.preset_texture(id), true)
+	center.add_child(avatar)
+	return center
+
+
 func _photo(path: String) -> TextureRect:
 	var photo: TextureRect = TextureRect.new()
 	photo.mouse_filter = Control.MOUSE_FILTER_IGNORE

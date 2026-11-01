@@ -17,7 +17,9 @@ extends PlatePanel
 signal records_requested(info: Dictionary)
 
 const CARD_WIDTH: float = 500.0
-const AVATAR_SIZE: float = 116.0
+## Kutu 116 → 132 (2026-11-01): daire kutunun içinde ORNAMENT_ROOM kadar küçük çizilir (taşan prestij süsü panelin
+## kenarına binmesin; HUD ile aynı kural, kullanıcı kararı), daire ~94 px kalır.
+const AVATAR_SIZE: float = 132.0
 const THUMB_SIZE: Vector2 = Vector2(112.0, 70.0)
 const THUMB_DIR: String = "res://assets/cars/thumbs/"
 ## Kendi kartımın kimliği (avatar PlayerProfile'dan çizilir).
@@ -59,6 +61,7 @@ func _init() -> void:
 
 	_avatar = AvatarView.new()
 	_avatar.custom_minimum_size = Vector2(AVATAR_SIZE, AVATAR_SIZE)
+	_avatar.ornament_room = ProfileCatalog.ORNAMENT_ROOM
 	_avatar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(_avatar)
 

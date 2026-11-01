@@ -1,0 +1,116 @@
+{
+  "_": "RASTGELE TAKMA AD HAVUZU (NamePool, 2026-11-01 kullanıcı kararı): sıfat + garaj nesnesi, BİTİŞİK (TurboSomun), sayı yok, karışık ton (havalı + tatlı komik), oyun diline göre. pre = isimden ÖNCE gelen değişmez söz (Turbo, Paslı); post = isimden SONRA gelen [eril, dişil] sıfat (ES / FR: TuercaLoca); adj = isimden önce cinsiyete göre çekimli sıfat (DE: Rostiger / Rostige / Rostiges). nouns: TR / EN düz, ES / FR / DE [isim, m|f|n]. Karakter kümesi takma ad kuralıyla aynı (A-Z, ÇĞİÖŞÜ, rakam): á é ñ ä ß YOK, yoksa eski sürüm adı geçersiz sayar. 16 harften uzun birleşimler kullanılmaz. Uygunsuz birleşim tests/name_pool_test.gd'de yakalanır.",
+  "tr": {
+    "pre": [
+      "Turbo", "Nitro", "Gece", "Şimşek", "Fırtına", "Efsane", "Altın", "Gümüş", "Kara", "Ateş",
+      "Çelik", "Kızıl", "Mavi", "Yıldız", "Roket", "Asil", "Cesur", "Hızlı", "Çevik", "Kurnaz",
+      "Yaman", "Çılgın", "Jet", "Atom", "Volt", "Kasırga", "Yıldırım", "Tufan", "Gizli", "Sihirli",
+      "Uçan", "Fiyakalı", "Havalı", "Parlak", "Cilalı", "Gıcır", "Şanslı", "Bıçkın", "Neon", "Krom",
+      "Paslı", "Uykucu", "Gevrek", "Tozlu", "Yağlı", "Sessiz", "Gürültülü", "Yaramaz", "Sakin", "Haylaz",
+      "Afacan", "Tombul", "Minik", "Koca", "Neşeli", "Tatlı", "Huysuz", "Keyifli", "Meraklı", "Telaşlı",
+      "Sevimli", "Dalgın", "Aceleci", "Utangaç", "Pofuduk"
+    ],
+    "nouns": [
+      "Somun", "Piston", "Buji", "Conta", "Kriko", "Rot", "Debriyaj", "Karbüratör", "Egzoz", "Jant",
+      "Vites", "Direksiyon", "Silecek", "Far", "Tampon", "Kaporta", "Radyatör", "Amortisör", "Supap", "Krank",
+      "Şanzıman", "Akü", "Cıvata", "Rondela", "Pense", "Tornavida", "Lastik", "Zincir", "Kayış", "Yay",
+      "Bobin", "Fren", "Balata", "Korna", "Dikiz", "Çamurluk", "Kaput", "Pedal", "Yağdanlık", "Anahtar",
+      "Kompresör", "Volan", "Dişli", "Rulman", "Hortum", "Filtre", "Sinyal", "Spoyler", "Segman", "Triger",
+      "Kelebek", "Marş", "Aks", "Manivela", "Kardan", "Klakson", "Torpido", "Bagaj", "Selektör", "Tekerlek"
+    ]
+  },
+  "en": {
+    "pre": [
+      "Turbo", "Nitro", "Midnight", "Thunder", "Storm", "Golden", "Silver", "Shadow", "Blazing", "Steel",
+      "Crimson", "Blue", "Rocket", "Noble", "Brave", "Swift", "Nimble", "Sly", "Crazy", "Jet",
+      "Atomic", "Volt", "Hyper", "Secret", "Magic", "Flying", "Fancy", "Cool", "Shiny", "Polished",
+      "Lucky", "Neon", "Chrome", "Roaring", "Wild", "Rapid", "Mighty", "Epic", "Cosmic", "Electric",
+      "Rusty", "Sleepy", "Crispy", "Dusty", "Greasy", "Quiet", "Noisy", "Cheeky", "Calm", "Wobbly",
+      "Grumpy", "Chubby", "Tiny", "Happy", "Sweet", "Cranky", "Jolly", "Curious", "Hasty", "Cuddly",
+      "Dreamy", "Clumsy", "Shy", "Squeaky", "Bouncy", "Fuzzy"
+    ],
+    "nouns": [
+      "Piston", "Wrench", "Sparkplug", "Gasket", "Jack", "Bolt", "Clutch", "Exhaust", "Wheel", "Gearbox",
+      "Shifter", "Wiper", "Headlight", "Bumper", "Fender", "Radiator", "Valve", "Battery", "Washer", "Pliers",
+      "Tire", "Chain", "Belt", "Spring", "Coil", "Brake", "Horn", "Mirror", "Hood", "Pedal",
+      "OilCan", "Key", "Gear", "Bearing", "Filter", "Spoiler", "Axle", "Muffler", "Throttle", "Carb",
+      "Sprocket", "Lugnut", "Hubcap", "Socket", "Torque", "Manifold", "Starter", "Hammer", "Toolbox", "Grille",
+      "Taillight", "Flywheel", "Jumper", "Tailpipe", "Dynamo", "Turbine", "Funnel", "Spanner", "Sparky", "Dashboard"
+    ]
+  },
+  "es": {
+    "pre": ["Turbo", "Nitro", "Super", "Mega", "Hiper", "Mini", "Ultra", "Neon", "Cromo", "Rayo"],
+    "post": [
+      ["Loco", "Loca"], ["Veloz", "Veloz"], ["Oxidado", "Oxidada"], ["Perezoso", "Perezosa"], ["Brillante", "Brillante"],
+      ["Feroz", "Feroz"], ["Nocturno", "Nocturna"], ["Valiente", "Valiente"], ["Salvaje", "Salvaje"], ["Dorado", "Dorada"],
+      ["Plateado", "Plateada"], ["Rojo", "Roja"], ["Azul", "Azul"], ["Ruidoso", "Ruidosa"], ["Callado", "Callada"],
+      ["Travieso", "Traviesa"], ["Alegre", "Alegre"], ["Legendario", "Legendaria"], ["Furioso", "Furiosa"], ["Tranquilo", "Tranquila"],
+      ["Grasiento", "Grasienta"], ["Crujiente", "Crujiente"], ["Supremo", "Suprema"], ["Bravo", "Brava"], ["Feliz", "Feliz"],
+      ["Gigante", "Gigante"], ["Fiero", "Fiera"], ["Astuto", "Astuta"], ["Dormido", "Dormida"], ["Sonriente", "Sonriente"],
+      ["Elegante", "Elegante"], ["Secreto", "Secreta"], ["Volador", "Voladora"], ["Atrevido", "Atrevida"], ["Genial", "Genial"],
+      ["Torpe", "Torpe"], ["Curioso", "Curiosa"], ["Dulce", "Dulce"], ["Tierno", "Tierna"], ["Cromado", "Cromada"],
+      ["Estelar", "Estelar"], ["Rebelde", "Rebelde"], ["Fugaz", "Fugaz"], ["Ligero", "Ligera"], ["Gordito", "Gordita"],
+      ["Chiquito", "Chiquita"], ["Rugiente", "Rugiente"], ["Invencible", "Invencible"], ["Imparable", "Imparable"], ["Mimoso", "Mimosa"],
+      ["Gracioso", "Graciosa"], ["Despistado", "Despistada"], ["Bonito", "Bonita"], ["Potente", "Potente"], ["Polvoroso", "Polvorosa"]
+    ],
+    "nouns": [
+      ["Tuerca", "f"], ["Tornillo", "m"], ["Gato", "m"], ["Llanta", "f"], ["Rueda", "f"], ["Motor", "m"], ["Freno", "m"],
+      ["Volante", "m"], ["Faro", "m"], ["Escape", "m"], ["Embrague", "m"], ["Radiador", "m"], ["Manguera", "f"], ["Biela", "f"],
+      ["Correa", "f"], ["Palanca", "f"], ["Bocina", "f"], ["Arandela", "f"], ["Llave", "f"], ["Retrovisor", "m"], ["Cilindro", "m"],
+      ["Carburador", "m"], ["Engranaje", "m"], ["Resorte", "m"], ["Cadena", "f"], ["Polea", "f"], ["Junta", "f"], ["Bobina", "f"],
+      ["Bomba", "f"], ["Pedal", "m"], ["Filtro", "m"], ["Eje", "m"], ["Chispa", "f"], ["Tapacubos", "m"], ["Pinza", "f"],
+      ["Martillo", "m"], ["Aceitera", "f"], ["Claxon", "m"], ["Maletero", "m"], ["Chasis", "m"], ["Muelle", "m"], ["Turbina", "f"],
+      ["Manivela", "f"], ["Rejilla", "f"], ["Defensa", "f"], ["Cable", "m"], ["Antena", "f"], ["Espejo", "m"], ["Parabrisas", "m"],
+      ["Tubo", "m"], ["Soporte", "m"], ["Gancho", "m"], ["Remolque", "m"], ["Casco", "m"], ["Tanque", "m"]
+    ]
+  },
+  "de": {
+    "pre": ["Turbo", "Nitro", "Blitz", "Donner", "Sturm", "Super", "Mega", "Hyper", "Neon", "Chrom", "Raketen", "Feuer"],
+    "adj": [
+      "Rostig", "Schnell", "Wild", "Flink", "Mutig", "Leise", "Laut", "Schlau", "Frech", "Lustig",
+      "Golden", "Silbern", "Rot", "Blau", "Stark", "Cool", "Müde", "Verrückt", "Funkelnd", "Staubig",
+      "Ölig", "Knusprig", "Sanft", "Tapfer", "Flott", "Fröhlich", "Wütend", "Ruhig", "Feurig", "Eisern",
+      "Neugierig", "Kühn", "Brummig", "Gemütlich", "Munter", "Wackelig", "Pfiffig", "Rasant", "Geheim", "Fliegend",
+      "Riesig", "Winzig", "Klein", "Grimmig", "Heiter", "Quirlig", "Zackig", "Spritzig", "Wendig", "Schick",
+      "Krumm", "Flauschig", "Rund", "Treu", "Kess", "Fesch"
+    ],
+    "nouns": [
+      ["Kolben", "m"], ["Zündkerze", "f"], ["Schraube", "f"], ["Wagenheber", "m"], ["Lenkrad", "n"], ["Motor", "m"],
+      ["Auspuff", "m"], ["Bremse", "f"], ["Reifen", "m"], ["Felge", "f"], ["Kupplung", "f"], ["Kühler", "m"],
+      ["Hupe", "f"], ["Getriebe", "n"], ["Zylinder", "m"], ["Ventil", "n"], ["Keilriemen", "m"], ["Ölkanne", "f"],
+      ["Schlüssel", "m"], ["Vergaser", "m"], ["Dichtung", "f"], ["Feder", "f"], ["Kette", "f"], ["Spoiler", "m"],
+      ["Blinker", "m"], ["Tacho", "m"], ["Kotflügel", "m"], ["Bolzen", "m"], ["Schalthebel", "m"], ["Batterie", "f"],
+      ["Zahnrad", "n"], ["Kolbenring", "m"], ["Turbolader", "m"], ["Spiegel", "m"], ["Pedal", "n"], ["Filter", "m"],
+      ["Achse", "f"], ["Kurbel", "f"], ["Zange", "f"], ["Hammer", "m"], ["Ölwanne", "f"], ["Radkappe", "f"],
+      ["Funke", "m"], ["Pumpe", "f"], ["Schlauch", "m"], ["Lager", "n"], ["Kabel", "n"], ["Rad", "n"],
+      ["Gang", "m"], ["Gaspedal", "n"], ["Rücklicht", "n"], ["Lenker", "m"], ["Anlasser", "m"], ["Kanister", "m"],
+      ["Scheinwerfer", "m"], ["Nockenwelle", "f"], ["Nabe", "f"], ["Sitz", "m"], ["Gurt", "m"]
+    ]
+  },
+  "fr": {
+    "pre": ["Turbo", "Nitro", "Super", "Mega", "Hyper", "Mini", "Ultra", "Neon", "Chrome", "Eclair"],
+    "post": [
+      ["Fou", "Folle"], ["Rapide", "Rapide"], ["Nocturne", "Nocturne"], ["Brillant", "Brillante"], ["Sauvage", "Sauvage"],
+      ["Rouge", "Rouge"], ["Bleu", "Bleue"], ["Bruyant", "Bruyante"], ["Calme", "Calme"], ["Coquin", "Coquine"],
+      ["Joyeux", "Joyeuse"], ["Furieux", "Furieuse"], ["Tranquille", "Tranquille"], ["Croustillant", "Croustillante"], ["Brave", "Brave"],
+      ["Malin", "Maligne"], ["Grand", "Grande"], ["Petit", "Petite"], ["Vif", "Vive"], ["Endormi", "Endormie"],
+      ["Royal", "Royale"], ["Infernal", "Infernale"], ["Agile", "Agile"], ["Costaud", "Costaude"], ["Rigolo", "Rigolote"],
+      ["Zen", "Zen"], ["Gourmand", "Gourmande"], ["Curieux", "Curieuse"], ["Poussif", "Poussive"], ["Timide", "Timide"],
+      ["Rebelle", "Rebelle"], ["Magique", "Magique"], ["Puissant", "Puissante"], ["Fulgurant", "Fulgurante"], ["Doux", "Douce"],
+      ["Mignon", "Mignonne"], ["Grognon", "Grognonne"], ["Farceur", "Farceuse"], ["Distrait", "Distraite"], ["Sage", "Sage"],
+      ["Fringant", "Fringante"], ["Vert", "Verte"], ["Jaune", "Jaune"], ["Violet", "Violette"], ["Orange", "Orange"],
+      ["Rugissant", "Rugissante"], ["Fonceur", "Fonceuse"], ["Luisant", "Luisante"], ["Pimpant", "Pimpante"], ["Dodu", "Dodue"],
+      ["Bavard", "Bavarde"], ["Gracieux", "Gracieuse"], ["Galactique", "Galactique"], ["Cosmique", "Cosmique"], ["Turbulent", "Turbulente"]
+    ],
+    "nouns": [
+      ["Piston", "m"], ["Bougie", "f"], ["Boulon", "m"], ["Cric", "m"], ["Volant", "m"], ["Moteur", "m"], ["Phare", "m"],
+      ["Frein", "m"], ["Pneu", "m"], ["Jante", "f"], ["Courroie", "f"], ["Bielle", "f"], ["Durite", "f"], ["Soupape", "f"],
+      ["Embrayage", "m"], ["Radiateur", "m"], ["Klaxon", "m"], ["Carbu", "m"], ["Ressort", "m"], ["Vis", "f"], ["Rondelle", "f"],
+      ["Levier", "m"], ["Capot", "m"], ["Bobine", "f"], ["Pompe", "f"], ["Cylindre", "m"], ["Engrenage", "m"], ["Rotule", "f"],
+      ["Filtre", "m"], ["Essieu", "m"], ["Clef", "f"], ["Marteau", "m"], ["Pince", "f"], ["Batterie", "f"], ["Bidon", "m"],
+      ["Tuyau", "m"], ["Moyeu", "m"], ["Enjoliveur", "m"], ["Aileron", "m"], ["Becquet", "m"], ["Calandre", "f"], ["Manivelle", "f"],
+      ["Starter", "m"], ["Turbine", "f"], ["Roue", "f"], ["Roulement", "m"], ["Manette", "f"], ["Gicleur", "m"], ["Allumage", "m"],
+      ["Compteur", "m"], ["Clignotant", "m"], ["Antenne", "f"], ["Cardan", "m"], ["Chariot", "m"], ["Treuil", "m"]
+    ]
+  }
+}

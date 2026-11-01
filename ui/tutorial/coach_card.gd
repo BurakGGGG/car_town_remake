@@ -187,6 +187,11 @@ class _Badge extends Control:
 			queue_redraw()
 	var _t: float = 0.0
 
+	## Yalnız görünürken döner / yeniden çizilir (gizliyken her karede çalışıyordu).
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_VISIBILITY_CHANGED or what == NOTIFICATION_ENTER_TREE:
+			set_process(is_visible_in_tree())
+
 	func _init() -> void:
 		custom_minimum_size = Vector2(RADIUS * 2.0 + 8.0, RADIUS * 2.0 + 24.0)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE

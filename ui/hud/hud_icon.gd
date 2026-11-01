@@ -54,6 +54,7 @@ enum Kind {
 	TASKS,     ## onay işaretli pano (alt sekme GÖREVLER) — sona eklendi
 	FRIENDS,   ## iki kişi (alt sekme ARKADAŞLAR) — sona eklendi
 	NEWSPAPER, ## katlanmış gazete (sağ üst HABERLER tabelası) — sona eklendi
+	DICE,      ## beş noktalı zar (rastgele takma ad) — sona eklendi
 }
 
 const HEART_RED: Color = Color("D7342A")
@@ -198,6 +199,8 @@ static func add_icon(ci: TriBatch, kind: Kind, c: Vector2, s: float, ink: Color,
 			_friends(ci, c, s, ink, cutout)
 		Kind.NEWSPAPER:
 			_newspaper(ci, c, s, ink, cutout, w)
+		Kind.DICE:
+			_dice(ci, c, s, ink, cutout)
 		_:
 			pass
 
@@ -210,6 +213,21 @@ static func _newspaper(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: C
 	_rect(ci, c, s, Vector2(-0.31, -0.02), Vector2(0.19, 0.25), cutout)        # fotoğraf
 	for y: float in [0.01, 0.12, 0.23]:
 		ci.draw_line(c + Vector2(-0.03, y) * s, c + Vector2(0.17, y) * s, cutout, w * 0.6, true)
+
+
+## Zar: hafif eğik yuvarlak kare, yüzünde beş nokta (rastgele takma ad).
+static func _dice(ci: TriBatch, c: Vector2, s: float, ink: Color, cutout: Color) -> void:
+	var tilt: float = -0.18
+	var corners: PackedVector2Array = PackedVector2Array()
+	for k: int in 4:   # yuvarlatılmış köşeler: her köşede kısa yay
+		var corner: Vector2 = Vector2(0.30 if k == 0 or k == 3 else -0.30, 0.30 if k < 2 else -0.30)
+		var start: float = PI * 0.5 * k
+		for j: int in 5:
+			var a: float = start + PI * 0.5 * j / 4.0
+			corners.append(c + (corner + Vector2.from_angle(a) * 0.12).rotated(tilt) * s)
+	ci.draw_colored_polygon(corners, ink)
+	for p: Vector2 in [Vector2.ZERO, Vector2(-0.2, -0.2), Vector2(0.2, -0.2), Vector2(-0.2, 0.2), Vector2(0.2, 0.2)]:
+		ci.draw_circle(c + p.rotated(tilt) * s, 0.075 * s, cutout)
 
 
 ## Görevler: kıskaçlı pano, üstünde iki işaretli satır ve bir boş satır.

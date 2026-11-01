@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- HAZIR AVATAR 29 (yüzsüz simge): spor direksiyon (tools/avatars/make_presets.py üretir, elle düzenleme) -->
+  <defs><radialGradient id="bg" cx="256" cy="220" r="330" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#D8E6FF"/><stop offset="1" stop-color="#7FA6E8"/></radialGradient></defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g fill="#FFFFFF" opacity="0.22">
+  <path d="M 256 250 L 856 250 L 836 405 Z"/>
+  <path d="M 256 250 L 776 550 L 680 674 Z"/>
+  <path d="M 256 250 L 556 770 L 411 830 Z"/>
+  <path d="M 256 250 L 256 850 L 101 830 Z"/>
+  <path d="M 256 250 L -44 770 L -168 674 Z"/>
+  <path d="M 256 250 L -264 550 L -324 405 Z"/>
+  <path d="M 256 250 L -344 250 L -324 95 Z"/>
+  <path d="M 256 250 L -264 -50 L -168 -174 Z"/>
+  <path d="M 256 250 L -44 -270 L 101 -330 Z"/>
+  <path d="M 256 250 L 256 -350 L 411 -330 Z"/>
+  <path d="M 256 250 L 556 -270 L 680 -174 Z"/>
+  <path d="M 256 250 L 776 -50 L 836 95 Z"/>
+  </g>
+  <circle cx="262" cy="266" r="168" fill="#000000" opacity="0.18"/>
+  <path d="M 232 256 L 112 238 L 112 290 L 226 300 Z" fill="#A7AFBC" stroke="#33262F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 280 256 L 400 238 L 400 290 L 286 300 Z" fill="#A7AFBC" stroke="#33262F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 226 290 L 230 404 L 282 404 L 286 290 Z" fill="#A7AFBC" stroke="#33262F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="256" r="156" fill="none" stroke="#33262F" stroke-width="54"/>
+  <circle cx="256" cy="256" r="156" fill="none" stroke="#2E3138" stroke-width="42"/>
+  <circle cx="256" cy="256" r="156" fill="none" stroke="#4A4E58" stroke-width="8" stroke-dasharray="3 14"/>
+  <path d="M 140 160 A 156 156 0 0 1 228 104" fill="none" stroke="#6E7480" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+  <path d="M 238 96 L 274 96 L 274 124 L 238 124 Z" fill="#E2483D" stroke="#33262F" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="264" r="58" fill="#3A3D46" stroke="#33262F" stroke-width="6"/>
+  <circle cx="256" cy="264" r="34" fill="none" stroke="#F2C14E" stroke-width="7"/>
+  <circle cx="256" cy="264" r="10" fill="#F2C14E"/>
+  <circle cx="109.40795115739829" cy="202.6448576411957" r="9" fill="#5A5E68" stroke="#33262F" stroke-width="3"/>
+  <circle cx="402.5920488426017" cy="202.6448576411957" r="9" fill="#5A5E68" stroke="#33262F" stroke-width="3"/>
+</svg>

@@ -79,6 +79,8 @@ var showroom: ShowroomScreen
 var login_screen: LoginScreen
 ## İlk yarıştan sonra bir kez: "Seni kim yendi, ilk sen duy!" → TAMAM → bildirim izni (PushPrompt).
 var push_prompt: PushPrompt
+## Adı hâlâ eski otomatik "Usta1234" olana bir kez havuzdan yeni ad önerisi (RenamePrompt).
+var rename_prompt: RenamePrompt
 ## Birkaç farklı günde oyuna giren oyuncuya bir kez: BİZİ DEĞERLENDİR → Play mağaza sayfası (RatePrompt, ödülsüz).
 var rate_prompt: RatePrompt
 var save_reminder_card: SaveReminderCard
@@ -125,7 +127,9 @@ var avatar_button: AvatarButton
 const AVATAR_BUTTON_SIZE: float = 76.0
 ## Seviye rozeti avatarın sağ altına, dışına doğru taşar (kullanıcı: "level avatarı kapatıyor, küçült, sağ alta al").
 const LEVEL_BADGE_SIZE: float = 26.0
-const LEVEL_BADGE_OVERHANG: float = 8.0
+## 2026-11-01: avatar dairesi kutunun içinde ORNAMENT_ROOM kadar küçük çizildiği için (taşan prestij süsü sığsın) rozet
+## kutunun köşesinde kalsa dairenin kenarına yine biner; taşma payı 8 → 0.
+const LEVEL_BADGE_OVERHANG: float = 0.0
 const LEVEL_BADGE_FONT: int = 12
 ## Bu panolar açıkken sol üst HUD gizlenir (geniş düzenleme panosu ona yer açarken sağdan taşıyordu; gazete tam sayfa;
 ## arkadaş kartı 853 birimlik telefonda bloğun sağına itilince 47 birim taşıyordu — ekran taraması 2026-10-17).
@@ -278,6 +282,7 @@ func _ready() -> void:
 	_build_showroom()
 	_build_login_screen()
 	_build_push_prompt()
+	_build_rename_prompt()
 	_build_rate_prompt()
 	_build_save_reminder()
 	_build_news()
@@ -831,7 +836,7 @@ func _on_cloud_user_changed(profile: Dictionary) -> void:
 
 
 ## İSİM PLAKASI: sosyal profilin takma adı — arkadaşların gördüğü ad, profil kartıyla aynı (2026-10-31: hesapla girince
-## profil "Usta1234" gibi rastgele adla kendiliğinden kurulur, SocialManager.auto_profile; oyuncu adı PROFİL › DÜZENLE'den
+## profil havuzdan rastgele adla ("TurboSomun", NamePool) kendiliğinden kurulur, SocialManager.auto_profile; oyuncu adı PROFİL › DÜZENLE'den
 ## değiştirir). Profil yoksa hesabın (Google) adı, misafirde / e-postada player_name. Ağaç dışında da çağrılır (arkadaş
 ## garajı ziyaretinde sosyal sinyali): get_tree kullanmaz.
 func _refresh_player_name() -> void:
@@ -1670,6 +1675,7 @@ func _register_screens() -> void:
 	router.register(&"profile", profile_screen, UiRouter.Kind.MODAL)
 	router.register(&"account", login_screen, UiRouter.Kind.MODAL)
 	router.register(&"push_prompt", push_prompt, UiRouter.Kind.MODAL)
+	router.register(&"rename_prompt", rename_prompt, UiRouter.Kind.MODAL)
 	router.register(&"rate_prompt", rate_prompt, UiRouter.Kind.MODAL)
 	router.register(&"save_reminder", save_reminder_card, UiRouter.Kind.MODAL)
 	router.register(&"news", news_screen, UiRouter.Kind.MODAL)
@@ -2397,6 +2403,43 @@ func _build_push_prompt() -> void:
 	garage_screen.get_parent().add_child(push_prompt)
 
 
+## YENİ TAKMA AD ÖNERİSİ (2026-11-01, kullanıcı kararı): adı hâlâ eski otomatik "Usta1234" olan oyuncuya güncellemeden
+## sonra BİR KEZ. Sosyal profil hazır olunca, açılıştaki gazete / merdiven / hediye / ders kapanıp oyun
+## RENAME_PROMPT_IDLE sn sakin kalınca açılır (SocialManager.should_offer_rename). Oturumun ilk RENAME_PROMPT_SESSION
+## saniyesi beklenir: açılış akışı (gazete, merdiven, ders) daha başlamadan araya girmesin. Ziyarette yok.
+const RENAME_PROMPT_SESSION: float = 20.0
+const RENAME_PROMPT_IDLE: float = 1.5
+var rename_prompt_session: float = RENAME_PROMPT_SESSION   # testler / QA kısaltır
+var _rename_prompt_timer: Timer
+var _rename_prompt_idle: float = 0.0
+
+
+func _build_rename_prompt() -> void:
+	rename_prompt = RenamePrompt.new()
+	garage_screen.get_parent().add_child(rename_prompt)
+	if GarageVisit.is_visiting():
+		return
+	_rename_prompt_timer = Timer.new()
+	_rename_prompt_timer.name = "RenamePromptTimer"
+	_rename_prompt_timer.wait_time = 0.5
+	add_child(_rename_prompt_timer)
+	_rename_prompt_timer.timeout.connect(_tick_rename_prompt)
+	_rename_prompt_timer.start()
+
+
+func _tick_rename_prompt() -> void:
+	if not is_inside_tree() or Time.get_ticks_msec() < rename_prompt_session * 1000.0:
+		return
+	if _social == null or not _social.should_offer_rename() or not _is_quiet():
+		_rename_prompt_idle = 0.0
+		return
+	_rename_prompt_idle += _rename_prompt_timer.wait_time
+	if _rename_prompt_idle < RENAME_PROMPT_IDLE:
+		return
+	_rename_prompt_timer.queue_free()
+	router.open(&"rename_prompt")
+
+
 func _build_news() -> void:
 	news_screen = NewsScreen.new()
 	garage_screen.get_parent().add_child(news_screen)
@@ -2860,6 +2903,9 @@ func _build_profile_screens() -> void:
 	avatar_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	avatar_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	avatar_button.view.flag_left = true   # sağ alt köşe seviye rozetinin: bayrak sola (üst üste biniyorlardı)
+	# Taşan prestij süsü (taç, kanat, defne, kupa) kutuya sığsın diye daire HERKESTE küçük (kullanıcı kararı 2026-11-01:
+	# "fotoğraf küçük olsun, prestij alan herkese sığsın; süsü olmayanın da küçük olsun"); düzen kaymaz.
+	avatar_button.view.ornament_room = ProfileCatalog.ORNAMENT_ROOM
 	avatar_button.pressed.connect(_on_name_plate_pressed)
 	slot.add_child(avatar_button)
 	level_sign.reparent(slot, false)
@@ -2880,6 +2926,15 @@ func _connect_profile() -> void:
 		avatar_button.show_avatar(profile.my_texture(), profile.my_illustrated(), profile.frame_id, profile.flag)
 	profile.changed.connect(update)
 	profile.avatar_changed.connect(update)
+	# Başarım avatarı (100 drag galibiyeti, 500 tamir…): dokununca PROFİL › DÜZENLE açılır
+	profile.avatar_earned.connect(func(_id: String) -> void:
+		_show_notice(Loc.t("YENİ PROFİL RESMİ AÇILDI!"), HudPalette.GEM_DARK, 2.6, func() -> void:
+			router.open(&"profile")
+			router.open(&"profile_edit")))
+	profile.frame_earned.connect(func(_id: String) -> void:
+		_show_notice(Loc.t("YENİ ÇERÇEVE AÇILDI!"), HudPalette.GEM_DARK, 2.6, func() -> void:
+			router.open(&"profile")
+			router.open(&"profile_edit")))
 	update.call()
 
 

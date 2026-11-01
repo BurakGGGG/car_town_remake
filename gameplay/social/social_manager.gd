@@ -121,7 +121,7 @@ const AVATAR_CACHE_INDEX: String = "user://avatars/index.json"
 const REPORT_REASONS: Array[String] = ["photo", "name", "garage"]
 ## OTOMATİK PROFİL (kullanıcı 2026-10-31: "google veya maille girdi ama profil kurmak için arkadaşlara gitmesi gerekiyor;
 ## direkt rastgele isimli açalım, isteyen değiştirsin"): hesapla giren oyuncunun sunucuda profili yoksa oturum açılınca
-## rastgele adla (SocialNames.default_name, "Usta1234") SESSİZCE kurulur; ad PROFİL › DÜZENLE ya da ARKADAŞLAR'dan
+## rastgele adla (SocialNames.default_name, havuzdan "TurboSomun") SESSİZCE kurulur; ad PROFİL › DÜZENLE ya da ARKADAŞLAR'dan
 ## değişir. Kurulamazsa (ağ) NO_PROFILE kalır: ARKADAŞLAR'daki form yedektir, sonraki açılışta yeniden denenir.
 ## Testler elle kurma akışını denerken kapatır.
 static var auto_profile: bool = true
@@ -425,6 +425,26 @@ func my_name() -> String:
 
 func my_code() -> String:
 	return SaveSafe.s(_meta.get("code", ""))
+
+
+## YENİ TAKMA AD ÖNERİSİ (2026-11-01, kullanıcı kararı): adı hâlâ eski otomatik "Usta1234" olan oyuncuya bir kez
+## havuzdan ad önerilir (RenamePrompt; KAYDET / KALSIN). Gösterilen hesap bu cihazda RENAME_OFFER_PATH'e yazılır.
+const RENAME_OFFER_PATH: String = "user://rename_offer.json"
+
+
+func should_offer_rename() -> bool:
+	return is_ready() and _busy == 0 and restricted_text.is_empty() and SocialNames.is_legacy_auto_name(my_name()) \
+		and not bool(_read_json(RENAME_OFFER_PATH).get(_uid, false))
+
+
+func mark_rename_offered() -> void:
+	if _uid.is_empty():
+		return
+	var offered: Dictionary = _read_json(RENAME_OFFER_PATH)
+	offered[_uid] = true
+	var file: FileAccess = FileAccess.open(RENAME_OFFER_PATH, FileAccess.WRITE)
+	if file:
+		file.store_string(JSON.stringify(offered))
 
 
 func is_friend(uid: String) -> bool:
@@ -1421,11 +1441,12 @@ static func _ask_of(doc: Dictionary) -> Dictionary:
 
 
 ## BAŞKA OYUNCUDAN gelen takma ad (garaj, istek, davet, hediye, haber, ziyaret belgesi): kendi adımızla aynı süzgeçten
-## (biçim + uygunsuz kelime + "admin" / "autoyard") geçmezse oyuncunun kimliğinden türeyen "Usta1234" gösterilir.
+## (biçim + uygunsuz kelime + "admin" / "autoyard") geçmezse oyuncunun kimliğinden türeyen havuz adı gösterilir
+## (NamePool.seeded_name; 2026-11-01'e kadar "Usta1234").
 ## Belgeyi oyunu atlayıp elle yazan biri adını süzgeçsiz yazabiliyordu. Şikâyet belgesindeki ad bilerek ham kalır.
 static func their_name(raw: Variant, uid: String) -> String:
 	var name: String = SocialNames.clean_name(SaveSafe.s(raw))
-	return name if SocialNames.is_valid_name(name) else "Usta%04d" % (absi(uid.hash()) % 10000)
+	return name if SocialNames.is_valid_name(name) else NamePool.seeded_name(uid.hash())
 
 
 ## Açık garaj belgesinden profil alanları (geçersiz değerler boşa düşer; eski sürümün belgesinde hiçbiri yoktur).

@@ -193,6 +193,11 @@ func _card(entry: Dictionary, alpha: float = 1.0) -> Control:
 			picture = _framed_avatar(String(entry["id"]))
 			title = Loc.t("%s ÇERÇEVE") % Loc.t(String(frame.get("name", "")))
 			detail = Loc.t("PROFİLİNDE KULLANABİLİRSİN")
+		LevelUnlocks.Kind.AVATAR:
+			tag = Loc.t("PROFİL RESMİ")
+			picture = _preset_avatar(String(entry["id"]))
+			title = Loc.t("YENİ PROFİL RESMİ")
+			detail = Loc.t("PROFİLİNDE KULLANABİLİRSİN")
 		LevelUnlocks.Kind.PET:
 			tag = Loc.t("YENİ DOST")
 			picture = _bubble(HudIcon.Kind.HEART, HudPalette.INK)

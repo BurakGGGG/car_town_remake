@@ -1007,8 +1007,8 @@
     {
       "id": "lambo_huracan",
       "brand": "LAMBERTINI",
-      "model": "URAGANO",
-      "display_name": "LAMBERTINI URAGANO",
+      "model": "HURACO",
+      "display_name": "LAMBERTINI HURACO",
       "year": 2015,
       "price": 400000,
       "condition": 0.85,
@@ -1040,7 +1040,7 @@
         "grip": 90
       },
       "performance": {
-        "variant": "Lambertini Uragano",
+        "variant": "Lambertini Huraco",
         "engine": "5.2 V10",
         "hp": 610,
         "zero_100": 2.9,
@@ -1158,9 +1158,9 @@
     },
     {
       "id": "tesla_model_y",
-      "brand": "TELSA",
+      "brand": "TESSORA",
       "model": "MODO Y",
-      "display_name": "TELSA MODO Y",
+      "display_name": "TESSORA MODO Y",
       "year": 2021,
       "price": 110000,
       "condition": 0.85,
@@ -1191,7 +1191,7 @@
         "grip": 84
       },
       "performance": {
-        "variant": "Telsa Modo Y",
+        "variant": "Tessora Modo Y",
         "engine": "Elektrik",
         "hp": 351,
         "zero_100": 5.0,
@@ -1309,8 +1309,8 @@
     {
       "id": "vw_beetle",
       "brand": "VOLKAN",
-      "model": "BÖCÜK 2.0",
-      "display_name": "VOLKAN BÖCÜK 2.0",
+      "model": "VASVAS 2.0",
+      "display_name": "VOLKAN VASVAS 2.0",
       "year": 2016,
       "price": 80000,
       "condition": 0.85,
@@ -1341,7 +1341,7 @@
         "grip": 72
       },
       "performance": {
-        "variant": "Volkan Böcük 2.0",
+        "variant": "Volkan Vasvas 2.0",
         "engine": "2.0 TSI",
         "hp": 220,
         "zero_100": 6.9,
@@ -2264,8 +2264,8 @@
     {
       "id": "police_bentley",
       "brand": "BENTON",
-      "model": "PATROL GT",
-      "display_name": "BENTON PATROL GT",
+      "model": "CONTINA GT",
+      "display_name": "BENTON CONTINA GT",
       "year": 2018,
       "price": 380000,
       "condition": 0.85,
@@ -2296,7 +2296,7 @@
         "grip": 86
       },
       "performance": {
-        "variant": "Benton Patrol GT",
+        "variant": "Benton Contina GT",
         "engine": "6.0 W12 Biturbo",
         "hp": 635,
         "zero_100": 3.7,
@@ -2406,8 +2406,8 @@
     {
       "id": "vw_beetle_1967",
       "brand": "VOLKAN",
-      "model": "BÖCÜK 67",
-      "label": "VOLKAN\nBÖCÜK 67",
+      "model": "VASVAS 67",
+      "label": "VOLKAN\nVASVAS 67",
       "year": 1967,
       "price": 25000,
       "condition": 1.0,
@@ -2430,7 +2430,7 @@
         "grip": 40
       },
       "performance": {
-        "variant": "Volkan Böcük 67",
+        "variant": "Volkan Vasvas 67",
         "engine": "1.5",
         "hp": 53,
         "zero_100": 20.0,
@@ -2451,8 +2451,8 @@
     {
       "id": "fiat_500_1965",
       "brand": "FIORA",
-      "model": "PICCOLA 65",
-      "label": "FIORA\nPICCOLA 65",
+      "model": "NOVA 50",
+      "label": "FIORA\nNOVA 50",
       "year": 1965,
       "price": 25000,
       "condition": 1.0,
@@ -2475,7 +2475,7 @@
         "grip": 38
       },
       "performance": {
-        "variant": "Fiora Piccola 65",
+        "variant": "Fiora Nova 50",
         "engine": "0.5",
         "hp": 18,
         "zero_100": 35.0,
@@ -2721,8 +2721,8 @@
     {
       "id": "vw_t1_bus",
       "brand": "VOLKAN",
-      "model": "HİPPİ T1",
-      "label": "VOLKAN\nHİPPİ T1",
+      "model": "TRANSPO T1",
+      "label": "VOLKAN\nTRANSPO T1",
       "year": 1965,
       "price": 25000,
       "condition": 1.0,
@@ -2745,7 +2745,7 @@
         "grip": 40
       },
       "performance": {
-        "variant": "Volkan Hippi T1",
+        "variant": "Volkan Transpo T1",
         "engine": "1.5",
         "hp": 44,
         "zero_100": 40.0,
@@ -3126,8 +3126,8 @@
     {
       "id": "mercedes_300sl",
       "brand": "MERIDES",
-      "model": "GULL 55",
-      "label": "MERIDES\nGULL 55",
+      "model": "SL-30",
+      "label": "MERIDES\nSL-30",
       "year": 1955,
       "price": 62500,
       "condition": 1.0,
@@ -3150,7 +3150,7 @@
         "grip": 58
       },
       "performance": {
-        "variant": "Merides Gull 55",
+        "variant": "Merides SL-30",
         "engine": "3.0",
         "hp": 215,
         "zero_100": 8.8,
@@ -3306,8 +3306,8 @@
     {
       "id": "bmw_m3_e30",
       "brand": "BMR",
-      "model": "RS 30",
-      "label": "BMR\nRS 30",
+      "model": "MX 3.30",
+      "label": "BMR\nMX 3.30",
       "year": 1990,
       "price": 62500,
       "condition": 1.0,
@@ -3330,7 +3330,7 @@
         "grip": 72
       },
       "performance": {
-        "variant": "BMR RS 30",
+        "variant": "BMR MX 3.30",
         "engine": "2.3",
         "hp": 215,
         "zero_100": 6.6,

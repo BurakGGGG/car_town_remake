@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- ÇERÇEVE SÜSÜ crown_front (tools/avatars/make_frames.py üretir, elle düzenleme) -->
+  <defs><linearGradient id="crown_m" x1="0" y1="36" x2="0" y2="132" gradientUnits="userSpaceOnUse"><stop offset="0.00" stop-color="#FFF0B0"/><stop offset="0.50" stop-color="#E8B23A"/><stop offset="1.00" stop-color="#8A5A0C"/></linearGradient><linearGradient id="crown_band" x1="0" y1="98" x2="0" y2="134" gradientUnits="userSpaceOnUse"><stop offset="0.00" stop-color="#FFF0B0"/><stop offset="0.33" stop-color="#E8B23A"/><stop offset="0.67" stop-color="#8A5A0C"/><stop offset="1.00" stop-color="#E8B23A"/></linearGradient><radialGradient id="crown_v" cx="256" cy="70" r="90" gradientUnits="userSpaceOnUse"><stop offset="0.00" stop-color="#E8485A"/><stop offset="0.50" stop-color="#A8142A"/><stop offset="1.00" stop-color="#5A0614"/></radialGradient></defs>
+  <path d="M 186 104 C 186 60, 216 44, 256 44 C 296 44, 326 60, 326 104 Z" fill="url(#crown_v)" stroke="#4A2A0C" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 214 104 C 214 80, 222.4 56, 256 46" fill="none" stroke="#4A2A0C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+  <path d="M 256 104 C 256 80, 256.0 56, 256 46" fill="none" stroke="#4A2A0C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+  <path d="M 298 104 C 298 80, 289.6 56, 256 46" fill="none" stroke="#4A2A0C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+  <path d="M 176 104 L 160 58 Q 182 76, 204 76 L 226 46 Q 241 70, 256 68 Q 271 70, 286 46 L 308 76 Q 330 76, 352 58 L 336 104 Z" fill="url(#crown_m)" stroke="#4A2A0C" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 172 92 Q 186 82, 204 86 M 340 92 Q 326 82, 308 86" fill="none" stroke="#FFF0B0" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <path d="M 230 60 Q 241 76, 256 76 Q 271 76, 282 60" fill="none" stroke="#FFF0B0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+  <path d="M 170 132 C 200 120, 312 120, 342 132 L 338 102 C 306 92, 206 92, 174 102 Z" fill="url(#crown_band)" stroke="#4A2A0C" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 180 108 C 214 99, 298 99, 332 108" fill="none" stroke="#FFF0B0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <path d="M 178 126 C 214 116, 298 116, 334 126" fill="none" stroke="#8A5A0C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+  <circle cx="186.0" cy="114.5" r="2.2" fill="#FFF0B0"/>
+  <circle cx="198.0" cy="115.0" r="2.2" fill="#FFF0B0"/>
+  <circle cx="210.0" cy="115.4" r="2.2" fill="#FFF0B0"/>
+  <circle cx="222.0" cy="115.8" r="2.2" fill="#FFF0B0"/>
+  <circle cx="234.0" cy="116.2" r="2.2" fill="#FFF0B0"/>
+  <circle cx="246.0" cy="116.7" r="2.2" fill="#FFF0B0"/>
+  <circle cx="258.0" cy="116.9" r="2.2" fill="#FFF0B0"/>
+  <circle cx="270.0" cy="116.5" r="2.2" fill="#FFF0B0"/>
+  <circle cx="282.0" cy="116.1" r="2.2" fill="#FFF0B0"/>
+  <circle cx="294.0" cy="115.7" r="2.2" fill="#FFF0B0"/>
+  <circle cx="306.0" cy="115.2" r="2.2" fill="#FFF0B0"/>
+  <circle cx="318.0" cy="114.8" r="2.2" fill="#FFF0B0"/>
+  <circle cx="160.0" cy="56.0" r="8.5" fill="#F4F0E6" stroke="#4A2A0C" stroke-width="3.5"/>
+  <circle cx="157.5" cy="53.5" r="2.6" fill="#FFFFFF"/>
+  <circle cx="226.0" cy="44.0" r="8.5" fill="#F4F0E6" stroke="#4A2A0C" stroke-width="3.5"/>
+  <circle cx="223.5" cy="41.5" r="2.6" fill="#FFFFFF"/>
+  <circle cx="286.0" cy="44.0" r="8.5" fill="#F4F0E6" stroke="#4A2A0C" stroke-width="3.5"/>
+  <circle cx="283.5" cy="41.5" r="2.6" fill="#FFFFFF"/>
+  <circle cx="352.0" cy="56.0" r="8.5" fill="#F4F0E6" stroke="#4A2A0C" stroke-width="3.5"/>
+  <circle cx="349.5" cy="53.5" r="2.6" fill="#FFFFFF"/>
+  <circle cx="256.0" cy="46.0" r="8.0" fill="#E8B23A" stroke="#4A2A0C" stroke-width="3.5"/>
+  <path d="M 256 38 L 256 34 M 252 36 L 260 36" fill="none" stroke="#4A2A0C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 256 99 L 268.6 114 L 256 129 L 243.4 114 Z" fill="#7A5208"/>
+  <path d="M 256 102 L 265.6 114 L 256 126 L 246.4 114 Z" fill="#D8283A" stroke="#6E0A14" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 256 102 L 265.6 114 L 256 112.2 Z" fill="#FF9AA4" opacity="0.9"/>
+  <path d="M 256 126 L 246.4 114 L 256 115.8 Z" fill="#6E0A14" opacity="0.5"/>
+  <circle cx="253.1" cy="109.8" r="1.9" fill="#FFFFFF"/>
+  <circle cx="212.0" cy="116.0" r="10.5" fill="#7A5208"/>
+  <circle cx="212.0" cy="116.0" r="8.0" fill="#2F62C0" stroke="#0E2A6A" stroke-width="2.5"/>
+  <path d="M 206.4 115.2 Q 212 107.2 217.6 115.2 Q 212 112.8 206.4 115.2 Z" fill="#A8C8FF" opacity="0.85"/>
+  <circle cx="209.2" cy="112.8" r="1.8" fill="#FFFFFF"/>
+  <circle cx="300.0" cy="116.0" r="10.5" fill="#7A5208"/>
+  <circle cx="300.0" cy="116.0" r="8.0" fill="#2F62C0" stroke="#0E2A6A" stroke-width="2.5"/>
+  <path d="M 294.4 115.2 Q 300 107.2 305.6 115.2 Q 300 112.8 294.4 115.2 Z" fill="#A8C8FF" opacity="0.85"/>
+  <circle cx="297.2" cy="112.8" r="1.8" fill="#FFFFFF"/>
+  <circle cx="184.0" cy="120.0" r="8.0" fill="#7A5208"/>
+  <circle cx="184.0" cy="120.0" r="5.5" fill="#2E9A5A" stroke="#0E4A2A" stroke-width="2.5"/>
+  <path d="M 180.15 119.45 Q 184 113.95 187.85 119.45 Q 184 117.8 180.15 119.45 Z" fill="#A8F0C0" opacity="0.85"/>
+  <circle cx="182.1" cy="117.8" r="1.2" fill="#FFFFFF"/>
+  <circle cx="328.0" cy="120.0" r="8.0" fill="#7A5208"/>
+  <circle cx="328.0" cy="120.0" r="5.5" fill="#2E9A5A" stroke="#0E4A2A" stroke-width="2.5"/>
+  <path d="M 324.15 119.45 Q 328 113.95 331.85 119.45 Q 328 117.8 324.15 119.45 Z" fill="#A8F0C0" opacity="0.85"/>
+  <circle cx="326.1" cy="117.8" r="1.2" fill="#FFFFFF"/>
+</svg>

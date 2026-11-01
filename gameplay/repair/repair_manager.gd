@@ -997,10 +997,17 @@ func _dismiss_customer(vehicle: TrafficVehicle) -> void:
 	customer_left.emit(vehicle)
 
 
+## Her karede sorulur (_tick_patience): yönetici bir kez bulunur, zayıf referansla tutulur (her karede grup araması yapılıyordu).
+var _director_ref: WeakRef = null
+
+
 func _tutorial_running() -> bool:
 	if not is_inside_tree():
 		return false
-	var director: Node = get_tree().get_first_node_in_group("tutorial_director")
+	var director: Node = _director_ref.get_ref() as Node if _director_ref else null
+	if director == null or not director.is_inside_tree():
+		director = get_tree().get_first_node_in_group("tutorial_director")
+		_director_ref = weakref(director) if director else null
 	return director != null and director.has_method(&"is_running") and bool(director.call(&"is_running"))
 
 

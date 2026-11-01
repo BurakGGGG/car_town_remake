@@ -45,6 +45,7 @@ var _scroll: ScrollContainer
 var _notice: Label
 var _tab: Tab = Tab.PHOTO
 var _confirm_frame: String = ""
+var _confirm_avatar: String = ""   # elmaslı avatar: ilk dokunuş fiyatı söyler, ikincisi alır
 var _name_edit: LineEdit
 var _title_edit: LineEdit
 var _closing: bool = false
@@ -63,6 +64,7 @@ func _ready() -> void:
 
 func open() -> void:
 	_confirm_frame = ""
+	_confirm_avatar = ""
 	_notice.text = ""
 	_gen += 1
 	_closing = false
@@ -205,9 +207,9 @@ func _build() -> void:
 func _connect() -> void:
 	_profile = get_tree().get_first_node_in_group("player_profile") as PlayerProfile
 	_social = get_tree().get_first_node_in_group("social") as SocialManager
-	if _profile:
-		_profile.changed.connect(_refresh)
-		_profile.avatar_changed.connect(_refresh)
+	if _profile:   # changed + avatar_changed aynı karede gelir (set_preset ikisini de yayar): tek yeniden kurulum
+		_profile.changed.connect(_refresh_soon)
+		_profile.avatar_changed.connect(_refresh_soon)
 	if _social:
 		_social.notice.connect(func(text: String) -> void:
 			if visible:
@@ -223,8 +225,21 @@ func _select_tab(tab: int) -> void:
 	_tab = tab as Tab
 	(_tabs[tab] as PlateButton).set_pressed_no_signal(true)
 	_confirm_frame = ""
+	_confirm_avatar = ""
 	_refresh()
 	_scroll.scroll_vertical = 0
+
+
+var _refresh_queued: bool = false
+
+
+func _refresh_soon() -> void:
+	if _refresh_queued:
+		return
+	_refresh_queued = true
+	(func() -> void:
+		_refresh_queued = false
+		_refresh()).call_deferred()
 
 
 func _refresh() -> void:
@@ -283,17 +298,34 @@ func _build_photo() -> void:
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = 6
 	grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	grid.add_theme_constant_override(&"h_separation", 14)
-	grid.add_theme_constant_override(&"v_separation", 10)
-	for id: String in ProfileCatalog.preset_ids():
+	grid.add_theme_constant_override(&"h_separation", 6)
+	grid.add_theme_constant_override(&"v_separation", 4)
+	for id: String in ProfileCatalog.preset_ids_display():
+		var unlocked: bool = _profile.avatar_unlocked(id)
+		var cell: VBoxContainer = VBoxContainer.new()
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cell.add_theme_constant_override(&"separation", 0)
 		var pick: AvatarButton = AvatarButton.new()
 		pick.name = "Preset_" + id
 		pick.diameter = 62.0
+		pick.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		pick.toggle_mode = true
 		pick.button_pressed = _profile.avatar == id
 		pick.show_avatar(ProfileCatalog.preset_texture(id), true)
-		pick.pressed.connect(func() -> void: _profile.set_preset(id))
-		grid.add_child(pick)
+		pick.pressed.connect(_on_preset_pressed.bind(id))
+		if not unlocked:
+			pick.view.modulate = Color(1.0, 1.0, 1.0, 0.5)
+			var lock: HudIcon = HudIcon.new()
+			lock.kind = HudIcon.Kind.LOCK
+			lock.icon_size = 18.0
+			lock.color = HudPalette.INK
+			lock.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+			lock.offset_left = -20.0
+			lock.offset_top = -20.0
+			pick.add_child(lock)
+		cell.add_child(pick)
+		cell.add_child(_avatar_caption(id, unlocked))
+		grid.add_child(cell)
 	_body.add_child(grid)
 
 	var google_row: HBoxContainer = _row()
@@ -308,6 +340,78 @@ func _build_photo() -> void:
 	toggle.highlight = _profile.use_google
 	google_row.add_child(toggle)
 	_body.add_child(google_row)
+
+
+## Avatarın altındaki kısa koşul, hücre genişliğinde (AVATAR_CELL): "SEVİYE 17"; elmaslıda elmas simgesi + fiyat
+## (onayda kırmızı "300?"), başarımda bayrak / anahtar simgesi + ilerleme ("37/100"). Açık avatarda boş (satırlar
+## hizalı kalsın diye yer tutar).
+const AVATAR_CELL: float = 70.0
+
+
+func _avatar_caption(id: String, unlocked: bool) -> Control:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "State"
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override(&"separation", 2)
+	row.custom_minimum_size = Vector2(AVATAR_CELL, 17.0)
+	var text: String = ""
+	var rule: Dictionary = ProfileCatalog.avatar_unlock(id)
+	if not unlocked:
+		var price: int = ProfileCatalog.avatar_price(id)
+		var done: Array[int] = _profile.avatar_progress(id)
+		if price > 0 or done[1] > 0:   # dilden bağımsız: simge + sayı ("300 JUWELEN" hücreye sığmıyordu)
+			var icon: HudIcon = HudIcon.new()
+			icon.kind = HudIcon.Kind.GEM if price > 0 else (HudIcon.Kind.FLAG if rule.has("wins") else HudIcon.Kind.WRENCH)
+			icon.icon_size = 12.0
+			icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			row.add_child(icon)
+			if price > 0:
+				text = ("%d?" if _confirm_avatar == id else "%d") % price
+			else:
+				text = "%d/%d" % [done[0], done[1]]
+		else:
+			text = ProfileCatalog.avatar_requirement(id)
+	var label: Label = _label(&"HudInkCaption", text)
+	label.add_theme_font_size_override(&"font_size", 11)
+	label.clip_text = true   # en küçük genişliği 0 olur: hücreyi doldurup ortalanır
+	label.custom_minimum_size = Vector2(0.0, 17.0)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if row.get_child_count() > 0 else HORIZONTAL_ALIGNMENT_CENTER
+	if _confirm_avatar == id:
+		label.add_theme_color_override(&"font_color", HudPalette.DANGER)
+	row.add_child(label)
+	return row
+
+
+## Açık avatar seçilir; kilitliye dokununca koşul söylenir; elmaslı olana iki dokunuşla alınır (çerçevelerdeki gibi).
+func _on_preset_pressed(id: String) -> void:
+	_notice.text = ""
+	if _profile.avatar_unlocked(id):
+		_confirm_avatar = ""
+		_profile.set_preset(id)
+		return
+	var rule: Dictionary = ProfileCatalog.avatar_unlock(id)
+	var price: int = ProfileCatalog.avatar_price(id)
+	if price <= 0:
+		_confirm_avatar = ""
+		if rule.has("level"):
+			_notice.text = Loc.t("Bu profil resmi %d. seviyede açılır.") % int(rule["level"])
+		elif rule.has("wins"):
+			_notice.text = Loc.t("Bu profil resmi %d drag galibiyetinde açılır.") % int(rule["wins"])
+		else:
+			_notice.text = Loc.t("Bu profil resmi %d tamirde açılır.") % int(rule.get("repairs", 0))
+		_refresh()
+		return
+	if _confirm_avatar != id:
+		_confirm_avatar = id
+		_notice.text = Loc.t("Bu profil resmi %d GEM. Almak için tekrar dokun.") % price
+		_refresh()
+		return
+	_confirm_avatar = ""
+	if not _profile.buy_avatar(id):
+		_notice.text = Loc.t("GEM YETERSİZ · %d GEM GEREKİYOR") % price
+		_refresh()
 
 
 func _on_gallery() -> void:
@@ -368,6 +472,7 @@ func _build_frames() -> void:
 		pick.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		pick.toggle_mode = true
 		pick.button_pressed = _profile.frame_id == id
+		pick.view.ornament_room = ProfileCatalog.ORNAMENT_ROOM   # taşan süs komşu hücrenin yazısına binmesin
 		pick.show_avatar(tex, illustrated, id)
 		pick.pressed.connect(_on_frame_pressed.bind(id))
 		cell.add_child(pick)
@@ -392,7 +497,14 @@ func _frame_state(entry: Dictionary) -> String:
 		return Loc.t("SEÇ")
 	if int(entry["gems"]) > 0:
 		return Loc.t("AL? %d GEM") % int(entry["gems"]) if _confirm_frame == id else Loc.t("%d GEM") % int(entry["gems"])
+	if ProfileCatalog.frame_wins(id) > 0:
+		return "%d/%d" % [mini(_race_wins(), ProfileCatalog.frame_wins(id)), ProfileCatalog.frame_wins(id)]
 	return Loc.t("SEVİYE %d") % int(entry["level"])
+
+
+func _race_wins() -> int:
+	var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager
+	return race.wins() if race else 0
 
 
 func _on_frame_pressed(id: String) -> void:
@@ -403,6 +515,10 @@ func _on_frame_pressed(id: String) -> void:
 		_profile.set_frame(id)
 		return
 	var price: int = int(entry["gems"])
+	if price <= 0 and ProfileCatalog.frame_wins(id) > 0:
+		_notice.text = Loc.t("%s çerçevesi %d drag galibiyetinde açılır.") % [Loc.t(String(entry["name"])), ProfileCatalog.frame_wins(id)]
+		_refresh()
+		return
 	if price <= 0:
 		_notice.text = Loc.t("%s çerçevesi %d. seviyede açılır.") % [Loc.t(String(entry["name"])), int(entry["level"])]
 		_refresh()
@@ -488,6 +604,7 @@ func _build_names() -> void:
 		_name_edit.name = "NameEdit"
 		_name_edit.text = _social.my_name()
 		name_row.add_child(_name_edit)
+		name_row.add_child(_dice_button(_name_edit))
 		name_row.add_child(_button(Loc.t("DEĞİŞTİR"), func() -> void: _social.rename(_name_edit.text), _social.is_busy()))
 		_body.add_child(name_row)
 	else:
@@ -536,6 +653,13 @@ func _button(text: String, callback: Callable, disabled: bool = false) -> PlateB
 	button.focus_mode = Control.FOCUS_NONE
 	button.pressed.connect(callback)
 	return button
+
+
+## ZAR: havuzdan yeni bir takma ad önerir (oyun dilinde); kaydetmek için yine DEĞİŞTİR / KAYDET'e basılır.
+func _dice_button(target: LineEdit) -> PlateButton:
+	return RenamePrompt.dice_button(func() -> void:
+		target.text = SocialNames.default_name()
+		target.caret_column = target.text.length(), 44.0)
 
 
 func _label(variation: StringName, text: String) -> Label:

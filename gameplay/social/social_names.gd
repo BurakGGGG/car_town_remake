@@ -109,10 +109,16 @@ static func is_blocked(name: String) -> bool:
 	return false
 
 
-## Yeni profil için önerilen ad: "Usta" + 4 rakam.
+## Yeni profil için önerilen ad: oyun dilinde havuzdan "sıfat + garaj nesnesi" (NamePool; 2026-11-01'e kadar
+## "Usta" + 4 rakamdı).
 static func default_name(rng: RandomNumberGenerator = null) -> String:
-	var number: int = rng.randi_range(1000, 9999) if rng else randi_range(1000, 9999)
-	return "Usta%d" % number
+	return NamePool.random_name("", rng)
+
+
+## 2026-11-01'den önceki otomatik ad mı ("Usta" + 4 rakam): bu oyunculara bir kez yeni ad önerilir (RenamePrompt).
+static func is_legacy_auto_name(name: String) -> bool:
+	return name.length() == 8 and name.begins_with("Usta") and name.substr(4).is_valid_int() \
+		and not name.substr(4).contains("-") and not name.substr(4).contains("+")
 
 
 static func _simplify(text: String) -> String:

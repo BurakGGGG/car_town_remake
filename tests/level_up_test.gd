@@ -62,8 +62,15 @@ func _unlocks() -> void:
 	check(at5.has(LevelUnlocks.Kind.FRAME) and StringName(at5[LevelUnlocks.Kind.FRAME]["id"]) == &"bronze",
 		"seviye 5: BRONZ çerçeve (elmaslı çerçeveler seviyeyle açılmaz)")
 	var at3: Dictionary = _kinds(LevelUnlocks.between(2, 3))
-	check(at3.has(LevelUnlocks.Kind.MISSIONS) and at3.has(LevelUnlocks.Kind.MOD_TIER) and at3.size() == 2,
-		"seviye 3: görevler + modifiye 1. kademe")
+	check(at3.has(LevelUnlocks.Kind.MISSIONS) and at3.has(LevelUnlocks.Kind.MOD_TIER) and at3.has(LevelUnlocks.Kind.AVATAR)
+		and at3.has(LevelUnlocks.Kind.FRAME) and at3.size() == 4,
+		"seviye 3: görevler + modifiye 1. kademe + profil resmi (Yeni ehliyetli) + İKAZ BANDI çerçevesi")
+	var at99: Dictionary = _kinds(LevelUnlocks.between(98, 99))
+	check(at99.has(LevelUnlocks.Kind.FRAME) and StringName(at99[LevelUnlocks.Kind.FRAME]["id"]) == &"crown", "seviye 99: TAÇ çerçevesi")
+	var wins_frame: bool = false
+	for e: Dictionary in LevelUnlocks.between(1, 99):
+		wins_frame = wins_frame or (e["kind"] == LevelUnlocks.Kind.FRAME and ProfileCatalog.frame_wins(String(e["id"])) > 0)
+	check(not wins_frame, "galibiyetle açılan ELMAS TAÇ seviye ekranında yok")
 	var at10: Dictionary = _kinds(LevelUnlocks.between(9, 10))
 	check(at10.has(LevelUnlocks.Kind.CRATE) and StringName(at10[LevelUnlocks.Kind.CRATE]["id"]) == &"family_crate",
 		"seviye 10: AİLE KASASI")
@@ -112,8 +119,10 @@ func _unlocks() -> void:
 		expected += 1 if PerformanceMods.required_level(stage) > 1 else 0
 	expected += 1 if MissionCatalog.MIN_LEVEL > 1 else 0
 	for frame: Dictionary in ProfileCatalog.FRAMES:
-		expected += 1 if int(frame["gems"]) == 0 and int(frame["level"]) > 1 else 0
+		expected += 1 if int(frame["gems"]) == 0 and int(frame["level"]) > 1 and not frame.has("wins") else 0
 	expected += 1 if PetManager.ARRIVAL_LEVEL > 1 else 0   # GARAJ DOSTLARI: kedi (YENİ DOST)
+	for id: String in ProfileCatalog.preset_ids():   # seviyeyle açılan hazır avatarlar (2026-11-01)
+		expected += 1 if int(ProfileCatalog.avatar_unlock(id).get("level", 0)) > 1 else 0
 	var decor_expected: int = 0
 	for item: Dictionary in GarageDecor.all():
 		decor_expected += 1 if int(item["min_level"]) > 1 else 0
@@ -125,11 +134,11 @@ func _unlocks() -> void:
 				decor_found += (entry["items"] as Array).size()
 			else:
 				found += 1
-	check(found == expected, "her müşteri / depo / kasa / kademe / görev / çerçeve / kedi kilidi bir kez (%d / %d)" % [found, expected])
+	check(found == expected, "her müşteri / depo / kasa / kademe / görev / çerçeve / kedi / avatar kilidi bir kez (%d / %d)" % [found, expected])
 	check(decor_found == decor_expected, "her dekor eşyası bir kez (%d / %d)" % [decor_found, decor_expected])
 
 	var next: Dictionary = LevelUnlocks.next_after(2)
-	check(int(next.get("level", 0)) == 3 and (next["unlocks"] as Array).size() == 2, "2'den sonra ilk açılış seviye 3 (görevler + kademe)")
+	check(int(next.get("level", 0)) == 3 and (next["unlocks"] as Array).size() == 4, "2'den sonra ilk açılış seviye 3 (görevler + kademe + profil resmi + çerçeve)")
 	check(LevelUnlocks.next_after(LevelUnlocks.MAX_LEVEL).is_empty(), "en üst seviyeden sonra açılış yok")
 
 
@@ -152,11 +161,11 @@ func _screen() -> void:
 	check((screen.get("_gem_label") as Label).text == "+%d GEM" % (PlayerProgress.LEVEL_GEMS * 2), "gem toplamı: %s" % (screen.get("_gem_label") as Label).text)
 	check((screen.get("_divider_label") as Label).text == "AÇILANLAR", "başlık AÇILANLAR")
 	var cards: HBoxContainer = screen.get("_cards")
-	check(cards.get_child_count() == 3, "3 kart: dekor (sv2) + görevler + modifiye (%d)" % cards.get_child_count())
+	check(cards.get_child_count() == 5, "5 kart: dekor (sv2) + görevler + modifiye + profil resmi + çerçeve (%d)" % cards.get_child_count())
 	# Seviye 2'de yalnız zemin karosu açılır (3B küçük resmi yok): kartta dokudan kare önizleme olmalı (boş kalıyordu)
 	var swatches: int = 0
 	for node: Node in cards.find_children("*", "Control", true, false):
-		if node.get_script() != null and node.get("texture") is Texture2D and not node is TextureRect:
+		if node.get_script() != null and node.get("texture") is Texture2D and not node is TextureRect and not node is AvatarView:
 			swatches += 1
 	check(swatches == RewardScreen.DECOR_THUMBS, "dekor kartında karo önizlemesi (%d)" % swatches)
 	(screen.get("_continue") as PlateButton).pressed.emit()
@@ -178,10 +187,10 @@ func _screen() -> void:
 	screen.close()
 	await seconds(0.4)
 
-	screen.add_level(31, 7750)   # 30'dan sonra açılan yok, sıradaki de yok
+	screen.add_level(LevelUnlocks.MAX_LEVEL + 1, 7750)   # son kilit sv99 (TAÇ): ondan sonra açılan yok, sıradaki de yok
 	await seconds(1.6)
 	check(screen.visible and cards.get_child_count() == 0 and not (screen.get("_divider") as Control).visible,
-		"30 sonrası: yalnız rozet + ödül, kart yok")
+		"son seviyeden sonra: yalnız rozet + ödül, kart yok")
 	screen.close()
 	await seconds(0.4)
 	check(not screen.visible, "kapandı")

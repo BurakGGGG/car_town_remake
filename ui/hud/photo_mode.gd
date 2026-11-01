@@ -181,6 +181,12 @@ func _gui_input(event: InputEvent) -> void:
 	accept_event()
 
 
+
+## Yalnız görünürken kare başına çalışır (gizliyken her karede boşuna çağrılıyordu; 2026-11-01 turu).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED or what == NOTIFICATION_ENTER_TREE:
+		set_process(is_visible_in_tree())
+
 func _process(delta: float) -> void:
 	if not visible:
 		return

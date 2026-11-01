@@ -76,7 +76,7 @@ func _run() -> void:
 		% ("" if no_card.is_empty() else ": eksik " + ", ".join(no_card)))
 	check(ResourceLoader.exists(JunkyardPostcard.OVERLAY_PATH) and ResourceLoader.exists(JunkyardPostcard.HAND_FONT_PATH)
 		and ResourceLoader.exists(JunkyardPostcard.SLAB_FONT_PATH), "kartpostal: kırışık katmanı + iki yazı tipi pakette")
-	check(JunkyardPostcard.title_for("PERGEOT", "44") == "PERGEOT 44" and JunkyardPostcard.title_for("BMR", "RS 30") == "BMR RS 30"
+	check(JunkyardPostcard.title_for("PERGEOT", "44") == "PERGEOT 44" and JunkyardPostcard.title_for("BMR", "MX 3.30") == "BMR MX 3.30"
 		and JunkyardPostcard.title_for("LAMBERTINI", "MIRUNA") == "MIRUNA", "kartpostal başlığı: kısa modelde marka da yazılır")
 	# Aranabilir yığının dış hattı önceden hesaplanır: sahne yeniden dışa aktarılınca veri yenilenmeli
 	var outline_raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(PileOutline.DATA_PATH))

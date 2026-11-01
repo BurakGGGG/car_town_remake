@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- ÇERÇEVE SÜSÜ diamond_crown_front (tools/avatars/make_frames.py üretir, elle düzenleme) -->
+  <defs><linearGradient id="diamond_crown_m" x1="0" y1="36" x2="0" y2="132" gradientUnits="userSpaceOnUse"><stop offset="0.00" stop-color="#FFFFFF"/><stop offset="0.50" stop-color="#C9D3DE"/><stop offset="1.00" stop-color="#6E7A88"/></linearGradient><linearGradient id="diamond_crown_band" x1="0" y1="98" x2="0" y2="134" gradientUnits="userSpaceOnUse"><stop offset="0.00" stop-color="#FFFFFF"/><stop offset="0.33" stop-color="#C9D3DE"/><stop offset="0.67" stop-color="#6E7A88"/><stop offset="1.00" stop-color="#C9D3DE"/></linearGradient><radialGradient id="diamond_crown_v" cx="256" cy="70" r="90" gradientUnits="userSpaceOnUse"><stop offset="0.00" stop-color="#4A6AA8"/><stop offset="0.50" stop-color="#22386E"/><stop offset="1.00" stop-color="#101C3A"/></radialGradient></defs>
+  <path d="M 186 104 C 186 60, 216 44, 256 44 C 296 44, 326 60, 326 104 Z" fill="url(#diamond_crown_v)" stroke="#4A2A0C" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 214 104 C 214 80, 222.4 56, 256 46" fill="none" stroke="#4A2A0C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+  <path d="M 256 104 C 256 80, 256.0 56, 256 46" fill="none" stroke="#4A2A0C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+  <path d="M 298 104 C 298 80, 289.6 56, 256 46" fill="none" stroke="#4A2A0C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+  <path d="M 176 104 L 160 58 Q 182 76, 204 76 L 226 46 Q 241 70, 256 68 Q 271 70, 286 46 L 308 76 Q 330 76, 352 58 L 336 104 Z" fill="url(#diamond_crown_m)" stroke="#4A2A0C" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 172 92 Q 186 82, 204 86 M 340 92 Q 326 82, 308 86" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <path d="M 230 60 Q 241 76, 256 76 Q 271 76, 282 60" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+  <path d="M 170 132 C 200 120, 312 120, 342 132 L 338 102 C 306 92, 206 92, 174 102 Z" fill="url(#diamond_crown_band)" stroke="#4A2A0C" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 180 108 C 214 99, 298 99, 332 108" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <path d="M 178 126 C 214 116, 298 116, 334 126" fill="none" stroke="#6E7A88" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+  <circle cx="186.0" cy="114.5" r="2.2" fill="#FFFFFF"/>
+  <circle cx="198.0" cy="115.0" r="2.2" fill="#FFFFFF"/>
+  <circle cx="210.0" cy="115.4" r="2.2" fill="#FFFFFF"/>
+  <circle cx="222.0" cy="115.8" r="2.2" fill="#FFFFFF"/>
+  <circle cx="234.0" cy="116.2" r="2.2" fill="#FFFFFF"/>
+  <circle cx="246.0" cy="116.7" r="2.2" fill="#FFFFFF"/>
+  <circle cx="258.0" cy="116.9" r="2.2" fill="#FFFFFF"/>
+  <circle cx="270.0" cy="116.5" r="2.2" fill="#FFFFFF"/>
+  <circle cx="282.0" cy="116.1" r="2.2" fill="#FFFFFF"/>
+  <circle cx="294.0" cy="115.7" r="2.2" fill="#FFFFFF"/>
+  <circle cx="306.0" cy="115.2" r="2.2" fill="#FFFFFF"/>
+  <circle cx="318.0" cy="114.8" r="2.2" fill="#FFFFFF"/>
+  <path d="M 160 44 L 171.8 58 L 160 72 L 148.2 58 Z" fill="#7A5208"/>
+  <path d="M 160 47 L 168.8 58 L 160 69 L 151.2 58 Z" fill="#7FE6FF" stroke="#2E7A98" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 160 47 L 168.8 58 L 160 56.35 Z" fill="#E8FCFF" opacity="0.9"/>
+  <path d="M 160 69 L 151.2 58 L 160 59.65 Z" fill="#2E7A98" opacity="0.5"/>
+  <circle cx="157.4" cy="54.1" r="1.8" fill="#FFFFFF"/>
+  <path d="M 226 35 L 238.6 50 L 226 65 L 213.4 50 Z" fill="#7A5208"/>
+  <path d="M 226 38 L 235.6 50 L 226 62 L 216.4 50 Z" fill="#7FE6FF" stroke="#2E7A98" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 226 38 L 235.6 50 L 226 48.2 Z" fill="#E8FCFF" opacity="0.9"/>
+  <path d="M 226 62 L 216.4 50 L 226 51.8 Z" fill="#2E7A98" opacity="0.5"/>
+  <circle cx="223.1" cy="45.8" r="1.9" fill="#FFFFFF"/>
+  <path d="M 286 35 L 298.6 50 L 286 65 L 273.4 50 Z" fill="#7A5208"/>
+  <path d="M 286 38 L 295.6 50 L 286 62 L 276.4 50 Z" fill="#7FE6FF" stroke="#2E7A98" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 286 38 L 295.6 50 L 286 48.2 Z" fill="#E8FCFF" opacity="0.9"/>
+  <path d="M 286 62 L 276.4 50 L 286 51.8 Z" fill="#2E7A98" opacity="0.5"/>
+  <circle cx="283.1" cy="45.8" r="1.9" fill="#FFFFFF"/>
+  <path d="M 352 44 L 363.8 58 L 352 72 L 340.2 58 Z" fill="#7A5208"/>
+  <path d="M 352 47 L 360.8 58 L 352 69 L 343.2 58 Z" fill="#7FE6FF" stroke="#2E7A98" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 352 47 L 360.8 58 L 352 56.35 Z" fill="#E8FCFF" opacity="0.9"/>
+  <path d="M 352 69 L 343.2 58 L 352 59.65 Z" fill="#2E7A98" opacity="0.5"/>
+  <circle cx="349.4" cy="54.1" r="1.8" fill="#FFFFFF"/>
+  <path d="M 256 41 L 270.2 58 L 256 75 L 241.8 58 Z" fill="#7A5208"/>
+  <path d="M 256 44 L 267.2 58 L 256 72 L 244.8 58 Z" fill="#7FE6FF" stroke="#2E7A98" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 256 44 L 267.2 58 L 256 55.9 Z" fill="#E8FCFF" opacity="0.9"/>
+  <path d="M 256 72 L 244.8 58 L 256 60.1 Z" fill="#2E7A98" opacity="0.5"/>
+  <circle cx="252.6" cy="53.1" r="2.2" fill="#FFFFFF"/>
+  <path d="M 256 100 L 267.8 114 L 256 128 L 244.2 114 Z" fill="#7A5208"/>
+  <path d="M 256 103 L 264.8 114 L 256 125 L 247.2 114 Z" fill="#7FE6FF" stroke="#2E7A98" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 256 103 L 264.8 114 L 256 112.35 Z" fill="#E8FCFF" opacity="0.9"/>
+  <path d="M 256 125 L 247.2 114 L 256 115.65 Z" fill="#2E7A98" opacity="0.5"/>
+  <circle cx="253.4" cy="110.2" r="1.8" fill="#FFFFFF"/>
+  <circle cx="212.0" cy="116.0" r="9.5" fill="#7A5208"/>
+  <circle cx="212.0" cy="116.0" r="7.0" fill="#BFF2FF" stroke="#2E7A98" stroke-width="2.5"/>
+  <path d="M 207.1 115.3 Q 212 108.3 216.9 115.3 Q 212 113.2 207.1 115.3 Z" fill="#FFFFFF" opacity="0.85"/>
+  <circle cx="209.6" cy="113.2" r="1.5" fill="#FFFFFF"/>
+  <circle cx="300.0" cy="116.0" r="9.5" fill="#7A5208"/>
+  <circle cx="300.0" cy="116.0" r="7.0" fill="#BFF2FF" stroke="#2E7A98" stroke-width="2.5"/>
+  <path d="M 295.1 115.3 Q 300 108.3 304.9 115.3 Q 300 113.2 295.1 115.3 Z" fill="#FFFFFF" opacity="0.85"/>
+  <circle cx="297.6" cy="113.2" r="1.5" fill="#FFFFFF"/>
+  <path d="M 200 40 L 201.5 46.5 L 208 48 L 201.5 49.5 L 200 56 L 198.5 49.5 L 192 48 L 198.5 46.5 Z" fill="#FFFFFF"/>
+  <path d="M 318 38 L 319.5 44.5 L 326 46 L 319.5 47.5 L 318 54 L 316.5 47.5 L 310 46 L 316.5 44.5 Z" fill="#FFFFFF"/>
+  <path d="M 232 32 L 233.5 38.5 L 240 40 L 233.5 41.5 L 232 48 L 230.5 41.5 L 224 40 L 230.5 38.5 Z" fill="#FFFFFF"/>
+</svg>

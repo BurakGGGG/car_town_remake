@@ -63,7 +63,7 @@
     },
     "bmw_m3_e30": {
       "base_time": 10.4063,
-      "key": "c4c909e26ef7de47ec0eb9064c8a48da",
+      "key": "b66d65a0d90995499c937922abf53cf4",
       "race_top_kmh": 174.808,
       "torque": 377.059
     },
@@ -129,7 +129,7 @@
     },
     "fiat_500_1965": {
       "base_time": 21.1598,
-      "key": "918dcfff903168f1ae0c7801e23922f0",
+      "key": "a877c126dfb65eabf7c31ae6672480b7",
       "race_top_kmh": 83.068,
       "torque": 27.865
     },
@@ -195,7 +195,7 @@
     },
     "lambo_huracan": {
       "base_time": 7.2697,
-      "key": "a3dd408eb4c8d865857e41e3a190f84d",
+      "key": "030478417c9a0635e1408248e7b82a99",
       "race_top_kmh": 272.292,
       "torque": 1151.72
     },
@@ -225,7 +225,7 @@
     },
     "mercedes_300sl": {
       "base_time": 11.5799,
-      "key": "ee5143a72399e238a2cbe505dfcd09e0",
+      "key": "2f0d6c2443fabf3c6658acc1824c7c7d",
       "race_top_kmh": 153.864,
       "torque": 293.956
     },
@@ -291,7 +291,7 @@
     },
     "police_bentley": {
       "base_time": 8.1951,
-      "key": "2fbb6944e30a418a590041acd6a9f2f8",
+      "key": "eb83a77c73500b82c1e5fa7701843734",
       "race_top_kmh": 233.524,
       "torque": 893.829
     },
@@ -357,7 +357,7 @@
     },
     "tesla_model_y": {
       "base_time": 9.4318,
-      "key": "c66ff6b7967222f9b2e478c55b02c366",
+      "key": "53c39242c272e340e56d18205df8a5e3",
       "race_top_kmh": 189.105,
       "torque": 561.641
     },
@@ -417,13 +417,13 @@
     },
     "vw_beetle": {
       "base_time": 10.5844,
-      "key": "c266f577ed554bf975fd78ae2e334b22",
+      "key": "bc3b0f47befed429f77bc8b09f7ce20e",
       "race_top_kmh": 177.8,
       "torque": 387.897
     },
     "vw_beetle_1967": {
       "base_time": 15.2231,
-      "key": "2b40dfbbbd5fed4c55b587461eac06ae",
+      "key": "6dd669a748eb8059422f6585f743fc14",
       "race_top_kmh": 116.172,
       "torque": 128.734
     },
@@ -447,7 +447,7 @@
     },
     "vw_t1_bus": {
       "base_time": 22.0129,
-      "key": "52e404e9586f8b415407ecf90d58f5d9",
+      "key": "09ff19e258a9c239492ce540b2e03043",
       "race_top_kmh": 84.928,
       "torque": 65.972
     },

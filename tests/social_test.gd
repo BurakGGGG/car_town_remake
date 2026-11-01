@@ -510,8 +510,10 @@ func _run() -> void:
 		"istekte yazan 'admin' / alice'in kodu değil, carol'ın garajındaki ad ve kod görünür")
 	check(social().incoming.filter(func(r: Dictionary) -> bool: return r["uid"] == "ghost").is_empty()
 		and not fb.store.has("users/bob/inbox/r_ghost"), "açık garajı olmayan gönderenin isteği silindi")
-	check(SocialManager.their_name("admin", "x").begins_with("Usta") and SocialManager.their_name(" Carol  Usta ", "x") == "Carol Usta"
-		and SocialManager.their_name("AutoYard Destek", "x").begins_with("Usta"), "başkasının adı süzgeçten geçer")
+	var fallback: String = SocialManager.their_name("admin", "x")
+	check(fallback == NamePool.seeded_name("x".hash()) and SocialNames.is_valid_name(fallback)
+		and SocialManager.their_name(" Carol  Usta ", "x") == "Carol Usta"
+		and SocialManager.their_name("AutoYard Destek", "x") == fallback, "başkasının adı süzgeçten geçer (yedek: havuz adı %s)" % fallback)
 	fb.store.erase("users/bob/inbox/r_carol")
 	await close_session()
 
@@ -709,7 +711,9 @@ func _run() -> void:
 	var said: int = notices.size()
 	await open_session("kim")
 	check(social().is_ready(), "girişten hemen sonra profil hazır (READY)")
-	check(RegEx.create_from_string("^Usta\\d{4}$").search(social().my_name()) != null, "rastgele ad: %s" % social().my_name())
+	check(NamePool.all_names(Loc.current()).has(social().my_name()) and not SocialNames.is_legacy_auto_name(social().my_name()),
+		"rastgele ad havuzdan (oyun dilinde): %s" % social().my_name())
+	check(not social().should_offer_rename(), "havuz adlı yeni oyuncuya 'yeni ad' önerisi çıkmaz")
 	check(SocialNames.is_valid_code(social().my_code()) and fb.store.get("codes/" + social().my_code(), {}).get("uid") == "kim",
 		"arkadaş kodu alındı")
 	check(garage_doc("kim").get("name") == social().my_name(), "açık garaj rastgele adla yazıldı")
@@ -731,9 +735,49 @@ func _run() -> void:
 	fb.deny_codes = 0
 	await close_session()
 	SocialManager.auto_profile = false
+	await _rename_offer()
 
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
+
+
+## 16) YENİ TAKMA AD ÖNERİSİ (2026-11-01): adı hâlâ eski otomatik "Usta1234" olana bir kez havuzdan ad önerilir.
+func _rename_offer() -> void:
+	print("== 16) Eski 'Usta1234' adına bir kez yeni ad önerisi (RenamePrompt) ==")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SocialManager.RENAME_OFFER_PATH))
+	await open_session("olga")
+	check(await social().create_profile("Usta4821"), "olga eski otomatik adla profil")
+	check(social().should_offer_rename(), "eski otomatik ad: öneri gösterilecek")
+	var prompt: RenamePrompt = RenamePrompt.new()
+	root.add_child(prompt)
+	await frames(2)
+	prompt.open()
+	await frames(20)
+	var first: String = prompt.suggestion()
+	check(prompt.visible and NamePool.all_names(Loc.current()).has(first) and SocialNames.is_valid_name(first), "kart açıldı, öneri havuzdan: %s" % first)
+	check(not social().should_offer_rename(), "gösterilince bu hesaba bir daha sorulmaz")
+	(prompt.find_child("DiceButton", true, false) as PlateButton).pressed.emit()
+	check(prompt.suggestion() != first and SocialNames.is_valid_name(prompt.suggestion()), "ZAR yeni ad çeker: %s" % prompt.suggestion())
+	var chosen: String = prompt.suggestion()
+	(prompt.find_child("SaveButton", true, false) as PlateButton).pressed.emit()
+	check(await until(func() -> bool: return not prompt.visible, 3.0), "KAYDET sonrası kart kapandı")
+	check(social().my_name() == chosen and garage_doc("olga").get("name") == chosen, "ad değişti, açık garaja yazıldı")
+	await close_session()
+	await open_session("pavel")
+	check(await social().create_profile("Usta1111"), "pavel eski otomatik adla profil")
+	prompt.open()
+	await frames(20)
+	(prompt.find_child("KeepButton", true, false) as PlateButton).pressed.emit()
+	check(await until(func() -> bool: return not prompt.visible, 3.0) and social().my_name() == "Usta1111", "KALSIN: ad aynı kaldı")
+	await close_session()
+	await open_session("pavel", false)   # aynı cihaz, yeniden açılış
+	check(social().is_ready() and social().my_name() == "Usta1111" and not social().should_offer_rename(),
+		"KALSIN diyene aynı cihazda bir daha sorulmaz")
+	await close_session()
+	prompt.queue_free()
+	check(SocialNames.is_legacy_auto_name("Usta1234") and not SocialNames.is_legacy_auto_name("Usta12345")
+		and not SocialNames.is_legacy_auto_name("Usta-123") and not SocialNames.is_legacy_auto_name("usta1234")
+		and not SocialNames.is_legacy_auto_name("TurboSomun"), "eski otomatik ad tanıma")
 
 
 ## Bob alice'e (silinmeden önce) bir istek daha bıraksın diye yeni bir oyuncu (dave) istek atar.

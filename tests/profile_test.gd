@@ -119,11 +119,120 @@ func photo(color: Color) -> Image:
 	return image
 
 
+## Hazır avatar kilitleri (2026-11-01): seviye / elmas / drag galibiyeti / tamir. Çağıran PlayerProgress'i sv20 ve
+## 20 gem'de bırakır; çıkışta aynı duruma döner.
+func _avatar_locks(p: PlayerProfile) -> void:
+	print("== 2b) Hazır avatar kilitleri ==")
+	var prog: PlayerProgress = w["prog"]
+	var before: String = p.avatar
+	prog.load_state(5, 0, 400)
+	check(p.avatar_unlocked("p01") and p.avatar_unlocked("p25") and p.avatar_unlocked("p29"), "ücretsizler açık (eski, ülke, simge)")
+	check(p.avatar_unlocked("p23") and not p.avatar_unlocked("p21"), "sv5: sv3 avatarı açık, sv6 avatarı kilitli")
+	p.set_preset("p21")
+	check(p.avatar != "p21", "kilitli avatar seçilemez")
+	check(not p.buy_avatar("p21") and prog.gems == 400, "seviye avatarı satın alınmaz")
+	check(p.buy_avatar("p17") and prog.gems == 100 and p.avatar == "p17" and p.avatars_owned == ["p17"], "Driftçi 300 GEM'e alınır ve seçilir")
+	check(not p.buy_avatar("p20") and prog.gems == 100 and p.avatar == "p17", "Retro tuner 250 GEM: 100 yetmez, gem gitmez")
+	p.set_preset("p03")
+	check(p.buy_avatar("p17") and prog.gems == 100 and p.avatar == "p17", "alınan avatara geri dönülür (yeniden ödenmez)")
+	var race: RaceManager = RaceManager.new()
+	var missions: MissionManager = MissionManager.new()
+	(w["root"] as Node).add_child(race)
+	(w["root"] as Node).add_child(missions)
+	await frames(2)
+	race.load_state({"races": 150, "wins": 99})
+	check(not p.avatar_unlocked("p18") and p.avatar_progress("p18") == [99, 100], "99 galibiyet: Ralli pilotu kilitli (99 / 100)")
+	race.load_state({"races": 150, "wins": 100})
+	check(p.avatar_unlocked("p18") and not p.avatar_unlocked("p36"), "100 galibiyet: Ralli pilotu açık, Dama bayrağı (500) kilitli")
+	check(not p.frame_unlocked("diamond_crown") and not p.set_frame("diamond_crown"), "ELMAS TAÇ 1000 galibiyette (100'de kilitli)")
+	var frames_earned: Array[String] = []
+	var on_frame: Callable = func(id: String) -> void: frames_earned.append(id)
+	p.frame_earned.connect(on_frame)
+	race.load_state({"races": 1500, "wins": 1000})
+	p._announce_earned("wins")
+	check(p.frame_unlocked("diamond_crown") and frames_earned == ["diamond_crown"], "1000. galibiyet: ELMAS TAÇ açılır ve duyurulur")
+	p.frame_earned.disconnect(on_frame)
+	var keep_frame: String = p.frame_id
+	check(p.set_frame("diamond_crown") and p.set_frame(keep_frame), "ELMAS TAÇ takılır (galibiyet çerçevesi kayda yazılmaz)")
+	check(not p.frames_owned.has("diamond_crown"), "galibiyet çerçevesi satın alınmış sayılmaz")
+	missions.count(&"repairs", 499)
+	check(not p.avatar_unlocked("p16") and p.avatar_progress("p16") == [499, 500], "499 tamir: Çekici şoförü kilitli")
+	var earned: Array[String] = []
+	var on_earned: Callable = func(id: String) -> void: earned.append(id)
+	p.avatar_earned.connect(on_earned)
+	missions.count(&"repairs", 1)
+	p._announce_earned("repairs")
+	check(p.avatar_unlocked("p16") and earned == ["p16"], "500. tamir: Çekici şoförü açılır ve duyurulur")
+	missions.count(&"repairs", 1)   # 501. tamir (oyunda her tamirde bir duyuru denemesi)
+	p._announce_earned("repairs")
+	check(earned == ["p16"], "eşik geçildikten sonra yeniden duyurulmaz")
+	p.avatar_earned.disconnect(on_earned)
+	var copy: PlayerProfile = PlayerProfile.new()
+	root.add_child(copy)
+	copy.load_state({"avatar": "p17", "avatars": ["p17", "p01", "p21", "p99", 5]})
+	check(copy.avatar == "p17" and copy.avatars_owned == ["p17"], "kayıtta yalnız elmaslı avatarlar tutulur (bozuk girdiler atılır)")
+	copy.queue_free()
+	race.queue_free()
+	missions.queue_free()
+	await frames(2)
+	p.avatar = before   # fotoğraf seçiliydi: sonraki yayın denetimleri onu bekler
+	prog.load_state(20, 0, 20)
+
+
 func _run() -> void:
 	SocialManager.auto_profile = false   # profil elle kurulur (otomatik profil social_test §15'te denenir)
 	print("== 1) Katalog ==")
-	check(ProfileCatalog.preset_ids().size() == 12 and ProfileCatalog.is_preset("p12") and not ProfileCatalog.is_preset("p13"),
-		"12 hazır avatar, p13 yok")
+	check(ProfileCatalog.preset_ids().size() == 36 and ProfileCatalog.is_preset("p36") and not ProfileCatalog.is_preset("p37"),
+		"36 hazır avatar, p37 yok")
+	var display: Array[String] = ProfileCatalog.preset_ids_display()
+	var free_count: int = ProfileCatalog.PRESET_COUNT - ProfileCatalog.AVATAR_UNLOCKS.size()
+	check(free_count == 18 and display.slice(0, free_count).all(func(id: String) -> bool: return ProfileCatalog.avatar_unlock(id).is_empty())
+		and display.has("p36") and display.size() == 36, "seçicide önce 18 ücretsiz avatar, sonra kilitliler")
+	check(ProfileCatalog.avatar_unlock("p25").is_empty() and ProfileCatalog.avatar_unlock("p28").is_empty(),
+		"ülke portreleri (kimlik avatarları) ücretsiz")
+	check(ProfileCatalog.is_icon_texture(ProfileCatalog.preset_texture("p29")) and ProfileCatalog.is_icon_texture(ProfileCatalog.preset_texture("p36"))
+		and not ProfileCatalog.is_icon_texture(ProfileCatalog.preset_texture("p28")) and not ProfileCatalog.is_icon_texture(null),
+		"p29–p36 yüzsüz simge: küçük boyda kırpılmaz")
+	print("== 1b) Çerçeveler (2026-11-01: 28) ==")
+	check(ProfileCatalog.FRAMES.size() == 28, "28 çerçeve (%d)" % ProfileCatalog.FRAMES.size())
+	var missing_tex: PackedStringArray = PackedStringArray()
+	var no_mips: PackedStringArray = PackedStringArray()
+	var too_big: PackedStringArray = PackedStringArray()
+	for entry: Dictionary in ProfileCatalog.FRAMES:
+		var id: String = entry["id"]
+		var textures: Array[Texture2D] = []
+		if entry.get("ring", false):
+			textures.append(ProfileCatalog.frame_ring(id))
+		for layer: String in ["back", "front"]:
+			if entry.has(layer):
+				textures.append(ProfileCatalog.frame_ornament(id, layer))
+		for tex: Texture2D in textures:
+			if tex == null:
+				missing_tex.append(id)
+				continue
+			var img: Image = tex.get_image()
+			if not img.has_mipmaps():
+				no_mips.append(id)
+			if entry.has("back") or entry.has("front"):
+				if tex != ProfileCatalog.frame_ring(id):   # süs dokusu: dairenin %20'sinden fazla taşmaz (tuvalde 32..480)
+					var used: Rect2i = img.get_used_rect()
+					var scale_k: float = float(img.get_width()) / 512.0
+					if used.position.x < floori(30 * scale_k) or used.position.y < floori(30 * scale_k) \
+							or used.end.x > ceili(482 * scale_k) or used.end.y > ceili(482 * scale_k):
+						too_big.append("%s %s" % [id, used])
+	check(missing_tex.is_empty(), "her halka / süs dokusu pakette%s" % ("" if missing_tex.is_empty() else ": " + ", ".join(missing_tex)))
+	check(no_mips.is_empty(), "halka / süs dokuları mipmap'li (küçük boyda tırtıklanmasın)%s" % ("" if no_mips.is_empty() else ": " + ", ".join(no_mips)))
+	check(too_big.is_empty(), "süsler ORNAMENT_ROOM kutusuna sığar%s" % ("" if too_big.is_empty() else ": " + ", ".join(too_big)))
+	check(ProfileCatalog.frame_wins("diamond_crown") == 1000 and ProfileCatalog.frame_animated("gauge")
+		and ProfileCatalog.frame_animated("flame_cup") and not ProfileCatalog.frame_animated("wood"), "ELMAS TAÇ 1000 galibiyet; hareketliler")
+	var at17: Array[Dictionary] = LevelUnlocks.between(16, 17)
+	check(at17.any(func(e: Dictionary) -> bool: return e["kind"] == LevelUnlocks.Kind.AVATAR and e["id"] == &"p13"),
+		"sv17'de SEVİYE ATLADIN ekranında yeni profil resmi (Boyacı)")
+	var only_level: bool = true
+	for e: Dictionary in LevelUnlocks.between(1, 99):
+		if e["kind"] == LevelUnlocks.Kind.AVATAR and not ProfileCatalog.avatar_unlock(String(e["id"])).has("level"):
+			only_level = false
+	check(only_level, "elmaslı / başarım avatarı seviye ekranında yok")
 	for id: String in ProfileCatalog.preset_ids() + ["featured_emre", "featured_elif"]:
 		var path: String = ProfileCatalog.AVATAR_DIR + ("preset_%s.png" % id.substr(1) if id.begins_with("p") else id + ".png")
 		if not ResourceLoader.exists(path):
@@ -191,6 +300,7 @@ func _run() -> void:
 	check(p.buy_frame("checker") and (w["prog"] as PlayerProgress).gems == 20 and p.frame_id == "checker", "DAMA 100 GEM'e alınır ve takılır")
 	check(p.set_frame("gold") and p.set_frame("checker"), "alınan çerçeveye geri dönülür (yeniden ödenmez)")
 	check((w["prog"] as PlayerProgress).gems == 20, "ikinci kez gem harcanmadı")
+	await _avatar_locks(p)
 	p.set_flag("TR")
 	p.set_flag("XX")
 	check(p.flag == "", "bilinmeyen bayrak boşa düşer")

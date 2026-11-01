@@ -1,8 +1,9 @@
 extends SceneTree
 ## PROFİL PORTRELERİ: tools/avatars/src/*.svg → PNG (Godot'un kendi SVG okuyucusuyla; sistemde rsvg / inkscape
 ## gerekmez). Kaynak klasörde .gdignore var: SVG'ler oyuna doku olarak alınmaz, yalnız bu betik okur.
-## Kullanım: godot-4 --headless --path . --script res://tools/avatars/render_avatars.gd -- <çıktı_klasörü> [boyut] [ad]
-## Boyut varsayılan 512 (kaynak 512 tuval). `ad` verilirse yalnız o dosya (uzantısız).
+## Kullanım: godot-4 --headless --path . --script res://tools/avatars/render_avatars.gd -- <çıktı_klasörü> [boyut] [ad] [kaynak]
+## Boyut varsayılan 512 (kaynak 512 tuval). `ad` verilirse yalnız o dosya (uzantısız; "" = hepsi). `kaynak` varsayılan
+## src/ (avatarlar); çerçeve süsleri için res://tools/avatars/frames_src/ (make_frames.py).
 
 const SRC: String = "res://tools/avatars/src/"
 const CANVAS: float = 512.0
@@ -17,13 +18,14 @@ func _init() -> void:
 	var out_dir: String = args[0]
 	var size: int = int(args[1]) if args.size() > 1 else int(CANVAS)
 	var only: String = args[2] if args.size() > 2 else ""
+	var src: String = args[3] if args.size() > 3 else SRC
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	var count: int = 0
-	for file: String in DirAccess.get_files_at(SRC):
+	for file: String in DirAccess.get_files_at(src):
 		if file.get_extension() != "svg" or (only != "" and file.get_basename() != only):
 			continue
 		var image: Image = Image.new()
-		var err: Error = image.load_svg_from_string(FileAccess.get_file_as_string(SRC + file), float(size) / CANVAS)
+		var err: Error = image.load_svg_from_string(FileAccess.get_file_as_string(src.path_join(file)), float(size) / CANVAS)
 		if err != OK:
 			push_error("render_avatars: %s okunamadı (%s)" % [file, error_string(err)])
 			continue

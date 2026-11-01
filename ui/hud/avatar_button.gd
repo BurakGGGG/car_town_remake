@@ -35,5 +35,5 @@ func show_avatar(tex: Texture2D, illustrated: bool, frame: String = ProfileCatal
 
 func _draw() -> void:
 	if toggle_mode and button_pressed:
-		var r: float = minf(size.x, size.y) * 0.5
+		var r: float = minf(size.x, size.y) * 0.5 / view.ornament_room
 		draw_arc(size * 0.5, r + 2.0, 0.0, TAU, 48, HudPalette.PLATE_SELECTED, 4.0, true)

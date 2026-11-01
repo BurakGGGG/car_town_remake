@@ -712,7 +712,7 @@ func _run() -> void:
 			_hud.settings_screen.call("_show_page", page))
 	await _screen(&"account", "hesap_kayit_sec", func() -> void:
 		_hud.login_screen.call("_on_conflict_found",
-			{"money": 9993530, "level": 30, "vehicles": PackedStringArray(["BMR 5.60", "TOFAN ŞAHAN", "LAMBERTINI URAGANO"])},
+			{"money": 9993530, "level": 30, "vehicles": PackedStringArray(["BMR 5.60", "TOFAN ŞAHAN", "LAMBERTINI HURACO"])},
 			{"money": 125000, "level": 8, "vehicles": PackedStringArray(["TOFAN ŞAHAN", "HYUNGA GETTA"])})
 		(_hud.login_screen.get("_choice_row") as Control).visible = true)
 	if _want("koleksiyon"):   # oyunda garajdan / showroom'dan açılır (YER açık: oyun HUD'u gizli)

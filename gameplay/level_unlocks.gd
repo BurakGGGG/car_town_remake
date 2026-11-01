@@ -3,10 +3,11 @@ extends RefCounted
 ## SEVİYE ATLAYINCA AÇILANLAR — seviye atlama ekranının (LevelUpScreen) tek veri kaynağı. Elle liste YAZILMAZ:
 ## her şey sistemlerin kendi seviye kilidinden okunur (RepairType.min_level, CarGarageCatalog.required_level,
 ## CrateCatalog.min_level, PerformanceMods.required_level, MissionCatalog.MIN_LEVEL, ProfileCatalog.FRAMES "level",
+## ProfileCatalog.AVATAR_UNLOCKS "level",
 ## GarageDecor.required_level, PetManager.ARRIVAL_LEVEL).
 ## Bir kilit başka seviyeye kayınca ekran kendiliğinden uyar.
 
-enum Kind { CUSTOMER, DEPOT, CRATE, MOD_TIER, MISSIONS, FRAME, DECOR, PET }
+enum Kind { CUSTOMER, DEPOT, CRATE, MOD_TIER, MISSIONS, FRAME, DECOR, PET, AVATAR }
 
 const MAX_LEVEL: int = 99
 
@@ -36,8 +37,13 @@ static func between(from_level: int, to_level: int) -> Array[Dictionary]:
 	if _in_range(PetManager.ARRIVAL_LEVEL, from_level, to_level):
 		out.append({"kind": Kind.PET, "id": &"tekir", "level": PetManager.ARRIVAL_LEVEL})
 	for frame: Dictionary in ProfileCatalog.FRAMES:   # elmasla alınanlar ve yalnız verilenler seviyeyle açılmaz
-		if int(frame["gems"]) == 0 and not frame.get("exclusive", false) and _in_range(int(frame["level"]), from_level, to_level):
+		if int(frame["gems"]) == 0 and not frame.get("exclusive", false) and not frame.has("wins") \
+				and _in_range(int(frame["level"]), from_level, to_level):
 			out.append({"kind": Kind.FRAME, "id": StringName(frame["id"]), "level": int(frame["level"])})
+	for id: String in ProfileCatalog.preset_ids():   # yalnız seviyeyle açılan hazır avatarlar (elmaslı / başarım değil)
+		var avatar_level: int = int(ProfileCatalog.avatar_unlock(id).get("level", 0))
+		if avatar_level > 0 and _in_range(avatar_level, from_level, to_level):
+			out.append({"kind": Kind.AVATAR, "id": StringName(id), "level": avatar_level})
 	var decor: Array[Dictionary] = []
 	for item: Dictionary in GarageDecor.all():
 		if _in_range(int(item["min_level"]), from_level, to_level):

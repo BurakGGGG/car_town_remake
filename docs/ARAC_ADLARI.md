@@ -10,8 +10,12 @@ Geri bildirim "adlar hiç çağrıştırıcı değil" → kullanıcı: "benzer o
 * **Marka:** gerçek markanın ilk hecesi / sesi kalır, gerisi 2–3 harf değişir; mümkünse doğal okunan bir kelime
   (TOKAYA, MERIDES, VOLKAN, RENOIR, FERRAZZI, LAMBERTINI). TEK harf değişmiş hal (TOKOTA, BMV) çok yakın bulundu.
 * **Model:** aynı yaklaşım (SUPREMA, CORALIA, PASSAGE, URAGANO); kodlar biraz değişir (E46 → 3.46, T10X → TX-10, A6 → AX6).
+* **Anlam çevirisi YOK (2026-11-01):** ad, asıl model adından ya da aracın Türkiye'deki lakabından SESLE türer
+  (Vosvos → VASVAS, Transporter → TRANSPO, Huracán → HURACO). Kelimenin anlamını çevirmek (Beetle → BÖCÜK,
+  hippi otobüsü → HİPPİ, martı kanadı → GULL, Cinquecento → PICCOLA, Huracán → URAGANO) zayıf bulundu.
+* Tescilli model kodu aynen geçmez (M3 → MX 3.30); iki harfin yer değiştirmesi (TESLA → TELSA) fazla yakın.
 * Ortası sıfırlı üç haneli sayı (404, 308) yok: Peugeot bunları sahiplenir (404 → PERGEOT 44). GTA markaları yok.
-* Biçim: `brand` ve `model` BÜYÜK HARF; Türkçe kelimede Türkçe büyük harf (ŞAHAN, MİRAT, HİPPİ, BÖCÜK); `display_name` =
+* Biçim: `brand` ve `model` BÜYÜK HARF; Türkçe kelimede Türkçe büyük harf (ŞAHAN, MİRAT); `display_name` =
   "MARKA MODEL", `label` (varsa) = "MARKA\nMODEL", `performance.variant` = karışık harf ("Tokaya Suprema"; rakamlı ve
   ≤ 2 harfli kelime ile BMR / CLX büyük kalır). Marka tek kelime (bilboard adı ilk boşluktan böler). En uzun ad 20 harf
   (CHEVALIER CAMARGO SS) — showroom kasa oran plakası buna göre 290 px.
@@ -55,7 +59,7 @@ rengiyle dolduruldu: `tools/debadge/` (Blender'ın Python'u + numpy; ayrıntı `
 * Kasa tasarımları gerçek araçlara benzer (ızgara biçimleri vb.); isim ve logo değişikliği bunu çözmez.
 * Hurdalık enkaz modelleri (`assets/world/junk_wrecks/`) dokusuz, köşe renkli; logo okunmuyor, dokunulmadı.
 
-## Liste (2026-11-01 v3)
+## Liste (2026-11-01 v3 + anlam çevirisi düzeltmesi)
 
 | Oyundaki ad | Kimlik | 2026-10-18 adı | Esin |
 |---|---|---|---|
@@ -65,11 +69,11 @@ rengiyle dolduruldu: `tools/debadge/` (Blender'ın Python'u + numpy; ayrıntı `
 | AUDEX AX6 | `audi_a6` | VIER SECHS 19 | Audi A6 (C8) 45 TFSI |
 | AUDEX QUARTO S1 | `audi_quattro_s1` | VIER SPORT 85 | Audi Sport Quattro |
 | AUDEX RX6 | `audi_rs6` | VIER KOMBI R 20 | Audi RS6 |
-| BENTON PATROL GT | `police_bentley` | MONARCH PATROL GT | Bentley Continental GT W12 |
+| BENTON CONTINA GT | `police_bentley` | MONARCH PATROL GT | Bentley Continental GT W12 |
 | BMR 3.30 | `bmw_f30` | BAVARIA DREI 15 | BMW 320i (F30) |
 | BMR 3.46 | `bmw_e46` | BAVARIA CLUB 46 | BMW E46 330i |
 | BMR 5.60 | `bmw_e60` | BAVARIA FÜNF 07 | BMW E60 530i |
-| BMR RS 30 | `bmw_m3_e30` | BAVARIA LEGEND 90 | BMW M3 E30 Evolution |
+| BMR MX 3.30 | `bmw_m3_e30` | BAVARIA LEGEND 90 | BMW M3 E30 Evolution |
 | BUGANTI CHIRAL | `bugatti_chiron` | OVALE TONNERRE 16 | Bugatti Chiron |
 | BUGANTI VERION | `bugatti_veyron` | OVALE ÉCLAIR 05 | Bugatti Veyron 16.4 |
 | CHERA TIGRO 8 | `chery_tiggo_8` | KİRAZ KAPLAN 8 | Chery Tiggo 8 Pro |
@@ -80,7 +84,7 @@ rengiyle dolduruldu: `tools/debadge/` (Blender'ın Python'u + numpy; ayrıntı `
 | DODSON CHARGO 70 | `dodge_charger_1970` | BLACKTOP BRUISER 70 | Dodge Charger R/T 440 |
 | FERRAZZI 488 PISTO | `ferrari_488_pista` | FURIA CIRCUITO 19 | Ferrari 488 Pista |
 | FERRAZZI LAFERRA | `ferrari_laferrari` | FURIA ASSOLUTA 13 | Ferrari LaFerrari |
-| FIORA PICCOLA 65 | `fiat_500_1965` | FITO PICCOLO 65 | Fiat Nuova 500 D |
+| FIORA NOVA 50 | `fiat_500_1965` | FITO PICCOLO 65 | Fiat Nuova 500 D |
 | FJORD ESCORTA RS | `ford_escort_rs1600` | FORGE RALLYE 72 | Ford Escort RS1600 |
 | FJORD FOCAL 3 | `ford_focus` | FORGE FOCAL 13 | Ford Focus |
 | FJORD MUSTANO 67 | `ford_mustang_1967` | FORGE WILD PONY 67 | Ford Mustang Fastback GT 390 |
@@ -91,16 +95,16 @@ rengiyle dolduruldu: `tools/debadge/` (Blender'ın Python'u + numpy; ayrıntı `
 | HYUNGA ASCENT ERO | `hyundai_era` | HYPER KENT 07 | Hyundai Accent Era |
 | HYUNGA GETTA | `hyundai_getz` | HYPER POCKET Z | Hyundai Getz |
 | JAGORA E-TIPO | `jaguar_e_type` | OCELOT CLASSIC 61 | Jaguar E-Type 3.8 |
+| LAMBERTINI HURACO | `lambo_huracan` | BULL MONSOON | Lamborghini Huracán |
 | LAMBERTINI MIRUNA | `lamborghini_miura` | BULL MATADOR 400 | Lamborghini Miura P400 |
-| LAMBERTINI URAGANO | `lambo_huracan` | BULL MONSOON | Lamborghini Huracán |
 | LANDRIDER SERIA 3 | `land_rover_series3` | MOORLAND TREK III | Land Rover Series III 88 |
 | LANZA DELTIA HF | `lancia_delta_integrale` | ASTA SEDICI 92 | Lancia Delta HF Integrale Evoluzione |
 | LANZA STRATIA | `lancia_stratos` | ASTA COMETA 74 | Lancia Stratos HF Stradale |
 | MERIDES 123 D | `mercedes_w123` | STERN TANK 123 | Mercedes-Benz 240 D |
 | MERIDES CLX 35 | `mercedes_cls` | STERN COUPÉ 350 | Mercedes CLS 350 |
 | MERIDES GD 63 | `mercedes_g` | STERN FESTUNG 18 | Mercedes-AMG G 63 |
-| MERIDES GULL 55 | `mercedes_300sl` | STERN GULLWING 55 | Mercedes-Benz 300 SL |
 | MERIDES S-40 | `mercedes_s400` | STERN KAISER S | Mercedes S400 |
+| MERIDES SL-30 | `mercedes_300sl` | STERN GULLWING 55 | Mercedes-Benz 300 SL |
 | MERIDES SPRINTO | `mercedes_sprinter` | STERN DOLMUŞ 19 | Mercedes-Benz Sprinter minibüs |
 | MERIDES VITA | `police_vito` | STERN SQUAD VAN | Mercedes-Benz Vito 119 CDI 4MATIC |
 | MINKO COPPA 65 | `mini_cooper_1965` | MICRO BULLDOG 65 | Mini Cooper 998 |
@@ -118,7 +122,7 @@ rengiyle dolduruldu: `tools/debadge/` (Blender'ın Python'u + numpy; ayrıntı `
 | SEDRA LEONA | `seat_leon` | IBERO LINCE 16 | Seat Leon |
 | SKOVA KAMIKO | `skoda_kamiq` | ARROW SUMMIT 20 | Skoda Kamiq |
 | SKOVA SUPERBA | `skoda_superb` | ARROW KANZLER 16 | Skoda Superb III |
-| TELSA MODO Y | `tesla_model_y` | ARCLINE RANGE Y | Tesla Model Y Long Range AWD |
+| TESSORA MODO Y | `tesla_model_y` | ARCLINE RANGE Y | Tesla Model Y Long Range AWD |
 | TOFAN MİRAT 124 | `tofas_murat_124` | BURSAN HACI 124 | Tofaş Murat 124 |
 | TOFAN MİRAT 131 | `tofas_murat_131` | BURSAN M-131 BOX | Tofaş Murat 131 |
 | TOFAN ŞAHAN | `tofas_sahin` | BURSAN ATMACA 95 | Tofaş Şahin |
@@ -128,10 +132,10 @@ rengiyle dolduruldu: `tools/debadge/` (Blender'ın Python'u + numpy; ayrıntı `
 | TOKAYA CORALIA | `toyota_corolla` | TORNADO HALE 21 | Toyota Corolla 1.8 Hybrid (E210) |
 | TOKAYA SUPREMA | `toyota_supra` | TORNADO APEX 97 | Toyota Supra A80 3.0 Twin Turbo |
 | VOLDA SV60 | `volvo_s60` | SHIELD ARMOR 16 | Volvo S60 |
-| VOLKAN BÖCÜK 2.0 | `vw_beetle` | WULF TURBO BUG | Volkswagen Beetle 2.0 TSI |
-| VOLKAN BÖCÜK 67 | `vw_beetle_1967` | WULF BUG 67 | Volkswagen Beetle 1500 |
 | VOLKAN GOLFER 7 | `vw_golf_7` | WULF MK7 HATCH | VW Golf 7 |
-| VOLKAN HİPPİ T1 | `vw_t1_bus` | WULF FLOWER BUS 65 | Volkswagen T1 1500 |
 | VOLKAN PASSAGE B5 | `vw_passat_b55` | WULF KOMBI 04 | VW Passat B5.5 |
 | VOLKAN PASSAGE B8 | `vw_passat_b8` | WULF KOMBI 16 | VW Passat B8 |
+| VOLKAN TRANSPO T1 | `vw_t1_bus` | WULF FLOWER BUS 65 | Volkswagen T1 1500 |
+| VOLKAN VASVAS 2.0 | `vw_beetle` | WULF TURBO BUG | Volkswagen Beetle 2.0 TSI |
+| VOLKAN VASVAS 67 | `vw_beetle_1967` | WULF BUG 67 | Volkswagen Beetle 1500 |
 | WILLOW MV | `willys_jeep_mb` | VETERAN WW2 CLASSIC | Willys MB |

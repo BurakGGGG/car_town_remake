@@ -5,7 +5,8 @@ extends Node
 ## Kayıt: SaveManager "profile" bölümü (eski kayıtta yoktur: varsayılanlar). Açık kısım (avatar tanımı, çerçeve,
 ## bayrak, garaj adı, vitrin aracı) SocialManager tarafından açık garaj belgesine yazılır (public_fields).
 ##
-## FOTOĞRAF (kullanıcı kararı 2026-10-16): kaynak galeri / kamera / 12 hazır avatar / Google. Google fotoğrafı
+## FOTOĞRAF (kullanıcı kararı 2026-10-16): kaynak galeri / kamera / hazır avatar (2026-11-01: 36, bir kısmı kilitli —
+## seviye / elmas / başarım, ProfileCatalog.AVATAR_UNLOCKS) / Google. Google fotoğrafı
 ## YALNIZCA oyuncu açarsa avatar olur (2026-10-17, gizlilik: önceden varsayılan açıktı ve herkese görünüyordu):
 ## profil düzenlemede GOOGLE düğmesi ya da "GOOGLE: AÇIK". Kayıtta "google_photo" anahtarı; eski "use_google"
 ## (varsayılanı true idi, oyuncu seçmeden yazılıyordu) okunmaz: herkes kapalı başlar.
@@ -20,6 +21,10 @@ extends Node
 signal changed
 ## Kendi avatar resmi değişti (HUD düğmesi, profil kartı).
 signal avatar_changed
+## Başarımla açılan hazır avatar kazanıldı (drag galibiyeti / tamir eşiği bu an aşıldı): HUD duyurur.
+signal avatar_earned(id: String)
+## Galibiyetle açılan çerçeve kazanıldı (ELMAS TAÇ, 1000 drag galibiyeti): HUD duyurur.
+signal frame_earned(id: String)
 
 const DIR: String = "user://profile/"
 const PHOTO_PATH: String = "user://profile/photo.jpg"
@@ -35,6 +40,8 @@ var photo_hash: String = ""
 var use_google: bool = false
 var frame_id: String = ProfileCatalog.DEFAULT_FRAME
 var frames_owned: Array[String] = []
+## Elmasla alınmış hazır avatarlar ("pNN"). Seviye / başarım avatarları kayda yazılmaz: koşuldan hesaplanır.
+var avatars_owned: Array[String] = []
 ## Kazanılmış unvanlar (ProfileCatalog.HONORS); ilki profil kartında ve açık garajda görünür.
 var honors: Array[String] = []
 var flag: String = ""
@@ -59,6 +66,7 @@ func _ready() -> void:
 	add_to_group("player_profile")
 	_load_files()
 	_connect_cloud.call_deferred()
+	_connect_achievements.call_deferred()
 
 
 # --- Kayıt -----------------------------------------------------------------------
@@ -66,7 +74,7 @@ func _ready() -> void:
 func state() -> Dictionary:
 	return {
 		"avatar": avatar, "photo_hash": photo_hash, "google_photo": use_google, "frame": frame_id,
-		"frames": frames_owned.duplicate(), "honors": honors.duplicate(), "flag": flag, "title": title, "showcase": String(showcase),
+		"frames": frames_owned.duplicate(), "avatars": avatars_owned.duplicate(), "honors": honors.duplicate(), "flag": flag, "title": title, "showcase": String(showcase),
 		"blocked": blocked.duplicate(), "hidden": hidden.duplicate(), "likes": likes,
 	}
 
@@ -86,6 +94,10 @@ func load_state(data: Dictionary) -> void:
 			if ProfileCatalog.is_frame(frame) and (int(ProfileCatalog.frame(frame)["gems"]) > 0
 					or ProfileCatalog.frame_exclusive(frame)) and not frames_owned.has(frame):
 				frames_owned.append(frame)
+	for id: Variant in (data.get("avatars", []) if data.get("avatars") is Array else []):
+		var bought: String = SaveSafe.s(id)
+		if ProfileCatalog.avatar_price(bought) > 0 and not avatars_owned.has(bought):
+			avatars_owned.append(bought)
 	for id: Variant in (data.get("honors", []) if data.get("honors") is Array else []):
 		var honor: String = SaveSafe.s(id)
 		if ProfileCatalog.is_honor(honor) and not honors.has(honor):
@@ -118,6 +130,7 @@ func reset() -> void:
 	use_google = false
 	frame_id = ProfileCatalog.DEFAULT_FRAME
 	frames_owned.clear()
+	avatars_owned.clear()
 	honors.clear()
 	flag = ""
 	title = ""
@@ -187,10 +200,89 @@ func needs_photo_restore() -> bool:
 # --- Seçimler --------------------------------------------------------------------
 
 func set_preset(av: String) -> void:
-	if not ProfileCatalog.is_preset(av) or avatar == av:
+	if not ProfileCatalog.is_preset(av) or avatar == av or not avatar_unlocked(av):
 		return
 	avatar = av
 	_changed(true)
+
+
+## Hazır avatar oyuncunun mu: ücretsiz, seviyesi yetiyor, elmasla alınmış ya da başarım eşiği aşılmış.
+func avatar_unlocked(id: String) -> bool:
+	if not ProfileCatalog.is_preset(id):
+		return false
+	var rule: Dictionary = ProfileCatalog.avatar_unlock(id)
+	if rule.has("level"):
+		return _level() >= int(rule["level"])
+	if rule.has("gems"):
+		return avatars_owned.has(id)
+	if rule.has("wins"):
+		return _race_wins() >= int(rule["wins"])
+	if rule.has("repairs"):
+		return _repairs() >= int(rule["repairs"])
+	return true
+
+
+## Elmaslı hazır avatarı satın alır ve seçer. Elmas yetmezse false.
+func buy_avatar(id: String) -> bool:
+	var price: int = ProfileCatalog.avatar_price(id)
+	if price <= 0 or avatars_owned.has(id):
+		if avatar_unlocked(id):
+			set_preset(id)
+			return true
+		return false
+	var progress: PlayerProgress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
+	if progress == null or not progress.spend_gems(price):
+		return false
+	avatars_owned.append(id)
+	avatar = id
+	_changed(true)
+	return true
+
+
+## Başarım ilerlemesi (seçicide "37 / 100 GALİBİYET"): [şimdiki, eşik]; başarım avatarı değilse [0, 0].
+func avatar_progress(id: String) -> Array[int]:
+	var rule: Dictionary = ProfileCatalog.avatar_unlock(id)
+	if rule.has("wins"):
+		return [mini(_race_wins(), int(rule["wins"])), int(rule["wins"])]
+	if rule.has("repairs"):
+		return [mini(_repairs(), int(rule["repairs"])), int(rule["repairs"])]
+	return [0, 0]
+
+
+func _race_wins() -> int:
+	var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager if is_inside_tree() else null
+	return race.wins() if race else 0
+
+
+func _repairs() -> int:
+	var missions: MissionManager = get_tree().get_first_node_in_group("missions") as MissionManager if is_inside_tree() else null
+	return missions.value_of(&"repairs") if missions else 0
+
+
+## Başarım avatarı duyurusu: yarış bitince / tamir parası alınınca eşik TAM o an aşıldıysa avatar_earned (sayaçlar o
+## sinyalde artar; bir kare sonra okunur). Eşiği atlayarak gelen sayı (göç, bulut) duyurulmaz, avatar yine açıktır.
+func _connect_achievements() -> void:
+	var race: RaceManager = get_tree().get_first_node_in_group("race") as RaceManager
+	if race:
+		race.race_finished.connect(func(won: bool, _money: int, _xp: int) -> void:
+			if won:
+				_announce_earned.call_deferred("wins"))
+	var repairs: RepairManager = get_tree().get_first_node_in_group("repair_manager") as RepairManager
+	if repairs:
+		repairs.repair_collected.connect(func(_car: Node3D, _reward: int, _xp: int) -> void:
+			_announce_earned.call_deferred("repairs"))
+
+
+func _announce_earned(key: String) -> void:
+	var now: int = _race_wins() if key == "wins" else _repairs()
+	for id: String in ProfileCatalog.AVATAR_UNLOCKS:
+		var rule: Dictionary = ProfileCatalog.AVATAR_UNLOCKS[id]
+		if int(rule.get(key, -1)) == now:
+			avatar_earned.emit(id)
+	if key == "wins":
+		for entry: Dictionary in ProfileCatalog.FRAMES:
+			if int(entry.get("wins", -1)) == now:
+				frame_earned.emit(String(entry["id"]))
 
 
 ## Galeri / kamera görüntüsü (kırpılmış kare): kodlanır, cihazda saklanır, avatar olur.
@@ -250,6 +342,8 @@ func frame_unlocked(id: String) -> bool:
 		return false
 	if int(entry["gems"]) > 0 or ProfileCatalog.frame_exclusive(id):
 		return frames_owned.has(id)
+	if ProfileCatalog.frame_wins(id) > 0:
+		return _race_wins() >= ProfileCatalog.frame_wins(id)
 	return _level() >= int(entry["level"])
 
 
