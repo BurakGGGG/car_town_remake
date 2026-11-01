@@ -774,4 +774,4 @@ burnunda çok soluk pembe kalıntı (oyun ölçeğinde görünmez). NSX arka pla
 `qa/dortlu_konum_qa.gd -- yakin`. Teker taraması: dıştan ve `merge` boşluksuz; içeriden jant kenarında %26–42'lik birkaç
 dilim (NSX arka, RX-7 ön, AE86 sağ-arka). Testler: vehicle_asset 1747, vehicle_wheel 80, car_thumbs 5, vehicle_display 23,
 collection_rewards 56, junkyard 148, friend_race 59, performance_mod 114, race_replay 33 — 0 FAIL.
-**Yayın bekleyen:** `lb_limits.json` / `lb_classes.json` güncellendi, functions (lbRun, lbWeekly) yeniden YAYINLANMADI.
+**Yayın:** `lb_limits.json` / `lb_classes.json` güncellendi, functions (lbRun, lbWeekly) 2026-11-02 yayınlandı.
