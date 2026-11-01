@@ -1,0 +1,10 @@
+{
+  "textured": "~/Desktop/cars/toyota trueno ae86/toyota_trueno_ae86.glb",
+  "segmented": "~/Desktop/cars/toyota trueno ae86/Meshy_AI_Midnight_Drift_20261101_part-segmentation_split.glb",
+  "out": "assets/cars/source/toyota_ae86.glb",
+  "front": "-X",
+  "seg": {"wheels": [0, 1, 7, 8], "glass": [2, 4, 5, 6, 9, 10], "trim": []},
+  "tris": {"body": 80000, "glass": 4000, "wheel": 6000, "lights": 1500, "trim": 1500},
+  "tex": 2048,
+  "ao": 0.35
+}

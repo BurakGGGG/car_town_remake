@@ -76,12 +76,15 @@
 [ext_resource type="PackedScene" uid="uid://ccvt5efeaitoe" path="res://assets/cars/skoda_superb.tscn" id="74_jll03"]
 [ext_resource type="PackedScene" uid="uid://fg7jdpixap0a" path="res://assets/cars/toyota_supra.tscn" id="75_37heo"]
 [ext_resource type="PackedScene" uid="uid://b8q3mgfusw318" path="res://assets/cars/nissan_skyline_r34.tscn" id="76_74nn0"]
+[ext_resource type="PackedScene" uid="uid://d1py0rlfx6d8y" path="res://assets/cars/honda_nsx.tscn" id="77_urc7a"]
+[ext_resource type="PackedScene" uid="uid://cpenshm3pwij6" path="res://assets/cars/mazda_rx7.tscn" id="78_iad2h"]
+[ext_resource type="PackedScene" uid="uid://bpq3sjw61st7b" path="res://assets/cars/toyota_ae86.tscn" id="79_bfbfv"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0fuxv"]
 albedo_color = Color(0.55, 0.57, 0.6, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_a0owi"]
-size = Vector2(9.2, 43.8)
+size = Vector2(9.2, 46)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wq25m"]
 albedo_color = Color(0.2, 0.75, 0.3, 1)
@@ -92,7 +95,7 @@ size = Vector3(1, 0.02, 0.05)
 [node name="SizeLab" type="Node3D" unique_id=228455966]
 
 [node name="Floor" type="MeshInstance3D" parent="." unique_id=1339549133]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.7, -0.001, 19.8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.7, -0.001, 20.9)
 material_override = SubResource("StandardMaterial3D_0fuxv")
 mesh = SubResource("PlaneMesh_a0owi")
 
@@ -413,7 +416,7 @@ text = "TOGG T10X
 font_size = 48
 
 [node name="togg_t10f" parent="." unique_id=319537661 instance=ExtResource("29_8bxcb")]
-transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, 3.0409079, 1.0728836e-06, 39.83259)
+transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, 2.4218495, 1.0728836e-06, 41.788593)
 
 [node name="Label_togg_t10f" type="Label3D" parent="." unique_id=1382003724]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 16.25)
@@ -831,7 +834,7 @@ text = "IBERO FARO 20
 font_size = 48
 
 [node name="ferrari_laferrari" parent="." unique_id=168139428 instance=ExtResource("67_bfbfv")]
-transform = Transform3D(1.05, 0, 0, 0, 1.05, 0, 0, 0, 1.05, 1.3419526, 0, 35.117283)
+transform = Transform3D(1.05, 0, 0, 0, 1.05, 0, 0, 0, 1.05, 1.1884171, 0, 41.803127)
 
 [node name="Label_ferrari_laferrari" type="Label3D" parent="." unique_id=410208420]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 36.05)
@@ -919,7 +922,7 @@ text = "ARROW KANZLER 16
 font_size = 48
 
 [node name="toyota_supra" parent="." unique_id=966426975 instance=ExtResource("75_37heo")]
-transform = Transform3D(0.029854137, 0.71694905, -0.85993767, 0.13005532, 0.852199, 0.71501225, 1.1120226, -0.118915655, -0.060536947, 6.954369, 2.4992497, 40.85938)
+transform = Transform3D(0.029854137, 0.71694905, -0.85993767, 0.13005532, 0.852199, 0.71501225, 1.1120226, -0.118915655, -0.060536947, 5.3060274, 2.4992497, 43.331875)
 
 [node name="Label_toyota_supra" type="Label3D" parent="." unique_id=1678244893]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 40.449997)
@@ -938,4 +941,37 @@ pixel_size = 0.0025
 billboard = 1
 text = "RISING KAIJU 99
 1.0500"
+font_size = 48
+
+[node name="honda_nsx" parent="." unique_id=1812611435 instance=ExtResource("77_urc7a")]
+transform = Transform3D(1.03, 0, 0, 0, 1.03, 0, 0, 0, 1.03, 0.65741897, 0, 41.777744)
+
+[node name="Label_honda_nsx" type="Label3D" parent="." unique_id=962770144]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 42.649998)
+pixel_size = 0.0025
+billboard = 1
+text = "HONZA NZX
+1.0000"
+font_size = 48
+
+[node name="mazda_rx7" parent="." unique_id=1273857409 instance=ExtResource("78_iad2h")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0, 41.8)
+
+[node name="Label_mazda_rx7" type="Label3D" parent="." unique_id=2058815656]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.02, 42.649998)
+pixel_size = 0.0025
+billboard = 1
+text = "MAZURA RZ-7
+0.9800"
+font_size = 48
+
+[node name="toyota_ae86" parent="." unique_id=348875528 instance=ExtResource("79_bfbfv")]
+transform = Transform3D(0.96, 0, 0, 0, 0.96, 0, 0, 0, 0.96, 3.6, 0, 41.8)
+
+[node name="Label_toyota_ae86" type="Label3D" parent="." unique_id=1383194712]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.02, 42.649998)
+pixel_size = 0.0025
+billboard = 1
+text = "TOKAYA TRUENZO 86
+0.9600"
 font_size = 48

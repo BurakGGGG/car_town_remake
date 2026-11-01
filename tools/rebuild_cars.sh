@@ -18,7 +18,7 @@ for c in json.load(open("vehicles/cars.json"))["cars"]:
     out = c["optimized_path"].replace("res://", "")
     extra = "--ratio 0.08 --rename" if c["id"] == "renault_toros" else "--ratio 0.125"
     # Meshy kaynakları (tools/meshy_prep.py) Blender'da sadeleşmiş + yeni UV'ye pişirilmiş geliyor: oran 1
-    if c["id"] in ("toyota_supra", "nissan_skyline_r34"):
+    if c["id"] in ("toyota_supra", "nissan_skyline_r34", "honda_nsx", "mazda_rx7", "toyota_ae86"):
         extra = "--ratio 1.0"
     print("%s|%s|%s|%s|%s" % (c["id"], src, out, c["scene_path"], extra))
 PY

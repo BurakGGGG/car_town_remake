@@ -13,6 +13,10 @@
 #   3. kopya mesh kaynaştırılır, role göre parçalara ayrılır, her parça kendi hedefine sadeleştirilir
 #   4. Smart UV + Cycles "selected to active" EMIT pişirmesi (temel renk) + gövdeye hafif AO (tekerlere değil:
 #      teker dönerken kemer gölgesi de dönerdi)
+#   5. (2026-11-02) teker temizliği: lastik silindirinin dışında kalan teker yüzleri (kemer astarı kırıntısı) gövdeye;
+#      lastik boyama: lastik bölgesindeki renkli / açık texel'ler lastik rengine (bkz. fit_wheel, "LASTİK BOYAMA")
+# Teşhis: MESHY_LABEL_DUMP=<dosya.npz> etiketleri (normalize yüz merkezi / normali, rol, bölütleme no) döküp çıkar.
+# Teker eksenini sonra tools/wheel_axis_search.py ile incelt (oval / tabanı ezik lastikte ÖZET ekseni ~4 mm kaçabiliyor).
 #
 # Ayar dosyası (tools/meshy/<id>.json):
 #   textured, segmented   Meshy dosyaları;  out  çıktı GLB (assets/cars/source/<id>.glb)
@@ -22,6 +26,8 @@
 #   taillights            arka uçtaki kırmızı texel kümelerini stop parçasına ayır (varsayılan true)
 #   tris                  hedef üçgen: {"body", "glass", "wheel", "lights", "trim"}
 #   tex, ao               pişirilen doku kenarı (2048) ve AO gücü (0 = yok)
+#   tire_paint, tire_r    lastikteki renkli / açık lekeleri lastik rengine boya (varsayılan true); jant kenarı ρ/R
+#                         (yoksa parlaklık profilinden) — bkz. "LASTİK BOYAMA"
 import bpy, bmesh, sys, json, math, os
 import numpy as np
 from mathutils import Vector, Matrix
@@ -120,6 +126,38 @@ def cleanup(label, a, b, area, amin, rounds=3):
     return label
 
 
+def fit_wheel(p, n):
+    """Teker ekseni → (cy, cz, r), Blender normalize uzayında (aks X boyunca). p: yüz merkezleri, n: yüz normalleri.
+    Yalnız DIŞA bakan sırt yüzeyi (normal radyal dışa, |n_x| < 0,7) kullanılır: Meshy teker parçasında kemer astarı
+    kırıntısı olabiliyor (AE86 arka) ve astarın görünen yüzü tekere bakar. Zarf / çember uydurma bu kırıntıyı (o da bir
+    yay) seçiyordu (2026-11-02):
+      r, cy = aks yüksekliği bandındaki (±0,15 r) sırtın yatay açıklığı (yüzdelik 1–99) — kırıntıdan ve ezik tabandan
+              etkilenmez;
+      cz    = lastik tepesi duruyorsa (dikey açıklık ≥ 0,9 × 2r) üst–alt ortası (Meshy lastikleri hafif oval: NSX dikey
+              çap yatayın %94'ü); tepe kemere kaynaşıp kesilmişse zemin (en alt nokta) + r."""
+    yz = p[:, 1:3].astype(np.float64)
+    nyz = n[:, 1:3].astype(np.float64)
+    c = (yz.min(0) + yz.max(0)) / 2
+    r = (yz[:, 1].max() - yz[:, 1].min()) / 2
+    zmin = float(np.percentile(yz[:, 1], 0.2))
+    for _ in range(4):
+        rad = yz - c
+        radn = rad / np.maximum(np.linalg.norm(rad, axis=1)[:, None], 1e-12)
+        outw = ((nyz * radn).sum(1) > 0.5) & (np.abs(n[:, 0]) < 0.7)
+        hb = outw & (np.abs(yz[:, 1] - c[1]) < 0.15 * r)
+        if hb.sum() < 20:
+            break
+        ylo, yhi = np.percentile(yz[hb, 0], [1, 99])
+        r = (yhi - ylo) / 2
+        c[0] = (ylo + yhi) / 2
+        vb = outw & (np.abs(yz[:, 0] - c[0]) < 0.15 * r)
+        up, dn = vb & (yz[:, 1] > c[1]), vb & (yz[:, 1] < c[1])
+        top = np.percentile(yz[up, 1], 99) if up.sum() > 10 else -1.0
+        bot = np.percentile(yz[dn, 1], 1) if dn.sum() > 10 else zmin
+        c[1] = (top + bot) / 2 if top - bot >= 1.8 * r else zmin + r
+    return float(c[0]), float(c[1]), float(r)
+
+
 # --- 1. dokulu mesh + bölütleme -------------------------------------------------------------------------------
 hi = import_glb(P(cfg["textured"]))
 assert len(hi) == 1, "dokulu GLB tek mesh olmalı"
@@ -193,6 +231,9 @@ s = 1.0 / (rhi[1] - rlo[1])
 ctr = (rlo + rhi) / 2
 NORM = Matrix.Scale(s, 4) @ Matrix.Translation(Vector((-ctr[0], -ctr[1], -rlo[2]))) @ R
 ncent = np.array([(NORM @ Vector(c))[:] for c in cent], np.float32)
+# yüz normalleri normalize uzayda (yalnız dönüş; ölçek yönü değiştirmez)
+R3 = R.to_3x3()
+nnorm = np.array([(R3 @ f.normal)[:] for f in bm.faces], np.float32)
 
 label = np.full(F, BODY, np.int32)
 for p in SEG.get("trim", []):
@@ -213,7 +254,6 @@ for p in wheel_parts:
     label[m] = corner
     print("TEKER parça", p, "→", NAMES[corner], np.round(c, 4))
 assert len(set(label[np.isin(label_seg, wheel_parts)])) == len(wheel_parts) == 4, "teker köşeleri çakıştı"
-
 # stop: arka %14'teki kırmızı gövde yüzleri; küçük kırıntılar (rozet, yansıma) elenir
 if cfg.get("taillights", True):
     cand = (label == BODY) & red & (ncent[:, 1] > 0.5 - 0.14)
@@ -246,6 +286,21 @@ if cfg.get("taillights", True):
 # temizlik: kırıntı bölgeler (en yakın yüz eşlemesinin sınır gürültüsü, cam eşiğinin tuz-biberi) komşuya katılır
 AMIN = float(cfg.get("min_region", 2.5e-4)) * area.sum()
 label = cleanup(label, adj_a, adj_b, area, AMIN)
+# teker temizliği (2026-11-02, kırıntı temizliğinden SONRA — yoksa küçük kırıntı komşusu tekere geri katılır): bölütlemenin teker parçası çamurluk / kemer kırıntısı da içerebiliyor (AE86 arka) — teker
+# dönünce onlar da dönerdi. Lastik silindirinin dışında kalan (ρ > 1,06 R ya da lastik genişliğinin %30 ötesinde) teker
+# yüzleri gövdeye geçer. Ayar "wheel_clean": false kapatır.
+if cfg.get("wheel_clean", True):
+    for corner in (FL, FR, RL, RR):
+        m = label == corner
+        cy, cz, R = fit_wheel(ncent[m], nnorm[m])
+        rho = np.hypot(ncent[:, 1] - cy, ncent[:, 2] - cz) / R
+        tread = m & (rho > 0.9) & (rho < 1.02)
+        xl, xh = np.percentile(ncent[tread, 0], [2, 98])
+        w = xh - xl
+        out = m & ((rho > 1.06) | (ncent[:, 0] < xl - 0.3 * w) | (ncent[:, 0] > xh + 0.3 * w))
+        label[out] = BODY
+        print("TEKER TEMİZLİK", NAMES[corner], "R %.4f" % R, "gövdeye", int(out.sum()), "yüz / alan %%%.1f" % (
+            100 * area[out].sum() / max(area[m].sum(), 1e-12)))
 # önce yuvalar: yuva sayısından büyük material_index to_mesh'te sıfırlanır
 lo.data.materials.clear()
 for n in NAMES:
@@ -256,6 +311,11 @@ bm.to_mesh(lo.data); bm.free()
 lo.data.transform(NORM); lo.data.update()
 hi.data.transform(NORM); hi.data.update()
 print("ROLLER", {NAMES[r]: int((label == r).sum()) for r in range(len(NAMES))})
+
+if os.environ.get("MESHY_LABEL_DUMP"):   # teşhis: etiketleri döküp çık (pişirme yok)
+    np.savez(os.environ["MESHY_LABEL_DUMP"], ncent=ncent, nnorm=nnorm, label=label, label_seg=label_seg, area=area)
+    print("DÖKÜM", os.environ["MESHY_LABEL_DUMP"])
+    sys.exit(0)
 
 # --- 3. parçala + sadeleştir ---------------------------------------------------------------------------------------
 for o in bpy.context.selected_objects:
@@ -457,6 +517,100 @@ if AO > 0:
     color_img.pixels.foreach_set(c.ravel())
     color_img.update()
 
+
+# LASTİK BOYAMA (2026-11-02): Meshy dokusunda lastik sırtında / yanağın dış kenarında kaporta rengi (RX-7 sarısı) ya da
+# gri-beyaz lekeler çıkıyordu (çamurluğa yakın lastik tepesi, pişirme ışınının kemere çarpması). Her teker texel'inin 3B
+# konumu pişirilir; eksene uzaklığı jantın dış kenarını (ρ_jant) aşan texel lastiktir, açık / renkli olanlar lastiğin kendi
+# koyu rengine (koyu texel'lerin ortancası) çekilir. Pişirme dolgusu (adanın dışı) da aynı renge.
+#   ayar: "tire_paint" (varsayılan true), "tire_r" (ρ_jant / R elle; yoksa parlaklık profilinden bulunur)
+if cfg.get("tire_paint", True):
+    hi.hide_render = True
+    bk.use_selected_to_active = False
+    bk.margin = 0
+    sc.cycles.samples = 1
+    pos_img = bpy.data.images.new("tirepos", TEX, TEX, alpha=False, float_buffer=True)
+    id_img = bpy.data.images.new("tireid", TEX, TEX, alpha=False, float_buffer=True)
+    for img_ in (pos_img, id_img):
+        img_.colorspace_settings.name = "Non-Color"
+    wheel_names = ["P_wheel_fl", "P_wheel_fr", "P_wheel_rl", "P_wheel_rr"]
+    emits = {}
+    for m in low.data.materials:
+        nt_ = m.node_tree
+        e_ = nt_.nodes.new("ShaderNodeEmission")
+        geo = nt_.nodes.new("ShaderNodeNewGeometry")
+        add = nt_.nodes.new("ShaderNodeVectorMath")
+        add.operation = "ADD"
+        add.inputs[1].default_value = (1.0, 1.0, 1.0)   # bake negatifi kırpmasın
+        nt_.links.new(geo.outputs["Position"], add.inputs[0])
+        nt_.links.new(add.outputs[0], e_.inputs["Color"])
+        o_ = next(n for n in nt_.nodes if n.type == "OUTPUT_MATERIAL")
+        nt_.links.new(e_.outputs["Emission"], o_.inputs["Surface"])
+        t = next(n for n in nt_.nodes if n.type == "TEX_IMAGE")
+        t.image = pos_img
+        nt_.nodes.active = t
+        emits[m.name] = (e_, t, add)
+    for o in sc.objects:
+        o.select_set(o == low)
+    bpy.context.view_layer.objects.active = low
+    bpy.ops.object.bake(type="EMIT")
+    for m in low.data.materials:
+        e_, t, add = emits[m.name]
+        nt_ = m.node_tree
+        for l in list(e_.inputs["Color"].links):
+            nt_.links.remove(l)
+        k_ = wheel_names.index(m.name) + 1 if m.name in wheel_names else 0
+        e_.inputs["Color"].default_value = (k_ / 4.0, 1.0, 0.0, 1.0)   # R = teker no, G = kaplama
+        t.image = id_img
+    bpy.ops.object.bake(type="EMIT")
+    pos = np.empty(TEX * TEX * 4, np.float32); pos_img.pixels.foreach_get(pos); pos = pos.reshape(-1, 4)[:, :3] - 1.0
+    idv = np.empty(TEX * TEX * 4, np.float32); id_img.pixels.foreach_get(idv); idv = idv.reshape(-1, 4)
+    cov = idv[:, 1] > 0.5
+    wid = np.where(cov, np.rint(idv[:, 0] * 4).astype(int) - 1, -1)
+    c = np.empty(TEX * TEX * 4, np.float32); color_img.pixels.foreach_get(c); c = c.reshape(-1, 4)
+    val = c[:, :3].max(1)
+    sat = np.where(val > 1e-4, (val - c[:, :3].min(1)) / np.maximum(val, 1e-4), 0)
+    npoly = len(low.data.polygons)
+    pc = np.empty(npoly * 3, np.float32); low.data.polygons.foreach_get("center", pc); pc = pc.reshape(-1, 3)
+    pn = np.empty(npoly * 3, np.float32); low.data.polygons.foreach_get("normal", pn); pn = pn.reshape(-1, 3)
+    pmi = np.empty(npoly, np.int32); low.data.polygons.foreach_get("material_index", pmi)
+    painted = np.zeros(TEX * TEX, bool)
+    tire_cols = []
+    for k, wn in enumerate(wheel_names):
+        mi = low.data.materials.find(wn)
+        cy, cz, R = fit_wheel(pc[pmi == mi], pn[pmi == mi])
+        m = wid == k
+        rho = np.hypot(pos[m, 1] - cy, pos[m, 2] - cz) / R
+        r_t = cfg.get("tire_r")
+        if r_t is None:
+            # jantın dış kenarı: 0,92 R'nin altında parlak texel oranı %50'yi aşan en dış 0,04'lük dilim + 0,02
+            r_t = 0.80
+            for b in np.arange(0.50, 0.92, 0.04):
+                sel = (rho >= b) & (rho < b + 0.04)
+                if sel.sum() > 20 and (val[m][sel] > 0.35).mean() > 0.5:
+                    r_t = b + 0.06
+        tire = np.zeros(TEX * TEX, bool)
+        tire[np.nonzero(m)[0][rho > r_t]] = True
+        dark = tire & (val < 0.12) & (sat < 0.5)
+        tc = np.median(c[dark, :3], 0) if dark.sum() > 50 else np.array([0.03, 0.03, 0.03], np.float32)
+        bad = tire & ~dark
+        c[bad, :3] = tc
+        painted |= tire
+        tire_cols.append(tc)
+        print("LASTİK %s ρ_jant %.2f R %.4f lastik texel %d boyanan %d renk %s" % (
+            wn[2:], r_t, R, int(tire.sum()), int(bad.sum()), np.round(tc, 3)))
+    # dolgu: kaplanmamış texel'lerden boyanan lastiğe 8 texel'e kadar yakın olanlar lastik rengi (mipmap'te sızmasın)
+    pm = painted.reshape(TEX, TEX)
+    dil = pm.copy()
+    for _ in range(8):
+        d2 = dil.copy()
+        d2[1:] |= dil[:-1]; d2[:-1] |= dil[1:]; d2[:, 1:] |= dil[:, :-1]; d2[:, :-1] |= dil[:, 1:]
+        dil = d2
+    fill = dil.ravel() & ~cov
+    c[fill, :3] = np.median(np.array(tire_cols), 0)
+    color_img.pixels.foreach_set(c.ravel())
+    color_img.update()
+    print("PİŞİRME lastik tamam, dolgu texel", int(fill.sum()))
+
 # dışa aktarıcı dokuyu diskteki dosyadan okusun (üretilmiş görüntü güvenilmez); çalışma klasörü depo dışı
 WORK = os.path.expanduser(cfg.get("work", "~/Projects/ct_shots/meshy_prep/" + os.path.basename(cfg["out"])[:-4]))
 os.makedirs(WORK, exist_ok=True)
@@ -505,28 +659,11 @@ for n_, rid in enumerate(sorted(out_parts)):
     summary["parts"][n_] = {"role": NAMES[rid], "tris": len(o.data.polygons)}
     if NAMES[rid].startswith("wheel"):
         # dönme ekseni: lastik dış zarfına (yan izdüşüm, alt 120° hariç) en küçük kareler çemberi
-        v = np_verts(o.data) + np.array(o.location[:], np.float32)   # dönüş / ölçek yok
-        yz = v[:, 1:3]
-        c = (yz.min(0) + yz.max(0)) / 2
-        r = (yz[:, 1].max() - yz[:, 1].min()) / 2
-        for _ in range(4):   # dış zarf: 5°'lik dilimlerin en uzak noktası, alt 120° (ezik taban) hariç
-            d = np.hypot(*(yz - c).T)
-            ang = np.degrees(np.arctan2(yz[:, 0] - c[0], yz[:, 1] - c[1]))  # 0 = yukarı
-            env = []
-            for a0 in range(-120, 120, 5):
-                m = (ang >= a0) & (ang < a0 + 5)
-                if m.any():
-                    env.append(np.nonzero(m)[0][np.argmax(d[m])])
-            if len(env) < 20:
-                break
-            e = yz[env]
-            A = np.c_[2 * e, np.ones(len(e))]
-            sol = np.linalg.lstsq(A, (e ** 2).sum(1), rcond=None)[0]
-            rn = math.sqrt(sol[2] + sol[0] ** 2 + sol[1] ** 2)
-            if not (0.8 * r < rn < 1.2 * r):
-                break
-            c, r = sol[:2], rn
-        cy, cz = c
+        npoly = len(o.data.polygons)
+        pc = np.empty(npoly * 3, np.float32); o.data.polygons.foreach_get("center", pc)
+        pn = np.empty(npoly * 3, np.float32); o.data.polygons.foreach_get("normal", pn)
+        pc = pc.reshape(-1, 3) + np.array(o.location[:], np.float32)   # dönüş / ölçek yok
+        cy, cz, r = fit_wheel(pc, pn.reshape(-1, 3))
         # Godot uzayı: y = Blender z, z = -Blender y
         summary["wheel_axes"][NAMES[rid][-2:]] = [round(float(cz), 4), round(float(-cy), 4), round(float(r), 4)]
 

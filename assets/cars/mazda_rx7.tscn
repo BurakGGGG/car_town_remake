@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://cpenshm3pwij6"]
+
+[ext_resource type="PackedScene" uid="uid://crssi0ki5ynf4" path="res://assets/cars/optimized/mazda_rx7.glb" id="1_mazda"]
+
+[node name="mazda_rx7" instance=ExtResource("1_mazda")]

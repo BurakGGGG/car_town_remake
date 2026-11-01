@@ -1175,6 +1175,38 @@ const MAPS: Dictionary = {
 		"wheel_groups": {"fl": [3], "fr": [4], "rl": [5], "rr": [6]},
 		"wheel_axes": {"fl": [0.0744, 0.2986, 0.0740], "fr": [0.0746, 0.2986, 0.0740], "rl": [0.0745, -0.2703, 0.0742], "rr": [0.0743, -0.2702, 0.0744]},
 	},
+	# --- 2026-11-02 onuncu parti (Meshy AI, aynı hat): bölütlemede ayrı kaliper / trim yok → 7 parça. Lastikteki renkli
+	# --- lekeler meshy_prep'in LASTİK BOYAMA adımında koyu lastik rengine çekildi.
+	"res://assets/cars/honda_nsx.tscn": {
+		"default_paint": Color(1.0, 1.0, 1.0),  # boya maskesi aracının ölçtüğü fabrika rengi #FFFFFF
+		"hazards": {"front": [0.135, 0.108], "rear": [0.162, 0.172]},  # ön tampon köşe sinyali, stobun dış ucundaki amber (qa/dortlu_konum_qa.gd -- yakin)
+		"body": [0],
+		"glass": [1],
+		"taillights": [2],
+		"wheels": [3, 4, 5, 6],
+		"wheel_groups": {"fl": [3], "fr": [4], "rl": [5], "rr": [6]},
+		"wheel_axes": {"fl": [0.0822, 0.2870, 0.0867], "fr": [0.0821, 0.2873, 0.0867], "rl": [0.0832, -0.2963, 0.0843], "rr": [0.0834, -0.2958, 0.0842]},  # tools/wheel_axis_search.py
+	},
+	"res://assets/cars/mazda_rx7.tscn": {
+		"default_paint": Color(0.996, 0.784, 0.016),  # boya maskesi aracının ölçtüğü fabrika rengi #FEC804
+		"hazards": {"front": [0.132, 0.118]},  # farların altındaki sinyal yarığı (qa/dortlu_konum_qa.gd -- yakin)
+		"body": [0],
+		"glass": [1],
+		"taillights": [2],
+		"wheels": [3, 4, 5, 6],
+		"wheel_groups": {"fl": [3], "fr": [4], "rl": [5], "rr": [6]},
+		"wheel_axes": {"fl": [0.0832, 0.2869, 0.0824], "fr": [0.0828, 0.2867, 0.0825], "rl": [0.0830, -0.2762, 0.0848], "rr": [0.0831, -0.2762, 0.0847]},  # tools/wheel_axis_search.py
+	},
+	"res://assets/cars/toyota_ae86.tscn": {
+		"default_paint": Color(1.0, 1.0, 1.0),  # boya maskesi aracının ölçtüğü fabrika rengi #FFFFFF (alt yarı siyah: boyanmaz)
+		"hazards": {"front": [0.132, 0.103], "rear": [0.165, 0.151]},  # tampondaki sinyal, stobun dış ucundaki amber (qa/dortlu_konum_qa.gd -- yakin)
+		"body": [0],
+		"glass": [1],
+		"taillights": [2],
+		"wheels": [3, 4, 5, 6],
+		"wheel_groups": {"fl": [3], "fr": [4], "rl": [5], "rr": [6]},
+		"wheel_axes": {"fl": [0.0732, 0.2829, 0.0759], "fr": [0.0731, 0.2828, 0.0762], "rl": [0.0731, -0.2607, 0.0765], "rr": [0.0730, -0.2608, 0.0763]},  # tools/wheel_axis_search.py
+	},
 	"res://assets/cars/toyota_corolla.tscn": {
 		"default_paint": Color(0.612, 0.627, 0.702),  # boya maskesi aracının ölçtüğü fabrika rengi #9CA0B3
 		"body": [6, 7, 8, 10, 12, 13, 16, 17, 18, 19, 20, 22, 23, 26, 27, 28, 30, 31, 33, 38, 40, 42, 43, 45, 46, 47, 48, 49, 53, 54, 55],

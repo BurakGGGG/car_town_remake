@@ -4,7 +4,7 @@
 16 araçlık eski katalogdan kalmaydı (kasa araçları, 5/10/14/16). Kararlar kullanıcıyla soru-cevapla verildi.
 
 ## Kurallar (`gameplay/collection_rewards.gd`, `CollectionRewards`)
-- **Sayılan araçlar:** edinilebilir bütün katalog = kasa araçları + hurdalık klasikleri (74; 2026-10-31 öncesi 72). Bir kez SAHİP OLMAK yeter
+- **Sayılan araçlar:** edinilebilir bütün katalog = kasa araçları + hurdalık klasikleri (77; 2026-11-02 öncesi 74, 2026-10-31 öncesi 72). Bir kez SAHİP OLMAK yeter
   (keşif: sonra satılsa da sayılır). KOLEKSİYONCU görevleri eskisi gibi yalnız kasa araçlarını sayar
   (`VehicleOwnership.discovered_count`).
 - **Profilde ve arkadaş listesinde de 72 (2026-10-26):** profil kartı, ARKADAŞLAR kartları ve öne çıkanlar
@@ -16,8 +16,8 @@
 - **Set ödülü:** elmas + ₺, setteki araçların NADİRLİĞİNE göre araç başına toplanır:
   `SET_GEMS` common 2 · rare 5 · epic 9 · legendary 18; `SET_MONEY` 5 b · 10 b · 20 b · 40 b ₺ (elmas "daha cimri").
   Hurdalık klasiğinin nadirliği restorasyon kademesinden: basit → nadir, klasik → epik, yarış → efsanevi.
-- **Kilometre taşları:** 10 / 20 / 35 / 50 / 74 araç → 10 / 20 / 40 / 80 / 150 elmas (2026-10-31: son taş 72 → 74, eski kayıttaki 72 yeni son taşa taşınır — `LEGACY_FINALS`).
-- **TAM KOLEKSİYON (74):** ayrıca KOLEKSİYONER profil çerçevesi (lacivert-altın, yıldızlı), KOLEKSİYONER KUPASI
+- **Kilometre taşları:** 10 / 20 / 35 / 50 / 77 araç → 10 / 20 / 40 / 80 / 150 elmas (2026-10-31: son taş 72 → 74, 2026-11-02: 74 → 77; eski kayıttaki 72 / 74 yeni son taşa taşınır — `LEGACY_FINALS`).
+- **TAM KOLEKSİYON (77):** ayrıca KOLEKSİYONER profil çerçevesi (lacivert-altın, yıldızlı), KOLEKSİYONER KUPASI
   (`collector_trophy`, lüks zemin eşyası, mağazada yok; `tools/decor/props_v9_koleksiyon.py`) ve KOLEKSİYONER unvanı
   (profil kartında "★ KOLEKSİYONER"; `public_garages.honor`).
 - Ödül araç keşfedilir keşfedilmez hesaba geçer (`VehicleOwnership.vehicle_discovered`): kasa, hurdalık, posta hediyesi,

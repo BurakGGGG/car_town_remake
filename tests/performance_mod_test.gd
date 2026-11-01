@@ -102,9 +102,10 @@ func _run() -> void:
 		# Fabrika aracın sınıfı kuralla aynı (bantlar ayrık)
 		if PerformanceMods.class_for(id, DragRaceSim.base_time(id)) != own:
 			check(false, "%s fabrika sınıfı kuralla aynı" % id)
-	check(worse_300 == 0, "74 araç × 30 kademe: hiçbir parça 300 m süresini uzatmıyor")
+	check(worse_300 == 0, "bütün araçlar × 30 kademe: hiçbir parça 300 m süresini uzatmıyor")
 	check(two_step == 0, "full yükseltmeyle hiçbir araç iki sınıf atlamıyor")
-	check(jumps.size() == 29, "full yükseltmeyle 29 araç bir üst sınıfa çıkıyor (%d)" % jumps.size())
+	# 2026-11-02 onuncu parti: AE86 B → A (11,34 → 10,40 sn) ile 29 → 30
+	check(jumps.size() == 30, "full yükseltmeyle 30 araç bir üst sınıfa çıkıyor (%d)" % jumps.size())
 	check(price_bad == 0, "fiyatlar kademe kademe artıyor, 50 ₺'ye yuvarlı")
 	check(invisible == 0, "her araçta her kademe ekranda en az bir değeri görünür iyileştiriyor")
 	check(hp_missing == 0, "bütün araçların beygiri katalogda (gösterge)")

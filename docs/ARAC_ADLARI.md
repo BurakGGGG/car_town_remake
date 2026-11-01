@@ -91,6 +91,7 @@ rengiyle dolduruldu: `tools/debadge/` (Blender'ın Python'u + numpy; ayrıntı `
 | FJORD RZ 200 | `ford_rs200` | FORGE GROUP B 200 | Ford RS200 |
 | FJORD TRANSA | `ford_transit` | FORGE HAMAL 19 | Ford Transit tek kabin kamyonet |
 | HONZA CIVITA | `honda_civic` | ZENITH REV 10 | Honda Civic VTEC |
+| HONZA NZX | `honda_nsx` | — | Honda NSX (NA1) 3.0 V6 VTEC |
 | HYUNGA ASCENT BLU | `hyundai_accent_blue` | HYPER CYAN 13 | Hyundai Accent Blue |
 | HYUNGA ASCENT ERO | `hyundai_era` | HYPER KENT 07 | Hyundai Accent Era |
 | HYUNGA GETTA | `hyundai_getz` | HYPER POCKET Z | Hyundai Getz |
@@ -100,6 +101,7 @@ rengiyle dolduruldu: `tools/debadge/` (Blender'ın Python'u + numpy; ayrıntı `
 | LANDRIDER SERIA 3 | `land_rover_series3` | MOORLAND TREK III | Land Rover Series III 88 |
 | LANZA DELTIA HF | `lancia_delta_integrale` | ASTA SEDICI 92 | Lancia Delta HF Integrale Evoluzione |
 | LANZA STRATIA | `lancia_stratos` | ASTA COMETA 74 | Lancia Stratos HF Stradale |
+| MAZURA RZ-7 | `mazda_rx7` | — | Mazda RX-7 (FD) Twin Turbo |
 | MERIDES 123 D | `mercedes_w123` | STERN TANK 123 | Mercedes-Benz 240 D |
 | MERIDES CLX 35 | `mercedes_cls` | STERN COUPÉ 350 | Mercedes CLS 350 |
 | MERIDES GD 63 | `mercedes_g` | STERN FESTUNG 18 | Mercedes-AMG G 63 |
@@ -131,6 +133,7 @@ rengiyle dolduruldu: `tools/debadge/` (Blender'ın Python'u + numpy; ayrıntı `
 | TOKAYA CELESTA GT4 | `toyota_celica_gt4` | TORNADO QUAD 93 | Toyota Celica GT-Four ST185 |
 | TOKAYA CORALIA | `toyota_corolla` | TORNADO HALE 21 | Toyota Corolla 1.8 Hybrid (E210) |
 | TOKAYA SUPREMA | `toyota_supra` | TORNADO APEX 97 | Toyota Supra A80 3.0 Twin Turbo |
+| TOKAYA TRUENZO 86 | `toyota_ae86` | — | Toyota Sprinter Trueno GT-APEX (AE86) |
 | VOLDA SV60 | `volvo_s60` | SHIELD ARMOR 16 | Volvo S60 |
 | VOLKAN GOLFER 7 | `vw_golf_7` | WULF MK7 HATCH | VW Golf 7 |
 | VOLKAN PASSAGE B5 | `vw_passat_b55` | WULF KOMBI 04 | VW Passat B5.5 |

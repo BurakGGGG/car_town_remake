@@ -725,3 +725,53 @@ laboratuvarda ayarladığı değer (2026-11-01): Supra 1,03 → 1,08, R34 1,05 �
 **Far** ayrı parça değil (dokudan): dörtlü önde `hazards` ile (köşe sinyali, ön ortografik ızgaradan ölçüldü); arkada
 stop parçası. Bilinen kusurlar: arka tekerlerde kemerden birkaç küçük kırıntı tekerle dönüyor (blur'da ince leke); Supra
 yanındaki reflektör ve kapı altı AO'yla hafif kirli; Meshy camlara iç döşemeyi silik boyamış (orijinalde de var).
+
+---
+
+# Onuncu parti (2026-11-02) — Meshy: NSX, RX-7, AE86, katalog 76 → 79
+
+Kullanıcı Meshy AI'da üretti (`~/Desktop/cars/honda nsx/`, `mazda rx7/`, `toyota trueno ae86/`; her birinde dokulu tek mesh +
+`…part-segmentation_split.glb`). Hat dokuzuncu partiyle aynı (`tools/meshy_prep.py` → `optimize_car.gd --ratio 1.0` →
+`resimplify_car.py` → --import → `make_car_scene.gd` → `tire_auto_fill.py` → `make_paint_mask.gd` → debadge →
+`tire_inner_paint.py` → --import → `make_car_thumbs.gd` → `bake_race_specs` / `bake_rival_pool` / `lb_limits` /
+`npm run lb-classes` → `make_size_lab.gd -- --add`). Ayarlar `tools/meshy/{honda_nsx,mazda_rx7,toyota_ae86}.json`
+(bölütlemede ayrı kaliper / trim yok → 7 parça: 0 gövde, 1 cam, 2 stop, 3–6 teker fl/fr/rl/rr; aynalar / RX-7 kanadı gövde).
+
+| Ad | Kimlik | GLB MB | Üçgen (resimplify) | Boya % | Fabrika rengi | 300 m | Sınıf |
+|---|---|---|---|---|---|---|---|
+| HONZA NZX | `honda_nsx` | 2,1 | 53.341 | 34,0 | #FFFFFF | 9,92 sn | A |
+| MAZURA RZ-7 | `mazda_rx7` | 2,6 | 60.093 | 33,5 | #FEC804 | 9,41 sn | A |
+| TOKAYA TRUENZO 86 | `toyota_ae86` | 2,5 | 62.422 | 26,4 | #FFFFFF (alt yarı siyah, boyanmaz) | 11,34 sn | B |
+
+**Veri:** NSX NA1 3.0 V6 VTEC (274 PS, 0-100 5,9 sn, 270, RWD; 4,405 × 1,81 × 1,17 m, aks 2,53 — auto-data), RX-7 FD Twin
+Turbo (239 PS, 5,3 sn, 250, RWD; 4,285 × 1,76 × 1,23 m, aks 2,425 — auto-data), Sprinter Trueno GT-APEX AE86 (130 PS,
+0-100 8,3 sn auto.ru, son hız ~190 TAHMİN; 4,205 × 1,625 × 1,335 m, aks 2,40). Fiyat / seviye / rütbe / nadirlik GEÇİCİ:
+NSX 140.000 ₺ sv. 24 rütbe 6 epic, RX-7 125.000 ₺ sv. 21 rütbe 5 epic, AE86 75.000 ₺ sv. 16 rütbe 4 rare. Üçü de SPOR
+KASASI + JAPON EFSANELERİ seti + Emre'nin araçları; trafikte normal araç. `model_scale` kullanıcının laboratuvarda
+ayarladığı değer (2026-11-02): NSX 1,00 → 1,03, RX-7 0,98 → 1,00, AE86 0,96 (ilk tahmin uzunluk / 4,39). AE86 tam modifiyeyle B → A (performance_mod_test sayımı 29 → 30).
+Koleksiyonun son taşı 74 → 77 (`LEGACY_FINALS` [72, 74]).
+
+**Yeni: lastik boyama + teker temizliği (meshy_prep).** Kullanıcı: "bazılarının lastikleri renkli çıktı". RX-7'de lastik
+yanağının dış kenarında ve sırtında kaporta sarısı, NSX / AE86'da sırtta gri-beyaz lekeler vardı (çamurluğa yakın lastik
+tepesi; pişirme ışını kemere çarpıyor). Pişirmeden sonra her teker texel'inin 3B konumu da pişirilir (EMIT, Position + 1,
+kenar payı 0); eksene uzaklığı jant kenarını (ρ_jant: parlak texel oranı %50'yi aşan en dış 0,04 R dilimi + 0,02, yoksa
+0,80) aşan texel lastiktir, açık / doygun olanlar lastiğin kendi koyu ortancasına çekilir, adanın 8 texel'lik dolgusu da.
+AE86 arka teker bölütlemesinde kemer astarı kırıntıları vardı (teker dönünce onlar da dönerdi, ekseni de %8 şişiriyordu):
+`fit_wheel` artık yalnız DIŞA bakan sırt yüzeyini kullanır (astarın görünen yüzü tekere bakar; zarf / RANSAC çember astar
+yayını seçiyordu) — r ve yatay merkez aks yüksekliği bandının yatay açıklığından; lastik silindirinin dışındaki teker
+yüzleri (ρ > 1,06 R ya da genişliğin %30 ötesi) gövdeye geçer (AE86 sol-arka alanın %8,8'i). Teşhis anahtarı
+`MESHY_LABEL_DUMP=<npz>`.
+
+**Yeni: `tools/wheel_axis_search.py`** (Blender): Meshy lastikleri hafif oval (NSX dikey çap yatayın %94'ü) ve AE86'nın
+tabanı ~4 mm ezik; ÖZET eksenleri AE86'da dikeyde kaçıyordu (wheel_blur'da çift lastik kenarı; wheel_fit'in yüzdelik ucu
+da yatayda kaçık). Araç teker parçasını aday eksen etrafında 6 açıda döndürüp yan izdüşümde kendisiyle örtüşmesini
+(Chamfer) en küçükleyen merkezi arar: AE86 maliyet 12,8 → 9,8, NSX / RX-7 < 1 mm düzeltme. CarPartMap'teki üç aracın
+eksenleri bundan; wheel_blur'da jant kolları ve bijon dairesi keskin.
+
+**Logo söküm:** NSX burun "H" arması + dört jant göbeği, RX-7 burun ve bagaj arması (`badges.json`); AE86'da logo yok. NSX
+burnunda çok soluk pembe kalıntı (oyun ölçeğinde görünmez). NSX arka plakasında anlamsız Meshy yazısı duruyor.
+**Dörtlü:** far / ön sinyal ayrı parça değil → `hazards` ön (NSX / AE86 arkada da stobun dış ucundaki amber), ölçüm
+`qa/dortlu_konum_qa.gd -- yakin`. Teker taraması: dıştan ve `merge` boşluksuz; içeriden jant kenarında %26–42'lik birkaç
+dilim (NSX arka, RX-7 ön, AE86 sağ-arka). Testler: vehicle_asset 1747, vehicle_wheel 80, car_thumbs 5, vehicle_display 23,
+collection_rewards 56, junkyard 148, friend_race 59, performance_mod 114, race_replay 33 — 0 FAIL.
+**Yayın bekleyen:** `lb_limits.json` / `lb_classes.json` güncellendi, functions (lbRun, lbWeekly) yeniden YAYINLANMADI.

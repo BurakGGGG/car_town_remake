@@ -1,8 +1,8 @@
 extends SceneTree
-## KOLEKSİYON ÖDÜLLERİ — CollectionRewards (set ödülü nadirliğe göre, kilometre taşları 10 / 20 / 35 / 50 / 74, TAM
+## KOLEKSİYON ÖDÜLLERİ — CollectionRewards (set ödülü nadirliğe göre, kilometre taşları 10 / 20 / 35 / 50 / 77, TAM
 ## KOLEKSİYON: çerçeve + kupa + unvan), kayıt (ödenen bir daha ödenmez, bölümü olmayan eski kayıtta tamam olanlar ödülsüz),
 ## SET TAMAMLANDI! ekranı (oyun sakinleşince, ödüller birleşir, sayaçlar TOPLA'ya dek bekler) ve KOLEKSİYON panosu
-## (sayaç 74 üzerinden, set satırları, ALINDI). Gerçek düğümlerle koşar (Main.tscn).
+## (sayaç 77 üzerinden, set satırları, ALINDI). Gerçek düğümlerle koşar (Main.tscn).
 ##   tools/run_tests.sh collection_rewards_test
 
 var fails: int = 0
@@ -78,7 +78,7 @@ func _rules() -> void:
 	check(CollectionRewards.final_milestone() == CollectionRewards.total_count(),
 		"son kilometre taşı (%d) = bütün koleksiyon (%d): katalog büyürse MILESTONES güncellenmeli"
 		% [CollectionRewards.final_milestone(), CollectionRewards.total_count()])
-	check(CollectionRewards.milestone_list() == [10, 20, 35, 50, 74], "taşlar 10 / 20 / 35 / 50 / 74")
+	check(CollectionRewards.milestone_list() == [10, 20, 35, 50, 77], "taşlar 10 / 20 / 35 / 50 / 77")
 	var in_sets: Dictionary = {}
 	var ids: Dictionary = {}
 	var bad: Array[String] = []
@@ -118,6 +118,10 @@ func _set_reward() -> void:
 	rewards.load_state({"sets": [], "milestones": [10, 72]})
 	check(rewards.is_milestone_paid(CollectionRewards.final_milestone()) and rewards.is_milestone_paid(10),
 		"eski kayıttaki TAM KOLEKSİYON taşı (72) yeni son taşa (%d) taşınır: ödül ikinci kez verilmez" % CollectionRewards.final_milestone())
+	rewards.reset()
+	rewards.load_state({"sets": [], "milestones": [74]})
+	check(rewards.is_milestone_paid(CollectionRewards.final_milestone()),
+		"eski kayıttaki TAM KOLEKSİYON taşı (74) da yeni son taşa (%d) taşınır" % CollectionRewards.final_milestone())
 	rewards.reset()
 	var yerli: Dictionary = CrateCatalog.get_set(&"yerli_klasikler")
 	var cars: Array = yerli["cars"]

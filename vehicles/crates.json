@@ -41,7 +41,7 @@
     {"id": "avrupa_minikleri", "name": "AVRUPA MİNİKLERİ", "cars": ["fiat_500_1965", "mini_cooper_1965", "vw_beetle_1967"]},
     {"id": "yol_ve_macera", "name": "YOL VE MACERA", "cars": ["willys_jeep_mb", "land_rover_series3", "vw_t1_bus"]},
     {"id": "amerikan_kaslilari", "name": "AMERİKAN KASLILARI", "cars": ["ford_mustang_1967", "chevrolet_corvette_c2", "dodge_charger_1970", "chevrolet_camaro"]},
-    {"id": "japon_efsaneleri", "name": "JAPON EFSANELERİ", "cars": ["toyota_supra", "nissan_skyline_r34", "mitsubishi_evo6", "toyota_celica_gt4", "honda_civic"]},
+    {"id": "japon_efsaneleri", "name": "JAPON EFSANELERİ", "cars": ["toyota_supra", "nissan_skyline_r34", "honda_nsx", "mazda_rx7", "toyota_ae86", "mitsubishi_evo6", "toyota_celica_gt4", "honda_civic"]},
     {"id": "altin_cag_gt", "name": "ALTIN ÇAĞ GT", "cars": ["jaguar_e_type", "aston_martin_db5", "mercedes_300sl", "lamborghini_miura", "porsche_911_1973"]},
     {"id": "ralli_efsaneleri", "name": "RALLİ EFSANELERİ", "cars": ["ford_escort_rs1600", "lancia_stratos", "audi_quattro_s1", "ford_rs200", "lancia_delta_integrale", "toyota_celica_gt4", "mitsubishi_evo6"]}
   ],
@@ -78,7 +78,7 @@
       "short_name": "SPOR",
       "price_gems": 100,
       "min_level": 14,
-      "pool": ["seat_leon", "honda_civic", "alfa_romeo_159", "chevrolet_camaro", "bmw_e46", "bmw_f30", "cupra_formentor", "toyota_supra", "nissan_skyline_r34"],
+      "pool": ["seat_leon", "honda_civic", "alfa_romeo_159", "chevrolet_camaro", "bmw_e46", "bmw_f30", "cupra_formentor", "toyota_supra", "nissan_skyline_r34", "honda_nsx", "mazda_rx7", "toyota_ae86"],
       "color": "#C4473A",
       "scene_path": "res://assets/crates/sport_crate.glb",
       "icon": "",

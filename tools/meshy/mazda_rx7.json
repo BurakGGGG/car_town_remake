@@ -1,0 +1,10 @@
+{
+  "textured": "~/Desktop/cars/mazda rx7/mazda_rx7.glb",
+  "segmented": "~/Desktop/cars/mazda rx7/Meshy_AI_Golden_Apex_20261101_part-segmentation_split.glb",
+  "out": "assets/cars/source/mazda_rx7.glb",
+  "front": "-X",
+  "seg": {"wheels": [2, 3, 7, 8], "glass": [4, 5, 6, 9], "trim": []},
+  "tris": {"body": 80000, "glass": 4000, "wheel": 6000, "lights": 1500, "trim": 1500},
+  "tex": 2048,
+  "ao": 0.35
+}

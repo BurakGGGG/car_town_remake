@@ -1,0 +1,10 @@
+{
+  "textured": "~/Desktop/cars/honda nsx/honda_nsx.glb",
+  "segmented": "~/Desktop/cars/honda nsx/Meshy_AI_White_Honda_NSX_20261101_part-segmentation_split.glb",
+  "out": "assets/cars/source/honda_nsx.glb",
+  "front": "-X",
+  "seg": {"wheels": [0, 1, 6, 7], "glass": [2, 4, 5, 8], "trim": []},
+  "tris": {"body": 80000, "glass": 4000, "wheel": 6000, "lights": 1500, "trim": 1500},
+  "tex": 2048,
+  "ao": 0.35
+}

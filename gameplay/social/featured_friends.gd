@@ -33,7 +33,7 @@ const EMRE_CARS: Array[String] = ["bmw_e46", "bmw_e60", "mercedes_cls", "mercede
 	"porsche_gt3", "lambo_huracan", "ferrari_488_pista", "chevrolet_camaro", "alfa_romeo_159", "seat_leon",
 	"honda_civic", "vw_golf_7", "togg_t10f",
 	"bugatti_chiron", "bugatti_veyron", "ferrari_laferrari", "porsche_taycan", "mercedes_g", "audi_a6", "bmw_f30",
-	"cupra_formentor", "toyota_supra", "nissan_skyline_r34"]
+	"cupra_formentor", "toyota_supra", "nissan_skyline_r34", "honda_nsx", "mazda_rx7", "toyota_ae86"]
 const ELIF_CARS: Array[String] = ["tofas_sahin", "renault_toros", "hyundai_era", "hyundai_getz", "hyundai_accent_blue",
 	"renault_fluence", "vw_passat_b55", "ford_focus", "opel_corsa", "skoda_kamiq", "vw_beetle", "togg_t10x",
 	"tesla_model_y", "volvo_s60",

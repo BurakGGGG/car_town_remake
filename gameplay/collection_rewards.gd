@@ -5,8 +5,8 @@ extends Node
 ##                yeter (keşif: sonra satılsa da sayılır). Ödül elmas + ₺, setteki araçların NADİRLİĞİNE göre araç başına
 ##                toplanır (SET_GEMS / SET_MONEY); hurdalık klasiklerinin nadirliği kademesinden (basit nadir, klasik epik,
 ##                yarış efsanevi). Her set bir kez.
-##   KİLOMETRE    keşfedilen araç sayısı (kasa + hurdalık: edinilebilir bütün katalog) 10 / 20 / 35 / 50 / 74 → elmas.
-##   TAM KOLEKSİYON  son taş (74): ayrıca KOLEKSİYONER çerçevesi + KOLEKSİYONER KUPASI (dekor, mağazada yok) + unvanı.
+##   KİLOMETRE    keşfedilen araç sayısı (kasa + hurdalık: edinilebilir bütün katalog) 10 / 20 / 35 / 50 / 77 → elmas.
+##   TAM KOLEKSİYON  son taş (77): ayrıca KOLEKSİYONER çerçevesi + KOLEKSİYONER KUPASI (dekor, mağazada yok) + unvanı.
 ## Ödül araç keşfedilir keşfedilmez hesaba geçer (VehicleOwnership.vehicle_discovered); `rewarded` → HUD sayaçları bekletir,
 ## SET TAMAMLANDI! ekranı (CollectionRewardScreen) oyun sakinken açılır, TOPLA'da paralar sayaçlara uçar.
 ## Durum kayıtta ("collection"); eski kayıtta bu bölüm yoksa bugün tamam olanlar ÖDÜLSÜZ işaretlenir (mark_existing).
@@ -22,10 +22,10 @@ const SET_MONEY: Dictionary = {&"common": 5000, &"rare": 10000, &"epic": 20000, 
 ## Hurdalık klasiklerinin set ödülündeki nadirliği (restorasyon kademesi → nadirlik).
 const RESTORATION_RARITY: Dictionary = {&"basic": &"rare", &"classic": &"epic", &"race": &"legendary"}
 ## Kilometre taşları: keşfedilen araç sayısı → elmas. En büyüğü TAM KOLEKSİYON.
-const MILESTONES: Dictionary = {10: 10, 20: 20, 35: 40, 50: 80, 74: 150}
+const MILESTONES: Dictionary = {10: 10, 20: 20, 35: 40, 50: 80, 77: 150}
 ## Katalog büyüyünce eski TAM KOLEKSİYON taşları: kayıtta ödenmiş görünüyorsa yeni son taş ödenmiş sayılır (ödül
-## ikinci kez verilmez; 2026-10-31 dokuzuncu parti 72 → 74).
-const LEGACY_FINALS: Array[int] = [72]
+## ikinci kez verilmez; 2026-10-31 dokuzuncu parti 72 → 74, 2026-11-02 onuncu parti 74 → 77).
+const LEGACY_FINALS: Array[int] = [72, 74]
 const FINAL_FRAME: String = "collector"
 const FINAL_DECOR: StringName = &"collector_trophy"
 const FINAL_HONOR: String = "collector"

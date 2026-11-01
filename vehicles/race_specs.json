@@ -169,6 +169,12 @@
       "race_top_kmh": 144.467,
       "torque": 234.927
     },
+    "honda_nsx": {
+      "base_time": 9.9219,
+      "key": "3aeb3efe741676b2c22f59d1c8fae5e3",
+      "race_top_kmh": 186.124,
+      "torque": 459.834
+    },
     "hyundai_accent_blue": {
       "base_time": 12.2264,
       "key": "e50cb6a491b7fdcf21cfba6b89eb0f38",
@@ -222,6 +228,12 @@
       "key": "7ca70a0be6cc0d1dcca2c7ba4eb016e6",
       "race_top_kmh": 92.092,
       "torque": 72.673
+    },
+    "mazda_rx7": {
+      "base_time": 9.411,
+      "key": "71f4bd3652d6f3114ef04fde10a67007",
+      "race_top_kmh": 202.784,
+      "torque": 562.125
     },
     "mercedes_300sl": {
       "base_time": 11.5799,
@@ -390,6 +402,12 @@
       "key": "7bf86c72f2220b8e869ab142e5334fc3",
       "race_top_kmh": 160.77,
       "torque": 357.929
+    },
+    "toyota_ae86": {
+      "base_time": 11.3428,
+      "key": "9f6e751c0ca921eb21a5010f7b7e0baa",
+      "race_top_kmh": 155.763,
+      "torque": 262.679
     },
     "toyota_celica_gt4": {
       "base_time": 10.955,
