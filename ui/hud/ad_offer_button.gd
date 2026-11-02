@@ -89,6 +89,12 @@ func refresh() -> void:
 	if state == AdService.Offer.LOADING:
 		visible = true
 		ads.request(offer)
+		var gap: int = ads.gap_left()
+		if gap > 0 and ads.block_reason(offer) == AdPolicy.TOO_SOON:
+			# İki reklam arası bekleme: reklam yüklense de izlenemez → kalan süre (zamanlayıcı saniyede bir tazeler)
+			text = Loc.t("%s SONRA") % _clock(gap) + ("\n" + reward_text if not compact and not reward_text.is_empty() else "")
+			_note_view(false)
+			return
 		if compact:
 			text = Loc.t("YÜKLENİYOR…")
 		else:

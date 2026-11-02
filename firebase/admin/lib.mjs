@@ -740,7 +740,7 @@ export const AD_KINDS = {
   event_race: { label: "Etkinlik yarışı +1 hak", cap: 1 },
   car_delivery: { label: "Araç siparişi 8 saat öne (3 reklam = hemen)", cap: 9 },
 };
-export const AD_DEFAULTS = { total_cap: 20, free_gems: 5, free_gems_cooldown: 180 };
+export const AD_DEFAULTS = { total_cap: 30, free_gems: 5, free_gems_cooldown: 180 };   // oyunla aynı (AdPolicy)
 
 /** Panel formundan reklam ayarı: total_cap 0–100, free_gems 1–50 (reklam başına elmas), free_gems_cooldown 0–3600 sn,
  *  caps {tür: 0–50} (0 = o teklif kapalı). Varsayılana eşit alanlar da yazılır (oyun hep panelin değerini kullanır). */

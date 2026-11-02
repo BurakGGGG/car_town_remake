@@ -33,10 +33,13 @@ func _run() -> void:
 	check(AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 3, 0, -1) == AdPolicy.OK, "seviye yetince uygun")
 	st["counts"] = {AdPolicy.RACE_DOUBLE: 5}
 	check(AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, 0, -1) == AdPolicy.DAILY_CAP, "tür günlük sınırı")
-	st["counts"] = {AdPolicy.RACE_DOUBLE: 4, AdPolicy.REPAIR_BOOST: 8, AdPolicy.FREE_GEMS: 5, AdPolicy.LEVELUP_DOUBLE: 2}
-	check(AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, 0, -1) == AdPolicy.OK, "toplam 20 altında (19) uygun")
-	st["counts"] = {AdPolicy.RACE_DOUBLE: 4, AdPolicy.REPAIR_BOOST: 8, AdPolicy.FREE_GEMS: 5, AdPolicy.LEVELUP_DOUBLE: 3}
-	check(AdPolicy.total_today(st) == 20 and AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, 0, -1) == AdPolicy.TOTAL_CAP, "toplam günlük sınır (20)")
+	# Toplam sınır 2026-11-02'de 20 → 30 (araç siparişi günde 9 reklam yiyebiliyor)
+	st["counts"] = {AdPolicy.RACE_DOUBLE: 4, AdPolicy.REPAIR_BOOST: 8, AdPolicy.FREE_GEMS: 5, AdPolicy.LEVELUP_DOUBLE: 2,
+		AdPolicy.CAR_DELIVERY: 9, AdPolicy.TIME_SKIP: 1}
+	check(AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, 0, -1) == AdPolicy.OK, "toplam 30 altında (29) uygun")
+	st["counts"] = {AdPolicy.RACE_DOUBLE: 4, AdPolicy.REPAIR_BOOST: 8, AdPolicy.FREE_GEMS: 5, AdPolicy.LEVELUP_DOUBLE: 3,
+		AdPolicy.CAR_DELIVERY: 9, AdPolicy.TIME_SKIP: 1}
+	check(AdPolicy.total_today(st) == 30 and AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, 0, -1) == AdPolicy.TOTAL_CAP, "toplam günlük sınır (30)")
 	st["counts"] = {}
 	check(AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, 10_000, 0) == AdPolicy.TOO_SOON, "iki reklam arası bekleme")
 	check(AdPolicy.block_reason(AdPolicy.RACE_DOUBLE, st, 9, AdPolicy.MIN_GAP_MS + 1, 0) == AdPolicy.OK, "bekleme bitince uygun")
@@ -179,6 +182,15 @@ func _run() -> void:
 	await frames(6)
 	check(svc.block_reason(AdPolicy.RACE_DOUBLE) == AdPolicy.TOO_SOON
 		and svc.offer_state(AdPolicy.RACE_DOUBLE) == AdService.Offer.LOADING, "iki reklam arası beklemede de YÜKLENİYOR (gizlenmez)")
+	var gap: int = svc.gap_left()
+	check(gap > 40 and gap <= AdPolicy.MIN_GAP_MS / 1000, "iki reklam arası kalan süre (%d sn)" % gap)
+	var wait_button: AdOfferButton = AdOfferButton.new(AdPolicy.RACE_DOUBLE, "+500 ₺")
+	root.add_child(wait_button)
+	await frames(2)
+	check(wait_button.visible and wait_button.disabled and wait_button.text.begins_with("0:4")
+		and wait_button.text.contains(Loc.t("%s SONRA").replace("%s", "").strip_edges()) and wait_button.text.contains("+500 ₺"),
+		"düğme beklemede geri sayar: «%s»" % wait_button.text.replace("\n", " / "))
+	wait_button.queue_free()
 	svc.load_state({"day": svc.state()["day"], "counts": {"race_double": 5}})
 	check(svc.offer_state(AdPolicy.RACE_DOUBLE) == AdService.Offer.NONE, "günlük sınırda teklif yok")
 	svc.reset()

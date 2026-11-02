@@ -141,6 +141,14 @@ func cooldown_left(kind: StringName) -> int:
 	return AdPolicy.cooldown_left(kind, _state, _now_unix())
 
 
+## İki reklam arası beklemenin (AdPolicy.MIN_GAP_MS) bitmesine kalan sn; bekleme yoksa 0. Teklif düğmesi bu sürede
+## "0:32 SONRA" yazar (2026-11-02: araç siparişinde 3 reklam üst üste izlenirken "REKLAM YÜKLENİYOR" yanıltıyordu).
+func gap_left() -> int:
+	if _last_ad_end_ms < 0:
+		return 0
+	return maxi(ceili(float(AdPolicy.MIN_GAP_MS - (Time.get_ticks_msec() - _last_ad_end_ms)) / 1000.0), 0)
+
+
 ## Teklif plakası basılabilir mi: politika uygun VE reklam hazır.
 func can_offer(kind: StringName) -> bool:
 	return block_reason(kind) == AdPolicy.OK and is_ready(kind)

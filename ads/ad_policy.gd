@@ -39,8 +39,8 @@ const RULES: Dictionary = {
 	CAR_DELIVERY: {"daily_cap": 9, "min_level": 3, "slot": &"repair"},
 }
 
-## Bütün türler toplamı günde en çok.
-const TOTAL_DAILY_CAP: int = 20
+## Bütün türler toplamı günde en çok (2026-11-02: 20 → 30; araç siparişi günde 9 reklam yiyebiliyor, kullanıcı isteği).
+const TOTAL_DAILY_CAP: int = 30
 ## ÜCRETSİZ ELMAS: reklam başına elmas.
 const FREE_GEMS_AMOUNT: int = 5
 ## SÜRE KISALTMA: kalan sürenin bu payı düşer, en çok TIME_SKIP_MAX sn; kalan bundan kısaysa teklif yok (iş başına bir).

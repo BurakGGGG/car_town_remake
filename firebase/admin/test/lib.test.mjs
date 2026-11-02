@@ -216,7 +216,7 @@ test("etkinlik modülleri: indirim, kasa, görev, rakip, paket", () => {
 
 test("ödüllü reklam ayarı: varsayılanlar, sınırlar, bilinmeyen tür", () => {
   const d = buildAds({});
-  assert.deepEqual(d, { total_cap: 20, free_gems: 5, free_gems_cooldown: 180, caps: {} }, "boş form = oyunun varsayılanı");
+  assert.deepEqual(d, { total_cap: 30, free_gems: 5, free_gems_cooldown: 180, caps: {} }, "boş form = oyunun varsayılanı");
   const a = buildAds({ total_cap: 30, free_gems: 10, free_gems_cooldown: 60, caps: { free_gems: 8, junk_refill: 0 } });
   assert.equal(a.caps.free_gems, 8);
   assert.equal(a.caps.junk_refill, 0, "0 = teklif kapalı");
