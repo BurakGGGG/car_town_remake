@@ -70,18 +70,16 @@ func _run() -> void:
 	for kind: int in PoliceSiren.Kind.values():
 		sirens.append(PoliceSiren._synth(kind))
 	sources["siren"] = sirens
-	var traffic: Array[AudioStreamWAV] = []
-	for kind: int in TrafficEngine.Kind.values():
-		traffic.append(TrafficEngine.make_stream(kind as TrafficEngine.Kind))
-	sources["trafik motoru"] = traffic
-	var exotic: Array[AudioStreamWAV] = []
-	for cylinders: int in [6, 8, 10]:
-		exotic.append(ExoticEngine.make_stream(cylinders))
-	sources["egzotik motor"] = exotic
-	var race: Array[AudioStreamWAV] = []
-	for character: int in RaceAudio.CHARACTERS.size():
-		race.append(RaceAudio._engine(character))
-	sources["yarış motoru"] = race
+	# Motor sesleri (2026-11-02): pişirmeyle aynı yol, PCM (QOA baytları burada okunamaz) — içten yanmalı, turbolu,
+	# elektrikli birer araç
+	for id: StringName in [&"chevrolet_camaro", &"toyota_supra", &"tesla_model_y"]:
+		var engine: EngineBank = EngineBank.build(id, EnginePreset.for_vehicle(id), false)
+		var loops: Array[AudioStreamWAV] = []
+		loops.append_array(engine.on_loops)
+		loops.append_array(engine.off_loops)
+		if engine.whistle:
+			loops.append(engine.whistle)
+		sources["motor sesi " + String(id)] = loops
 	var total: int = 0
 	for name: String in sources:
 		var looped: int = 0
@@ -95,7 +93,7 @@ func _run() -> void:
 		total += looped
 		check(looped > 0 and bad == 0, "%s: %d döngülü ses, loop_end verinin içinde ve dikiş korunmuş (bozuk %d)"
 			% [name, looped, bad])
-	check(total >= 15, "denetlenen döngülü ses sayısı makul (%d)" % total)
+	check(total >= 40, "denetlenen döngülü ses sayısı makul (%d)" % total)
 
 	print("RESULT fails=%d" % fails)
 	quit(1 if fails > 0 else 0)

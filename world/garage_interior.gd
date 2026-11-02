@@ -12,6 +12,8 @@ extends Node3D
 ##   DeckTop / Backdrop       çatı katı otoparkın güvertesi (deck.png) ve fon perdesi (backdrop.png)
 ##   TableTop, Car            MODİFİYE GARAJI: döner tablanın üstü (ModGarageView yarı saydam yapar) ve araç yeri;
 ##                            seviyesiz garajın zemini tek doku (floor.png)
+##   Deck_*, Ramp_*           DİNO ATÖLYESİ: baklava sac — pişmiş ışık (köşe rengi) × diamond.png (UV tekrarlı)
+##   Screen_0, WallScreen     DİNO ATÖLYESİ ekranları (dyno_graph.png), Screen_1 (dyno_gauges.png): ışıksız doku
 ##   Beam_*                   ışık huzmeleri (katkılı)
 ##   Slot_<n>, Slot_Tow       park yerleri: araç burnu düğümün +Z'sine bakar
 ## Blender metre; oyunda 1 birim = 4,39 m (araçlar 1,0 boyuna normalize): kök METER ölçeğiyle küçülür.
@@ -25,6 +27,7 @@ const DIR: Dictionary = {
 	&"hangar": "res://assets/garages/hangar/",
 	&"waiting": "res://assets/garages/rooftop/",
 	&"modgarage": "res://assets/garages/modgarage/",
+	&"dynoroom": "res://assets/garages/dynoroom/",
 }
 const FILE: Dictionary = {
 	&"mahalle": "mahalle.glb",
@@ -34,6 +37,7 @@ const FILE: Dictionary = {
 	&"hangar": "hangar.glb",
 	&"waiting": "rooftop.glb",
 	&"modgarage": "modgarage.glb",
+	&"dynoroom": "dynoroom.glb",
 }
 ## Seviye kalemleri: CarGarageCatalog kalemi → GLB adı öneki.
 const ITEM_NODES: Dictionary = {
@@ -103,6 +107,14 @@ const SETUP: Dictionary = {
 		"ambient": Color(0.58, 0.5, 0.44), "ambient_energy": 0.7, "background": Color(0.012, 0.011, 0.012),
 		"beam_gain": 1.0,
 	},
+	# DİNO ATÖLYESİ (DynoView): kamera kodda (GENEL / TEKER / EGZOZ); soğuk beyaz LED tavan ışığı
+	&"dynoroom": {
+		"camera": Vector3(9.4, 2.3, 2.6), "target": Vector3(5.8, 8.6, 0.75), "fov": 44.0,
+		"bounds": Rect2(0.6, 0.6, 11.8, 13.8), "height": 4.6,
+		"key_dir": Vector3(0.2, 0.3, -0.93), "key_color": Color(0.92, 0.96, 1.0), "key_energy": 1.1,
+		"ambient": Color(0.58, 0.62, 0.68), "ambient_energy": 0.75, "background": Color(0.02, 0.022, 0.026),
+		"beam_gain": 1.0,
+	},
 }
 
 ## İSİM TABELASININ yeri (NameSign, kullanıcı isteği 2026-10-21): Blender metresinde kök noktası (karoların alt ortası),
@@ -134,6 +146,7 @@ var _model: Node3D
 var _base: StandardMaterial3D        # köşe renkli ışıksız (IŞIKLAR çarpanı albedo_color'da)
 var _beam: StandardMaterial3D
 var _floor_material: StandardMaterial3D
+var _diamond: StandardMaterial3D     # dino atölyesinin baklava sacı (pişmiş ışık × tekrarlı doku)
 var _decals: Dictionary = {}         # seviye gölgesi MeshInstance3D → doku yolu (görünür olunca yüklenir)
 var _levels: Dictionary = {}
 
@@ -194,7 +207,7 @@ func set_levels(levels: Dictionary) -> void:
 
 ## Seviye kalemli garaj mı (çatı katı otoparkın ve modifiye garajının kalemi yok).
 func is_leveled() -> bool:
-	return garage != &"waiting" and garage != &"modgarage"
+	return garage != &"waiting" and garage != &"modgarage" and garage != &"dynoroom"
 
 
 ## Adıyla bir GLB düğümü (TableTop, Car …); yoksa null.
@@ -284,8 +297,8 @@ static func _floor_path(id: StringName, levels: Dictionary) -> String:
 static func _texture_paths(id: StringName, levels: Dictionary) -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
 	var dir: String = String(DIR[id])
-	if id == &"waiting" or id == &"modgarage":
-		for file: String in ["floor.png", "deck.png", "backdrop.png"]:
+	if id == &"waiting" or id == &"modgarage" or id == &"dynoroom":
+		for file: String in ["floor.png", "deck.png", "backdrop.png", "diamond.png", "dyno_graph.png", "dyno_gauges.png"]:
 			out.append(dir + file)
 		return out
 	out.append(_floor_path(id, levels))
@@ -368,6 +381,14 @@ func _apply_materials(levels: Dictionary) -> void:
 			material = _texture_material(_take(dir + "deck.png") as Texture2D)
 		elif node_name == "Backdrop":
 			material = _texture_material(_take(dir + "backdrop.png") as Texture2D)
+		elif node_name.begins_with("Deck_") or node_name.begins_with("Ramp_"):
+			if _diamond == null:
+				_diamond = _lit_texture_material(_take(dir + "diamond.png") as Texture2D)
+			material = _diamond
+		elif node_name == "Screen_0" or node_name == "WallScreen":
+			material = _texture_material(_take(dir + "dyno_graph.png") as Texture2D)
+		elif node_name == "Screen_1":
+			material = _texture_material(_take(dir + "dyno_gauges.png") as Texture2D)
 		for s: int in (mi.mesh.get_surface_count() if mi.mesh else 0):
 			mi.set_surface_override_material(s, material)
 	set_levels(levels)
@@ -379,6 +400,15 @@ static func _vertex_material() -> StandardMaterial3D:
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.vertex_color_use_as_albedo = true
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return material
+
+
+## Pişmiş ışık (köşe rengi) × tekrarlı doku: dino atölyesinin baklava sacı.
+static func _lit_texture_material(texture: Texture2D) -> StandardMaterial3D:
+	var material: StandardMaterial3D = _vertex_material()
+	material.albedo_texture = texture
+	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	material.texture_repeat = true
 	return material
 
 
@@ -418,7 +448,8 @@ static func _decal_material(texture: Texture2D) -> StandardMaterial3D:
 
 static func _keep_shaders() -> void:
 	if _shader_keepers.is_empty():
-		_shader_keepers = [_vertex_material(), _beam_material(1.0), _texture_material(null), _decal_material(null)]
+		_shader_keepers = [_vertex_material(), _beam_material(1.0), _texture_material(null), _decal_material(null),
+			_lit_texture_material(null)]
 
 
 ## Shader ön ısıtması: her materyal türünden küçük birer dörtgen (GarageScreen.prewarm garaj görüntüsünün kamerası önüne

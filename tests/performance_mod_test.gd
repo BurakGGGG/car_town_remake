@@ -292,6 +292,16 @@ func _run() -> void:
 	check(workshop.view == ModWorkshop.View.MENU and performance_card != null and performance_card.is_visible_in_tree()
 		and cosmetic_card != null and cosmetic_card.is_visible_in_tree(), "önce menü: PERFORMANS + KOZMETİK kartları")
 	check(cosmetic_card.disabled and not performance_card.disabled, "KOZMETİK basılamaz (ÇOK YAKINDA)")
+	var dyno_card: PlateButton = garage.find_child("Menu_dyno", true, false)
+	check(dyno_card != null and dyno_card.is_visible_in_tree() and not dyno_card.disabled
+		and (dyno_card.get_node("Icon") as TextureRect).texture != null, "DİNAMOMETRE kartı (resimli, basılır)")
+	dyno_card.pressed.emit()
+	await frames(5)
+	check(garage.is_dyno() and (garage.find_child("DynoScreen", true, false) as Control).visible, "kart dino atölyesini açar")
+	garage.call(&"_on_exit_pressed")
+	await frames(5)
+	check(not garage.is_dyno() and garage.is_modding() and workshop.view == ModWorkshop.View.MENU,
+		"dinodan GERİ: modifiye menüsüne dönüş")
 	check((performance_card.get_node("Icon") as TextureRect).texture != null
 		and (cosmetic_card.get_node("Icon") as TextureRect).texture != null
 		and (cosmetic_card.get_node("Icon2") as TextureRect).texture != null, "menü kartlarında resimler")

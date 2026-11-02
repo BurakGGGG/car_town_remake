@@ -2743,5 +2743,18 @@
  "YENİ ÇERÇEVE AÇILDI!": "NEUER RAHMEN FREIGESCHALTET!",
  "SÜRÜCÜ BELGESİ": "FÜHRERSCHEIN",
  "SONRAKİ SINIF %s": "NÄCHSTE KLASSE %s",
- " · AUTO YARD": ""
+ " · AUTO YARD": "",
+ "%d bg": "%d PS",
+ "%s d/dk": "%s U/min",
+ "%d Nm": "%d Nm",
+ "DEVİR": "DREHZAHL",
+ "EN İYİ %d bg": "BESTWERT %d PS",
+ "GAZ": "GAS",
+ "Gaz ver, gücünü ölç": "Gib Gas, miss deine Leistung",
+ "TORK": "DREHMOMENT",
+ "YAKINDAN İNCELE": "GENAUER ANSEHEN",
+ "bas, aşağı kaydır": "drücken, nach unten ziehen",
+ "güç": "Leistung",
+ "tork": "Drehmoment",
+ "fabrika": "Serie"
 }

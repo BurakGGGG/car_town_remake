@@ -640,6 +640,7 @@ func _connect_auto_save() -> void:
 	if _mods:
 		_mods.jobs_changed.connect(request_save)
 		_mods.mods_changed.connect(func(_id: StringName) -> void: request_save())
+		_mods.dyno_record_changed.connect(func(_id: StringName) -> void: request_save())
 	if _ownership:
 		_ownership.ownership_changed.connect(request_save)
 	if _profile:

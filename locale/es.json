@@ -2744,5 +2744,18 @@
  "YENİ ÇERÇEVE AÇILDI!": "¡NUEVO MARCO DESBLOQUEADO!",
  "SÜRÜCÜ BELGESİ": "PERMISO DE CONDUCIR",
  "SONRAKİ SINIF %s": "SIGUIENTE CLASE %s",
- " · AUTO YARD": ""
+ " · AUTO YARD": "",
+ "%d bg": "%d CV",
+ "%s d/dk": "%s rpm",
+ "%d Nm": "%d Nm",
+ "DEVİR": "RPM",
+ "EN İYİ %d bg": "MEJOR %d CV",
+ "GAZ": "GAS",
+ "Gaz ver, gücünü ölç": "Acelera y mide tu potencia",
+ "TORK": "PAR",
+ "YAKINDAN İNCELE": "VER DE CERCA",
+ "bas, aşağı kaydır": "pulsa y desliza",
+ "güç": "potencia",
+ "tork": "par",
+ "fabrika": "de serie"
 }

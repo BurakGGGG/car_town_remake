@@ -58,13 +58,12 @@ func _run() -> void:
 		and TrafficEngine.horn_kind(TrafficEngine.Kind.VAN) == TrafficEngine.Horn.VAN
 		and TrafficEngine.horn_kind(TrafficEngine.Kind.ELECTRIC) == TrafficEngine.Horn.CLEAN, "korna motor tipine göre")
 
-	print("== sentez ==")
-	for kind: int in TrafficEngine.Kind.values():
-		var loop: AudioStreamWAV = TrafficEngine.make_stream(kind as TrafficEngine.Kind)
-		var count: int = loop.data.size() / 2 - 1   # son kare ilk karenin kopyası (LoopedWav: okuma veri içinde)
-		var seam: float = absf(loop.data.decode_s16(0) - loop.data.decode_s16((count - 1) * 2)) / 32768.0
-		check(loop.loop_mode == AudioStreamWAV.LOOP_FORWARD and loop.loop_end == count and seam < 0.2,
-			"%s döngüsü dikişsiz (%.3f)" % [TrafficEngine.Kind.keys()[kind], seam])
+	print("== pişmiş motor sesleri ==")
+	var missing: Array[StringName] = []
+	for entry: Dictionary in CarCatalog.all():
+		if not EngineBank.has_bank(StringName(entry["id"])):
+			missing.append(StringName(entry["id"]))
+	check(missing.is_empty(), "katalogdaki her aracın pişmiş motor sesi var (eksik: %s)" % [missing])
 	for horn: int in TrafficEngine.Horn.values():
 		var streams: Array[AudioStreamWAV] = TrafficEngine.horn_streams(horn as TrafficEngine.Horn)
 		check(streams.size() == 4 and streams[TrafficEngine.HORN_LONG].get_length() > streams[TrafficEngine.HORN_TAP].get_length(),
@@ -72,37 +71,37 @@ func _run() -> void:
 
 	print("== motor sürüşü ==")
 	var engine: TrafficEngine = TrafficEngine.new()
-	engine.setup(null, TrafficEngine.Kind.FAMILY, 1.0, &"Master")
+	engine.setup(EngineBank.for_vehicle(&"audi_a6"), TrafficEngine.Kind.FAMILY, &"Master")
 	var base: float = float((TrafficEngine.DRIVES[TrafficEngine.Kind.FAMILY] as Array)[0])
+	check(engine.voice != null and engine.voice.lite and engine.voice.dynamics < 1.0, "trafik: hafif oynatıcı, sıkıştırılmış dinamik")
 	for i: int in 120:
 		engine.drive(0.0, 1.0 / 60.0)
-	check(absf(engine.volume_db - (base + TrafficEngine.IDLE_DB)) < 1.0, "rölantide kısık (%.1f dB)" % engine.volume_db)
+	check(absf(engine.volume_db - base) < 1.0 and engine.load_now(false) == 0.0, "rölantide gaz kesik (%.1f dB)" % engine.volume_db)
 	var speed: float = 0.0
 	var top_gear: int = 0
-	var loud: float = -100.0
+	var hard: float = 0.0
 	for i: int in 240:
 		speed = minf(speed + 0.6 / 60.0, 0.8)
 		engine.drive(speed, 1.0 / 60.0)
 		top_gear = maxi(top_gear, engine.gear())
-		loud = maxf(loud, engine.volume_db)
+		hard = maxf(hard, engine.load_now(true))
 	check(top_gear >= 2, "kalkışta vites büyüdü (%d)" % top_gear)
-	check(loud > base, "gaz verirken gürleşti (%.1f dB)" % loud)
+	check(hard > TrafficEngine.CRUISE_THROTTLE + 0.3, "gaz verirken yük yüksek (%.2f)" % hard)
 	for i: int in 120:
 		engine.drive(0.8, 1.0 / 60.0, true, false)
 	check(engine.stream_paused or engine.volume_db <= TrafficEngine.SILENT_DB + 0.5, "uzaktaki motor susar")
 	engine.free()
 	var ev: TrafficEngine = TrafficEngine.new()
-	ev.setup(null, TrafficEngine.Kind.ELECTRIC, 1.0, &"Master")
+	ev.setup(EngineBank.for_vehicle(&"tesla_model_y"), TrafficEngine.Kind.ELECTRIC, &"Master")
 	for i: int in 120:
 		ev.drive(0.0, 1.0 / 60.0)
 	check(ev.volume_db <= TrafficEngine.SILENT_DB + 0.5, "elektrikli dururken sessiz")
-	var low_pitch: float = 0.0
 	for i: int in 120:
 		ev.drive(0.3, 1.0 / 60.0)
-	low_pitch = ev.pitch_scale
+	var low_rpm: float = ev.rpm()
 	for i: int in 120:
 		ev.drive(0.8, 1.0 / 60.0)
-	check(ev.pitch_scale > low_pitch, "elektrikli vınlama hızla incelir (%.2f → %.2f)" % [low_pitch, ev.pitch_scale])
+	check(ev.rpm() > low_rpm * 2.0, "elektrikli motor devri hızla artar (%.0f → %.0f)" % [low_rpm, ev.rpm()])
 	ev.free()
 
 	print("== şehirde ==")

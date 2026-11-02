@@ -79,9 +79,11 @@ var _streaks: Array[MeshInstance3D] = []
 var _engine: AudioStreamPlayer
 var _pop: AudioStreamPlayer
 var _whoosh: AudioStreamPlayer
-var _engine_pitch: float = 1.0
-var _engine_db: float = 0.0
-var _engine_tween: Tween
+## Aracın kendi pişmiş motor sesi (EngineVoice, MOTOR SES LABORATUVARI); _rev bir gaz zarfı çalar.
+var _engine_voice: EngineVoice
+var _rev_time: float = -1.0
+var _rev_len: float = 0.0
+var _rev_peak: float = 0.0
 # tabla
 var _base_yaw: float = 0.0          # Car işaretçisinin açısı (derece)
 var _yaw: float = 0.0
@@ -163,7 +165,8 @@ func exit() -> void:
 	_pivot = null
 	_mirror_key = null
 	_engine = null
-	_engine_tween = null
+	_engine_voice = null
+	_rev_time = -1.0
 	_pop = null
 	_whoosh = null
 	_lights.clear()
@@ -283,6 +286,7 @@ func _process(delta: float) -> void:
 		for rig: CarRig in [_rig, _mirror_rig]:
 			if rig:
 				rig.spin_wheels(_wheel_speed * delta)
+	_drive_rev(delta)
 	_apply()
 
 
@@ -468,12 +472,10 @@ func _build_effects() -> void:
 		_car.add_child(streak)
 		_streaks.append(streak)
 	_engine = _player()
-	var engine: Array = RaceAudio.engine_for(PerformanceMods.performance_ratio(vehicle_id), DragRaceSim.is_electric(vehicle_id))
-	_engine.stream = engine[0]
-	_engine_pitch = engine[1]
-	_engine_db = engine[2]
+	var bank: EngineBank = RaceAudio.bank_for(vehicle_id)
+	_engine_voice = EngineVoice.new(_engine, bank)
 	_pop = _player()
-	_pop.stream = RaceAudio.pop_stream()
+	_pop.stream = bank.pops[0] if not bank.pops.is_empty() else RaceAudio.pop_stream()
 	_whoosh = _player()
 	_whoosh.stream = _whoosh_stream()
 
@@ -671,27 +673,46 @@ func _sweep_over(from_local: Vector3, to_local: Vector3, generation: int) -> voi
 			sweep.light_energy = sin(t * PI) * 3.2, 0.0, 1.0, 1.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
-## Gaz: motor döngüsü devirle tizleşir, tepeye çıkıp rölantiye iner (drag yarışının motor tınısı).
+## Gaz: aracın kendi motor sesiyle (EngineVoice) devir tepeye çıkar, gaz kesilir (patlama / blow-off bankadan),
+## rölantiye iner, sonra motor sesi söner. `peak_rpm` 7500'lük genel ölçekte; aracın ses aralığına oranla taşınır.
 func _rev(peak_rpm: float, seconds: float, generation: int) -> void:
-	if _engine == null or _engine.stream == null or not _alive(generation):
+	if _engine_voice == null or not _alive(generation):
 		return
-	var idle: float = clampf(900.0 / RaceAudio.BASE_RPM * _engine_pitch, 0.28, 4.0)
-	var peak: float = clampf(peak_rpm / RaceAudio.BASE_RPM * _engine_pitch, 0.28, 4.0)
-	if not _engine.playing:
-		_engine.pitch_scale = idle
-		_engine.volume_db = -30.0
-		_engine.play()
-	if _engine_tween:
-		_engine_tween.kill()
-	var engine: AudioStreamPlayer = _engine
-	_engine_tween = engine.create_tween()
-	_engine_tween.tween_property(engine, "pitch_scale", peak, seconds * 0.32).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-	_engine_tween.parallel().tween_property(engine, "volume_db", -9.0 + _engine_db, seconds * 0.2)
-	_engine_tween.tween_property(engine, "pitch_scale", idle, seconds * 0.68).set_ease(Tween.EASE_IN_OUT)
-	_engine_tween.parallel().tween_property(engine, "volume_db", -34.0, seconds * 0.68).set_ease(Tween.EASE_IN)
-	_engine_tween.tween_callback(func() -> void:
-		if is_instance_valid(engine):
-			engine.stop())
+	var bank: EngineBank = _engine_voice.bank
+	var idle: float = maxf(bank.idle_rpm(), 600.0) if not bank.is_electric() else 400.0
+	_rev_peak = idle + clampf(peak_rpm / 7500.0, 0.2, 1.0) * (bank.redline_rpm() - idle)
+	_rev_len = seconds
+	_rev_time = 0.0
+	_engine.volume_db = -9.0
+	_engine_voice.running = true
+
+
+## Gaz zarfı: ilk %32'de tam gazla tepeye, sonra gaz kesik rölantiye; zarf bitince ses 0,5 sn'de söner.
+func _drive_rev(delta: float) -> void:
+	if _engine_voice == null or _rev_time < 0.0:
+		return
+	_rev_time += delta
+	var bank: EngineBank = _engine_voice.bank
+	var idle: float = maxf(bank.idle_rpm(), 600.0) if not bank.is_electric() else 400.0
+	var rise: float = _rev_len * 0.32
+	var rpm: float
+	var throttle: float
+	if _rev_time < rise:
+		var x: float = _rev_time / rise
+		rpm = lerpf(idle, _rev_peak, 1.0 - (1.0 - x) * (1.0 - x))
+		throttle = 1.0
+	else:
+		var x: float = clampf((_rev_time - rise) / maxf(_rev_len - rise, 0.01), 0.0, 1.0)
+		rpm = lerpf(_rev_peak, idle, x * x * (3.0 - 2.0 * x))
+		throttle = 0.0
+	if _rev_time > _rev_len:
+		_engine.volume_db = move_toward(_engine.volume_db, -50.0, delta * 80.0)
+		if _engine.volume_db <= -49.0:
+			_engine_voice.stop_all()
+			_engine.stop()
+			_rev_time = -1.0
+			return
+	_engine_voice.update(delta, rpm, throttle)
 
 
 ## HAVA AKIŞI: ön tamponun önünden girişlere akan ince ışık çizgileri (üç dalga).

@@ -4,7 +4,9 @@ extends Node
 ##   honk    — iki tonlu araba kornası (kaçak yüzünden fren yapan araç)
 ##   screech — lastik cıyaklaması (yarışı kaybeden araç kaçmaya başlarken)
 ## Sentez açılışta bir kez arka plan iş parçacığında yapılır (telefonda ana iş parçacığında ~50 ms takılma olurdu);
-## hazır değilken istenen ses atlanır. TrafficManager kurar; araç ekranda görünmüyorsa çağrılmaz.
+## hazır değilken istenen ses atlanır. TrafficManager kurar; araç ekranda görünmüyorsa çağrılmaz. Dünyayı örten bir
+## YER açıkken (garaj, dino atölyesi, mağaza, yarış… — Hud.WORLD_COVERING_PLACES) çalmaz: şehrin kamerası arkada hâlâ
+## "görüyor" sayılıyordu, dino atölyesinde korna duyuluyordu (kullanıcı 2026-11-02). CityAmbience de orada susar.
 
 const MIX_RATE: int = 22050
 ## Aynı sesin art arda tekrarı arasında en az süre (ms): üç araç birden fren yapınca korna kakofonisi olmasın.
@@ -36,7 +38,7 @@ func _exit_tree() -> void:
 
 
 func honk() -> void:
-	if not _ready_streams():
+	if _world_covered() or not _ready_streams():
 		return
 	var now: int = Time.get_ticks_msec()
 	if now - _last_honk < HONK_GAP_MSEC:
@@ -48,11 +50,16 @@ func honk() -> void:
 
 
 func screech() -> void:
-	if not _ready_streams():
+	if _world_covered() or not _ready_streams():
 		return
 	_screech_player.stream = _screech_stream
 	_screech_player.pitch_scale = _rng.randf_range(0.95, 1.05)
 	_screech_player.play()
+
+
+func _world_covered() -> bool:
+	var router: UiRouter = get_tree().get_first_node_in_group("ui_router") as UiRouter if is_inside_tree() else null
+	return router != null and Hud.WORLD_COVERING_PLACES.has(router.current_place())
 
 
 func _ready_streams() -> bool:

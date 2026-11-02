@@ -110,6 +110,8 @@ static var _rigs: Dictionary = {}
 var root: Node3D
 var scene_path: String
 var spin_deg: float = 0.0
+## Ön aksın ayrı dönüş açısı (set_axle_spin; dinamometrede yalnız çeken aks döner). NAN = arka aksla aynı.
+var front_spin_deg: float = NAN
 var steer_deg: float = 0.0
 
 var _all_meshes: Array[MeshInstance3D] = []  # bu aracın tüm mesh'leri (LOD katsayısı için)
@@ -612,6 +614,14 @@ func wheel_points() -> Array[Dictionary]:
 ## Tüm tekerleri aks ekseninde verilen açıya getirir (derece).
 func set_wheel_spin(degrees: float) -> void:
 	spin_deg = fmod(degrees, 360.0)
+	front_spin_deg = NAN
+	_update_wheels()
+
+
+## Aksları ayrı açılarla döndürür (derece): dinamometrede yalnız çeken aks döner, öbürü durur.
+func set_axle_spin(front_degrees: float, rear_degrees: float) -> void:
+	spin_deg = fmod(rear_degrees, 360.0)
+	front_spin_deg = fmod(front_degrees, 360.0)
 	_update_wheels()
 
 
@@ -640,10 +650,11 @@ func set_steer(degrees: float) -> void:
 
 func _update_wheels() -> void:
 	var spin: Basis = Basis(Vector3.RIGHT, deg_to_rad(spin_deg))
+	var front_spin: Basis = spin if is_nan(front_spin_deg) else Basis(Vector3.RIGHT, deg_to_rad(front_spin_deg))
 	for group: Dictionary in _wheel_groups:
 		var rot: Basis = spin
 		if group["front"]:
-			rot = Basis(Vector3.UP, deg_to_rad(steer_deg)) * spin
+			rot = Basis(Vector3.UP, deg_to_rad(steer_deg)) * front_spin
 		# Dönüş EBEVEYN uzayında, tekerin GERÇEK merkezi etrafında uygulanır. (Eskiden ilk
 		# mesh'in KENDİ yerel kutu merkezi pivot alınıp dönüş mesh'in yerel uzayında
 		# uygulanıyordu: parçaların yerel çerçeveleri farklı olduğunda teker kendi ekseninde

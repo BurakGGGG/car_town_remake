@@ -7,6 +7,7 @@ extends AudioStreamPlayer
 ## ziyaretinde kendi sahne ağaçtan çıkarılırken müzik kesilip baştan başlamaz.
 ## Drag yarışı açılınca garaj teması kısılıp DURAKLAR, yarış teması yükselir; yarış kapanınca garaj
 ## teması kaldığı yerden geri gelir (race). Hurdalık da aynı yolla kendi temasına geçer (junkyard).
+## DİNAMOMETRE açıkken garaj teması DYNO_DB'ye kısılır (dyno; kullanıcı: "dyno da oyun müziğini kıs motor sesini aç").
 
 const THEME: String = "res://assets/audio/music/garage_theme.wav"
 const RACE_THEME: String = "res://assets/audio/music/drag_theme.wav"
@@ -16,6 +17,8 @@ const BASE_DB: float = -4.0
 ## Yarış teması motor seslerinin altında kalsın (motorlar SFX bus'ında).
 const RACE_DB: float = -9.0
 const JUNKYARD_DB: float = -5.0
+## Dino atölyesinde garaj teması (motor sesinin ~15 dB altında, arkada hafifçe duyulur).
+const DYNO_DB: float = -19.0
 const SILENT_DB: float = -40.0
 const FADE_IN: float = 2.5
 const SWAP_TIME: float = 0.8
@@ -48,6 +51,13 @@ static func junkyard(tree: SceneTree, on: bool) -> void:
 		music._swap(music._yard, on, JUNKYARD_DB)
 
 
+## DİNAMOMETRE açıldı (true) / kapandı (false): garaj teması kısılır / geri gelir (yer teması çalarken dokunmaz).
+static func dyno(tree: SceneTree, on: bool) -> void:
+	var music: GameMusic = tree.root.get_node_or_null(NODE_NAME) as GameMusic if tree else null
+	if music:
+		music._duck(on)
+
+
 func _ready() -> void:
 	bus = GameSettings.MUSIC_BUS
 	stream = load(THEME) as AudioStream
@@ -74,6 +84,15 @@ func _ready() -> void:
 ## Yarışta mı çalıyor (yarış teması duyulur durumda)?
 func is_racing() -> bool:
 	return _race.playing
+
+
+func _duck(on: bool) -> void:
+	if _race.playing or _yard.playing:
+		return
+	if _tween:
+		_tween.kill()
+	_tween = create_tween()
+	_tween.tween_property(self, "volume_db", DYNO_DB if on else BASE_DB, SWAP_TIME).set_trans(Tween.TRANS_SINE)
 
 
 func _set_race(on: bool) -> void:

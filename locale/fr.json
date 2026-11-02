@@ -2745,5 +2745,18 @@
  "YENİ ÇERÇEVE AÇILDI!": "NOUVEAU CADRE DÉBLOQUÉ !",
  "SÜRÜCÜ BELGESİ": "PERMIS DE CONDUIRE",
  "SONRAKİ SINIF %s": "CLASSE SUIVANTE %s",
- " · AUTO YARD": ""
+ " · AUTO YARD": "",
+ "%d bg": "%d ch",
+ "%s d/dk": "%s tr/min",
+ "%d Nm": "%d Nm",
+ "DEVİR": "RÉGIME",
+ "EN İYİ %d bg": "RECORD %d ch",
+ "GAZ": "GAZ",
+ "Gaz ver, gücünü ölç": "Accélère, mesure ta puissance",
+ "TORK": "COUPLE",
+ "YAKINDAN İNCELE": "VOIR DE PRÈS",
+ "bas, aşağı kaydır": "appuie, glisse vers le bas",
+ "güç": "puissance",
+ "tork": "couple",
+ "fabrika": "d'origine"
 }

@@ -60,15 +60,18 @@ func _run() -> void:
 		check(not bool(CarCatalog.get_entry(id)["traffic"]), "%s normal trafiğe kapalı" % id)
 	check(not CarCatalog.is_exotic(&"chevrolet_camaro") and not CarCatalog.is_exotic(&"police_bentley"),
 		"Camaro / polis egzotik değil")
-	check(ExoticEngine.cylinders_of(&"lambo_huracan") == 10 and ExoticEngine.cylinders_of(&"ferrari_488_pista") == 8
-		and ExoticEngine.cylinders_of(&"porsche_gt3") == 6 and ExoticEngine.cylinders_of(&"bugatti_chiron") == 10
-		and ExoticEngine.cylinders_of(&"ferrari_laferrari") == 10,
-		"motor tınısı: Huracán V10, 488 V8, GT3 düz altı, W16 / V12 en tiz profil")
+	# 2026-11-02: her egzotiğin kendi pişmiş motor sesi (EngineBank), dizilimi motoruna uygun
+	var layouts: Dictionary = {&"lambo_huracan": "v10", &"ferrari_488_pista": "v8_flat", &"porsche_gt3": "b6",
+		&"bugatti_chiron": "w16", &"bugatti_veyron": "w16", &"ferrari_laferrari": "v12"}
+	for id: StringName in layouts:
+		var baked: EngineBank = EngineBank.for_vehicle(id)
+		check(baked != null and String(baked.runtime.get("layout", "")) == layouts[id] and baked.on_loops.size() >= 4,
+			"%s: pişmiş motor sesi, dizilim %s" % [id, layouts[id]])
 
 	print("== motor döngüsü ==")
-	for cylinders: int in [6, 8, 10]:
-		var wav: AudioStreamWAV = ExoticEngine.make_stream(cylinders)
-		var n: int = wav.data.size() / 2 - 1   # son kare ilk karenin kopyası (LoopedWav: okuma veri içinde)
+	var bank: EngineBank = EngineBank.build(&"lambo_huracan", EnginePreset.for_vehicle(&"lambo_huracan"), false)
+	for wav: AudioStreamWAV in [bank.on_loops[0], bank.on_loops[bank.on_loops.size() - 1], bank.off_loops[0]]:
+		var n: int = wav.loop_end   # sonrası ilk iki örneğin kopyası (karıştırıcı loop_end'i ve bir sonrakini okur)
 		var max_step: int = 0
 		for i: int in range(1, n):
 			max_step = maxi(max_step, absi(wav.data.decode_s16(i * 2) - wav.data.decode_s16((i - 1) * 2)))
@@ -76,41 +79,41 @@ func _run() -> void:
 		var peak: int = 0
 		for i: int in n:
 			peak = maxi(peak, absi(wav.data.decode_s16(i * 2)))
-		check(wav.loop_mode == AudioStreamWAV.LOOP_FORWARD and wav.loop_end == n, "%d silindir: döngü tam arabellek" % cylinders)
-		check(seam <= max_step, "%d silindir: döngü dikişi içerideki en büyük adımdan küçük (%d ≤ %d)" % [cylinders, seam, max_step])
-		check(peak > 8000 and peak < 32767, "%d silindir: düzey makul, kırpılma yok (tepe %d)" % [cylinders, peak])
+		check(wav.loop_mode == AudioStreamWAV.LOOP_FORWARD and wav.data.size() / 2 == n + 2, "döngü: veri + 2 örnek pay")
+		check(seam <= max_step, "döngü dikişi içerideki en büyük adımdan küçük (%d ≤ %d)" % [seam, max_step])
+		check(peak > 800 and peak < 32700, "düzey makul, kırpılma yok (tepe %d)" % peak)
 
 	print("== motor sürüşü ==")
 	var engine: ExoticEngine = ExoticEngine.new()
 	root.add_child(engine)
-	engine.setup(ExoticEngine.make_stream(8), 8, 1.0, &"Master")
+	engine.setup(EngineBank.for_vehicle(&"ferrari_488_pista"), &"Master")
 	engine.play()   # duraklatma durumu yalnızca çalan (ses sunucusuna kaydolmuş) oynatıcıda okunur
 	await frames(2)
 	var dt: float = 1.0 / 60.0
 	var speed: float = 0.0
 	var top_gear: int = 0
-	var loud: float = -100.0
+	var hard: float = 0.0
 	for i: int in 120:   # 2 sn: 0 → 0,8 birim/sn (0,6 birim/sn² — trafiğin hızlanması)
 		speed = minf(speed + 0.6 * dt, 0.8)
 		engine.drive(speed, dt)
 		top_gear = maxi(top_gear, engine.gear())
-		loud = maxf(loud, engine.volume_db)
+		hard = maxf(hard, engine.load_now(true))
 	check(top_gear >= 2, "hızlanırken vites büyür (en yüksek %d)" % (top_gear + 1))
-	check(loud > ExoticEngine.ENGINE_DB, "gaz verirken seyirden gür (%.1f dB)" % loud)
+	check(hard > ExoticEngine.CRUISE_THROTTLE + 0.3, "gaz verirken yük yüksek (%.2f)" % hard)
+	check(engine.voice.active_streams() >= 1, "motor sesi çalıyor (%d akış)" % engine.voice.active_streams())
 	for i: int in 120:   # 2 sn sabit hız
 		engine.drive(speed, dt)
 	var cruise_rpm: float = engine.rpm()
 	check(cruise_rpm > 1500.0 and cruise_rpm < ExoticEngine.CRUISE_SHIFT_RPM + 200.0,
 		"sabit hızda sakin devir (%.0f d/dk, %d. vites)" % [cruise_rpm, engine.gear() + 1])
-	check(absf(engine.pitch_scale - cruise_rpm / ExoticEngine.BASE_RPM) < 0.05, "perde = devir / döngü devri")
-	var cruise_db: float = engine.volume_db
+	check(absf(engine.voice.rpm - cruise_rpm) < 1.0 and engine.load_now(true) < 0.4, "sese giden devir = motor devri, seyirde hafif yük")
 	for i: int in 90:   # 1,5 sn fren
 		speed = maxf(speed - 0.7 * dt, 0.0)
 		engine.drive(speed, dt)
 	check(engine.gear() == 0 and absf(engine.rpm() - ExoticEngine.IDLE_RPM) < 50.0, "durunca 1. vites, rölanti")
 	for i: int in 60:
 		engine.drive(0.0, dt)
-	check(engine.volume_db < cruise_db and not engine.stream_paused, "kırmızıda rölanti: kısık ama duyulur")
+	check(engine.load_now(false) == 0.0 and not engine.stream_paused, "kırmızıda rölanti: gaz kesik ama duyulur")
 	for i: int in int((ExoticEngine.IDLE_SILENCE + 2.0) / dt):
 		engine.drive(0.0, dt)
 	check(engine.stream_paused, "uzun bekleyişte rölanti de söner")

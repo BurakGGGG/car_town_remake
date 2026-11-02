@@ -304,6 +304,16 @@ var _workshop: ModWorkshop
 var _mod_view: ModGarageView
 ## Sağ sütunun sahnedeki yerleşimi (modifiye kipinde üste sabitlenir, çıkınca geri konur).
 var _right_layout: Dictionary = {}
+## DİNAMOMETRE (2026-11-02): dino atölyesi (3B + fizik + ses) ve arayüzü. Girişler: araca dokununca YAKINDAN İNCELE,
+## modifiye menüsünde DİNAMOMETRE kartı. Dino açıkken garajın kendi plakaları gizli (_dyno_hidden).
+var _dyno_view: DynoView
+var _dyno_screen: DynoScreen
+var _dyno_from_mods: bool = false
+var _dyno_hidden: Array[Control] = []
+## Araca dokununca üstünde beliren YAKINDAN İNCELE plakası (aracı ekranda izler) ve izlediği araç / nokta.
+var _inspect_anchor: Control
+var _inspect_vehicle: StringName = &""
+var _inspect_point: Vector3
 var _detail_values: Dictionary = {}
 
 
@@ -374,6 +384,14 @@ func _ready() -> void:
 	_mod_view.name = "ModGarageView"
 	add_child(_mod_view)
 	_workshop.focus_changed.connect(_mod_view.focus)
+	_workshop.dyno_requested.connect(func() -> void: open_dyno(_shown_vehicle))
+	_dyno_view = DynoView.new()
+	_dyno_view.name = "DynoView"
+	add_child(_dyno_view)
+	_dyno_screen = DynoScreen.new()
+	overlay.add_child(_dyno_screen)
+	_dyno_screen.back_pressed.connect(close_dyno)
+	_build_inspect_plate()
 	_apply_responsive_layout()
 	get_viewport().size_changed.connect(_apply_responsive_layout)
 
@@ -381,6 +399,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if turntable_speed > 0.0 and not _closing:
 		car_slot.rotate_y(deg_to_rad(turntable_speed) * delta)
+	_place_inspect_plate()
 
 
 # --- Ekrana uyum (telefon tuvali ~1040×480) ----------------------------------
@@ -511,6 +530,7 @@ func open() -> void:
 func close() -> void:
 	if not visible or _closing:
 		return
+	close_dyno()
 	_closing = true
 	set_process(false)
 	_kill_tweens()
@@ -1466,8 +1486,126 @@ func is_modding() -> bool:
 	return _workshop != null and _workshop.is_active()
 
 
+# --- DİNAMOMETRE -------------------------------------------------------------------------------------
+
+func is_dyno() -> bool:
+	return _dyno_view != null and _dyno_view.active
+
+
+## Aracı dino atölyesine çıkarır (sahip olunan araç). Modifiye kipindeyse modifiye sahnesinden geçilir, çıkışta oraya
+## dönülür; değilse garajın iç mekânı askıya alınır.
+func open_dyno(vehicle_id: StringName = &"") -> void:
+	var id: StringName = vehicle_id if vehicle_id != &"" else _shown_vehicle
+	if id == &"" or not _is_owned(id) or is_dyno() or _closing:
+		return
+	_hide_inspect_plate()
+	_kill_tweens()
+	_dyno_from_mods = is_modding()
+	if _dyno_from_mods:
+		_mod_view.exit()
+	else:
+		_interior_view.suspend(true)
+	var hide: Array[Node3D] = [car_slot]
+	var room: Node3D = car_viewport.get_node_or_null("Environment") as Node3D
+	if room:
+		hide.append(room)
+	if not _dyno_view.enter(id, car_viewport, preview_camera, car_viewport.get_node_or_null("KeyLight") as DirectionalLight3D,
+			hide):
+		_return_from_dyno()
+		return
+	_dyno_hidden.clear()
+	for group: Control in [top_group, left_group, right_group, bottom_group, exit_group, _top_right]:
+		if group and group.visible:
+			group.hide()
+			_dyno_hidden.append(group)
+	_dyno_screen.open(_dyno_view)
+
+
+## Dinodan çıkış: atölye kapanır, gelinen yere (modifiye menüsü ya da garaj) dönülür.
+func close_dyno() -> void:
+	if not is_dyno():
+		return
+	_dyno_screen.close()
+	_dyno_view.exit()
+	for group: Control in _dyno_hidden:
+		if is_instance_valid(group):
+			group.show()
+	_dyno_hidden.clear()
+	_return_from_dyno()
+
+
+func _return_from_dyno() -> void:
+	if _dyno_from_mods and is_modding():
+		_enter_mod_garage()
+		_workshop.show_menu()
+	else:
+		_interior_view.suspend(false)
+		if _shown_vehicle != &"":
+			_focus_interior(_shown_vehicle)
+	_refresh_stats()   # dino modifiye değiştirmez ama en iyi ölçüm modifiye kartında görünür
+	_place_car_list.call_deferred()
+
+
+## YAKINDAN İNCELE: araca dokununca üstünde beliren plaka (her karede aracın ekrandaki yerini izler).
+func _build_inspect_plate() -> void:
+	_inspect_anchor = Control.new()
+	_inspect_anchor.name = "InspectAnchor"
+	_inspect_anchor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(_inspect_anchor)
+	var plate: PlateButton = PlateButton.new()
+	plate.name = "InspectButton"
+	plate.theme_type_variation = &"HudPlateSmall"
+	plate.kind = HudIcon.Kind.ZOOM_IN
+	plate.icon_left = true
+	plate.bolts = false
+	plate.text = Loc.t("YAKINDAN İNCELE")
+	plate.focus_mode = Control.FOCUS_NONE
+	plate.pressed.connect(func() -> void: open_dyno(_inspect_vehicle))
+	_inspect_anchor.add_child(plate)
+	_inspect_anchor.hide()
+
+
+func _show_inspect_plate(vehicle_id: StringName) -> void:
+	if not _is_owned(vehicle_id) or not _interior_view.active:
+		_hide_inspect_plate()
+		return
+	var rig: CarRig = _interior_view.rig_of(vehicle_id)
+	if rig == null or not is_instance_valid(rig.root):
+		_hide_inspect_plate()
+		return
+	var bounds: AABB = DynoView.quick_bounds(rig.root)
+	_inspect_vehicle = vehicle_id
+	_inspect_point = Vector3(bounds.get_center().x, bounds.end.y, bounds.get_center().z)
+	_inspect_anchor.show()
+	_place_inspect_plate()
+
+
+func _hide_inspect_plate() -> void:
+	_inspect_vehicle = &""
+	if _inspect_anchor:
+		_inspect_anchor.hide()
+
+
+## Plaka aracın tepesinin biraz üstünde ortalanır (kamera odaklanırken de izler). Araç seçimi değişince / ekran örtülünce söner.
+func _place_inspect_plate() -> void:
+	if _inspect_anchor == null or not _inspect_anchor.visible:
+		return
+	if _inspect_vehicle != _shown_vehicle or is_modding() or is_dyno() or _closing or not _interior_view.active:
+		_hide_inspect_plate()
+		return
+	var plate: Control = _inspect_anchor.get_node("InspectButton") as Control
+	var size: Vector2 = plate.get_combined_minimum_size()
+	plate.size = size
+	_inspect_anchor.size = size
+	var at: Vector2 = preview_camera.unproject_position(_inspect_point)
+	_inspect_anchor.position = at - Vector2(size.x * 0.5, size.y + 14.0)
+
+
 ## GERİ: modifiyede bir üst görünüme (kategori → PERFORMANS → menü), menüdeyse araç listesine, değilse garajdan çık.
 func _on_exit_pressed() -> void:
+	if is_dyno():
+		close_dyno()
+		return
 	if is_modding() and _workshop.back():
 		return
 	if is_modding() and not _home_mods:
@@ -2018,14 +2156,17 @@ func _focus_interior(vehicle_id: StringName) -> bool:
 
 
 func _on_interior_car_tapped(vehicle_id: StringName) -> void:
-	if is_modding() or _closing or (_name_sign_panel and _name_sign_panel.visible):
+	if is_modding() or is_dyno() or _closing or (_name_sign_panel and _name_sign_panel.visible):
 		return   # tabela düzenlenirken araç seçilmez (aksiyon plakaları panonun üstüne açılırdı)
 	car_list.select(vehicle_id)   # vehicle_selected → _show_vehicle (alt şerit de eşlenir)
 	if _shown_vehicle != vehicle_id:
 		_show_vehicle(vehicle_id, true)
+	_show_inspect_plate(vehicle_id)
 
 
 func _on_view_gui_input(event: InputEvent) -> void:
+	if is_dyno():
+		return   # dino atölyesinde 3B girdi yok (pedal / düğmeler arayüzde)
 	if _mod_view.active:
 		if _mod_view.handle_input(event):
 			view.accept_event()

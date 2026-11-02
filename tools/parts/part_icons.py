@@ -794,9 +794,52 @@ def paint_cans():
         sphere(rr, (dx, -0.3 - 0.09 * k, 1.3 / 2 + 0.47 + dz), m=m["red"], seg=12)
 
 
+# --- DİNAMOMETRE (modifiye menüsünün DİNAMOMETRE kartı, 2026-11-02) ----------------------------------------
+
+def dyno_roller():
+    """Sarı dino gövdesinin bir kesiti: tırtıllı çelik merdane, üstünde jantlı teker, yanlarda baklava sac."""
+    m = M()
+    yellow = mat("dyno_yellow", "F0B21C", metal=0.15, rough=0.45)
+    steel = mat("dyno_drum", "8C9299", metal=0.9, rough=0.3)
+    plate = mat("dyno_plate", "9AA0A7", metal=0.8, rough=0.4)
+    # teker (r 0,95) merkezde: merdanenin tepesi tekerin altına (z −0,95) değer
+    box((2.6, 0.18, 0.5), (0, -0.95, -1.2), m=yellow, bevel=0.03)
+    box((2.6, 0.18, 0.5), (0, 0.95, -1.2), m=yellow, bevel=0.03)
+    for side in (-1, 1):
+        box((0.9, 1.75, 0.06), (side * 0.85, 0, -0.97), m=plate, bevel=0.01)
+    cyl(0.55, 1.7, (0, 0, -1.5), (90, 0, 0), steel, verts=40, bevel=0.0)
+    for k in range(14):
+        y = -0.8 + k * 1.6 / 13
+        torus(0.552, 0.012, (0, y, -1.5), (90, 0, 0), m["dark"], seg=40, mseg=4)
+    wheel(spokes=5, rim="alu", width=0.42)
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.transform.rotate(value=math.radians(-35), orient_axis="Z", center_override=(0, 0, 0))
+    bpy.ops.object.select_all(action="DESELECT")
+
+
+def dyno_fan():
+    """Tekerlekli soğutma fanı: siyah gövde, ızgara halkaları, kanatlar, U ayak."""
+    m = M()
+    body = mat("fan_body", "2B2E33", metal=0.4, rough=0.5)
+    grill = mat("fan_grill", "C2C7CC", metal=0.9, rough=0.3)
+    cyl(0.9, 0.45, (0, 0, 0), (90, 0, 0), body, verts=48, bevel=0.02)
+    for k in range(1, 6):
+        torus(0.9 * k / 5.6, 0.012, (0, -0.25, 0), (90, 0, 0), grill, seg=40, mseg=4)
+    for k in range(8):
+        a = k * math.pi / 4
+        box((0.86, 0.02, 0.02), (math.cos(a) * 0.43, -0.25, math.sin(a) * 0.43), (0, -math.degrees(a), 0), grill, bevel=0.0)
+    cyl(0.16, 0.5, (0, -0.02, 0), (90, 0, 0), body, verts=20)
+    for side in (-1, 1):
+        box((0.08, 0.08, 1.0), (side * 1.0, 0, -0.5), m=m["dark"], bevel=0.01)
+    box((2.2, 0.1, 0.08), (0, 0, -1.0), m=m["dark"], bevel=0.01)
+
+
 # --- Parça listesi: id → model (PerformanceMods.PART_ICONS bu id'leri kullanır) ---------------------------
 
 PARTS = {
+    # DİNAMOMETRE kartı
+    "dyno_roller": dyno_roller,
+    "dyno_fan": dyno_fan,
     # MOTOR
     "motor_ecu": lambda: ecu("green"),
     "motor_cam": camshaft,

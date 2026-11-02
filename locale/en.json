@@ -2743,5 +2743,18 @@
  "YENİ ÇERÇEVE AÇILDI!": "NEW FRAME UNLOCKED!",
  "SÜRÜCÜ BELGESİ": "DRIVING LICENCE",
  "SONRAKİ SINIF %s": "NEXT CLASS %s",
- " · AUTO YARD": ""
+ " · AUTO YARD": "",
+ "%d bg": "%d hp",
+ "%s d/dk": "%s rpm",
+ "%d Nm": "%d Nm",
+ "DEVİR": "RPM",
+ "EN İYİ %d bg": "BEST %d hp",
+ "GAZ": "GAS",
+ "Gaz ver, gücünü ölç": "Floor it, measure your power",
+ "TORK": "TORQUE",
+ "YAKINDAN İNCELE": "CLOSER LOOK",
+ "bas, aşağı kaydır": "press, slide down",
+ "güç": "power",
+ "tork": "torque",
+ "fabrika": "stock"
 }

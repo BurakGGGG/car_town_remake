@@ -9,7 +9,7 @@ renk yönetimi uygulanarak) ve ekran değeri olarak saklanır. Dönüşüm doğr
 yükler).
 
 Kullanım (ekransız, depo kökünden):
-    blender -b --factory-startup --python tools/garages/export_garage.py -- mahalle|sanayi|…|rooftop|modgarage [--fast]
+    blender -b --factory-startup --python tools/garages/export_garage.py -- mahalle|sanayi|…|rooftop|modgarage|dynoroom [--fast]
 
 NEDEN PİŞİRME: onaylanan görünüm Cycles render'ı (dolaylı ışık, yumuşak gölge, ışık havuzları). Telefon (GL
 Compatibility) bunu gerçek zamanlı yapamaz: ortam / zemin / eşyalar ışığı pişmiş hâlde IŞIKSIZ çizilir; yalnız araçlar
@@ -531,6 +531,33 @@ def export_modgarage():
     export_glb(meshes + [floor] + markers, os.path.join(OUT_DIR, "modgarage.glb"))
 
 
+# --- DİNO ATÖLYESİ ----------------------------------------------------------------------------------
+# Seviyesiz, 360° oda (tools/garages/dynoroom.py), araçsız: köşe rengi yüzler odanın içine çevrilerek pişer; zemin tek
+# doku (floor.png); Deck_* / Ramp_* köşe rengine yalnız ışık pişer (oyun diamond.png ile çarpar); ekranlar (Screen_*,
+# WallScreen) pişmez, oyunda kendi dokularıyla ışıksız. Hareketli parçalar (DrumRear, FrontCarriage ⊃ DrumFront,
+# Fan ⊃ FanBlades) ayrı düğüm, kökleri dönme / kayma noktasında. Dokular: diamond.png, dyno_graph.png, dyno_gauges.png.
+
+def export_dynoroom():
+    import shutil
+    parts = build(TMP_DIR)
+    preview_camera("wide", 1280, 720)
+    view_settings()
+    clear_lights()
+    preview_lights()
+    floor = parts["floor"]
+    screens = parts["screens"]
+    meshes = [o for o in parts["static"].objects if o.type == 'MESH' and o is not floor and o not in screens]
+    empties = [o for o in parts["static"].objects if o.type == 'EMPTY']
+    bake_vertex(meshes, VERTEX_SAMPLES, inside=INTERIOR)
+    ppm = min(80.0, 2048.0 / max(W, D))
+    bake_image(floor, "floor_lit", int(W * ppm), int(D * ppm), {'DIRECT', 'INDIRECT', 'COLOR'})
+    display_image(bake_image.last, os.path.join(OUT_DIR, "floor.png"))
+    for name in ("dyno_diamond.png", "dyno_graph.png", "dyno_gauges.png"):
+        shutil.copyfile(os.path.join(parts["tex_dir"], name), os.path.join(OUT_DIR, name.replace("dyno_diamond", "diamond")))
+    markers = [o for o in parts["markers"].objects]
+    export_glb(meshes + screens + [floor] + empties + markers, os.path.join(OUT_DIR, "dynoroom.glb"))
+
+
 for o in list(scn.objects):
     if o.name in ("Cube", "Light", "Camera"):
         bpy.data.objects.remove(o, do_unlink=True)
@@ -538,6 +565,8 @@ if SCENE == "rooftop":
     export_rooftop()
 elif SCENE == "modgarage":
     export_modgarage()
+elif SCENE == "dynoroom":
+    export_dynoroom()
 else:
     export_leveled()
 print("BİTTİ %.1f sn" % (time.time() - t0))

@@ -32,6 +32,8 @@ signal title_changed(text: String)
 signal layout_changed
 ## Görünen kategori değişti (&"" = genel bakış): modifiye garajının kamerası o parçaya gider (ModGarageView.focus).
 signal focus_changed(category: StringName)
+## Menüdeki DİNAMOMETRE kartı: araç dino atölyesine çıkar (GarageScreen.open_dyno).
+signal dyno_requested
 
 enum View { MENU, OVERVIEW, CATEGORY }
 
@@ -47,12 +49,15 @@ const STAGE_BAND: float = 17.0
 const PANEL_WIDTH: float = 214.0
 const STATS_WIDTH: float = 196.0
 const DYNO_WIDTH: float = 296.0
-## Menü kartı: parça kartı boyunda, geniş; solda iki üst üste resim, sağda başlık / alt yazı / durum.
-const MENU_CARD_WIDTH: float = 330.0
-const MENU_ICON: float = 92.0
-const MENU_ICON_SMALL: float = 60.0
-const MENU_TEXT_LEFT: float = 146.0
+## Menü kartı: parça kartı boyunda; solda iki üst üste resim, sağda başlık / alt yazı / durum. Üç kart (PERFORMANS,
+## DİNAMOMETRE, KOZMETİK) en dar tuvalde (853) yan yana sığsın diye 268 (2026-11-02; önce iki kart × 330).
+const MENU_CARD_WIDTH: float = 268.0
+const MENU_ICON: float = 82.0
+const MENU_ICON_SMALL: float = 54.0
+const MENU_TEXT_LEFT: float = 120.0
 const GAIN: Color = Color("3FA45F")
+## DİNAMOMETRE kartının şeridi / YENİ çipi (atölyenin kayış turuncusu).
+const DYNO_BAND: Color = Color("E8701A")
 ## Parça rafı: kartların oturduğu koyu, yuvarlak köşeli şerit (zeminin çizgileri kartların arasından görünmesin).
 const TRAY_COLOR: Color = Color(0.11, 0.12, 0.14, 0.84)
 ## Pano açıkken sayaç / durumlar bu aralıkla tazelenir (sn).
@@ -341,12 +346,14 @@ func _tray_label(text: String, alpha: float) -> Label:
 	return label
 
 
-## Ana menü: PERFORMANS genel bakışa girer; KOZMETİK henüz yok (basılamaz, ÇOK YAKINDA).
+## Ana menü: PERFORMANS genel bakışa girer; DİNAMOMETRE dino atölyesine (dyno_requested); KOZMETİK henüz yok
+## (basılamaz, ÇOK YAKINDA).
 func _build_menu() -> ScrollContainer:
 	var scroll: ScrollContainer = _scroll("ModMenuScroll")
 	var row: HBoxContainer = scroll.get_node("Row") as HBoxContainer
 	# Kart → [büyük resim, önüne binen küçük resim] (ICON_DIR; boya kutuları tools/parts/part_icons.py cosmetic_paint)
-	var pictures: Dictionary = {&"performance": ["motor_block", "turbo_big"], &"cosmetic": ["cosmetic_paint", "tire_slick"]}
+	var pictures: Dictionary = {&"performance": ["motor_block", "turbo_big"], &"dyno": ["dyno_roller", "dyno_fan"],
+		&"cosmetic": ["cosmetic_paint", "tire_slick"]}
 	for id: StringName in pictures:
 		var card: PlateButton = _plate_card("Menu_%s" % id, Vector2(MENU_CARD_WIDTH, CARD_HEIGHT))
 		card.draw.connect(_draw_menu_card.bind(card, id))
@@ -354,7 +361,7 @@ func _build_menu() -> ScrollContainer:
 		var big: TextureRect = _icon_rect(Vector2(14.0, 22.0), MENU_ICON)
 		big.texture = load(PerformanceMods.ICON_DIR + String(names[0]) + ".png") as Texture2D
 		card.add_child(big)
-		var small: TextureRect = _icon_rect(Vector2(76.0, CARD_HEIGHT - MENU_ICON_SMALL - 10.0), MENU_ICON_SMALL)
+		var small: TextureRect = _icon_rect(Vector2(64.0, CARD_HEIGHT - MENU_ICON_SMALL - 10.0), MENU_ICON_SMALL)
 		small.name = "Icon2"
 		small.texture = load(PerformanceMods.ICON_DIR + String(names[1]) + ".png") as Texture2D
 		card.add_child(small)
@@ -362,6 +369,8 @@ func _build_menu() -> ScrollContainer:
 			card.disabled = true
 			big.modulate = Color(1.0, 1.0, 1.0, 0.55)
 			small.modulate = Color(1.0, 1.0, 1.0, 0.55)
+		elif id == &"dyno":
+			card.pressed.connect(func() -> void: dyno_requested.emit())
 		else:
 			card.pressed.connect(show_overview)
 		row.add_child(card)
@@ -792,12 +801,17 @@ func _refresh_job() -> void:
 func _draw_menu_card(card: PlateButton, id: StringName) -> void:
 	var w: float = card.size.x
 	var performance: bool = id == &"performance"
+	var dyno: bool = id == &"dyno"
 	var ink: Color = card.get_theme_color(&"font_color")
-	if not performance:   # basılamaz ama okunur (temanın soluk yazısı 0,4: soluk plakada seçilmiyordu)
+	if not performance and not dyno:   # basılamaz ama okunur (temanın soluk yazısı 0,4: soluk plakada seçilmiyordu)
 		ink.a = 0.6
-	card.draw_rect(Rect2(8.0, 5.0, w - 16.0, 4.0), HudPalette.COIN if performance else Color(HudPalette.INK_SOFT, 0.4))
+	var band: Color = HudPalette.COIN if performance else (DYNO_BAND if dyno else Color(HudPalette.INK_SOFT, 0.4))
+	card.draw_rect(Rect2(8.0, 5.0, w - 16.0, 4.0), band)
 	var font: Font = card.get_theme_font(&"font")
 	var text_width: float = w - MENU_TEXT_LEFT - 30.0
+	if dyno:
+		_draw_dyno_card(card, font, ink, text_width)
+		return
 	var title: String = Loc.t("PERFORMANS") if performance else Loc.t("KOZMETİK")
 	var title_size: int = 22
 	while title_size > 14 and font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size).x > text_width:
@@ -828,6 +842,25 @@ func _draw_menu_card(card: PlateButton, id: StringName) -> void:
 			11).x + 10.0   # _pill'in genişliği
 		card.draw_string(font, Vector2(MENU_TEXT_LEFT + chip_width + 8.0, 98.0 + 12.5), timer, HORIZONTAL_ALIGNMENT_LEFT,
 			-1, 11, HudPalette.COIN_DARK)
+	var mid: float = card.size.y * 0.5
+	card.draw_polyline(PackedVector2Array([Vector2(w - 24.0, mid - 9.0), Vector2(w - 15.0, mid),
+		Vector2(w - 24.0, mid + 9.0)]), ink, 3.0, true)
+
+
+## DİNAMOMETRE kartı: başlık, "Gaz ver, gücünü ölç", en iyi ölçüm (yoksa YENİ), sağda ok.
+func _draw_dyno_card(card: PlateButton, font: Font, ink: Color, text_width: float) -> void:
+	var w: float = card.size.x
+	var title: String = Loc.t("DİNAMOMETRE")
+	var title_size: int = 22
+	while title_size > 13 and font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size).x > text_width:
+		title_size -= 1
+	card.draw_string(font, Vector2(MENU_TEXT_LEFT, 50.0), title, HORIZONTAL_ALIGNMENT_LEFT, text_width, title_size, ink)
+	card.draw_multiline_string(font, Vector2(MENU_TEXT_LEFT, 70.0), Loc.t("Gaz ver, gücünü ölç"),
+		HORIZONTAL_ALIGNMENT_LEFT, text_width, 11, 2, HudPalette.INK_SOFT)
+	var mods: PerformanceModManager = _mods()
+	var best: float = mods.dyno_best(vehicle_id) if mods and vehicle_id != &"" else 0.0
+	var chip: String = Loc.t("EN İYİ %d bg") % roundi(best) if best > 0.0 else Loc.t("YENİ")
+	_pill(card, Vector2(MENU_TEXT_LEFT, 98.0), chip, GAIN if best > 0.0 else DYNO_BAND, 11)
 	var mid: float = card.size.y * 0.5
 	card.draw_polyline(PackedVector2Array([Vector2(w - 24.0, mid - 9.0), Vector2(w - 15.0, mid),
 		Vector2(w - 24.0, mid + 9.0)]), ink, 3.0, true)

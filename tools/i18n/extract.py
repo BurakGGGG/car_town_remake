@@ -14,6 +14,9 @@ import json, os, re, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SCAN = ["gameplay", "ui", "world", "vfx", "race", "traffic", "ads", "vehicles", "garage_system.gd",
         "car_hitbox.gd", "shop_hitbox.gd", "world_camera.gd", "build_grid.gd"]
+# Oyuncuya hiç görünmeyen metin dosyaları: MOTOR SES LABORATUVARI'nın (tools/engine_lab, geliştirici aracı) parametre
+# adları / açıklamaları
+SKIP_FILES = {"vehicles/sound/engine_preset.gd"}
 SKIP_CALLS = ("push_warning", "push_error", "print", "printerr", "assert", "get_node", "has_method",
               "has_signal", "get_first_node_in_group", "add_to_group", "is_in_group", "connect", "load(",
               "preload", "get_setting", "find_child", "get_node_or_null", "set_value", "get_value",
@@ -24,9 +27,11 @@ STR = re.compile(r'(?<![&\^$])"((?:[^"\\\n]|\\.)*)"')
 
 TR_UPPER = "ÇĞİÖŞÜ"
 # Sezgilerin kod sandığı ama oyuncunun gördüğü kısa metinler (Loc.t ile çevrilir)
-INCLUDE = {"%s sn", "%s ve %s", "%d dakika", "%d saat", "%d %s %d", "%d %s", "%d dk", "E-posta", "Hile", "Spam"}
+INCLUDE = {"%s sn", "%s ve %s", "%d dakika", "%d saat", "%d %s %d", "%d %s", "%d dk", "E-posta", "Hile", "Spam",
+           "%d bg", "%s d/dk", "tork", "fabrika"}   # DİNAMOMETRE birimleri / göstergesi
 EXCLUDE = {"ad: %s | bayrak: %s", "açılış: oyun sahnesi kuruldu (şehrin ilk 3B karesi)", "drag pisti", "dünya efektleri", "garaj ekranı", "shader compilation failed", "ön ısıtma bitti", "ön ısıtma: ", "FWD", "RWD", "AWD", "Master", "GDScript: %s @ %s", "Appodeal: başlatma uyarıları: %s", "dosya taşınamadı", "indirme hatası (%d / %d)", "istek başlamadı", "özet tutmuyor", "TEST ÇÖKMESİ", "ÇÖKERT", "Crashlytics kurulumu için oyunu bilerek çökertir. Sonra oyunu yeniden aç.", "test çökmesi (AYARLAR)", "AUTO YARD Crashlytics test crash", "Document does not exist", "PERMISSION_DENIED: restricted", "Facebook login not configured", "Content-Type: application/json", "USD", "mock: hata", "mock: hazır değil", "mock: iptal", "mock: kapalı", "TÜRKÇE", "ENGLISH", "ESPAÑOL", "DEUTSCH", "FRANÇAIS", "LANGUAGE", " · LANGUAGE",
            "DİL", "IDIOMA", "SPRACHE", "LANGUE",
+           "WAVEfmt ",   # EngineBank WAV başlığı
            "WW", "WL", "LW", "LL",   # RaceLearning bağlam kimlikleri (son iki yarış), oyuncuya görünmez
            "HUD", "Şehir önizlemesi (editör)", "Şehir önizlemesini yenile"}   # düğüm adı, editör Inspector'ı
 
@@ -141,8 +146,9 @@ def main():
             continue
         for d, _, files in os.walk(p):
             for fn in files:
-                if fn.endswith(".gd") and fn != "loc.gd":
-                    scan_gd(os.path.join(d, fn), out)
+                full = os.path.join(d, fn)
+                if fn.endswith(".gd") and fn != "loc.gd" and os.path.relpath(full, ROOT) not in SKIP_FILES:
+                    scan_gd(full, out)
     scan_json(out)
     os.makedirs(os.path.join(ROOT, "locale"), exist_ok=True)
     with open(os.path.join(ROOT, "locale/strings.json"), "w", encoding="utf-8") as f:

@@ -84,6 +84,9 @@ const RACE_MODEL_LIMIT: int = 2
 ## her doğumda 1 / (EXOTIC_EVERY − EXOTIC_MIN_GAP) şansla sıra gelir → ortalama aralık tam EXOTIC_EVERY.
 const EXOTIC_EVERY: int = 20
 const EXOTIC_MIN_GAP: int = 8
+## Süper araç şehir trafiğinden bu kat hızlı gider (2026-11-02, kullanıcı: "daha hızlı olsun şehir trafiğine göre");
+## ara sıra gaza da basar (TrafficVehicle.SURGE_*).
+const EXOTIC_PACE: float = 1.3
 ## Takip mesafelerinin (TrafficVehicle.stop_distance / follow_distance) varsaydığı iki yarım boy: burun 0,3 + 0,3.
 const NOMINAL_LENGTH: float = 0.6
 ## Bu hızın altındaki araç "duruyor" sayılır (kilit araması).
@@ -353,6 +356,9 @@ func _spawn_at(point: TrafficWaypoint, entry: Dictionary = {}, start: Vector3 = 
 	vehicle.stop_distance = _rng.randf_range(0.76, 0.95)   # kuyrukta öndekine fazla yanaşmaz, aralar aynı olmaz
 	add_child(vehicle)
 	vehicle.vehicle_id = model["id"]
+	if vehicle.is_exotic():
+		vehicle.max_speed *= EXOTIC_PACE
+		vehicle.acceleration *= EXOTIC_PACE
 	vehicle.setup(self, model["scene"], appearance if appearance else _random_appearance(model["id"]), point, model_scale)
 	if start != Vector3.INF:
 		vehicle.global_position = Vector3(start.x, vehicle.global_position.y, start.z)

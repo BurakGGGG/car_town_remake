@@ -27,6 +27,8 @@ signal jobs_changed
 signal gem_finished(vehicle_id: StringName)
 ## Satın alma olmadı (neden: Status).
 signal purchase_failed(vehicle_id: StringName, category: StringName, status: int)
+## DİNAMOMETRE: aracın en iyi ölçülen tepe gücü değişti (kayıt).
+signal dyno_record_changed(vehicle_id: StringName)
 
 enum Status {
 	BUYABLE,        ## alınabilir
@@ -48,6 +50,7 @@ var _builds: Dictionary = {}   # araç id → {kategori: kademe}
 var _floors: Dictionary = {}   # araç id → gösterilen 0-100 oranının tabanı
 var _jobs: Array[Dictionary] = []   # {car, category, stage, bay, start, end}
 var _ready_cars: Dictionary = {}    # HAZIR sinyali verilmiş araçlar
+var _dyno_best: Dictionary = {}     # araç id → dinamometrede ölçülen en iyi tepe güç (gösterge bg)
 var _poll: float = 0.0
 
 
@@ -327,7 +330,10 @@ func state() -> Dictionary:
 		jobs_out.append({"car": String(job["car"]), "category": String(job["category"]), "stage": int(job["stage"]),
 			"bay": int(job["bay"]), "start": float(job["start"]), "end": float(job["end"]),
 			"ad_cut": bool(job.get("ad_cut", false))})
-	return {"builds": builds, "floors": floors, "jobs": jobs_out}
+	var dyno: Dictionary = {}
+	for id: StringName in _dyno_best:
+		dyno[String(id)] = snappedf(float(_dyno_best[id]), 0.1)
+	return {"builds": builds, "floors": floors, "jobs": jobs_out, "dyno": dyno}
 
 
 ## Kayıttan: katalogda olmayan araç / bilinmeyen kategori atılır; bozuk takma bırakılır. Eski kayıtta yoktur.
@@ -336,6 +342,14 @@ func load_state(data: Dictionary) -> void:
 	_floors.clear()
 	_jobs.clear()
 	_ready_cars.clear()
+	_dyno_best.clear()
+	var dyno: Variant = data.get("dyno", {})
+	if dyno is Dictionary:
+		for raw: Variant in dyno:
+			var dyno_id: StringName = StringName(SaveSafe.s(raw))
+			var hp: float = SaveSafe.f((dyno as Dictionary)[raw])
+			if not CarCatalog.get_entry(dyno_id).is_empty() and hp > 0.0 and hp < 5000.0:
+				_dyno_best[dyno_id] = hp
 	var builds: Variant = data.get("builds", {})
 	if builds is Dictionary:
 		for raw: Variant in builds:
@@ -383,6 +397,22 @@ func load_state(data: Dictionary) -> void:
 ## Yeni oyun: yapı yok, takma yok.
 func reset() -> void:
 	load_state({})
+
+
+# --- DİNAMOMETRE ---------------------------------------------------------------------------------
+
+## Aracın dinamometrede ölçülen en iyi tepe gücü (bg; ölçülmemişse 0).
+func dyno_best(vehicle_id: StringName) -> float:
+	return float(_dyno_best.get(vehicle_id, 0.0))
+
+
+## DİNO KOŞUSU sonucu: öncekinden yüksekse kaydedilir; yeni rekorsa true.
+func record_dyno(vehicle_id: StringName, peak_hp: float) -> bool:
+	if peak_hp <= dyno_best(vehicle_id) + 0.05 or CarCatalog.get_entry(vehicle_id).is_empty():
+		return false
+	_dyno_best[vehicle_id] = peak_hp
+	dyno_record_changed.emit(vehicle_id)
+	return true
 
 
 # --- İç ------------------------------------------------------------------------------------------

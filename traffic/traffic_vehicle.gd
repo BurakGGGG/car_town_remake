@@ -104,6 +104,17 @@ const LAUNCH_BRAKING: float = 2.6
 const LAUNCH_COAST: float = 0.9      # kalkış bitince normal hıza süzülme (birim/sn²)
 const LAUNCH_DISTANCE: float = 7.0
 const LAUNCH_ABORT: float = 2.6
+## SÜPER ARAÇ GAZLAMASI (2026-11-02, kullanıcı: "şehirden geçen süper arabaların sesi… yavaşken kulağa güzel gelmiyor,
+## sanki ara sıra gaza basıyormuş gibi olsun, daha hızlı olsun şehir trafiğine göre"): egzotik araç seyirde önü boşken
+## SURGE_GAP aralıkla kısa bir gaz patlaması yapar (kalkışla aynı yol: SURGE_SPEED'e SURGE_DISTANCE boyunca), sonra gazı
+## kesip normal hızına süzülür. ExoticEngine ivmeden tam gazı, vites atmayı ve gaz kesince patlamaları çalar. Şeritteki
+## hızı da öbür trafikten yüksektir (TrafficManager.EXOTIC_PACE).
+const SURGE_GAP: Vector2 = Vector2(2.5, 5.0)
+const SURGE_RETRY: float = 0.6
+const SURGE_SPEED: float = 1.55
+const SURGE_ACCEL: float = 1.5
+const SURGE_DISTANCE: float = 3.2
+const SURGE_CLEAR: float = 2.6
 ## Kavşak çıkışından en az bu kadar uzaklaşmadan durmaz: arkadaki araç kavşağın içinde beklemesin (karşı yönü tıkardı).
 const HAZARD_EXIT_CLEAR: float = 1.2
 
@@ -186,6 +197,11 @@ var _hazard_left: float = 0.0
 var _last_exit: Vector3 = Vector3.INF   # son geçilen kavşak çıkışı
 var _light_stop: bool = false            # kırmızıda en önde duruyor (önü boş): yeşilde kalkış zarı atılır
 var _launch_from: Vector3 = Vector3.INF  # süper araç kalkışının başladığı yer (INF: kalkış yok)
+var _launch_top: float = LAUNCH_SPEED      # kalkış / gazlama: hedef hız, ivme, mesafe
+var _launch_rate: float = LAUNCH_ACCEL
+var _launch_length: float = LAUNCH_DISTANCE
+var _surge_in: float = -1.0                # sonraki gazlamaya kalan süre (< 0: henüz kurulmadı)
+var _exotic: int = -1                      # süper araç mı (-1: henüz bakılmadı)
 ## Kalkış olasılığı (QA gerçek akışı görmek için 1 yapar).
 var launch_chance: float = LAUNCH_CHANCE
 var _hazards: HazardLights
@@ -360,14 +376,27 @@ func _physics_process(delta: float) -> void:
 		_light_stop = false
 		if ahead > LAUNCH_CLEAR and not fleeing and pressure <= 0.0 and roll_launch():
 			start_launch()
+	# Süper araç gazlaması: seyirde, önü boşken, kavşaktan uzakta ara sıra
+	if _launch_from == Vector3.INF and is_exotic():
+		if _surge_in < 0.0:
+			_surge_in = randf_range(SURGE_GAP.x, SURGE_GAP.y) * 0.5
+		_surge_in -= delta
+		if _surge_in <= 0.0:
+			if speed > 0.25 and ahead > SURGE_CLEAR and not hold and not fleeing and pressure <= 0.0 \
+					and _hazard_left <= 0.0 and merge_aim == Vector3.INF and not _in_intersection \
+					and (entry == null or to_entry > light_lookahead + 0.4):
+				start_surge()
+				_surge_in = randf_range(SURGE_GAP.x, SURGE_GAP.y)
+			else:
+				_surge_in = SURGE_RETRY
 	if _launch_from != Vector3.INF:
 		var gone: float = _flat(global_position - _launch_from).length()
-		if gone > LAUNCH_DISTANCE or ahead < LAUNCH_ABORT or pressure > 0.0 or fleeing or hold \
+		if gone > _launch_length or ahead < LAUNCH_ABORT or pressure > 0.0 or fleeing or hold \
 				or (gone > 2.0 and entry != null and to_entry < light_lookahead):
 			_launch_from = Vector3.INF
 		else:
-			desired = LAUNCH_SPEED if target.speed_limit <= 0.0 else minf(LAUNCH_SPEED, target.speed_limit)
-	var rate_up: float = LAUNCH_ACCEL if _launch_from != Vector3.INF else acceleration
+			desired = _launch_top if target.speed_limit <= 0.0 else minf(_launch_top, target.speed_limit)
+	var rate_up: float = _launch_rate if _launch_from != Vector3.INF else acceleration
 	var rate_down: float = HAZARD_BRAKING if _hazard_left > 0.0 else braking
 	if speed > max_speed + 0.01:   # kalkıştan dönüş: önünde araç / ışık varsa sert, yoksa süzülerek
 		rate_down = LAUNCH_BRAKING if ahead < follow_distance * 2.5 or hold else LAUNCH_COAST
@@ -557,9 +586,28 @@ func roll_launch() -> bool:
 ## Süper araç kalkışını başlatır (yeşilde zar tutunca; test / QA doğrudan da çağırır).
 func start_launch() -> void:
 	_launch_from = global_position
+	_launch_top = LAUNCH_SPEED
+	_launch_rate = LAUNCH_ACCEL
+	_launch_length = LAUNCH_DISTANCE
 	_flair_speed = speed
 	if manager:
 		manager.vehicle_launched.emit(self)
+
+
+## Süper araç gazlaması (seyirde kısa gaz patlaması; kalkışın kısa hâli, lastik cıyağı yok).
+func start_surge() -> void:
+	_launch_from = global_position
+	_launch_top = SURGE_SPEED
+	_launch_rate = SURGE_ACCEL
+	_launch_length = SURGE_DISTANCE
+	_flair_speed = speed
+
+
+## Süper araç mı (cars.json "exotic"; bir kez bakılır).
+func is_exotic() -> bool:
+	if _exotic < 0:
+		_exotic = 1 if CarCatalog.is_exotic(vehicle_id) else 0
+	return _exotic == 1
 
 
 func is_launching() -> bool:

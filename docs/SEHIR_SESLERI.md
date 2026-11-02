@@ -96,6 +96,10 @@ Kullanıcı isteği: "araç seslerini çeşitlendir ve daha da güzel olsun. Sok
 bazı yerlerde durup dörtlü yaksınlar, 3–5 saniye sonra devam etsinler. Nadir olarak."
 
 ### Motorlar (`traffic/traffic_engine.gd`, TrafficEngine)
+> **2026-11-02:** sesler artık her aracın kendi pişmiş bankası (`EngineBank`, MOTOR SES LABORATUVARI). Aşağıdaki tip
+> tablosu yalnız SÜRÜŞÜ (devir, vites, korna) belirler; tip döngüleri ve sentez kaldırıldı. Ayrıntı:
+> `docs/MOTOR_SESLERI.md`.
+
 Egzotik olmayan her trafik aracına tipine göre motor (egzotikler ExoticEngine'de kaldı, polis aracında motor yok: siren var).
 Tip `cars.json`'dan çıkarılır (`TrafficEngine.kind_of`):
 
@@ -165,3 +169,20 @@ Kullanıcı isteği: "Ana ekranda ara sıra geçen süper araçlar, önleri boş
 - Ölçüm (`qa/superarac_kalkis_qa.gd`, kamera araçta): kalkışta Ambience bus'ı ~1,2 sn boyunca −22'den −10 dBFS'e çıkar, araç
   uzaklaştıkça söner. Kareler ve ses `~/Projects/ct_shots/kalkis/`.
 - Test: `tests/traffic_sound_test.gd` (zar oranı, yalnız egzotik, hızlanma, cıyak, kalkışın bitmesi).
+
+## Süper araç gazlaması ve hızı (2026-11-02)
+
+Kullanıcı isteği (telefonda dinledikten sonra): "Şehirden geçen süper arabaların sesi güzel değil. Hızlıyken güzel, yavaşken
+kulağa güzel gelmiyor. Sanki ara sıra gaza basıyormuş gibi olsun, daha hızlı olsun şehir trafiğine göre."
+
+- **Hız:** süper araç doğarken en yüksek hızı ve ivmesi `TrafficManager.EXOTIC_PACE` (1,3) ile çarpılır: normal trafik
+  0,55–0,9 birim/sn, süper araç 0,72–1,17. Öndeki yavaş araca yetişince onu izler.
+- **Gazlama (`TrafficVehicle.start_surge`):** seyirde önü `SURGE_CLEAR` (2,6 birim) kadar boşken, kavşak girişine 2,6 birimden uzakta,
+  `SURGE_GAP` (2,5–5 sn) aralıkla kısa bir gaz patlaması: 1,5 birim/sn² ile `SURGE_SPEED` (1,55) hıza, `SURGE_DISTANCE` (3,2 birim)
+  boyunca; sonra gazı kesip normal hızına süzülür. Kalkışla aynı yol (`_launch_top` / `_launch_rate` / `_launch_length`),
+  lastik cıyağı yok, `vehicle_launched` yayılmaz. Koşul tutmazsa 0,6 sn sonra yeniden bakılır.
+- **Motor (`ExoticEngine`):** yavaşken düşük devirde hafif gazla boğuk kalıyordu. Vitesler daha geç büyür, daha erken küçülür:
+  gazda 5600 d/dk'da atar (eskiden 4300), seyirde 3800'de (2700), 2300'ün altında küçülür (1500). Seyir gazı 0,32 (0,25).
+  Böylece seyir ~3000–4000 d/dk; gazlamada 3. viteste ~5600'e çıkıp atar, gaz kesince bankanın patlamaları / blow-off'u gelir.
+- QA: `qa/superarac_gazlama_qa.gd` (Huracán'ı 40 sn izler: gazlama sayısı, devir, vites; Ambience bus'ı WAV'a,
+  `~/Projects/ct_shots/gazlama/`).

@@ -14,7 +14,8 @@ extends Node3D
 ##   MOTOR   — EGZOTİK araçlarda ExoticEngine (2026-10-17); diğer her trafik aracında tipine göre TrafficEngine
 ##             (2026-10-20, kullanıcı: "araç seslerini çeşitlendir ve daha da güzel olsun": küçük / büyük benzinli,
 ##             altı, V8, dizel, kamyonet, eski karbüratörlü, elektrikli). Aynı anda dinleyiciye en yakın ENGINE_VOICES
-##             aracın motoru duyulur. Lastik sesi de araç boyuna göre üç çeşit (küçük / orta / iri).
+##             aracın motoru duyulur. 2026-11-02'den beri her aracın KENDİ pişmiş motor sesi (EngineBank, MOTOR SES
+##             LABORATUVARI); tip yalnız sürüşü belirler. Lastik sesi araç boyuna göre üç çeşit (küçük / orta / iri).
 ##   KALKIŞ CIYAĞI — süper araç ışıktan gaza basınca (TrafficManager.vehicle_launched) aracın lastiklerinden kısa cıyak
 ##             (motorun tam gazını ExoticEngine ivmeden kendisi çalar).
 ##   BAĞLAMLI KORNA — dörtlü yakıp duran aracın arkasındaki araç kısa süre sonra, uzun sıkışan araç ara sıra korna
@@ -86,8 +87,8 @@ const BIRD_WEIGHTS: Array[float] = [0.34, 0.2, 0.14, 0.2, 0.12]
 const VARIANTS: int = 3
 
 ## Arka planda üretilen ses bankası: "hum", "tire" / "tire_small" / "tire_big" (döngü), "birds" (tür → varyantlar),
-## "horns" (uzak korna), "car_horns" (TrafficEngine.Horn → 4 basış deseni), "squeals", "engines" (silindir sayısı →
-## egzotik motor döngüsü), "traffic_engines" (TrafficEngine.Kind → döngü).
+## "horns" (uzak korna), "car_horns" (TrafficEngine.Horn → 4 basış deseni), "squeals". Motor sesleri burada değil:
+## her aracın pişmiş bankası (EngineBank) araç doğunca yüklenir.
 static var _bank: Dictionary = {}
 
 var _manager: TrafficManager
@@ -371,22 +372,22 @@ static func _tire_key(vehicle: Node3D) -> String:
 	return "tire_small" if length < TIRE_SMALL_LENGTH else "tire"
 
 
-## Egzotik olmayan trafik aracının motoru (polis aracına yok: sireni var). Döngü farklı yerden başlar, küçük perde farkı.
+## Egzotik olmayan trafik aracının motoru (polis aracına yok: sireni var): aracın kendi pişmiş motor sesi
+## (EngineBank; pişmemiş araçta motor yok).
 func _motor_for(vehicle: Node3D) -> TrafficEngine:
 	var traffic_vehicle: TrafficVehicle = vehicle as TrafficVehicle
 	if traffic_vehicle == null or traffic_vehicle.vehicle_id == &"" or CarCatalog.is_exotic(traffic_vehicle.vehicle_id) \
 			or String(traffic_vehicle.vehicle_id).begins_with("police"):
 		return null
-	var kind: TrafficEngine.Kind = TrafficEngine.kind_of(traffic_vehicle.vehicle_id)
-	var stream: AudioStreamWAV = (_bank["traffic_engines"] as Dictionary).get(kind)
-	if stream == null:
+	var bank: EngineBank = EngineBank.for_vehicle(traffic_vehicle.vehicle_id)
+	if bank == null:
 		return null
 	var motor: TrafficEngine = TrafficEngine.new()
-	motor.setup(stream, kind, _rng.randf_range(0.95, 1.05), BUS)
+	motor.setup(bank, TrafficEngine.kind_of(traffic_vehicle.vehicle_id), BUS)
 	motor.attenuation_filter_cutoff_hz = AIR_CUTOFF
 	add_child(motor)
 	motor.global_position = vehicle.global_position
-	motor.play(_rng.randf() * stream.get_length())
+	motor.play()
 	motor.stream_paused = true
 	return motor
 
@@ -409,21 +410,20 @@ func audible_engine_count() -> int:
 	return n
 
 
-## Egzotik araca motor sesi (diğerlerine null). Döngü farklı yerden başlar, araç başına küçük perde farkı.
+## Egzotik araca motor sesi (diğerlerine null): aracın kendi pişmiş motor sesi (EngineBank).
 func _engine_for(vehicle: Node3D) -> ExoticEngine:
 	var traffic_vehicle: TrafficVehicle = vehicle as TrafficVehicle
 	if traffic_vehicle == null or not CarCatalog.is_exotic(traffic_vehicle.vehicle_id):
 		return null
-	var cylinders: int = ExoticEngine.cylinders_of(traffic_vehicle.vehicle_id)
-	var stream: AudioStreamWAV = (_bank["engines"] as Dictionary).get(cylinders)
-	if stream == null:
+	var bank: EngineBank = EngineBank.for_vehicle(traffic_vehicle.vehicle_id)
+	if bank == null:
 		return null
 	var engine: ExoticEngine = ExoticEngine.new()
-	engine.setup(stream, cylinders, _rng.randf_range(0.97, 1.03), BUS)
+	engine.setup(bank, BUS)
 	engine.attenuation_filter_cutoff_hz = AIR_CUTOFF
 	add_child(engine)
 	engine.global_position = vehicle.global_position
-	engine.play(_rng.randf() * stream.get_length())
+	engine.play()
 	engine.stream_paused = true
 	return engine
 
@@ -657,12 +657,8 @@ static func _build_bank() -> Dictionary:
 		],
 		"squeals": [TrafficSfx.squeal_stream(0.7, 11), TrafficSfx.squeal_stream(1.0, 23)],
 		"chirp": TrafficSfx.squeal_stream(0.45, 41),
-		"engines": {6: ExoticEngine.make_stream(6), 8: ExoticEngine.make_stream(8), 10: ExoticEngine.make_stream(10)},
-		"traffic_engines": {},
 		"car_horns": {},
 	}
-	for kind: int in TrafficEngine.Kind.values():
-		(bank["traffic_engines"] as Dictionary)[kind] = TrafficEngine.make_stream(kind as TrafficEngine.Kind)
 	for horn: int in TrafficEngine.Horn.values():
 		(bank["car_horns"] as Dictionary)[horn] = TrafficEngine.horn_streams(horn as TrafficEngine.Horn)
 	return bank
