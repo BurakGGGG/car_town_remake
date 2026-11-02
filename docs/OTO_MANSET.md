@@ -12,16 +12,20 @@ sayfa; KISA KISA iki satıra sığmazsa en önemsizler "+N HABER DAHA" olur. YAL
 arkadaşın aracı + avatarı, kazançta para görseli (karakter yok).
 **Ne zaman:** soğuk açılış + arka plandan 30 dakikadan uzun dönüş. Haber yoksa çıkmaz.
 
-**Pasif gelir:** sen yokken tamir alanları çalışır. 8 saatlik yokluk ≈ 30 dakikalık aktif oyun (aktif ₺/dk ÷ 16).
-İlk öneri "yarı hız"dı; ölçümle geç oyunda gecede ~600.000 ₺ çıktı (araçlar 15.000–450.000 ₺), kullanıcı 1/16'yı seçti.
+**Pasif gelir:** sen yokken tamir alanları çalışır. Aktif ₺/dk ÷ 16; kasa **4 saatte** dolar (4 saat ≈ 15 dakikalık
+aktif oyun, gazetedeki ×2 reklamla 30 dk). İlk öneri "yarı hız"dı; ölçümle geç oyunda gecede ~600.000 ₺ çıktı (araçlar
+15.000–450.000 ₺), kullanıcı 1/16'yı seçti. **2026-11-02:** tavan 8 saatten 4 saate indi (kullanıcı: "offline birikimi
+çok fazla veriyoruz"; seçenekler oranı yarıya indirmek / tavanı 4 saate indirmek / azalan verim / dörtte bir idi, tavan
+seçildi). Saatlik oran aynı; gecelik toplam yarıya indi, günde iki kez uğramak ödüllendirilir. Eski kayıtta 4 saati
+aşan kasa açılışta parası süreyle orantılı kırpılarak 4 saate indirilir.
 - Yalnız PARA (XP, ustalık, görev sayılmaz).
-- Kasa 8 saatte dolar ("kepenk iner"). 30 dakikadan kısa aralarda kasa sessizce büyür, sonraki gazetede çıkar.
+- Kasa 4 saatte dolar ("kepenk iner"). 30 dakikadan kısa aralarda kasa sessizce büyür, sonraki gazetede çıkar.
 - Yarım kalan tamirler: sen yokken bitenler tam ödül + XP ile gazeteye (haberde ayrı cümle), bitmeyenler alana döner.
 - Arka planda tamir sayaçları geçen süre kadar ilerler.
-- Rıza Usta iki kez anlatır: ilk kazançlı gazeteden sonra ve kasa ilk kez 8 saati doldurunca.
+- Rıza Usta iki kez anlatır: ilk kazançlı gazeteden sonra ve kasa ilk kez 4 saati doldurunca.
 - Saat: "girişliyse sunucu saati" seçildi. Firebase eklentisinde sunucu saati okuma yok → Google'ın HTTPS cevabındaki
   Date başlığı (internet varken misafirde de), oyun içinde monoton sayaçla. İnternetsizse cihaz saati; geri alınmışsa 0.
-- 8 saat dolunca telefon bildirimi YOK (yerel bildirim altyapısı yok), garaj panelinde bilgi satırı YOK.
+- Kasa dolunca telefon bildirimi YOK (yerel bildirim altyapısı yok), garaj panelinde bilgi satırı YOK.
 
 Benim kararlarım (kullanıcıya söylendi): usta temel ders (Rıza Usta'nın ilk dersi) bitmeden çalışmaz; 10 dakikadan
 kısa birikim haber olmaz; ödeme kayda hemen yazılır (gazete açıkken kapanırsa ya hiç ya bir kez ödenmiştir); eğitim,
@@ -38,8 +42,9 @@ kasa açılışı, yükleme ekranı ya da bulut kayıt seçimi sürerken gazete 
 | 3 | 1.008 | 1.008 | 1.234 | 1.666 |
 | 4 | 1.441 | 1.441 | 1.441 | 1.877 |
 
-Tamir hızı 5 (süre ×0,6) +%48 (ölçüm), aradakiler süre çarpanıyla orantılı. Pasif = ×1/16. 8 saat dolu kasa:
-başlangıç ~11.000 ₺, garaj 3 / 3 alan / hız 3 ~59.000 ₺, geç oyun ~83.000 ₺. "Kaç araç" = kasa ÷ açık işlerin
+Tamir hızı 5 (süre ×0,6) +%48 (ölçüm), aradakiler süre çarpanıyla orantılı. Pasif = ×1/16. 4 saat dolu kasa
+(×2 reklamla iki katı): başlangıç ~5.600 ₺, garaj 2 / 2 alan / hız 3 ~17.500 ₺, garaj 3 / 3 alan / hız 3 ~29.500 ₺,
+geç oyun (garaj 4 / 3 alan / hız 5) ~41.700 ₺. "Kaç araç" = kasa ÷ açık işlerin
 ortalama ödülü (garajın müşteri çarpanıyla).
 
 ## Kod
@@ -62,7 +67,7 @@ Dil değişiminde işler zaten devirle (carry_over) gelir; yeni sahne kayıttaki
 
 ## Test / QA
 
-- `tests/offline_earnings_test.gd` (run_tests listesinde): tablo, HTTP Date, 8 saat sınırı, kısa aralar, gösterilen
+- `tests/offline_earnings_test.gd` (run_tests listesinde): tablo, HTTP Date, 4 saat sınırı (eski 8 saatlik kasanın kırpılması), kısa aralar, gösterilen
   payın ödenmesi, saat geri alma, kayıt turu, temel ders şartı, metinler, gerçek sahnede açılış + yarım işler.
 - `qa/oto_manset_qa.gd`: sahte veriyle görünüm (853x480 / 1067x480, QA_LANG=es).
 - `qa/pasif_gelir_qa.gd`: gerçek oyunda 6 sa / 10 sa yokluk, para uçuşu, Rıza Usta, arka plandan dönüş (gerçek ağ saati).

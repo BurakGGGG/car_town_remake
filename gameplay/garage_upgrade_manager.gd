@@ -14,7 +14,7 @@ extends Node
 
 ## Bir geliştirme satın alındı (yeni seviyesiyle).
 signal upgrade_purchased(id: StringName, level: int)
-## Satın alma başarısız (yetersiz bakiye ya da maksimum seviye).
+## Satın alma başarısız (yetersiz bakiye, maksimum seviye ya da oyuncu seviyesi kilidi; son ikisinde cost 0).
 signal purchase_failed(id: StringName, cost: int)
 ## Seviyeler değişti — satın alma, kayıttan yükleme ya da yeni oyun. Kayıttan yükleme
 ## upgrade_purchased yaymadığı için GarageSystem / RepairBayManager bu sinyali dinler.
@@ -73,20 +73,37 @@ func is_max(id: StringName) -> bool:
 	return u == null or u.is_max()
 
 
-## Satın alınabilir mi: maksimum değil ve bakiye yetiyor.
+## Sıradaki seviye için gereken oyuncu seviyesi (kilit yoksa / maksimumda 0). Kilit açık olsa da değeri döner.
+func required_player_level(id: StringName) -> int:
+	var u: GarageUpgrade = get_upgrade(id)
+	return u.next_required_level() if u else 0
+
+
+## Sıradaki seviye oyuncu seviyesi yüzünden kilitli mi (GarageUpgrade.min_player_levels). Oyuncu ilerlemesi yoksa
+## (yalın test) kilit uygulanmaz.
+func is_level_locked(id: StringName) -> bool:
+	var need: int = required_player_level(id)
+	if need <= 1:
+		return false
+	var progress: PlayerProgress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress \
+			if is_inside_tree() else null
+	return progress != null and progress.level < need
+
+
+## Satın alınabilir mi: maksimum değil, oyuncu seviyesi yetiyor ve bakiye yetiyor.
 func can_buy(id: StringName) -> bool:
 	var u: GarageUpgrade = get_upgrade(id)
-	if u == null or u.is_max():
+	if u == null or u.is_max() or is_level_locked(id):
 		return false
 	var economy: EconomyManager = _economy()
 	return economy == null or economy.can_afford(u.next_cost())
 
 
 ## Satın alma: bakiye yeterliyse ücret düşer, seviye artar ve upgrade_purchased yayılır (true).
-## Yetersiz bakiye / maksimum seviyede hiçbir şey değişmez (false).
+## Yetersiz bakiye / maksimum seviye / oyuncu seviyesi kilidinde hiçbir şey değişmez (false).
 func buy(id: StringName) -> bool:
 	var u: GarageUpgrade = get_upgrade(id)
-	if u == null or u.is_max():
+	if u == null or u.is_max() or is_level_locked(id):
 		if u:
 			purchase_failed.emit(id, 0)
 		return false

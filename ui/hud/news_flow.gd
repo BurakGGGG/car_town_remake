@@ -13,7 +13,7 @@ extends Node
 ## Toplama sürerken arkadaş hediyesi / yarış haberi küçük bildirim olarak çıkmaz (gazeteye girer; kullanıcı kararı: oyun
 ## açıkken gelenler bildirim, girişte toplu gazete).
 ## TAMAM'da OfflineEarnings.collect() parayı verir, paralar kazanç fotoğrafından sayaca uçar (CoinFlight), arkadaş tabanı
-## ilerler. Kullanıcı kararı: Rıza Usta pasif geliri iki kez anlatır — ilk kazançlı gazeteden sonra ve kasa ilk kez 8 saati
+## ilerler. Kullanıcı kararı: Rıza Usta pasif geliri iki kez anlatır — ilk kazançlı gazeteden sonra ve kasa ilk kez 4 saati
 ## doldurunca. Hud kurar.
 
 const IDLE: float = 1.0
@@ -200,7 +200,7 @@ func _tips(result: Dictionary) -> void:
 			await director.said
 	if bool(result.get("full", false)) and not _away.told_full:
 		if director.say("", Loc.t("KEPENGİ İNDİRDİM"),
-				Loc.t("8 saat çalıştım, kepengi indirdim. Sık uğra ki dükkân durmasın!")):
+				Loc.t("4 saat çalıştım, kepengi indirdim. Sık uğra ki dükkân durmasın!")):
 			_away.told_full = true
 			_away.save_soon()
 			await director.said

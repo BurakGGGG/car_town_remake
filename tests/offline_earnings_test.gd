@@ -1,5 +1,5 @@
 extends SceneTree
-## PASİF GELİR + YARIM KALAN İŞLER + OTO MANŞET AKIŞI (2026-10-17) — ölçülmüş gelir tablosu ve tamir hızı, 8 saat kasa
+## PASİF GELİR + YARIM KALAN İŞLER + OTO MANŞET AKIŞI (2026-10-17) — ölçülmüş gelir tablosu ve tamir hızı, 4 saat kasa
 ## sınırı, kısa aralarda birikim, saat geri alma, temel ders şartı, gösterilen payın ödenmesi (açıkken biriken sonraya
 ## kalır), kayıt turu, sunucu saati (HTTP Date) ayrıştırma, kazanç haberinin metni, kayıttaki yarım işler (biten → gazete,
 ## bitmeyen → alana) ve gerçek sahnede açılış: gazete açılır, TAMAM parayı verir, Rıza Usta bir kez konuşur.
@@ -68,7 +68,7 @@ func _run() -> void:
 	check(mid > 1666.0 and mid < 1666.0 * 1.48, "ara tamir hızı arada (%.0f)" % mid)
 	check(is_equal_approx(OfflineEarnings.active_rate(9, 9, 1.0, true), 1877.0), "aralık dışı değerler sınıra çekilir")
 	var full_late: float = OfflineEarnings.active_rate(4, 3, 0.6, true) * OfflineEarnings.OFFLINE_SHARE * OfflineEarnings.CAP_MINUTES
-	check(full_late > 70000.0 and full_late < 90000.0, "geç oyunda 8 saat ≈ 30 dk oyun (%.0f ₺)" % full_late)
+	check(full_late > 35000.0 and full_late < 48000.0, "geç oyunda dolu kasa (4 saat) ≈ 15 dk oyun (%.0f ₺)" % full_late)
 
 	print("== 2) Sunucu saati (HTTP Date) ==")
 	var expect: int = Time.get_unix_time_from_datetime_dict({"year": 2026, "month": 10, "day": 17, "hour": 14, "minute": 52, "second": 3})
@@ -76,7 +76,7 @@ func _run() -> void:
 	check(OfflineEarnings.parse_http_date("Sat, 17 Okt 2026 14:52 GMT") == 0 and OfflineEarnings.parse_http_date("") == 0,
 		"bozuk tarih 0")
 
-	print("== 3) Kasa: oran, 8 saat sınırı, kısa aralar ==")
+	print("== 3) Kasa: oran, 4 saat sınırı, kısa aralar ==")
 	var away: OfflineEarnings = OfflineEarnings.new()
 	away.use_network = false
 	root.add_child(away)
@@ -90,7 +90,7 @@ func _run() -> void:
 	away.accrue(300)
 	check(is_equal_approx(away.bank_minutes, 70.0), "kısa aralar birikir (70 dk)")
 	away.accrue(20 * 3600)
-	check(is_equal_approx(away.bank_minutes, OfflineEarnings.CAP_MINUTES) and away.full, "8 saatte kepenk iner")
+	check(is_equal_approx(away.bank_minutes, OfflineEarnings.CAP_MINUTES) and away.full, "4 saatte kepenk iner")
 	var capped: int = away.bank_money
 	away.accrue(3600)
 	check(away.bank_money == capped, "dolu kasa büyümez")
@@ -133,6 +133,11 @@ func _run() -> void:
 	check(copy.finished.size() == 1 and int(copy.finished[0]["reward"]) == 230, "biten yarım iş kayıtta")
 	copy.load_state({"finished": [{"type": "yok_boyle_is", "reward": 9999}], "bank": {"minutes": "x", "money": -5}})
 	check(copy.finished.is_empty() and copy.bank_money == 0 and copy.bank_minutes == 0.0, "bozuk kayıt temizlendi")
+	copy.load_state({"bank": {"minutes": 480.0, "money": 80000, "jobs": 40, "full": true}})
+	check(is_equal_approx(copy.bank_minutes, OfflineEarnings.CAP_MINUTES) and copy.bank_money == 40000
+		and copy.bank_jobs == 20 and copy.full, "eski 8 saatlik kasa 4 saate orantılı kırpıldı (%d ₺)" % copy.bank_money)
+	copy.load_state({"bank": {"minutes": 300.0, "money": 5000, "jobs": 1, "full": false}})
+	check(copy.bank_money == 4000 and copy.bank_jobs == 1 and copy.full, "tavanı aşan kasa doldu sayılır")
 	copy.free()
 	var tutorial: TutorialManager = TutorialManager.new()
 	root.add_child(tutorial)
@@ -147,15 +152,15 @@ func _run() -> void:
 		node.free()
 
 	print("== 6) Kazanç haberinin metni ==")
-	var deck: String = NewsDigest.deck({"kind": NewsDigest.EARNINGS, "money": 2300, "jobs": 9, "minutes": 360, "full": true,
+	var deck: String = NewsDigest.deck({"kind": NewsDigest.EARNINGS, "money": 2300, "jobs": 9, "minutes": 240, "full": true,
 		"finished": 2, "finished_money": 780, "finished_xp": 25})
-	check(deck.contains("6 saat içinde 9 araç") and deck.contains("2 iş de bitti") and deck.contains("+25 XP")
+	check(deck.contains("4 saat içinde 9 araç") and deck.contains("2 iş de bitti") and deck.contains("+25 XP")
 		and deck.contains("kepenk"), "süre + araç + yarım işler + kepenk: %s" % deck)
 	var only_jobs: String = NewsDigest.deck({"kind": NewsDigest.EARNINGS, "money": 780, "jobs": 0, "finished": 1,
 		"finished_money": 780, "finished_xp": 25})
 	check(only_jobs.begins_with("Yarım bıraktığın iş bitti"), "yalnız tek yarım iş: tekil cümle, 'de' yok")
 	check(NewsDigest.duration_text(40) == "40 dakika" and NewsDigest.duration_text(130) == "2 saat", "süre yazısı")
-	var composed: Dictionary = NewsDigest.compose([{"kind": NewsDigest.EARNINGS, "money": 3000, "jobs": 9, "minutes": 480,
+	var composed: Dictionary = NewsDigest.compose([{"kind": NewsDigest.EARNINGS, "money": 3000, "jobs": 9, "minutes": 240,
 		"full": true, "finished": 2, "finished_money": 700, "finished_xp": 20}] as Array[Dictionary], 3)
 	var composed_deck: String = NewsDigest.deck(composed["headline"])
 	check(composed_deck.contains("2 iş de bitti") and composed_deck.contains("kepenk"), "birleştirmeden sonra da yarım iş + kepenk")

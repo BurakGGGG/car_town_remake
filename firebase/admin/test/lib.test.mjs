@@ -226,7 +226,8 @@ test("ödüllü reklam ayarı: varsayılanlar, sınırlar, bilinmeyen tür", () 
   assert.equal(AD_KINDS.free_gems.cap, 5);
   assert.deepEqual(AD_KINDS.event_race, { label: "Etkinlik yarışı +1 hak", cap: 1 }, "etkinlik yarışı: günde 3 + reklamla 1");
   assert.equal(buildAds({ caps: { event_race: 0 } }).caps.event_race, 0);
-  assert.equal(Object.keys(AD_KINDS).length, 10, "oyundaki 10 teklif türü");
+  assert.deepEqual(AD_KINDS.car_delivery, { label: "Araç siparişi 8 saat öne (3 reklam = hemen)", cap: 9 }, "araç mağazası");
+  assert.equal(Object.keys(AD_KINDS).length, 11, "oyundaki 11 teklif türü (AdPolicy.RULES)");
 });
 
 test("paket listesi ve takvim belgesi (öbür alanlar korunur, ayna yazılır)", () => {

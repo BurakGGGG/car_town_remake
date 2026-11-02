@@ -163,6 +163,12 @@ func _card(entry: Dictionary, alpha: float = 1.0) -> Control:
 			detail = Loc.t("%s · +%s ₺") % [_duration(type.duration), Hud.format_thousands(type.reward)]
 			if type.min_garage_level > 1 or type.min_bays > 1:
 				need = Loc.t("GARAJ SV.%d + %d ALAN GEREKİR") % [type.min_garage_level, type.min_bays]
+		LevelUnlocks.Kind.GARAGE:
+			tag = Loc.t("YENİ")
+			picture = _bubble(HudIcon.Kind.GARAGE, HudPalette.INK)
+			title = Loc.t("GARAJ SEVİYE %d") % int(entry["garage_level"])
+			# ₺ sayıdan ayrılıp tek başına alt satıra düşmesin (bölünmez boşluk)
+			detail = (Loc.t("GENİŞLETME AÇILDI · %s ₺") % Hud.format_thousands(int(entry["cost"]))).replace(" ₺", "\u00a0₺")
 		LevelUnlocks.Kind.DEPOT:
 			var garage: StringName = entry["id"]
 			tag = Loc.t("YENİ DEPO")

@@ -144,6 +144,9 @@ func _ensure_crate_system() -> void:
 	# PASİF GELİR (OTO MANŞET): sen yokken ustanın kasası + yarım kalan işler (kayıt SaveManager'da, ondan ÖNCE hazır)
 	if get_tree().get_first_node_in_group("offline_earnings") == null:
 		add_child(OfflineEarnings.new())
+	# ARAÇ MAĞAZASI: gemle hemen / ₺ ile 24 saatte teslim siparişleri (kayıt SaveManager'da, ondan ÖNCE hazır)
+	if get_tree().get_first_node_in_group("car_shop") == null:
+		add_child(CarShop.new())
 	# Takılan parçanın garajdaki görünümü (lifteki araç + kalan süre balonu)
 	if get_tree().get_first_node_in_group("performance_bays") == null:
 		var mod_bays: PerformanceBays = PerformanceBays.new()

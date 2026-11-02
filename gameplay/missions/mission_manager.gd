@@ -1171,7 +1171,7 @@ func _cheapest_growth(upgrades: GarageUpgradeManager, bays: RepairBayManager) ->
 	var best: int = 0
 	if upgrades:
 		for id: StringName in [GarageUpgradeManager.SPEED_ID, GarageUpgradeManager.GARAGE_ID]:
-			if not upgrades.is_max(id):
+			if not upgrades.is_max(id) and not upgrades.is_level_locked(id):   # seviye kilitli genişletme büyüme sayılmaz
 				var cost: int = upgrades.next_cost(id)
 				best = cost if best == 0 else mini(best, cost)
 	if bays and bays.unlocked_count() < bays.bay_count():

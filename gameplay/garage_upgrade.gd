@@ -24,6 +24,9 @@ extends Resource
 @export var costs: PackedInt32Array = PackedInt32Array()
 ## Her seviyenin oyun etkisi (effects[0] = Lv1).
 @export var effects: PackedFloat32Array = PackedFloat32Array()
+## Sıradaki seviyeler için gereken OYUNCU seviyesi, costs ile aynı dizin (min_player_levels[0] = Lv1 → Lv2).
+## Eksik / 0 = kilit yok. Kilit yalnız yeni satın almayı durdurur: önceden alınmış seviye geri alınmaz.
+@export var min_player_levels: PackedInt32Array = PackedInt32Array()
 
 
 var max_level: int:
@@ -37,6 +40,17 @@ func is_max() -> bool:
 ## Bir sonraki seviyenin ücreti (maksimumdaysa 0).
 func next_cost() -> int:
 	return 0 if is_max() else costs[current_level - 1]
+
+
+## `target` seviyesine çıkmak için gereken oyuncu seviyesi (kilit yoksa 0).
+func required_level_for(target: int) -> int:
+	var index: int = target - 2
+	return min_player_levels[index] if index >= 0 and index < min_player_levels.size() else 0
+
+
+## Bir sonraki seviye için gereken oyuncu seviyesi (maksimumda ya da kilit yoksa 0).
+func next_required_level() -> int:
+	return 0 if is_max() else required_level_for(current_level + 1)
 
 
 ## Şu anki seviyenin oyun etkisi (tanımsızsa 1.0).
@@ -55,17 +69,22 @@ func value_at(level: int) -> float:
 
 ## GELİŞTİRME KATALOĞU — ilk sürümde iki geliştirme. 2026-10-21 zorluk turu (kullanıcı: "garajı hemen büyütüyorum, genişletme
 ## ücretleri çok az"): genişletme 36/90/180 b → 90/260/650 b, tamir hızı 1/2/3,5/5 b → 3/7,5/15/30 b.
+## 2026-11-02 yayın verisi (Firebase, 102 hesap; docs/EKONOMI_2026_11_02.md): 1. garajda bırakan 21 oyuncu vardı (90 b
+## duvarı) → 2. garaj 50 b. Bağlı oyuncu 3. garajı sv.13–16'da, 4.'yü sv.17–20'de, ~2 günde alıyordu → OYUNCU SEVİYESİ kilidi:
+## 3. garaj sv.15, 4. garaj sv.22 (sv.22 ≈ sv.18'in 2,6 katı XP; tepe ~bir haftaya yayılır).
 static func defaults() -> Array[GarageUpgrade]:
 	return [
 		_make(&"repair_speed", Loc.t("TAMİR HIZI"), &"WRENCH", Loc.t("Tamir süresi"),
 			PackedInt32Array([3000, 7500, 15000, 30000]), PackedFloat32Array([1.0, 0.9, 0.8, 0.7, 0.6])),
 		_make(&"garage_level", Loc.t("GARAJ SEVİYESİ"), &"GARAGE", Loc.t("Garaj alanı"),
-			PackedInt32Array([90000, 260000, 650000]), PackedFloat32Array([1.0, 2.0, 3.0, 4.0])),
+			PackedInt32Array([50000, 260000, 650000]), PackedFloat32Array([1.0, 2.0, 3.0, 4.0]),
+			PackedInt32Array([0, 15, 22])),
 	]
 
 
 static func _make(p_id: StringName, p_name: String, p_icon: StringName, p_desc: String,
-		p_costs: PackedInt32Array, p_effects: PackedFloat32Array) -> GarageUpgrade:
+		p_costs: PackedInt32Array, p_effects: PackedFloat32Array,
+		p_levels: PackedInt32Array = PackedInt32Array()) -> GarageUpgrade:
 	var u: GarageUpgrade = GarageUpgrade.new()
 	u.id = p_id
 	u.display_name = p_name
@@ -73,5 +92,6 @@ static func _make(p_id: StringName, p_name: String, p_icon: StringName, p_desc: 
 	u.description = p_desc
 	u.costs = p_costs
 	u.effects = p_effects
+	u.min_player_levels = p_levels
 	u.current_level = 1
 	return u

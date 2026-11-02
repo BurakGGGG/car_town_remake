@@ -459,7 +459,7 @@ func paint_tiles(cells: Array[Vector2i], pattern: StringName) -> Dictionary:
 		budget -= price
 		changes.append([cell, from, pattern])
 	var cost: int = price * changes.size()
-	if cost > 0 and economy and not economy.spend_money(cost):
+	if cost > 0 and economy and not economy.spend_money(cost, false):   # GERİ AL'la iade edilebilir: GarageEditor sayar
 		result["short"] = true
 		return result
 	for change: Array in changes:
@@ -582,7 +582,7 @@ func build_walls(keys: Array[String], piece: StringName) -> Dictionary:
 		if owned_of(piece) + need > MAX_WALL_COPIES:
 			return {}
 		var economy: EconomyManager = _economy()
-		if economy and not economy.spend_money(spent):
+		if economy and not economy.spend_money(spent, false):   # GERİ AL'la iade edilebilir: GarageEditor sayar
 			purchase_failed.emit(piece, spent)
 			return {}
 		_owned[piece] = owned_of(piece) + need

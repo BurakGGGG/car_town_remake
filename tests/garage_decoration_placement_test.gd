@@ -761,6 +761,7 @@ func _level_expansion() -> void:
 	var level: int = upgrades.garage_level()
 	var prev: Rect2 = rect1
 	var prev_back: float = a1.back_face_z
+	(get_first_node_in_group("player_progress") as PlayerProgress).level = 30   # 3./4. garaj seviye kilidi
 	while not upgrades.is_max(GarageUpgradeManager.GARAGE_ID):
 		check(21, upgrades.buy(GarageUpgradeManager.GARAGE_ID), "garaj %d. seviyeye büyüdü" % (level + 1))
 		level += 1

@@ -52,8 +52,10 @@ func can_afford(amount: int) -> bool:
 
 
 ## Harcama: yeterliyse düşer ve true döner. Yetersizse HİÇBİR ŞEY değişmez ve false döner;
-## bakiye hiçbir koşulda negatife inmez.
-func spend_money(amount: int) -> bool:
+## bakiye hiçbir koşulda negatife inmez. `counted` false: GERİ ALINABİLİR harcama (garaj düzenlemesinde karo / duvar):
+## money_spent şimdi yayılmaz, işlem geri alınamaz olunca count_spent ile sayılır (2026-11-02: boya + GERİ AL ile
+## "₺ HARCA" görevi ve HARCAMACI başarımı para harcamadan doluyordu).
+func spend_money(amount: int, counted: bool = true) -> bool:
 	if amount <= 0:
 		return true
 	if _money < amount:
@@ -61,8 +63,15 @@ func spend_money(amount: int) -> bool:
 		return false
 	_money -= amount
 	money_changed.emit(_money)
-	money_spent.emit(amount)
+	if counted:
+		money_spent.emit(amount)
 	return true
+
+
+## Geri alınabilir harcama kesinleşti (spend_money(..., false) ile ödenmişti): görev sayaçlarına şimdi girer.
+func count_spent(amount: int) -> void:
+	if amount > 0:
+		money_spent.emit(amount)
 
 
 ## Zorunlu ücret (OTOPARK faturası): bakiyenin yettiği kadarı düşer, bakiye sıfırın altına inmez. Harcama SAYILMAZ

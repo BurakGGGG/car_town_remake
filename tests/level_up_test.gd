@@ -74,6 +74,11 @@ func _unlocks() -> void:
 	var at10: Dictionary = _kinds(LevelUnlocks.between(9, 10))
 	check(at10.has(LevelUnlocks.Kind.CRATE) and StringName(at10[LevelUnlocks.Kind.CRATE]["id"]) == &"family_crate",
 		"seviye 10: AİLE KASASI")
+	var at15: Dictionary = _kinds(LevelUnlocks.between(14, 15))
+	var at22: Dictionary = _kinds(LevelUnlocks.between(21, 22))
+	check(at15.has(LevelUnlocks.Kind.GARAGE) and int(at15[LevelUnlocks.Kind.GARAGE]["garage_level"]) == 3
+		and at22.has(LevelUnlocks.Kind.GARAGE) and int(at22[LevelUnlocks.Kind.GARAGE]["garage_level"]) == 4,
+		"seviye 15: 3. garaj, seviye 22: 4. garaj genişletmesi açılır")
 	var at12: Dictionary = _kinds(LevelUnlocks.between(11, 12))
 	check(at12.has(LevelUnlocks.Kind.CUSTOMER) and StringName(at12[LevelUnlocks.Kind.CUSTOMER]["id"]) == &"brake_overhaul",
 		"seviye 12: FREN REVİZYONU müşterisi")
@@ -121,6 +126,10 @@ func _unlocks() -> void:
 	for frame: Dictionary in ProfileCatalog.FRAMES:
 		expected += 1 if int(frame["gems"]) == 0 and int(frame["level"]) > 1 and not frame.has("wins") else 0
 	expected += 1 if PetManager.ARRIVAL_LEVEL > 1 else 0   # GARAJ DOSTLARI: kedi (YENİ DOST)
+	for upgrade: GarageUpgrade in GarageUpgrade.defaults():   # garaj genişletmesinin seviye kilidi (2026-11-02)
+		if upgrade.id == GarageUpgradeManager.GARAGE_ID:
+			for target: int in range(2, upgrade.max_level + 1):
+				expected += 1 if upgrade.required_level_for(target) > 1 else 0
 	for id: String in ProfileCatalog.preset_ids():   # seviyeyle açılan hazır avatarlar (2026-11-01)
 		expected += 1 if int(ProfileCatalog.avatar_unlock(id).get("level", 0)) > 1 else 0
 	var decor_expected: int = 0

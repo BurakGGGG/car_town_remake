@@ -40,7 +40,7 @@ Evcil hayvan önerisinin ayrıntısı ayrı raporda: [EVCIL_HAYVAN_RAPORU.md](EV
 
 | Alan | Bugün oyunda olan |
 |---|---|
-| **Tamir** | 7 iş: MOTOR, FREN, LASTİK, KAPORTA, BOYA İŞİ (sv5), DÖŞEME (sv8), FREN REVİZYONU (sv12). 3 tamir alanı. GARAJ SEVİYESİ 1–4, TAMİR HIZI 5 kademe. İş ustalığı (5 yıldız). Çevrimdışı kazanç (aktif gelirin 1/16'sı, 8 saat). Müşteri sabrı (75–110 sn). Elmas / reklamla bitirme |
+| **Tamir** | 7 iş: MOTOR, FREN, LASTİK, KAPORTA, BOYA İŞİ (sv5), DÖŞEME (sv8), FREN REVİZYONU (sv12). 3 tamir alanı. GARAJ SEVİYESİ 1–4, TAMİR HIZI 5 kademe. İş ustalığı (5 yıldız). Çevrimdışı kazanç (aktif gelirin 1/16'sı, 4 saat). Müşteri sabrı (75–110 sn). Elmas / reklamla bitirme |
 | **Araç** | 74 araç (72 edinilebilir: 43 kasadan, 28 restorasyondan, 1 hoş geldin kasasından). 5 kasa (40–250 elmas, olasılıklar görünür). GERİ AL. Koleksiyon (13 set, ödülsüz). GARAJIM sergisi, OTOPARK (%5/gün), 5 depo (MAHALLE … HANGAR, 25 M ₺). İsim tabelası |
 | **Hurdalık** | Ayrı harita, 9 parça türü, günlük enkazlar, 3 görünümlü restorasyon, Necati ve Cemo |
 | **Modifiye** | 6 kategori × 5 kademe, dinamometre, yeni lüks **Modifiye Garajı** (sinematik kamera). Boya kapalı |

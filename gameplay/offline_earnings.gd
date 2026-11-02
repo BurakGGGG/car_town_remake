@@ -1,10 +1,10 @@
 class_name OfflineEarnings
 extends Node
 ## PASİF GELİR — "garaj patronsuz da çalışır" (2026-10-17, kullanıcıyla soru-cevapla karar; bkz. docs/OTO_MANSET.md).
-## Oyuncu yokken tamir alanları müşteri almaya devam eder. Kazanç ölçülmüş AKTİF gelirin 1/16'sıdır: 8 saatlik yokluk
-## ≈ 30 dakikalık oyun (kullanıcı: "yarı hız" önerim ölçümle çok cömert çıktı, geç oyunda gecede ~600.000 ₺). Aktif gelir
+## Oyuncu yokken tamir alanları müşteri almaya devam eder. Kazanç ölçülmüş AKTİF gelirin 1/16'sıdır: 4 saatlik yokluk
+## ≈ 15 dakikalık oyun (kullanıcı: "yarı hız" önerim ölçümle çok cömert çıktı, geç oyunda gecede ~600.000 ₺). Aktif gelir
 ## garaj seviyesi × açık tamir alanı × tamir hızı tablosundan (docs/PROGRESSION_REFACTOR.md §8). YALNIZ PARA: XP,
-## ustalık, görev sayılmaz. Birikim KASADA bekler (CAP_MINUTES = 8 saat dolunca durur) ve oyuna girişteki gazetede
+## ustalık, görev sayılmaz. Birikim KASADA bekler (CAP_MINUTES = 4 saat dolunca durur) ve oyuna girişteki gazetede
 ## (OTO MANŞET, NewsFlow) TAMAM'da sayaca uçar. 30 dk'dan kısa aralarda kasa sessizce büyür, sonraki gazetede çıkar.
 ## YARIM KALAN TAMİRLER (RepairManager): oyun kapanırken alandaki işler kayda girer; açılışta sen yokken bitenler tam
 ## ödül + XP ile kasaya, bitmeyenler alana geri kurulur. Uygulama arka plandayken sayaçlar geçen süre kadar ilerler;
@@ -25,10 +25,11 @@ const EARLY_RATE: Array = [372, 626, 1008, 1441]
 ## Tamir hızı 5. seviyede (süre ×0,6) geç oyun geliri +%48 ölçüldü; aradaki seviyeler süre çarpanıyla orantılı.
 const SPEED_GAIN_AT_MAX: float = 0.48
 const SPEED_MAX_MULTIPLIER: float = 0.6
-## Pasif gelir aktifin bu kadarı (8 saat ≈ 30 dk oyun).
+## Pasif gelir aktifin bu kadarı (4 saat ≈ 15 dk oyun; gazetedeki ×2 reklamla 30 dk).
 const OFFLINE_SHARE: float = 1.0 / 16.0
-## Kasa en çok bu kadar dakikalık kazanç biriktirir (8 saat; sonra "kepenk iner").
-const CAP_MINUTES: float = 480.0
+## Kasa en çok bu kadar dakikalık kazanç biriktirir (sonra "kepenk iner"). 2026-11-02 8 saatten 4 saate indi (kullanıcı:
+## "offline birikimi çok fazla veriyoruz"; oran aynı kaldı, gecelik tavan yarıya indi, günde iki giriş ödüllenir).
+const CAP_MINUTES: float = 240.0
 ## Bundan kısa birikim gazetede haber olmaz (kasa büyümeye devam eder).
 const MIN_NEWS_MINUTES: float = 10.0
 ## Arka plandan bu kadar uzun aradan dönülünce gazete çıkar (kullanıcı kararı: 30 dk).
@@ -51,13 +52,13 @@ var last_seen: int = 0
 var bank_money: int = 0
 var bank_minutes: float = 0.0
 var bank_jobs: int = 0
-## Kasa 8 saati doldurdu (bir sonraki gazetede "kepenk indi" yazar).
+## Kasa tavanı doldurdu (bir sonraki gazetede "kepenk indi" yazar).
 var full: bool = false
 ## Sen yokken biten yarım işler: [{type, reward, xp}] (ödülleri gazetede verilir).
 var finished: Array[Dictionary] = []
 ## Gazetenin sayısı (OTO MANŞET "SAYI n").
 var issue: int = 0
-## Rıza Usta'nın tek seferlik açıklamaları: ilk kazanç, ilk kez 8 saat dolması.
+## Rıza Usta'nın tek seferlik açıklamaları: ilk kazanç, kasanın ilk kez dolması.
 var told_first: bool = false
 var told_full: bool = false
 
@@ -151,7 +152,7 @@ func clear_window() -> void:
 	window_to = 0
 
 
-## Yokluk süresi kadar kasaya kazanç ekler (8 saat sınırına kadar). Temel ders bitmediyse usta çalışmaz.
+## Yokluk süresi kadar kasaya kazanç ekler (CAP_MINUTES sınırına kadar). Temel ders bitmediyse usta çalışmaz.
 func accrue(seconds: int) -> void:
 	if seconds <= 0 or not _working():
 		return
@@ -365,9 +366,16 @@ func load_state(data: Dictionary) -> void:
 	last_seen = maxi(SaveSafe.i(data.get("last_seen", 0)), 0)
 	var bank: Dictionary = data.get("bank", {}) if data.get("bank") is Dictionary else {}
 	bank_money = maxi(SaveSafe.i(bank.get("money", 0)), 0)
-	bank_minutes = clampf(SaveSafe.f(bank.get("minutes", 0.0)), 0.0, CAP_MINUTES)
+	bank_minutes = maxf(SaveSafe.f(bank.get("minutes", 0.0)), 0.0)
 	bank_jobs = maxi(SaveSafe.i(bank.get("jobs", 0)), 0)
 	full = SaveSafe.b(bank.get("full", false))
+	if bank_minutes > CAP_MINUTES:
+		# Eski (8 saat tavanlı) kayıtta tavanı aşan kasa: para ve araç sayısı süreyle orantılı kırpılır
+		var keep: float = CAP_MINUTES / bank_minutes
+		bank_money = int(round(float(bank_money) * keep))
+		bank_jobs = maxi(int(round(float(bank_jobs) * keep)), 1 if bank_money > 0 else 0)
+		bank_minutes = CAP_MINUTES
+		full = true
 	finished = []
 	for raw: Variant in data.get("finished", []) if data.get("finished") is Array else []:
 		if raw is Dictionary and RepairType.by_id(StringName(SaveSafe.s((raw as Dictionary).get("type", "")))) != null:

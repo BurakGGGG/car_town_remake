@@ -1058,6 +1058,11 @@ func show_expansion_plate() -> void:
 		var cost: int = _upgrades.next_cost(id)
 		var affordable: bool = _economy == null or _economy.can_afford(cost)
 		price = "%s ₺%s" % [format_thousands(cost), "" if affordable else Loc.t("  ·  PARA YETERSİZ")]
+		if _upgrades.is_level_locked(id):   # oyuncu seviyesi kilidi (3. / 4. garaj)
+			var progress: PlayerProgress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
+			price = Loc.t("SEVİYE %d GEREKLİ (şu an %d)") % [_upgrades.required_player_level(id),
+				progress.level if progress else 1]
+			affordable = false
 		effects = ProgressionEffects.garage_level_lines(get_tree(), next_level)
 		_bay_buy.disabled = not affordable
 	_bay_plate.set_content(Loc.t("GARAJI GENİŞLET"), subtitle, price, effects)
@@ -2298,8 +2303,31 @@ func _build_showroom() -> void:
 	showroom = ShowroomScreen.new()
 	garage_screen.get_parent().add_child(showroom)   # temalı Root'un altına, en üste
 	showroom.vehicle_purchased.connect(_on_vehicle_purchased)
+	showroom.vehicle_ordered.connect(_on_vehicle_ordered)
 	showroom.crate_purchased.connect(_on_crate_purchased)
 	showroom.screen_requested.connect(func(id: StringName) -> void: router.open(id))
+	_connect_car_shop.call_deferred()
+
+
+## ARAÇ MAĞAZASI (CarShop, GarageSystem kurar): ₺ siparişi teslim edilince / iade edilince bildirim. Araç
+## sahipliğe girdiği için YERLEŞTİR panosu kendi sırasıyla (boşta) açılır.
+func _connect_car_shop() -> void:
+	var shop: CarShop = get_tree().get_first_node_in_group("car_shop") as CarShop if is_inside_tree() else null
+	if shop == null or shop.delivered.is_connected(_on_car_delivered):
+		return
+	shop.delivered.connect(_on_car_delivered)
+	shop.refunded.connect(func(vehicle_id: StringName, amount: int) -> void:
+		_show_notice(Loc.t("%s ZATEN SENDE: %s ₺ İADE EDİLDİ") % [_car_name(vehicle_id), format_thousands(amount)],
+			HudPalette.COIN_DARK, 2.6))
+
+
+func _on_vehicle_ordered(vehicle_id: StringName) -> void:
+	_show_notice(Loc.t("%s YOLDA: %d SAATTE GELİR") % [_car_name(vehicle_id), int(CarShop.delivery_seconds() / 3600)],
+		HudPalette.COIN_DARK, 2.2)
+
+
+func _on_car_delivered(vehicle_id: StringName) -> void:
+	_show_notice(Loc.t("%s GELDİ!") % _car_name(vehicle_id), HudPalette.COIN_DARK, 2.4)
 
 
 ## PLAYER tabelası temalı Root'un en üstünde durur (showroom'un da üstünde: kayıt seçimi her yerde görünür).

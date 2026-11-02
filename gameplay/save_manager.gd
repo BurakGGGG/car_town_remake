@@ -82,6 +82,7 @@ var _save_reminder: SaveReminder
 var _collection: CollectionRewards
 var _event_car: EventCar
 var _pets: PetManager
+var _car_shop: CarShop
 var _timer: Timer
 var _loading: bool = false   # yükleme sırasında gelen sinyaller otomatik kaydı tetiklemesin
 var _fresh_json: String = ""  # sahnenin başlangıç değerleri (kayıt yüklenmeden önce), has_progress için
@@ -126,6 +127,7 @@ func _setup() -> void:
 	_collection = get_tree().get_first_node_in_group("collection_rewards") as CollectionRewards
 	_event_car = get_tree().get_first_node_in_group("event_car") as EventCar
 	_pets = get_tree().get_first_node_in_group("pets") as PetManager
+	_car_shop = get_tree().get_first_node_in_group("car_shop") as CarShop
 	if visit_mode:
 		_loading = true
 		_apply(GarageVisit.garage())
@@ -265,6 +267,8 @@ func new_game() -> void:
 		_event_car.reset()
 	if _pets:
 		_pets.reset()
+	if _car_shop:
+		_car_shop.reset()
 	if _repairs:
 		_repairs.load_jobs([])
 	if _crates:
@@ -451,6 +455,9 @@ func _collect() -> Dictionary:
 		"event_car": _event_car.state() if _event_car else {},
 		# GARAJ DOSTLARI: kedi sahiplenildi mi, adı, dostluk puanı, bekleyen geliş, aksesuarlar. Eski kayıtta yoktur: kedisiz.
 		"pets": _pets.state() if _pets else {},
+		# ARAÇ MAĞAZASI: ₺ ile verilmiş, yoldaki siparişler (teslim anı unix sn; oyun kapalıyken de dolar). Eski kayıtta
+		# yoktur: sipariş yok.
+		"car_shop": _car_shop.state() if _car_shop else {},
 	}
 
 
@@ -619,6 +626,9 @@ func _apply(data: Dictionary) -> void:
 	if _pets:
 		var pets_data: Variant = data.get("pets", {})
 		_pets.load_state(pets_data if pets_data is Dictionary else {})
+	if _car_shop:
+		var shop_data: Variant = data.get("car_shop", {})
+		_car_shop.load_state(shop_data if shop_data is Dictionary else {})
 	if legacy:
 		if _missions:
 			_missions.mark_legacy_repairs_passed()   # geçilmiş tamir yıldızları ödenmiş sayılır

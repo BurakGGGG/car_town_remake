@@ -4,22 +4,32 @@ extends RefCounted
 ## her şey sistemlerin kendi seviye kilidinden okunur (RepairType.min_level, CarGarageCatalog.required_level,
 ## CrateCatalog.min_level, PerformanceMods.required_level, MissionCatalog.MIN_LEVEL, ProfileCatalog.FRAMES "level",
 ## ProfileCatalog.AVATAR_UNLOCKS "level",
-## GarageDecor.required_level, PetManager.ARRIVAL_LEVEL).
+## GarageDecor.required_level, PetManager.ARRIVAL_LEVEL, GarageUpgrade.min_player_levels).
 ## Bir kilit başka seviyeye kayınca ekran kendiliğinden uyar.
 
-enum Kind { CUSTOMER, DEPOT, CRATE, MOD_TIER, MISSIONS, FRAME, DECOR, PET, AVATAR }
+enum Kind { CUSTOMER, DEPOT, CRATE, MOD_TIER, MISSIONS, FRAME, DECOR, PET, AVATAR, GARAGE }
 
 const MAX_LEVEL: int = 99
 
 
 ## (from_level, to_level] aralığında açılanlar, ekrandaki sırayla. Her kayıt {"kind": Kind, "id": StringName,
 ## "level": int} ve türe özgü alanlar: CUSTOMER "type" (RepairType), MOD_TIER "stage" (int), DECOR "items"
-## (Array[StringName], pahalıdan ucuza; bütün dekor TEK kayıtta toplanır, "level" en yükseğidir).
+## (Array[StringName], pahalıdan ucuza; bütün dekor TEK kayıtta toplanır, "level" en yükseğidir), GARAGE "garage_level"
+## (açılan garaj seviyesi) + "cost" (₺).
 static func between(from_level: int, to_level: int) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for type: RepairType in RepairType.defaults():
 		if _in_range(type.min_level, from_level, to_level):
 			out.append({"kind": Kind.CUSTOMER, "id": type.id, "level": type.min_level, "type": type})
+	# Garaj genişletmesinin oyuncu seviyesi kilidi (2026-11-02: 3. garaj sv.15, 4. garaj sv.22)
+	for upgrade: GarageUpgrade in GarageUpgrade.defaults():
+		if upgrade.id != GarageUpgradeManager.GARAGE_ID:
+			continue
+		for target: int in range(2, upgrade.max_level + 1):
+			var need: int = upgrade.required_level_for(target)
+			if need > 1 and _in_range(need, from_level, to_level):
+				out.append({"kind": Kind.GARAGE, "id": StringName("garage_%d" % target), "level": need,
+					"garage_level": target, "cost": upgrade.costs[target - 2]})
 	for garage: StringName in CarGarageCatalog.ids():
 		var garage_level: int = CarGarageCatalog.required_level(garage)
 		if _in_range(garage_level, from_level, to_level):

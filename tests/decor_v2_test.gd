@@ -275,6 +275,11 @@ func _editor_tools() -> void:
 	await frames(30)
 	check(editor.active, "düzenleyici açık")
 	economy.set_money(100000)
+	# HARCAMA SAYACI (2026-11-02): karo / duvar ödemesi geri alınabilirken sayılmaz; geri alınan hiç sayılmaz, kalan
+	# düzenleme bitince sayılır (boya + GERİ AL döngüsü "₺ HARCA" görevini dolduruyordu)
+	var counted: Array[int] = []
+	var on_spent: Callable = func(amount: int) -> void: counted.append(amount)
+	economy.money_spent.connect(on_spent)
 	editor.begin_paint(&"tile_grey")
 	editor.set_paint_mode(&"brush")
 	var price: int = decor.tile_price(&"tile_grey")
@@ -285,8 +290,10 @@ func _editor_tools() -> void:
 		and decor.tile(Vector2i(4, 2)) == &"tile_grey", "fırça sürüklenen gözleri boyadı (atlamadan)")
 	var spent: int = 100000 - economy.money
 	check(spent == price * 3 and editor.history_size() == 1, "tek vuruş = tek geri al adımı (%d ₺)" % spent)
+	check(counted.is_empty(), "boyama geri alınabilirken harcama sayılmadı")
 	editor.undo()
 	check(decor.tile_count() == 0 and economy.money == 100000, "geri al: karolar silindi, para iade edildi")
+	check(counted.is_empty(), "geri alınan boya hiç harcama sayılmadı")
 	editor.set_paint_mode(&"rect")
 	editor._tool_press(_screen(cell_pos(1.5, 1.5)))
 	editor._tool_move(_screen(cell_pos(3.5, 3.5)))
@@ -332,8 +339,15 @@ func _editor_tools() -> void:
 		"dokunuş tek segment koydu")
 	editor.end_tool()
 	check(editor.tool == GarageEditor.Tool.OBJECT, "eşya düzenine dönüldü")
+	check(counted.is_empty(), "düzenleme sürerken karo / duvar harcaması sayılmadı")
 	router.close_all()
 	await frames(4)
+	var settled: int = 0
+	for amount: int in counted:
+		settled += amount
+	check(not editor.active and settled == price * 9 + decor.price_of(&"wall_plain"),
+		"düzenleme bitince kalanlar sayıldı: 3×3 karo + 1 duvar (%d ₺)" % settled)
+	economy.money_spent.disconnect(on_spent)
 
 
 ## Oyun modunda eşyaya BASILI TUT → düzenleyici o eşya tutulmuş açılır, parmak kalkmadan taşınır.

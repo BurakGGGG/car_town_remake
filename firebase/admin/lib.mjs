@@ -738,6 +738,7 @@ export const AD_KINDS = {
   mission_reroll: { label: "Günlük görevi değiştir", cap: 1 },
   junk_refill: { label: "Hurdalık yığınını doldur", cap: 2 },
   event_race: { label: "Etkinlik yarışı +1 hak", cap: 1 },
+  car_delivery: { label: "Araç siparişi 8 saat öne (3 reklam = hemen)", cap: 9 },
 };
 export const AD_DEFAULTS = { total_cap: 20, free_gems: 5, free_gems_cooldown: 180 };
 

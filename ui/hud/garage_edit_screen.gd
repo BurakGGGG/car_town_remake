@@ -646,6 +646,9 @@ func _write_upgrade_card(card: PlateButton, id: StringName, title: String, actio
 	if upgrade.is_max():
 		card.text = Loc.t("%s\nMAKSİMUM") % head
 		return
+	if _upgrade_manager.is_level_locked(id):   # oyuncu seviyesi kilidi (3. / 4. garaj)
+		card.text = "%s\n%s" % [head, Loc.t("SEVİYE %d GEREKLİ") % _upgrade_manager.required_player_level(id)]
+		return
 	card.text = "%s\n%s %s ₺" % [head, action, Hud.format_thousands(upgrade.next_cost())]
 
 
@@ -670,6 +673,10 @@ func _show_upgrade_plate(id: StringName) -> void:
 				var cost: int = _upgrade_manager.next_cost(upgrade_id)
 				can_buy = _economy == null or _economy.can_afford(cost)
 				price = "%s ₺%s" % [Hud.format_thousands(cost), "" if can_buy else Loc.t("  ·  PARA YETERSİZ")]
+				if _upgrade_manager.is_level_locked(upgrade_id):   # oyuncu seviyesi kilidi: ne zaman açılacağı yazar
+					can_buy = false
+					price = Loc.t("SEVİYE %d GEREKLİ (şu an %d)") % [_upgrade_manager.required_player_level(upgrade_id),
+						_player.level if _player else 1]
 				if id == &"garage":
 					effects = ProgressionEffects.garage_level_lines(tree, next_level)
 				else:

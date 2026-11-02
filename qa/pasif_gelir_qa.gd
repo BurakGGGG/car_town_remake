@@ -105,7 +105,7 @@ func _run() -> void:
 	print("2) 10 saat yokluk: kepenk")
 	check(await cold_start(10.0, []), "gazete açıldı")
 	earn = get_first_node_in_group("offline_earnings") as OfflineEarnings
-	check(earn.full and is_equal_approx(earn.bank_minutes, OfflineEarnings.CAP_MINUTES), "8 saatte durdu")
+	check(earn.full and is_equal_approx(earn.bank_minutes, OfflineEarnings.CAP_MINUTES), "4 saatte durdu")
 	await shot("04_gazete_kepenk")
 	hud().news_screen._ok.pressed.emit()
 	await create_timer(3.2).timeout

@@ -6,7 +6,7 @@ extends RefCounted
 ## Metinler esprili magazin dilinde, her tür için dönüşümlü birkaç kalıp (sayı tohumu = gazetenin sayısı).
 ## Saf veri + metin: ekranı NewsScreen çizer. Ham haber: {"kind": <tür>, ...türün alanları}:
 ##   RACE_LOST / RACE_WON  people [kişi], count (yarış sayısı), car (yenen / yenilmeyen araç)
-##   EARNINGS              money (toplam), jobs (ustanın tamiri), minutes (kasanın süresi, 8 sa sınırlı), full (kasa doldu),
+##   EARNINGS              money (toplam), jobs (ustanın tamiri), minutes (kasanın süresi, 4 sa sınırlı), full (kasa doldu),
 ##                         finished / finished_money / finished_xp (sen yokken biten yarım işler)
 ##   GIFT                  people, parts {parça: adet}
 ##   VISIT                 people, likes (beğenen sayısı)
@@ -39,8 +39,6 @@ const LB_PASSED: StringName = &"lb_passed"
 
 ## Küçük işler sütuna çıkmaz, doğrudan KISA KISA şeridine iner (manşet olabilirler: gazetede başka haber yoksa).
 const BRIEF_KINDS: Array[StringName] = [PILES, MOD_READY, MISSIONS, GARAGE_UPGRADED]
-## Pasif gelirin "büyük kazanç" sayıldığı süre (sınır: 8 saat — kullanıcı kararı "yarı hız, 8 saat").
-const FULL_SHIFT_MINUTES: int = 480
 
 
 ## Gazeteyi dizer: {"headline": haber, "columns": [haber], "briefs": [haber]}. Haber yoksa boş sözlük.
@@ -155,7 +153,8 @@ static func weight(item: Dictionary) -> float:
 		LB_PASSED:
 			return 98.0 + count
 		EARNINGS:
-			return 60.0 + 30.0 * clampf(float(item.get("minutes", 0)) / FULL_SHIFT_MINUTES, 0.0, 1.0)
+			# Dolu kasa (OfflineEarnings.CAP_MINUTES) "büyük kazanç" ağırlığını alır
+			return 60.0 + 30.0 * clampf(float(item.get("minutes", 0)) / OfflineEarnings.CAP_MINUTES, 0.0, 1.0)
 		RACE_WON:
 			return 56.0 + mini(count, 3)
 		GIFT:
@@ -348,7 +347,7 @@ static func deck(item: Dictionary) -> String:
 					lines.append((Loc.t("Yarım bıraktığın %d iş de bitti (+%s, +%d XP).") if jobs > 0
 						else Loc.t("Yarım bıraktığın %d iş bitti (+%s, +%d XP).")) % [done, money, xp])
 			if bool(item.get("full", false)):
-				lines.append(Loc.t("Garaj 8 saat sonra kepenk indirdi: sık uğra!"))
+				lines.append(Loc.t("Garaj 4 saat sonra kepenk indirdi: sık uğra!"))
 			return " ".join(lines)
 		GIFT:
 			if many:

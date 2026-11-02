@@ -163,6 +163,20 @@ func purchase_vehicle(vehicle_id: StringName) -> bool:
 	return true
 
 
+## ARAÇ MAĞAZASI (CarShop): bedeli CarShop'ta ödenmiş araç — gemle hemen ya da ₺ siparişinin teslimi. Para / gem
+## burada düşmez; satın alma sayılır (görev "cars_bought", analitik) ve araç YERLEŞTİR akışına girer.
+func grant_purchased(vehicle_id: StringName) -> bool:
+	if is_owned(vehicle_id) or CarCatalog.get_entry(vehicle_id).is_empty():
+		return false
+	_owned.append(vehicle_id)
+	_discover(vehicle_id)
+	vehicle_purchased.emit(vehicle_id)
+	ownership_changed.emit()
+	vehicle_added.emit(vehicle_id)
+	_request_save()
+	return true
+
+
 ## Ücretsiz ekleme (kasa sonucu, başlangıç aracı, ödül). Para düşmez. Araç keşfedilmiş sayılır.
 func add_vehicle(vehicle_id: StringName) -> bool:
 	if is_owned(vehicle_id):

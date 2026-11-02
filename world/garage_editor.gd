@@ -232,6 +232,8 @@ func deactivate() -> void:
 	if camera and camera.has_method("restore_view") and not _saved_view.is_empty():
 		camera.call("restore_view", _saved_view)   # düzenlemeden önceki görünüme dön
 	_saved_view = {}
+	for op: Dictionary in _history:
+		_settle(op)   # düzenleme bitti: geçmişteki karo / duvar ödemeleri artık geri alınamaz
 	_history.clear()
 	var save: SaveManager = get_tree().get_first_node_in_group("save_manager") as SaveManager
 	if save:
@@ -555,8 +557,25 @@ func history_size() -> int:
 func _push(op: Dictionary) -> void:
 	_history.append(op)
 	while _history.size() > HISTORY:
-		_history.pop_front()
+		_settle(_history.pop_front())   # geçmişten taşan işlem geri alınamaz
 	state_changed.emit()
+
+
+## İşlem artık GERİ ALINAMAZ (geçmişten taştı ya da düzenleme bitti): karo / duvar için ödenen para şimdi HARCAMA
+## sayılır (DecorManager onu spend_money(..., false) ile ödedi). Geri alınan işlem hiç sayılmaz: boya + GERİ AL döngüsü
+## "₺ HARCA" görevini ve HARCAMACI başarımını doldurmaz (2026-11-02).
+func _settle(op: Dictionary) -> void:
+	var paid: int = 0
+	match String(op.get("type", "")):
+		"tiles":
+			paid = int(op.get("cost", 0))
+		"walls":
+			paid = int(op.get("spent", 0))
+	if paid <= 0 or not is_inside_tree():
+		return
+	var economy: EconomyManager = get_tree().get_first_node_in_group("economy") as EconomyManager
+	if economy:
+		economy.count_spent(paid)
 
 
 # --- Girdi -----------------------------------------------------------------------------
@@ -1021,8 +1040,12 @@ func _finish_stroke(commit: bool) -> void:
 		var walls: InteriorWalls = _view.interior_walls()
 		if walls:
 			walls.clear_preview()
-	if commit and String(_stroke.get("kind", "")) == "tiles" and not (_stroke["changes"] as Array).is_empty():
-		_push({"type": "tiles", "changes": _stroke["changes"], "cost": int(_stroke["cost"])})
+	if String(_stroke.get("kind", "")) == "tiles" and not (_stroke["changes"] as Array).is_empty():
+		var op: Dictionary = {"type": "tiles", "changes": _stroke["changes"], "cost": int(_stroke["cost"])}
+		if commit:
+			_push(op)
+		else:
+			_settle(op)   # geri al adımı olmadan kalan boya: ödeme kesin, harcama sayılır
 	_stroke = {}
 	_stroke_keys.clear()
 	_stroke_from = Vector2i(-1, -1)

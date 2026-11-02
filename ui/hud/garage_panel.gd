@@ -113,6 +113,10 @@ func _write_upgrade(button: PlateButton, id: StringName, title: String, action: 
 		button.text = Loc.t("%s\nMAKSİMUM") % head
 		button.disabled = id == GarageUpgradeManager.SPEED_ID   # garaj düğmesi maksimumda da plakayı gösterir
 		return
+	if _upgrades.is_level_locked(id):   # oyuncu seviyesi kilidi (3. / 4. garaj)
+		button.text = "%s\n%s" % [head, Loc.t("SEVİYE %d GEREKLİ") % _upgrades.required_player_level(id)]
+		button.disabled = false   # GENİŞLET plakası açılır, kilidi orada yazar
+		return
 	var cost: int = upgrade.next_cost()
 	button.text = "%s\n%s %s ₺" % [head, action, Hud.format_thousands(cost)]
 	# TAMİR HIZI doğrudan satın alınır: bakiye yetmezse kapalı. GENİŞLET plaka açar (yetersiz bakiye

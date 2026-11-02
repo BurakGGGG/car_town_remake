@@ -61,6 +61,30 @@ func _run() -> void:
 	await frames(3)
 	check(upgrades.garage_level() == level + 1 and not group.visible, "SATIN AL → garaj seviyesi arttı, plaka kapandı")
 	check((cards[&"garage"] as PlateButton).text.contains(Loc.t("GARAJ SV.%d") % (level + 1)), "kart yeni seviyeyi yazar")
+
+	print("== OYUNCU SEVİYESİ KİLİDİ (2026-11-02: 3. garaj sv.15, 4. garaj sv.22) ==")
+	var garage_id: StringName = GarageUpgradeManager.GARAGE_ID
+	check(GarageUpgrade.defaults()[1].costs[0] == 50000, "2. garaj 50.000 ₺")
+	var progress: PlayerProgress = get_first_node_in_group("player_progress")
+	var old_level: int = progress.level
+	progress.level = 10
+	edit.call("_refresh_upgrades")
+	check(upgrades.garage_level() == 2 and upgrades.required_player_level(garage_id) == 15 and upgrades.is_level_locked(garage_id)
+		and not upgrades.can_buy(garage_id), "3. garaj oyuncu seviyesi 15'te açılır (şu an 10; para yetiyor)")
+	check((cards[&"garage"] as PlateButton).text.contains(Loc.t("SEVİYE %d GEREKLİ") % 15), "kart kilidi yazar")
+	(cards[&"garage"] as PlateButton).pressed.emit()
+	await frames(1)
+	check(group.visible and (edit.get("_upgrade_buy") as PlateButton).disabled
+		and plate._price.text == Loc.t("SEVİYE %d GEREKLİ (şu an %d)") % [15, 10], "plaka: GENİŞLET kapalı, kilit yazılı")
+	check(not upgrades.buy(garage_id) and upgrades.garage_level() == 2, "kilitliyken satın alınmaz, para gitmez")
+	progress.level = 15
+	edit.call("_refresh_upgrades")
+	check(not (edit.get("_upgrade_buy") as PlateButton).disabled, "seviye 15: plaka açıldı")
+	(edit.get("_upgrade_buy") as PlateButton).pressed.emit()
+	await frames(3)
+	check(upgrades.garage_level() == 3 and upgrades.required_player_level(garage_id) == 22 and upgrades.is_level_locked(garage_id),
+		"3. garaj alındı; 4. garaj seviye 22'yi bekler")
+	progress.level = old_level
 	var speed: int = upgrades.level(GarageUpgradeManager.SPEED_ID)
 	if not upgrades.is_max(GarageUpgradeManager.SPEED_ID):
 		(cards[&"speed"] as PlateButton).pressed.emit()
