@@ -138,8 +138,11 @@ taradığında oyun yeni sesi kullanır. Başsız toplu pişirme için:
 - **Drag yarışı (`race/race_audio.gd`):** `set_vehicles(oyuncu, rakip)` iki aracın sesini kurar.
   - **Devir:** fiziğin devri bankanın rölanti–kırmızı aralığına oranla taşınır.
   - **Gaz:** geri sayımda 0,55, yarışta 1, vites geçişinde ve çizgiden sonra 0.
-  - **Diğer:** kesici fizikten gelir. Vites patlaması aracın kendi patlamasıdır (`backfire`). Oyuncu −6 dB,
-    rakip −15 dB.
+  - **Diğer:** kesici fizikten gelir. Vites patlaması aracın kendi patlamasıdır (`backfire`).
+  - **Düzey (2026-11-02, kullanıcı telefonda: "dragta da çok kısık"):** motorlar yüksek motor sesi bus'ında
+    (`EngineVoice.loud_bus()` → `EngineLoud`: AudioEffectHardLimiter tavan −1 dB, çıkışı SFX). Oyuncu +4 dB, rakip −5 dB,
+    katman farklarının %75'i (`DYNAMICS`). Ölçüm (`qa/drag_ses_olcum.gd`, Supra): motor bus'ı tavanda (−1 dB), müzik
+    tepesi −12,5 dB. Eskiden −6 / −15 dB doğrudan SFX'teydi. Dinamometre de aynı bus'ı kullanır.
 - **Şehir trafiği (`traffic/traffic_engine.gd`):** sürüş tipi (`kind_of`) yalnız devir, vites ve kornayı belirler;
   sesi aracın bankası verir.
   - **Gaz:** seyirde 0,25 yük, hızlanma bunun üstüne eklenir, dururken rölanti.

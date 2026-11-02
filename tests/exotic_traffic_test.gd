@@ -181,6 +181,34 @@ func _run() -> void:
 	var mean: float = float(total) / maxf(float(gaps.size()), 1.0)
 	check(mean > 18.5 and mean < 21.5, "8000 doğumda %d egzotik, ortalama aralık %.1f" % [gaps.size(), mean])
 	check(shortest >= TrafficManager.EXOTIC_MIN_GAP + 1, "art arda gelmez: en kısa aralık %d" % shortest)
+
+	print("-- nadir araçlar (Japon beşlisi): ortalama %d doğumda bir --" % TrafficManager.RARE_EVERY)
+	var rares: Array[StringName] = CarCatalog.rare_traffic_ids()
+	var jdm: Array[StringName] = [&"toyota_supra", &"nissan_skyline_r34", &"honda_nsx", &"mazda_rx7", &"toyota_ae86"]
+	check(rares.size() == jdm.size() and jdm.all(func(id: StringName) -> bool: return rares.has(id)), "nadir araçlar: %s" % [rares])
+	for id: StringName in rares:
+		check(not bool(CarCatalog.get_entry(id)["traffic"]) and not CarCatalog.is_exotic(id)
+			and not traffic.city_model_ids().has(id), "%s şehir havuzunda değil, egzotik değil" % id)
+	traffic._since_rare = 0
+	traffic._rare_next = &""
+	var rare_gaps: Array[int] = []
+	last = 0
+	for n: int in range(1, 8001):
+		if traffic._rare_next != &"":
+			rare_gaps.append(n - last)
+			last = n
+			traffic._count_spawn(traffic._rare_next)
+		else:
+			traffic._count_spawn(normal)
+	total = 0
+	shortest = 1 << 30
+	for g: int in rare_gaps:
+		total += g
+		shortest = mini(shortest, g)
+	mean = float(total) / maxf(float(rare_gaps.size()), 1.0)
+	check(mean > 18.5 and mean < 21.5, "8000 doğumda %d nadir araç, ortalama aralık %.1f" % [rare_gaps.size(), mean])
+	check(shortest >= TrafficManager.RARE_MIN_GAP + 1, "nadir araçlar art arda gelmez: en kısa aralık %d" % shortest)
+	traffic._rare_next = &""
 	await create_timer(1.0).timeout   # benzetim sırasında başlayan yüklemeler bitsin
 
 	print("-- gerçek doğum --")

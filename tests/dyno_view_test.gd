@@ -72,7 +72,7 @@ func _run() -> void:
 		"araç çalışır hâlde gelir (rölantide, marş sesi yok)")
 	var player: AudioStreamPlayer = view.get("_player")
 	var bus: int = AudioServer.get_bus_index(player.bus)
-	check(player.bus == DynoView.BUS and AudioServer.get_bus_send(bus) == GameSettings.SFX_BUS
+	check(player.bus == EngineVoice.LOUD_BUS and AudioServer.get_bus_send(bus) == GameSettings.SFX_BUS
 		and AudioServer.get_bus_effect(bus, 0) is AudioEffectHardLimiter and player.volume_db > 0.0
 		and view.voice.dynamics < 1.0, "motor sesi kendi bus'ında: sınırlayıcı → SFX, %.0f dB" % player.volume_db)
 

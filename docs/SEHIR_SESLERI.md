@@ -186,3 +186,16 @@ kulağa güzel gelmiyor. Sanki ara sıra gaza basıyormuş gibi olsun, daha hız
   Böylece seyir ~3000–4000 d/dk; gazlamada 3. viteste ~5600'e çıkıp atar, gaz kesince bankanın patlamaları / blow-off'u gelir.
 - QA: `qa/superarac_gazlama_qa.gd` (Huracán'ı 40 sn izler: gazlama sayısı, devir, vites; Ambience bus'ı WAV'a,
   `~/Projects/ct_shots/gazlama/`).
+
+## Nadir araçlar: Japon beşlisi (2026-11-02)
+
+Kullanıcı isteği: "Yeni 5 Japon aracımız var ya, onlar da trafikte çok dolaşmasın. Onlar da güzel araçlar, nadir olsunlar."
+
+- cars.json `"rare_traffic": true` + `"traffic": false`: Supra, R34, NSX, RX-7, AE86 (`CarCatalog.is_rare_traffic`,
+  `rare_traffic_ids`). Şehir havuzunda değiller (eskiden 42 modellik havuzda, 4'lük dönen havuza girince doğumların 4'te
+  biri olabiliyordu).
+- `TrafficManager`: egzotikle aynı yol, kendi sayacıyla: ortalama `RARE_EVERY` (20) rastgele doğumda bir, en az
+  `RARE_MIN_GAP` (8) araç arayla, şehirde olmayan biri seçilir (`_pick_unused`), sırası gelince modeli hemen yüklenir;
+  doğunca listeden düşer. Benzetim (8000 doğum): ortalama aralık 19,6, en kısa 9.
+- Egzotikten farkı: tamir müşterisi olabilir, sürüşü (hız, gazlama yok) ve motoru normal trafik gibi.
+- Test: `tests/exotic_traffic_test.gd` (katalog, havuz dışı, oran).

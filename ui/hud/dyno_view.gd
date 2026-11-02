@@ -13,8 +13,8 @@ extends Node
 ## Kullanıcı kararları (2026-11-02): tek kamera (sağ ön 3/4), START yok — araç atölyeye ÇALIŞIR hâlde gelir (marş sesi
 ## yok, rölanti kısa sürede açılır), vites yok, DİNO KOŞUSU düğmesi yok: rölantiden kesiciye her tam gaz çekiş bir ÖLÇÜMDÜR
 ## (DynoSim.pulls), tepe gücü en iyi ölçüm olarak kaydedilir (pull_measured). Yalnız çeken aksın merdanesi ve tekerleri
-## döner (FWD ön, RWD arka, AWD ikisi). Açıkken garaj müziği kısılır (GameMusic.dyno), motor sesi öne çıkar: kendi BUS'ı
-## (sert sınırlayıcı → SFX) sayesinde yüksek çalınır, tam gazda / patlamada kırpılmaz; rölanti ile tam gaz arası farkın
+## döner (FWD ön, RWD arka, AWD ikisi). Açıkken garaj müziği kısılır (GameMusic.dyno), motor sesi öne çıkar: yüksek motor
+## sesi bus'ı (EngineVoice.loud_bus: sert sınırlayıcı → SFX) sayesinde yüksek çalınır, tam gazda / patlamada kırpılmaz; rölanti ile tam gaz arası farkın
 ## yalnız bir kısmı çalınır (DYNAMICS), rölanti de dolgun duyulur (kullanıcı: "dinamometrede motor sesi çok az").
 
 ## Rölantiden kesiciye tam gaz çekiş bitti: tepe güç (gösterge ölçeği) ve yeni rekor mu.
@@ -33,12 +33,10 @@ const ROOM_MAX: Vector2 = Vector2(12.3, 14.3)
 const ROOM_MIN: Vector2 = Vector2(0.7, 0.7)
 ## Dikey görüş açısı (Blender 24 mm, 16:9).
 const FOV_WIDE: float = 45.7
-## Motor sesi: kendi bus'ı (sınırlayıcı tavanı) → SFX. Düzey (yarışta oyuncu motoru −6 dB, SFX'e doğrudan), katman
-## farklarının çalınan payı ve fan dönüşü (tur/sn).
-const BUS: StringName = &"DynoEngine"
+## Motor sesi: yüksek motor sesi bus'ı (EngineVoice.loud_bus: sınırlayıcı → SFX). Düzey, katman farklarının çalınan payı
+## ve fan dönüşü (tur/sn).
 const ENGINE_DB: float = 6.0
 const DYNAMICS: float = 0.6
-const LIMIT_CEILING_DB: float = -1.0
 const FAN_RPS: float = 6.0
 const STRAP_COLOR: Color = Color("E8701A")
 
@@ -124,7 +122,7 @@ func enter(vehicle: StringName, root: Node, camera: Camera3D, key_light: Directi
 	sim = DynoSim.new(vehicle)
 	_player = AudioStreamPlayer.new()
 	_player.name = "DynoEngine"
-	_player.bus = _ensure_bus()
+	_player.bus = EngineVoice.loud_bus()
 	_player.volume_db = ENGINE_DB
 	add_child(_player)
 	voice = EngineVoice.new(_player, RaceAudio.bank_for(vehicle))
@@ -203,21 +201,6 @@ func set_throttle(value: float) -> void:
 
 func is_engine_on() -> bool:
 	return sim != null and sim.running
-
-
-## Motor sesinin bus'ı: yoksa kurulur (sert sınırlayıcı, çıkışı SFX → ayarlardaki efekt düzeyi uygulanır).
-static func _ensure_bus() -> StringName:
-	if AudioServer.get_bus_index(BUS) >= 0:
-		return BUS
-	AudioServer.add_bus()
-	var index: int = AudioServer.bus_count - 1
-	AudioServer.set_bus_name(index, BUS)
-	AudioServer.set_bus_send(index, GameSettings.SFX_BUS)
-	var limiter: AudioEffectHardLimiter = AudioEffectHardLimiter.new()
-	limiter.ceiling_db = LIMIT_CEILING_DB
-	limiter.release = 0.15
-	AudioServer.add_bus_effect(index, limiter)
-	return BUS
 
 
 # --- Kare ----------------------------------------------------------------------------------------------

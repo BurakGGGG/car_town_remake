@@ -27,6 +27,11 @@ const LITE_OFF: float = 0.3
 const LIFT_FROM: float = 0.55
 const LIFT_TO: float = 0.25
 const STOP_FADE: float = 25.0
+## YÜKSEK MOTOR SESİ bus'ı (dinamometre, drag yarışı; 2026-11-02 kullanıcı: "motor sesi çok kısık"): sert sınırlayıcı
+## (tavan LOUD_CEILING_DB) → SFX. Oynatıcı 0 dB'nin üstünde çalınabilir, tam gaz / patlama kırpılmaz; ayarlardaki efekt
+## düzeyi SFX'te uygulanır.
+const LOUD_BUS: StringName = &"EngineLoud"
+const LOUD_CEILING_DB: float = -1.0
 
 var bank: EngineBank
 var player: Node
@@ -60,6 +65,21 @@ var pops_played: int = 0
 var _starting: float = -1.0     # marş sesi başladığından beri (sn); -1 = marş yok
 var _master: float = 1.0        # kontak kapatma / açma yumuşatması
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+
+
+## Yüksek motor sesi bus'ının adı; yoksa kurulur (sınırlayıcı → SFX).
+static func loud_bus() -> StringName:
+	if AudioServer.get_bus_index(LOUD_BUS) >= 0:
+		return LOUD_BUS
+	AudioServer.add_bus()
+	var index: int = AudioServer.bus_count - 1
+	AudioServer.set_bus_name(index, LOUD_BUS)
+	AudioServer.set_bus_send(index, GameSettings.SFX_BUS)
+	var limiter: AudioEffectHardLimiter = AudioEffectHardLimiter.new()
+	limiter.ceiling_db = LOUD_CEILING_DB
+	limiter.release = 0.15
+	AudioServer.add_bus_effect(index, limiter)
+	return LOUD_BUS
 
 
 func _init(target: Node, engine_bank: EngineBank, lite_mode: bool = false) -> void:

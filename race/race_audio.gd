@@ -10,12 +10,16 @@ extends Node
 ## oranla taşınır (fizik ve ses ayrı ayarlanır; kırmızı çizgi her zaman sesin kırmızısında duyulur).
 ## Gaz: geri sayımda yarım (kalkış devrinde bekler), yarışta tam, vites geçişinde ve çizgiden sonra kesik (kesince
 ## bankanın patlama / blow-off'u kendiliğinden gelir; vites patlaması backfire() ile alevle eş zamanlı).
+## Düzey (2026-11-02, kullanıcı: "araç sesleri dragta da çok kısık"): motorlar yüksek motor sesi bus'ında
+## (EngineVoice.loud_bus: sert sınırlayıcı → SFX) 0 dB'nin üstünde çalar, katman farklarının DYNAMICS payı çalınır
+## (orta devir de dolgun); tam gaz / patlama kırpılmaz. Eskiden −6 / −15 dB doğrudan SFX'teydi.
 ## Tek seferlikler: geri sayım bipi, GO bipi. Yalnızca SES üretir; yarış mantığını bilmez. DragRaceScreen her kare
 ## drive() ile besler.
 
 const MIX_RATE: int = 22050
-const PLAYER_DB: float = -6.0
-const RIVAL_DB: float = -15.0
+const PLAYER_DB: float = 4.0
+const RIVAL_DB: float = -5.0
+const DYNAMICS: float = 0.75
 ## Geri sayımda (kalkış devrinde beklerken) gaz.
 const STAGED_THROTTLE: float = 0.55
 
@@ -36,6 +40,8 @@ func _ready() -> void:
 	_ensure_streams()
 	_player_engine = _player()
 	_rival_engine = _player()
+	_player_engine.bus = EngineVoice.loud_bus()
+	_rival_engine.bus = EngineVoice.loud_bus()
 	_oneshot = _player()
 
 
@@ -57,7 +63,9 @@ static func _voice(target: AudioStreamPlayer, id: StringName, previous: EngineVo
 	if previous:
 		previous.set_bank(bank)
 		return previous
-	return EngineVoice.new(target, bank)
+	var voice: EngineVoice = EngineVoice.new(target, bank)
+	voice.dynamics = DYNAMICS
+	return voice
 
 
 ## Aracın pişmiş bankası; yoksa (yeni araç pişirilmemiş) ön ayardan bellekte üretilir (yavaş, uyarı verir).

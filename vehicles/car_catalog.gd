@@ -68,6 +68,21 @@ static func exotic_ids() -> Array[StringName]:
 	return out
 
 
+## NADİR ARAÇ (cars.json "rare_traffic", 2026-11-02 kullanıcı: "yeni 5 japon aracı trafikte çok dolaşmasın, güzel
+## araçlar, nadir olsunlar"): normal trafik havuzunda değil; şehirden egzotik gibi ara sıra geçer (TrafficManager,
+## ortalama RARE_EVERY araçta bir). Egzotikten farkı: tamir müşterisi olabilir, sürüşü ve motoru normal trafik gibi.
+static func is_rare_traffic(id: StringName) -> bool:
+	return bool(get_entry(id).get("rare_traffic", false))
+
+
+static func rare_traffic_ids() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for entry: Dictionary in all():
+		if entry["rare_traffic"]:
+			out.append(entry["id"])
+	return out
+
+
 ## ARACIN OYUN ÖLÇEĞİ — gerçek boyuttan türetilmiş çarpan (cars.json "model_scale").
 ## Aracı sahneye koyan HER yer (trafik, garaj, showroom, drag) kendi bağlam çarpanını bununla
 ## çarpar; böylece dört yerde de aynı fiziksel oran görünür. Koda araç adı gömülmez.
@@ -204,6 +219,7 @@ const SCHEMA: Array[Dictionary] = [
 	{"key": "plate_color", "kind": Kind.COLOR, "default": Color("F3E8CF")},
 	{"key": "traffic", "kind": Kind.BOOL, "default": true},
 	{"key": "exotic", "kind": Kind.BOOL, "default": false},    # true: trafiğe kapalı ama şehirden ARA SIRA geçer (TrafficManager)
+	{"key": "rare_traffic", "kind": Kind.BOOL, "default": false},   # true: trafiğe kapalı, NADİR geçer (TrafficManager)
 	{"key": "paintable", "kind": Kind.BOOL, "default": true},   # false: kaplamalı araç (polis) — boyası değişmez
 	{"key": "obtainable", "kind": Kind.BOOL, "default": true},  # false: oyuncu edinemez (polis: yalnızca kovalamacada)
 	{"key": "race", "kind": Kind.STATS, "default": {}},   # drag yarışı statları (bkz. RACE_STATS)

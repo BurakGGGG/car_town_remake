@@ -29,6 +29,10 @@ extends Node3D
 ## art arda gelmesin diye arada en az EXOTIC_MIN_GAP araç olur. Sıra gelince model hemen arka planda yüklenir (yarışa
 ## özel modellerin yanına), araç doğunca listeden düşer (sahnesini araç tutar). Egzotik yalnızca GEÇER: tamir müşterisi
 ## olmaz (RepairManager). Motor sesi CityAmbience'ta (ExoticEngine).
+## NADİR ARAÇ (2026-11-02, kullanıcı: "yeni 5 japon aracı trafikte çok dolaşmasın, güzel araçlar, nadir olsunlar"):
+## cars.json "rare_traffic" (Supra, R34, NSX, RX-7, AE86) şehir havuzunda değil; egzotikle aynı yolla, kendi sayacıyla
+## ortalama RARE_EVERY doğumda bir gelir (en az RARE_MIN_GAP ara). Egzotikten farkı: tamir müşterisi olabilir, sürüşü
+## ve motoru normal trafik gibi.
 ## TRAFİK POLİSİ (TrafficPolice, çocuk düğüm): araçlar birbirini bekleyip kilitlenince (find_deadlock) karşı şeritten polis
 ## gelir, kilidin önünde durup siren çalar, en öndeki aracı geçirir.
 ## Polis kovalamacası: PoliceChase (çocuk düğüm, kodla kurulur) açılıştan 15 sn sonra, sonra 2 dakikada bir şüpheli + polis gönderir;
@@ -87,6 +91,9 @@ const EXOTIC_MIN_GAP: int = 8
 ## Süper araç şehir trafiğinden bu kat hızlı gider (2026-11-02, kullanıcı: "daha hızlı olsun şehir trafiğine göre");
 ## ara sıra gaza da basar (TrafficVehicle.SURGE_*).
 const EXOTIC_PACE: float = 1.3
+## Nadir araç (cars.json "rare_traffic") ortalama bu kadar rastgele doğumda bir, en az RARE_MIN_GAP araç arayla.
+const RARE_EVERY: int = 20
+const RARE_MIN_GAP: int = 8
 ## Takip mesafelerinin (TrafficVehicle.stop_distance / follow_distance) varsaydığı iki yarım boy: burun 0,3 + 0,3.
 const NOMINAL_LENGTH: float = 0.6
 ## Bu hızın altındaki araç "duruyor" sayılır (kilit araması).
@@ -119,6 +126,9 @@ var _pending: Dictionary = {}              # id → scene_path (arka planda yük
 var _exotics: Array[StringName] = []       # cars.json "exotic" modelleri
 var _since_exotic: int = 0                 # son egzotikten beri doğan rastgele araç
 var _exotic_next: StringName = &""         # sırası gelen egzotik (yükleniyor / doğmayı bekliyor)
+var _rares: Array[StringName] = []         # cars.json "rare_traffic" modelleri
+var _since_rare: int = 0                   # son nadir araçtan beri doğan araç
+var _rare_next: StringName = &""           # sırası gelen nadir araç
 var _rotate_timer: float = 0.0
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var chase: PoliceChase
@@ -154,6 +164,7 @@ func _ready() -> void:
 		if entry["traffic"]:
 			_candidates.append(entry["id"])
 	_exotics = CarCatalog.exotic_ids()
+	_rares = CarCatalog.rare_traffic_ids()
 	for i: int in mini(pool_size, _candidates.size()):
 		_request_model(_candidates[i])
 	_rotate_timer = pool_rotate_interval
@@ -208,18 +219,32 @@ func _next_model() -> Dictionary:
 		if _pending.has(_exotic_next):
 			return {}
 		_exotic_next = &""   # yüklenemedi ya da yarış modelleri arasından düştü: bu sefer normal araç
+	if _rare_next != &"" and is_model_in_use(_rare_next):
+		_rare_next = _pick_unused(_rares)   # bu arada rakip / müşteri olarak şehirde: başka bir nadir araç
+		if _rare_next != &"":
+			_request_model(_rare_next)
+	if _rare_next != &"":
+		var rare: Dictionary = _pool_entry(_rare_next)
+		if not rare.is_empty():
+			return rare
+		if _pending.has(_rare_next):
+			return {}
+		_rare_next = &""
 	return _free_model()
 
 
 ## Doğan rastgele araç sayılır. Egzotik doğunca sayaç sıfırlanır ve modeli listeden düşer (sahnesini araç tutar; rakip
 ## olarak yeniden istenirse yüklenir). Aradan sonra sıra gelince model HEMEN yüklenmeye başlar: sonraki doğuma hazır olur.
 func _count_spawn(id: StringName) -> void:
-	if _exotics.has(id):
-		_since_exotic = 0
-		_exotic_next = &""
+	var exotic: bool = _exotics.has(id)
+	var rare: bool = _rares.has(id)
+	if exotic or rare:
 		for i: int in range(_race_models.size() - 1, -1, -1):
 			if _race_models[i]["id"] == id:
 				_race_models.remove_at(i)
+	if exotic:
+		_since_exotic = 0
+		_exotic_next = &""
 		return
 	_since_exotic += 1
 	if _exotic_next == &"" and _since_exotic >= EXOTIC_MIN_GAP \
@@ -227,13 +252,27 @@ func _count_spawn(id: StringName) -> void:
 		_exotic_next = _pick_exotic()
 		if _exotic_next != &"":
 			_request_model(_exotic_next)
+	if rare:
+		_since_rare = 0
+		_rare_next = &""
+		return
+	_since_rare += 1
+	if _rare_next == &"" and _since_rare >= RARE_MIN_GAP and _rng.randf() < 1.0 / float(RARE_EVERY - RARE_MIN_GAP):
+		_rare_next = _pick_unused(_rares)
+		if _rare_next != &"":
+			_request_model(_rare_next)
 
 
 ## Şehirde olmayan rastgele bir egzotik model (&"" = yok).
 func _pick_exotic() -> StringName:
+	return _pick_unused(_exotics)
+
+
+## `ids` arasından şehirde olmayan rastgele bir model (&"" = yok).
+func _pick_unused(ids: Array[StringName]) -> StringName:
 	var used: Dictionary = models_in_use()
 	var options: Array[StringName] = []
-	for id: StringName in _exotics:
+	for id: StringName in ids:
 		if not used.has(id):
 			options.append(id)
 	return options[_rng.randi() % options.size()] if not options.is_empty() else &""

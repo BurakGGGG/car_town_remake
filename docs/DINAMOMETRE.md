@@ -77,7 +77,8 @@ olsun"). Taslak tuvali: https://claude.ai/artifact/QLcyqVWPyizpjLwfRQTWC2
 - **Dönen parçalar** (merdaneler, fan kanatları) gerçek zamanlı ışıklı metalle çizilir. Pişmiş ışık geometriyle birlikte
   döndüğü için merdanenin karanlık alt yüzü üste geliyordu.
 - **Ses:** aracın pişmiş bankası EngineVoice ile çalar; devir RaceAudio ile aynı şekilde oranla eşlenir.
-  - Kendi bus'ı `DynoEngine` (AudioEffectHardLimiter, tavan −1 dB, çıkışı SFX → ayarlardaki efekt düzeyi uygulanır).
+  - Yüksek motor sesi bus'ı `EngineLoud` (`EngineVoice.loud_bus()`; AudioEffectHardLimiter, tavan −1 dB, çıkışı SFX →
+    ayarlardaki efekt düzeyi uygulanır; drag yarışı da kullanır).
     Oynatıcı +6 dB (`ENGINE_DB`), katman farklarının %60'ı çalınır (`DYNAMICS` 0,6): rölanti dolgun, tam gaz / patlama
     kırpılmaz. Önceki −1 dB (SFX'e doğrudan) telefonda çok kısıktı. Egzoz patlaması `EngineVoice.popped` sinyaliyle `DragFx` alevini tetikler (Supra'nın
   "pat pat pat"ı alevle birlikte).
