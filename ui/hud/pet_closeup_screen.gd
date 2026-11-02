@@ -8,6 +8,9 @@ extends Control
 ##   - Kediye DOKUN = sev (dokun-tepki): sevilme klibi, uçan kalpler, dostluk +1 (PetManager.pet bekleme süreli).
 ##   - OLTA (sağ alt, amber): parmakla gezdirilen tüy; kedi gözüyle izler, yakına gelince atlar / pati vurur.
 ##   - Sağ üst ✕ ve Android GERİ kapatır.
+##   - SES (PetVoice, 2026-11-02): kedi YALNIZ burada sesli — kameraya dönünce selam miyavı, sevince mırlar (+ ara sıra
+##     "mrrp"), numara / aksesuar / ad koymada sevinir, oltada tüye cıvıldar; kapanınca susar. Açıkken garaj müziği
+##     GameMusic.PET_DB'ye iner (mırlama müziğin altında kalıyordu).
 ## GELİŞ (open_arrival): sinema şeritleri, kamera garaj ağzına, kedi sokaktan girip oturur, yakın kamera, ad ZORUNLU
 ## (PetNameScreen), sahiplenince kart açılır.
 
@@ -65,6 +68,7 @@ var _olta: _Olta
 var _acc_slots: Dictionary = {}       # aksesuar kimliği → _AccSlot
 var _armed: StringName = &""          # denenen (alınmamış) aksesuar
 var _armed_msec: int = 0
+var _voice: PetVoice
 
 
 func _ready() -> void:
@@ -73,7 +77,15 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build()
+	_voice = PetVoice.new()
+	add_child(_voice)
 	set_process(false)
+
+
+## Açıkken sahne yeniden kurulursa (dil değişimi vb.) kökteki müzik kısık kalmasın.
+func _exit_tree() -> void:
+	if visible:
+		GameMusic.pet_closeup(get_tree(), false)
 
 
 ## Geliş sinematiğiyle açar (seviye ödülü; ad ekranı zorunlu).
@@ -100,6 +112,8 @@ func open() -> void:
 	_set_play(false)
 	_chrome.visible = false
 	_hint.text = ""
+	_voice.begin()
+	GameMusic.pet_closeup(get_tree(), true)
 	show()
 	set_process(true)
 	if _arrival:
@@ -117,6 +131,8 @@ func close() -> void:
 	if not visible or _closing:
 		return
 	_closing = true
+	_voice.end()
+	GameMusic.pet_closeup(get_tree(), false)
 	_set_play(false)
 	_armed = &""   # PetWorld.end_closeup denemeyi çıkarır
 	var tween: Tween = create_tween()
@@ -152,6 +168,7 @@ func _start_closeup() -> void:
 	_hint.text = Loc.t("Sevmek için kediye dokun")
 	await _world.closeup_ready
 	_ready_to_pet = true
+	_voice.greet(0.2)
 
 
 func _cut_to_close_camera() -> void:
@@ -233,6 +250,7 @@ func _hits_cat(pos: Vector2) -> bool:
 func _pet() -> void:
 	_world.closeup_clips([&"pet"])
 	_spawn_hearts(_cat_screen()["head"])
+	_voice.petted()
 	_count_love()
 
 
@@ -279,6 +297,7 @@ func _set_play(on: bool) -> void:
 		_toy = s["head"] + Vector2(-90.0, -60.0)
 		_toy_target = _toy
 		_world.closeup_clips([&"play_enter"], &"play_crouch")
+		_voice.hunt(true)
 		_hint.text = Loc.t("Parmağını sürükle, oltayı gezdir")
 	else:
 		_world.closeup_clips([&"play_exit"], &"sit_idle")
@@ -312,6 +331,7 @@ func _step_play(delta: float) -> void:
 		_pounce_wait = POUNCE_COOLDOWN
 		var high: bool = _toy.y < (s["head"] as Vector2).y - float(s["radius"]) * 0.6
 		_world.closeup_clips([&"play_swat" if high else &"play_pounce"], &"play_crouch")
+		_voice.hunt(false)
 		_count_love()
 
 
@@ -347,7 +367,8 @@ func _refresh_card() -> void:
 			go.focus_mode = Control.FOCUS_NONE
 			go.pressed.connect(func() -> void:
 				if _ready_to_pet and not _play and not _world.closeup_busy():
-					_world.closeup_clips([id]))
+					_world.closeup_clips([id])
+					_voice.happy(0.4))
 			row.add_child(go)
 		else:
 			var lock: HudIcon = HudIcon.new()
@@ -414,6 +435,7 @@ func _on_accessory(id: StringName) -> void:
 		_show_toast(Loc.t("%s TAKILDI!") % Loc.t(String(info["name"])))
 		if is_instance_valid(_cam) and _world.actor():
 			_spawn_hearts(_cat_screen()["head"])
+		_voice.happy(0.2)
 
 
 func _disarm() -> void:
@@ -524,6 +546,7 @@ func _run_arrival() -> void:
 	await _cut_to_close_camera()
 	_world.begin_closeup(_dir)
 	await _world.closeup_ready
+	_voice.greet(0.2)
 	_name_screen.mandatory = true
 	_name_screen.start_name = ""
 	_router.open(&"pet_name")
@@ -538,6 +561,7 @@ func _finish_arrival(pet_name: String) -> void:
 	_ready_to_pet = true
 	_hint.text = Loc.t("Sevmek için kediye dokun")
 	_show_toast(Loc.t("%s ARTIK SENİN DOSTUN!") % pet_name.to_upper())
+	_voice.happy(0.4)
 
 
 # --- Kurulum ----------------------------------------------------------------------------------

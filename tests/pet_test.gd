@@ -12,6 +12,8 @@ extends SceneTree
 ##   - kedi eşyaları (yatak / kule / kap): kedi yatağa çıkıp uyur, kulenin tablasına çıkar, kabın önünde yer; üstünde
 ##     durduğu eşya kaldırılınca yere iner
 ##   - yakın kamera (PLACE pet_closeup) açılır / kapanır, kedi hayatına döner
+##   - kedi sesi (PetVoice): kayıtlar var, mırlama döngülü; yalnız yakın kamerada konuşur, ilk sevmede mrrp + mırlama,
+##     ağız doluyken yeni ses atlanır, kapanınca susar
 ##   tools/run_tests.sh pet_test
 
 var fails: int = 0
@@ -68,6 +70,7 @@ func _initialize() -> void:
 	await _furniture()
 	await _accessories()
 	_names()
+	await _voice()
 	await _closeup()
 	print("SONUC: fails=%d" % fails)
 	quit(1 if fails > 0 else 0)
@@ -440,9 +443,52 @@ func _closeup() -> void:
 	hud.router.back()
 	await create_timer(0.4).timeout
 	check(not hud.router.is_open(&"pet_name"), "ad değiştirme ekranı GERİ ile kapandı")
+	var voice: PetVoice = hud.pet_closeup_screen.find_child("PetVoice", false, false) as PetVoice
+	check(voice != null and not voice.active(), "kedi sesi kurulu, garajda sessiz")
 	hud.router.open(&"pet_closeup")
 	await create_timer(1.0).timeout
 	check(hud.router.current_place() == &"pet_closeup" and world.in_closeup(), "yakın kamera açıldı, kedi yakın kamerada")
+	check(voice != null and voice.active(), "yakın kamerada kedi sesi açık")
+	var music: GameMusic = root.get_node_or_null(GameMusic.NODE_NAME) as GameMusic
+	check(music == null or absf(music.volume_db - GameMusic.PET_DB) < 0.5,
+		"yakın kamerada müzik kısık (%.1f dB)" % (music.volume_db if music else 0.0))
 	hud.router.back()
 	await create_timer(0.8).timeout
 	check(not hud.router.is_open(&"pet_closeup") and not world.in_closeup(), "kapandı, kedi hayatına döndü")
+	check(voice != null and not voice.active() and not voice.purring(), "kapanınca kedi sustu")
+	if music:
+		await create_timer(GameMusic.SWAP_TIME + 0.2).timeout
+		check(absf(music.volume_db - GameMusic.BASE_DB) < 0.5, "kapanınca müzik geri geldi (%.1f dB)" % music.volume_db)
+
+
+func _voice() -> void:
+	print("== Kedi sesi (yalnız yakın kamera) ==")
+	var missing: Array[String] = []
+	for kind: StringName in PetVoice.POOLS:
+		for clip: StringName in PetVoice.POOLS[kind]:
+			if not ResourceLoader.exists(PetVoice.DIR + String(clip) + ".wav"):
+				missing.append(String(clip))
+	check(missing.is_empty(), "bütün kedi kayıtları var %s" % [missing])
+	var purr: AudioStreamWAV = load(PetVoice.DIR + "purr.wav") as AudioStreamWAV
+	check(purr != null and purr.loop_mode == AudioStreamWAV.LOOP_FORWARD, "mırlama ileri döngülü")
+	var v: PetVoice = PetVoice.new()
+	root.add_child(v)
+	await frames(1)
+	v.petted()
+	v.greet()
+	check(v.last_clip() == &"" and not v.purring(), "yakın kamera dışında ses yok")
+	v.begin()
+	v.petted()
+	check(String(v.last_clip()).begins_with("trill") and v.purring(), "ilk sevme: mrrp + mırlama")
+	check(not v.say(&"hello"), "ağız doluyken yeni ses atlanır")
+	await create_timer(PetVoice.PURR_IN + 0.2).timeout
+	check(v.purr_level() > 0.99, "mırlama tam düzeye çıktı")
+	v.end()
+	check(not v.say(&"hello"), "kapanınca konuşmaz")
+	await create_timer(PetVoice.PURR_OUT_FAST + 0.3).timeout
+	check(v.purr_level() == 0.0 and not v.purring(), "kapanınca mırlama söndü")
+	v.begin()
+	await create_timer(0.8).timeout
+	check(v.say(&"chirp") and String(v.last_clip()).begins_with("chirp"), "olta cıvıltısı çalar")
+	v.end()
+	v.queue_free()

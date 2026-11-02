@@ -8,6 +8,7 @@ extends AudioStreamPlayer
 ## Drag yarışı açılınca garaj teması kısılıp DURAKLAR, yarış teması yükselir; yarış kapanınca garaj
 ## teması kaldığı yerden geri gelir (race). Hurdalık da aynı yolla kendi temasına geçer (junkyard).
 ## DİNAMOMETRE açıkken garaj teması DYNO_DB'ye kısılır (dyno; kullanıcı: "dyno da oyun müziğini kıs motor sesini aç").
+## Kedinin YAKIN KAMERASINDA PET_DB'ye iner (pet_closeup): mırlama müziğin altında kayboluyordu (2026-11-02 kaydı).
 
 const THEME: String = "res://assets/audio/music/garage_theme.wav"
 const RACE_THEME: String = "res://assets/audio/music/drag_theme.wav"
@@ -19,6 +20,8 @@ const RACE_DB: float = -9.0
 const JUNKYARD_DB: float = -5.0
 ## Dino atölyesinde garaj teması (motor sesinin ~15 dB altında, arkada hafifçe duyulur).
 const DYNO_DB: float = -19.0
+## Kedi yakın kamerası: müzik ~6 dB geri çekilir, mırlama / miyav öne çıkar (müzik yine duyulur).
+const PET_DB: float = -10.0
 const SILENT_DB: float = -40.0
 const FADE_IN: float = 2.5
 const SWAP_TIME: float = 0.8
@@ -55,7 +58,14 @@ static func junkyard(tree: SceneTree, on: bool) -> void:
 static func dyno(tree: SceneTree, on: bool) -> void:
 	var music: GameMusic = tree.root.get_node_or_null(NODE_NAME) as GameMusic if tree else null
 	if music:
-		music._duck(on)
+		music._duck(DYNO_DB if on else BASE_DB)
+
+
+## Kedinin yakın kamerası açıldı (true) / kapandı (false): garaj teması PET_DB'ye iner / geri gelir.
+static func pet_closeup(tree: SceneTree, on: bool) -> void:
+	var music: GameMusic = tree.root.get_node_or_null(NODE_NAME) as GameMusic if tree else null
+	if music:
+		music._duck(PET_DB if on else BASE_DB)
 
 
 func _ready() -> void:
@@ -86,13 +96,14 @@ func is_racing() -> bool:
 	return _race.playing
 
 
-func _duck(on: bool) -> void:
+## Garaj temasını db'ye yumuşakça indirir / çıkarır (yer teması çalarken dokunmaz).
+func _duck(db: float) -> void:
 	if _race.playing or _yard.playing:
 		return
 	if _tween:
 		_tween.kill()
 	_tween = create_tween()
-	_tween.tween_property(self, "volume_db", DYNO_DB if on else BASE_DB, SWAP_TIME).set_trans(Tween.TRANS_SINE)
+	_tween.tween_property(self, "volume_db", db, SWAP_TIME).set_trans(Tween.TRANS_SINE)
 
 
 func _set_race(on: bool) -> void:

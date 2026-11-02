@@ -129,7 +129,7 @@ Hayvanın **sevdiği eşya** konunca hayvan oraya gelir ve "hatıra" bırakır. 
 | Animasyon | **Kukla animasyonu:** parçalar kodla / AnimationPlayer ile döner (iskelet yok). Kuyruk sallama, nefes, baş çevirme, oturma, kıvrılma, yürüme. GL Compatibility'de en ucuz yol |
 | Hareket | Garaj zemininde dekor ızgarası üzerinde `AStarGrid2D` (dekor ve tamir alanları engel). Uyuma yerleri: araç tavanı (modelin üst sınırından), yatak, kule |
 | Etkileşim | `CarHitbox` gibi `StaticBody3D` + dokunma. Sevgi kalpleri `HudSfx` / CPUParticles |
-| Ses | Kodla üretilen mırlama, miyav, havlama (RaceAudio / ambiyans gibi örnek dosya yok). SFX veri yolu |
+| Ses | **2026-11-02 uygulandı:** gerçek kayıtlar (Freesound CC0, kod sentezi değil — 2026-10-31 kararı), yalnız yakın kamerada: selam miyavı, sevince mırlama + "mrrp", numarada sevinç, oltada cıvıltı. `world/pets/pet_voice.gd`, kesim/düzey `tools/pets/kedi_sesleri.py`, kaynaklar `assets/audio/pets/KAYNAKLAR.txt`. SFX veri yolu; yakın kamerada müzik `GameMusic.PET_DB`'ye iner |
 | Sosyal | PublicGarage JSON'unda `pets`; Firestore kuralı değişmez (JSON zaten garaj belgesinin içinde) |
 | Görev | MissionManager'a yeni ölçütler: `pets_petted`, `pet_fed`, `pet_photos`; başarım "HAYVANSEVER" |
 | Ayar | AYARLAR → GRAFİK: "Evcil hayvanları göster" (zayıf cihazlarda kapatılabilir) |
