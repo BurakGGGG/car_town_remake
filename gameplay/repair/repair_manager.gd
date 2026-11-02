@@ -959,13 +959,15 @@ func _on_customer_stopped(vehicle: TrafficVehicle) -> void:
 
 
 ## SABIR: bekleyen müşterinin süresi azalır; son PATIENCE_WARN sn balonda geri sayım, bitince gider.
-## Seçili müşteri (oyuncu plakasına bakıyor) ve eğitim sürerken azalmaz.
+## Seçili müşteri (oyuncu plakasına bakıyor), eğitim ve drift gösterisi sürerken azalmaz.
 ## SIRA: geri sayıma girecek müşteri, bir öncekinin geri sayımı COUNTDOWN_GAP sn önce başlamadıysa tam PATIENCE_WARN'da
 ## bekler (balonda sayı yok); sayım bitip gidecek müşteri de son gidişten COUNTDOWN_GAP sn geçmediyse 0:01'de bekler —
 ## seçiliyken duran bir sayım sonradan başkasınınkiyle çakışabildiği için gidişte de denetlenir.
 func _tick_patience(delta: float) -> void:
 	if _tutorial_running():
 		return
+	if _traffic and _traffic.drift and _traffic.drift.is_busy():
+		return   # drift gösterisi: müşteri kaldırımdan çıkıp araçların önüne girmesin (gösteriden sonra sayım sürer)
 	_patience_clock += delta
 	for vehicle: TrafficVehicle in _traffic.vehicles.duplicate():
 		if not vehicle.is_waiting() or vehicle == _target:

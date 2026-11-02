@@ -35,6 +35,8 @@ extends Node3D
 ## ve motoru normal trafik gibi.
 ## TRAFİK POLİSİ (TrafficPolice, çocuk düğüm): araçlar birbirini bekleyip kilitlenince (find_deadlock) karşı şeritten polis
 ## gelir, kilidin önünde durup siren çalar, en öndeki aracı geçirir.
+## JAPON DRIFT GÖSTERİSİ: DriftEvent (çocuk düğüm) çok seyrek iki drift aracını tandem geçirir; hazırlık ve gösteri
+## sürerken yeni araç / yarış daveti doğmaz, kavşak DriftEvent.blocks_crossing'e uyar, dörtlü yanmaz.
 ## Polis kovalamacası: PoliceChase (çocuk düğüm, kodla kurulur) açılıştan 15 sn sonra, sonra 2 dakikada bir şüpheli + polis gönderir;
 ## bu araçlar `vehicles` listesinde DEĞİLDİR (sayılmaz, müşteri / rakip olmaz). Trafik onlara yol verir
 ## (chase_pressure) ve kovalamaca sürerken kavşakta karşı eksen bekler.
@@ -133,6 +135,7 @@ var _rotate_timer: float = 0.0
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var chase: PoliceChase
 var police: TrafficPolice
+var drift: DriftEvent
 ## Kavşağın trafik lambası (TrafficLights kendini bağlar; yoksa yalnızca eksen sırası).
 var lights: TrafficLights
 ## Yarışı kaybedip kaçan araçlar ve kavşağı talep eden kaçak (karşı eksen beklesin), talep zamanı, korna çalanlar.
@@ -160,6 +163,8 @@ func _ready() -> void:
 	add_child(sfx)
 	ambience = CityAmbience.new()
 	add_child(ambience)
+	drift = DriftEvent.new()
+	add_child(drift)
 	for entry: Dictionary in CarCatalog.all():
 		if entry["traffic"]:
 			_candidates.append(entry["id"])
@@ -179,7 +184,7 @@ func _physics_process(delta: float) -> void:
 	if _hazard_timer <= 0.0:
 		_hazard_timer = _rng.randf_range(HAZARD_GAP.x, HAZARD_GAP.y) if start_hazard() else HAZARD_RETRY
 	_spawn_timer -= delta
-	if _spawn_timer <= 0.0 and city_vehicle_count() < max_vehicles:
+	if _spawn_timer <= 0.0 and city_vehicle_count() < max_vehicles and not (drift and drift.holds_spawns()):
 		if _try_spawn():
 			_spawn_timer = spawn_interval
 		else:
@@ -332,7 +337,7 @@ func city_vehicle_count() -> int:
 ## planda yüklenmeye başlar ve null döner; RaceManager birkaç saniye sonra yeniden dener.
 ## `appearance`: arkadaş rakibin boyası (RaceManager); null → rastgele NPC rengi.
 func spawn_challenger(wanted: StringName = &"", appearance: CarAppearance = null) -> TrafficVehicle:
-	if race_spawn_point == null or _pool.is_empty():
+	if race_spawn_point == null or _pool.is_empty() or (drift and drift.holds_spawns()):
 		return null
 	var start: Vector3 = hidden_start(race_spawn_point)
 	if not _is_clear(start):
@@ -418,6 +423,17 @@ func spawn_chase_vehicle(point: TrafficWaypoint, entry: Dictionary, appearance: 
 	return vehicle
 
 
+## Drift gösterisi aracı: kovalamaca aracı gibi kurulur (trafik listesine girmez, müşteri / rakip olmaz), DriftEvent sürer.
+func spawn_drift_vehicle(id: StringName, scene: PackedScene, appearance: CarAppearance) -> TrafficVehicle:
+	var vehicle: TrafficVehicle = TrafficVehicle.new()
+	vehicle.name = "Drift_%s" % id
+	add_child(vehicle)
+	vehicle.vehicle_id = id
+	vehicle.setup(self, scene, appearance, spawn_points[0] if not spawn_points.is_empty() else race_spawn_point, model_scale)
+	vehicle.start_drift()
+	return vehicle
+
+
 ## Rastgele bir şehir modeli — şehirde henüz OLMAYAN (kovalamaca şüphelisi); boşta model yoksa {}.
 func random_city_model() -> Dictionary:
 	return _free_model()
@@ -435,6 +451,9 @@ func models_in_use() -> Dictionary:
 			used[vehicle.vehicle_id] = true
 	if police and police.police():
 		used[police.police().vehicle_id] = true
+	if drift:
+		for id: StringName in drift.reserved_models():
+			used[id] = true   # gösteriye ayrılan (yükleniyor / yolda) drift araçları
 	return used
 
 
@@ -594,6 +613,10 @@ func _is_clear(position: Vector3) -> bool:
 		for vehicle: TrafficVehicle in chase.vehicles():
 			if vehicle.global_position.distance_to(position) < spawn_clearance:
 				return false
+	if drift:
+		for vehicle: TrafficVehicle in drift.vehicles():
+			if vehicle.global_position.distance_to(position) < spawn_clearance:
+				return false
 	return true
 
 
@@ -700,7 +723,7 @@ func find_deadlock(min_stuck: float) -> Array[TrafficVehicle]:
 
 ## DÖRTLÜ: `vehicle` verilmezse ekranda görünen uygun bir araç seçilir; kovalamaca sürerken olmaz. Duran araç (yoksa null).
 func start_hazard(vehicle: TrafficVehicle = null) -> TrafficVehicle:
-	if chase and chase.is_active():
+	if (chase and chase.is_active()) or (drift and drift.is_busy()):
 		return null
 	if vehicle == null:
 		var router: UiRouter = get_tree().get_first_node_in_group("ui_router") as UiRouter
@@ -727,6 +750,8 @@ func request_crossing(vehicle: TrafficVehicle) -> bool:
 	_prune_crossing()
 	if _crossing.has(vehicle):
 		return true
+	if drift and drift.blocks_crossing(vehicle):
+		return false   # drift gösterisi: kavşak boşaltılıyor / araçlar geçiyor
 	if chase and chase.holds_crossing(vehicle.axis):
 		return false   # kovalamaca geçiyor: karşı eksen kavşağa girmez
 	if police and police.holds_crossing(vehicle.axis):

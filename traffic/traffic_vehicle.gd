@@ -22,6 +22,9 @@ extends Node3D
 ##                    (fault = null, durum NORMAL) ve araç waypoint zincirinden yoluna devam eder; ileride
 ##                    yeniden müşteri olursa yeni bir arıza atanır.
 ## Arıza durumu (repair_status) mode'dan ayrı tutulur (NORMAL → DAMAGED → REPAIRING → REPAIRED → NORMAL).
+##   DRIFT            JAPON DRIFT GÖSTERİSİ (DriftEvent): pozu (konum, kayma açısı, karşı direksiyon, yatış, aks başına
+##                    tekerlek dönüşü) her karede önceden hesaplanmış çizelgeden verilir. Seçilemez, trafik listesinde
+##                    değildir (müşteri / rakip olmaz).
 ##   CHASE            polis kovalamacası (PoliceChase): şüpheli ya da polis. Waypoint takibi yerine kovalamacanın
 ##                    hazırladığı yol çizgisinde, yolun ORTA çizgisinde hızlı gider; trafik ona yol verir, kavşak
 ##                    kilidine ve öndeki araca bakmaz. Seçilemez, müşteri / rakip olmaz, şehir sayacına girmez.
@@ -39,7 +42,7 @@ enum RepairStatus { NORMAL, DAMAGED, REPAIRING, REPAIRED }
 ## RACE_CHALLENGE: yarış daveti veren rakip — tamir akışıyla AYNI yanaşma kodunu kullanır
 ## (yol kenarına çekilir, döner, balon açar) ama arıza/tamir durumuna hiç dokunmaz.
 enum Mode { TRAFFIC, REPAIR_REQUESTED, REPAIR_WAITING, REPAIR_BAY, REPAIR_COMPLETE, REWARD_WAITING,
-	RACE_CHALLENGE, CHASE }
+	RACE_CHALLENGE, CHASE, DRIFT }
 
 const WHEEL_RADIUS: float = 0.1  # model uzayında (ölçek öncesi)
 const CarHitboxScript: GDScript = preload("res://car_hitbox.gd")
@@ -658,13 +661,45 @@ func start_chase(points: PackedVector3Array, offset: float) -> void:
 	for i: int in range(1, points.size()):
 		_chase_lengths.append(_chase_lengths[i - 1] + _flat(points[i] - points[i - 1]).length())
 	chase_offset = offset
+	_disable_pick()
+	place_on_chase_path(0.0)
+
+
+## Tıklama kutusu kapanır: hızla geçen araca dokunmak tamir / yarış plakası açmasın.
+func _disable_pick() -> void:
 	var hitbox: StaticBody3D = get_node_or_null("CarHitbox") as StaticBody3D
 	if hitbox:
 		hitbox.input_ray_pickable = false
 		for shape: Node in hitbox.get_children():
 			if shape is CollisionShape3D:
 				(shape as CollisionShape3D).disabled = true
-	place_on_chase_path(0.0)
+
+
+# --- Drift gösterisi (DriftEvent API) ------------------------------------------------------
+
+## Drift aracı yap: kendi kendine sürmez, DriftEvent her karede place_drift ile yerleştirir; seçilemez.
+func start_drift() -> void:
+	mode = Mode.DRIFT
+	target = null
+	_disable_pick()
+
+
+## Drift pozu: gövde merkezi (y yok sayılır), gövde yönü (yaw, atan2(x, z)), yatış / oturma (rad, model kökünde), ön
+## teker açısı (derece, + sol) ve aksların birikimli dönüşü (derece; arka patinajda hızlı döner).
+func place_drift(at: Vector3, yaw: float, roll: float, pitch: float, steer: float, front_spin: float, rear_spin: float,
+		speed_now: float) -> void:
+	global_position = Vector3(at.x, global_position.y, at.z)
+	global_transform.basis = Basis(Vector3.UP, yaw)
+	speed = speed_now
+	if model:
+		model.rotation = Vector3(pitch, 0.0, roll)
+	if rig:
+		rig.steer_deg = steer
+		rig.set_axle_spin(front_spin, rear_spin)
+
+
+func is_drifting() -> bool:
+	return mode == Mode.DRIFT
 
 
 ## Kovalamaca yolunda `distance`'taki yerel çerçeve: orta çizgi noktası (chase_offset kaymalı), ileri ve sol yön.

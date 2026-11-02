@@ -182,7 +182,7 @@ func check_now() -> bool:
 
 
 func _look_for_jam() -> void:
-	if _manager == null or (_manager.chase and _manager.chase.is_active()):
+	if _manager == null or (_manager.chase and _manager.chase.is_active()) or (_manager.drift and _manager.drift.is_busy()):
 		return
 	var ring: Array[TrafficVehicle] = _manager.find_deadlock(JAM_TIME)
 	if ring.is_empty():

@@ -15,7 +15,7 @@ trap 'rm -f "$PROJ/override.cfg"' EXIT
 for d in "$HOME/snap/godot-4"/*/.local/share/ct_qa "${XDG_DATA_HOME:-$HOME/.local/share}/ct_qa"; do
 	[ "$GODOT" = "godot-4" ] && [[ "$d" != "$HOME/snap/"* ]] && continue
 	mkdir -p "$d"
-	rm -f "$d/savegame.json" "$d/cloud_sync.json"
+	rm -f "$d/savegame.json" "$d/cloud_sync.json" "$d/city_events.cfg"
 	[ -n "${QA_SAVE:-}" ] && cp "$QA_SAVE" "$d/savegame.json"
 	printf '[general]\nlanguage="%s"\n' "${QA_LANG:-tr}" > "$d/settings.cfg"
 done

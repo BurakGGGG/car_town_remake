@@ -180,6 +180,8 @@ func start(ignore_screens: bool = false, lane: TrafficWaypoint = null) -> bool:
 		return false
 	if _manager.police and _manager.police.is_busy():
 		return false   # trafik polisi kilit açıyor: aynı polis modeli iki kez çıkmasın
+	if _manager.drift and _manager.drift.is_busy():
+		return false   # drift gösterisi sürüyor
 	if not ignore_screens and _screen_open():
 		return false
 	var model: Dictionary = _manager.random_city_model()

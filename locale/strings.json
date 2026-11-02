@@ -171,7 +171,7 @@
   "ui/hud/collection_reward_screen.gd:96"
  ],
  "%d SEVGİDE": [
-  "ui/hud/pet_closeup_screen.gd:360"
+  "ui/hud/pet_closeup_screen.gd:381"
  ],
  "%d TAMİR": [
   "gameplay/social/profile_catalog.gd:186"
@@ -358,7 +358,7 @@
   "ui/hud/news_digest.gd:302"
  ],
  "%s ARTIK SENİN DOSTUN!": [
-  "ui/hud/pet_closeup_screen.gd:540"
+  "ui/hud/pet_closeup_screen.gd:563"
  ],
  "%s AÇILDI": [
   "ui/hud/news_digest.gd:442"
@@ -529,7 +529,7 @@
   "ui/hud/news_digest.gd:309"
  ],
  "%s TAKILDI!": [
-  "ui/hud/pet_closeup_screen.gd:414"
+  "ui/hud/pet_closeup_screen.gd:435"
  ],
  "%s TAKILIYOR": [
   "ui/hud/hud.gd:1129"
@@ -748,7 +748,7 @@
   "ui/hud/invite_screen.gd:207"
  ],
  "%s · %d GEM · ALMAK İÇİN BİR DAHA DOKUN": [
-  "ui/hud/pet_closeup_screen.gd:400"
+  "ui/hud/pet_closeup_screen.gd:421"
  ],
  "%s · %d. KADEME MODİFİYE": [
   "ui/hud/event_screen.gd:584"
@@ -1057,7 +1057,7 @@
   "decor/decorations.json:air_hockey.title"
  ],
  "AKSESUAR": [
-  "ui/hud/pet_closeup_screen.gd:737"
+  "ui/hud/pet_closeup_screen.gd:761"
  ],
  "AKÜ ŞARJ ARABASI": [
   "decor/decorations.json:battery_charger.title"
@@ -1231,7 +1231,7 @@
   "gameplay/social/profile_catalog.gd:96"
  ],
  "ARKA AYAKLAR": [
-  "ui/hud/pet_closeup_screen.gd:30"
+  "ui/hud/pet_closeup_screen.gd:33"
  ],
  "ARKADAN İTİŞ": [
   "ui/hud/dyno_screen.gd:53",
@@ -2552,7 +2552,7 @@
   "decor/decorations.json:referral_neon.title"
  ],
  "DOSTLUK": [
-  "ui/hud/pet_closeup_screen.gd:715"
+  "ui/hud/pet_closeup_screen.gd:739"
  ],
  "DOSTLUK YARIŞI": [
   "gameplay/missions/mission_catalog.gd:142"
@@ -3202,11 +3202,11 @@
   "ui/hud/friend_card_screen.gd:155"
  ],
  "FOTOĞRAF KAYDEDİLEMEDİ": [
-  "ui/hud/pet_closeup_screen.gd:479",
+  "ui/hud/pet_closeup_screen.gd:501",
   "ui/hud/photo_mode.gd:163"
  ],
  "FOTOĞRAF ÇEK": [
-  "ui/hud/pet_closeup_screen.gd:758"
+  "ui/hud/pet_closeup_screen.gd:782"
  ],
  "FOTOĞRAFI YERLEŞTİR": [
   "ui/hud/avatar_cropper.gd:80"
@@ -3325,11 +3325,11 @@
   "ui/hud/profile_edit_screen.gd:278"
  ],
  "GALERİYE KAYDEDİLDİ": [
-  "ui/hud/pet_closeup_screen.gd:477",
+  "ui/hud/pet_closeup_screen.gd:499",
   "ui/hud/photo_mode.gd:158"
  ],
  "GALERİYE KAYDETMEK İÇİN İZİN GEREKİYOR": [
-  "ui/hud/pet_closeup_screen.gd:469",
+  "ui/hud/pet_closeup_screen.gd:491",
   "ui/hud/photo_mode.gd:148"
  ],
  "GARAJ": [
@@ -3535,7 +3535,7 @@
  ],
  "GEM YETMİYOR\n%d GEM gerekiyor, %d GEM'in var.": [
   "ui/hud/restoration_panel.gd:371",
-  "ui/hud/pet_closeup_screen.gd:406",
+  "ui/hud/pet_closeup_screen.gd:427",
   "ui/hud/hud.gd:1161"
  ],
  "GEM: GÜNLÜK GİRİŞ · GÖREVLER · SEVİYE · USTALIK": [
@@ -3955,7 +3955,7 @@
   "ui/hud/drag_race_screen.gd:941"
  ],
  "GİY": [
-  "ui/hud/pet_closeup_screen.gd:830"
+  "ui/hud/pet_closeup_screen.gd:854"
  ],
  "GİZLİLİK POLİTİKASI": [
   "ui/hud/settings_screen.gd:423"
@@ -5608,7 +5608,7 @@
   "gameplay/social/profile_catalog.gd:99"
  ],
  "NUMARALAR": [
-  "ui/hud/pet_closeup_screen.gd:732"
+  "ui/hud/pet_closeup_screen.gd:756"
  ],
  "Ne yapacağını bilmiyorsan GÖREVLER'e bak. Görevler sana yol gösterir ve her biri ödül verir; günlük ve haftalık görevler her gün yenilenir.": [
   "ui/tutorial/tutorial_director.gd:860"
@@ -5836,7 +5836,7 @@
   "decor/decorations.json:tile_pastel.title"
  ],
  "PATİ VER": [
-  "ui/hud/pet_closeup_screen.gd:30"
+  "ui/hud/pet_closeup_screen.gd:33"
  ],
  "PATİNAJ ": [
   "ui/hud/drag_race_screen.gd:1189"
@@ -5970,7 +5970,7 @@
   "decor/decorations.json:epoxy_blue.desc"
  ],
  "Parmağını sürükle, oltayı gezdir": [
-  "ui/hud/pet_closeup_screen.gd:282"
+  "ui/hud/pet_closeup_screen.gd:301"
  ],
  "Parça hazır": [
   "ui/hud/mod_workshop.gd:719"
@@ -6261,7 +6261,7 @@
  "SATIN AL": [
   "ui/hud/garage_edit_screen.gd:428",
   "ui/hud/garage_edit_screen.gd:684",
-  "ui/hud/pet_closeup_screen.gd:828",
+  "ui/hud/pet_closeup_screen.gd:852",
   "ui/hud/car_garages_screen.gd:864",
   "ui/hud/hud.gd:991",
   "ui/hud/hud.gd:1017",
@@ -6645,9 +6645,9 @@
   "gameplay/quest_catalog.gd:27"
  ],
  "Sevmek için kediye dokun": [
-  "ui/hud/pet_closeup_screen.gd:152",
-  "ui/hud/pet_closeup_screen.gd:285",
-  "ui/hud/pet_closeup_screen.gd:539"
+  "ui/hud/pet_closeup_screen.gd:168",
+  "ui/hud/pet_closeup_screen.gd:304",
+  "ui/hud/pet_closeup_screen.gd:562"
  ],
  "Seçtiğin hesabın e-postası farklı olduğu için %s bağlanmadı. Bu hesapla devam ediyorsun.": [
   "gameplay/cloud_save_manager.gd:685"
@@ -6895,7 +6895,7 @@
  "TAMİR": [
   "ui/hud/garage_screen.tscn:1312",
   "vfx/world_prewarm.gd:37",
-  "traffic/traffic_vehicle.gd:839"
+  "traffic/traffic_vehicle.gd:922"
  ],
  "TAMİR ALANI": [
   "ui/hud/garage_edit_screen.gd:686"
@@ -7026,7 +7026,7 @@
   "ui/hud/garage_edit_screen.gd:1365"
  ],
  "TEKİR": [
-  "ui/hud/pet_closeup_screen.gd:323"
+  "ui/hud/pet_closeup_screen.gd:343"
  ],
  "TELEFON KULÜBESİ": [
   "decor/decorations.json:phone_booth.title"
@@ -7240,7 +7240,7 @@
   "gameplay/race/performance_mods.gd:73"
  ],
  "Turuncu tekir · garajın kedisi": [
-  "ui/hud/pet_closeup_screen.gd:713"
+  "ui/hud/pet_closeup_screen.gd:737"
  ],
  "Turuncu-beyaz şeritli üç varil.": [
   "decor/decorations.json:traffic_drums.desc"
@@ -7479,7 +7479,7 @@
   "ui/hud/friends_screen.gd:523"
  ],
  "YAP": [
-  "ui/hud/pet_closeup_screen.gd:345"
+  "ui/hud/pet_closeup_screen.gd:365"
  ],
  "YARDIM ÇAĞRISI": [
   "ui/hud/news_digest.gd:206"
@@ -7763,7 +7763,7 @@
   "decor/decorations.json:round_table.title"
  ],
  "YUVARLAN": [
-  "ui/hud/pet_closeup_screen.gd:30"
+  "ui/hud/pet_closeup_screen.gd:33"
  ],
  "Yakın Oranlı Kutu": [
   "gameplay/race/performance_mods.gd:75"
@@ -8033,7 +8033,7 @@
   "gameplay/social/social_names.gd:27"
  ],
  "polis sireni": [
-  "traffic/police_chase.gd:367"
+  "traffic/police_chase.gd:369"
  ],
  "puşt": [
   "gameplay/social/social_names.gd:23"
@@ -8316,7 +8316,7 @@
   "ui/hud/leaderboard_screen.gd:175"
  ],
  "ÜSTÜNDE": [
-  "ui/hud/pet_closeup_screen.gd:834"
+  "ui/hud/pet_closeup_screen.gd:858"
  ],
  "Ülke tablosu için PROFİL'den bayrağını seç.": [
   "ui/hud/leaderboard_screen.gd:393"
