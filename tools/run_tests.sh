@@ -42,7 +42,9 @@ for t in $ALL; do
 	script="$SUITE/$t.gd"
 	[ -f "$PROJ/tests/$t.gd" ] && script="res://tests/$t.gd"
 	# Eğitim (Rıza Usta) kapalı: temiz kayıtta hoş geldin kartı testlerin dokunuşlarını tutardı
-	CT_NO_TUTORIAL=1 timeout 600 stdbuf -oL "$GODOT" --path . $mode --script "$script" > "$OUT/$t.txt" 2>&1
+	# -k 10: SIGTERM alan Godot kapanırken takılabiliyor (2026-11-02 race_test 600 sn'den sonra da 20 dk asılı
+	# kaldı, paket ilerlemedi) → 10 sn sonra SIGKILL.
+	CT_NO_TUTORIAL=1 timeout -k 10 600 stdbuf -oL "$GODOT" --path . $mode --script "$script" > "$OUT/$t.txt" 2>&1
 	ok=$(grep -c '  OK ' "$OUT/$t.txt")
 	bad=$(grep -cE '^  FAIL|^\s+FAIL' "$OUT/$t.txt")
 	note=""
