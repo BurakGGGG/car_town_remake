@@ -14,6 +14,11 @@ signal clip_finished(clip: StringName)
 
 const SCENE_PATH: String = "res://assets/pets/tekir.glb"
 const EYES_CLOSED: Texture2D = preload("res://assets/pets/tekir_eyes_closed.jpg")
+## Tüy renkleri (PetManager.FURS): turuncu modelin kendi dokusu; diğerleri FUR_DIR/tekir_<id>.jpg + tekir_<id>_eyes_closed.jpg
+## (tools/pets/tekir_fur.py: aynı UV, yalnız renk — beyazda mavi göz, siyahta yeşil göz).
+const FUR_DIR: String = "res://assets/pets/fur/"
+## Gövde gölgelendiricisi: glb malzemesiyle aynı görünüm + kıyafetin altındaki deriyi gizleme maskesi.
+const BODY_SHADER: Shader = preload("res://world/pets/pet_body.gdshader")
 ## Boy çarpanı. Garajın kendisi (araçlar, dekor) ŞEHİR ölçeğinde: 1 m = 0,6 / 4,39 birim (DecorBuilder.METER). Kedi
 ## önce 1 m = 1 / 4,39 ile (garaj içi araç bağlamı) kurulmuştu → arabalara göre ~1,7 kat iriydi. Kullanıcı kararı
 ## (2026-10-31, karşılaştırma ct_shots/pets/olcek): "arada" — kedi ×0,8 (gerçek orandan ~1,33 kat iri, garaj
@@ -33,8 +38,11 @@ const HIT_SIZE: Vector3 = Vector3(0.625, 0.625, 1.0)   # ×0,8 küçülen kedide
 
 var _player: AnimationPlayer
 var _mesh: MeshInstance3D
-var _mat: BaseMaterial3D
+var _mat: ShaderMaterial
 var _open_tex: Texture2D
+var _closed_tex: Texture2D = EYES_CLOSED
+var _base_open: Texture2D            # modelin turuncu dokusu
+var _fur: StringName = &"orange"
 var _clip: StringName = &""
 var _eyes_shut_forced: bool = false
 var _blink_left: float = 3.0
@@ -66,11 +74,19 @@ func _ready() -> void:
 	_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var src: Material = _mesh.get_active_material(0)
 	if src is BaseMaterial3D:
-		_mat = (src as BaseMaterial3D).duplicate() as BaseMaterial3D
-		_open_tex = _mat.albedo_texture
+		_mat = ShaderMaterial.new()
+		_mat.shader = BODY_SHADER
+		_mat.set_shader_parameter(&"roughness", (src as BaseMaterial3D).roughness)
+		_open_tex = (src as BaseMaterial3D).albedo_texture
+		_base_open = _open_tex
+		_mat.set_shader_parameter(&"albedo_texture", _open_tex)
 		_mesh.material_override = _mat
 	_build_shadow()
 	_build_hitbox()
+	if _fur != &"orange":
+		var want: StringName = _fur
+		_fur = &"orange"
+		set_fur(want)
 	play(&"idle")
 
 
@@ -155,6 +171,24 @@ func set_accessories(ids: Array[StringName]) -> void:
 		var mesh: MeshInstance3D = _load_accessory(id)
 		if mesh:
 			_acc_nodes[id] = mesh
+	_apply_hide_mask()
+
+
+## Gövde kıyafeti takılıysa altındaki deri çizilmez (assets/pets/acc/<id>_mask.png, kedinin UV'sinde).
+func _apply_hide_mask() -> void:
+	var mask: Texture2D = null
+	for id: StringName in _acc_nodes:
+		var path: String = "res://assets/pets/acc/%s_mask.png" % id
+		if PetManager.slot_of(id) == &"body" and ResourceLoader.exists(path):
+			mask = load(path) as Texture2D
+			break
+	if _mat:
+		_mat.set_shader_parameter(&"hide_mask", mask)
+
+
+## Şu an derinin bir kısmı gizli mi (testler için).
+func skin_hidden() -> bool:
+	return _mat != null and _mat.get_shader_parameter(&"hide_mask") != null
 
 
 func worn_accessories() -> Array[StringName]:
@@ -187,6 +221,41 @@ func _load_accessory(id: StringName) -> MeshInstance3D:
 	return mesh
 
 
+# --- Tüy rengi -------------------------------------------------------------------------------
+
+## Gövde dokusunu verilen tüy rengine çevirir (açık ve kapalı göz dokusu birlikte). Hazır olmadan çağrılırsa _ready uygular.
+func set_fur(id: StringName) -> void:
+	if id == &"" or not PetManager.has_fur(id):
+		id = PetManager.DEFAULT_FUR
+	if _mat == null:
+		_fur = id
+		return
+	if id == _fur:
+		return
+	if id == PetManager.DEFAULT_FUR:
+		_open_tex = _base_open
+		_closed_tex = EYES_CLOSED
+	else:
+		var open: Texture2D = load(FUR_DIR + "tekir_%s.jpg" % id) as Texture2D
+		var closed: Texture2D = load(FUR_DIR + "tekir_%s_eyes_closed.jpg" % id) as Texture2D
+		if open == null or closed == null:
+			push_warning("PetActor: tüy dokusu yok: %s" % id)
+			return
+		_open_tex = open
+		_closed_tex = closed
+	_fur = id
+	_apply_eyes(_eyes_shut_forced or EYES_SHUT.has(_clip) or _blinking > 0.0)
+
+
+func fur() -> StringName:
+	return _fur
+
+
+## Şu an gövdede görünen doku (testler için).
+func body_texture() -> Texture2D:
+	return _mat.get_shader_parameter(&"albedo_texture") as Texture2D if _mat else null
+
+
 # --- Gözler ----------------------------------------------------------------------------------
 
 ## Gözleri zorla kapalı tut (ör. yakın kamerada sevilirken klip dışı da).
@@ -197,7 +266,7 @@ func set_eyes_shut(on: bool) -> void:
 
 func _apply_eyes(shut: bool) -> void:
 	if _mat:
-		_mat.albedo_texture = EYES_CLOSED if shut else _open_tex
+		_mat.set_shader_parameter(&"albedo_texture", _closed_tex if shut else _open_tex)
 
 
 # --- Dokunma alanı ve gölge -----------------------------------------------------------------------

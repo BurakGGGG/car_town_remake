@@ -11,6 +11,9 @@ extends Node
 ##   - Ad ZORUNLU (ad ekranında süzgeçten geçer); ödül YOK, yalnız eğlence. Sevdikçe dostluk artar, numaralar açılır,
 ##     hiçbir şey düşmez (bakım yükü / ceza yok).
 ##   - Aksesuarlar yalnız elmasla (150–400).
+##   - 2026-11-03: GÖVDE yuvasına dört kıyafet (kedinin derisinden türetilir, tools/pets/tekir_wear.py). Aynı kedinin
+##     beyaz (mavi göz) ve siyah (yeşil göz) dokuları da hazır (FURS) ama ARAYÜZDE YOK: kullanıcı kararı "herkese turuncu
+##     tekir; beyaz ve siyah ileride gelecek EVCİL HAYVANLAR ekranında (köpekler vb. ile) olsun".
 
 ## Kedi gelmeye hazır (geliş sinyali sahnesini / ad ekranını açar). Bekleyen geliş açılışta da yeniden yayınlanabilir.
 signal arrival_ready
@@ -23,6 +26,8 @@ signal friendship_changed(points: int)
 signal trick_unlocked(trick: StringName)
 ## Aksesuar alındı / takıldı / çıkarıldı.
 signal accessories_changed
+## Tüy rengi değişti (FURS kimliği).
+signal fur_changed(fur: StringName)
 
 const ARRIVAL_LEVEL: int = 5
 const DEFAULT_NAME: String = "Tekir"
@@ -40,14 +45,32 @@ const TRICKS: Array[Dictionary] = [
 	{"id": &"trick_roll", "points": 60},
 ]
 
-## Aksesuarlar (yalnız elmas; kullanıcı kararı 150–400). Yuva başına bir tane takılır: BOYUN (tasma / bandana) ve
-## BAŞ (kasket / kask). Modeller assets/pets/acc/<id>.glb + raf simgesi icon_<id>.png (tools/pets/tekir_acc.py).
+## Aksesuarlar (yalnız elmas; kullanıcı kararı 150–400). Yuva başına bir tane takılır: BOYUN (tasma / bandana),
+## BAŞ (kasket / kask) ve GÖVDE (kıyafetler). Modeller assets/pets/acc/<id>.glb + raf simgesi icon_<id>.png
+## (tools/pets/tekir_acc.py, kıyafetler tools/pets/tekir_wear.py).
 const ACCESSORIES: Array[Dictionary] = [
 	{"id": &"collar_red", "name": "TASMA", "slot": &"neck", "gems": 150},
 	{"id": &"bandana", "name": "BANDANA", "slot": &"neck", "gems": 200},
 	{"id": &"cap", "name": "USTA KEPİ", "slot": &"head", "gems": 250},
 	{"id": &"helmet", "name": "KASK", "slot": &"head", "gems": 400},
+	{"id": &"vest", "name": "İKAZ YELEĞİ", "slot": &"body", "gems": 200},
+	{"id": &"sweater", "name": "ÖRGÜ KAZAK", "slot": &"body", "gems": 250},
+	{"id": &"race_jacket", "name": "YARIŞ MONTU", "slot": &"body", "gems": 350},
+	{"id": &"leather_jacket", "name": "DERİ CEKET", "slot": &"body", "gems": 400},
 ]
+## Takılma sırası (worn() bu sırayla döner).
+const SLOTS: Array[StringName] = [&"neck", &"head", &"body"]
+## Birlikte giyilemeyenler: bandananın üçgeni göğüste kıyafetin altında kalıyor → biri takılınca öteki çıkar.
+const CLASHES: Dictionary = {&"bandana": [&"body"]}
+
+## Tüy renkleri: aynı model, iskelet ve hareketler, yalnız gövde dokusu değişir (tools/pets/tekir_fur.py →
+## assets/pets/fur/). Şimdilik herkes turuncu tekir; set_fur'u yalnız ilerideki EVCİL HAYVANLAR ekranı çağıracak.
+const FURS: Array[Dictionary] = [
+	{"id": &"orange"},   # turuncu tekir, kehribar göz (modelin kendi dokusu)
+	{"id": &"white"},    # beyaz, mavi göz
+	{"id": &"black"},    # siyah, yeşil göz
+]
+const DEFAULT_FUR: StringName = &"orange"
 
 var _adopted: bool = false
 var _name: String = ""
@@ -58,6 +81,7 @@ var _equipped: Dictionary = {}        # yuva (String) → aksesuar kimliği (Str
 var _last_pet_msec: int = -100000
 var _love_day: String = ""       # günlük sayacın günü (YYYY-AA-GG)
 var _love_today: int = 0
+var _fur: StringName = DEFAULT_FUR
 
 
 func _ready() -> void:
@@ -141,14 +165,38 @@ static func slot_of(id: StringName) -> StringName:
 	return StringName(accessory(id).get("slot", &""))
 
 
+## İki aksesuar birlikte giyilemez mi (aynı yuva ya da CLASHES).
+static func clashes(a: StringName, b: StringName) -> bool:
+	if a == &"" or b == &"" or a == b:
+		return false
+	var sa: StringName = slot_of(a)
+	var sb: StringName = slot_of(b)
+	if sa == sb:
+		return true
+	return (CLASHES.get(a, []) as Array).has(sb) or (CLASHES.get(b, []) as Array).has(sa)
+
+
+func fur() -> StringName:
+	return _fur
+
+
+static func has_fur(id: StringName) -> bool:
+	for f: Dictionary in FURS:
+		if f["id"] == id:
+			return true
+	return false
+
+
+
+
 func is_worn(id: StringName) -> bool:
 	return id != &"" and equipped(slot_of(id)) == id
 
 
-## Takılı aksesuarlar (yuva sırası: boyun, baş).
+## Takılı aksesuarlar (yuva sırası: boyun, baş, gövde).
 func worn() -> Array[StringName]:
 	var out: Array[StringName] = []
-	for slot: StringName in [&"neck", &"head"]:
+	for slot: StringName in SLOTS:
 		var id: StringName = equipped(slot)
 		if id != &"":
 			out.append(id)
@@ -221,7 +269,7 @@ func buy_accessory(id: StringName) -> bool:
 	if progress == null or not progress.spend_gems(int(info["gems"])):
 		return false
 	_accessories.append(id)
-	_equipped[String(info["slot"])] = id
+	_wear(id)
 	_request_save()
 	accessories_changed.emit()
 	return true
@@ -240,9 +288,26 @@ func equip(slot: StringName, id: StringName) -> void:
 	if id == &"":
 		_equipped.erase(String(slot))
 	else:
-		_equipped[String(slot)] = id
+		_wear(id)
 	_request_save()
 	accessories_changed.emit()
+
+
+## Takar; çakışan (aynı yuva ya da CLASHES) takılı olanı çıkarır.
+func _wear(id: StringName) -> void:
+	for other: StringName in worn():
+		if clashes(id, other):
+			_equipped.erase(String(slot_of(other)))
+	_equipped[String(slot_of(id))] = id
+
+
+## Tüy rengini değiştirir. Bilinmeyen kimlik ya da aynı renk: hiçbir şey olmaz. (Arayüzde yok — EVCİL HAYVANLAR ekranı.)
+func set_fur(id: StringName) -> void:
+	if not has_fur(id) or id == _fur:
+		return
+	_fur = id
+	_request_save()
+	fur_changed.emit(_fur)
 
 
 func _on_level_up(level: int) -> void:
@@ -263,7 +328,7 @@ func state() -> Dictionary:
 	for slot: String in _equipped:
 		eq[slot] = String(_equipped[slot])
 	return {"adopted": _adopted, "name": _name, "friendship": _friendship, "arrival": _arrival_pending,
-		"accessories": acc, "equipped": eq, "love_day": _love_day, "love_today": _love_today}
+		"accessories": acc, "equipped": eq, "love_day": _love_day, "love_today": _love_today, "fur": String(_fur)}
 
 
 func load_state(data: Dictionary) -> void:
@@ -275,6 +340,8 @@ func load_state(data: Dictionary) -> void:
 	_arrival_pending = bool(data.get("arrival", false)) and not _adopted
 	_love_day = SaveSafe.s(data.get("love_day", ""))
 	_love_today = clampi(SaveSafe.i(data.get("love_today", 0)), 0, DAILY_LOVE)
+	var fur_id: StringName = StringName(SaveSafe.s(data.get("fur", "")))
+	_fur = fur_id if has_fur(fur_id) else DEFAULT_FUR
 	_accessories.clear()
 	var acc: Variant = data.get("accessories", [])
 	if acc is Array:
@@ -286,11 +353,12 @@ func load_state(data: Dictionary) -> void:
 	if eq is Dictionary:
 		for slot: Variant in eq:
 			var id: StringName = StringName(SaveSafe.s(eq[slot]))
-			if _accessories.has(id):
-				_equipped[String(slot)] = id
+			if _accessories.has(id) and String(slot_of(id)) == String(slot):
+				_wear(id)
 	# Oyun sırasında yüklenen kayıt (bulut eşitleme, sıfırlama): garajdaki kedinin üstü tazelensin
 	accessories_changed.emit()
 	friendship_changed.emit(_friendship)
+	fur_changed.emit(_fur)
 
 
 func reset() -> void:

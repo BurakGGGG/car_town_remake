@@ -842,4 +842,5 @@ def main():
         check_render(cat, objs, os.path.splitext(check)[0])
 
 
-main()
+if __name__ == "__main__":   # tekir_wear.py simge çizimini buradan alır
+    main()

@@ -4,7 +4,10 @@ extends Control
 ## dokununca açılır; UiRouter'da PLACE "pet_closeup": oyun HUD'u gizlenir, dünya ve oyun sürer (tamirler / müşteriler).
 ##   - Kedi kamera tarafında oturur ve kameraya bakar (PetWorld.begin_closeup); kamera perspektif, kedi kadrajın SAĞINDA.
 ##   - SOL KART: ad (kalem → PetNameScreen), "turuncu tekir", DOSTLUK (sıradaki numaraya ilerleme), NUMARALAR (açılan:
-##     YAP, kilitli: kaç sevgide), AKSESUAR rafı (dene → elmasla al → tak / çıkar), FOTOĞRAF ÇEK (logolu JPEG → galeri).
+##     YAP, kilitli: kaç sevgide), FOTOĞRAF ÇEK (logolu JPEG → galeri).
+##   - SAĞDA GARDIROP (2026-11-03, kullanıcı kararı taslak "C · Sağda gardırop"; kıyafetler gelince 8 eşya karta
+##     sığmıyordu): AKSESUAR 2×2 (boyun / baş) + KIYAFET 2×2 (gövde) — dene → elmasla al → tak / çıkar. Kedi iki panelin
+##     arasında, kadrajın hafif sağında.
 ##   - Kediye DOKUN = sev (dokun-tepki): sevilme klibi, uçan kalpler, dostluk +1 (PetManager.pet bekleme süreli).
 ##   - OLTA (sağ alt, amber): parmakla gezdirilen tüy; kedi gözüyle izler, yakına gelince atlar / pati vurur.
 ##   - Sağ üst ✕ ve Android GERİ kapatır.
@@ -17,9 +20,14 @@ extends Control
 signal closed
 
 const CARD_WIDTH: float = 300.0
+## Sağdaki GARDIROP paneli (iki sütun raf yuvası) ve onun sağındaki ✕ / olta sütunu.
+const WARDROBE_WIDTH: float = 172.0
+const RIGHT_COLUMN: float = 110.0
 const CAM_DISTANCE: float = 0.36 * PetActor.SIZE
 const CAM_HEIGHT: float = 0.11 * PetActor.SIZE
-const CAM_SIDE: float = 0.05 * PetActor.SIZE     # kediyi kadrajın sağına iter (sol kartın yeri)
+## Kediyi kadrajın sağına iter: sol kart (300) ile sağdaki gardırop + ✕ sütununun (~290) arasının ortası, ekran ortasının
+## ~20 px sağı (gardıropsuzken 0,05 idi: kart tek başına soldaydı).
+const CAM_SIDE: float = 0.009 * PetActor.SIZE
 const CAM_FOV: float = 34.0
 const FADE: float = 0.18
 ## Olta: tüy parmağı bu yumuşaklıkla izler; kedinin atlaması için hız (px/sn) ve yakınlık (kedi yarıçapının katı).
@@ -503,6 +511,16 @@ func _photo() -> void:
 
 func _show_toast(text: String) -> void:
 	_toast_label.text = text
+	# İki panel arasına sığmayan yazı satır kırar (en dar ekranda ~240 px); sığan tek satır, plaka yazı kadar
+	var room: float = size.x - (CARD_WIDTH + 30.0) - (WARDROBE_WIDTH + RIGHT_COLUMN + 16.0) - 24.0
+	var font: Font = _toast_label.get_theme_font(&"font")
+	var font_size: int = _toast_label.get_theme_font_size(&"font_size")
+	var widest: float = 0.0
+	for line: String in text.split("\n"):
+		widest = maxf(widest, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+	var wrap: bool = room > 0.0 and widest > room
+	_toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if wrap else TextServer.AUTOWRAP_OFF
+	_toast_label.custom_minimum_size.x = room if wrap else 0.0
 	_toast.visible = true
 	_toast.modulate.a = 1.0
 	var tween: Tween = _toast.create_tween()
@@ -629,6 +647,7 @@ func _build() -> void:
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	layout.add_child(spacer)
+	_build_wardrobe(layout)
 	var right: VBoxContainer = VBoxContainer.new()
 	right.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layout.add_child(right)
@@ -668,11 +687,12 @@ func _build() -> void:
 	add_child(bottom)
 	_hint = _label(&"HudOutlined", "")
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # en dar ekranda iki panel arası ~240 px
 	_hint.add_theme_font_size_override(&"font_size", 18)
 	var hint_margin: MarginContainer = MarginContainer.new()
 	hint_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hint_margin.add_theme_constant_override(&"margin_left", int(CARD_WIDTH) + 30)
-	hint_margin.add_theme_constant_override(&"margin_right", 110)
+	hint_margin.add_theme_constant_override(&"margin_right", int(WARDROBE_WIDTH + RIGHT_COLUMN) + 16)
 	hint_margin.add_theme_constant_override(&"margin_bottom", 22)
 	hint_margin.add_child(_hint)
 	bottom.add_child(hint_margin)
@@ -685,6 +705,7 @@ func _build() -> void:
 	toast_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_margin.add_theme_constant_override(&"margin_top", 18)
 	toast_margin.add_theme_constant_override(&"margin_left", int(CARD_WIDTH) + 30)
+	toast_margin.add_theme_constant_override(&"margin_right", int(WARDROBE_WIDTH + RIGHT_COLUMN) + 16)
 	top_box.add_child(toast_margin)
 	_toast = PanelContainer.new()
 	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -692,6 +713,7 @@ func _build() -> void:
 	_toast.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_toast.visible = false
 	_toast_label = _label(&"HudInkValue", "")
+	_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast.add_child(_toast_label)
 	toast_margin.add_child(_toast)
 
@@ -758,19 +780,6 @@ func _build_card(parent: Control) -> void:
 	_tricks.add_theme_constant_override(&"separation", 2)
 	col.add_child(_tricks)
 
-	col.add_child(_label(&"HudInkCaption", Loc.t("AKSESUAR")))
-	var shelf: HBoxContainer = HBoxContainer.new()
-	shelf.add_theme_constant_override(&"separation", 6)
-	col.add_child(shelf)
-	for acc: Dictionary in PetManager.ACCESSORIES:
-		var id: StringName = acc["id"]
-		var slot: _AccSlot = _AccSlot.new()
-		slot.setup(load("res://assets/pets/acc/icon_%s.png" % id) as Texture2D, int(acc["gems"]))
-		slot.tooltip_text = Loc.t(String(acc["name"]))
-		slot.pressed.connect(_on_accessory.bind(id))
-		shelf.add_child(slot)
-		_acc_slots[id] = slot
-
 	var fill: Control = Control.new()
 	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fill.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -783,6 +792,40 @@ func _build_card(parent: Control) -> void:
 	photo.focus_mode = Control.FOCUS_NONE
 	photo.pressed.connect(_photo)
 	col.add_child(photo)
+
+
+## GARDIROP: sağda dar plaka — AKSESUAR (boyun + baş) ve KIYAFET (gövde) ikişer sütunlu raf.
+func _build_wardrobe(parent: Control) -> void:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.name = "Wardrobe"
+	panel.add_theme_stylebox_override(&"panel", plate_box())
+	panel.custom_minimum_size = Vector2(WARDROBE_WIDTH, 0.0)
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	parent.add_child(panel)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.add_theme_constant_override(&"separation", 6)
+	panel.add_child(col)
+	var title: Label = _label(&"HudPlateTitle", Loc.t("GARDIROP"))
+	title.add_theme_font_size_override(&"font_size", 18)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(title)
+	for group: Array in [[Loc.t("AKSESUAR"), [&"neck", &"head"]], [Loc.t("KIYAFET"), [&"body"]]]:
+		col.add_child(_label(&"HudInkCaption", group[0]))
+		var grid: GridContainer = GridContainer.new()
+		grid.columns = 2
+		grid.add_theme_constant_override(&"h_separation", 6)
+		grid.add_theme_constant_override(&"v_separation", 6)
+		col.add_child(grid)
+		for acc: Dictionary in PetManager.ACCESSORIES:
+			if not (group[1] as Array).has(acc["slot"]):
+				continue
+			var id: StringName = acc["id"]
+			var slot: _AccSlot = _AccSlot.new()
+			slot.setup(load("res://assets/pets/acc/icon_%s.png" % id) as Texture2D, int(acc["gems"]))
+			slot.tooltip_text = Loc.t(String(acc["name"]))
+			slot.pressed.connect(_on_accessory.bind(id))
+			grid.add_child(slot)
+			_acc_slots[id] = slot
 
 
 ## Aksesuar yuvası (taslak C): krem kutu + modelin küçük resmi + altta durum. Kilitli: elmas fiyatı; denenen:

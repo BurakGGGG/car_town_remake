@@ -69,6 +69,7 @@ func _initialize() -> void:
 	await _walls_block()
 	await _furniture()
 	await _accessories()
+	await _wear_and_fur()
 	_names()
 	await _voice()
 	await _closeup()
@@ -414,6 +415,85 @@ func _accessories() -> void:
 	pets.load_state({"adopted": true, "name": "Paşa"})
 	check(cat.worn_accessories().is_empty(), "kayıt yeniden yüklenince kedinin üstü tazelendi (aksesuarsız)")
 	pets.load_state(keep)
+
+
+func _wear_and_fur() -> void:
+	print("== Kıyafet (gövde yuvası) ve tüy rengi ==")
+	var keep: Dictionary = pets.state()
+	pets.load_state({"adopted": true, "name": "Paşa", "friendship": 80})
+	progress.load_state(progress.level, progress.xp, 2000)
+	await frames(2)
+	var cat: PetActor = world.actor()
+	check(cat != null and not cat.skin_hidden(), "kıyafetsiz kedide deri gizlenmez")
+	if cat == null:
+		pets.load_state(keep)
+		return
+	var body: Array[StringName] = []
+	for a: Dictionary in PetManager.ACCESSORIES:
+		if a["slot"] == &"body":
+			body.append(a["id"])
+			check(int(a["gems"]) >= 150 and int(a["gems"]) <= 400, "%s fiyatı 150–400 elmas" % a["id"])
+			check(ResourceLoader.exists("res://assets/pets/acc/%s_mask.png" % a["id"]), "%s deri gizleme maskesi var" % a["id"])
+	check(same(body, [&"vest", &"sweater", &"race_jacket", &"leather_jacket"]), "dört kıyafet gövde yuvasında")
+	check(pets.buy_accessory(&"vest") and pets.is_worn(&"vest") and progress.gems == 1800, "İKAZ YELEĞİ 200 elmasa alındı, giyildi")
+	await frames(1)
+	check(cat.worn_accessories().has(&"vest") and cat.skin_hidden(), "yelek kedinin üstünde, altındaki deri gizli")
+	pets.grant_accessory(&"collar_red")
+	pets.equip(&"neck", &"collar_red")
+	check(pets.is_worn(&"collar_red") and pets.is_worn(&"vest"), "tasma kıyafetle birlikte giyilir")
+	pets.grant_accessory(&"bandana")
+	pets.equip(&"neck", &"bandana")
+	check(pets.is_worn(&"bandana") and not pets.is_worn(&"vest") and not pets.is_worn(&"collar_red"),
+		"bandana takılınca kıyafet çıkar (üçgeni kıyafetin altında kalıyordu)")
+	await frames(1)
+	check(not cat.skin_hidden(), "kıyafet çıkınca deri yine görünür")
+	check(pets.buy_accessory(&"sweater") and pets.is_worn(&"sweater") and not pets.is_worn(&"bandana"),
+		"ÖRGÜ KAZAK alınınca bandana çıktı")
+	check(PetManager.clashes(&"bandana", &"race_jacket") and not PetManager.clashes(&"collar_red", &"race_jacket")
+		and PetManager.clashes(&"vest", &"sweater") and not PetManager.clashes(&"cap", &"vest"), "çakışma kuralı")
+	world.set_accessory_preview(&"race_jacket")
+	check(cat.worn_accessories().has(&"race_jacket") and not cat.worn_accessories().has(&"sweater"),
+		"kıyafet denemesi giyilen kıyafetin yerine geçer")
+	world.set_accessory_preview(&"bandana")
+	check(cat.worn_accessories().has(&"bandana") and not cat.worn_accessories().has(&"sweater") and not cat.skin_hidden(),
+		"bandana denemesi kıyafeti geçici çıkarır")
+	world.set_accessory_preview(&"")
+	check(cat.worn_accessories().has(&"sweater") and cat.skin_hidden(), "deneme bitince kazak geri")
+	# Tüy rengi: ücretsiz, anında, kayda girer
+	var orange_tex: Texture2D = cat.body_texture()
+	var seen: Array[StringName] = []
+	var cb: Callable = func(f: StringName) -> void: seen.append(f)
+	pets.fur_changed.connect(cb)
+	var gems_before: int = progress.gems
+	check(pets.fur() == &"orange" and cat.fur() == &"orange", "varsayılan tüy turuncu tekir")
+	pets.set_fur(&"white")
+	check(pets.fur() == &"white" and cat.fur() == &"white" and cat.body_texture() != orange_tex
+		and cat.body_texture().resource_path.ends_with("tekir_white.jpg"), "beyaz seçildi, gövde dokusu değişti")
+	check(progress.gems == gems_before, "tüy rengi elmas düşürmez")
+	cat.set_eyes_shut(true)
+	check(cat.body_texture().resource_path.ends_with("tekir_white_eyes_closed.jpg"), "beyazın kapalı göz dokusu")
+	cat.set_eyes_shut(false)
+	pets.set_fur(&"black")
+	check(cat.body_texture().resource_path.ends_with("tekir_black.jpg"), "siyah seçildi")
+	pets.set_fur(&"zebra")
+	check(pets.fur() == &"black", "bilinmeyen renk yok sayıldı")
+	pets.set_fur(&"black")
+	check(same(seen, [&"white", &"black"]), "aynı renk ve bilinmeyen renk sinyal yaymaz")
+	var data: Dictionary = pets.state()
+	check(data.get("fur") == "black", "tüy rengi kayda girer")
+	pets.load_state({"adopted": true, "name": "Paşa"})
+	check(pets.fur() == &"orange" and cat.fur() == &"orange" and cat.body_texture() == orange_tex,
+		"renksiz eski kayıt turuncu, kedi tazelendi")
+	pets.load_state(data)
+	check(pets.fur() == &"black" and cat.fur() == &"black" and pets.is_worn(&"sweater"), "kayıttan siyah + kazak geri geldi")
+	pets.load_state({"adopted": true, "name": "Paşa", "fur": 7})
+	check(pets.fur() == &"orange", "bozuk renk kaydı güvenli")
+	pets.load_state({"adopted": true, "name": "Paşa", "accessories": ["vest", "bandana"],
+		"equipped": {"body": "vest", "neck": "bandana", "head": "vest"}})
+	check(pets.worn().size() == 1 and pets.equipped(&"head") == &"", "kayıtta çakışan / yanlış yuvadaki takılmaz")
+	pets.fur_changed.disconnect(cb)
+	pets.load_state(keep)
+	await frames(1)
 
 
 func _names() -> void:

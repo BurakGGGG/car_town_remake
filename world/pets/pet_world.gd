@@ -118,6 +118,9 @@ func _setup() -> void:
 		return
 	_pets.adopted.connect(func(_n: String) -> void: _sync())
 	_pets.accessories_changed.connect(_apply_accessories)
+	_pets.fur_changed.connect(func(f: StringName) -> void:
+		if _actor:
+			_actor.set_fur(f))
 	var save: SaveManager = get_tree().get_first_node_in_group("save_manager") as SaveManager
 	if save:
 		save.game_loaded.connect(func(_ok: bool) -> void: _sync())
@@ -259,6 +262,7 @@ func _spawn(at: Vector2 = Vector2.INF) -> void:
 	_actor.global_position = Vector3(p.x, _floor_y(), p.y)
 	_actor.rotation.y = randf() * TAU
 	_apply_accessories()
+	_actor.set_fur(_pets.fur() if _pets else PetManager.DEFAULT_FUR)
 	_restart()
 
 
@@ -278,9 +282,8 @@ func _apply_accessories() -> void:
 	if _actor == null or _pets == null:
 		return
 	var ids: Array[StringName] = []
-	var preview_slot: StringName = PetManager.slot_of(_preview) if _preview != &"" else &""
 	for id: StringName in _pets.worn():
-		if preview_slot == &"" or PetManager.slot_of(id) != preview_slot:
+		if not PetManager.clashes(id, _preview):   # denenen, aynı yuvadakinin (ve çakışanın) yerine geçer
 			ids.append(id)
 	if _preview != &"" and not ids.has(_preview):
 		ids.append(_preview)

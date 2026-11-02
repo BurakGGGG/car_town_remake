@@ -4,6 +4,7 @@ yüzeyine İŞARETLİ uzaklığı ölçülür (BVH en yakın nokta + yüz normal
 doğrusal karışım (Blender Armature değiştiricisi, hacim koruma kapalı) olduğundan sonuç oyundakiyle aynıdır.
 
   blender -b --factory-startup --python tools/pets/acc_clip_check.py -- <proje_kökü> [rapor.json] [--render <klasör>]
+          [--items vest,race_jacket,...] [--acc-dir <glb klasörü>]   (kıyafetler: tekir_wear.py çıktısı)
 
 Çıktı: aksesuar × klip için en derin gömülme (mm, model metresi) ve gömülen köşe oranı; --render ile her aksesuarın
 en kötü karesi yakın plan PNG.
@@ -97,8 +98,12 @@ def import_glb(path):
 
 
 def main():
+    global ITEMS
     argv = sys.argv[sys.argv.index("--") + 1:]
     root = argv[0]
+    if "--items" in argv:
+        ITEMS = argv[argv.index("--items") + 1].split(",")
+    acc_dir = argv[argv.index("--acc-dir") + 1] if "--acc-dir" in argv else os.path.join(root, "assets/pets/acc")
     report = argv[1] if len(argv) > 1 and not argv[1].startswith("--") else ""
     render_dir = argv[argv.index("--render") + 1] if "--render" in argv else ""
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -108,7 +113,7 @@ def main():
     acts = sorted(bpy.data.actions, key=lambda a: a.name)
     accs = {}
     for name in ITEMS:
-        objs = import_glb(os.path.join(root, "assets/pets/acc/%s.glb" % name))
+        objs = import_glb(os.path.join(acc_dir, "%s.glb" % name))
         mesh = skinned_mesh(objs)
         mw = mesh.matrix_world.copy()
         mesh.parent = arm
@@ -231,4 +236,5 @@ def render_worst(cat, arm, accs, worst, out):
         log("kare", n, act_name, f, "%.1f mm" % (depth * 1000))
 
 
-main()
+if __name__ == "__main__":
+    main()

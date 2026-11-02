@@ -8903,5 +8903,23 @@
  ],
  "✔ TAKILI": [
   "ui/hud/mod_workshop.gd:940"
+ ],
+ "DERİ CEKET": [
+  "gameplay/pets/pet_manager.gd:59"
+ ],
+ "GARDIROP": [
+  "ui/hud/pet_closeup_screen.gd:808"
+ ],
+ "KIYAFET": [
+  "ui/hud/pet_closeup_screen.gd:812"
+ ],
+ "YARIŞ MONTU": [
+  "gameplay/pets/pet_manager.gd:58"
+ ],
+ "ÖRGÜ KAZAK": [
+  "gameplay/pets/pet_manager.gd:57"
+ ],
+ "İKAZ YELEĞİ": [
+  "gameplay/pets/pet_manager.gd:56"
  ]
 }
