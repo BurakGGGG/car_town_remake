@@ -7,6 +7,7 @@
 //   email_codes/{özet}      `at` (ms) + 1 saat  → giriş kodu (10 dk geçerli) + saatlik gönderim sınırı (email_code.js)
 //   email_ips/{özet}        `at` (ms) + 1 saat  → adres başına saatlik gönderim sınırı
 //   iap/{belirteç özeti}    `at` (sn) + 1 yıl   → satın alma doğrulama kaydı (iade / itiraz incelemesi; iap.js)
+//   devices/d_{özet}        `at` (sn) + 13 ay   → cihaz metrikleri, son görülmeden 13 ay sonra (devices.js; 2026-11-03)
 // Belgeler istemciye kapalı ya da yalnızca sahibine açık; silmeyi yönetici yetkisiyle bu fonksiyon yapar.
 
 const DAY_S = 24 * 60 * 60;
@@ -17,6 +18,7 @@ const RULES = [
   { collection: "email_codes", unit: "ms", maxAgeS: 60 * 60 },
   { collection: "email_ips", unit: "ms", maxAgeS: 60 * 60 },
   { collection: "iap", unit: "s", maxAgeS: 365 * DAY_S },
+  { collection: "devices", unit: "s", maxAgeS: 395 * DAY_S },
 ];
 const BATCH = 400;
 

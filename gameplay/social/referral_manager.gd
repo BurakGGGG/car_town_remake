@@ -364,10 +364,15 @@ func _check_level() -> void:
 
 ## Bu cihazın özeti (64 onaltılık karakter).
 func device_hash() -> String:
-	var raw: String = device_override if not device_override.is_empty() else _android_id()
-	if raw.is_empty():
-		raw = "install:" + _install_id()
+	var raw: String = device_override if not device_override.is_empty() else stable_device_id()
 	return (DEVICE_SALT + raw).sha256_text()
+
+
+## Cihazın kalıcı HAM kimliği: ANDROID_ID, yoksa kuruluma özel rastgele kimlik ("install:…"). Dışarıya yalnız tuzlu
+## özeti çıkar (davet: DEVICE_SALT; cihaz metrikleri: DeviceMetrics.SALT — iki özet birbirine bağlanamaz).
+static func stable_device_id() -> String:
+	var raw: String = _android_id()
+	return raw if not raw.is_empty() else "install:" + _install_id()
 
 
 static func _android_id() -> String:

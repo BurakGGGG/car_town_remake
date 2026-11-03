@@ -1,7 +1,10 @@
 // GÜNLÜK İSTATİSTİK — saf mantık (index.js gece zamanlayıcısına bağlar, yönetim paneli de anlık hesap için kullanır;
 // test/stats.test.js sahte db / auth ile sınar). stats_daily/{YYYY-MM-DD} (İstanbul günü) = {players, active_1d, active_7d,
-// active_30d, push, new_1d, at}. Yalnızca HESAPLI oyuncular sayılır (misafirin Firebase kaydı yok): players.updated_at son
-// bulut yazması = son oynama. Sayımlar Firestore count() ile (belge okumaz, binde bir okuma ücreti).
+// active_30d, push, new_1d, devices, at}. Üst düzey sayılar yalnızca HESAPLI oyuncular (players.updated_at son bulut yazması =
+// son oynama; Firestore count() ile, belge okumaz). `devices` (2026-11-03) MİSAFİR DAHİL her cihaz: devices.js deviceStats
+// (son 30 günün cihaz belgeleri okunur).
+
+const { deviceStats } = require("./devices");
 
 const DAY_S = 24 * 60 * 60;
 
@@ -40,6 +43,7 @@ async function computeStats({ db, auth, now }) {
     active_30d: await countOf(players.where("updated_at", ">=", nowS - 30 * DAY_S)),
     push: await countOf(db.collection("push")),
     new_1d: await newAccounts(auth, now, now - DAY_S * 1000),
+    devices: await deviceStats({ db, now }),
     at: nowS,
   };
 }

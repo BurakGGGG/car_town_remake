@@ -1476,6 +1476,14 @@ async function loadStats() {
     $("s-live").innerHTML = [["Hesaplı oyuncu", l.players], ["Aktif · 24 saat", l.active_1d], ["Aktif · 7 gün", l.active_7d],
       ["Aktif · 30 gün", l.active_30d], ["Yeni hesap · 24 saat", l.new_1d], ["Bildirimi açık", `${l.push} (${pct(l.push)})`]]
       .map(([k, v]) => `<div class="card">${esc(k)}<b>${esc(v)}</b></div>`).join("");
+    // MİSAFİR DAHİL her cihaz (devices/, 2026-11-03): yeni sürümden önce boş
+    const dv = l.devices || {};
+    const dpct = (n) => (dv.active_7d ? Math.round(n / dv.active_7d * 100) + "%" : "–");
+    $("s-live").innerHTML += [["Cihaz · 24 saat (misafir dahil)", dv.active_1d ?? 0], ["Cihaz · 7 gün", dv.active_7d ?? 0],
+      ["Cihaz · 30 gün", dv.active_30d ?? 0], ["Yeni cihaz · 24 saat", dv.new_1d ?? 0],
+      ["Misafir · 7 gün", `${dv.guest_7d ?? 0} (${dpct(dv.guest_7d ?? 0)})`],
+      ["Bildirimi açık · 7 gün (tüm cihaz)", `${dv.push_7d ?? 0} (${dpct(dv.push_7d ?? 0)})`]]
+      .map(([k, v]) => `<div class="card">${esc(k)}<b>${esc(v)}</b></div>`).join("");
     const max = Math.max(1, ...r.days.map((d) => d.active_1d || 0));
     $("s-days").innerHTML = r.days.length ? `<div style="display:flex;align-items:flex-end;gap:4px;height:140px;border-bottom:1px solid var(--line)">` +
       r.days.map((d) => `<div title="${esc(d.day)}: ${d.active_1d} aktif, ${d.new_1d} yeni" style="flex:1;background:var(--amber);border-radius:4px 4px 0 0;height:${Math.max(2, Math.round((d.active_1d || 0) / max * 130))}px"></div>`).join("") +

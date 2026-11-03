@@ -123,6 +123,19 @@ bağlantı JavaClassWrapper ile. Olaylar: `repair_collect`, `repair_gem_finish`,
 Rıza: AYARLAR → HESAP VE GİZLİLİK → KULLANIM İSTATİSTİKLERİ / HATA RAPORLARI (varsayılan açık, Firebase'in toplama
 anahtarına yazılır). Reklam kimliği toplanmaz, reklam onay sinyalleri reddedilmiş başlar. UID yalnız Crashlytics'e
 (destek için), Analytics hesaba bağlanmaz. Test: `tools/run_tests.sh telemetry_test`.
+Oyuncu özelliği `push` (on / off, 2026-11-03): bildirim oyunda açık VE telefon izin veriyor.
+
+## Cihaz metrikleri — `devices/d_{özet}` (`DeviceMetrics`, 2026-11-03)
+
+Misafir dahil HER cihazın özet sayıları (misafirin Firebase kaydı yok; oyuncuların ~%62'si hiçbir sayıma girmiyordu).
+`gameplay/telemetry/device_metrics.gd` → oturumsuz callable `deviceMetrics` (functions/devices.js, düz HTTP). Kimlik =
+ANDROID_ID'nin tuzlu SHA-256 özeti (davet özetinden ayrı tuz), UID YOK. Anlık alanlar: hesap türü, dil, sürüm, model, sdk,
+seviye/para/gem/araç/garaj/ders, bildirim (`push` oyunda, `push_os` telefon izni, `push_asked`, tür anahtarları).
+Sayaçlar (fark olarak, `inst`+`seq` ile tekrar korumalı): `play_s`, `sess`, `ads` (ödüllü), `iap`, `iap_usd_c` (liste
+fiyatı). Sunucu: `first_at`, `at` (son görülme), `days`. Gönderim: açılış +8 sn, 5 dk'da bir, değişiklikte, arka plana
+geçerken. Rıza = KULLANIM İSTATİSTİKLERİ: kapanınca `{forget}` → belge silinir. `cleanupExpired` 13 ay görülmeyeni siler,
+`dailyStats` `devices` özetini yazar (aktif 1/7/30, yeni, misafir, bildirim), panel İstatistik kartları gösterir.
+Testler: `tools/run_tests.sh device_metrics_test`, functions `npm test` (devices.test.js), `npm run devices-e2e`.
 
 ## Yönetim paneli
 

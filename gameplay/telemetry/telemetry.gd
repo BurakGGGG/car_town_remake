@@ -443,6 +443,11 @@ func _connect_game() -> void:
 	if cloud:
 		cloud.user_changed.connect(func(_profile: Variant) -> void: _sync_user(cloud))
 		_sync_user(cloud)
+	# Oyuncu özelliği `push` (on / off): GA4'te misafir dahil bildirim payı (2026-11-03)
+	var push: PushService = tree.get_first_node_in_group("push") as PushService
+	if push:
+		push.changed.connect(func() -> void: _sync_push(push))
+		_sync_push(push)
 
 
 func _on_mod_installed(vehicle_id: StringName, category: StringName, stage: int, _old_class: String,
@@ -463,6 +468,11 @@ func _on_tutorial_changed(tutorial: TutorialManager) -> void:
 func _sync_user(cloud: CloudSaveManager) -> void:
 	set_user(cloud.get_uid())
 	set_property(&"account", account_kind(cloud.get_provider() if cloud.is_authenticated() else ""))
+
+
+## Bildirim açık mı: oyunda açık VE telefon izin veriyor.
+func _sync_push(push: PushService) -> void:
+	set_property(&"push", "on" if push.is_enabled() and PushService.os_allows() else "off")
 
 
 ## GDScript / motor hatalarını yakalar. Başka iş parçacığından da çağrılır: yalnız kilitli listeye yazar

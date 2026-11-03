@@ -238,6 +238,11 @@ func _ensure_social() -> void:
 		var moderation: ModerationWatch = ModerationWatch.new()
 		moderation.name = "ModerationWatch"
 		add_child(moderation)
+	# CİHAZ METRİKLERİ (DeviceMetrics, "device_metrics"): misafir dahil her cihazın özet sayıları (yöneticilerden sonra)
+	if get_tree().get_first_node_in_group("device_metrics") == null:
+		var metrics: DeviceMetrics = DeviceMetrics.new()
+		metrics.name = "DeviceMetrics"
+		add_child(metrics)
 
 
 ## GARAJ DOSTLARI: kedilerin garajdaki hayatı (PetWorld, "pet_world") — garaj yuvası başına bir tane (en çok

@@ -94,6 +94,24 @@ func is_enabled() -> bool:
 	return bool(_state.get("enabled", false))
 
 
+## Oyuncuya bildirim soruldu mu (öneri gösterildi ya da AYARLAR'dan açıp kapattı). Cihaz metrikleri için.
+func was_asked() -> bool:
+	return bool(_state.get("asked", false))
+
+
+## Telefon bu uygulamanın bildirimlerine izin veriyor mu (NotificationManager.areNotificationsEnabled, API 24+). Oyunda
+## açık olsa da oyuncu sonradan telefon ayarlarından kapatmış olabilir. Android dışında / okunamazsa true.
+static func os_allows() -> bool:
+	if OS.get_name() != "Android" or not Engine.has_singleton("AndroidRuntime"):
+		return true
+	var activity: Object = Engine.get_singleton("AndroidRuntime").call("getActivity")
+	var manager: Variant = activity.call(&"getSystemService", "notification") if activity else null
+	var enabled: Variant = (manager as Object).call(&"areNotificationsEnabled") if manager is Object else null
+	if JavaClassWrapper.get_exception() != null:
+		return true
+	return enabled if enabled is bool else true
+
+
 func is_busy() -> bool:
 	return _busy
 

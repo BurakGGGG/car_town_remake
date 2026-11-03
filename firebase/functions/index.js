@@ -20,6 +20,7 @@
 //   lbRun           haftalık drag tablosu: koşu yazılınca / silinince hile sınırı + dünya / ülke özeti (lb/…) + "arkadaşın seni
 //                   geçti" haberi ve bildirimi (mantık leaderboard.js, docs/LIDER_TABLOSU.md)
 //   lbWeekly        Pazartesi 00:10 TR: geçen haftanın sınıf tablolarına göre ödül postası (mantık leaderboard.js)
+//   deviceMetrics   MİSAFİR DAHİL her cihazın özet sayıları devices/d_{özet} (oturumsuz; mantık devices.js, 2026-11-03)
 // Test: npm test. Bölge europe-west4: Firestore eur3 (europe-west1 / europe-west4) ile aynı yer.
 // Gönderim: firebase/ klasöründen `firebase deploy --only functions --project car-town-remake` (Blaze planı gerekir).
 
@@ -45,6 +46,7 @@ const { cleanupAccount } = require("./account_cleanup");
 const { verifyPurchase, IapError, PACKAGES } = require("./iap");
 const { processVoided } = require("./refunds");
 const { handleRunWritten, payWeekly } = require("./leaderboard");
+const { handleDeviceMetrics, DeviceError } = require("./devices");
 const { GoogleAuth } = require("google-auth-library");
 const functionsV1 = require("firebase-functions/v1");
 
@@ -101,6 +103,19 @@ exports.emailCodeSend = onCall({ ...CODE_OPTS, secrets: [RESEND_API_KEY] }, asyn
     });
   } catch (e) {
     throw toHttpsError(e);
+  }
+});
+
+// Oturumsuz (misafirin Firebase oturumu yok): oyun düz HTTP ile çağırır, cors kapalı (CODE_OPTS gibi). Yanıt yalnız
+// {ok, applied}; hata nedeni bad_<alan> / too_many.
+exports.deviceMetrics = onCall({ region: "europe-west4", maxInstances: 5, cors: false, memory: "256MiB" }, async (req) => {
+  try {
+    return await handleDeviceMetrics({ db: getFirestore(), data: req.data, ip: clientIp(req.rawRequest.headers,
+      req.rawRequest.ip), now: Date.now() });
+  } catch (e) {
+    if (e instanceof DeviceError) throw new HttpsError(e.status, e.reason, { reason: e.reason });
+    console.error(e);
+    throw new HttpsError("internal", "internal", { reason: "internal" });
   }
 });
 
