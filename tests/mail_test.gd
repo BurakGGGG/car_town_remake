@@ -517,7 +517,7 @@ func _hud_popup() -> void:
 	check(economy.money == money0 + 2500, "AL: ₺ hesaba geçti (%d → %d)" % [money0, economy.money])
 	check(gift != null and gift.visible and gift.get_index() > screen.get_index(), "HEDİYEN GELDİ! ekranı kutunun üstünde açıldı")
 	var gift_cards: HBoxContainer = gift.get("_cards")
-	check(gift_cards.get_child_count() == 2 and (gift.get("_money_label") as Label).text == "+2.500 ₺",
+	check(gift_cards.get_child_count() == 2 and (gift.get("_money_label") as Label).text == "+2.500",
 		"kartlar: kasa + dekor (%d), ₺ hapı" % gift_cards.get_child_count())
 	(gift.find_child("CollectButton", true, false) as PlateButton).pressed.emit()
 	await seconds(0.5)

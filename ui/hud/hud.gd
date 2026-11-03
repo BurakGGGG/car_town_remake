@@ -564,6 +564,13 @@ func _set_car_info_compact(on: bool) -> void:
 		_repair_panel.compact = on
 
 
+## PARA SİMGESİ (2026-11-03): yazılardaki ₺ altın para olarak çizilir (FontFallback → autoyard_coin.ttf). Yanında
+## zaten HudIcon.Kind.COIN duran düğme / çip / satır metinlerinde ₺ çift para gösterirdi: bunlar ₺'yi (ve bitişik
+## boşluğu) çıkarır. Çeviri anahtarları değişmez.
+static func coinless(text: String) -> String:
+	return text.replace(" ₺", "").replace("\u00a0₺", "").replace("₺ ", "").replace("₺", "")
+
+
 ## 12500 -> "12.500"
 static func format_thousands(value: int) -> String:
 	var digits: String = str(absi(value))

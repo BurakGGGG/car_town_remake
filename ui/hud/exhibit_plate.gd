@@ -184,8 +184,8 @@ func _refresh() -> void:
 	if _race.highlight != racer:
 		_race.highlight = racer
 	var armed: bool = Time.get_ticks_msec() < _sell_armed_until
-	_sell.text = Loc.t("ONAYLA: +%s ₺") % Hud.format_thousands(ownership.sell_price(vehicle_id)) \
-		if armed and ownership else Loc.t("SAT")
+	_sell.text = Hud.coinless(Loc.t("ONAYLA: +%s ₺") % Hud.format_thousands(ownership.sell_price(vehicle_id))) \
+		if armed and ownership else Loc.t("SAT")   # düğmede para simgesi var
 
 
 func _on_race() -> void:

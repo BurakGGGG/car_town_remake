@@ -1479,7 +1479,7 @@ func _refresh_vehicle() -> void:
 		"%s ₺" % Hud.format_thousands(price), lines)
 	_buy_button.kind = HudIcon.Kind.COIN
 	if _ownership == null:
-		_buy_button.text = "%s ₺" % Hud.format_thousands(price)
+		_buy_button.text = Hud.format_thousands(price)   # düğmede para simgesi var
 		_buy_button.disabled = true
 		return
 	match _ownership.status(_shown_vehicle):
@@ -1487,13 +1487,13 @@ func _refresh_vehicle() -> void:
 			_buy_button.text = Loc.t("SAHİPSİN")
 			_buy_button.disabled = true
 		VehicleOwnership.Status.TOO_EXPENSIVE:
-			_buy_button.text = Loc.t("%s ₺\nPARA YETERSİZ") % Hud.format_thousands(price)
+			_buy_button.text = Hud.coinless(Loc.t("%s ₺\nPARA YETERSİZ") % Hud.format_thousands(price))
 			_buy_button.disabled = true
 		VehicleOwnership.Status.UNDISCOVERED:
 			_buy_button.text = Loc.t("KASADAN ÇIKAR")
 			_buy_button.disabled = true
 		_:
-			_buy_button.text = Loc.t("GERİ AL\n%s ₺") % Hud.format_thousands(price)
+			_buy_button.text = Hud.coinless(Loc.t("GERİ AL\n%s ₺") % Hud.format_thousands(price))
 			_buy_button.disabled = false
 
 
@@ -1912,14 +1912,14 @@ func _write_pay_buttons(id: StringName, state: int) -> void:
 	if not gem_only:
 		var tl: String = Hud.format_thousands(CarShop.tl_price(id))
 		if shop.money_block(id) == CarShop.BLOCK_MONEY:
-			_cash_button.text = Loc.t("%s ₺\nPARA YETERSİZ") % tl
+			_cash_button.text = Hud.coinless(Loc.t("%s ₺\nPARA YETERSİZ") % tl)   # düğmede para simgesi var
 			_cash_button.disabled = true
 		elif _confirm == PAY_CASH:
-			_cash_button.text = Loc.t("EMİN MİSİN?\n%s ₺") % tl
+			_cash_button.text = Hud.coinless(Loc.t("EMİN MİSİN?\n%s ₺") % tl)
 			_cash_button.highlight = true
 			_cash_button.disabled = false
 		else:
-			_cash_button.text = Loc.t("%s ₺\n%d SAATTE GELİR") % [tl, int(CarShop.delivery_seconds() / 3600)]
+			_cash_button.text = Hud.coinless(Loc.t("%s ₺\n%d SAATTE GELİR") % [tl, int(CarShop.delivery_seconds() / 3600)])
 			_cash_button.disabled = false
 	_gem_button.visible = true
 	var gems: int = CarShop.gem_price(id)

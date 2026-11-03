@@ -261,7 +261,7 @@ func _on_double() -> void:
 func _set_reward_row(icon: _Icon, label: Label, reward: Dictionary) -> void:
 	icon.kind = HudIcon.Kind.COIN if int(reward["money"]) > 0 else HudIcon.Kind.GEM
 	icon.texture = null
-	label.text = _amount_text(reward)
+	label.text = Hud.coinless(_amount_text(reward))   # yanında para simgesi var
 	if reward["decor"] != &"":
 		icon.texture = _thumb_for(reward["decor"])
 		label.text = "%s\n%s" % [Loc.t(String(GarageDecor.get_item(reward["decor"]).get("title", ""))), _amount_text(reward)]

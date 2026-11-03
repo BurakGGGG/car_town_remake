@@ -166,7 +166,7 @@ func _screen() -> void:
 	check(screen.visible, "sakin anda açıldı")
 	var badge: Control = screen.get("_badge")
 	check((badge.get("_number") as Label).text == "3", "rozet: 3 (atlanan seviyeler tek ekranda)")
-	check((screen.get("_money_label") as Label).text == "+1.250 ₺", "para toplamı: %s" % (screen.get("_money_label") as Label).text)
+	check((screen.get("_money_label") as Label).text == "+1.250", "para toplamı: %s" % (screen.get("_money_label") as Label).text)
 	check((screen.get("_gem_label") as Label).text == "+%d GEM" % (PlayerProgress.LEVEL_GEMS * 2), "gem toplamı: %s" % (screen.get("_gem_label") as Label).text)
 	check((screen.get("_divider_label") as Label).text == "AÇILANLAR", "başlık AÇILANLAR")
 	var cards: HBoxContainer = screen.get("_cards")

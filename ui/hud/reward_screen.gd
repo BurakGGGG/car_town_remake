@@ -106,7 +106,7 @@ func _present() -> void:
 
 ## Ödül hapları: ₺ ve GEM (0 olan gizlenir).
 func _set_amounts(money: int, gems: int) -> void:
-	_money_label.text = "+%s ₺" % Hud.format_thousands(money)
+	_money_label.text = "+%s" % Hud.format_thousands(money)   # çipte para simgesi var
 	_money_chip.visible = money > 0
 	_gem_label.text = Loc.t("+%d GEM") % gems
 	_gem_chip.visible = gems > 0

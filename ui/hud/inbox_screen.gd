@@ -212,9 +212,9 @@ func _on_button() -> void:
 ## Alınmamış postanın içindekiler (MailNotice'teki satırlarla aynı bilgiler).
 func _mail_rewards(mail: Dictionary) -> void:
 	if int(mail["money"]) > 0:
-		_reward_line(HudIcon.Kind.COIN, "+%s ₺" % Hud.format_thousands(int(mail["money"])))
+		_reward_line(HudIcon.Kind.COIN, "+%s" % Hud.format_thousands(int(mail["money"])))
 	if int(mail["money_min"]) > 0:
-		_reward_line(HudIcon.Kind.COIN, "+%s ₺" % Hud.format_thousands(MailService.income_money(get_tree(), int(mail["money_min"]))))
+		_reward_line(HudIcon.Kind.COIN, "+%s" % Hud.format_thousands(MailService.income_money(get_tree(), int(mail["money_min"]))))
 	if int(mail["gems"]) > 0:
 		_reward_line(HudIcon.Kind.GEM, Loc.t("+%d GEM") % int(mail["gems"]))
 	for car: StringName in mail["cars"]:
@@ -235,7 +235,7 @@ func _mail_rewards(mail: Dictionary) -> void:
 	var adjust_money: int = int(adjust.get("money", 0))
 	var adjust_gems: int = int(adjust.get("gems", 0))
 	if adjust_money != 0:
-		_reward_line(HudIcon.Kind.COIN, "%s%s ₺" % ["+" if adjust_money > 0 else "−", Hud.format_thousands(absi(adjust_money))],
+		_reward_line(HudIcon.Kind.COIN, "%s%s" % ["+" if adjust_money > 0 else "−", Hud.format_thousands(absi(adjust_money))],
 			HudPalette.INK if adjust_money > 0 else HudPalette.DANGER)
 	if adjust_gems != 0:
 		_reward_line(HudIcon.Kind.GEM, ("+" if adjust_gems > 0 else "−") + Loc.t("%d GEM") % absi(adjust_gems),
@@ -246,7 +246,7 @@ func _mail_rewards(mail: Dictionary) -> void:
 
 func _past_rewards(past: Dictionary) -> void:
 	if int(past["money"]) > 0:
-		_reward_line(HudIcon.Kind.COIN, "+%s ₺" % Hud.format_thousands(int(past["money"])))
+		_reward_line(HudIcon.Kind.COIN, "+%s" % Hud.format_thousands(int(past["money"])))
 	if int(past["gems"]) > 0:
 		_reward_line(HudIcon.Kind.GEM, Loc.t("+%d GEM") % int(past["gems"]))
 	for line: Variant in past["items"]:

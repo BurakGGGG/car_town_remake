@@ -353,7 +353,7 @@ func _tile_text(entry: Dictionary) -> String:
 	if int(entry.get("gems", 0)) > 0:
 		return "+%d" % int(entry["gems"])   # elmas simgesi üstünde: "GEM" yazısı dar basamakta iki satıra bölünüyordu
 	if int(entry.get("money_min", 0)) > 0:
-		return "%s ₺" % Hud.format_thousands(MailService.income_money(get_tree(), int(entry["money_min"])))
+		return Hud.format_thousands(MailService.income_money(get_tree(), int(entry["money_min"])))   # para simgesi üstünde
 	for crate: Variant in (entry.get("crates", {}) as Dictionary):
 		return MailService.crate_name(StringName(crate))
 	if entry.has("decor"):

@@ -60,7 +60,7 @@ func show_rewards(summary: Dictionary) -> void:
 	_gem_icon = null
 	if int(summary.get("money", 0)) > 0:
 		rows.append(_amount_row(HudIcon.Kind.COIN, int(summary["money"]),
-			func(v: int) -> String: return "+%s ₺" % Hud.format_thousands(v), HudPalette.COIN_DARK))
+			func(v: int) -> String: return "+%s" % Hud.format_thousands(v), HudPalette.COIN_DARK))   # satırda para simgesi var
 	if int(summary.get("gems", 0)) > 0:
 		var gem_format: String = Loc.t("+%d GEM")
 		rows.append(_amount_row(HudIcon.Kind.GEM, int(summary["gems"]),

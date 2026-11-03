@@ -162,7 +162,7 @@ func _screen() -> void:
 			photos += 1
 	check(photos == CollectionRewardScreen.SET_PHOTOS, "set kartında %d araç fotoğrafı (%d)" % [CollectionRewardScreen.SET_PHOTOS, photos])
 	var reward: Dictionary = CollectionRewards.set_reward(CrateCatalog.get_set(&"yerli_klasikler"))
-	check((screen.get("_money_label") as Label).text == "+%s ₺" % Hud.format_thousands(int(reward["money"])),
+	check((screen.get("_money_label") as Label).text == "+%s" % Hud.format_thousands(int(reward["money"])),
 		"para hapı: %s" % (screen.get("_money_label") as Label).text)
 	(screen.get("_collect") as PlateButton).pressed.emit()
 	await seconds(3.0)
