@@ -890,6 +890,8 @@ func occluding_walls(walls: Dictionary) -> Dictionary:
 		return out
 	var clip: Rect2 = wall_clip()
 	for key: String in walls:
+		if InteriorWalls.SEE_THROUGH.has((walls[key] as Dictionary).get("piece", &"")):
+			continue   # cam bölme: arkası zaten görünür, çerçevesi opak kalmalı
 		var box: AABB = InteriorWalls.segment_box(key, walls, clip, _area.floor_y, _area.wall_top)
 		if box.size == Vector3.ZERO:
 			continue

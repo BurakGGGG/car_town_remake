@@ -30,6 +30,9 @@ const FRAME_COLOR: Color = Color("2B2E33")
 const GLASS_COLOR: Color = Color(0.72, 0.86, 0.95, 0.32)
 ## Aracın önündeki duvarın saydamlığı (0 opak, 1 görünmez): duvar belli olsun, arkası okunsun.
 const OCCLUDER_FADE: float = 0.62
+## Arkası zaten görünen parçalar: aracın önüne düşse de soldurulmaz. Cam bölme soldurulunca yalnız
+## çerçevesi saydamlaşıyordu (alt / üst çıtalar kayboluyor, bölme kırık görünüyordu).
+const SEE_THROUGH: Array[StringName] = [&"wall_glass"]
 
 static var _default_wall: StandardMaterial3D
 static var _door_mat: StandardMaterial3D

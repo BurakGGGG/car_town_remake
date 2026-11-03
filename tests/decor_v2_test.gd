@@ -264,6 +264,11 @@ func _fading() -> void:
 	view.set_editing(false)
 	await frames(1)
 	check(view.interior_walls().faded_keys().has(front), "düzenlemeden çıkınca yeniden yarı saydam")
+	# Cam bölme zaten saydam: soldurulursa yalnız çerçevesi kayboluyordu
+	decor.load_state({"owned": {"wall_glass": 1}, "walls": [{"edge": front, "piece": "wall_glass"}]})
+	await frames(2)
+	check(decor.wall_at(front).get("piece", &"") == &"wall_glass" and view.interior_walls().faded_keys().is_empty(),
+		"aracın önündeki cam bölme soldurulmaz (çerçevesi opak)")
 	decor.reset()
 	await frames(2)
 
