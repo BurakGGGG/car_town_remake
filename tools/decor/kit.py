@@ -164,6 +164,11 @@ def finish(name, export=True):
     for o in objs:
         o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
+    # Önce her parçanın dönüşümü örgüye uygulanır: birleşen gövde ilk parçanın konum / dönüşünü taşımasın. Yoksa
+    # aşağıdaki "konum = 0" ve yerel taban kaydırması tasarım koordinatlarını kaydırıyordu (ilk parçası eğik çubuk
+    # olan kedi hamağında kedinin noktası ~0,3 m kaymıştı, 2026-11-03). Görüntüyü DecorBuilder yeniden ortaladığı
+    # için yalnız tasarım koordinatı kullanan yerde (PetWorld.PET_FURNITURE) görünüyordu.
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     if len(objs) > 1:
         bpy.ops.object.join()
     body = bpy.context.object

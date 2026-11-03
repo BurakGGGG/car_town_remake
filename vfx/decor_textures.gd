@@ -100,6 +100,8 @@ static func generate_pattern(id: StringName) -> Image:
 		&"steel_grate": _grate(img)
 		&"parquet_basket": _basket(img, Color("B9874F"), 43)
 		&"marble": _marble(img)
+		# Japon partisi (2026-11-03)
+		&"tatami": _tatami(img)
 		_: img.fill(Color("777777"))
 	return img
 
@@ -191,6 +193,7 @@ static func wall_color(id: StringName) -> Color:
 		&"wall_stone": return Color("8D8273")
 		&"wall_race_stripe": return Color("24262A")
 		&"wall_diamond": return Color("A9AEB4")
+		&"wall_shoji": return Color("EFE9DA")
 		_: return Color(0.6, 0.6, 0.6)
 
 
@@ -227,6 +230,7 @@ static func generate_wall(id: StringName) -> Image:
 		&"wall_stone": _stones(img, 4, 8, Color("8D8273"), Color("C9C0AE"), 25)
 		&"wall_race_stripe": _wall_stripe(img)
 		&"wall_diamond": _diamond(img, Color("A9AEB4"))
+		&"wall_shoji": _shoji(img)
 		_: return null
 	return img
 
@@ -257,6 +261,48 @@ static func wall_material(id: StringName) -> StandardMaterial3D:
 
 
 # --- Çizim yardımcıları ----------------------------------------------------------------
+
+## TATAMİ: "dört buçuk hasır" (yojōhan) dizilişi — karo 3 × 3 birim; dört uzun hasır (1 × 2) ortadaki kare yarım
+## hasırın çevresinde fırıldak gibi döner. Yan yana iki düz hasır her karoda tekrarlanınca garaj boyunca kesintisiz
+## şerit (tahta döşeme) gibi görünüyordu. Hasır örgüsü uzun kenara dik ince çizgiler; uzun kenarlarda koyu yeşil
+## kumaş şerit (heri); hasırlar örgü yönünden ötürü hafif farklı tonda.
+static func _tatami(img: Image) -> void:
+	var u: Array[int] = [0, 43, 86, SIZE]
+	# [x0, y0, x1, y1 (birim), yatay mı (uzun kenar x boyunca), ton]
+	var mats: Array = [[0, 0, 2, 1, true, Color("CBC38C")], [2, 0, 3, 2, false, Color("C2BA80")],
+		[1, 2, 3, 3, true, Color("C5BD84")], [0, 1, 1, 3, false, Color("CEC690")], [1, 1, 2, 2, true, Color("BDB57B")]]
+	var heri: Color = Color("2F3E2B")
+	for m: Array in mats:
+		var r: Rect2i = Rect2i(u[m[0]], u[m[1]], u[m[2]] - u[m[0]], u[m[3]] - u[m[1]])
+		var horizontal: bool = m[4]
+		var base: Color = m[5]
+		var n: int = r.size.x if horizontal else r.size.y
+		for i: int in n:
+			var k: float = 0.9 if i % 3 == 0 else (1.03 if i % 3 == 1 else 1.0)
+			var line: Rect2i = Rect2i(r.position.x + i, r.position.y, 1, r.size.y) if horizontal \
+				else Rect2i(r.position.x, r.position.y + i, r.size.x, 1)
+			_rect(img, line, _shade(base, k))
+		if horizontal:   # heri uzun kenarlarda (üst / alt)
+			_rect(img, Rect2i(r.position.x, r.position.y, r.size.x, 3), heri)
+			_rect(img, Rect2i(r.position.x, r.end.y - 3, r.size.x, 3), heri)
+			_rect(img, Rect2i(r.end.x - 1, r.position.y, 1, r.size.y), _shade(base, 0.7))   # kısa kenar ek yeri
+		else:
+			_rect(img, Rect2i(r.position.x, r.position.y, 3, r.size.y), heri)
+			_rect(img, Rect2i(r.end.x - 3, r.position.y, 3, r.size.y), heri)
+			_rect(img, Rect2i(r.position.x, r.end.y - 1, r.size.x, 1), _shade(base, 0.7))
+
+
+## SHOJİ: tekrar boyunda bir panel — kalın ahşap çerçeve, içinde 4 × 3 ince kafes, pirinç kâğıdı.
+static func _shoji(img: Image) -> void:
+	var wood: Color = Color("7A5534")
+	_speckle(img, Color("EFE9DA"), 0.015, 26)
+	for k: int in [32, 64, 96]:
+		_rect(img, Rect2i(k - 1, 0, 2, SIZE), wood)
+	for k: int in [43, 85]:
+		_rect(img, Rect2i(0, k - 1, SIZE, 2), wood)
+	for r: Rect2i in [Rect2i(0, 0, 3, SIZE), Rect2i(SIZE - 3, 0, 3, SIZE), Rect2i(0, 0, SIZE, 3),
+			Rect2i(0, SIZE - 3, SIZE, 3)]:
+		_rect(img, r, _shade(wood, 0.85))
 
 static func _rect(img: Image, r: Rect2i, c: Color) -> void:
 	img.fill_rect(r.intersection(Rect2i(0, 0, SIZE, SIZE)), c)

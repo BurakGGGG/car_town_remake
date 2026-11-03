@@ -49,6 +49,14 @@ const PET_FURNITURE: Dictionary = {
 	&"lux_cat_tower": {"kind": &"tower", "spots": [Vector3(0.0, 0.0, 0.441), Vector3(0.36, 0.0, 0.903)]},
 	&"cat_bowls": {"kind": &"bowl", "spots": [Vector3(-0.11, 0.015, 0.0)]},
 	&"lux_cat_bowls": {"kind": &"bowl", "spots": [Vector3(-0.11, 0.0, 0.0)]},
+	# Kedi eşyaları 2 (tools/decor/props_v11_kedi2.py; tünel / oyuncak sepeti / duvar basamakları yalnız süs)
+	&"cat_box": {"kind": &"bed", "spots": [Vector3(0.0, 0.0, 0.03)]},
+	&"cat_tire_bed": {"kind": &"bed", "spots": [Vector3(0.0, 0.0, 0.167)]},
+	&"cat_hammock": {"kind": &"bed", "spots": [Vector3(0.0, 0.0, 0.202)]},
+	&"cat_scratcher": {"kind": &"tower", "spots": [Vector3(0.0, 0.0, 0.577)]},
+	&"cat_house": {"kind": &"tower", "spots": [Vector3(0.0, 0.02, 0.407)]},
+	&"lux_cat_sakura": {"kind": &"tower", "spots": [Vector3(0.0, 0.0, 0.467), Vector3(0.38, 0.0, 0.973)]},
+	&"cat_fountain": {"kind": &"bowl", "spots": [Vector3(0.0, 0.0, 0.0)]},
 }
 ## Kabın önünde durma uzaklığı (m): baş kabın üstüne gelsin
 const BOWL_STAND_M: float = 0.19

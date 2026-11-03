@@ -2861,6 +2861,337 @@
       "value": 3600,
       "min_level": 4,
       "desc": "İğne ve iplerle işaretli araç ithalat rotaları."
+    },
+    {
+      "id": "cat_box",
+      "title": "KARTON KUTU",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 2500,
+      "value": 1000,
+      "min_level": 5,
+      "desc": "Eski bir koli, içinde battaniye. Kedin içine girip uyur."
+    },
+    {
+      "id": "cat_toys",
+      "title": "OYUNCAK SEPETİ",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 2000,
+      "value": 800,
+      "min_level": 5,
+      "desc": "Hasır sepette yün yumaklar, tüy çubuğu ve oyuncak fareler."
+    },
+    {
+      "id": "cat_tunnel",
+      "title": "KEDİ TÜNELİ",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 3000,
+      "value": 1200,
+      "min_level": 5,
+      "desc": "Kırışık bezden oyun tüneli."
+    },
+    {
+      "id": "cat_fountain",
+      "title": "SU ÇEŞMESİ",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 4500,
+      "value": 1800,
+      "min_level": 5,
+      "desc": "Çiçek ağızlı seramik su çeşmesi. Kedin susayınca gelip içer."
+    },
+    {
+      "id": "cat_tire_bed",
+      "title": "LASTİK YATAK",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 5000,
+      "value": 2000,
+      "min_level": 5,
+      "desc": "Yatırılmış eski bir lastik, ortasında kabarık minder. Kedin içinde kıvrılıp uyur."
+    },
+    {
+      "id": "cat_scratcher",
+      "title": "TIRMALAMA DİREĞİ",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 7000,
+      "value": 2800,
+      "min_level": 5,
+      "desc": "Sisal sarılı direk, tepesinde minder. Kedin tepesine çıkıp dinlenir."
+    },
+    {
+      "id": "cat_hammock",
+      "title": "KEDİ HAMAĞI",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 9000,
+      "value": 3600,
+      "min_level": 5,
+      "desc": "Ahşap çapraz ayaklı, sarkık bez hamak. Kedin bezin içinde kıvrılıp uyur."
+    },
+    {
+      "id": "cat_house",
+      "title": "MİNİ GARAJ KEDİ EVİ",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 16000,
+      "value": 6400,
+      "min_level": 5,
+      "desc": "Yarı açık kepenkli minik bir garaj. Kedin çatıdaki mindere çıkıp etrafı izler."
+    },
+    {
+      "id": "lux_cat_sakura",
+      "title": "SAKURA KEDİ AĞACI",
+      "kind": "pet",
+      "placement": "floor",
+      "price": 0,
+      "price_gems": 180,
+      "value": 54000,
+      "min_level": 5,
+      "desc": "Kırmızı lake davul, altın bantlar ve çiçek açmış sakura dalları. Kedin davulun üstünde uyur, tepedeki platformdan garajı izler."
+    },
+    {
+      "id": "cat_wall_steps",
+      "title": "KEDİ BASAMAKLARI",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 6000,
+      "value": 2400,
+      "min_level": 5,
+      "desc": "Duvara basamak basamak raflar ve delikli kedi kutusu."
+    },
+    {
+      "id": "jp_andon",
+      "title": "ANDON LAMBA",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 5000,
+      "value": 2000,
+      "min_level": 4,
+      "desc": "Kâğıt kaplı ahşap yer lambası. Sıcak, yumuşak ışık."
+    },
+    {
+      "id": "jp_daruma",
+      "title": "DARUMA BEBEKLERİ",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 4500,
+      "value": 1800,
+      "min_level": 4,
+      "desc": "Japon dilek bebekleri. Dilek tutunca bir gözü boyanır, gerçekleşince ötekisi."
+    },
+    {
+      "id": "jp_maneki",
+      "title": "MANEKİ NEKO",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 9000,
+      "value": 3600,
+      "min_level": 5,
+      "desc": "Pati sallayan Japon uğur kedisi. Elinde altın koban."
+    },
+    {
+      "id": "jp_kotatsu",
+      "title": "KOTATSU",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 14000,
+      "value": 5600,
+      "min_level": 6,
+      "desc": "Yorganlı alçak Japon masası. Üstünde mandalina ve çay."
+    },
+    {
+      "id": "jp_byobu",
+      "title": "KATLANIR PARAVAN",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 18000,
+      "value": 7200,
+      "min_level": 7,
+      "desc": "Altın varaklı byobu: dalgalar, Fuji Dağı, kırmızı güneş ve çam dalı."
+    },
+    {
+      "id": "jp_taiko",
+      "title": "TAİKO DAVULU",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 22000,
+      "value": 8800,
+      "min_level": 8,
+      "desc": "Ahşap beşik üstünde dev Japon davulu."
+    },
+    {
+      "id": "jp_vending",
+      "title": "JAPON OTOMATI",
+      "kind": "lounge",
+      "placement": "floor",
+      "price": 28000,
+      "value": 11200,
+      "min_level": 9,
+      "desc": "Işıklı vitrinli, sıra sıra kutu ve şişe içecekli sokak otomatı."
+    },
+    {
+      "id": "jp_bamboo_fence",
+      "title": "BAMBU ÇİT",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 6000,
+      "value": 2400,
+      "min_level": 4,
+      "desc": "Siyah iple bağlanmış sık bambu çit."
+    },
+    {
+      "id": "jp_shishi_odoshi",
+      "title": "BAMBU ÇEŞME",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 12000,
+      "value": 4800,
+      "min_level": 6,
+      "desc": "Su dolunca devrilip taşa vuran bambu (shishi-odoshi) ve taş yalak."
+    },
+    {
+      "id": "jp_stone_lantern",
+      "title": "TAŞ FENER",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 16000,
+      "value": 6400,
+      "min_level": 6,
+      "desc": "Yosunlu, içi ışıklı Japon taş feneri."
+    },
+    {
+      "id": "jp_zen_garden",
+      "title": "ZEN BAHÇESİ",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 20000,
+      "value": 8000,
+      "min_level": 7,
+      "desc": "Tırmıklanmış beyaz çakıl ve yosunlu kayalar."
+    },
+    {
+      "id": "jp_koinobori",
+      "title": "SAZAN FLAMALARI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 26000,
+      "value": 10400,
+      "min_level": 8,
+      "desc": "Rüzgârda dalgalanan siyah, kırmızı ve mavi sazan flamaları (koinobori)."
+    },
+    {
+      "id": "jp_koi_pond",
+      "title": "KOİ HAVUZU",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 42000,
+      "value": 16800,
+      "min_level": 11,
+      "desc": "Taş kenarlı havuz, renkli koi balıkları ve nilüferler."
+    },
+    {
+      "id": "jp_ramen_stall",
+      "title": "RAMEN TEZGÂHI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 55000,
+      "value": 22000,
+      "min_level": 12,
+      "desc": "Fenerli, noren perdeli seyyar ramen tezgâhı."
+    },
+    {
+      "id": "jp_torii",
+      "title": "TORİİ KAPISI",
+      "kind": "yard",
+      "placement": "floor",
+      "price": 60000,
+      "value": 24000,
+      "min_level": 15,
+      "desc": "Vermilyon kırmızısı Japon tapınak kapısı."
+    },
+    {
+      "id": "jp_maple",
+      "title": "JAPON AKÇAAĞACI",
+      "kind": "plant",
+      "placement": "floor",
+      "price": 28000,
+      "value": 11200,
+      "min_level": 9,
+      "desc": "Sonbahar renklerinde, kırmızı yapraklı akçaağaç."
+    },
+    {
+      "id": "jp_noren",
+      "title": "NOREN PERDE",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 6000,
+      "value": 2400,
+      "min_level": 4,
+      "desc": "Kapı üstüne asılan yarık indigo perde."
+    },
+    {
+      "id": "jp_fan",
+      "title": "JAPON YELPAZESİ",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 6500,
+      "value": 2600,
+      "min_level": 4,
+      "desc": "Dev katlanır yelpaze: kırmızı güneş ve dalgalar."
+    },
+    {
+      "id": "jp_scroll",
+      "title": "ASMA RESİM",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 7500,
+      "value": 3000,
+      "min_level": 4,
+      "desc": "Brokar kenarlı asma resim: Fuji Dağı ve kırmızı güneş."
+    },
+    {
+      "id": "jp_lanterns",
+      "title": "KIRMIZI FENERLER",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 8000,
+      "value": 3200,
+      "min_level": 4,
+      "desc": "Ahşap kirişten sarkan iki kırmızı kâğıt fener."
+    },
+    {
+      "id": "jp_neon_kanji",
+      "title": "NEON KANJİ",
+      "kind": "wall_item",
+      "placement": "wall",
+      "price": 38000,
+      "value": 15200,
+      "min_level": 11,
+      "desc": "Japonca 'araba' (kuruma) harfi, kırmızı neon."
+    },
+    {
+      "id": "tatami",
+      "title": "TATAMİ",
+      "kind": "floor_pattern",
+      "placement": "tile",
+      "price": 220,
+      "value": 88,
+      "min_level": 6,
+      "desc": "Hasır tatami, koyu yeşil kenar şeritli."
+    },
+    {
+      "id": "wall_shoji",
+      "title": "SHOJİ PANEL",
+      "kind": "wall_surface",
+      "placement": "surface",
+      "price": 26000,
+      "value": 10400,
+      "min_level": 8,
+      "desc": "Ahşap kafesli pirinç kâğıdı panel."
     }
   ]
 }

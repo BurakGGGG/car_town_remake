@@ -8993,5 +8993,203 @@
  ],
  "İlk ad ücretsiz, sonra değiştirmek %d GEM.": [
   "ui/hud/pet_name_screen.gd:57"
+ ],
+ "KARTON KUTU": [
+  "decor/decorations.json:cat_box.title"
+ ],
+ "Eski bir koli, içinde battaniye. Kedin içine girip uyur.": [
+  "decor/decorations.json:cat_box.desc"
+ ],
+ "OYUNCAK SEPETİ": [
+  "decor/decorations.json:cat_toys.title"
+ ],
+ "Hasır sepette yün yumaklar, tüy çubuğu ve oyuncak fareler.": [
+  "decor/decorations.json:cat_toys.desc"
+ ],
+ "KEDİ TÜNELİ": [
+  "decor/decorations.json:cat_tunnel.title"
+ ],
+ "Kırışık bezden oyun tüneli.": [
+  "decor/decorations.json:cat_tunnel.desc"
+ ],
+ "SU ÇEŞMESİ": [
+  "decor/decorations.json:cat_fountain.title"
+ ],
+ "Çiçek ağızlı seramik su çeşmesi. Kedin susayınca gelip içer.": [
+  "decor/decorations.json:cat_fountain.desc"
+ ],
+ "LASTİK YATAK": [
+  "decor/decorations.json:cat_tire_bed.title"
+ ],
+ "Yatırılmış eski bir lastik, ortasında kabarık minder. Kedin içinde kıvrılıp uyur.": [
+  "decor/decorations.json:cat_tire_bed.desc"
+ ],
+ "TIRMALAMA DİREĞİ": [
+  "decor/decorations.json:cat_scratcher.title"
+ ],
+ "Sisal sarılı direk, tepesinde minder. Kedin tepesine çıkıp dinlenir.": [
+  "decor/decorations.json:cat_scratcher.desc"
+ ],
+ "KEDİ HAMAĞI": [
+  "decor/decorations.json:cat_hammock.title"
+ ],
+ "Ahşap çapraz ayaklı, sarkık bez hamak. Kedin bezin içinde kıvrılıp uyur.": [
+  "decor/decorations.json:cat_hammock.desc"
+ ],
+ "MİNİ GARAJ KEDİ EVİ": [
+  "decor/decorations.json:cat_house.title"
+ ],
+ "Yarı açık kepenkli minik bir garaj. Kedin çatıdaki mindere çıkıp etrafı izler.": [
+  "decor/decorations.json:cat_house.desc"
+ ],
+ "SAKURA KEDİ AĞACI": [
+  "decor/decorations.json:lux_cat_sakura.title"
+ ],
+ "Kırmızı lake davul, altın bantlar ve çiçek açmış sakura dalları. Kedin davulun üstünde uyur, tepedeki platformdan garajı izler.": [
+  "decor/decorations.json:lux_cat_sakura.desc"
+ ],
+ "KEDİ BASAMAKLARI": [
+  "decor/decorations.json:cat_wall_steps.title"
+ ],
+ "Duvara basamak basamak raflar ve delikli kedi kutusu.": [
+  "decor/decorations.json:cat_wall_steps.desc"
+ ],
+ "ANDON LAMBA": [
+  "decor/decorations.json:jp_andon.title"
+ ],
+ "Kâğıt kaplı ahşap yer lambası. Sıcak, yumuşak ışık.": [
+  "decor/decorations.json:jp_andon.desc"
+ ],
+ "DARUMA BEBEKLERİ": [
+  "decor/decorations.json:jp_daruma.title"
+ ],
+ "Japon dilek bebekleri. Dilek tutunca bir gözü boyanır, gerçekleşince ötekisi.": [
+  "decor/decorations.json:jp_daruma.desc"
+ ],
+ "MANEKİ NEKO": [
+  "decor/decorations.json:jp_maneki.title"
+ ],
+ "Pati sallayan Japon uğur kedisi. Elinde altın koban.": [
+  "decor/decorations.json:jp_maneki.desc"
+ ],
+ "KOTATSU": [
+  "decor/decorations.json:jp_kotatsu.title"
+ ],
+ "Yorganlı alçak Japon masası. Üstünde mandalina ve çay.": [
+  "decor/decorations.json:jp_kotatsu.desc"
+ ],
+ "KATLANIR PARAVAN": [
+  "decor/decorations.json:jp_byobu.title"
+ ],
+ "Altın varaklı byobu: dalgalar, Fuji Dağı, kırmızı güneş ve çam dalı.": [
+  "decor/decorations.json:jp_byobu.desc"
+ ],
+ "TAİKO DAVULU": [
+  "decor/decorations.json:jp_taiko.title"
+ ],
+ "Ahşap beşik üstünde dev Japon davulu.": [
+  "decor/decorations.json:jp_taiko.desc"
+ ],
+ "JAPON OTOMATI": [
+  "decor/decorations.json:jp_vending.title"
+ ],
+ "Işıklı vitrinli, sıra sıra kutu ve şişe içecekli sokak otomatı.": [
+  "decor/decorations.json:jp_vending.desc"
+ ],
+ "BAMBU ÇİT": [
+  "decor/decorations.json:jp_bamboo_fence.title"
+ ],
+ "Siyah iple bağlanmış sık bambu çit.": [
+  "decor/decorations.json:jp_bamboo_fence.desc"
+ ],
+ "BAMBU ÇEŞME": [
+  "decor/decorations.json:jp_shishi_odoshi.title"
+ ],
+ "Su dolunca devrilip taşa vuran bambu (shishi-odoshi) ve taş yalak.": [
+  "decor/decorations.json:jp_shishi_odoshi.desc"
+ ],
+ "TAŞ FENER": [
+  "decor/decorations.json:jp_stone_lantern.title"
+ ],
+ "Yosunlu, içi ışıklı Japon taş feneri.": [
+  "decor/decorations.json:jp_stone_lantern.desc"
+ ],
+ "ZEN BAHÇESİ": [
+  "decor/decorations.json:jp_zen_garden.title"
+ ],
+ "Tırmıklanmış beyaz çakıl ve yosunlu kayalar.": [
+  "decor/decorations.json:jp_zen_garden.desc"
+ ],
+ "SAZAN FLAMALARI": [
+  "decor/decorations.json:jp_koinobori.title"
+ ],
+ "Rüzgârda dalgalanan siyah, kırmızı ve mavi sazan flamaları (koinobori).": [
+  "decor/decorations.json:jp_koinobori.desc"
+ ],
+ "KOİ HAVUZU": [
+  "decor/decorations.json:jp_koi_pond.title"
+ ],
+ "Taş kenarlı havuz, renkli koi balıkları ve nilüferler.": [
+  "decor/decorations.json:jp_koi_pond.desc"
+ ],
+ "RAMEN TEZGÂHI": [
+  "decor/decorations.json:jp_ramen_stall.title"
+ ],
+ "Fenerli, noren perdeli seyyar ramen tezgâhı.": [
+  "decor/decorations.json:jp_ramen_stall.desc"
+ ],
+ "TORİİ KAPISI": [
+  "decor/decorations.json:jp_torii.title"
+ ],
+ "Vermilyon kırmızısı Japon tapınak kapısı.": [
+  "decor/decorations.json:jp_torii.desc"
+ ],
+ "JAPON AKÇAAĞACI": [
+  "decor/decorations.json:jp_maple.title"
+ ],
+ "Sonbahar renklerinde, kırmızı yapraklı akçaağaç.": [
+  "decor/decorations.json:jp_maple.desc"
+ ],
+ "NOREN PERDE": [
+  "decor/decorations.json:jp_noren.title"
+ ],
+ "Kapı üstüne asılan yarık indigo perde.": [
+  "decor/decorations.json:jp_noren.desc"
+ ],
+ "JAPON YELPAZESİ": [
+  "decor/decorations.json:jp_fan.title"
+ ],
+ "Dev katlanır yelpaze: kırmızı güneş ve dalgalar.": [
+  "decor/decorations.json:jp_fan.desc"
+ ],
+ "ASMA RESİM": [
+  "decor/decorations.json:jp_scroll.title"
+ ],
+ "Brokar kenarlı asma resim: Fuji Dağı ve kırmızı güneş.": [
+  "decor/decorations.json:jp_scroll.desc"
+ ],
+ "KIRMIZI FENERLER": [
+  "decor/decorations.json:jp_lanterns.title"
+ ],
+ "Ahşap kirişten sarkan iki kırmızı kâğıt fener.": [
+  "decor/decorations.json:jp_lanterns.desc"
+ ],
+ "NEON KANJİ": [
+  "decor/decorations.json:jp_neon_kanji.title"
+ ],
+ "Japonca 'araba' (kuruma) harfi, kırmızı neon.": [
+  "decor/decorations.json:jp_neon_kanji.desc"
+ ],
+ "TATAMİ": [
+  "decor/decorations.json:tatami.title"
+ ],
+ "Hasır tatami, koyu yeşil kenar şeritli.": [
+  "decor/decorations.json:tatami.desc"
+ ],
+ "SHOJİ PANEL": [
+  "decor/decorations.json:wall_shoji.title"
+ ],
+ "Ahşap kafesli pirinç kâğıdı panel.": [
+  "decor/decorations.json:wall_shoji.desc"
  ]
 }

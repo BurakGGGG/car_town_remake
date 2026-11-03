@@ -21,7 +21,7 @@ only = [n for n in os.environ.get("CT_DECOR_ONLY", "").split(",") if n]
 targets = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
 for target in targets:
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    scope: dict = {"__name__": "__decor__"}
+    scope: dict = {"__name__": "__decor__", "__file__": os.path.abspath(target)}   # ek kit (kit_torna.py) yolu için
     exec(compile(kit, "kit.py", "exec"), scope)
     if only:
         real_finish = scope["finish"]
