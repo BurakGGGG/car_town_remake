@@ -2459,6 +2459,12 @@ func _tick_invite() -> void:
 func _build_push_prompt() -> void:
 	push_prompt = PushPrompt.new()
 	garage_screen.get_parent().add_child(push_prompt)
+	push_reward_popup = RewardPopup.new()
+	push_reward_popup.name = "PushRewardPopup"
+	push_reward_popup.hud = self
+	garage_screen.get_parent().add_child(push_reward_popup)
+	if not GarageVisit.is_visiting():
+		_connect_push_followups.call_deferred()
 
 
 ## YENİ TAKMA AD ÖNERİSİ (2026-11-01, kullanıcı kararı): adı hâlâ eski otomatik "Usta1234" olan oyuncuya güncellemeden
@@ -2505,6 +2511,87 @@ func _build_news() -> void:
 	news_flow.hud = self
 	news_flow.screen = news_screen
 	add_child(news_flow)
+
+
+## YENİ ÖNERİ + ÖDÜL (2026-11-04, kullanıcı kararı): eski öneriyi görmüş ama bildirimi açık olmayan oyuncuya yeni öneri
+## güncellemeden sonra BİR KEZ, oturumun PUSH_REASK_SESSION. saniyesinden sonra sakin anda (PushService.wants_reask).
+## Bildirim fiilen açık olup ödülü alınmamış kayıtta (öneriden, AYARLAR'dan ya da daha önce açmış oyuncuda) bulut kaydı
+## kararını verince 20 gem verilir ve ödül penceresi açılır (AYARLAR açıkken de: anahtarı orada açan hemen görsün).
+const PUSH_REASK_SESSION: float = 40.0
+const PUSH_REWARD_IDLE: float = 0.8
+var push_reask_session: float = PUSH_REASK_SESSION   # testler / QA kısaltır
+var push_reward_popup: RewardPopup
+var _push_reward_timer: Timer
+var _push_reward_idle: float = 0.0
+
+
+func _connect_push_followups() -> void:
+	var push: PushService = get_tree().get_first_node_in_group("push") as PushService
+	var community: CommunityLinks = get_tree().get_first_node_in_group("community") as CommunityLinks
+	var cloud: CloudSaveManager = get_tree().get_first_node_in_group("cloud_save") as CloudSaveManager
+	if push:
+		push.changed.connect(_arm_push_reward)
+	if community:
+		community.changed.connect(_arm_push_reward)
+	if cloud:
+		cloud.state_changed.connect(func(_state: CloudSaveManager.State) -> void: _arm_push_reward())
+	_arm_push_reward()
+	var wait: float = maxf(push_reask_session - Time.get_ticks_msec() / 1000.0, 1.0)
+	get_tree().create_timer(wait).timeout.connect(_arm_push_reask)
+
+
+func _arm_push_reask() -> void:
+	if not is_inside_tree():
+		if not tree_entered.is_connected(_arm_push_reask):
+			tree_entered.connect(_arm_push_reask, CONNECT_DEFERRED | CONNECT_ONE_SHOT)
+		return
+	var push: PushService = get_tree().get_first_node_in_group("push") as PushService
+	if push and push.wants_reask():
+		_arm_push_prompt()
+
+
+## Ödül verilebilir mi: bildirim fiilen açık, ödül bu kayıtta alınmamış, bulut kaydı kararını vermiş (yoksa ödül
+## birazdan yerine gelecek kayda değil eskisine yazılırdı).
+func _push_reward_due() -> bool:
+	var push: PushService = get_tree().get_first_node_in_group("push") as PushService
+	var community: CommunityLinks = get_tree().get_first_node_in_group("community") as CommunityLinks
+	var cloud: CloudSaveManager = get_tree().get_first_node_in_group("cloud_save") as CloudSaveManager
+	if push == null or community == null or not push.is_active() or not community.push_reward_open():
+		return false
+	return cloud == null or cloud.get_state() in [CloudSaveManager.State.UNAVAILABLE, CloudSaveManager.State.SIGNED_OUT,
+		CloudSaveManager.State.SYNCED, CloudSaveManager.State.OFFLINE]
+
+
+func _arm_push_reward() -> void:
+	if not is_inside_tree() or GarageVisit.is_visiting() or is_instance_valid(_push_reward_timer) \
+			or not _push_reward_due():
+		return
+	_push_reward_idle = 0.0
+	_push_reward_timer = Timer.new()
+	_push_reward_timer.name = "PushRewardTimer"
+	_push_reward_timer.wait_time = 0.4
+	add_child(_push_reward_timer)
+	_push_reward_timer.timeout.connect(_tick_push_reward)
+	_push_reward_timer.start()
+
+
+func _tick_push_reward() -> void:
+	if not _push_reward_due():
+		_push_reward_timer.queue_free()
+		return
+	var settings_open: bool = router.top() == &"settings" and get_tree().root.get_node_or_null("LoadingScreen") == null
+	if not (_is_quiet() or settings_open) or push_reward_popup.visible:
+		_push_reward_idle = 0.0
+		return
+	_push_reward_idle += _push_reward_timer.wait_time
+	if _push_reward_idle < PUSH_REWARD_IDLE:
+		return
+	_push_reward_timer.queue_free()
+	var community: CommunityLinks = get_tree().get_first_node_in_group("community") as CommunityLinks
+	var gems: int = community.claim_push_reward() if community else 0
+	if gems > 0:
+		push_reward_popup.move_to_front()
+		push_reward_popup.show_rewards({"gems": gems, "title": Loc.t("BİLDİRİMLER AÇIK!")})
 
 
 ## YARIŞ BİLDİRİMİ ÖNERİSİ (kullanıcı kararı): izin oyun açılışında değil İLK YARIŞTAN SONRA istenir — o an oyuncu ne

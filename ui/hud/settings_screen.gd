@@ -620,7 +620,7 @@ func _refresh_push() -> void:
 	var reason: String = _push.unavailable_reason() if _push else "platform"
 	_push_row.visible = reason != "platform"
 	_push_rule.visible = _push_row.visible
-	var on: bool = _push_row.visible and _push.is_enabled()
+	var on: bool = _push_row.visible and _push.is_active()   # telefon ayarından kapatılmışsa kapalı görünür
 	for kind: StringName in _push_kinds:
 		(_push_kinds[kind] as PlateButton).get_parent().visible = on
 	if not _push_row.visible:
@@ -632,6 +632,10 @@ func _refresh_push() -> void:
 		_push_caption.text = _push.last_failure
 	else:
 		_push_caption.text = Loc.t("Hediye gelince, bir arkadaşın seni yarışta yenince ve yeni etkinliklerde telefonuna haber gelir.")
+		var community: CommunityLinks = get_tree().get_first_node_in_group("community") as CommunityLinks
+		if not on and community and community.push_reward_open():
+			# Öneriyi kapatan da ödülü buradan alabilir (2026-11-04)
+			_push_caption.text = Loc.t("Aç, %d gem kazan!") % CommunityLinks.PUSH_GEMS + " " + _push_caption.text
 	var account: bool = _push.has_account()
 	var captions: Dictionary = {
 		PushService.RACE: Loc.t("Bir arkadaşın seni yarışta yenince."),
@@ -653,10 +657,10 @@ func _refresh_push() -> void:
 func _on_push_toggled() -> void:
 	if _push == null or _push.is_busy():
 		return
-	if _push.is_enabled():
+	if _push.is_active():
 		await _push.disable()
 	else:
-		await _push.enable()
+		await _push.enable()   # telefon ayarından kapatılmışsa da buradan: izin / telefon ayarı yeniden istenir
 	_refresh()
 
 

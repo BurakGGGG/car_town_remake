@@ -58,12 +58,26 @@ func _run() -> void:
 	await create_timer(0.4).timeout
 	await shot("01_oneri")
 
-	print("2) TAMAM → izin + jeton + DUYURU konusu")
+	print("2) AÇ → izin + jeton + DUYURU konusu → 20 gem ödül penceresi (2026-11-04)")
 	var prompt: PushPrompt = router.screen(&"push_prompt") as PushPrompt
+	var progress: PlayerProgress = get_first_node_in_group("player_progress") as PlayerProgress
+	var community: CommunityLinks = get_first_node_in_group("community") as CommunityLinks
+	community.load_state({})
+	var gems_before: int = progress.gems
+	check(prompt._pill.visible, "öneride +20 GEM etiketi")
 	prompt._ok.pressed.emit()
 	await create_timer(3.0).timeout
-	check(router.top() != &"push_prompt", "TAMAM sonrası öneri kapandı")
+	check(router.top() != &"push_prompt", "AÇ sonrası öneri kapandı")
 	check(push.is_enabled() and push.fake_topic == "news_" + Loc.current(), "açık, konu %s" % push.fake_topic)
+	check(hud.push_reward_popup.visible and progress.gems == gems_before + CommunityLinks.PUSH_GEMS,
+		"ödül penceresi + %d gem (%d → %d)" % [CommunityLinks.PUSH_GEMS, gems_before, progress.gems])
+	await create_timer(1.2).timeout
+	await shot("01b_odul")
+	hud.push_reward_popup.close()
+	await create_timer(1.5).timeout
+	check(not community.push_reward_open(), "ödül alındı: bir daha verilmez")
+	hud._arm_push_reward()
+	check(not is_instance_valid(hud._push_reward_timer), "ikinci ödül zamanlayıcısı kurulmadı")
 	hud._arm_push_prompt()
 	check(not is_instance_valid(hud._push_prompt_timer), "ikinci yarıştan sonra öneri yok")
 
@@ -99,7 +113,27 @@ func _run() -> void:
 	await create_timer(0.6).timeout
 	check(not push.is_enabled() and push.fake_topic == "" and not race.is_visible_in_tree(), "KAPAT: konudan çıkıldı, türler gizli")
 	await shot("04_ayarlar_kapali")
+	print("5) Güncellemeden sonra: eski öneriyi görmüş, bildirimi kapalı oyuncuya bir kez daha")
 	social._uid = ""
+	router.close_all()
+	push._state = {"asked": true}
+	check(push.wants_reask(), "eski öneriyi görmüş: yeniden sorulacak")
+	hud._arm_push_reask()
+	await create_timer(Hud.PUSH_PROMPT_IDLE + 1.0).timeout
+	check(router.top() == &"push_prompt", "sakin anda yeni öneri açıldı")
+	await create_timer(0.5).timeout
+	(router.screen(&"push_prompt") as PushPrompt)._later.pressed.emit()
+	await create_timer(0.6).timeout
+	check(not push.should_ask() and not push.wants_reask(), "ŞİMDİ DEĞİL: bu sürüm bir daha sorulmaz")
+	print("6) Önceden açmış oyuncu: güncellemeden sonra 20 gem kendiliğinden")
+	community.load_state({})
+	push._state = {"asked": true, "enabled": true}
+	gems_before = progress.gems
+	hud._arm_push_reward()
+	await create_timer(2.0).timeout
+	check(hud.push_reward_popup.visible and progress.gems == gems_before + CommunityLinks.PUSH_GEMS, "ödül penceresi açıldı")
+	hud.push_reward_popup.close()
+	await create_timer(1.0).timeout
 	router.close_all()
 	PushService.force_available = false
 	print("SONUÇ: %d hata" % fails)

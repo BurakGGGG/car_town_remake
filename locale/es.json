@@ -2874,5 +2874,21 @@
  "TATAMİ": "TATAMI",
  "Hasır tatami, koyu yeşil kenar şeritli.": "Tatami de paja tejida con ribete verde oscuro.",
  "SHOJİ PANEL": "PANEL SHOJI",
- "Ahşap kafesli pirinç kâğıdı panel.": "Paneles de papel de arroz con celosía de madera."
+ "Ahşap kafesli pirinç kâğıdı panel.": "Paneles de papel de arroz con celosía de madera.",
+ "%s yarışta aracını yendi! İntikam almak için dokun": "¡%s le ganó a tu coche en una carrera! Toca para vengarte",
+ "1 sa önce": "hace 1 h",
+ "5 dk önce": "hace 5 min",
+ "AUTO YARD · ": "AUTO YARD · ",
+ "Aç, %d gem kazan!": "¡Actívalas y gana %d gemas!",
+ "Bildirimler kapalı kaldı. İstediğin zaman AYARLAR > SES VE BİLDİRİMLER'den açabilirsin.": "Las notificaciones siguen desactivadas. Puedes activarlas cuando quieras en AJUSTES > SONIDO Y NOTIFICACIONES.",
+ "BİLDİRİMLER AÇIK!": "¡NOTIFICACIONES ACTIVADAS!",
+ "BİLDİRİMLERİ AÇ": "ACTIVAR NOTIFICACIONES",
+ "Garajına hediye geldi! Almak için dokun": "¡Llegó un regalo a tu taller! Toca para recogerlo",
+ "Haberin olsun!": "¡Entérate de todo!",
+ "Hafta sonu etkinliği başladı: ÇİFTE PARA!": "¡Empezó el evento del fin de semana: DINERO DOBLE!",
+ "Hediye geldiğinde, bir arkadaşın seni yarışta yendiğinde ve yeni etkinlik başladığında telefonuna kısa bir haber gelsin.": "Recibe un aviso cuando llegue un regalo, cuando un amigo te gane en una carrera y cuando empiece un nuevo evento.",
+ "açınca hemen hesabında": "en tu cuenta al activarlas",
+ "İstersen sonra AYARLAR > SES VE BİLDİRİMLER'den de açabilirsin.": "También puedes activarlas más tarde en AJUSTES > SONIDO Y NOTIFICACIONES.",
+ "PushService: %s": "",
+ "şimdi|bildirim": "ahora"
 }

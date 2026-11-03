@@ -2873,5 +2873,21 @@
  "TATAMİ": "TATAMI",
  "Hasır tatami, koyu yeşil kenar şeritli.": "Geflochtene Tatami mit dunkelgrüner Einfassung.",
  "SHOJİ PANEL": "SHOJI-PANEEL",
- "Ahşap kafesli pirinç kâğıdı panel.": "Reispapier in einem Holzgitter."
+ "Ahşap kafesli pirinç kâğıdı panel.": "Reispapier in einem Holzgitter.",
+ "%s yarışta aracını yendi! İntikam almak için dokun": "%s hat dein Auto im Rennen geschlagen! Tippe für deine Rache",
+ "1 sa önce": "vor 1 Std.",
+ "5 dk önce": "vor 5 Min.",
+ "AUTO YARD · ": "AUTO YARD · ",
+ "Aç, %d gem kazan!": "Schalte sie ein und hol dir %d Juwelen!",
+ "Bildirimler kapalı kaldı. İstediğin zaman AYARLAR > SES VE BİLDİRİMLER'den açabilirsin.": "Mitteilungen sind weiterhin aus. Du kannst sie jederzeit unter EINSTELLUNGEN > TON UND MITTEILUNGEN einschalten.",
+ "BİLDİRİMLER AÇIK!": "MITTEILUNGEN AN!",
+ "BİLDİRİMLERİ AÇ": "MITTEILUNGEN EINSCHALTEN",
+ "Garajına hediye geldi! Almak için dokun": "Ein Geschenk ist in deiner Werkstatt angekommen! Tippe, um es abzuholen",
+ "Haberin olsun!": "Bleib auf dem Laufenden!",
+ "Hafta sonu etkinliği başladı: ÇİFTE PARA!": "Das Wochenend-Event läuft: DOPPELTES GELD!",
+ "Hediye geldiğinde, bir arkadaşın seni yarışta yendiğinde ve yeni etkinlik başladığında telefonuna kısa bir haber gelsin.": "Erhalte eine kurze Mitteilung, wenn ein Geschenk ankommt, ein Freund dich im Rennen schlägt oder ein neues Event startet.",
+ "açınca hemen hesabında": "sofort nach dem Einschalten",
+ "İstersen sonra AYARLAR > SES VE BİLDİRİMLER'den de açabilirsin.": "Du kannst sie auch später unter EINSTELLUNGEN > TON UND MITTEILUNGEN einschalten.",
+ "PushService: %s": "",
+ "şimdi|bildirim": "jetzt"
 }

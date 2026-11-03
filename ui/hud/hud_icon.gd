@@ -55,6 +55,7 @@ enum Kind {
 	FRIENDS,   ## iki kişi (alt sekme ARKADAŞLAR) — sona eklendi
 	NEWSPAPER, ## katlanmış gazete (sağ üst HABERLER tabelası) — sona eklendi
 	DICE,      ## beş noktalı zar (rastgele takma ad) — sona eklendi
+	BELL,      ## zil (bildirim izni önerisi) — sona eklendi
 }
 
 const HEART_RED: Color = Color("D7342A")
@@ -201,8 +202,25 @@ static func add_icon(ci: TriBatch, kind: Kind, c: Vector2, s: float, ink: Color,
 			_newspaper(ci, c, s, ink, cutout, w)
 		Kind.DICE:
 			_dice(ci, c, s, ink, cutout)
+		Kind.BELL:
+			_bell(ci, c, s, ink)
 		_:
 			pass
+
+
+## Zil: kubbe + yayvan etek, altında tokmak, tepede küçük halka.
+static func _bell(ci: TriBatch, c: Vector2, s: float, ink: Color) -> void:
+	var pts: PackedVector2Array = PackedVector2Array()
+	pts.append(c + Vector2(-0.42, 0.24) * s)
+	pts.append(c + Vector2(-0.31, 0.12) * s)
+	for i: int in 15:
+		var a: float = PI + PI * float(i) / 14.0
+		pts.append(c + (Vector2(cos(a), sin(a)) * 0.27 + Vector2(0.0, -0.05)) * s)
+	pts.append(c + Vector2(0.31, 0.12) * s)
+	pts.append(c + Vector2(0.42, 0.24) * s)
+	ci.draw_colored_polygon(pts, ink)
+	ci.draw_circle(c + Vector2(0.0, 0.33) * s, 0.09 * s, ink, true, -1.0, true)
+	ci.draw_circle(c + Vector2(0.0, -0.37) * s, 0.065 * s, ink, true, -1.0, true)
 
 
 ## Gazete: ön sayfa + sağda katlanmış arka yaprak; sayfada manşet bandı, fotoğraf kutusu ve üç satır.

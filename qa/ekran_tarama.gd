@@ -706,6 +706,10 @@ func _run() -> void:
 	await _screen(&"save_reminder", "hesap_kaydet_karti")
 	await _screen(&"gem_store", "hesap_kaydet_market")
 	SaveReminder.force_guest = false
+	# BİLDİRİM ÖNERİSİ v2 (2026-11-04, taslak B): telefon önizlemesi + "+20 GEM" etiketi (PC'de eklenti yok: zorla)
+	PushService.force_available = true
+	await _screen(&"push_prompt", "bildirim_onerisi", Callable(), 3.6)
+	PushService.force_available = false
 	await _screen(&"settings", "ayarlar")
 	for page: int in [1, 2, 3, 4]:
 		await _screen(&"settings", "ayarlar_%d" % page, func() -> void:

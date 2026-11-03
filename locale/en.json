@@ -2873,5 +2873,21 @@
  "TATAMİ": "TATAMI",
  "Hasır tatami, koyu yeşil kenar şeritli.": "Woven tatami with dark green edging.",
  "SHOJİ PANEL": "SHOJI PANEL",
- "Ahşap kafesli pirinç kâğıdı panel.": "Rice-paper panels in a wooden lattice."
+ "Ahşap kafesli pirinç kâğıdı panel.": "Rice-paper panels in a wooden lattice.",
+ "%s yarışta aracını yendi! İntikam almak için dokun": "%s beat your car in a race! Tap to get revenge",
+ "1 sa önce": "1 h ago",
+ "5 dk önce": "5 min ago",
+ "AUTO YARD · ": "AUTO YARD · ",
+ "Aç, %d gem kazan!": "Turn them on and get %d gems!",
+ "Bildirimler kapalı kaldı. İstediğin zaman AYARLAR > SES VE BİLDİRİMLER'den açabilirsin.": "Notifications are still off. You can turn them on anytime in SETTINGS > SOUND AND NOTIFICATIONS.",
+ "BİLDİRİMLER AÇIK!": "NOTIFICATIONS ON!",
+ "BİLDİRİMLERİ AÇ": "TURN ON NOTIFICATIONS",
+ "Garajına hediye geldi! Almak için dokun": "A gift arrived at your garage! Tap to claim it",
+ "Haberin olsun!": "Stay in the loop!",
+ "Hafta sonu etkinliği başladı: ÇİFTE PARA!": "The weekend event is live: DOUBLE MONEY!",
+ "Hediye geldiğinde, bir arkadaşın seni yarışta yendiğinde ve yeni etkinlik başladığında telefonuna kısa bir haber gelsin.": "Get a short notification when a gift arrives, when a friend beats you in a race and when a new event starts.",
+ "açınca hemen hesabında": "yours as soon as you turn them on",
+ "İstersen sonra AYARLAR > SES VE BİLDİRİMLER'den de açabilirsin.": "You can also turn them on later in SETTINGS > SOUND AND NOTIFICATIONS.",
+ "PushService: %s": "",
+ "şimdi|bildirim": "now"
 }

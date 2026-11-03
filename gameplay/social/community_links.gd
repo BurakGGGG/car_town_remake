@@ -12,11 +12,17 @@ extends Node
 ## kez sorulur (Hud._arm_rate_prompt); SONRA → RATE_RETRY_DAYS oyun günü sonra yeniden, en çok RATE_MAX_ASKS kez.
 ## DEĞERLENDİR → Play mağaza sayfası, bir daha sorulmaz. Oyun günü GemRewards.play_days'tir (saat geri alınınca ilerlemez).
 ## Pencere "beğendin mi?" diye sormaz: Google memnun olanı ayıklayan soruyu da istemiyor.
+##
+## BİLDİRİM ÖDÜLÜ (2026-11-04, kullanıcı kararı): telefon bildirimlerini açan PUSH_GEMS gem alır, kayıt başına BİR KEZ.
+## Bildirim gerçekten açık olmalı (PushService.is_active: oyunda açık + telefon izin veriyor). Hud verir ve ödül
+## penceresini gösterir (Hud._arm_push_reward); daha önce açmış olan da güncellemeden sonra bir kez alır (kapatıp
+## açmaya teşvik olmasın).
 
 ## Durum / ödül değişti (MARKET kartları tazelensin).
 signal changed
 
 const FOLLOW_GEMS: int = 10
+const PUSH_GEMS: int = 20
 ## Sıra MARKET'teki kart sırasıdır. `name` marka adı (çevrilmez), `art`: GemPackArt.Kind (kartın logosu).
 const LINKS: Array[Dictionary] = [
 	{"id": &"instagram", "name": "INSTAGRAM", "url": "https://www.instagram.com/autoyardgame",
@@ -39,6 +45,7 @@ var _follow: Dictionary = {}   # id (String) → Follow
 var _rate_asks: int = 0
 var _rate_next: int = RATE_FIRST_DAY
 var _rated: bool = false
+var _push_claimed: bool = false
 
 
 func _ready() -> void:
@@ -95,6 +102,27 @@ static func _link(id: StringName) -> Dictionary:
 	return {}
 
 
+# --- Bildirim ödülü --------------------------------------------------------------------------
+
+## Bildirim ödülü bu kayıtta henüz alınmadı mı.
+func push_reward_open() -> bool:
+	return not _push_claimed
+
+
+## Bildirimler açıksa PUSH_GEMS gem verir (kayıt başına bir kez). Verilen gem (alınamıyorsa 0).
+func claim_push_reward() -> int:
+	var push: PushService = get_tree().get_first_node_in_group("push") as PushService
+	var progress: PlayerProgress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
+	if _push_claimed or push == null or not push.is_active() or progress == null:
+		return 0
+	_push_claimed = true
+	progress.add_gems(PUSH_GEMS)
+	Telemetry.event(&"push_reward", {"gems": PUSH_GEMS})
+	_request_save()
+	changed.emit()
+	return PUSH_GEMS
+
+
 # --- Değerlendirme -------------------------------------------------------------------------
 
 ## Bu oyun gününde BİZİ DEĞERLENDİR sorulmalı mı? (sakin an / oturum süresi Hud'da)
@@ -127,7 +155,8 @@ func is_rated() -> bool:
 # --- Kayıt (SaveManager) -------------------------------------------------------------------
 
 func state() -> Dictionary:
-	return {"follow": _follow.duplicate(), "rate": {"asks": _rate_asks, "next": _rate_next, "done": _rated}}
+	return {"follow": _follow.duplicate(), "rate": {"asks": _rate_asks, "next": _rate_next, "done": _rated},
+		"push": _push_claimed}
 
 
 func load_state(data: Dictionary) -> void:
@@ -142,6 +171,7 @@ func load_state(data: Dictionary) -> void:
 	_rate_asks = clampi(SaveSafe.i(rate.get("asks", 0)), 0, RATE_MAX_ASKS)
 	_rate_next = maxi(SaveSafe.i(rate.get("next", RATE_FIRST_DAY)), RATE_FIRST_DAY)
 	_rated = SaveSafe.b(rate.get("done", false))
+	_push_claimed = SaveSafe.b(data.get("push", false))
 	changed.emit()
 
 

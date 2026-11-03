@@ -12,6 +12,11 @@ extends Node
 ## bu telefona artık gelmez (sunucu geçersiz jetonu ilk gönderimde siler), duyurular gelmeye devam eder.
 ## NEREDEN AÇILIR: AYARLAR → SES VE BİLDİRİMLER → BİLDİRİMLER (ana anahtar + üç tür) ve İLK YARIŞTAN SONRA bir kez çıkan
 ## öneri (PushPrompt). İzin oyun açılışında İSTENMEZ. Öneri bu cihazda bir kez gösterilir (should_ask / mark_asked).
+## ÖNERİ SÜRÜMÜ (2026-11-04, kullanıcı kararı): öneri yenilendi + açana 20 gem (CommunityLinks.claim_push_reward). Eski
+## öneriyi görmüş ama bildirimi açık olmayan oyuncuya YENİ öneri bir kez daha gösterilir: `asked_v` < ASK_VERSION.
+## TELEFON AYARI: Android izin penceresini bir daha göstermiyorsa (iki kez reddedilmiş: yanıt QUICK_DENY_MS'den hızlı
+## gelir) ya da telefon bu uygulamanın bildirimlerini kapatmışsa AÇ, telefonun bu uygulamaya ait bildirim ayarını
+## açar; oyuncu oyuna dönünce (NOTIFICATION_APPLICATION_RESUMED) izin verildiyse açma yeniden denenir.
 ##
 ## Firebase eklentisinde mesajlaşma modülü yok: kütüphane export_plugin.gd bağımlılığıyla gelir, jeton ve konu Godot'un
 ## JavaClassWrapper köprüsüyle (Task.isComplete yoklanır — Java dinleyicisi gerekmez). GarageSystem kurar, "push"
@@ -26,6 +31,12 @@ const PERMISSION_SDK: int = 33
 const TOKEN_WAIT: float = 15.0
 const MESSAGING_CLASS: String = "com.google.firebase.messaging.FirebaseMessaging"
 const TOPIC_PREFIX: String = "news_"
+## Öneri sürümü: bu sürümden eski öneriyi görmüş ve bildirimi kapalı oyuncuya yeni öneri bir kez daha gösterilir.
+const ASK_VERSION: int = 2
+## İzin yanıtı bundan hızlı geldiyse Android pencere göstermemiştir (kalıcı ret): telefonun ayarı açılır.
+const QUICK_DENY_MS: int = 600
+const SETTINGS_ACTION: String = "android.settings.APP_NOTIFICATION_SETTINGS"
+const SETTINGS_EXTRA_PACKAGE: String = "android.provider.extra.APP_PACKAGE"
 
 const RACE: StringName = &"race"
 const GIFT: StringName = &"gift"
@@ -34,6 +45,12 @@ const KINDS: Array[StringName] = [RACE, GIFT, NEWS]
 
 ## QA / masaüstü görüntüsü: düğmeyi Android olmadan göstermek için.
 static var force_available: bool = false
+## Test: telefonun bildirim izni (-1 gerçek, 0 kapalı, 1 açık).
+static var os_allows_override: int = -1
+## Test: telefonun bildirim ayarını açan (true: açıldı). Boşsa Android Intent'i.
+var settings_opener: Callable = Callable()
+## Test: izin isteği (true: verildi). Boşsa Android izin penceresi.
+var permission_asker: Callable = Callable()
 
 ## Son AÇ denemesi neden olmadı (AYARLAR satırı gösterir; HUD bildirimi ayarlar açıkken görünmüyor). Başarıda boş.
 var last_failure: String = ""
@@ -44,6 +61,8 @@ var _social: SocialManager
 var _state: Dictionary = {}
 var _busy: bool = false
 var _seen_uid: String = ""
+## Telefonun bildirim ayarı açıldı, oyuncunun dönmesi bekleniyor.
+var _settings_pending: bool = false
 
 
 func _ready() -> void:
@@ -77,21 +96,38 @@ func has_account() -> bool:
 	return _social != null and not _social.uid().is_empty()
 
 
-## İLK YARIŞTAN SONRAKİ ÖNERİ gösterilsin mi: açılabilir, kapalı ve bu cihazda henüz sorulmadı.
+## ÖNERİ gösterilsin mi: açılabilir, bildirim fiilen açık değil ve bu cihaza bu öneri sürümü henüz sorulmadı.
 func should_ask() -> bool:
-	return available() and not is_enabled() and not _busy and not bool(_state.get("asked", false))
+	return available() and not is_active() and not _busy and _asked_version() < ASK_VERSION
 
 
-## Öneri gösterildi (ya da oyuncu kendisi açtı / kapattı): bir daha sorulmaz.
+## Eski öneriyi görmüş (ilk yarışı geçmiş) ama yeni öneri sürümü henüz sorulmamış: güncellemeden sonraki ilk sakin anda
+## sorulur (Hud._arm_push_reask), yeni oyuncu gibi bir sonraki yarışı beklemez.
+func wants_reask() -> bool:
+	return should_ask() and bool(_state.get("asked", false))
+
+
+## Öneri gösterildi (ya da oyuncu kendisi açtı / kapattı): bu sürümde bir daha sorulmaz.
 func mark_asked() -> void:
-	if not bool(_state.get("asked", false)):
+	if _asked_version() < ASK_VERSION:
 		_state["asked"] = true
+		_state["asked_v"] = ASK_VERSION
 		_write()
+
+
+func _asked_version() -> int:
+	return SaveSafe.i(_state.get("asked_v", 1 if bool(_state.get("asked", false)) else 0))
 
 
 ## Bu cihazda bildirimler açık mı (izin verildi, jeton alındı).
 func is_enabled() -> bool:
 	return bool(_state.get("enabled", false))
+
+
+## Bildirimler fiilen geliyor mu: bu cihazda bildirim var (Android + eklenti), oyunda açık VE telefon bu uygulamaya
+## izin veriyor (sonradan kapatılmış olabilir). Masaüstünde kalmış push.json "açık" sayılmaz (ödül verilmez).
+func is_active() -> bool:
+	return available() and is_enabled() and os_allows()
 
 
 ## Oyuncuya bildirim soruldu mu (öneri gösterildi ya da AYARLAR'dan açıp kapattı). Cihaz metrikleri için.
@@ -102,6 +138,8 @@ func was_asked() -> bool:
 ## Telefon bu uygulamanın bildirimlerine izin veriyor mu (NotificationManager.areNotificationsEnabled, API 24+). Oyunda
 ## açık olsa da oyuncu sonradan telefon ayarlarından kapatmış olabilir. Android dışında / okunamazsa true.
 static func os_allows() -> bool:
+	if os_allows_override >= 0:
+		return os_allows_override == 1
 	if OS.get_name() != "Android" or not Engine.has_singleton("AndroidRuntime"):
 		return true
 	var activity: Object = Engine.get_singleton("AndroidRuntime").call("getActivity")
@@ -148,9 +186,22 @@ func enable() -> bool:
 		return false
 	_busy = true
 	_state["asked"] = true
+	_state["asked_v"] = ASK_VERSION
 	last_failure = ""
 	changed.emit()
+	var started: int = Time.get_ticks_msec()
 	var ok: bool = await _ask_permission()
+	var quick: bool = Time.get_ticks_msec() - started < QUICK_DENY_MS
+	if ok and not os_allows():
+		ok = false   # izin var ama telefon bu uygulamanın bildirimlerini kapatmış: pencere çıkmaz, ayar gerekir
+		quick = true
+	if not ok and quick and _open_settings():
+		# Android izin penceresi göstermedi: telefonun bildirim ayarı açıldı, oyuncu dönünce yeniden denenir
+		_settings_pending = true
+		_write()
+		_busy = false
+		changed.emit()
+		return false
 	var token: String = ""
 	if not ok:
 		last_failure = Loc.t("Bildirim izni verilmedi. Telefonun Ayarlar > Uygulamalar bölümünden açabilirsin.")
@@ -186,6 +237,7 @@ func disable() -> void:
 	_delete_token()
 	_state["enabled"] = false
 	_state["asked"] = true
+	_state["asked_v"] = ASK_VERSION
 	_state.erase("uid")
 	last_failure = ""
 	_write()
@@ -299,7 +351,53 @@ func _topic_call(method: StringName, topic: String) -> bool:
 
 # --- Android ----------------------------------------------------------------------
 
+## Telefon ayarından dönüş: izin verildiyse açma yeniden denenir. Bildirim açıkken telefon ayarı değiştiyse arayüz
+## (AYARLAR satırı, ödül) tazelensin.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_APPLICATION_RESUMED:
+		return
+	if _settings_pending:
+		_settings_pending = false
+		if os_allows() and (permission_asker.is_valid() or GallerySaver.android_sdk() < PERMISSION_SDK
+				or OS.get_granted_permissions().has(PERMISSION)):
+			enable()
+		else:
+			_notice(Loc.t("Bildirimler kapalı kaldı. İstediğin zaman AYARLAR > SES VE BİLDİRİMLER'den açabilirsin."))
+	elif is_enabled():
+		changed.emit()
+
+
+## Telefonun bu uygulamaya ait bildirim ayarını açar (Intent APP_NOTIFICATION_SETTINGS). Açıldıysa true.
+func _open_settings() -> bool:
+	if settings_opener.is_valid():
+		return bool(settings_opener.call())
+	if OS.get_name() != "Android" or not Engine.has_singleton("AndroidRuntime"):
+		return false
+	var activity: Object = Engine.get_singleton("AndroidRuntime").call("getActivity")
+	var intent_class: JavaClass = JavaClassWrapper.wrap("android.content.Intent")
+	if activity == null or intent_class == null:
+		return false
+	var intent: Object = intent_class.call("Intent", SETTINGS_ACTION)
+	if _java_failed() or intent == null:
+		return false
+	intent.call("putExtra", SETTINGS_EXTRA_PACKAGE, AppInfo.package_name())
+	if _java_failed():
+		return false
+	activity.call("startActivity", intent)
+	return not _java_failed()
+
+
+static func _java_failed() -> bool:
+	var exception: JavaObject = JavaClassWrapper.get_exception()
+	if exception == null:
+		return false
+	push_warning("PushService: %s" % str(exception.call("toString")))
+	return true
+
+
 func _ask_permission() -> bool:
+	if permission_asker.is_valid():
+		return bool(await permission_asker.call())
 	if force_available and OS.get_name() != "Android":
 		return true
 	if GallerySaver.android_sdk() < PERMISSION_SDK or OS.get_granted_permissions().has(PERMISSION):
