@@ -300,7 +300,7 @@ func _pet_event(hud: Hud) -> void:
 	hud.router.open(&"pet_closeup")
 	var ready: bool = await _until(func() -> bool: return closeup._ready_to_pet, 8.0)
 	for i: int in 8:
-		_pets._last_pet_msec = -100000
+		_pets._last_pet_msec.clear()
 		closeup._pet()
 		await process_frame
 	hud.router.back()

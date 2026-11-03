@@ -93,8 +93,8 @@ func _run() -> void:
 	_shot("seviliyor")
 	# Numaralar açılsın (dostluk 10)
 	for i: int in 12:
-		pets._last_pet_msec = -100000
-		pets._love_day = ""   # günlük sınırı atla (QA)
+		pets._last_pet_msec.clear()
+		pets._cur()["love_day"] = ""   # günlük sınırı atla (QA)
 		pets.pet()
 	closeup._refresh_card()
 	await _wait(2.0)

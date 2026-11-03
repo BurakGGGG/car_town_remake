@@ -240,13 +240,16 @@ func _ensure_social() -> void:
 		add_child(moderation)
 
 
-## GARAJ DOSTLARI: kedinin garajdaki hayatı (PetWorld, "pet_world"). Kedi sahiplenilince ortaya çıkar; ziyarette şimdilik yok.
+## GARAJ DOSTLARI: kedilerin garajdaki hayatı (PetWorld, "pet_world") — garaj yuvası başına bir tane (en çok
+## PetManager.MAX_OUT hayvan garajda). Hayvan sahiplenilip yuvaya çıkınca ortaya çıkar; ziyarette şimdilik yok.
 func _ensure_pet_world() -> void:
 	if get_tree().get_first_node_in_group("pet_world") != null:
 		return
-	var world: PetWorld = PetWorld.new()
-	world.name = "PetWorld"
-	add_child(world)
+	for i: int in PetManager.MAX_OUT:
+		var world: PetWorld = PetWorld.new()
+		world.name = "PetWorld" if i == 0 else "PetWorld%d" % (i + 1)
+		world.slot = i
+		add_child(world)
 
 
 ## Avludaki dekorasyon görünümü de kodla kurulur (sahne dosyası elle düzenlenmiyor).

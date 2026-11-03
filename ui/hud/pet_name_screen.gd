@@ -6,6 +6,9 @@ extends Control
 ##   mandatory = true  → geliş sinematiği: ad ZORUNLU, kapatılamaz (GERİ yok, Android GERİ'si de kapatmaz)
 ##   mandatory = false → yakın kameradaki kartın kalemi: adı değiştirir, GERİ ile vazgeçilir
 ## Ad süzgeci SocialNames'tir (uygunsuz kök / kelime, harf kümesi); 2–14 karakter.
+## ÜCRET (2026-11-03): her hayvanın ilk adı ücretsiz, sonrası PetManager.RENAME_GEMS. Açan taraf cost_gems'i verir;
+## ücretliyse TAMAM "DEĞİŞTİR · 100" (elmas simgesi) olur, elmas yetmezse ad değişmez, MARKET açılır. Elması
+## PetManager.rename düşer (burada yalnız gösterim ve ön denetim).
 
 signal closed
 ## Geçerli ad onaylandı (PetManager.adopt çağıran taraftadır).
@@ -19,6 +22,11 @@ const SUGGESTIONS: PackedStringArray = ["Tekir", "Sarman", "Paşa", "Duman", "B�
 
 var mandatory: bool = true
 var start_name: String = ""
+## Boş değilse başlık bu (HAYVANLAR ekranında yeni alınan kedi: "Yeni kedine ad ver"); bir açılışlık, kapanınca silinir.
+var title_text: String = ""
+## Bu ad değişikliğinin elmas ücreti (0 = ücretsiz ilk ad); bir açılışlık.
+var cost_gems: int = 0
+var _cost: int = 0
 
 var _column: VBoxContainer
 var _tag: _Tag
@@ -40,8 +48,17 @@ func _ready() -> void:
 
 
 func open() -> void:
-	_title.text = Loc.t("Garajına bir kedi yerleşti!") if mandatory else Loc.t("Adını değiştir")
-	_subtitle.text = Loc.t("Künyesine adını yaz.")
+	_title.text = title_text if title_text != "" else \
+		(Loc.t("Garajına bir kedi yerleşti!") if mandatory else Loc.t("Adını değiştir"))
+	title_text = ""
+	_cost = cost_gems
+	cost_gems = 0
+	_subtitle.text = Loc.t("Künyesine adını yaz.") + "\n" + (Loc.t("Ad değiştirmek %d GEM.") % _cost if _cost > 0
+		else Loc.t("İlk ad ücretsiz, sonra değiştirmek %d GEM.") % PetManager.RENAME_GEMS)
+	_ok.kind = HudIcon.Kind.GEM if _cost > 0 else HudIcon.Kind.NONE
+	_ok.icon_left = true
+	_ok.icon_size = 16.0
+	_ok.text = Loc.t("DEĞİŞTİR · %d") % _cost if _cost > 0 else Loc.t("TAMAM")
 	_back.visible = not mandatory
 	_edit.text = start_name
 	_error.text = ""
@@ -205,6 +222,14 @@ func _confirm() -> void:
 	if not why.is_empty():
 		_error.text = why
 		return
+	if _cost > 0 and clean(_edit.text) != clean(start_name):
+		var player: PlayerProgress = get_tree().get_first_node_in_group("player_progress") as PlayerProgress
+		if player == null or not player.can_afford_gems(_cost):
+			_error.text = Loc.t("GEM YETMİYOR\n%d GEM gerekiyor, %d GEM'in var.") % [_cost, player.gems if player else 0]
+			var router: UiRouter = get_tree().get_first_node_in_group("ui_router") as UiRouter
+			if router:
+				router.open(&"gem_store")   # MODAL: ad ekranı kapanır, altındaki ekran (yakın kamera / HAYVANLAR) kalır
+			return
 	named.emit(clean(_edit.text))
 	close()
 

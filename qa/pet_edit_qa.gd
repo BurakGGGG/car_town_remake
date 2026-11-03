@@ -70,7 +70,7 @@ func _run() -> void:
 	await _wait(0.5)
 	await _shot("kart_bugun_0")
 	for i: int in 7:
-		pets._last_pet_msec = -100000
+		pets._last_pet_msec.clear()
 		closeup._pet()
 		await _wait(0.25)
 	await _wait(0.3)

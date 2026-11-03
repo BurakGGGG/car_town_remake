@@ -70,6 +70,8 @@ func _initialize() -> void:
 	await _furniture()
 	await _accessories()
 	await _wear_and_fur()
+	await _multi_pets()
+	await _rename_cost()
 	_names()
 	await _voice()
 	await _closeup()
@@ -106,7 +108,9 @@ func _adopt() -> void:
 	check(pets.is_adopted() and pets.pet_name() == "Paşa" and not pets.is_arrival_pending(), "ad kayıtlı, geliş kapandı")
 	await frames(6)
 	check(world.actor() != null, "PetWorld kediyi garaja koydu")
+	progress.load_state(progress.level, progress.xp, 1000)
 	check(pets.adopt("Uzun Bir Kedi Adı Deneme") and pets.pet_name().length() <= PetManager.NAME_MAX, "ad sınırı")
+	check(progress.gems == 1000 - PetManager.RENAME_GEMS, "gelişteki ad ücretsizdi, ad değiştirmek %d elmas" % PetManager.RENAME_GEMS)
 	pets.adopt("Paşa")
 
 
@@ -118,23 +122,23 @@ func _friendship() -> void:
 	check(pets.friendship() == start + 1, "dostluk +1")
 	# Günlük sınır: aynı gün en çok DAILY_LOVE puan, sonra sevmek sayılmaz; ertesi gün yeniden
 	for i: int in 10:
-		pets._last_pet_msec = -100000
+		pets._last_pet_msec.clear()
 		pets.pet()
 	check(pets.friendship() == start + PetManager.DAILY_LOVE and pets.love_left() == 0,
 		"aynı gün en çok %d sevgi sayıldı (%d)" % [PetManager.DAILY_LOVE, pets.friendship() - start])
-	pets._last_pet_msec = -100000
+	pets._last_pet_msec.clear()
 	check(not pets.pet(), "sınır dolunca sevme puan saymadı")
 	var snap: Dictionary = pets.state()
 	check(snap.get("love_today") == PetManager.DAILY_LOVE and String(snap.get("love_day", "")) != "",
 		"günlük sayaç kayda giriyor")
-	pets._love_day = "2000-01-01"   # ertesi gün
-	pets._last_pet_msec = -100000
+	pets._cur()["love_day"] = "2000-01-01"   # ertesi gün
+	pets._last_pet_msec.clear()
 	check(pets.pet() and pets.love_today() == 1, "ertesi gün sevgi yeniden sayıldı")
 	var unlocked: Array[StringName] = []
 	pets.trick_unlocked.connect(func(t: StringName) -> void: unlocked.append(t))
 	for i: int in 70:
-		pets._last_pet_msec = -100000   # bekleme süresini atla
-		pets._love_day = ""             # her dokunuş yeni gün (sınırı atla)
+		pets._last_pet_msec.clear()   # bekleme süresini atla
+		pets._cur()["love_day"] = ""    # her dokunuş yeni gün (sınırı atla)
 		pets.pet()
 	check(pets.is_trick_unlocked(&"trick_paw") and pets.is_trick_unlocked(&"trick_beg") and pets.is_trick_unlocked(&"trick_roll"),
 		"üç numara açıldı")
@@ -492,6 +496,160 @@ func _wear_and_fur() -> void:
 		"equipped": {"body": "vest", "neck": "bandana", "head": "vest"}})
 	check(pets.worn().size() == 1 and pets.equipped(&"head") == &"", "kayıtta çakışan / yanlış yuvadaki takılmaz")
 	pets.fur_changed.disconnect(cb)
+	pets.load_state(keep)
+	await frames(1)
+
+
+func _multi_pets() -> void:
+	print("== HAYVANLAR: beyaz / siyah kedi elmasla, garajda en çok 2, hayvan başına ad / dostluk / giydikleri ==")
+	var keep: Dictionary = pets.state()
+	pets.load_state({"adopted": true, "name": "Paşa", "friendship": 40, "accessories": ["collar_red"],
+		"equipped": {"neck": "collar_red"}})
+	await frames(2)
+	var worlds: Array[PetWorld] = []
+	for node: Node in get_nodes_in_group(&"pet_world"):
+		worlds.append(node as PetWorld)
+	worlds.sort_custom(func(a: PetWorld, b: PetWorld) -> bool: return a.slot < b.slot)
+	check(worlds.size() == PetManager.MAX_OUT and worlds[0].slot == 0 and worlds[1].slot == 1, "garaj yuvası başına bir dünya")
+	var pasa: String = pets.focused()
+	check(pets.uids().size() == 1 and pets.is_out(pasa) and pets.pet_in_slot(0) == pasa, "eski (v1) kayıt tek kediye göçtü, garajda")
+	check(pets.worn_of(pasa).has(&"collar_red") and pets.friendship_of(pasa) == 40, "göçte dostluk ve tasma korundu")
+	check(worlds[0].actor() != null and worlds[0].pet_uid() == pasa and worlds[1].actor() == null, "yuva 0'da Paşa, yuva 1 boş")
+	progress.load_state(progress.level, progress.xp, 100)
+	check(pets.buy_pet(&"white") == "" and not pets.owns_variant(&"white") and progress.gems == 100,
+		"elmas yetmezse kedi alınmaz, elmas düşmez")
+	check(pets.buy_pet(&"orange") == "" and pets.buy_pet(&"dog") == "", "ilk kedi ve YAKINDA satılmaz")
+	progress.load_state(progress.level, progress.xp, 2000)
+	var white: String = pets.buy_pet(&"white")
+	check(white != "" and progress.gems == 1500 and pets.name_of(white) == "Pamuk" and pets.fur_of(white) == &"white",
+		"BEYAZ KEDİ 500 elmasa alındı, varsayılan ad Pamuk")
+	check(pets.is_out(white) and pets.out_pets().size() == 2 and pets.garage_full(), "yer vardı: garaja çıktı (2 / 2)")
+	check(pets.buy_pet(&"white") == "" and progress.gems == 1500, "aynı çeşit ikinci kez alınmaz")
+	await frames(3)
+	check(worlds[1].actor() != null and worlds[1].pet_uid() == white and worlds[1].actor().fur() == &"white",
+		"ikinci yuvada beyaz kedi dolaşıyor")
+	check(worlds[1].actor().worn_accessories().is_empty() and worlds[0].actor().worn_accessories().has(&"collar_red"),
+		"giydikleri hayvan başına (Paşa'nın tasması beyazda yok)")
+	var black: String = pets.buy_pet(&"black")
+	check(black != "" and progress.gems == 750 and not pets.is_out(black), "SİYAH KEDİ 750: garaj dolu, evde bekliyor")
+	check(not pets.set_out(black, true) and not pets.is_out(black), "dolu garaja çıkamaz")
+	check(pets.set_out(pasa, false) and not pets.is_out(pasa), "Paşa eve gitti")
+	await frames(2)
+	check(worlds[0].actor() == null and worlds[1].actor() != null, "Paşa sahneden kalktı, beyaz yerinde (yuva kararlı)")
+	check(pets.set_out(black, true) and pets.pet_in_slot(0) == black, "siyah boşalan yuvaya çıktı")
+	await frames(2)
+	check(worlds[0].actor() != null and worlds[0].actor().fur() == &"black", "yuva 0'da siyah kedi")
+	pets.focus(white)
+	check(pets.pet_name() == "Pamuk" and pets.focused() == white, "odak beyaz kedide (yakın kamera kartı)")
+	pets.equip(&"neck", &"collar_red")
+	check(pets.worn_of(white).has(&"collar_red") and pets.worn_of(pasa).has(&"collar_red"),
+		"ortak dolap: aynı tasmayı iki kedi de takabilir")
+	await frames(1)
+	check(worlds[1].actor().worn_accessories().has(&"collar_red"), "beyazın tasması sahnede")
+	pets._last_pet_msec.clear()
+	pets.pet()
+	check(pets.friendship_of(white) == 1 and pets.friendship_of(pasa) == 40 and pets.friendship_of(black) == 0,
+		"sevgi yalnız odaktaki hayvana")
+	var gems_before: int = progress.gems
+	check(pets.rename_cost(white) == 0 and pets.rename(white, "Kar") and pets.name_of(white) == "Kar"
+		and pets.name_of(pasa) == "Paşa" and progress.gems == gems_before, "alınan kedinin ilk adı ücretsiz, ad hayvan başına")
+	check(pets.rename_cost(white) == PetManager.RENAME_GEMS and pets.rename_cost(black) == 0, "ilk addan sonra ücretli")
+	pets.adopt("Pamuk")
+	check(progress.gems == gems_before - PetManager.RENAME_GEMS, "ikinci ad %d elmas" % PetManager.RENAME_GEMS)
+	check(pets.name_of(white) == "Pamuk" and pets.uids().size() == 3, "sahipliyken adopt odaktakinin adını değiştirir")
+	worlds[0]._claim = "dekor_1"
+	check(worlds[1]._taken("dekor_1") and not worlds[0]._taken("dekor_1"), "öteki kedinin gittiği eşya dolu sayılır")
+	worlds[0]._claim = ""
+	var data: Dictionary = pets.state()
+	check(int(data.get("v", 0)) == 2 and (data["pets"] as Array).size() == 3 and data.get("name") == "Paşa",
+		"kayıt v2 + eski sürümler için ilk hayvan kökte")
+	pets.load_state({})
+	await frames(2)
+	check(worlds[0].actor() == null and worlds[1].actor() == null, "kayıt sıfırlanınca garaj kedisiz")
+	pets.load_state(data)
+	await frames(2)
+	check(pets.uids() == [pasa, white, black] and pets.pet_in_slot(0) == black and pets.pet_in_slot(1) == white
+		and not pets.is_out(pasa), "kimlikler ve yuvalar kayıttan geri geldi")
+	check(pets.name_of(white) == "Pamuk" and pets.friendship_of(white) == 1 and pets.worn_of(white).has(&"collar_red"),
+		"beyazın adı, dostluğu, tasması geri geldi")
+	check(worlds[0].actor() != null and worlds[0].actor().fur() == &"black" and worlds[1].actor().fur() == &"white",
+		"yüklemeden sonra iki kedi sahnede")
+	pets.load_state({"v": 2, "adopted": true, "pets": [
+		{"uid": "p1", "variant": "orange", "name": "A", "slot": 0},
+		{"uid": "p2", "variant": "white", "name": "B", "slot": 0},
+		{"uid": "p3", "variant": "white", "name": "C", "slot": 1},
+		{"uid": "p4", "variant": "zebra", "name": "D", "slot": 1}]})
+	check(pets.uids().size() == 2 and pets.pet_in_slot(0) == "p1" and not pets.is_out("p2"),
+		"bozuk kayıt: aynı yuvadaki ikinci eve, aynı çeşitten ikincisi ve bilinmeyen çeşit atılır")
+	# Arayüz: pati tabelası ve HAYVANLAR ekranı
+	var hud: Hud = root.find_child("HUD", true, false) as Hud
+	if hud and hud.pets_button:
+		pets.load_state({"adopted": true, "name": "Paşa"})
+		check(hud.pets_button.visible and hud.pets_button.show_badge, "pati tabelası görünür, ekran açılmadığı için ünlem")
+		hud.router.open(&"pets")
+		await frames(3)
+		check(hud.pets_screen.visible and not hud.pets_button.show_badge and pets.screen_seen(), "HAYVANLAR açıldı, ünlem kalktı")
+		hud.pets_screen.select(&"white")
+		check(hud.pets_screen._primary.text.contains("500"), "beyaz kartında 500 GEM · SATIN AL")
+		hud.router.back()
+		await frames(2)
+		pets.load_state({})
+		check(not hud.pets_button.visible, "kedisi olmayan oyuncuda tabela yok")
+	pets.load_state(keep)
+	await frames(2)
+
+
+func _rename_cost() -> void:
+	print("== Ad değiştirme: ilk ad ücretsiz, sonrası %d elmas ==" % PetManager.RENAME_GEMS)
+	var keep: Dictionary = pets.state()
+	pets.load_state({"adopted": true, "name": "Paşa"})
+	var uid: String = pets.focused()
+	check(pets.rename_cost(uid) == PetManager.RENAME_GEMS, "eski kayıttaki kedinin adı gelişte verilmişti: ücretli")
+	progress.load_state(progress.level, progress.xp, PetManager.RENAME_GEMS - 1)
+	check(not pets.rename(uid, "Duman") and pets.name_of(uid) == "Paşa" and progress.gems == PetManager.RENAME_GEMS - 1,
+		"elmas yetmezse ad değişmez, elmas düşmez")
+	check(pets.rename(uid, "Paşa") and progress.gems == PetManager.RENAME_GEMS - 1, "aynı ad ücretsiz")
+	progress.load_state(progress.level, progress.xp, 500)
+	check(pets.rename(uid, "Duman") and pets.name_of(uid) == "Duman" and progress.gems == 500 - PetManager.RENAME_GEMS,
+		"ad değişti, %d elmas düştü" % PetManager.RENAME_GEMS)
+	progress.load_state(progress.level, progress.xp, 2000)
+	var white: String = pets.buy_pet(&"white")
+	var after_buy: int = progress.gems
+	check(white != "" and pets.rename_cost(white) == 0 and pets.rename(white, "Kar") and progress.gems == after_buy,
+		"yeni kedinin ilk adı ücretsiz")
+	check(pets.rename_cost(white) == PetManager.RENAME_GEMS, "sonra ücretli")
+	var white2: String = pets.uid_of_variant(&"white")
+	var data: Dictionary = pets.state()
+	pets.load_state(data)
+	check(pets.rename_cost(white2) == PetManager.RENAME_GEMS, "ilk ad kullanıldı bilgisi kayda giriyor")
+	# Ad ekranı: ücret görünür, elmas yetmezse onaylamaz
+	var hud: Hud = root.find_child("HUD", true, false) as Hud
+	if hud and hud.pet_closeup_screen:
+		var screen: PetNameScreen = hud.pet_closeup_screen.name_screen()
+		screen.mandatory = false
+		screen.start_name = "Kar"
+		screen.cost_gems = PetManager.RENAME_GEMS
+		hud.router.open(&"pet_name")
+		await frames(2)
+		check(screen._ok.text.contains(str(PetManager.RENAME_GEMS)) and screen._ok.kind == HudIcon.Kind.GEM,
+			"ad ekranında ücret: %s" % screen._ok.text)
+		progress.load_state(progress.level, progress.xp, 10)
+		var fired: Array[String] = []
+		var cb: Callable = func(n: String) -> void: fired.append(n)
+		screen.named.connect(cb)
+		screen._edit.text = "Bulut"
+		screen._confirm()
+		await frames(2)
+		check(fired.is_empty() and hud.router.is_open(&"gem_store"), "elmas yetmeyince onaylamadı, MARKET açıldı")
+		screen.named.disconnect(cb)
+		hud.router.close_all()
+		await frames(2)
+		screen.start_name = "Kar"
+		hud.router.open(&"pet_name")
+		await frames(2)
+		check(screen._ok.text == Loc.t("TAMAM") and screen._ok.kind == HudIcon.Kind.NONE, "bir açılışlık: sonraki açılış ücretsiz gösterir")
+		hud.router.close_all()
+		await frames(2)
 	pets.load_state(keep)
 	await frames(1)
 

@@ -199,6 +199,9 @@ var race_result_screen: RaceResultScreen
 var supercar_tease_screen: SupercarTeaseScreen
 ## GARAJ DOSTLARI: kediye dokununca yakın kamera (PLACE "pet_closeup") ve ad ekranı (MODAL "pet_name").
 var pet_closeup_screen: PetCloseupScreen
+## HAYVANLAR ekranı (PLACE "pets") ve sağ üstteki pati tabelası (ilk kedi gelince görünür).
+var pets_screen: PetsScreen
+var pets_button: PetsButton
 ## Ön ısıtma bitti mi (_warm_up). Yükleme ekranı bu olmadan kalkmaz: ilk kullanım takılmaları oyuna taşınmasın.
 var warmed_up: bool = false
 var _race: RaceManager
@@ -1703,6 +1706,7 @@ func _register_screens() -> void:
 	router.register(&"supercar_tease", supercar_tease_screen, UiRouter.Kind.MODAL)
 	router.register(&"pet_closeup", pet_closeup_screen, UiRouter.Kind.PLACE)   # dünya görünür, HUD gizli
 	router.register(&"pet_name", pet_closeup_screen.name_screen(), UiRouter.Kind.MODAL)
+	router.register(&"pets", pets_screen, UiRouter.Kind.PLACE)   # üstünde ad ekranı / MARKET açılabilsin
 	router.register(&"collection", collection_screen, UiRouter.Kind.MODAL)
 	router.register(&"all_cars", all_cars_screen, UiRouter.Kind.MODAL)
 	router.register(&"car_garages", car_garages_screen, UiRouter.Kind.MODAL)
@@ -1950,6 +1954,21 @@ func _setup_gem_store() -> void:
 	login_ladder_button.visible = login_ladder_screen != null
 	login_ladder_button.pressed.connect(func() -> void: router.open(&"login_ladder"))
 	shop_row.add_child(login_ladder_button)
+	# HAYVANLAR (2026-11-03, kullanıcı kararı): takvimin SOLUNDA pati tabelası; yalnız ilk kedi gelince görünür
+	pets_button = PetsButton.new()
+	pets_button.name = "PetsButton"
+	pets_button.custom_minimum_size = camera_button.custom_minimum_size
+	pets_button.pressed.connect(func() -> void: router.open(&"pets"))
+	shop_row.add_child(pets_button)
+	shop_row.move_child(pets_button, 0)
+	var pets: PetManager = get_tree().get_first_node_in_group("pets") as PetManager
+	var refresh_pets: Callable = func() -> void:
+		pets_button.visible = pets != null and pets.is_adopted()
+		pets_button.show_badge = pets != null and not pets.screen_seen()
+	if pets:
+		pets.pets_changed.connect(refresh_pets)
+		pets.adopted.connect(func(_n: String) -> void: refresh_pets.call())
+	refresh_pets.call()
 	var shop_button: GemShopButton = GemShopButton.new()
 	shop_button.name = "GemShopButton"
 	shop_button.custom_minimum_size = camera_button.custom_minimum_size
@@ -2554,16 +2573,20 @@ func _build_pet_screens() -> void:
 	pet_closeup_screen = PetCloseupScreen.new()
 	var host: Node = garage_screen.get_parent()
 	host.add_child(pet_closeup_screen)
-	host.add_child(pet_closeup_screen.name_screen())
+	pets_screen = PetsScreen.new()
+	pets_screen.name_screen = pet_closeup_screen.name_screen()
+	host.add_child(pets_screen)
+	host.add_child(pet_closeup_screen.name_screen())   # ikisinin de üstünde
 	if GarageVisit.is_visiting():
 		return
 	_connect_pets.call_deferred()
 
 
 func _connect_pets() -> void:
-	var world: PetWorld = get_tree().get_first_node_in_group("pet_world") as PetWorld
-	if world and not world.pet_tapped.is_connected(_on_pet_tapped):
-		world.pet_tapped.connect(_on_pet_tapped)
+	for node: Node in get_tree().get_nodes_in_group("pet_world"):   # garaj yuvası başına bir dünya
+		var world: PetWorld = node as PetWorld
+		if world and not world.pet_tapped.is_connected(_on_pet_tapped):
+			world.pet_tapped.connect(_on_pet_tapped.bind(world))
 	_pet_arrival_timer = Timer.new()
 	_pet_arrival_timer.name = "PetArrivalTimer"
 	_pet_arrival_timer.wait_time = 0.5
@@ -2572,8 +2595,9 @@ func _connect_pets() -> void:
 	_pet_arrival_timer.start()
 
 
-func _on_pet_tapped() -> void:
+func _on_pet_tapped(world: PetWorld) -> void:
 	if router.top().is_empty() and not (tutorial and tutorial.is_running()):
+		pet_closeup_screen.target_world = world
 		router.open(&"pet_closeup")
 
 

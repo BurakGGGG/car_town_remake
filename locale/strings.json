@@ -8921,5 +8921,77 @@
  ],
  "İKAZ YELEĞİ": [
   "gameplay/pets/pet_manager.gd:56"
+ ],
+ "%d GEM · SATIN AL": [
+  "ui/hud/pets_screen.gd:178"
+ ],
+ "%s EVE GİTTİ": [
+  "ui/hud/pets_screen.gd:253"
+ ],
+ "%s GARAJA ÇIKTI": [
+  "ui/hud/pets_screen.gd:257"
+ ],
+ "ADINI DEĞİŞTİR": [
+  "ui/hud/pets_screen.gd:547"
+ ],
+ "BEYAZ KEDİ": [
+  "gameplay/pets/pet_manager.gd:88"
+ ],
+ "EVDE": [
+  "ui/hud/pets_screen.gd:195"
+ ],
+ "EVE GÖNDER": [
+  "ui/hud/pets_screen.gd:165"
+ ],
+ "GARAJ DOLU\nÖnce bir hayvanı eve gönder.": [
+  "ui/hud/pets_screen.gd:255"
+ ],
+ "GARAJA ÇIKAR": [
+  "ui/hud/pets_screen.gd:167"
+ ],
+ "GARAJDA %d / %d": [
+  "ui/hud/pets_screen.gd:114"
+ ],
+ "Garajına yakında gelecek.": [
+  "ui/hud/pets_screen.gd:131"
+ ],
+ "HAYVANLAR": [
+  "ui/hud/pets_screen.gd:384"
+ ],
+ "Kendi adı, dostluğu ve kıyafetleriyle garajına gelir.": [
+  "ui/hud/pets_screen.gd:150"
+ ],
+ "KÖPEK": [
+  "gameplay/pets/pet_manager.gd:94"
+ ],
+ "Mavi gözlü beyaz · garajın kedisi": [
+  "gameplay/pets/pet_manager.gd:89"
+ ],
+ "SİYAH KEDİ": [
+  "gameplay/pets/pet_manager.gd:90"
+ ],
+ "TURUNCU TEKİR": [
+  "gameplay/pets/pet_manager.gd:86"
+ ],
+ "Yeni dostlar yolda: köpekler de garaja geliyor.": [
+  "ui/hud/pets_screen.gd:148"
+ ],
+ "Yeni kedine ad ver": [
+  "ui/hud/pets_screen.gd:279"
+ ],
+ "Yeşil gözlü siyah · garajın kedisi": [
+  "gameplay/pets/pet_manager.gd:91"
+ ],
+ "ADINI DEĞİŞTİR · %d": [
+  "ui/hud/pets_screen.gd:165"
+ ],
+ "Ad değiştirmek %d GEM.": [
+  "ui/hud/pet_name_screen.gd:56"
+ ],
+ "DEĞİŞTİR · %d": [
+  "ui/hud/pet_name_screen.gd:61"
+ ],
+ "İlk ad ücretsiz, sonra değiştirmek %d GEM.": [
+  "ui/hud/pet_name_screen.gd:57"
  ]
 }

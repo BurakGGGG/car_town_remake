@@ -1,7 +1,10 @@
 class_name PetWorld
 extends Node3D
 ## GARAJ DOSTLARI — kedinin garajdaki HAYATI: nereye yürür, ne yapar, neye tepki verir. Görünüm PetActor'da, veri
-## PetManager'da. GarageSystem kodla kurar ("pet_world" grubu); kedi sahiplenilince (PetManager.adopted) ortaya çıkar.
+## PetManager'da. GarageSystem kodla kurar ("pet_world" grubu): GARAJ YUVASI başına bir tane (PetManager.MAX_OUT,
+## 2026-11-03 "garajda aynı anda 2 hayvan"); her biri kendi yuvasındaki hayvanı (PetManager.pet_in_slot) gösterir, yuva
+## boşsa sahnede kedi yoktur. Yuva 0 ilk kedinin geliş sinematiğini de oynatır. İki kedi aynı eşyaya / araç tavanına /
+## kasaya çıkmaz (_taken).
 ##
 ## YOL: garaj zemini dekor ızgarasının (DecorGrid, göz 0,175) gözlerine bölünür; dekor eşyaları, tamir alanları, kasalar
 ## ve iç duvarlar (kedi yarıçapı kadar şişirilmiş) engeldir; AStarGrid2D yol bulur, görüş hattı olan ara noktalar atlanır.
@@ -60,7 +63,11 @@ const POSE_CENTER: Dictionary = {&"sleep": Vector2(-0.096, 0.075), &"loaf": Vect
 const NAV_SUB: int = 3
 const NAV_CELL: float = DecorGrid.CELL / NAV_SUB
 
+## Garaj yuvası (0..PetManager.MAX_OUT-1); add_child'dan ÖNCE verilir.
+var slot: int = 0
 var _pets: PetManager
+var _uid: String = ""         # yuvadaki hayvan (PetManager uid; "" = boş)
+var _claim: String = ""       # gitmekte olduğu eşya / araç / kasa (öteki kedi aynısını seçmesin)
 var _view: GarageDecorView
 var _actor: PetActor
 var _preview: StringName = &""
@@ -117,10 +124,11 @@ func _setup() -> void:
 	if _pets == null or _view == null:
 		return
 	_pets.adopted.connect(func(_n: String) -> void: _sync())
+	_pets.pets_changed.connect(_sync)
 	_pets.accessories_changed.connect(_apply_accessories)
-	_pets.fur_changed.connect(func(f: StringName) -> void:
-		if _actor:
-			_actor.set_fur(f))
+	_pets.fur_changed.connect(func(_f: StringName) -> void:
+		if _actor and _uid != "":
+			_actor.set_fur(_pets.fur_of(_uid)))
 	var save: SaveManager = get_tree().get_first_node_in_group("save_manager") as SaveManager
 	if save:
 		save.game_loaded.connect(func(_ok: bool) -> void: _sync())
@@ -204,17 +212,62 @@ func _on_decor_changed() -> void:
 		_restart(0.3)
 
 
-## Kedi sahiplenildiyse sahnede olsun.
+## Yuvanın hayvanı sahnede olsun: hayvan değiştiyse eskisi gider, yenisi gelir; görünüşü (tüy, giydikleri) tazelenir.
+## Geliş sinematiğindeki (henüz sahibi olmayan) kedi silinmez, sahiplenilince bu yuvanın hayvanı olur. Yakın kameradayken
+## kedi değişmez (kapanınca end_closeup yeniden eşitler).
 func _sync() -> void:
-	if _pets and _pets.is_adopted() and _actor == null:
+	if _pets == null:
+		return
+	var want: String = _pets.pet_in_slot(slot)
+	if _in_closeup:
+		if _uid == "" and want != "":
+			_uid = want   # gelişte ad verildi: sahnedeki kedi bu hayvan
+			_apply_accessories()
+		return
+	if _actor != null and _uid != want and (_uid != "" or not _visitor):
+		_despawn()
+	_uid = want
+	if _uid == "":
+		return
+	if _actor == null:
 		_spawn()
-	elif _pets and _pets.is_adopted() and _actor != null and not _in_closeup and _mode == Mode.STILL and _visitor:
-		_visitor = false
+	elif _mode == Mode.STILL and _visitor:
+		_visitor = false   # geliş sinematiğindeki kedi sahiplenildi: hayatı başlar
 		_restart()
+	_apply_accessories()
+	_actor.set_fur(_pets.fur_of(_uid))
+
+
+## Yuvadaki hayvan eve gitti: sahneden kalkar, süren işi biter.
+func _despawn() -> void:
+	_gen += 1
+	_cu_gen += 1
+	_mode = Mode.STILL
+	_roof = ""
+	_claim = ""
+	_perch_spot = 0
+	_asleep = false
+	_busy_reaction = false
+	_actor.queue_free()
+	_actor = null
 
 
 func actor() -> PetActor:
 	return _actor
+
+
+## Bu yuvadaki hayvanın PetManager uid'i ("" = boş).
+func pet_uid() -> String:
+	return _uid
+
+
+## Başka bir kedi bu eşyaya / araca / kasaya gidiyor ya da üstünde mi?
+func _taken(iid: String) -> bool:
+	for node: Node in get_tree().get_nodes_in_group("pet_world"):
+		var other: PetWorld = node as PetWorld
+		if other != null and other != self and other._actor != null and (other._roof == iid or other._claim == iid):
+			return true
+	return false
 
 
 ## QA / test: süren rutini kesip tek bir işi yaptırır (sonra hayat kaldığı yerden sürer).
@@ -253,7 +306,7 @@ func on_roof() -> bool:
 
 func _spawn(at: Vector2 = Vector2.INF) -> void:
 	_actor = PetActor.new()
-	_actor.name = "Tekir"
+	_actor.name = "Pet%d" % slot
 	add_child(_actor)
 	_actor.tapped.connect(func() -> void:
 		if not _in_closeup:
@@ -262,7 +315,7 @@ func _spawn(at: Vector2 = Vector2.INF) -> void:
 	_actor.global_position = Vector3(p.x, _floor_y(), p.y)
 	_actor.rotation.y = randf() * TAU
 	_apply_accessories()
-	_actor.set_fur(_pets.fur() if _pets else PetManager.DEFAULT_FUR)
+	_actor.set_fur(_pets.fur_of(_uid) if _pets and _uid != "" else PetManager.DEFAULT_FUR)
 	_restart()
 
 
@@ -282,7 +335,7 @@ func _apply_accessories() -> void:
 	if _actor == null or _pets == null:
 		return
 	var ids: Array[StringName] = []
-	for id: StringName in _pets.worn():
+	for id: StringName in _pets.worn_of(_uid):
 		if not PetManager.clashes(id, _preview):   # denenen, aynı yuvadakinin (ve çakışanın) yerine geçer
 			ids.append(id)
 	if _preview != &"" and not ids.has(_preview):
@@ -296,6 +349,7 @@ func _apply_accessories() -> void:
 func _restart(delay: float = 0.4) -> void:
 	_gen += 1
 	_mode = Mode.STILL
+	_claim = ""
 	_busy_reaction = false   # yakın kamera / düzenleyiciyle kesilen tepkinin bayrağı açık kalıyordu (bir daha tepki yok)
 	if _editing:
 		return   # düzenleyici kapanınca yeniden başlar
@@ -306,6 +360,7 @@ func _life(gen: int, delay: float) -> void:
 	if not await _wait(delay, gen):
 		return
 	while gen == _gen and is_instance_valid(_actor):
+		_claim = ""   # yarıda kalan işin eşyası bırakılır
 		var act: StringName = _pick()
 		activity_started.emit(act)
 		var ok: bool = await _do(act, gen)
@@ -464,7 +519,7 @@ func _display_cars() -> Array[Dictionary]:
 
 
 func _act_roof(gen: int) -> bool:
-	var cars: Array[Dictionary] = _display_cars()
+	var cars: Array[Dictionary] = _display_cars().filter(func(c: Dictionary) -> bool: return not _taken(c["iid"]))
 	if cars.is_empty():
 		return false
 	var car: Dictionary = cars[randi() % cars.size()]
@@ -472,10 +527,13 @@ func _act_roof(gen: int) -> bool:
 	var side: Vector2 = _free_near_rect(rect)
 	if side == Vector2.INF:
 		return false
+	var iid: String = car["iid"]
+	_claim = iid
 	if not await _walk_to(side, gen):
 		return false
-	var iid: String = car["iid"]
-	return await _jump_to(car["roof"], gen, func() -> void: _roof = iid)
+	return await _jump_to(car["roof"], gen, func() -> void:
+		_roof = iid
+		_claim = "")
 
 
 func _act_roof_rest(gen: int) -> bool:
@@ -578,7 +636,7 @@ func _furniture_model(iid: String) -> Node3D:
 
 
 func _pick_furniture(kind: StringName) -> Dictionary:
-	var list: Array[Dictionary] = _furniture(kind)
+	var list: Array[Dictionary] = _furniture(kind).filter(func(f: Dictionary) -> bool: return not _taken(f["iid"]))
 	if list.is_empty():
 		return {}
 	var me: Vector2 = _pos2()
@@ -593,11 +651,13 @@ func _climb(f: Dictionary, spot: int, gen: int, land: Vector3 = Vector3.INF) -> 
 	var side: Vector2 = _land_near(f["rect"])
 	if side == Vector2.INF:
 		return false
+	var iid: String = f["iid"]
+	_claim = iid
 	if not await _walk_to(side, gen):
 		return false
-	var iid: String = f["iid"]
 	return await _jump_to(target, gen, func() -> void:
 		_roof = iid
+		_claim = ""
 		_perch_spot = spot)
 
 
@@ -730,7 +790,10 @@ func _act_eat(gen: int) -> bool:
 		if stand == Vector2.INF or a_pt.distance_to(_pos2()) < approach.distance_to(_pos2()):
 			stand = s_pt
 			approach = a_pt
-	if stand == Vector2.INF or not await _walk_to(approach, gen):
+	if stand == Vector2.INF:
+		return false
+	_claim = f["iid"]   # yerken de kap ötekine kapalı (kesilirse _restart bırakır)
+	if not await _walk_to(approach, gen):
 		return false
 	if not await _walk_direct(stand, gen):
 		return false
@@ -741,7 +804,10 @@ func _act_eat(gen: int) -> bool:
 		return false
 	if randf() < 0.5 and not await _once(&"groom", gen):
 		return false
-	return await _walk_direct(approach, gen)
+	var ok: bool = await _walk_direct(approach, gen)
+	if gen == _gen:
+		_claim = ""
+	return ok
 
 
 ## Yol ızgarası dışında kısa düz yürüyüş (kabın önüne gelmek: kap ızgarada engel gözünde).
@@ -832,6 +898,7 @@ func end_closeup() -> void:
 	if _actor:
 		_actor.set_eyes_shut(false)
 		_restart(0.6)
+	_sync()   # yakın kamera açıkken eve gönderilen / değişen hayvan
 
 
 func in_closeup() -> bool:
@@ -964,8 +1031,8 @@ func _on_repair_ready(car: Node3D) -> void:
 
 
 func _on_crate_added(uid: int) -> void:
-	if not _can_react():
-		return
+	if not _can_react() or _taken("crate"):
+		return   # öteki kedi kasaya çıkıyor
 	_react(func(gen: int) -> bool:
 		if not await _wait(3.5, gen):   # kasa yere otursun
 			return false
@@ -976,10 +1043,15 @@ func _on_crate_added(uid: int) -> void:
 			return false
 		var rect: Rect2 = Rect2(Vector2(box.position.x, box.position.z), Vector2(box.size.x, box.size.z))
 		var side: Vector2 = _free_near_rect(rect)
-		if side == Vector2.INF or not await _walk_to(side, gen):
+		if side == Vector2.INF or _taken("crate"):
+			return false
+		_claim = "crate"
+		if not await _walk_to(side, gen):
 			return false
 		var top: Vector3 = Vector3(box.get_center().x, box.end.y - 0.002, box.get_center().z)
-		if not await _jump_to(top, gen, func() -> void: _roof = "crate"):   # kesilirse _jump_down rastgele iner
+		if not await _jump_to(top, gen, func() -> void:
+				_roof = "crate"
+				_claim = ""):   # kesilirse _jump_down rastgele iner
 			return false
 		if not await _once(&"sit_down", gen):
 			return false

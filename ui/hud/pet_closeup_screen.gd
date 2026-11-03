@@ -42,6 +42,8 @@ const TRICK_NAMES: Dictionary = {&"trick_paw": "PATİ VER", &"trick_beg": "ARKA 
 
 var _pets: PetManager
 var _world: PetWorld
+## Açılacak kedinin dünyası (Hud dokunulan kediyi verir; boşsa yuva 0 — geliş sinematiği de orada).
+var target_world: PetWorld
 var _router: UiRouter
 var _name_screen: PetNameScreen
 var _world_cam: Camera3D
@@ -64,6 +66,7 @@ var _bars: Array[ColorRect] = []
 var _chrome: MarginContainer
 var _card: PanelContainer
 var _name_label: Label
+var _caption_label: Label
 var _friend_bar: _Bar
 var _friend_label: Label
 var _tricks: VBoxContainer
@@ -71,6 +74,7 @@ var _olta_button: PlateButton
 var _hint: Label
 var _toast: PanelContainer
 var _toast_label: Label
+var _toast_tween: Tween          # art arda bildirimde eskisinin solması yenisini söndürmesin
 var _hearts: Control
 var _olta: _Olta
 var _acc_slots: Dictionary = {}       # aksesuar kimliği → _AccSlot
@@ -107,7 +111,11 @@ func open_arrival() -> void:
 
 func open() -> void:
 	_pets = get_tree().get_first_node_in_group("pets") as PetManager
-	_world = get_tree().get_first_node_in_group("pet_world") as PetWorld
+	_world = target_world if is_instance_valid(target_world) and not _arrival \
+		else get_tree().get_first_node_in_group("pet_world") as PetWorld
+	target_world = null
+	if _pets and _world and _world.pet_uid() != "":
+		_pets.focus(_world.pet_uid())   # kart, sevme ve raf bu kediyle çalışır
 	_router = get_tree().get_first_node_in_group("ui_router") as UiRouter
 	_world_cam = get_viewport().get_camera_3d()
 	if _world_cam:
@@ -349,6 +357,8 @@ func _refresh_card() -> void:
 	if _pets == null:
 		return
 	_name_label.text = _pets.pet_name().to_upper() if _pets.is_adopted() else Loc.t("TEKİR")
+	var kind: Dictionary = PetManager.variant(StringName(_pets.pet_info(_pets.focused()).get("variant", &"orange")))
+	_caption_label.text = Loc.t(String(kind.get("caption", "Turuncu tekir · garajın kedisi")))
 	var next: Dictionary = _pets.next_trick()
 	var points: int = _pets.friendship()
 	if next.is_empty():
@@ -459,6 +469,7 @@ func _rename() -> void:
 		return
 	_name_screen.mandatory = false
 	_name_screen.start_name = _pets.pet_name()
+	_name_screen.cost_gems = _pets.rename_cost(_pets.focused())   # ilk ad ücretsiz, sonrası elmas
 	_router.open(&"pet_name")
 
 
@@ -523,10 +534,12 @@ func _show_toast(text: String) -> void:
 	_toast_label.custom_minimum_size.x = room if wrap else 0.0
 	_toast.visible = true
 	_toast.modulate.a = 1.0
-	var tween: Tween = _toast.create_tween()
-	tween.tween_interval(1.6)
-	tween.tween_property(_toast, "modulate:a", 0.0, 0.3)
-	tween.tween_callback(func() -> void: _toast.visible = false)
+	if _toast_tween and _toast_tween.is_valid():
+		_toast_tween.kill()
+	_toast_tween = _toast.create_tween()
+	_toast_tween.tween_interval(1.6)
+	_toast_tween.tween_property(_toast, "modulate:a", 0.0, 0.3)
+	_toast_tween.tween_callback(func() -> void: _toast.visible = false)
 
 
 # --- Geliş sinematiği ------------------------------------------------------------------------------
@@ -756,7 +769,8 @@ func _build_card(parent: Control) -> void:
 	rename.focus_mode = Control.FOCUS_NONE
 	rename.pressed.connect(_rename)
 	head.add_child(rename)
-	col.add_child(_label(&"HudInkCaption", Loc.t("Turuncu tekir · garajın kedisi")))
+	_caption_label = _label(&"HudInkCaption", Loc.t("Turuncu tekir · garajın kedisi"))
+	col.add_child(_caption_label)
 
 	col.add_child(_label(&"HudInkCaption", Loc.t("DOSTLUK")))
 	var friend: HBoxContainer = HBoxContainer.new()
